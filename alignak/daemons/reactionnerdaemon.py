@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -50,7 +50,7 @@ This module provide Reactionner class used to launch notifications or event hand
 """
 
 from alignak.satellite import Satellite
-from alignak.property import PathProp, IntegerProp
+from alignak.property import PathProp, IntegerProp, StringProp
 
 
 class Reactionner(Satellite):
@@ -73,11 +73,21 @@ class Reactionner(Satellite):
 
     properties = Satellite.properties.copy()
     properties.update({
-        'pidfile':   PathProp(default='reactionnerd.pid'),
-        'port':      IntegerProp(default=7769),
-        'local_log': PathProp(default='reactionnerd.log'),
+        'daemon_type':
+            StringProp(default='reactionner'),
+        'pidfile':
+            PathProp(default='reactionnerd.pid'),
+        'port':
+            IntegerProp(default=7769),
+        'local_log':
+            PathProp(default='reactionnerd.log'),
     })
 
-    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file, profile=''):
-        super(Reactionner, self).__init__('reactionner', config_file, is_daemon, do_replace, debug,
-                                          debug_file)
+    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file,
+                 port=None, local_log=None, daemon_name=None):
+        self.daemon_name = 'reactionner'
+        if daemon_name:
+            self.daemon_name = daemon_name
+
+        super(Reactionner, self).__init__(self.daemon_name, config_file, is_daemon, do_replace,
+                                          debug, debug_file, port, local_log)

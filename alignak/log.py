@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -17,92 +17,42 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 #
-#
-# This file incorporates work covered by the following copyright and
-# permission notice:
-#
-#  Copyright (C) 2009-2014:
-#     Hartmut Goebel, h.goebel@goebel-consult.de
-#     Guillaume Bour, guillaume@bour.cc
-#     xkilian, fmikus@acktomic.com
-#     Nicolas Dupeux, nicolas@dupeux.net
-#     Zoran Zaric, zz@zoranzaric.de
-#     Jan Ulferts, jan.ulferts@xing.com
-#     Grégory Starck, g.starck@gmail.com
-#     Frédéric Pégé, frederic.pege@gmail.com
-#     Sebastien Coavoux, s.coavoux@free.fr
-#     Thibault Cohen, titilambert@gmail.com
-#     Jean Gabes, naparuba@gmail.com
-#     Olivier Hanesse, olivier.hanesse@gmail.com
-#     Gerhard Lausser, gerhard.lausser@consol.de
-
-#  This file is part of Shinken.
-#
-#  Shinken is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU Affero General Public License as published by
-#  the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-#
-#  Shinken is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-#
-#  You should have received a copy of the GNU Affero General Public License
-#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 """
-This module provide logging facilities for Alignak.
-There is a custom log handler that create broks for every log emited with level < debug
+This module provides logging facilities for Alignak.
 """
-import logging
-import sys
 import os
-import stat
-from logging import Handler, Formatter, StreamHandler, NOTSET, FileHandler
+import sys
+
+import logging
+from logging import Formatter, StreamHandler
 from logging.handlers import TimedRotatingFileHandler
 
 from termcolor import cprint
 
-
 from alignak.brok import Brok
 
+# Default values for root logger
+ROOT_LOGGER_NAME = 'alignak'
+ROOT_LOGGER_LEVEL = logging.INFO
 
-# obj = None
-# name = None
-HUMAN_TIMESTAMP_LOG = False
+# Default ISO8601 UTC date formatting:
+HUMAN_DATE_FORMAT = '%Y-%m-%d %H:%M:%S %Z'
 
-__brokhandler__ = None
-
-
-DEFAULT_FORMATTER = Formatter('[%(created)i] %(levelname)s: %(message)s')
+# Default log formatter (no human timestamp)
 DEFAULT_FORMATTER_NAMED = Formatter('[%(created)i] %(levelname)s: [%(name)s] %(message)s')
-HUMAN_FORMATTER = Formatter('[%(asctime)s] %(levelname)s: %(message)s', '%a %b %d %H:%M:%S %Y')
+
+# Human timestamped log formatter
 HUMAN_FORMATTER_NAMED = Formatter('[%(asctime)s] %(levelname)s: [%(name)s] %(message)s',
-                                  '%a %b %d %H:%M:%S %Y')
-NAG_FORMATTER = Formatter('[%(created)i] %(message)s')
+                                  HUMAN_DATE_FORMAT)
+
+# Time rotation for file logger
+ROTATION_WHEN = 'midnight'
+ROTATION_INTERVAL = 1
+ROTATION_COUNT = 5
 
 
-class BrokHandler(Handler):
-    """
-    This log handler is forwarding log messages as broks to the broker.
-
-    Only messages of level higher than DEBUG are send to other
-    satellite to not risk overloading them.
-    """
-
-    def __init__(self, broker):
-        # Only messages of level INFO or higher are passed on to the
-        # broker. Other handlers have a different level.
-        Handler.__init__(self, logging.INFO)
-        self._broker = broker
-
-    def emit(self, record):
-        try:
-            msg = self.format(record)
-            brok = Brok('log', {'log': msg + '\n'})
-            self._broker.add(brok)
-        except Exception:
-            self.handleError(record)
+logger = logging.getLogger(ROOT_LOGGER_NAME)  # pylint: disable=C0103
+logger.setLevel(ROOT_LOGGER_LEVEL)
 
 
 class ColorStreamHandler(StreamHandler):
@@ -117,209 +67,109 @@ class ColorStreamHandler(StreamHandler):
             cprint(msg, colors[record.levelname])
         except UnicodeEncodeError:
             print msg.encode('ascii', 'ignore')
-        except Exception:
+        except IOError:
+            # May happen when process are closing
+            pass
+        except TypeError:
             self.handleError(record)
 
 
-class Log(logging.Logger):
+def setup_logger(logger_, level=logging.INFO, log_file=None, log_console=True,
+                 when=ROTATION_WHEN, interval=ROTATION_INTERVAL, backup_count=ROTATION_COUNT,
+                 human_log=False, human_date_format=HUMAN_DATE_FORMAT):
     """
-    Alignak logger class, wrapping access to Python logging standard library.
-    See : https://docs.python.org/2/howto/logging.html#logging-flow for more detail about
-    how log are handled"""
+    Configure the provided logger
+    - appends a ColorStreamHandler if it is not yet present
+    - manages the formatter according to the required timestamp
+    - appends a TimedRotatingFileHandler if it is not yet present for the same file
+    - update level and formatter for already existing handlers
 
-    def __init__(self, name="Alignak", level=NOTSET, log_set=False):
-        logging.Logger.__init__(self, name, level)
-        self.pre_log_buffer = []
-        self.log_set = log_set
+    :param logger_: logger object to configure. If None, configure the root logger
+    :param level: log level
+    :param log_file:
+    :param log_console: True to configure the console stream handler
+    :param human_log: use a human readeable date format
+    :param when:
+    :param interval:
+    :param backup_count:
+    :param human_date_format
+    :return: the modified logger object
+    """
+    if logger_ is None:
+        logger_ = logging.getLogger(ROOT_LOGGER_NAME)
 
-    def setLevel(self, level):
-        """ Set level of logger and handlers.
-        The logger need the lowest level (see link above)
-
-        :param level: logger/handler level
-        :type level: int
-        :return: None
-        """
+    # Set logger level
+    if level is not None:
         if not isinstance(level, int):
             level = getattr(logging, level, None)
-            if not level or not isinstance(level, int):
-                raise TypeError('log level must be an integer')
-        # Not very useful, all we have to do is no to set the level > info for the brok handler
-        self.level = min(level, logging.INFO)
-        # Only set level to file and/or console handler
-        for handler in self.handlers:
-            if isinstance(handler, BrokHandler):
-                continue
-            handler.setLevel(level)
+        logger_.setLevel(level)
 
-    def load_obj(self, obj, name_=None):
-        """ We load the object where we will put log broks
-        with the 'add' method
+    formatter = DEFAULT_FORMATTER_NAMED
+    if human_log:
+        formatter = Formatter('[%(asctime)s] %(levelname)s: [%(name)s] %(message)s',
+                              human_date_format)
 
-        :param obj: object instance
-        :type obj: object
-        :param name_: name of object
-        :type name_: str | None
-        :return: None
-        """
-        global __brokhandler__
-        __brokhandler__ = BrokHandler(obj)
-        if name_ is not None or self.name is not None:
-            if name_ is not None:
-                self.name = name_
-            # We need to se the name format to all other handlers
-            for handler in self.handlers:
-                handler.setFormatter(DEFAULT_FORMATTER_NAMED)
-            __brokhandler__.setFormatter(DEFAULT_FORMATTER_NAMED)
+    if log_console and hasattr(sys.stdout, 'isatty'):
+        for handler in logger_.handlers:
+            if isinstance(handler, ColorStreamHandler):
+                if handler.level != level:
+                    handler.setLevel(level)
+                handler.setFormatter(formatter)
+                break
         else:
-            __brokhandler__.setFormatter(DEFAULT_FORMATTER)
-        self.addHandler(__brokhandler__)
+            csh = ColorStreamHandler(sys.stdout)
+            csh.setFormatter(formatter)
+            logger_.addHandler(csh)
 
-    def register_local_log(self, path, level=None, purge_buffer=True):
-        """The alignak logging wrapper can write to a local file if needed
-        and return the file descriptor so we can avoid to
-        close it.
-
-        Add logging to a local log-file.
-
-        The file will be rotated once a day
-
-        :param path: path of log
-        :type path: str
-        :param level: level of log
-        :type level: None | int
-        :param purge_buffer: True if want purge the buffer, otherwise False
-        :type purge_buffer: bool
-        :return:
-        """
-        self.log_set = True
-        # Todo : Create a config var for backup count
-        if os.path.exists(path) and not stat.S_ISREG(os.stat(path).st_mode):
-            # We don't have a regular file here. Rotate may fail
-            # It can be one of the stat.S_IS* (FIFO? CHR?)
-            handler = FileHandler(path)
+    if log_file:
+        for handler in logger_.handlers:
+            if isinstance(handler, TimedRotatingFileHandler) \
+                    and handler.baseFilename == os.path.abspath(log_file):
+                if handler.level != level:
+                    handler.setLevel(level)
+                handler.setFormatter(formatter)
+                break
         else:
-            handler = TimedRotatingFileHandler(path, 'midnight', backupCount=5)
-        if level is not None:
-            handler.setLevel(level)
-        if self.name is not None:
-            handler.setFormatter(DEFAULT_FORMATTER_NAMED)
-        else:
-            handler.setFormatter(DEFAULT_FORMATTER)
-        self.addHandler(handler)
+            file_handler = TimedRotatingFileHandler(log_file,
+                                                    when=when, interval=interval,
+                                                    backupCount=backup_count)
+            file_handler.setFormatter(formatter)
+            logger_.addHandler(file_handler)
 
-        # Ok now unstack all previous logs
-        if purge_buffer:
-            self._destack()
-
-        # Todo : Do we need this now we use logging?
-        return handler.stream.fileno()
-
-    def set_human_format(self, human=True):
-        """
-        Set the output as human format.
-
-        If the optional parameter `human` is False, the timestamps format
-        will be reset to the default format.
-
-        :param human: True if want timestamp in human format, otherwise False
-        :type human: bool
-        :return: None
-        """
-        global HUMAN_TIMESTAMP_LOG
-        HUMAN_TIMESTAMP_LOG = bool(human)
-
-        # Apply/Remove the human format to all handlers except the brok one.
-        for handler in self.handlers:
-            if isinstance(handler, BrokHandler):
-                continue
-
-            if self.name is not None:
-                handler.setFormatter(HUMAN_TIMESTAMP_LOG and HUMAN_FORMATTER_NAMED or
-                                     DEFAULT_FORMATTER_NAMED)
-            else:
-                handler.setFormatter(HUMAN_TIMESTAMP_LOG and HUMAN_FORMATTER or DEFAULT_FORMATTER)
-
-    def _stack(self, level, args, kwargs):
-        """
-        Stack logs if we don't open a log file so we will be able to flush them
-        Stack max 500 logs (no memory leak please...)
-
-        :param level: level log
-        :type level: int
-        :param args: arguments
-        :type args:
-        :param kwargs:
-        :type kwargs:
-        :return: None
-        """
-        if self.log_set:
-            return
-        self.pre_log_buffer.append((level, args, kwargs))
-        if len(self.pre_log_buffer) > 500:
-            self.pre_log_buffer = self.pre_log_buffer[2:]
-
-    def _destack(self):
-        """
-        DIRTY HACK : log should be always written to a file.
-        we are opening a log file, flush all the logs now
-
-        :return: None
-        """
-        for (level, args, kwargs) in self.pre_log_buffer:
-            fun = getattr(logging.Logger, level, None)
-            if fun is None:
-                self.warning('Missing level for a log? %s', level)
-                continue
-            fun(self, *args, **kwargs)
-
-    def debug(self, *args, **kwargs):
-        self._stack('debug', args, kwargs)
-        logging.Logger.debug(self, *args, **kwargs)
-
-    def info(self, *args, **kwargs):
-        self._stack('info', args, kwargs)
-        # super(logging.Logger, self).info(*args, **kwargs)
-        logging.Logger.info(self, *args, **kwargs)
-
-    def warning(self, *args, **kwargs):
-        self._stack('warning', args, kwargs)
-        logging.Logger.warning(self, *args, **kwargs)
-
-    def error(self, *args, **kwargs):
-        self._stack('error', args, kwargs)
-        logging.Logger.error(self, *args, **kwargs)
+    return logger_
 
 
-# --- create the main logger ---
-logging.setLoggerClass(Log)
-# pylint: disable=C0103
-logger = logging.getLogger('Alignak')
-if hasattr(sys.stdout, 'isatty'):
-    CSH = ColorStreamHandler(sys.stdout)
-    if logger.name is not None:
-        CSH.setFormatter(DEFAULT_FORMATTER_NAMED)
-    else:
-        CSH.setFormatter(DEFAULT_FORMATTER)
-    logger.addHandler(CSH)
-
-
-def naglog_result(level, result, *args):
+def get_logger_fds(logger_):
     """
-    Function use for old Nag compatibility. We to set format properly for this call only.
+    Get the file descriptors used by the logger
 
-    Dirty Hack to keep the old format, we should have another logger and
-    use one for Alignak logs and another for monitoring data
+    :param logger_: logger object to configure. If None, configure the root logger
+    :return: list of file descriptors
     """
-    prev_formatters = []
-    for handler in logger.handlers:
-        prev_formatters.append(handler.formatter)
-        handler.setFormatter(NAG_FORMATTER)
+    if logger_ is None:
+        logger_ = logging.getLogger(ROOT_LOGGER_NAME)
 
-    log_fun = getattr(logger, level)
+    fds = []
+    for handler in logger_.handlers:
+        try:
+            fds.append(handler.stream.fileno())
+        except AttributeError:
+            # If a log handler do not have a stream...
+            pass
 
-    if log_fun:
-        log_fun(result)
+    return fds
 
-    for index, handler in enumerate(logger.handlers):
-        handler.setFormatter(prev_formatters[index])
+
+def make_monitoring_log(level, message):
+    """
+    Function used to build the monitoring log. Build a Brok typed as monitoring_log with
+    the message to log
+
+    TODO: replace with dedicated brok for each event to log
+
+    :param level: log level as defined in logging
+    :param message: message to insert into the monitoring log
+    :return:
+    """
+    logger.debug("Monitoring log: %s / %s", level, message)
+    return Brok({'type': 'monitoring_log', 'data': {'level': level, 'message': message}})

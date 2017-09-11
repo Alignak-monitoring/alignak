@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -59,16 +59,18 @@ import traceback
 import re
 from multiprocessing import Queue, Process
 import warnings
+import logging
 
-from alignak.log import logger
 from alignak.misc.common import setproctitle
 
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
-# The `properties dict defines what the module can do and
+# The `properties` dict defines what the module can do and
 # if it's an external module or not.
 # pylint: disable=C0103
 properties = {
-    # name of the module type ; to distinguish between them:
+    # module type ; to distinguish between them:
+    # retention, logs, configuration, livestate, ...
     'type': None,
 
     # is the module "external" (external means here a daemon module)?
@@ -94,11 +96,11 @@ class BaseModule(object):
     def __init__(self, mod_conf):
         """Instantiate a new module.
         There can be many instance of the same type.
-        'mod_conf' is module configuration object
-        for this new module instance.
+        'mod_conf' is the module configuration object for this new module instance.
         """
         self.myconf = mod_conf
-        self.name = mod_conf.get_name()
+        self.alias = mod_conf.get_name()
+        # Todo: disabled feature
         # We can have sub modules
         self.modules = getattr(mod_conf, 'modules', [])
         self.props = mod_conf.properties.copy()
@@ -108,7 +110,7 @@ class BaseModule(object):
         self.is_external = self.props.get('external', False)
         # though a module defined with no phase is quite useless .
         self.phases = self.props.get('phases', [])
-        self.phases.append(None)
+        # self.phases.append(None)
         # the queue the module will receive data to manage
         self.to_q = None
         # the queue the module will put its result data
@@ -119,14 +121,20 @@ class BaseModule(object):
         # We want to know where we are load from? (broker, scheduler, etc)
         self.loaded_into = 'unknown'
 
-    def init(self):
+    def init(self):  # pylint: disable=R0201
         """Handle this module "post" init ; just before it'll be started.
-        Like just open necessaries file(s), database(s),
-        or whatever the module will need.
 
-        :return: None
+        This function initializes the module instance. If False is returned, the modules manager
+        will periodically retry an to initialize the module.
+        If an exception is raised, the module will be definitely considered as dead :/
+
+        This function must be present and return True for Alignak to consider the module as loaded
+        and fully functional.
+
+        :return: True / False according to initialization succeeded or not
+        :rtype: bool
         """
-        pass
+        return True
 
     def set_loaded_into(self, daemon_name):
         """Setter for loaded_into attribute
@@ -188,10 +196,10 @@ class BaseModule(object):
         try:
             self._main()
         except Exception as exp:
-            logger.error('[%s] %s', self.name, traceback.format_exc())
-            raise exp
+            logger.exception('[%s] %s', self.alias, traceback.format_exc())
+            raise Exception(exp)
 
-    def start(self, http_daemon=None):
+    def start(self, http_daemon=None):  # pylint: disable=W0613
         """Actually restart the process if the module is external
         Try first to stop the process and create a new Process instance
         with target start_module.
@@ -204,8 +212,10 @@ class BaseModule(object):
 
         if not self.is_external:
             return
-        self.stop_process()
-        logger.info("Starting external process for instance %s", self.name)
+
+        if self.process:
+            self.stop_process()
+        logger.info("Starting external process for module %s...", self.alias)
         proc = Process(target=self.start_module, args=())
 
         # Under windows we should not call start() on an object that got
@@ -220,7 +230,7 @@ class BaseModule(object):
         # We save the process data AFTER the fork()
         self.process = proc
         self.properties['process'] = proc  # TODO: temporary
-        logger.info("%s is now started ; pid=%d", self.name, proc.pid)
+        logger.info("%s is now started (pid=%d)", self.alias, proc.pid)
 
     def kill(self):
         """Sometime terminate() is not enough, we must "help"
@@ -229,6 +239,8 @@ class BaseModule(object):
         :return: None
         """
 
+        logger.info("Killing external module (pid=%d) for module %s...",
+                    self.process.pid, self.alias)
         if os.name == 'nt':
             self.process.terminate()
         else:
@@ -238,6 +250,7 @@ class BaseModule(object):
             # You do not let me another choice guy...
             if self.process.is_alive():
                 os.kill(self.process.pid, signal.SIGKILL)
+            logger.info("External module killed")
 
     def stop_process(self):
         """Request the module process to stop and release it
@@ -245,12 +258,13 @@ class BaseModule(object):
         :return: None
         """
         if self.process:
-            logger.info("I'm stopping module %r (pid=%s)",
+            logger.info("I'm stopping module %r (pid=%d)",
                         self.get_name(), self.process.pid)
             self.process.terminate()
-            self.process.join(timeout=1)
+            # Wait for 10 seconds before killing the process abruptly
+            self.process.join(timeout=10)
             if self.process.is_alive():
-                logger.warning("%r is still alive normal kill, I help it to die",
+                logger.warning("%r is still alive after normal kill, I help it to die",
                                self.get_name())
                 self.kill()
                 self.process.join(1)
@@ -266,7 +280,7 @@ class BaseModule(object):
         :return: module name
         :rtype: str
         """
-        return self.name
+        return self.alias
 
     def has(self, prop):
         """The classic has: do we have a prop or not?
@@ -283,7 +297,7 @@ class BaseModule(object):
             DeprecationWarning, stacklevel=2)
         return hasattr(self, prop)
 
-    def want_brok(self, b):
+    def want_brok(self, b):  # pylint: disable=W0613,R0201
         """Generic function to check if the module need a specific brok
         In this case it is always True
 
@@ -296,22 +310,38 @@ class BaseModule(object):
 
     def manage_brok(self, brok):
         """Request the module to manage the given brok.
-        There a lot of different possible broks to manage.
+        There are a lot of different possible broks to manage:
+        - monitoring_log
+
+        - notification_raise
+        - downtime_raise
+        - initial_host_status, initial_service_status, initial_contact_status
+        - initial_broks_done
+
+        - update_host_status, update_service_status, initial_contact_status
+        - host_check_result, service_check_result
+        - host_next_schedule, service_next_scheduler
+        - host_snapshot, service_snapshot
+        - unknown_host_check_result, unknown_service_check_result
+
+        - program_status
+        - clean_all_my_instance_id
+
+        - new_conf
 
         :param brok:
         :type brok:
         :return:
         :rtype:
         """
-        manage = getattr(self, 'manage_' + brok.type + '_brok', None)
-        if manage:
-            # Be sure the brok is prepared before call it
-            brok.prepare()
-            return manage(brok)
+        pass
 
-    def manage_signal(self, sig, frame):
+    def manage_signal(self, sig, frame):  # pylint: disable=W0613
         """Generic function to handle signals
-        Set interrupted attribute to True and return
+
+        Only called when the module process received SIGINT or SIGKILL.
+
+        Set interrupted attribute to True, self.process to None and returns
 
         :param sig: signal sent
         :type sig:
@@ -319,7 +349,9 @@ class BaseModule(object):
         :type frame:
         :return: None
         """
+        logger.info("Process for module %s received a signal: %s", self.alias, str(sig))
         self.interrupted = True
+        self.process = None
 
     def set_signal_handler(self, sigs=None):
         """Set the signal handler function (manage_signal)
@@ -357,7 +389,7 @@ class BaseModule(object):
     def set_proctitle(self, name):
         """Wrapper for setproctitle method
 
-        :param name: module name
+        :param name: module alias
         :type name: str
         :return: None
         """
@@ -376,14 +408,23 @@ class BaseModule(object):
 
         :return: None
         """
-        self.set_proctitle(self.name)
-
+        self.set_proctitle(self.alias)
         self.set_signal_handler()
-        logger.info("[%s[%d]]: Now running..", self.name, os.getpid())
+
+        logger.info("Process for module %s is now running (pid=%d)", self.alias, os.getpid())
+
         # Will block here!
-        self.main()
+        try:
+            self.main()
+        except (IOError, EOFError):
+            pass
+            # logger.warning('[%s] EOF exception: %s', self.alias, traceback.format_exc())
+        except Exception as exp:  # pylint: disable=broad-except
+            logger.exception('[%s] main function exception: %s', self.alias, exp)
+
         self.do_stop()
-        logger.info("[%s]: exiting now..", self.name)
+
+        logger.info("Process for module %s is now exiting (pid=%d)", self.alias, os.getpid())
 
     # TODO: apparently some modules would uses "work" as the main method??
     work = _main

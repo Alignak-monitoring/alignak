@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -44,118 +44,157 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
-#
-# This file is used to test reading and processing of config files
-#
+"""
+This file is used to test the complex hostgroups
+"""
 
-from alignak_test import *
+from alignak_test import AlignakTest
 
 
 class TestComplexHostgroups(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file(['etc/alignak_complex_hostgroups.cfg'])
+        self.setup_with_file('cfg/hostgroup/complex_hostgroups.cfg')
+        assert self.conf_is_correct
+
+        # Our scheduler
+        self._sched = self.schedulers['scheduler-master'].sched
 
     def get_svc(self):
-        return self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        return self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
 
     def find_service(self, name, desc):
-        return self.sched.services.find_srv_by_name_and_hostname(name, desc)
+        return self._sched.services.find_srv_by_name_and_hostname(name, desc)
 
     def find_host(self, name):
-        return self.sched.hosts.find_by_name(name)
+        return self._sched.hosts.find_by_name(name)
 
     def find_hostgroup(self, name):
-        return self.sched.hostgroups.find_by_name(name)
+        return self._sched.hostgroups.find_by_name(name)
 
     def dump_hosts(self, svc):
         for h in svc.host_name:
             print h
 
     # check if service exist in hst, but NOT in others
-    def srv_define_only_on(self, desc, hsts):
-        r = True
-        # first hsts
-        for h in hsts:
-            svc = self.find_service(h.host_name, desc)
-            if svc is None:
-                print "Error: the host %s is missing service %s!!" % (h.host_name, desc)
-                r = False
+    def service_defined_only_on(self, service_description, hosts):
+        """
+        Check if the service named as service_description exists on the hosts and
+        not on the other scheduler hosts
 
-        for h in self.sched.hosts:
-            if h not in hsts:
-                svc = self.find_service(h.host_name, desc)
+        :param service_description: service to search for
+        :param hosts: list of expected hosts
+        :return:
+        """
+        result = True
+        # Exists on the listed hosts
+        for host in hosts:
+            svc = self.find_service(host.host_name, service_description)
+            if svc is None:
+                print "Error: the host %s is missing service %s!!" % (host.host_name,
+                                                                      service_description)
+                result = False
+
+        # Do not exist on the other hosts
+        for host in self._sched.hosts:
+            if host not in hosts:
+                svc = self.find_service(host.host_name, service_description)
                 if svc is not None:
-                    print "Error: the host %s got the service %s!!" % (h.host_name, desc)
-                    r = False
-        return r
+                    print "Error: the host %s got the service %s!!" % (host.host_name,
+                                                                       service_description)
+                    result = False
+        return result
 
     def test_complex_hostgroups(self):
-        print self.sched.services.items
-        svc = self.get_svc()
-        print "Service", svc
-        #print self.conf.hostgroups
-
-        # All our hosts
+        """
+        Test a complex hostgroup definition
+        :return:
+        """
+        # Get all our hosts
         test_linux_web_prod_0 = self.find_host('test_linux_web_prod_0')
+        assert test_linux_web_prod_0 is not None
         test_linux_web_qual_0 = self.find_host('test_linux_web_qual_0')
+        assert test_linux_web_qual_0 is not None
         test_win_web_prod_0 = self.find_host('test_win_web_prod_0')
+        assert test_win_web_prod_0 is not None
         test_win_web_qual_0 = self.find_host('test_win_web_qual_0')
+        assert test_win_web_qual_0 is not None
         test_linux_file_prod_0 = self.find_host('test_linux_file_prod_0')
+        assert test_linux_file_prod_0 is not None
 
         hg_linux = self.find_hostgroup('linux')
+        assert hg_linux is not None
         hg_web = self.find_hostgroup('web')
+        assert hg_web is not None
         hg_win = self.find_hostgroup('win')
+        assert hg_win is not None
         hg_file = self.find_hostgroup('file')
-        print "HG Linux", hg_linux
-        for h in hg_linux:
-            print "H", h.get_name()
+        assert hg_file is not None
 
-        self.assertIn(test_linux_web_prod_0, hg_linux.members)
-        self.assertNotIn(test_linux_web_prod_0, hg_file.members)
+        # Hostgroup linux has 3 hosts
+        assert hg_linux.get_name() == "linux"
+        assert len(hg_linux.get_hosts()) == 3
+        # Expected hosts are in this group
+        assert test_linux_web_prod_0.uuid in hg_linux.members
+        assert test_linux_web_qual_0.uuid in hg_linux.members
+        assert test_linux_file_prod_0.uuid in hg_linux.members
+        for host in hg_linux:
+            assert self._sched.hosts[host].get_name() in ['test_linux_web_prod_0',
+                                                          'test_linux_web_qual_0',
+                                                          'test_linux_file_prod_0']
 
-        # First the service define for the host linux_0 only
-        svc = self.find_service('test_linux_web_prod_0', 'linux_0')
-        print "Service linux_0 only", svc.get_full_name()
-        r = self.srv_define_only_on('linux_0', [test_linux_web_prod_0, test_linux_web_qual_0, test_linux_file_prod_0])
-        self.assertEqual(True, r)
+        # First the service defined for the hostgroup: linux
+        assert self.service_defined_only_on('linux_0', [test_linux_web_prod_0,
+                                                        test_linux_web_qual_0,
+                                                        test_linux_file_prod_0])
 
-        print "Service linux_0,web"
-        r = self.srv_define_only_on('linux_web_0', [test_linux_web_prod_0, test_linux_web_qual_0, test_linux_file_prod_0, test_win_web_prod_0, test_win_web_qual_0])
-        self.assertEqual(True, r)
+        # Then a service defined for the hostgroups: linux,web
+        assert self.service_defined_only_on('linux_web_0', [test_linux_web_prod_0,
+                                                            test_linux_web_qual_0,
+                                                            test_linux_file_prod_0,
+                                                            test_win_web_prod_0,
+                                                            test_win_web_qual_0])
 
-        ### Now the real complex things :)
-        print "Service Linux&web"
-        r = self.srv_define_only_on('linux_AND_web_0', [test_linux_web_prod_0, test_linux_web_qual_0])
-        self.assertEqual(True, r)
+        # The service defined for the hostgroup: linux&web
+        assert self.service_defined_only_on('linux_AND_web_0', [test_linux_web_prod_0,
+                                                                test_linux_web_qual_0])
 
-        print "Service Linux|web"
-        r = self.srv_define_only_on('linux_OR_web_0', [test_linux_web_prod_0, test_linux_web_qual_0, test_win_web_prod_0, test_win_web_qual_0, test_linux_file_prod_0])
-        self.assertEqual(True, r)
+        # The service defined for the hostgroup: linux|web
+        assert self.service_defined_only_on('linux_OR_web_0', [test_linux_web_prod_0,
+                                                               test_linux_web_qual_0,
+                                                               test_win_web_prod_0,
+                                                               test_win_web_qual_0,
+                                                               test_linux_file_prod_0])
 
-        print "(linux|web),file"
-        r = self.srv_define_only_on('linux_OR_web_PAR_file0', [test_linux_web_prod_0, test_linux_web_qual_0, test_win_web_prod_0, test_win_web_qual_0, test_linux_file_prod_0, test_linux_file_prod_0])
-        self.assertEqual(True, r)
+        # The service defined for the hostgroup: (linux|web),file
+        assert self.service_defined_only_on('linux_OR_web_PAR_file0', [test_linux_web_prod_0,
+                                                                       test_linux_web_qual_0,
+                                                                       test_win_web_prod_0,
+                                                                       test_win_web_qual_0,
+                                                                       test_linux_file_prod_0,
+                                                                       test_linux_file_prod_0])
 
-        print "(linux|web)&prod"
-        r = self.srv_define_only_on('linux_OR_web_PAR_AND_prod0', [test_linux_web_prod_0, test_win_web_prod_0, test_linux_file_prod_0])
-        self.assertEqual(True, r)
+        # The service defined for the hostgroup: (linux|web)&prod
+        assert self.service_defined_only_on('linux_OR_web_PAR_AND_prod0', [test_linux_web_prod_0,
+                                                                           test_win_web_prod_0,
+                                                                           test_linux_file_prod_0])
 
-        print "(linux|web)&(*&!prod)"
-        r = self.srv_define_only_on('linux_OR_web_PAR_AND_NOT_prod0', [test_linux_web_qual_0, test_win_web_qual_0])
-        self.assertEqual(True, r)
+        # The service defined for the hostgroup: (linux|web)&(*&!prod)
+        assert self.service_defined_only_on(
+            'linux_OR_web_PAR_AND_NOT_prod0', [test_linux_web_qual_0, test_win_web_qual_0])
 
-        print "Special minus problem"
-        r = self.srv_define_only_on('name-with-minus-in-it', [test_linux_web_prod_0])
-        self.assertEqual(True, r)
+        # The service defined for the hostgroup with a minus sign in its name
+        assert self.service_defined_only_on('name-with-minus-in-it', [test_linux_web_prod_0])
 
-        print "(linux|web)&prod AND not test_linux_file_prod_0"
-        r = self.srv_define_only_on('linux_OR_web_PAR_AND_prod0_AND_NOT_test_linux_file_prod_0', [test_linux_web_prod_0, test_win_web_prod_0])
-        self.assertEqual(True, r)
+        # The service defined for the hostgroup: (linux|web)&(prod), except an host
+        assert self.service_defined_only_on(
+            'linux_OR_web_PAR_AND_prod0_AND_NOT_test_linux_file_prod_0', [test_linux_web_prod_0,
+                                                                          test_win_web_prod_0])
 
-        print "win&((linux|web)&prod) AND not test_linux_file_prod_0"
-        r = self.srv_define_only_on('WINDOWS_AND_linux_OR_web_PAR_AND_prod0_AND_NOT_test_linux_file_prod_0', [test_win_web_prod_0])
-        self.assertEqual(True, r)
+        # The service defined for the hostgroup: win&((linux|web)&prod), except an host
+        assert self.service_defined_only_on(
+            'WINDOWS_AND_linux_OR_web_PAR_AND_prod0_AND_NOT_test_linux_file_prod_0', [
+                test_win_web_prod_0])
 
 
 if __name__ == '__main__':

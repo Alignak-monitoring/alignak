@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -52,26 +52,27 @@
 This module provide Module and Modules classes used to manage internal and external modules
 for each daemon
 """
-
+import logging
 from alignak.objects.item import Item, Items
 
 from alignak.property import StringProp, ListProp
 from alignak.util import strip_and_uniq
-from alignak.log import logger
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Module(Item):
     """
     Class to manage a module
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'module'
 
     properties = Item.properties.copy()
     properties.update({
-        'module_alias': StringProp(),
         'python_name': StringProp(),
-        'modules': ListProp(default=[''], split_on_coma=True),
+        'module_alias': StringProp(),
+        'module_types': ListProp(default=[''], split_on_coma=True),
+        'modules': ListProp(default=[''], split_on_coma=True)
     })
 
     macros = {}
@@ -86,6 +87,25 @@ class Module(Item):
         """
         return self.module_alias
 
+    def get_types(self):
+        """
+        Get name of module
+
+        :return: Name of module
+        :rtype: str
+        """
+        return self.module_types
+
+    def is_a_module(self, module_type):
+        """
+        Is the module of the required type?
+
+        :param module_type: module type to check
+        :type: str
+        :return: True / False
+        """
+        return module_type in self.module_types
+
     def __repr__(self):
         return '<module module=%s alias=%s />' % (self.python_name, self.module_alias)
 
@@ -94,8 +114,8 @@ class Module(Item):
 
 class Modules(Items):
     """
-    Class to manage list of Module
-    Modules is used to regroup all Module
+    Class to manage list of modules
+    Modules is used to group all Module
     """
     name_property = "module_alias"
     inner_class = Module
@@ -108,7 +128,7 @@ class Modules(Items):
         """
         self.linkify_s_by_plug()
 
-    def linkify_s_by_plug(self):
+    def linkify_s_by_plug(self, modules=None):
         """
         Link modules
 
@@ -130,7 +150,6 @@ class Modules(Items):
                     new_modules.append(plug)
                 else:
                     err = "[module] unknown %s module from %s" % (plug_name, module.get_name())
-                    logger.error(err)
                     module.configuration_errors.append(err)
             module.modules = new_modules
 

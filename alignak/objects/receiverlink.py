@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -43,18 +43,17 @@
 """
 This module provide ReceiverLink and ReceiverLinks classes used to manage receivers
 """
-
+import logging
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import BoolProp, IntegerProp, StringProp
-from alignak.log import logger
-from alignak.http.client import HTTPEXCEPTIONS
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class ReceiverLink(SatelliteLink):
     """
     Class to manage the receiver information
     """
-    _id = 0
     my_type = 'receiver'
     properties = SatelliteLink.properties.copy()
     properties.update({
@@ -62,44 +61,17 @@ class ReceiverLink(SatelliteLink):
         'port':               IntegerProp(default=7772, fill_brok=['full_status']),
         'manage_sub_realms':  BoolProp(default=True, fill_brok=['full_status']),
         'manage_arbiters':    BoolProp(default=False, fill_brok=['full_status'], to_send=True),
-        'direct_routing':     BoolProp(default=False, fill_brok=['full_status'], to_send=True),
         'accept_passive_unknown_check_results': BoolProp(default=False,
                                                          fill_brok=['full_status'], to_send=True),
     })
 
-    def register_to_my_realm(self):
+    def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
         """
         Add this reactionner to the realm
 
         :return: None
         """
         self.realm.receivers.append(self)
-
-    def push_host_names(self, sched_id, hnames):
-        """
-        Send host names to receiver
-
-        :param sched_id: id of the scheduler
-        :type sched_id: int
-        :param hnames: list of host names
-        :type hnames: list
-        :return: None
-        """
-        try:
-            if self.con is None:
-                self.create_connection()
-            logger.info(" (%s)", self.uri)
-
-            # If the connection failed to initialize, bail out
-            if self.con is None:
-                self.add_failed_check_attempt()
-                return
-
-            # r = self.con.push_host_names(sched_id, hnames)
-            self.con.get('ping')
-            self.con.post('push_host_names', {'sched_id': sched_id, 'hnames': hnames}, wait='long')
-        except HTTPEXCEPTIONS, exp:
-            self.add_failed_check_attempt(reason=str(exp))
 
 
 class ReceiverLinks(SatelliteLinks):

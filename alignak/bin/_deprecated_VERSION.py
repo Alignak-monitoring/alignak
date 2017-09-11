@@ -10,6 +10,7 @@ from alignak.version import VERSION
 from alignak.misc.custom_module import CustomModule
 
 
+# pragma: no cover, deprecated
 class DeprecatedAlignakBin(CustomModule):
     """DeprecatedAlignakBin subclasses Custommodule and implement VERSION property
 

@@ -44,6 +44,14 @@ alignak.objects.command module
     :undoc-members:
     :show-inheritance:
 
+alignak.objects.commandcallitem module
+--------------------------------------
+
+.. automodule:: alignak.objects.commandcallitem
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 alignak.objects.config module
 -----------------------------
 
@@ -72,6 +80,14 @@ alignak.objects.escalation module
 ---------------------------------
 
 .. automodule:: alignak.objects.escalation
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+alignak.objects.genericextinfo module
+-------------------------------------
+
+.. automodule:: alignak.objects.genericextinfo
     :members:
     :undoc-members:
     :show-inheritance:
@@ -136,14 +152,6 @@ alignak.objects.macromodulation module
 --------------------------------------
 
 .. automodule:: alignak.objects.macromodulation
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.objects.matchingitem module
------------------------------------
-
-.. automodule:: alignak.objects.matchingitem
     :members:
     :undoc-members:
     :show-inheritance:

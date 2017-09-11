@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -74,11 +74,11 @@ def guess_int_or_float(val):
     """
     try:
         return to_best_int_float(val)
-    except Exception, exp:
+    except (ValueError, TypeError):
         return None
 
 
-class Metric:
+class Metric:  # pylint: disable=R0903
     """
     Class providing a small abstraction for one metric of a Perfdatas class
     """
@@ -86,7 +86,6 @@ class Metric:
         self.name = self.value = self.uom = \
             self.warning = self.critical = self.min = self.max = None
         string = string.strip()
-        # print "Analysis string", string
         matches = METRIC_PATTERN.match(string)
         if matches:
             # Get the name but remove all ' in it
@@ -97,10 +96,6 @@ class Metric:
             self.critical = guess_int_or_float(matches.group(5))
             self.min = guess_int_or_float(matches.group(6))
             self.max = guess_int_or_float(matches.group(7))
-            # print 'Name', self.name
-            # print "Value", self.value
-            # print "Res", r
-            # print r.groups()
             if self.uom == '%':
                 self.min = 0
                 self.max = 100
@@ -114,7 +109,7 @@ class Metric:
         return string
 
 
-class PerfDatas:
+class PerfDatas:  # pylint: disable=R0903
     """
     Class providing performance data extracted from a check output
     """

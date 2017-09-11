@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -48,7 +48,7 @@
 """This module provides ModulesManager class. Used to load modules in Alignak
 
 """
-
+import logging
 import time
 import traceback
 import cStringIO
@@ -57,19 +57,44 @@ import importlib
 
 
 from alignak.basemodule import BaseModule
-from alignak.log import logger
+
+# Initialization test period
+MODULE_INIT_PERIOD = 5
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class ModulesManager(object):
-    """This class is use to manage modules and call callback"""
+    """This class is used to manage modules and call callback"""
 
-    def __init__(self, modules_type, manager, max_queue_size=0):
-        self.modules_type = modules_type
+    def __init__(self, daemon_type, sync_manager, max_queue_size=0):
+        self.daemon_type = daemon_type
+        self.daemon_name = daemon_type
         self.modules_assoc = []
         self.instances = []
         self.to_restart = []
         self.max_queue_size = max_queue_size
-        self.manager = manager
+        self.sync_manager = sync_manager
+
+        # By default the modules configuration is correct and the
+        # warnings and errors lists are empty
+        self.configuration_is_correct = True
+        self.configuration_warnings = []
+        self.configuration_errors = []
+
+        logger.debug("Created a module manager for '%s'", self.daemon_type)
+
+    def set_daemon_name(self, daemon_name):
+        """
+        Set the daemon name of the daemon which this manager is attached to
+        and propagate this daemon name to our managed modules
+
+        :param daemon_name:
+        :return:
+        """
+        self.daemon_name = daemon_name
+        for instance in self.instances:
+            instance.set_loaded_into(daemon_name)
 
     def set_modules(self, modules):
         """Setter for modules and allowed_type attributes
@@ -90,90 +115,105 @@ class ModulesManager(object):
         """
         self.max_queue_size = max_queue_size
 
-    def load_and_init(self, mod_confs):
-        """Import, instanciate & "init" the modules we have been requested
+    def load_and_init(self, modules):
+        """Import, instantiate & "init" the modules we manage
 
+        :param modules: list of the managed modules
         :return: None
         """
-        self.load(mod_confs)
+        self.load(modules)
         self.get_instances()
 
-    @staticmethod
-    def find_module_properties_and_get_instance(module, mod_name):
-        """
-        Get properties and get_instance of a module
+        return len(self.configuration_errors) == 0
 
-        :param module: module object
-        :type module: object
-        :param mod_name: Name of the module
-        :type mod_name: str
-        :return: None
-        """
-        try:
-            module.properties
-            module.get_instance
-        except AttributeError:
-            pass
-        else:
-            # good module style
-            return
-        submod = importlib.import_module('.module', mod_name)
-        # old style:
-        module.properties = submod.properties
-        module.get_instance = submod.get_instance
+    def load(self, modules):
+        """Load Python modules and check their usability
 
-    def load(self, mod_confs):
+        :param modules: list of the modules that must be loaded
+        :return:
         """
-        Try to import the requested modules ; put the imported modules in self.imported_modules.
-        """
-        # Now we want to find in theses modules the ones we are looking for
-        del self.modules_assoc[:]
-        for mod_conf in mod_confs:
+        self.modules_assoc = []
+        for module in modules:
+            logger.info("Importing Python module '%s' for %s...",
+                        module.python_name, module.module_alias)
             try:
-                module = importlib.import_module(mod_conf.python_name)
-                self.find_module_properties_and_get_instance(module, mod_conf.python_name)
-                self.modules_assoc.append((mod_conf, module))
-            except ImportError:
-                logger.warning("Module %s (%s) can't be loaded, not found", mod_conf.python_name,
-                               mod_conf.module_alias)
-            except AttributeError:
-                logger.warning("Module %s (%s) can't be loaded because attributes errors",
-                               mod_conf.python_name, mod_conf.module_alias)
+                python_module = importlib.import_module(module.python_name)
 
-    def try_instance_init(self, inst, late_start=False):
-        """Try to "init" the given module instance.
+                # Check existing module properties
+                # Todo: check all mandatory properties
+                if not hasattr(python_module, 'properties'):  # pragma: no cover
+                    self.configuration_errors.append(
+                        "Module %s is missing a 'properties' dictionary" % module.python_name
+                    )
+                    raise AttributeError
+                logger.info("Module properties: %s", getattr(python_module, 'properties'))
 
-        :param inst: instance to init
-        :type inst: object
+                # Check existing module get_instance method
+                if not hasattr(python_module, 'get_instance') or \
+                        not callable(getattr(python_module, 'get_instance')):  # pragma: no cover
+                    self.configuration_errors.append(
+                        "Module %s is missing a 'get_instance' function" % module.python_name
+                    )
+                    raise AttributeError
+
+                self.modules_assoc.append((module, python_module))
+                logger.info("Imported '%s' for %s", module.python_name, module.module_alias)
+            except ImportError as exp:  # pragma: no cover, simple protection
+                self.configuration_errors.append(
+                    "Module %s (%s) can't be loaded, Python importation error: %s" %
+                    (module.python_name, module.module_alias, str(exp))
+                )
+            except AttributeError:  # pragma: no cover, simple protection
+                self.configuration_errors.append(
+                    "Module %s (%s) can't be loaded, module configuration" %
+                    (module.python_name, module.module_alias)
+                )
+            else:
+                logger.info("Loaded Python module '%s' (%s)",
+                            module.python_name, module.module_alias)
+
+    def try_instance_init(self, instance, late_start=False):
+        """Try to "initialize" the given module instance.
+
+        :param instance: instance to init
+        :type instance: object
         :param late_start: If late_start, don't look for last_init_try
         :type late_start: bool
         :return: True on successful init. False if instance init method raised any Exception.
         :rtype: bool
         """
+        result = False
         try:
-            logger.info("Trying to init module: %s", inst.get_name())
-            inst.init_try += 1
+            logger.info("Trying to initialize module: %s", instance.get_name())
+            instance.init_try += 1
             # Maybe it's a retry
-            if not late_start and inst.init_try > 1:
-                # Do not try until 5 sec, or it's too loopy
-                if inst.last_init_try > time.time() - 5:
+            if not late_start and instance.init_try > 1:
+                # Do not try until too frequently, or it's too loopy
+                if instance.last_init_try > time.time() - MODULE_INIT_PERIOD:
                     return False
-            inst.last_init_try = time.time()
+            instance.last_init_try = time.time()
 
-            # If it's an external, create/update Queues()
-            if inst.is_external:
-                inst.create_queues(self.manager)
+            # If it's an external module, create/update Queues()
+            if instance.is_external:
+                instance.create_queues(self.sync_manager)
 
-            inst.init()
-        except Exception, err:
-            logger.error("The instance %s raised an exception %s, I remove it!",
-                         inst.get_name(), str(err))
+            # The module instance init function says if initialization is ok
+            result = instance.init()
+        except Exception as exp:  # pylint: disable=W0703
+            # pragma: no cover, simple protection
+            self.configuration_errors.append(
+                "The module instance %s raised an exception on initialization: %s, I remove it!" %
+                (instance.get_name(), str(exp))
+            )
+            logger.error("The instance %s raised an exception on initialization: %s, I remove it!",
+                         instance.get_name(), str(exp))
             output = cStringIO.StringIO()
             traceback.print_exc(file=output)
-            logger.error("Back trace of this remove: %s", output.getvalue())
+            logger.error("Traceback of the exception: %s", output.getvalue())
             output.close()
             return False
-        return True
+
+        return result
 
     def clear_instances(self, insts=None):
         """Request to "remove" the given instances list or all if not provided
@@ -207,28 +247,44 @@ class ModulesManager(object):
         :rtype: list
         """
         self.clear_instances()
+
         for (mod_conf, module) in self.modules_assoc:
             mod_conf.properties = module.properties.copy()
             try:
-                inst = module.get_instance(mod_conf)
-                if not isinstance(inst, BaseModule):
-                    raise TypeError('Returned instance is not of type BaseModule (%s) !'
-                                    % type(inst))
-            except Exception as err:
-                logger.error("The module %s raised an exception %s, I remove it! traceback=%s",
-                             mod_conf.get_name(), err, traceback.format_exc())
-            else:
-                # Give the module the data to which module it is load from
-                inst.set_loaded_into(self.modules_type)
-                self.instances.append(inst)
+                instance = module.get_instance(mod_conf)
+                if not isinstance(instance, BaseModule):  # pragma: no cover, simple protection
+                    self.configuration_errors.append(
+                        "Module %s instance is not a BaseModule instance: %s" %
+                        (module.module_alias, type(instance))
+                    )
 
-        for inst in self.instances:
-            # External are not init now, but only when they are started
-            if not inst.is_external and not self.try_instance_init(inst):
+                if instance.modules and instance.modules:
+                    self.configuration_warnings.append(
+                        "Module %s instance defines some sub-modules. "
+                        "This feature is not currently supported" % (module.module_alias)
+                    )
+                    raise AttributeError
+            except Exception as exp:  # pylint: disable=W0703
+                # pragma: no cover, simple protection
+                logger.error("The module %s raised an exception on loading, I remove it!",
+                             mod_conf.get_name())
+                logger.exception("Exception: %s", exp)
+                self.configuration_errors.append(
+                    "The module %s raised an exception on loading: %s, I remove it!" %
+                    (mod_conf.get_name(), str(exp))
+                )
+            else:
+                # Give the module the data to which daemon/module it is loaded into
+                instance.set_loaded_into(self.daemon_name)
+                self.instances.append(instance)
+
+        for instance in self.instances:
+            # External instances are not initialized now, but only when they are started
+            if not instance.is_external and not self.try_instance_init(instance):
                 # If the init failed, we put in in the restart queue
-                logger.warning("The module '%s' failed to init, I will try to restart it later",
-                               inst.get_name())
-                self.to_restart.append(inst)
+                logger.warning("The module '%s' failed to initialize, "
+                               "I will try to restart it later", instance.get_name())
+                self.to_restart.append(instance)
 
         return self.instances
 
@@ -261,29 +317,29 @@ class ModulesManager(object):
         """
         # External instances need to be close before (process + queues)
         if inst.is_external:
-            logger.debug("Ask stop process for %s", inst.get_name())
+            logger.info("Request external process to stop for %s", inst.get_name())
             inst.stop_process()
-            logger.debug("Stop process done")
+            logger.info("External process stopped.")
 
-        inst.clear_queues(self.manager)
+        inst.clear_queues(self.sync_manager)
 
         # Then do not listen anymore about it
         self.instances.remove(inst)
 
     def check_alive_instances(self):
-        """Check alive isntances.
-        If not, log error and  try to restart it
+        """Check alive instances.
+        If not, log error and try to restart it
 
         :return: None
         """
         # Only for external
         for inst in self.instances:
             if inst not in self.to_restart:
-                if inst.is_external and not inst.process.is_alive():
-                    logger.error("The external module %s goes down unexpectedly!", inst.get_name())
+                if inst.is_external and inst.process is not None and not inst.process.is_alive():
+                    logger.error("The external module %s died unexpectedly!", inst.get_name())
                     logger.info("Setting the module %s to restart", inst.get_name())
                     # We clean its queues, they are no more useful
-                    inst.clear_queues(self.manager)
+                    inst.clear_queues(self.sync_manager)
                     self.to_restart.append(inst)
                     # Ok, no need to look at queue size now
                     continue
@@ -297,14 +353,14 @@ class ModulesManager(object):
                 queue_size = 0
                 try:
                     queue_size = inst.to_q.qsize()
-                except Exception, exp:
+                except Exception:  # pylint: disable=W0703
                     pass
                 if queue_size > self.max_queue_size:
                     logger.error("The external module %s got a too high brok queue size (%s > %s)!",
                                  inst.get_name(), queue_size, self.max_queue_size)
                     logger.info("Setting the module %s to restart", inst.get_name())
                     # We clean its queues, they are no more useful
-                    inst.clear_queues(self.manager)
+                    inst.clear_queues(self.sync_manager)
                     self.to_restart.append(inst)
 
     def try_to_restart_deads(self):
@@ -328,28 +384,38 @@ class ModulesManager(object):
     def get_internal_instances(self, phase=None):
         """Get a list of internal instances (in a specific phase)
 
+        If phase is None, return all internal instances whtever the phase
+
         :param phase: phase to filter (never used)
         :type phase:
         :return: internal instances list
         :rtype: list
         """
+        if phase is None:
+            return [inst for inst in self.instances if not inst.is_external]
+
         return [inst
                 for inst in self.instances
-                if not inst.is_external and phase in inst.phases
-                and inst not in self.to_restart]
+                if not inst.is_external and phase in inst.phases and
+                inst not in self.to_restart]
 
     def get_external_instances(self, phase=None):
         """Get a list of external instances (in a specific phase)
+
+        If phase is None, return all external instances whtever the phase
 
         :param phase: phase to filter (never used)
         :type phase:
         :return: external instances list
         :rtype: list
         """
+        if phase is None:
+            return [inst for inst in self.instances if inst.is_external]
+
         return [inst
                 for inst in self.instances
-                if inst.is_external and phase in inst.phases
-                and inst not in self.to_restart]
+                if inst.is_external and phase in inst.phases and
+                inst not in self.to_restart]
 
     def get_external_to_queues(self):
         """Get a list of queue to external instances

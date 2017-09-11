@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -50,24 +50,25 @@ implements acknowledgment for notification. Basically used for parsing.
 
 """
 
+from alignak.brok import Brok
+from alignak.alignakobject import AlignakObject
 
-class Acknowledge:
+
+class Acknowledge(AlignakObject):  # pylint: disable=R0903
     """
     Allows you to acknowledge the current problem for the specified service.
     By acknowledging the current problem, future notifications (for the same
     servicestate) are disabled.
     """
-    _id = 1
 
-    # Just to list the properties we will send as pickle
-    # so to others daemons, all but NOT REF
     properties = {
-        '_id': None,
+        'uuid': None,
         'sticky': None,
         'notify': None,
         'end_time': None,
         'author': None,
         'comment': None,
+        'comment_id': str
     }
     # If the "sticky" option is set to one (1), the acknowledgement
     # will remain until the service returns to an OK state. Otherwise
@@ -78,56 +79,47 @@ class Acknowledge:
     # If the "notify" option is set to one (1), a notification will be
     # sent out to contacts indicating that the current service problem
     # has been acknowledged.
-    #
-    # <WTF??>
-    # If the "persistent" option is set to one (1), the comment
-    # associated with the acknowledgement will survive across restarts
-    # of the Alignak process. If not, the comment will be deleted the
-    # next time Alignak restarts. "persistent" not only means "survive
-    # restarts", but also
-    #
-    # => End of comment Missing!!
-    # </WTF??>
 
-    def __init__(self, ref, sticky, notify, persistent,
-                 author, comment, end_time=0):
-        self._id = self.__class__._id
-        self.__class__._id += 1
-        self.ref = ref  # pointer to srv or host we are applied
-        self.sticky = sticky
-        self.notify = notify
-        self.end_time = end_time
-        self.author = author
-        self.comment = comment
+    def serialize(self):
+        """This function serialize into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
 
-    def __getstate__(self):
-        """Call by pickle for dataify the acknowledge
-        because we DO NOT WANT REF in this pickleisation!
+        Here we directly return all attributes
 
-        :return: dictionary of properties
+        :return: json representation of a Acknowledge
         :rtype: dict
         """
-        cls = self.__class__
-        # id is not in *_properties
-        res = {'_id': self._id}
-        for prop in cls.properties:
-            if hasattr(self, prop):
-                res[prop] = getattr(self, prop)
-        return res
+        return {'uuid': self.uuid, 'ref': self.ref, 'sticky': self.sticky, 'notify': self.notify,
+                'end_time': self.end_time, 'author': self.author, 'comment': self.comment}
 
-    def __setstate__(self, state):
-        """
-        Inversed function of getstate
+    def get_raise_brok(self, host_name, service_name=''):
+        """Get a start acknowledge brok
 
-        :param state: it's the state
-        :type state: dict
-        :return: None
+        :param comment_type: 1 = host, 2 = service
+        :param host_name:
+        :param service_name:
+        :return: brok with wanted data
+        :rtype: alignak.brok.Brok
         """
-        cls = self.__class__
-        self._id = state['_id']
-        for prop in cls.properties:
-            if prop in state:
-                setattr(self, prop, state[prop])
-        # If load a old ack, set the end_time to 0 which refers to infinite
-        if not hasattr(self, 'end_time'):
-            self.end_time = 0
+        data = self.serialize()
+        data['host'] = host_name
+        if service_name != '':
+            data['service'] = service_name
+
+        brok = Brok({'type': 'acknowledge_raise', 'data': data})
+        return brok
+
+    def get_expire_brok(self, host_name, service_name=''):
+        """Get an expire acknowledge brok
+
+        :type item: item
+        :return: brok with wanted data
+        :rtype: alignak.brok.Brok
+        """
+        data = self.serialize()
+        data['host'] = host_name
+        if service_name != '':
+            data['service'] = service_name
+
+        brok = Brok({'type': 'acknowledge_expire', 'data': data})
+        return brok

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -16,5 +16,5 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
-"""This module provide all class for Alignak HTTP communation.
+"""This module provide all class for Alignak HTTP communication.
 Most of files are for server side HTTP. Only client.py is for client side http"""

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -64,23 +64,23 @@ about the configuration part. for the running one, it's better
 to look at the schedulingitem class that manage all
 scheduling/consume check smart things :)
 """
+# pylint: disable=too-many-lines
 
+import os
 import time
+import logging
 
-from alignak.objects.item import Items
-from alignak.objects.schedulingitem import SchedulingItem
+from alignak.objects.schedulingitem import SchedulingItem, SchedulingItems
 
 from alignak.autoslots import AutoSlots
-from alignak.util import (format_t_into_dhms_format, to_hostnames_list, get_obj_name,
-                          to_svc_hst_distinct_lists, to_list_string_of_names, to_list_of_names,
-                          to_name_if_possible)
-from alignak.property import BoolProp, IntegerProp, FloatProp, CharProp, StringProp, ListProp
-from alignak.macroresolver import MacroResolver
-from alignak.eventhandler import EventHandler
-from alignak.log import logger, naglog_result
+from alignak.util import format_t_into_dhms_format
+from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, CharProp
+from alignak.log import make_monitoring_log
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
-class Host(SchedulingItem):
+class Host(SchedulingItem):  # pylint: disable=R0904
     """Host class implements monitoring concepts for host.
     For example it defines parents, check_interval, check_command  etc.
     """
@@ -88,7 +88,6 @@ class Host(SchedulingItem):
     # running_properties names
     __metaclass__ = AutoSlots
 
-    _id = 1  # zero is reserved for host (primary node for parents)
     ok_up = 'UP'
     my_type = 'host'
 
@@ -108,7 +107,7 @@ class Host(SchedulingItem):
     # *no_slots: do not take this property for __slots__
     #  Only for the initial call
     # conf_send_preparation: if set, will pass the property to this function. It's used to "flatten"
-    #  some dangerous properties like realms that are too 'linked' to be send like that.
+    #  some dangerous properties like realms that are too 'linked' to be sent like that.
     # brok_transformation: if set, will call the function with the value of the property
     #  the major times it will be to flatten the data (like realm_name instead of the realm object).
     properties = SchedulingItem.properties.copy()
@@ -117,92 +116,30 @@ class Host(SchedulingItem):
             StringProp(fill_brok=['full_status', 'check_result', 'next_schedule']),
         'alias':
             StringProp(fill_brok=['full_status']),
-        'display_name':
-            StringProp(default='', fill_brok=['full_status']),
         'address':
             StringProp(fill_brok=['full_status']),
+        'address6':
+            StringProp(fill_brok=['full_status'], default=''),
         'parents':
-            ListProp(brok_transformation=to_hostnames_list, default=[],
+            ListProp(default=[],
                      fill_brok=['full_status'], merging='join', split_on_coma=True),
         'hostgroups':
-            ListProp(brok_transformation=to_list_string_of_names, default=[],
+            ListProp(default=[],
                      fill_brok=['full_status'], merging='join', split_on_coma=True),
         'check_command':
             StringProp(default='_internal_host_up', fill_brok=['full_status']),
-        'initial_state':
-            CharProp(default='o', fill_brok=['full_status']),
-        'max_check_attempts':
-            IntegerProp(default=1, fill_brok=['full_status']),
-        'check_interval':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result']),
-        'retry_interval':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result']),
-        'active_checks_enabled':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
-        'passive_checks_enabled':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
-        'check_period':
-            StringProp(brok_transformation=to_name_if_possible, fill_brok=['full_status']),
-        'obsess_over_host':
-            BoolProp(default=False, fill_brok=['full_status'], retention=True),
-        'check_freshness':
-            BoolProp(default=False, fill_brok=['full_status']),
-        'freshness_threshold':
-            IntegerProp(default=0, fill_brok=['full_status']),
-        'event_handler':
-            StringProp(default='', fill_brok=['full_status']),
-        'event_handler_enabled':
-            BoolProp(default=False, fill_brok=['full_status']),
-        'low_flap_threshold':
-            IntegerProp(default=25, fill_brok=['full_status']),
-        'high_flap_threshold':
-            IntegerProp(default=50, fill_brok=['full_status']),
-        'flap_detection_enabled':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
         'flap_detection_options':
-            ListProp(default=['o', 'd', 'u'], fill_brok=['full_status'],
+            ListProp(default=['o', 'd', 'x'], fill_brok=['full_status'],
                      merging='join', split_on_coma=True),
-        'process_perf_data':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
-        'retain_status_information':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'retain_nonstatus_information':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'contacts':
-            ListProp(default=[], brok_transformation=to_list_of_names,
-                     fill_brok=['full_status'], merging='join', split_on_coma=True),
-        'contact_groups':
-            ListProp(default=[], fill_brok=['full_status'],
-                     merging='join', split_on_coma=True),
-        'notification_interval':
-            IntegerProp(default=60, fill_brok=['full_status']),
-        'first_notification_delay':
-            IntegerProp(default=0, fill_brok=['full_status']),
-        'notification_period':
-            StringProp(brok_transformation=to_name_if_possible, fill_brok=['full_status']),
         'notification_options':
-            ListProp(default=['d', 'u', 'r', 'f'], fill_brok=['full_status'],
+            ListProp(default=['d', 'x', 'r', 'f'], fill_brok=['full_status'],
                      merging='join', split_on_coma=True),
-        'notifications_enabled':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
-        'stalking_options':
-            ListProp(default=[''], fill_brok=['full_status']),
-        'notes':
-            StringProp(default='', fill_brok=['full_status']),
-        'notes_url':
-            StringProp(default='', fill_brok=['full_status']),
-        'action_url':
-            StringProp(default='', fill_brok=['full_status']),
-        'icon_image':
-            StringProp(default='', fill_brok=['full_status']),
-        'icon_image_alt':
-            StringProp(default='', fill_brok=['full_status']),
-        'icon_set':
-            StringProp(default='', fill_brok=['full_status']),
         'vrml_image':
             StringProp(default='', fill_brok=['full_status']),
         'statusmap_image':
             StringProp(default='', fill_brok=['full_status']),
+        'freshness_state':
+            CharProp(default='x', fill_brok=['full_status']),
 
         # No slots for this 2 because begin property by a number seems bad
         # it's stupid!
@@ -210,401 +147,52 @@ class Host(SchedulingItem):
             StringProp(default='', fill_brok=['full_status'], no_slots=True),
         '3d_coords':
             StringProp(default='', fill_brok=['full_status'], no_slots=True),
-        'failure_prediction_enabled':
-            BoolProp(default=False, fill_brok=['full_status']),
-
         # New to alignak
         # 'fill_brok' is ok because in scheduler it's already
         # a string from conf_send_preparation
-        'realm':
-            StringProp(default=None, fill_brok=['full_status'], conf_send_preparation=get_obj_name),
-        'poller_tag':
-            StringProp(default='None'),
-        'reactionner_tag':
-            StringProp(default='None'),
-        'resultmodulations':
-            ListProp(default=[], merging='join'),
-        'business_impact_modulations':
-            ListProp(default=[], merging='join'),
-        'escalations':
-            ListProp(default=[], fill_brok=['full_status'], merging='join', split_on_coma=True),
-        'maintenance_period':
-            StringProp(default='', brok_transformation=to_name_if_possible,
-                       fill_brok=['full_status']),
-        'time_to_orphanage':
-            IntegerProp(default=300, fill_brok=['full_status']),
         'service_overrides':
             ListProp(default=[], merging='duplicate', split_on_coma=False),
         'service_excludes':
             ListProp(default=[], merging='duplicate', split_on_coma=True),
         'service_includes':
             ListProp(default=[], merging='duplicate', split_on_coma=True),
-        'labels':
-            ListProp(default=[], fill_brok=['full_status'], merging='join',
-                     split_on_coma=True),
-
-        # BUSINESS CORRELATOR PART
-        # Business rules output format template
-        'business_rule_output_template':
-            StringProp(default='', fill_brok=['full_status']),
-        # Business rules notifications mode
-        'business_rule_smart_notifications':
-            BoolProp(default=False, fill_brok=['full_status']),
-        # Treat downtimes as acknowledgements in smart notifications
-        'business_rule_downtime_as_ack':
-            BoolProp(default=False, fill_brok=['full_status']),
-        # Enforces child nodes notification options
-        'business_rule_host_notification_options':
-            ListProp(default=[''], fill_brok=['full_status']),
-        'business_rule_service_notification_options':
-            ListProp(default=[''], fill_brok=['full_status']),
-
-        # Business impact value
-        'business_impact':
-            IntegerProp(default=2, fill_brok=['full_status']),
-
-        # Load some triggers
-        'trigger':
-            StringProp(default=''),
-        'trigger_name':
-            StringProp(default=''),
-        'trigger_broker_raise_enabled':
-            BoolProp(default=False),
-
-        # Trending
-        'trending_policies':
-            ListProp(default=[], fill_brok=['full_status'], merging='join'),
-
-        # Our modulations. By defualt void, but will filled by an inner if need
-        'checkmodulations':
-            ListProp(default=[], fill_brok=['full_status'], merging='join'),
-        'macromodulations':
-            ListProp(default=[], merging='join'),
-
-        # Custom views
-        'custom_views':
-            ListProp(default=[], fill_brok=['full_status'], merging='join'),
-
-        # Snapshot part
-        'snapshot_enabled':
-            BoolProp(default=False),
-        'snapshot_command':
-            StringProp(default=''),
-        'snapshot_period':
-            StringProp(default=''),
         'snapshot_criteria':
-            ListProp(default=['d', 'u'], fill_brok=['full_status'], merging='join'),
-        'snapshot_interval':
-            IntegerProp(default=5),
+            ListProp(default=['d', 'x'], fill_brok=['full_status'], merging='join'),
     })
 
     # properties set only for running purpose
     # retention: save/load this property from retention
     running_properties = SchedulingItem.running_properties.copy()
     running_properties.update({
-        'modified_attributes':
-            IntegerProp(default=0L, fill_brok=['full_status'], retention=True),
-        'last_chk':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'next_chk':
-            IntegerProp(default=0, fill_brok=['full_status', 'next_schedule'], retention=True),
-        'in_checking':
-            BoolProp(default=False, fill_brok=['full_status', 'check_result', 'next_schedule']),
-        'in_maintenance':
-            IntegerProp(default=None, fill_brok=['full_status'], retention=True),
-        'latency':
-            FloatProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'attempt':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'state':
             StringProp(default='UP', fill_brok=['full_status', 'check_result'],
                        retention=True),
-        'state_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'state_type':
-            StringProp(default='HARD', fill_brok=['full_status', 'check_result'], retention=True),
-        'state_type_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'current_event_id':
-            StringProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'last_event_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'last_state':
-            StringProp(default='PENDING', fill_brok=['full_status', 'check_result'],
-                       retention=True),
-        'last_state_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'last_state_type':
-            StringProp(default='HARD', fill_brok=['full_status', 'check_result'], retention=True),
-        'last_state_change':
-            FloatProp(default=0.0, fill_brok=['full_status', 'check_result'], retention=True),
-        'last_hard_state_change':
-            FloatProp(default=0.0, fill_brok=['full_status', 'check_result'], retention=True),
-        'last_hard_state':
-            StringProp(default='PENDING', fill_brok=['full_status'], retention=True),
-        'last_hard_state_id':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
         'last_time_up':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'last_time_down':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'last_time_unreachable':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        'duration_sec':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-        'output':
-            StringProp(default='', fill_brok=['full_status', 'check_result'], retention=True),
-        'long_output':
-            StringProp(default='', fill_brok=['full_status', 'check_result'], retention=True),
-        'is_flapping':
-            BoolProp(default=False, fill_brok=['full_status'], retention=True),
-        'flapping_comment_id':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-        # No broks for _depend_of because of to much links to hosts/services
-        # dependencies for actions like notif of event handler, so AFTER check return
-        'act_depend_of':
-            ListProp(default=[]),
-
-        # dependencies for checks raise, so BEFORE checks
-        'chk_depend_of':
-            ListProp(default=[]),
-
-        # elements that depend of me, so the reverse than just upper
-        'act_depend_of_me':
-            ListProp(default=[]),
-
-        # elements that depend of me
-        'chk_depend_of_me':
-            ListProp(default=[]),
-        'last_state_update':
-            StringProp(default=0, fill_brok=['full_status'], retention=True),
-
         # no brok ,to much links
         'services':
             StringProp(default=[]),
-
-        # No broks, it's just internal, and checks have too links
-        'checks_in_progress':
-            StringProp(default=[]),
-
-        # No broks, it's just internal, and checks have too links
-        'notifications_in_progress':
-            StringProp(default={}, retention=True),
-
-        'downtimes':
-            StringProp(default=[], fill_brok=['full_status'], retention=True),
-
-        'comments':
-            StringProp(default=[], fill_brok=['full_status'], retention=True),
-
-        'flapping_changes':
-            StringProp(default=[], fill_brok=['full_status'], retention=True),
-
-        'percent_state_change':
-            FloatProp(default=0.0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'problem_has_been_acknowledged':
-            BoolProp(default=False, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'acknowledgement':
-            StringProp(default=None, retention=True),
-
-        'acknowledgement_type':
-            IntegerProp(default=1, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'check_type':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'has_been_checked':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'should_be_scheduled':
-            IntegerProp(default=1, fill_brok=['full_status'], retention=True),
-
-        'last_problem_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'current_problem_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'execution_time':
-            FloatProp(default=0.0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'u_time':
-            FloatProp(default=0.0),
-
-        's_time':
-            FloatProp(default=0.0),
-
-        'last_notification':
-            FloatProp(default=0.0, fill_brok=['full_status'], retention=True),
-
-        'current_notification_number':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-
-        'current_notification_id':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-
-        'check_flapping_recovery_notification':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
-
-        'scheduled_downtime_depth':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-
-        'pending_flex_downtime':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-
-        'timeout':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'start_time':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'end_time':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'early_timeout':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'return_code':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'perf_data':
-            StringProp(default='', fill_brok=['full_status', 'check_result'], retention=True),
-
-        'last_perf_data':
-            StringProp(default='', retention=True),
-
-        'customs':
-            StringProp(default={}, fill_brok=['full_status']),
-
+        'realm_name':
+            StringProp(default=''),
         'got_default_realm':
             BoolProp(default=False),
-
-        # use for having all contacts we have notified
-        # Warning: for the notified_contacts retention save, we save only the names of the
-        # contacts, and we should RELINK
-        # them when we load it.
-        'notified_contacts':
-            StringProp(default=set(), retention=True, retention_preparation=to_list_of_names),
-
-        'in_scheduled_downtime':
-            BoolProp(default=False, fill_brok=['full_status', 'check_result'], retention=True),
-
-        'in_scheduled_downtime_during_last_check':
-            BoolProp(default=False, retention=True),
-
-        # put here checks and notif raised
-        'actions':
-            StringProp(default=[]),
-
-        # and here broks raised
-        'broks':
-            StringProp(default=[]),
-
-        # For knowing with which elements we are in relation
-        # of dep.
-        # childs are the hosts that have US as parent, so
-        # only a network dep
-        'childs':
-            StringProp(brok_transformation=to_hostnames_list, default=[],
-                       fill_brok=['full_status']),
-
-        # Here it's the elements we are depending on
-        # so our parents as network relation, or a host
-        # we are depending in a hostdependency
-        # or even if we are business based.
-        'parent_dependencies':
-            StringProp(brok_transformation=to_svc_hst_distinct_lists, default=set(),
-                       fill_brok=['full_status']),
-
-        # Here it's the guys that depend on us. So it's the total
-        # opposite of the parent_dependencies
-        'child_dependencies':
-            StringProp(brok_transformation=to_svc_hst_distinct_lists,
-                       default=set(),
-                       fill_brok=['full_status']),
-
-
-        # Problem/impact part
-        'is_problem':
-            StringProp(default=False, fill_brok=['full_status']),
-
-        'is_impact':
-            StringProp(default=False, fill_brok=['full_status']),
-
-        # the save value of our business_impact for "problems"
-        'my_own_business_impact':
-            IntegerProp(default=-1, fill_brok=['full_status']),
-
-        # list of problems that make us an impact
-        'source_problems':
-            StringProp(brok_transformation=to_svc_hst_distinct_lists, default=[],
-                       fill_brok=['full_status']),
-
-        # list of the impact I'm the cause of
-        'impacts':
-            StringProp(brok_transformation=to_svc_hst_distinct_lists, default=[],
-                       fill_brok=['full_status']),
-
-        # keep a trace of the old state before being an impact
-        'state_before_impact':
-            StringProp(default='PENDING'),
-
-        # keep a trace of the old state id before being an impact
-        'state_id_before_impact':
-            StringProp(default=0),
-
-        # if the state change, we know so we do not revert it
-        'state_changed_since_impact':
-            StringProp(default=False),
-
-        # BUSINESS CORRELATOR PART
-        # Say if we are business based rule or not
-        'got_business_rule':
-            BoolProp(default=False, fill_brok=['full_status']),
-
-        # Previously processed business rule (with macro expanded)
-        'processed_business_rule':
-            StringProp(default="", fill_brok=['full_status']),
-
-        # Our Dependency node for the business rule
-        'business_rule':
-            StringProp(default=None),
-
-        # Manage the unknown/unreach during hard state
-        # From now its not really used
-        'in_hard_unknown_reach_phase':
-            BoolProp(default=False, retention=True),
-
-        'was_in_hard_unknown_reach_phase':
-            BoolProp(default=False, retention=True),
 
         'state_before_hard_unknown_reach_phase':
             StringProp(default='UP', retention=True),
 
-        # Set if the element just change its father/son topology
-        'topology_change':
-            BoolProp(default=False, fill_brok=['full_status']),
-
         # Keep in mind our pack id after the cutting phase
         'pack_id':
             IntegerProp(default=-1),
-
-        # Trigger list
-        'triggers':
-        StringProp(default=[]),
-
-        # snapshots part
-        'last_snapshot':  IntegerProp(default=0, fill_brok=['full_status'], retention=True),
-
-        # Keep the string of the last command launched for this element
-        'last_check_command': StringProp(default=''),
     })
 
     # Hosts macros and prop that give the information
     # the prop can be callable or not
-    macros = {
+    macros = SchedulingItem.macros.copy()
+    macros.update({
         'HOSTNAME':          'host_name',
         'HOSTDISPLAYNAME':   'display_name',
         'HOSTALIAS':         'alias',
@@ -626,8 +214,10 @@ class Host(SchedulingItem):
         'HOSTDURATIONSEC':   'get_duration_sec',
         'HOSTDOWNTIME':      'get_downtime',
         'HOSTPERCENTCHANGE': 'percent_state_change',
-        'HOSTGROUPNAME':     'get_groupname',
-        'HOSTGROUPNAMES':    'get_groupnames',
+        'HOSTGROUPNAME':     ('get_groupname', ['hostgroups']),
+        'HOSTGROUPNAMES':    ('get_groupnames', ['hostgroups']),
+        'HOSTGROUPALIAS':    ('get_groupalias', ['hostgroups']),
+        'HOSTGROUPALIASES':  ('get_groupaliases', ['hostgroups']),
         'LASTHOSTCHECK':     'last_chk',
         'LASTHOSTSTATECHANGE': 'last_state_change',
         'LASTHOSTUP':        'last_time_up',
@@ -638,6 +228,7 @@ class Host(SchedulingItem):
         'HOSTPERFDATA':      'perf_data',
         'LASTHOSTPERFDATA':  'last_perf_data',
         'HOSTCHECKCOMMAND':  'get_check_command',
+        'HOSTSNAPSHOTCOMMAND': 'get_snapshot_command',
         'HOSTACKAUTHOR':     'get_ack_author_name',
         'HOSTACKAUTHORNAME': 'get_ack_author_name',
         'HOSTACKAUTHORALIAS': 'get_ack_author_name',
@@ -645,33 +236,28 @@ class Host(SchedulingItem):
         'HOSTACTIONURL':     'action_url',
         'HOSTNOTESURL':      'notes_url',
         'HOSTNOTES':         'notes',
-        'HOSTREALM':         'get_realm',
+        'HOSTREALM':         'realm_name',
         'TOTALHOSTSERVICES': 'get_total_services',
-        'TOTALHOSTSERVICESOK': 'get_total_services_ok',
-        'TOTALHOSTSERVICESWARNING': 'get_total_services_warning',
-        'TOTALHOSTSERVICESUNKNOWN': 'get_total_services_unknown',
-        'TOTALHOSTSERVICESCRITICAL': 'get_total_services_critical',
+        'TOTALHOSTSERVICESOK': ('get_total_services_ok', ['services']),
+        'TOTALHOSTSERVICESWARNING': ('get_total_services_warning', ['services']),
+        'TOTALHOSTSERVICESCRITICAL': ('get_total_services_critical', ['services']),
+        'TOTALHOSTSERVICESUNKNOWN': ('get_total_services_unknown', ['services']),
+        'TOTALHOSTSERVICESUNREACHABLE': ('get_total_services_unreachable', ['services']),
         'HOSTBUSINESSIMPACT':  'business_impact',
-        # Business rules output formatting related macros
-        'STATUS':            'get_status',
-        'SHORTSTATUS':       'get_short_status',
-        'FULLNAME':          'get_full_name',
-    }
-
+    })
+    # Todo: really unuseful ... should be removed, but let's discuss!
+    # Currently, this breaks the macro resolver because the corresponding properties do not exit!
     # Manage ADDRESSX macros by adding them dynamically
-    for i in range(32):
-        macros['HOSTADDRESS%d' % i] = 'address%d' % i
+    # for i in range(32):
+    #     macros['HOSTADDRESS%d' % i] = 'address%d' % i
 
     # This tab is used to transform old parameters name into new ones
     # so from Nagios2 format, to Nagios3 ones.
     # Or Alignak deprecated names like criticity
-    old_properties = {
-        'normal_check_interval': 'check_interval',
-        'retry_check_interval': 'retry_interval',
-        'criticity': 'business_impact',
+    old_properties = SchedulingItem.old_properties.copy()
+    old_properties.update({
         'hostgroup': 'hostgroups',
-        # 'criticitymodulations': 'business_impact_modulations',
-    }
+    })
 
 #######
 #                   __ _                       _   _
@@ -683,6 +269,33 @@ class Host(SchedulingItem):
 #                         __/ |
 #                        |___/
 ######
+
+    @staticmethod
+    def convert_conf_for_unreachable(params):
+        """
+        The 'u' state for UNREACHABLE has been rewritten in 'x' in:
+        * flap_detection_options
+        * notification_options
+        * snapshot_criteria
+
+        So convert value from config file to keep compatibility with Nagios
+
+        :param params: parameters of the host before put in properties
+        :type params: dict
+        :return: None
+        """
+        for prop in ['flap_detection_options', 'notification_options',
+                     'snapshot_criteria', 'stalking_options']:
+            if prop in params:
+                params[prop] = [p.replace('u', 'x') for p in params[prop]]
+
+        if 'initial_state' in params and \
+                (params['initial_state'] == 'u' or params['initial_state'] == ['u']):
+            params['initial_state'] = 'x'
+
+        if 'freshness_state' in params and \
+                (params['freshness_state'] == 'u' or params['freshness_state'] == ['u']):
+            params['freshness_state'] = 'x'
 
     def fill_predictive_missing_parameters(self):
         """Fill address with host_name if not already set
@@ -696,102 +309,38 @@ class Host(SchedulingItem):
             self.alias = self.host_name
         if self.initial_state == 'd':
             self.state = 'DOWN'
-        elif self.initial_state == 'u':
+        elif self.initial_state == 'x':
             self.state = 'UNREACHABLE'
 
     def is_correct(self):
-        """Check if this host configuration is correct ::
+        """Check if this object configuration is correct ::
 
-        * All required parameter are specified
-        * Go through all configuration warnings and errors that could have been raised earlier
+        * Check our own specific properties
+        * Call our parent class is_correct checker
 
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
         state = True
+
+        # Internal checks before executing inherited function...
         cls = self.__class__
-
-        source = getattr(self, 'imported_from', 'unknown')
-
-        special_properties = ['check_period', 'notification_interval',
-                              'notification_period']
-        for prop, entry in cls.properties.items():
-            if prop not in special_properties:
-                if not hasattr(self, prop) and entry.required:
-                    logger.error("[host::%s] %s property not set", self.get_name(), prop)
-                    state = False  # Bad boy...
-
-        # Then look if we have some errors in the conf
-        # Juts print warnings, but raise errors
-        for err in self.configuration_warnings:
-            logger.warning("[host::%s] %s", self.get_name(), err)
-
-        # Raised all previously saw errors like unknown contacts and co
-        if self.configuration_errors != []:
-            state = False
-            for err in self.configuration_errors:
-                logger.error("[host::%s] %s", self.get_name(), err)
-
-        if not hasattr(self, 'notification_period'):
-            self.notification_period = None
-
-        # Ok now we manage special cases...
-        if self.notifications_enabled and self.contacts == []:
-            logger.warning("The host %s has no contacts nor contact_groups in (%s)",
-                           self.get_name(), source)
-
-        if getattr(self, 'event_handler', None) and not self.event_handler.is_valid():
-            logger.error("%s: my event_handler %s is invalid",
-                         self.get_name(), self.event_handler.command)
-            state = False
-
-        if getattr(self, 'check_command', None) is None:
-            logger.error("%s: I've got no check_command", self.get_name())
-            state = False
-        # Ok got a command, but maybe it's invalid
-        else:
-            if not self.check_command.is_valid():
-                logger.error("%s: my check_command %s is invalid",
-                             self.get_name(), self.check_command.command)
-                state = False
-            if self.got_business_rule:
-                if not self.business_rule.is_valid():
-                    logger.error("%s: my business rule is invalid", self.get_name(),)
-                    for bperror in self.business_rule.configuration_errors:
-                        logger.error("[host::%s] %s", self.get_name(), bperror)
-                    state = False
-
-        if (not hasattr(self, 'notification_interval') and
-                self.notifications_enabled is True):
-            logger.error("%s: I've got no notification_interval but "
-                         "I've got notifications enabled", self.get_name())
-            state = False
-
-        # if no check_period, means 24x7, like for services
-        if not hasattr(self, 'check_period'):
-            self.check_period = None
-
         if hasattr(self, 'host_name'):
             for char in cls.illegal_object_name_chars:
                 if char in self.host_name:
-                    logger.error("%s: My host_name got the character %s that is not allowed.",
-                                 self.get_name(), char)
+                    msg = "[%s::%s] host_name got an illegal character: %s" % (
+                        self.my_type, self.get_name(), char
+                    )
+                    self.configuration_errors.append(msg)
                     state = False
 
-        return state
+        # Ok now we manage special cases...
+        if self.notifications_enabled and not self.contacts:
+            msg = "[%s::%s] notifications are enabled but no contacts nor contact_groups " \
+                  "property is defined for this host" % (self.my_type, self.get_name())
+            self.configuration_warnings.append(msg)
 
-    def find_service_by_name(self, service_description):
-        """Get a service object from this host
-
-        :param service_description: service_description of the service we want
-        :type service_description:
-        :return: service with service.service_description == service_description
-        :rtype: alignak.objects.service.Services | None
-        """
-        for serv in self.services:
-            if getattr(serv, 'service_description', '__UNNAMED_SERVICE__') == service_description:
-                return serv
-        return None
+        return super(Host, self).is_correct() and state
 
     def get_services(self):
         """Get all services for this host
@@ -819,34 +368,49 @@ class Host(SchedulingItem):
             except AttributeError:  # outch, no name for this template
                 return 'UNNAMEDHOSTTEMPLATE'
 
-    def get_groupname(self):
-        """Get alias of the host's hostgroup
+    def get_groupname(self, hostgroups):
+        """Get name of the first host's hostgroup (alphabetic sort)
 
         :return: host group name
         :rtype: str
-        TODO: Clean this. It returns the last hostgroup encountered
+        TODO: Clean this. It returns the first hostgroup (alphabetic sort)
         """
-        groupname = ''
-        for hostgroup in self.hostgroups:
-            # naglog_result('info', 'get_groupname : %s %s %s' % (hg._id, hg.alias, hg.get_name()))
-            # groupname = "%s [%s]" % (hg.alias, hg.get_name())
-            groupname = "%s" % (hostgroup.alias)
-        return groupname
+        group_names = self.get_groupnames(hostgroups).split(',')
+        return group_names[0]
 
-    def get_groupnames(self):
-        """Get aliases of the host's hostgroups
+    def get_groupalias(self, hostgroups):
+        """Get alias of the first host's hostgroup (alphabetic sort on group alias)
 
-        :return: comma separated aliases of hostgroups
+        :return: host group alias
+        :rtype: str
+        TODO: Clean this. It returns the first hostgroup alias (alphabetic sort)
+        """
+        group_aliases = self.get_groupaliases(hostgroups).split(',')
+        return group_aliases[0]
+
+    def get_groupnames(self, hostgroups):
+        """Get names of the host's hostgroups
+
+        :return: comma separated names of hostgroups alphabetically sorted
         :rtype: str
         """
-        groupnames = ''
-        for hostgroup in self.hostgroups:
-            # naglog_result('info', 'get_groupnames : %s' % (hg.get_name()))
-            if groupnames == '':
-                groupnames = hostgroup.get_name()
-            else:
-                groupnames = "%s, %s" % (groupnames, hostgroup.get_name())
-        return groupnames
+        group_names = []
+        for hostgroup_id in self.hostgroups:
+            hostgroup = hostgroups[hostgroup_id]
+            group_names.append(hostgroup.get_name())
+        return ','.join(sorted(group_names))
+
+    def get_groupaliases(self, hostgroups):
+        """Get aliases of the host's hostgroups
+
+        :return: comma separated aliases of hostgroups alphabetically sorted
+        :rtype: str
+        """
+        group_aliases = []
+        for hostgroup_id in self.hostgroups:
+            hostgroup = hostgroups[hostgroup_id]
+            group_aliases.append(hostgroup.alias)
+        return ','.join(sorted(group_aliases))
 
     def get_full_name(self):
         """Accessor to host_name attribute
@@ -855,14 +419,6 @@ class Host(SchedulingItem):
         :rtype: str
         """
         return self.host_name
-
-    def get_realm(self):
-        """Accessor to realm attribute
-
-        :return: realm object of host
-        :rtype: alignak.objects.realm.Realm
-        """
-        return self.realm
 
     def get_hostgroups(self):
         """Accessor to hostgroups attribute
@@ -880,6 +436,13 @@ class Host(SchedulingItem):
         """
         return self.tags
 
+    # def get_realm_name(self):
+    #     """Accessor to realm attribute
+    #     :return: realm object of host
+    #     :rtype: alignak.objects.realm.Realm
+    #     """
+    #     return self.realm_name
+    #
     def is_linked_with_host(self, other):
         """Check if other is in act_depend_of host attribute
 
@@ -888,112 +451,10 @@ class Host(SchedulingItem):
         :return: True if other in act_depend_of list, otherwise False
         :rtype: bool
         """
-        for (host, status, _, timeperiod, inherits_parent) in self.act_depend_of:
+        for (host, _, _, _) in self.act_depend_of:
             if host == other:
                 return True
         return False
-
-    def del_host_act_dependency(self, other):
-        """Remove act_dependency between two hosts.
-
-        :param other: other host we want to remove the dependency
-        :type other: alignak.objects.host.Host
-        :return: None
-        TODO: Host object should not handle other host obj.
-             We should call obj.del_* on both obj.
-             This is 'Java' style
-        """
-        to_del = []
-        # First we remove in my list
-        for (host, status, n_type, timeperiod, inherits_parent) in self.act_depend_of:
-            if host == other:
-                to_del.append((host, status, n_type, timeperiod, inherits_parent))
-        for tup in to_del:
-            self.act_depend_of.remove(tup)
-
-        # And now in the father part
-        to_del = []
-        for (host, status, n_type, timeperiod, inherits_parent) in other.act_depend_of_me:
-            if host == self:
-                to_del.append((host, status, n_type, timeperiod, inherits_parent))
-        for tup in to_del:
-            other.act_depend_of_me.remove(tup)
-
-        # Remove in child/parents deps too
-        # Me in father list
-        other.child_dependencies.remove(self)
-        # and father list in mine
-        self.parent_dependencies.remove(other)
-
-    def add_host_act_dependency(self, host, status, timeperiod, inherits_parent):
-        """Add logical act_dependency between two hosts.
-
-        :param host: other host we want to add the dependency
-        :type host: alignak.objects.host.Host
-        :param status: notification failure criteria, notification for a dependent host may vary
-        :type status: list
-        :param timeperiod: dependency period. Timeperiod for dependency may vary
-        :type timeperiod: alignak.objects.timeperiod.Timeperiod
-        :param inherits_parent: if this dep will inherit from parents (timeperiod, status)
-        :type inherits_parent: bool
-        :return: None
-        TODO: Host object should not handle other host obj.
-             We should call obj.add_* on both obj.
-             This is 'Java' style
-        TODO: Function seems to be asymmetric, (obj1.call1 , obj2.call1, obj2.call2)
-        """
-        # I add him in MY list
-        self.act_depend_of.append((host, status, 'logic_dep', timeperiod, inherits_parent))
-        # And I add me in it's list
-        host.act_depend_of_me.append((self, status, 'logic_dep', timeperiod, inherits_parent))
-
-        # And the parent/child dep lists too
-        host.register_son_in_parent_child_dependencies(self)
-
-    def add_business_rule_act_dependency(self, host, status, timeperiod, inherits_parent):
-        """Add business act_dependency between two hosts.
-
-        :param host: other host we want to add the dependency
-        :type host: alignak.objects.host.Host
-        :param status: notification failure criteria, notification for a dependent host may vary
-        :type status: list
-        :param timeperiod: dependency period. Timeperiod for dependency may vary
-        :type timeperiod: alignak.objects.timeperiod.Timeperiod
-        :param inherits_parent: if this dep will inherit from parents (timeperiod, status)
-        :type inherits_parent: bool
-        :return: None
-        TODO: Function seems to be asymmetric, (obj1.call1 , obj2.call1, obj2.call2)
-        """
-        # first I add the other the I depend on in MY list
-        # I only register so he know that I WILL be a impact
-        self.act_depend_of_me.append((host, status, 'business_dep',
-                                      timeperiod, inherits_parent))
-
-        # And the parent/child dep lists too
-        self.register_son_in_parent_child_dependencies(host)
-
-    def add_host_chk_dependency(self, host, status, timeperiod, inherits_parent):
-        """Add logic chk_dependency between two hosts.
-
-        :param host: other host we want to add the dependency
-        :type host: alignak.objects.host.Host
-        :param status: notification failure criteria, notification for a dependent host may vary
-        :type status: list
-        :param timeperiod: dependency period. Timeperiod for dependency may vary
-        :type timeperiod: alignak.objects.timeperiod.Timeperiod
-        :param inherits_parent: if this dep will inherit from parents (timeperiod, status)
-        :type inherits_parent: bool
-        :return: None
-        TODO: Function seems to be asymmetric, (obj1.call1 , obj2.call1, obj2.call2)
-        """
-        # I add him in MY list
-        self.chk_depend_of.append((host, status, 'logic_dep', timeperiod, inherits_parent))
-        # And I add me in it's list
-        host.chk_depend_of_me.append((self, status, 'logic_dep', timeperiod, inherits_parent))
-
-        # And we fill parent/childs dep for brok purpose
-        # Here self depend on host
-        host.register_son_in_parent_child_dependencies(self)
 
     def add_service_link(self, service):
         """Add a service to the service list of this host
@@ -1020,10 +481,12 @@ class Host(SchedulingItem):
 
         :param service:
         :type service: alignak.objects.service.Service
-        :return: True if is ecvluded, otherwise False
+        :return: True if is excluded, otherwise False
         :rtype: bool
         """
-        return self.is_excluded_for_sdesc(service.service_description, service.is_tpl())
+        return self.is_excluded_for_sdesc(
+            getattr(service, 'service_description', None), service.is_tpl()
+        )
 
     def is_excluded_for_sdesc(self, sdesc, is_tpl=False):
         """ Check whether this host should have the passed service *description*
@@ -1053,45 +516,7 @@ class Host(SchedulingItem):
 #                                 |___/
 ####
 
-    def set_unreachable(self):
-        """Set unreachable: all our parents are down
-        Unreachable is different from down even if the state id is the same
-
-        :return:None
-        """
-        now = time.time()
-        self.state_id = 2
-        self.state = 'UNREACHABLE'
-        self.last_time_unreachable = int(now)
-
-    def set_impact_state(self):
-        """We just go an impact, so we go unreachable
-        But only if we enable this state change in the conf
-
-        :return: None
-        """
-        cls = self.__class__
-        if cls.enable_problem_impacts_states_change:
-            # Keep a trace of the old state (problem came back before
-            # a new checks)
-            self.state_before_impact = self.state
-            self.state_id_before_impact = self.state_id
-            # This flag will know if we override the impact state
-            self.state_changed_since_impact = False
-            self.state = 'UNREACHABLE'  # exit code UNDETERMINED
-            self.state_id = 2
-
-    def unset_impact_state(self):
-        """Unset impact, only if impact state change is set in configuration
-
-        :return: None
-        """
-        cls = self.__class__
-        if cls.enable_problem_impacts_states_change and not self.state_changed_since_impact:
-            self.state = self.state_before_impact
-            self.state_id = self.state_id_before_impact
-
-    def set_state_from_exit_status(self, status):
+    def set_state_from_exit_status(self, status, notif_period, hosts, services):
         """Set the state in UP, DOWN, or UNDETERMINED
         with the status of a check. Also update last_state
 
@@ -1109,11 +534,11 @@ class Host(SchedulingItem):
         # And only if we enable the impact state change
         cls = self.__class__
         if (cls.enable_problem_impacts_states_change and
-                self.is_impact and
-                not self.state_changed_since_impact):
+                self.is_impact and not self.state_changed_since_impact):
             self.last_state = self.state_before_impact
         else:
             self.last_state = self.state
+
         # There is no 1 case because it should have been managed by the caller for a host
         # like the schedulingitem::consume method.
         if status == 0:
@@ -1126,6 +551,11 @@ class Host(SchedulingItem):
             self.state_id = 1
             self.last_time_down = int(self.last_state_update)
             state_code = 'd'
+        elif status == 4:
+            self.state = 'UNREACHABLE'
+            self.state_id = 4
+            self.last_time_unreachable = int(self.last_state_update)
+            state_code = 'x'
         else:
             self.state = 'DOWN'  # exit code UNDETERMINED
             self.state_id = 1
@@ -1133,14 +563,18 @@ class Host(SchedulingItem):
             state_code = 'd'
         if state_code in self.flap_detection_options:
             self.add_flapping_change(self.state != self.last_state)
-        if self.state != self.last_state:
+            # Now we add a value, we update the is_flapping prop
+            self.update_flapping(notif_period, hosts, services)
+
+        if self.state != self.last_state and \
+                not (self.state == "DOWN" and self.last_state == "UNREACHABLE"):
             self.last_state_change = self.last_state_update
         self.duration_sec = now - self.last_state_change
 
     def is_state(self, status):
         """Return if status match the current host status
 
-        :param status: status to compare ( "o", "d", "u"). Usually comes from config files
+        :param status: status to compare ( "o", "d", "x"). Usually comes from config files
         :type status: str
         :return: True if status <=> self.status, otherwise False
         :rtype: bool
@@ -1152,7 +586,7 @@ class Host(SchedulingItem):
             return True
         elif status == 'd' and self.state == 'DOWN':
             return True
-        elif status == 'u' and self.state == 'UNREACHABLE':
+        elif status in ['u', 'x'] and self.state == 'UNREACHABLE':
             return True
         return False
 
@@ -1168,17 +602,50 @@ class Host(SchedulingItem):
             last_time_non_up = 0
         return last_time_non_up
 
+    def raise_check_result(self):
+        """Raise ACTIVE CHECK RESULT entry
+        Example : "ACTIVE HOST CHECK: server;DOWN;HARD;1;I don't know what to say..."
+
+        :return: None
+        """
+        log_level = 'info'
+        if self.state == 'DOWN':
+            log_level = 'error'
+        elif self.state == 'UNREACHABLE':
+            log_level = 'warning'
+        brok = make_monitoring_log(
+            log_level, 'ACTIVE HOST CHECK: %s;%s;%s;%d;%s' % (
+                self.get_name(), self.state, self.state_type, self.attempt, self.output
+            )
+        )
+        self.broks.append(brok)
+
     def raise_alert_log_entry(self):
-        """Raise HOST ALERT entry (critical level)
+        """Raise HOST ALERT entry
         Format is : "HOST ALERT: *get_name()*;*state*;*state_type*;*attempt*;*output*"
         Example : "HOST ALERT: server;DOWN;HARD;1;I don't know what to say..."
 
         :return: None
         """
-        naglog_result('critical',
-                      'HOST ALERT: %s;%s;%s;%d;%s' % (self.get_name(),
-                                                      self.state, self.state_type,
-                                                      self.attempt, self.output))
+        log_level = 'info'
+        if self.state == 'DOWN':
+            log_level = 'error'
+        if self.state == 'UNREACHABLE':
+            log_level = 'warning'
+        brok = make_monitoring_log(
+            log_level, 'HOST ALERT: %s;%s;%s;%d;%s' % (
+                self.get_name(), self.state, self.state_type, self.attempt, self.output
+            )
+        )
+        self.broks.append(brok)
+
+        if 'TEST_LOG_ALERTS' in os.environ:
+            if os.environ['TEST_LOG_ALERTS'] == 'WARNING':
+                logger.warning('HOST ALERT: %s;%s;%s;%d;%s', self.get_name(), self.state,
+                               self.state_type, self.attempt, self.output)
+            else:
+                logger.info('HOST ALERT: %s;%s;%s;%d;%s', self.get_name(), self.state,
+                            self.state_type, self.attempt, self.output)
 
     def raise_initial_state(self):
         """Raise CURRENT HOST ALERT entry (info level)
@@ -1187,11 +654,18 @@ class Host(SchedulingItem):
 
         :return: None
         """
+        log_level = 'info'
+        if self.state == 'DOWN':
+            log_level = 'error'
+        if self.state == 'UNREACHABLE':
+            log_level = 'warning'
         if self.__class__.log_initial_states:
-            naglog_result('info',
-                          'CURRENT HOST STATE: %s;%s;%s;%d;%s' % (self.get_name(),
-                                                                  self.state, self.state_type,
-                                                                  self.attempt, self.output))
+            brok = make_monitoring_log(
+                log_level, 'CURRENT HOST STATE: %s;%s;%s;%d;%s' % (
+                    self.get_name(), self.state, self.state_type, self.attempt, self.output
+                )
+            )
+            self.broks.append(brok)
 
     def raise_freshness_log_entry(self, t_stale_by, t_threshold):
         """Raise freshness alert entry (warning level)
@@ -1206,14 +680,14 @@ class Host(SchedulingItem):
         :type t_threshold: int
         :return: None
         """
-        logger.warning("The results of host '%s' are stale by %s "
-                       "(threshold=%s).  I'm forcing an immediate check "
-                       "of the host.",
+        logger.warning("The freshness period of host '%s' is expired by %s "
+                       "(threshold=%s).  I'm forcing the state to freshness state (%s).",
                        self.get_name(),
                        format_t_into_dhms_format(t_stale_by),
-                       format_t_into_dhms_format(t_threshold))
+                       format_t_into_dhms_format(t_threshold),
+                       self.freshness_state)
 
-    def raise_notification_log_entry(self, notif):
+    def raise_notification_log_entry(self, notif, contact, host_ref=None):
         """Raise HOST NOTIFICATION entry (critical level)
         Format is : "HOST NOTIFICATION: *contact.get_name()*;*self.get_name()*;*state*;
                      *command.get_name()*;*output*"
@@ -1223,7 +697,10 @@ class Host(SchedulingItem):
         :type notif: alignak.objects.notification.Notification
         :return: None
         """
-        contact = notif.contact
+        if not self.__class__.log_notifications:
+            return
+
+        log_level = 'info'
         command = notif.command_call
         if notif.type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'CUSTOM',
                           'ACKNOWLEDGEMENT', 'FLAPPINGSTART', 'FLAPPINGSTOP',
@@ -1231,11 +708,25 @@ class Host(SchedulingItem):
             state = '%s (%s)' % (notif.type, self.state)
         else:
             state = self.state
-        if self.__class__.log_notifications:
-            naglog_result('critical',
-                          "HOST NOTIFICATION: %s;%s;%s;%s;%s" % (contact.get_name(),
-                                                                 self.get_name(), state,
-                                                                 command.get_name(), self.output))
+            if self.state == 'UNREACHABLE':
+                log_level = 'warning'
+            if self.state == 'DOWN':
+                log_level = 'error'
+
+        brok = make_monitoring_log(
+            log_level, "HOST NOTIFICATION: %s;%s;%s;%s;%s" % (
+                contact.get_name(), self.get_name(), state, command.get_name(), self.output
+            )
+        )
+        self.broks.append(brok)
+
+        if 'TEST_LOG_NOTIFICATIONS' in os.environ:
+            if os.environ['TEST_LOG_NOTIFICATIONS'] == 'WARNING':
+                logger.warning("HOST NOTIFICATION: %s;%s;%s;%s;%s", contact.get_name(),
+                               self.get_name(), state, command.get_name(), self.output)
+            else:
+                logger.info("HOST NOTIFICATION: %s;%s;%s;%s;%s", contact.get_name(),
+                            self.get_name(), state, command.get_name(), self.output)
 
     def raise_event_handler_log_entry(self, command):
         """Raise HOST EVENT HANDLER entry (critical level)
@@ -1247,11 +738,20 @@ class Host(SchedulingItem):
         :type command: alignak.objects.command.Command
         :return: None
         """
-        if self.__class__.log_event_handlers:
-            naglog_result('critical',
-                          "HOST EVENT HANDLER: %s;%s;%s;%s;%s" % (self.get_name(),
-                                                                  self.state, self.state_type,
-                                                                  self.attempt, command.get_name()))
+        if not self.__class__.log_event_handlers:
+            return
+
+        log_level = 'info'
+        if self.state == 'UNREACHABLE':
+            log_level = 'warning'
+        if self.state == 'DOWN':
+            log_level = 'error'
+        brok = make_monitoring_log(
+            log_level, "HOST EVENT HANDLER: %s;%s;%s;%s;%s" % (
+                self.get_name(), self.state, self.state_type, self.attempt, command.get_name()
+            )
+        )
+        self.broks.append(brok)
 
     def raise_snapshot_log_entry(self, command):
         """Raise HOST SNAPSHOT entry (critical level)
@@ -1263,11 +763,20 @@ class Host(SchedulingItem):
         :type command: alignak.objects.command.Command
         :return: None
         """
-        if self.__class__.log_event_handlers:
-            naglog_result('critical',
-                          "HOST SNAPSHOT: %s;%s;%s;%s;%s" % (self.get_name(),
-                                                             self.state, self.state_type,
-                                                             self.attempt, command.get_name()))
+        if not self.__class__.log_snapshots:
+            return
+
+        log_level = 'info'
+        if self.state == 'UNREACHABLE':
+            log_level = 'warning'
+        if self.state == 'DOWN':
+            log_level = 'error'
+        brok = make_monitoring_log(
+            log_level, "HOST SNAPSHOT: %s;%s;%s;%s;%s" % (
+                self.get_name(), self.state, self.state_type, self.attempt, command.get_name()
+            )
+        )
+        self.broks.append(brok)
 
     def raise_flapping_start_log_entry(self, change_ratio, threshold):
         """Raise HOST FLAPPING ALERT START entry (critical level)
@@ -1284,11 +793,15 @@ class Host(SchedulingItem):
         :type threshold: float
         :return: None
         """
-        naglog_result('critical',
-                      "HOST FLAPPING ALERT: %s;STARTED; "
-                      "Host appears to have started flapping "
-                      "(%.1f%% change >= %.1f%% threshold)"
-                      % (self.get_name(), change_ratio, threshold))
+        if not self.__class__.log_flappings:
+            return
+
+        brok = make_monitoring_log(
+            'info', "HOST FLAPPING ALERT: %s;STARTED; Host appears to have started flapping "
+                    "(%.1f%% change >= %.1f%% threshold)" %
+                    (self.get_name(), change_ratio, threshold)
+        )
+        self.broks.append(brok)
 
     def raise_flapping_stop_log_entry(self, change_ratio, threshold):
         """Raise HOST FLAPPING ALERT STOPPED entry (critical level)
@@ -1305,11 +818,15 @@ class Host(SchedulingItem):
         :type threshold: float
         :return: None
         """
-        naglog_result('critical',
-                      "HOST FLAPPING ALERT: %s;STOPPED; "
-                      "Host appears to have stopped flapping "
-                      "(%.1f%% change < %.1f%% threshold)"
-                      % (self.get_name(), change_ratio, threshold))
+        if not self.__class__.log_flappings:
+            return
+
+        brok = make_monitoring_log(
+            'info', "HOST FLAPPING ALERT: %s;STOPPED; Host appears to have stopped flapping "
+                    "(%.1f%% change < %.1f%% threshold)" %
+                    (self.get_name(), change_ratio, threshold)
+        )
+        self.broks.append(brok)
 
     def raise_no_next_check_log_entry(self):
         """Raise no scheduled check entry (warning level)
@@ -1324,6 +841,28 @@ class Host(SchedulingItem):
                        "because there is not future valid time",
                        self.get_name())
 
+    def raise_acknowledge_log_entry(self):
+        """Raise HOST ACKNOWLEDGE ALERT entry (critical level)
+
+        :return: None
+        """
+        brok = make_monitoring_log(
+            'info', "HOST ACKNOWLEDGE ALERT: %s;STARTED; "
+                    "Host problem has been acknowledged" % self.get_name()
+        )
+        self.broks.append(brok)
+
+    def raise_unacknowledge_log_entry(self):
+        """Raise HOST ACKNOWLEDGE STOPPED entry (critical level)
+
+        :return: None
+        """
+        brok = make_monitoring_log(
+            'info', "HOST ACKNOWLEDGE ALERT: %s;EXPIRED; "
+                    "Host problem acknowledge expired" % self.get_name()
+        )
+        self.broks.append(brok)
+
     def raise_enter_downtime_log_entry(self):
         """Raise HOST DOWNTIME ALERT entry (critical level)
         Format is : "HOST DOWNTIME ALERT: *get_name()*;STARTED;
@@ -1333,10 +872,11 @@ class Host(SchedulingItem):
 
         :return: None
         """
-        naglog_result('critical',
-                      "HOST DOWNTIME ALERT: %s;STARTED; "
-                      "Host has entered a period of scheduled downtime"
-                      % (self.get_name()))
+        brok = make_monitoring_log(
+            'info', "HOST DOWNTIME ALERT: %s;STARTED; "
+                    "Host has entered a period of scheduled downtime" % (self.get_name())
+        )
+        self.broks.append(brok)
 
     def raise_exit_downtime_log_entry(self):
         """Raise HOST DOWNTIME ALERT entry (critical level)
@@ -1347,10 +887,11 @@ class Host(SchedulingItem):
 
         :return: None
         """
-        naglog_result('critical',
-                      "HOST DOWNTIME ALERT: %s;STOPPED; Host has "
-                      "exited from a period of scheduled downtime"
-                      % (self.get_name()))
+        brok = make_monitoring_log(
+            'info', "HOST DOWNTIME ALERT: %s;STOPPED; "
+                    "Host has exited from a period of scheduled downtime" % (self.get_name())
+        )
+        self.broks.append(brok)
 
     def raise_cancel_downtime_log_entry(self):
         """Raise HOST DOWNTIME ALERT entry (critical level)
@@ -1361,17 +902,18 @@ class Host(SchedulingItem):
 
         :return: None
         """
-        naglog_result('critical',
-                      "HOST DOWNTIME ALERT: %s;CANCELLED; "
-                      "Scheduled downtime for host has been cancelled."
-                      % (self.get_name()))
+        brok = make_monitoring_log(
+            'info', "HOST DOWNTIME ALERT: %s;CANCELLED; "
+                    "Scheduled downtime for host has been cancelled." % (self.get_name())
+        )
+        self.broks.append(brok)
 
     def manage_stalking(self, check):
         """Check if the host need stalking or not (immediate recheck)
         If one stalking_options matches the exit_status ('o' <=> 0 ...) then stalk is needed
         Raise a log entry (info level) if stalk is needed
 
-        :param check: finshed check (check.status == 'waitconsume')
+        :param check: finished check (check.status == 'waitconsume')
         :type check: alignak.check.Check
         :return: None
         """
@@ -1383,45 +925,10 @@ class Host(SchedulingItem):
                 need_stalk = True
             elif check.exit_status == 2 and 'd' in self.stalking_options:
                 need_stalk = True
-            elif check.exit_status == 3 and 'u' in self.stalking_options:
-                need_stalk = True
             if check.output != self.output:
                 need_stalk = False
         if need_stalk:
             logger.info("Stalking %s: %s", self.get_name(), self.output)
-
-    def fill_parents_dependency(self):
-        """Add network act_dependency for each parent of this host.
-        This dependency is always effective (No timeperiod and all states) and inherits from parent
-
-        :return: None
-        TODO: Host object should not handle other host obj.
-             We should call obj._fun_ on both obj.
-             This is 'Java' style
-        """
-        for parent in self.parents:
-            if parent is not None:
-                # I add my parent in my list
-                self.act_depend_of.append((parent, ['d', 'u', 's', 'f'], 'network_dep', None, True))
-
-                # And I register myself in my parent list too
-                parent.register_child(self)
-
-                # And add the parent/child dep filling too, for broking
-                parent.register_son_in_parent_child_dependencies(self)
-
-    def register_child(self, child):
-        """Add a child to child list
-
-        :param child: host to add
-        :type child: alignak.objects.host.Host
-        :return: None
-        """
-        # We've got 2 list: a list for our child
-        # where we just put the pointer, it's just for broking
-        # and another with all data, useful for 'running' part
-        self.childs.append(child)
-        self.act_depend_of_me.append((child, ['d', 'u', 's', 'f'], 'network_dep', None, True))
 
     def get_data_for_checks(self):
         """Get data for a check
@@ -1451,7 +958,7 @@ class Host(SchedulingItem):
         """
         return [self, contact, notif]
 
-    def notification_is_blocked_by_contact(self, notif, contact):
+    def notification_is_blocked_by_contact(self, notifways, timeperiods, notif, contact):
         """Check if the notification is blocked by this contact.
 
         :param notif: notification created earlier
@@ -1461,7 +968,8 @@ class Host(SchedulingItem):
         :return: True if the notification is blocked, False otherwise
         :rtype: bool
         """
-        return not contact.want_host_notification(self.last_chk, self.state, notif.type,
+        return not contact.want_host_notification(notifways, timeperiods,
+                                                  self.last_chk, self.state, notif.type,
                                                   self.business_impact, notif.command_call)
 
     def get_duration_sec(self):
@@ -1485,7 +993,9 @@ class Host(SchedulingItem):
         hours, mins = divmod(mins, 60)
         return "%02dh %02dm %02ds" % (hours, mins, secs)
 
-    def notification_is_blocked_by_item(self, n_type, t_wished=None):
+    def notification_is_blocked_by_item(self, notification_period, hosts, services,
+                                        n_type, t_wished=None):
+        # pylint: disable=too-many-return-statements
         """Check if a notification is blocked by the host.
         Conditions are ONE of the following::
 
@@ -1520,93 +1030,98 @@ class Host(SchedulingItem):
         # custom notification -> false
 
         # Block if notifications are program-wide disabled
-        if not self.enable_notifications:
-            return True
-
-        # Does the notification period allow sending out this notification?
-        if (self.notification_period is not None and
-                not self.notification_period.is_time_valid(t_wished)):
-            return True
-
         # Block if notifications are disabled for this host
-        if not self.notifications_enabled:
-            return True
-
         # Block if the current status is in the notification_options d,u,r,f,s
-        if 'n' in self.notification_options:
+        # Does the notification period allow sending out this notification?
+        if not self.enable_notifications or \
+                not self.notifications_enabled or \
+                'n' in self.notification_options or \
+                (notification_period is not None and
+                 not notification_period.is_time_valid(t_wished)):
+            logger.debug("Host: %s, notification %s sending is blocked by globals",
+                         self.get_name(), n_type)
             return True
 
-        if n_type in ('PROBLEM', 'RECOVERY'):
-            if self.state == 'DOWN' and 'd' not in self.notification_options:
-                return True
-            if self.state == 'UP' and 'r' not in self.notification_options:
-                return True
-            if self.state == 'UNREACHABLE' and 'u' not in self.notification_options:
-                return True
-        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED')
-                and 'f' not in self.notification_options):
+        if n_type in ('PROBLEM', 'RECOVERY') and (
+                self.state == 'DOWN' and 'd' not in self.notification_options or
+                self.state == 'UP' and 'r' not in self.notification_options or
+                self.state == 'UNREACHABLE' and 'x' not in self.notification_options):
+            logger.debug("Host: %s, notification %s sending is blocked by options",
+                         self.get_name(), n_type)
             return True
-        if (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED')
-                and 's' not in self.notification_options):
+
+        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED') and
+                'f' not in self.notification_options):
+            logger.debug("Host: %s, notification %s sending is blocked by options",
+                         n_type, self.get_name())
+            return True
+
+        if (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED') and
+                's' not in self.notification_options):
+            logger.debug("Host: %s, notification %s sending is blocked by options",
+                         n_type, self.get_name())
+            return True
+
+        # Flapping notifications are blocked when in scheduled downtime
+        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED') and
+                self.scheduled_downtime_depth > 0):
+            logger.debug("Host: %s, notification %s sending is blocked by downtime",
+                         self.get_name(), n_type)
             return True
 
         # Acknowledgements make no sense when the status is ok/up
-        if n_type == 'ACKNOWLEDGEMENT':
-            if self.state == self.ok_up:
-                return True
-
-        # Flapping
-        if n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
-            # TODO block if not notify_on_flapping
-            if self.scheduled_downtime_depth > 0:
-                return True
+        if n_type == 'ACKNOWLEDGEMENT' and self.state == self.ok_up:
+            logger.debug("Host: %s, notification %s sending is blocked by current state",
+                         self.get_name(), n_type)
+            return True
 
         # When in deep downtime, only allow end-of-downtime notifications
         # In depth 1 the downtime just started and can be notified
         if self.scheduled_downtime_depth > 1 and n_type not in ('DOWNTIMEEND', 'DOWNTIMECANCELLED'):
+            logger.debug("Host: %s, notification %s sending is blocked by deep downtime",
+                         self.get_name(), n_type)
             return True
 
         # Block if in a scheduled downtime and a problem arises
-        if self.scheduled_downtime_depth > 0 and n_type in ('PROBLEM', 'RECOVERY'):
+        if self.scheduled_downtime_depth > 0 and \
+                n_type in ('PROBLEM', 'RECOVERY', 'ACKNOWLEDGEMENT'):
+            logger.debug("Host: %s, notification %s sending is blocked by downtime",
+                         self.get_name(), n_type)
             return True
 
         # Block if the status is SOFT
         if self.state_type == 'SOFT' and n_type == 'PROBLEM':
+            logger.debug("Host: %s, notification %s sending is blocked by soft state",
+                         self.get_name(), n_type)
             return True
 
         # Block if the problem has already been acknowledged
-        if self.problem_has_been_acknowledged and n_type != 'ACKNOWLEDGEMENT':
+        if self.problem_has_been_acknowledged and n_type not in ('ACKNOWLEDGEMENT',
+                                                                 'DOWNTIMESTART',
+                                                                 'DOWNTIMEEND',
+                                                                 'DOWNTIMECANCELLED'):
+            logger.debug("Host: %s, notification %s sending is blocked by acknowledged",
+                         self.get_name(), n_type)
             return True
 
         # Block if flapping
         if self.is_flapping and n_type not in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
+            logger.debug("Host: %s, notification %s sending is blocked by flapping",
+                         self.get_name(), n_type)
             return True
 
         # Block if business rule smart notifications is enabled and all its
-        # childs have been acknowledged or are under downtime.
+        # children have been acknowledged or are under downtime.
         if self.got_business_rule is True \
                 and self.business_rule_smart_notifications is True \
-                and self.business_rule_notification_is_blocked() is True \
+                and self.business_rule_notification_is_blocked(hosts, services) is True \
                 and n_type == 'PROBLEM':
+            logger.debug("Host: %s, notification %s sending is blocked by business rules",
+                         self.get_name(), n_type)
             return True
 
+        logger.debug("Host: %s, notification %s sending is not blocked", self.get_name(), n_type)
         return False
-
-    def get_obsessive_compulsive_processor_command(self):
-        """Create action for obsessive compulsive commands if such option is enabled
-
-        :return: None
-        """
-        cls = self.__class__
-        if not cls.obsess_over or not self.obsess_over_host:
-            return
-        macroresolver = MacroResolver()
-        data = self.get_data_for_event_handler()
-        cmd = macroresolver.resolve_command(cls.ochp_command, data)
-        e_handler = EventHandler(cmd, timeout=cls.ochp_timeout)
-
-        # ok we can put it in our temp action queue
-        self.actions.append(e_handler)
 
     def get_total_services(self):
         """Get the number of services for this host
@@ -1616,7 +1131,7 @@ class Host(SchedulingItem):
         """
         return str(len(self.services))
 
-    def _tot_services_by_state(self, state):
+    def _tot_services_by_state(self, services, state):
         """Get the number of service in the specified state
 
         :param state: state to filter service
@@ -1625,12 +1140,57 @@ class Host(SchedulingItem):
         :rtype: int
         """
         return str(sum(1 for s in self.services
-                       if s.state_id == state))
+                       if services[s].state_id == state))
 
-    get_total_services_ok = lambda s: s._tot_services_by_state(0)
-    get_total_services_warning = lambda s: s._tot_services_by_state(1)
-    get_total_services_critical = lambda s: s._tot_services_by_state(2)
-    get_total_services_unknown = lambda s: s._tot_services_by_state(3)
+    def get_total_services_ok(self, services):
+        """Get number of services ok
+
+        :param services:
+        :type services:
+        :return: Number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state(services, 0)
+
+    def get_total_services_warning(self, services):
+        """Get number of services warning
+
+        :param services:
+        :type services:
+        :return: Number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state(services, 1)
+
+    def get_total_services_critical(self, services):
+        """Get number of services critical
+
+        :param services:
+        :type services:
+        :return: Number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state(services, 2)
+
+    def get_total_services_unknown(self, services):
+        """Get number of services unknown
+
+        :param services:
+        :type services:
+        :return: Number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state(services, 3)
+
+    def get_total_services_unreachable(self, services):
+        """Get number of services unreachable
+
+        :param services:
+        :type services:
+        :return: Number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state(services, 4)
 
     def get_ack_author_name(self):
         """Get the author of the acknowledgement
@@ -1663,7 +1223,15 @@ class Host(SchedulingItem):
         """
         return self.check_command.get_name()
 
-    def get_short_status(self):
+    def get_snapshot_command(self):
+        """Wrapper to get the name of the snapshot_command attribute
+
+        :return: snapshot_command name
+        :rtype: str
+        """
+        return self.snapshot_command.get_name()
+
+    def get_short_status(self, hosts, services):
         """Get the short status of this host
 
         :return: "U", "D", "N" or "n/a" based on host state_id or business_rule state
@@ -1672,14 +1240,14 @@ class Host(SchedulingItem):
         mapping = {
             0: "U",
             1: "D",
-            2: "N",
+            4: "N",
         }
         if self.got_business_rule:
-            return mapping.get(self.business_rule.get_state(), "n/a")
-        else:
-            return mapping.get(self.state_id, "n/a")
+            return mapping.get(self.business_rule.get_state(hosts, services), "n/a")
 
-    def get_status(self):
+        return mapping.get(self.state_id, "n/a")
+
+    def get_status(self, hosts, services):
         """Get the status of this host
 
         :return: "UP", "DOWN", "UNREACHABLE" or "n/a" based on host state_id or business_rule state
@@ -1689,14 +1257,14 @@ class Host(SchedulingItem):
             mapping = {
                 0: "UP",
                 1: "DOWN",
-                2: "UNREACHABLE",
+                4: "UNREACHABLE",
             }
-            return mapping.get(self.business_rule.get_state(), "n/a")
-        else:
-            return self.state
+            return mapping.get(self.business_rule.get_state(hosts, services), "n/a")
+
+        return self.state
 
     def get_downtime(self):
-        """Accessor to scheduled_downtime_depth attribue
+        """Accessor to scheduled_downtime_depth attribute
 
         :return: scheduled downtime depth
         :rtype: str
@@ -1705,16 +1273,17 @@ class Host(SchedulingItem):
         return str(self.scheduled_downtime_depth)
 
 
-class Hosts(Items):
+class Hosts(SchedulingItems):
     """Class for the hosts lists. It's mainly for configuration
 
     """
     name_property = "host_name"  # use for the search by name
     inner_class = Host  # use for know what is in items
 
-    def linkify(self, timeperiods=None, commands=None, contacts=None, realms=None,
-                resultmodulations=None, businessimpactmodulations=None, escalations=None,
-                hostgroups=None, triggers=None, checkmodulations=None, macromodulations=None):
+    def linkify(self, timeperiods=None, commands=None, contacts=None,  # pylint: disable=R0913
+                realms=None, resultmodulations=None, businessimpactmodulations=None,
+                escalations=None, hostgroups=None, triggers=None,
+                checkmodulations=None, macromodulations=None):
         """Create link between objects::
 
          * hosts -> timeperiods
@@ -1790,11 +1359,11 @@ class Hosts(Items):
                 parent = parent.strip()
                 o_parent = self.find_by_name(parent)
                 if o_parent is not None:
-                    new_parents.append(o_parent)
+                    new_parents.append(o_parent.uuid)
                 else:
-                    err = "the parent '%s' on host '%s' is unknown!" % (parent, host.get_name())
-                    self.configuration_warnings.append(err)
-            # print "Me,", h.host_name, "define my parents", new_parents
+                    err = "the parent '%s' for the host '%s' is unknown!" % (parent,
+                                                                             host.get_name())
+                    self.configuration_errors.append(err)
             # We find the id, we replace the names
             host.parents = new_parents
 
@@ -1805,29 +1374,29 @@ class Hosts(Items):
         :type realms: alignak.objects.realm.Realms
         :return: None
         """
-        default_realm = None
-        for realm in realms:
-            if getattr(realm, 'default', False):
-                default_realm = realm
-        # if default_realm is None:
-        #    print "Error: there is no default realm defined!"
+        default_realm = realms.get_default()
         for host in self:
-            if host.realm is not None:
+            if host.realm != '':
                 realm = realms.find_by_name(host.realm.strip())
                 if realm is None:
                     err = "the host %s got an invalid realm (%s)!" % (host.get_name(), host.realm)
                     host.configuration_errors.append(err)
-                host.realm = realm
+                    # This to avoid having an host.realm as a string name
+                    host.realm_name = host.realm
+                    host.realm = None
+                else:
+                    host.realm = realm.uuid
+                    host.realm_name = realm.get_name()  # Needed for the specific $HOSTREALM$ macro
             else:
-                # print("Notice: applying default realm %s to host %s"
-                #       % (default_realm.get_name(), h.get_name()))
-                host.realm = default_realm
+                # Applying default realm to an host
+                host.realm = default_realm.uuid if default_realm else ''
+                host.realm_name = default_realm.get_name() if default_realm else ''
                 host.got_default_realm = True
 
     def linkify_h_by_hg(self, hostgroups):
         """Link hosts with hostgroups
 
-        :param hostgroups: realms object to link with
+        :param hostgroups: hostgroups object to link with
         :type hostgroups: alignak.objects.hostgroup.Hostgroups
         :return: None
         """
@@ -1840,15 +1409,15 @@ class Hosts(Items):
                     # TODO: should an unknown hostgroup raise an error ?
                     hostgroup = hostgroups.find_by_name(hg_name)
                     if hostgroup is not None:
-                        new_hostgroups.append(hostgroup)
+                        new_hostgroups.append(hostgroup.uuid)
                     else:
                         err = ("the hostgroup '%s' of the host '%s' is "
                                "unknown" % (hg_name, host.host_name))
                         host.configuration_errors.append(err)
             host.hostgroups = new_hostgroups
 
-    def explode(self, hostgroups, contactgroups, triggers):
-        """Explode hosts, hostrgroups and triggers::
+    def explode(self, hostgroups, contactgroups):
+        """Explode hosts with hostgroups, contactgroups::
 
         * Add triggers source to host triggers
         * Add contact from contactgroups to host contacts
@@ -1862,10 +1431,6 @@ class Hosts(Items):
         :type triggers: alignak.objects.trigger.Triggers
         :return: None
         """
-
-        # items::explode_trigger_string_into_triggers
-        self.explode_trigger_string_into_triggers(triggers)
-
         for template in self.templates.itervalues():
             # items::explode_contact_groups_into_contacts
             # take all contacts from our contact_groups into our contact property
@@ -1883,12 +1448,27 @@ class Hosts(Items):
                     hostgroups.add_member(hname, hostgroup.strip())
 
     def apply_dependencies(self):
-        """Loop on hosts and call Host.fill_parents_dependency()
+        """Loop on hosts and register dependency between parent and son
+
+        call Host.fill_parents_dependency()
 
         :return: None
         """
         for host in self:
-            host.fill_parents_dependency()
+            for parent_id in host.parents:
+                if parent_id is None:
+                    continue
+                parent = self[parent_id]
+                if parent.active_checks_enabled:
+                    # Add parent in the list
+                    host.act_depend_of.append((parent_id, ['d', 'x', 's', 'f'], '', True))
+
+                    # Add child in the parent
+                    parent.act_depend_of_me.append((host.uuid, ['d', 'x', 's', 'f'], '', True))
+
+                    # And add the parent/child dep filling too, for broking
+                    parent.child_dependencies.add(host.uuid)
+                    host.parent_dependencies.add(parent_id)
 
     def find_hosts_that_use_template(self, tpl_name):
         """Find hosts that use the template defined in argument tpl_name
@@ -1900,23 +1480,34 @@ class Hosts(Items):
         """
         return [h.host_name for h in self if tpl_name in h.tags if hasattr(h, "host_name")]
 
-    def create_business_rules(self, hosts, services):
-        """
-        Loop on hosts and call Host.create_business_rules(hosts, services)
+    def is_correct(self):
+        """Check if the hosts list configuration is correct ::
 
-        :param hosts: hosts to link to
-        :type hosts: alignak.objects.host.Hosts
-        :param services: services to link to
-        :type services: alignak.objects.service.Services
-        :return: None
-        """
-        for host in self:
-            host.create_business_rules(hosts, services)
+        * check if any loop exists in each host dependencies
+        * Call our parent class is_correct checker
 
-    def create_business_rules_dependencies(self):
-        """Loop on hosts and call Host.create_business_rules_dependencies()
-
-        :return: None
+        :return: True if the configuration is correct, otherwise False
+        :rtype: bool
         """
-        for host in self:
-            host.create_business_rules_dependencies()
+        state = True
+
+        # Internal checks before executing inherited function...
+        loop = self.no_loop_in_parents("self", "parents")
+        if loop:
+            msg = "Loop detected while checking hosts "
+            self.configuration_errors.append(msg)
+            state = False
+            for uuid, item in self.items.iteritems():
+                for elem in loop:
+                    if elem == uuid:
+                        msg = "Host %s is parent in dependency defined in %s" % (
+                            item.get_name(), item.imported_from
+                        )
+                        self.configuration_errors.append(msg)
+                    elif elem in item.parents:
+                        msg = "Host %s is child in dependency defined in %s" % (
+                            self[elem].get_name(), self[elem].imported_from
+                        )
+                        self.configuration_errors.append(msg)
+
+        return super(Hosts, self).is_correct() and state

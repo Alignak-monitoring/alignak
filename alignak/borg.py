@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -47,14 +47,17 @@
 """
 
 
-class Borg(object):
+class Borg(object):  # pylint: disable=R0903
     """Borg class define a simple __shared_state class attribute.
     __dict__ points to this value when calling __init__
 
-    TODO: Is this class really needed? Only subclassed by MacroSolver
+    This is used to make a Singleton-like pattern with a python object that inherits from the Borg.
+
+    The Singleton design pattern (DP) has a catchy name, but the wrong focus -- on identity
+    rather than on state. The Borg design pattern has all instances share state instead,
+    and Python makes it, literally, a snap.
     """
     __shared_state = {}
 
     def __init__(self):
-        # print "Init Borg", self.__dict__, self.__class__.__shared_state
         self.__dict__ = self.__class__.__shared_state

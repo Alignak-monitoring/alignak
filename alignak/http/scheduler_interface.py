@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -16,16 +16,16 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
-"""This module provide a specific HTTP interface for a SCheduler."""
+"""This module provide a specific HTTP interface for a Scheduler."""
 
+import logging
 import cherrypy
-import base64
-import cPickle
-import zlib
 
-from alignak.log import logger
 from alignak.http.generic_interface import GenericInterface
 from alignak.util import average_percentile
+from alignak.misc.serialization import serialize, unserialize
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class SchedulerInterface(GenericInterface):
@@ -33,9 +33,9 @@ class SchedulerInterface(GenericInterface):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_checks(self, do_checks=False, do_actions=False, poller_tags=['None'],
-                   reactionner_tags=['None'], worker_name='none',
-                   module_types=['fork']):
+    def get_checks(self, do_checks=False, do_actions=False, poller_tags=None,
+                   reactionner_tags=None, worker_name='none',
+                   module_types=None):
         """Get checks from scheduler, used by poller or reactionner (active ones)
 
         :param do_checks: used for poller to get checks
@@ -50,64 +50,96 @@ class SchedulerInterface(GenericInterface):
         :type worker_name: str
         :param module_types: Module type to filter actions/checks
         :type module_types: list
-        :return: base64 zlib compress pickled check/action list
+        :return: serialized check/action list
         :rtype: str
         """
-        # print "We ask us checks"
+        if poller_tags is None:
+            poller_tags = ['None']
+        if reactionner_tags is None:
+            reactionner_tags = ['None']
+        if module_types is None:
+            module_types = ['fork']
         do_checks = (do_checks == 'True')
         do_actions = (do_actions == 'True')
         res = self.app.sched.get_to_run_checks(do_checks, do_actions, poller_tags, reactionner_tags,
                                                worker_name, module_types)
-        # print "Sending %d checks" % len(res)
-        self.app.sched.nb_checks_send += len(res)
+        # Count actions got by the poller/reactionner
+        if do_checks:
+            self.app.nb_pulled_checks += len(res)
+        if do_actions:
+            self.app.nb_pulled_actions += len(res)
+        # self.app.sched.nb_checks_send += len(res)
 
-        return base64.b64encode(zlib.compress(cPickle.dumps(res), 2))
+        return serialize(res, True)
 
     @cherrypy.expose
+    @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
-    def put_results(self, results):
+    def put_results(self):
         """Put results to scheduler, used by poller and reactionners
 
-        :param results: results to handle
-        :type results:
         :return: True or ?? (if lock acquire fails)
         :rtype: bool
         """
-        nb_received = len(results)
-        self.app.sched.nb_check_received += nb_received
-        if nb_received != 0:
-            logger.debug("Received %d results", nb_received)
-        for result in results:
-            result.set_type_active()
-        with self.app.sched.waiting_results_lock:
-            self.app.sched.waiting_results.extend(results)
+        res = cherrypy.request.json
+        who_sent = res['from']
+        results = res['results']
 
-        # for c in results:
-        # self.sched.put_results(c)
+        results = unserialize(results, no_load=True)
+        if results:
+            logger.debug("Got some results: %d results from %s", len(results), who_sent)
+        else:
+            logger.debug("-> no results")
+        self.app.sched.nb_checks_results += len(results)
+
+        for result in results:
+            logger.debug("-> result: %s", result)
+            # resultobj = unserialize(result, True)
+            result.set_type_active()
+
+            # Update scheduler counters
+            self.app.sched.counters[result.is_a]["total"]["results"]["total"] += 1
+            if result.status not in \
+                    self.app.sched.counters[result.is_a]["total"]["results"]:
+                self.app.sched.counters[result.is_a]["total"]["results"][result.status] = 0
+            self.app.sched.counters[result.is_a]["total"]["results"][result.status] += 1
+            self.app.sched.counters[result.is_a]["active"]["results"]["total"] += 1
+            if result.status not in \
+                    self.app.sched.counters[result.is_a]["active"]["results"]:
+                self.app.sched.counters[result.is_a]["active"]["results"][result.status] = 0
+            self.app.sched.counters[result.is_a]["active"]["results"][result.status] += 1
+
+            # Append to the scheduler result queue
+            self.app.sched.waiting_results.put(result)
+
         return True
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def get_broks(self, bname):
-        """Get checks from scheduler, used by brokers
+        """Get broks from scheduler, used by brokers
 
         :param bname: broker name, used to filter broks
         :type bname: str
-        :return: 64 zlib compress pickled brok list
-        :rtype: str
+        :return: serialized brok list
+        :rtype: dict
         """
         # Maybe it was not registered as it should, if so,
         # do it for it
         if bname not in self.app.sched.brokers:
             self.fill_initial_broks(bname)
+        elif not self.app.sched.brokers[bname]['initialized']:
+            self.fill_initial_broks(bname)
+
+        if bname not in self.app.sched.brokers:
+            return {}
 
         # Now get the broks for this specific broker
         res = self.app.sched.get_broks(bname)
-        # got only one global counter for broks
-        self.app.sched.nb_broks_send += len(res)
+
         # we do not more have a full broks in queue
         self.app.sched.brokers[bname]['has_full_broks'] = False
-        return base64.b64encode(zlib.compress(cPickle.dumps(res), 2))
+        return serialize(res, True)
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -121,12 +153,12 @@ class SchedulerInterface(GenericInterface):
         TODO: Maybe we should check_last time we did it to prevent DDoS
         """
         with self.app.conf_lock:
-            if bname not in self.app.brokers:
-                logger.info("A new broker just connected : %s", bname)
-                self.app.sched.brokers[bname] = {'broks': {}, 'has_full_broks': False}
+            if bname not in self.app.sched.brokers:
+                return
             env = self.app.sched.brokers[bname]
             if not env['has_full_broks']:
-                env['broks'].clear()
+                logger.info("A new broker just connected : %s", bname)
+                # env['broks'].clear()
                 self.app.sched.fill_initial_broks(bname, with_logs=True)
 
     @cherrypy.expose
@@ -145,14 +177,7 @@ class SchedulerInterface(GenericInterface):
         """
         sched = self.app.sched
 
-        res = sched.get_checks_status_counts()
-
-        res = {
-            'nb_scheduled': res['scheduled'],
-            'nb_inpoller': res['inpoller'],
-            'nb_zombies': res['zombie'],
-            'nb_notifications': len(sched.actions)
-        }
+        res = {'counters': sched.counters}
 
         # Spare schedulers do not have such properties
         if hasattr(sched, 'services'):
@@ -164,36 +189,38 @@ class SchedulerInterface(GenericInterface):
             latencies.extend([s.latency for s in sched.hosts])
             lat_avg, lat_min, lat_max = average_percentile(latencies)
             res['latency_average'] = 0.0
-            res['latency_minimun'] = 0.0
+            res['latency_minimum'] = 0.0
             res['latency_maximum'] = 0.0
             if lat_avg:
                 res['latency_average'] = lat_avg
-                res['latency_minimun'] = lat_min
+                res['latency_minimum'] = lat_min
                 res['latency_maximum'] = lat_max
         return res
 
     @cherrypy.expose
-    def run_external_commands(self, cmds):
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def run_external_commands(self):
         """Post external_commands to scheduler (from arbiter)
         Wrapper to to app.sched.run_external_commands method
 
-        :param cmds: external commands list ro run
-        :type cmds: list
         :return: None
         """
+        commands = cherrypy.request.json
         with self.app.lock:
-            self.app.sched.run_external_commands(cmds)
+            self.app.sched.run_external_commands(commands['cmds'])
 
     @cherrypy.expose
-    def put_conf(self, conf):
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def put_conf(self, conf=None):
         """Post conf to scheduler (from arbiter)
 
-        :param conf: new configuration to load
-        :type conf: dict
         :return: None
         """
         self.app.sched.die()
-        super(SchedulerInterface, self).put_conf(conf)
+        conf = cherrypy.request.json
+        super(SchedulerInterface, self).put_conf(conf['conf'])
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -203,6 +230,6 @@ class SchedulerInterface(GenericInterface):
         :return: None
         """
         with self.app.conf_lock:
-            logger.debug("Arbiter wants me to wait for a new configuration")
+            logger.warning("Arbiter wants me to wait for a new configuration")
             self.app.sched.die()
             super(SchedulerInterface, self).wait_new_conf()

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -62,7 +62,6 @@ class Businessimpactmodulation(Item):
     """Businessimpactmodulation class is simply a modulation of the business impact value
     (of a Host/Service) during a modulation period.
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'businessimpactmodulation'
 
     properties = Item.properties.copy()
@@ -71,17 +70,27 @@ class Businessimpactmodulation(Item):
                        'modulation_period':               StringProp(default=''),
                        })
 
+    def __init__(self, params=None, parsing=True):
+        super(Businessimpactmodulation, self).__init__(params, parsing=parsing)
+
+        # Ok just put None as modulation_period, means 24x7
+        if not hasattr(self, 'modulation_period'):
+            self.modulation_period = '24x7'
+
     def get_name(self):
         """Accessor to business_impact_modulation_name attribute
 
         :return: business impact modulation name
         :rtype: str
         """
-        return self.business_impact_modulation_name
+        if hasattr(self, 'business_impact_modulation_name'):
+            return self.business_impact_modulation_name
+        return 'Unnamed'
 
 
 class Businessimpactmodulations(Items):
-    """Businessimpactmodulations class allowed to handle easily several Businessimpactmodulation objects
+    """Businessimpactmodulations class allowed to handle easily
+       several Businessimpactmodulation objects
 
     """
     name_property = "business_impact_modulation_name"
@@ -94,24 +103,4 @@ class Businessimpactmodulations(Items):
         :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: None
         """
-        self.linkify_cm_by_tp(timeperiods)
-
-    def linkify_cm_by_tp(self, timeperiods):
-        """Replace modulation period by real Timeperiod object into each Businessimpactmodulation
-
-        :param timeperiods: timeperiods to link to
-        :type timeperiods: alignak.objects.timeperiod.Timeperiods
-        :return: None
-        """
-        for resultmod in self:
-            mtp_name = resultmod.modulation_period.strip()
-
-            # The new member list, in id
-            mtp = timeperiods.find_by_name(mtp_name)
-
-            if mtp_name != '' and mtp is None:
-                err = ("Error: the business impact modulation '%s' got an unknown "
-                       "modulation_period '%s'" % (resultmod.get_name(), mtp_name))
-                resultmod.configuration_errors.append(err)
-
-            resultmod.modulation_period = mtp
+        self.linkify_with_timeperiods(timeperiods, 'modulation_period')

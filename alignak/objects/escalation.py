@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -57,30 +57,42 @@ from alignak.objects.item import Item, Items
 
 from alignak.util import strip_and_uniq
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
-from alignak.log import logger
 
 
 class Escalation(Item):
     """Escalation class is used to implement notification escalation
 
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'escalation'
 
     properties = Item.properties.copy()
     properties.update({
-        'escalation_name':      StringProp(),
-        'first_notification':   IntegerProp(),
-        'last_notification':    IntegerProp(),
-        'first_notification_time': IntegerProp(),
-        'last_notification_time': IntegerProp(),
-        # by default don't use the notification_interval defined in
-        # the escalation, but the one defined by the object
-        'notification_interval': IntegerProp(default=-1),
-        'escalation_period':    StringProp(default=''),
-        'escalation_options':   ListProp(default=['d', 'u', 'r', 'w', 'c'], split_on_coma=True),
-        'contacts':             ListProp(default=[], split_on_coma=True),
-        'contact_groups':       ListProp(default=[], split_on_coma=True),
+        'escalation_name':
+            StringProp(),
+        'host_name':
+            StringProp(default=''),
+        'service_description':
+            StringProp(default=''),
+        'first_notification':
+            IntegerProp(),
+        'last_notification':
+            IntegerProp(),
+        'first_notification_time':
+            IntegerProp(),
+        'last_notification_time':
+            IntegerProp(),
+        # As a default don't use the notification_interval defined in
+        # the escalation, but the one defined in the object
+        'notification_interval':
+            IntegerProp(default=-1),
+        'escalation_period':
+            StringProp(default=''),
+        'escalation_options':
+            ListProp(default=['d', 'u', 'r', 'w', 'c'], split_on_coma=True),
+        'contacts':
+            ListProp(default=[], split_on_coma=True),
+        'contact_groups':
+            ListProp(default=[], split_on_coma=True),
     })
 
     running_properties = Item.running_properties.copy()
@@ -101,7 +113,7 @@ class Escalation(Item):
         """
         return self.escalation_name
 
-    def is_eligible(self, timestamp, status, notif_number, in_notif_time, interval):
+    def is_eligible(self, timestamp, status, notif_number, in_notif_time, interval, escal_period):
         """Check if the escalation is eligible (notification is escalated or not)
 
         Escalation is NOT eligible in ONE of the following condition is fulfilled::
@@ -157,14 +169,13 @@ class Escalation(Item):
             return False
 
         # Maybe the time is not in our escalation_period
-        if self.escalation_period is not None and \
-                not self.escalation_period.is_time_valid(timestamp):
+        if escal_period is not None and not escal_period.is_time_valid(timestamp):
             return False
 
         # Ok, I do not see why not escalade. So it's True :)
         return True
 
-    def get_next_notif_time(self, t_wished, status, creation_time, interval):
+    def get_next_notif_time(self, t_wished, status, creation_time, interval, escal_period):
         """Get the next notification time for the escalation
         Only legit for time based escalation
 
@@ -199,62 +210,66 @@ class Escalation(Item):
             return None
 
         # Maybe the time we found is not a valid one....
-        if self.escalation_period is not None and not self.escalation_period.is_time_valid(start):
+        if escal_period is not None and not escal_period.is_time_valid(start):
             return None
 
         # Ok so I ask for my start as a possibility for the next notification time
         return start
 
     def is_correct(self):
-        """Check if all elements got a good configuration
+        """Check if this object configuration is correct ::
+
+        * Check our own specific properties
+        * Call our parent class is_correct checker
 
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
         state = True
-        cls = self.__class__
+
+        # Internal checks before executing inherited function...
 
         # If we got the _time parameters, we are time based. Unless, we are not :)
         if hasattr(self, 'first_notification_time') or hasattr(self, 'last_notification_time'):
             self.time_based = True
-            special_properties = self.special_properties_time_based
-        else:  # classic ones
-            special_properties = self.special_properties
-
-        for prop, entry in cls.properties.items():
-            if prop not in special_properties:
-                if not hasattr(self, prop) and entry.required:
-                    logger.error('%s: I do not have %s', self.get_name(), prop)
-                    state = False  # Bad boy...
-
-        # Raised all previously saw errors like unknown contacts and co
-        if self.configuration_errors != []:
-            state = False
-            for err in self.configuration_errors:
-                logger.error(err)
 
         # Ok now we manage special cases...
         if not hasattr(self, 'contacts') and not hasattr(self, 'contact_groups'):
-            logger.error('%s: I do not have contacts nor contact_groups', self.get_name())
+            msg = '%s: I do not have contacts nor contact_groups' % (self.get_name())
+            self.configuration_errors.append(msg)
             state = False
 
         # If time_based or not, we do not check all properties
         if self.time_based:
             if not hasattr(self, 'first_notification_time'):
-                logger.error('%s: I do not have first_notification_time', self.get_name())
+                msg = '%s: I do not have first_notification_time' % (self.get_name())
+                self.configuration_errors.append(msg)
                 state = False
             if not hasattr(self, 'last_notification_time'):
-                logger.error('%s: I do not have last_notification_time', self.get_name())
+                msg = '%s: I do not have last_notification_time' % (self.get_name())
+                self.configuration_errors.append(msg)
                 state = False
         else:  # we check classical properties
             if not hasattr(self, 'first_notification'):
-                logger.error('%s: I do not have first_notification', self.get_name())
+                msg = '%s: I do not have first_notification' % (self.get_name())
+                self.configuration_errors.append(msg)
                 state = False
             if not hasattr(self, 'last_notification'):
-                logger.error('%s: I do not have last_notification', self.get_name())
+                msg = '%s: I do not have last_notification' % (self.get_name())
+                self.configuration_errors.append(msg)
                 state = False
 
-        return state
+        # Change the special_properties definition according to time_based ...
+        save_special_properties = self.special_properties
+        if self.time_based:
+            self.special_properties = self.special_properties_time_based
+
+        state_parent = super(Escalation, self).is_correct()
+
+        if self.time_based:
+            self.special_properties = save_special_properties
+
+        return state_parent and state
 
 
 class Escalations(Items):
@@ -314,15 +329,14 @@ class Escalations(Items):
                 if sdesc.strip() == '*':
                     slist = services.find_srvs_by_hostname(hname)
                     if slist is not None:
+                        slist = [services[serv] for serv in slist]
                         for serv in slist:
-                            serv.escalations.append(escal)
+                            serv.escalations.append(escal.uuid)
                 else:
                     for sname in strip_and_uniq(sdesc.split(',')):
                         serv = services.find_srv_by_name_and_hostname(hname, sname)
                         if serv is not None:
-                            # print "Linking service", s.get_name(), 'with me', es.get_name()
-                            serv.escalations.append(escal)
-                            # print "Now service", s.get_name(), 'have', s.escalations
+                            serv.escalations.append(escal.uuid)
 
     def linkify_es_by_h(self, hosts):
         """Add each escalation object into host.escalation attribute
@@ -333,17 +347,15 @@ class Escalations(Items):
         """
         for escal in self:
             # If no host, no hope of having a service
-            if (not hasattr(escal, 'host_name') or escal.host_name.strip() == ''
-                    or (hasattr(escal, 'service_description')
-                        and escal.service_description.strip() != '')):
+            if (not hasattr(escal, 'host_name') or escal.host_name.strip() == '' or
+                    (hasattr(escal, 'service_description') and
+                        escal.service_description.strip() != '')):
                 continue
             # I must be NOT a escalation on for service
             for hname in strip_and_uniq(escal.host_name.split(',')):
                 host = hosts.find_by_name(hname)
                 if host is not None:
-                    # print "Linking host", h.get_name(), 'with me', es.get_name()
-                    host.escalations.append(escal)
-                    # print "Now host", h.get_name(), 'have', h.escalations
+                    host.escalations.append(escal.uuid)
 
     def explode(self, hosts, hostgroups, contactgroups):
         """Loop over all escalation and explode hostsgroups in host

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -47,12 +47,24 @@
 # This file is used to test host- and service-downtimes.
 #
 
-from alignak_test import *
+import time
+import unittest
+from alignak_test import AlignakTest
 
 
 class TestContactDowntime(AlignakTest):
+    """
+    This class test downtime for contacts
+    """
+
+    def setUp(self):
+        self.setup_with_file("cfg/cfg_default.cfg")
+        self._sched = self.schedulers['scheduler-master'].sched
 
     def test_contact_downtime(self):
+        """
+        Test contact downtime and brok creation associated
+        """
         self.print_header()
         # schedule a 2-minute downtime
         # downtime must be active
@@ -64,46 +76,42 @@ class TestContactDowntime(AlignakTest):
         duration = 600
         now = time.time()
         # downtime valid for the next 2 minutes
-        test_contact = self.sched.contacts.find_by_name('test_contact')
+        test_contact = self._sched.contacts.find_by_name('test_contact')
         cmd = "[%lu] SCHEDULE_CONTACT_DOWNTIME;test_contact;%d;%d;lausser;blablub" % (now, now, now + duration)
-        self.sched.run_external_command(cmd)
+        self._sched.run_external_command(cmd)
+        self.external_command_loop()
 
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-        svc.checks_in_progress = []
+        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
         # Change the notif interval, so we can notify as soon as we want
         svc.notification_interval = 0.001
 
-        host = self.sched.hosts.find_by_name("test_host_0")
-        host.checks_in_progress = []
+        host = self._sched.hosts.find_by_name("test_host_0")
         host.act_depend_of = []  # ignore the router
 
         #time.sleep(20)
         # We loop, the downtime wil be check and activate
         self.scheduler_loop(1, [[svc, 0, 'OK'], [host, 0, 'UP']])
 
-        self.assert_any_log_match('CONTACT DOWNTIME ALERT.*;STARTED')
-        self.show_and_clear_logs()
+        self.assert_any_brok_match('CONTACT DOWNTIME ALERT.*;STARTED')
 
         print "downtime was scheduled. check its activity and the comment\n"*5
-        self.assertEqual(1, len(self.sched.contact_downtimes))
         self.assertEqual(1, len(test_contact.downtimes))
-        self.assertIn(test_contact.downtimes[0], self.sched.contact_downtimes.values())
 
-        self.assertTrue(test_contact.downtimes[0].is_in_effect)
-        self.assertFalse(test_contact.downtimes[0].can_be_deleted)
+        downtime = test_contact.downtimes.values()[0]
+        assert downtime.is_in_effect
+        assert not downtime.can_be_deleted
 
         # Ok, we define the downtime like we should, now look at if it does the job: do not
         # raise notif during a downtime for this contact
         self.scheduler_loop(3, [[svc, 2, 'CRITICAL']])
 
         # We should NOT see any service notification
-        self.assert_no_log_match('SERVICE NOTIFICATION.*;CRITICAL')
-        self.show_and_clear_logs()
+        self.assert_no_brok_match('SERVICE NOTIFICATION.*;CRITICAL')
 
         # Now we short the downtime a lot so it will be stop at now + 1 sec.
-        test_contact.downtimes[0].end_time = time.time() + 1
+        downtime.end_time = time.time() + 1
 
         time.sleep(2)
 
@@ -111,11 +119,9 @@ class TestContactDowntime(AlignakTest):
         self.scheduler_loop(1, [])
 
         # So we should be out now, with a log
-        self.assert_any_log_match('CONTACT DOWNTIME ALERT.*;STOPPED')
-        self.show_and_clear_logs()
+        self.assert_any_brok_match('CONTACT DOWNTIME ALERT.*;STOPPED')
 
         print "\n\nDowntime was ended. Check it is really stopped"
-        self.assertEqual(0, len(self.sched.contact_downtimes))
         self.assertEqual(0, len(test_contact.downtimes))
 
         for n in svc.notifications_in_progress.values():
@@ -126,8 +132,7 @@ class TestContactDowntime(AlignakTest):
         # raise notif during a downtime for this contact
         time.sleep(1)
         self.scheduler_loop(3, [[svc, 2, 'CRITICAL']])
-        self.assert_any_log_match('SERVICE NOTIFICATION.*;CRITICAL')
-        self.show_and_clear_logs()
+        self.assert_any_brok_match('SERVICE NOTIFICATION.*;CRITICAL')
 
         for n in svc.notifications_in_progress.values():
             print "NOTIF", n, n.t_to_go, time.time(), time.time() - n.t_to_go
@@ -145,35 +150,30 @@ class TestContactDowntime(AlignakTest):
         duration = 600
         now = time.time()
         # downtime valid for the next 2 minutes
-        test_contact = self.sched.contacts.find_by_name('test_contact')
+        test_contact = self._sched.contacts.find_by_name('test_contact')
         cmd = "[%lu] SCHEDULE_CONTACT_DOWNTIME;test_contact;%d;%d;lausser;blablub" % (now, now, now + duration)
-        self.sched.run_external_command(cmd)
+        self._sched.run_external_command(cmd)
 
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-        svc.checks_in_progress = []
+        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
         # Change the notif interval, so we can notify as soon as we want
         svc.notification_interval = 0.001
 
-        host = self.sched.hosts.find_by_name("test_host_0")
-        host.checks_in_progress = []
+        host = self._sched.hosts.find_by_name("test_host_0")
         host.act_depend_of = []  # ignore the router
 
-        #time.sleep(20)
         # We loop, the downtime wil be check and activate
         self.scheduler_loop(1, [[svc, 0, 'OK'], [host, 0, 'UP']])
 
-        self.assert_any_log_match('CONTACT DOWNTIME ALERT.*;STARTED')
-        self.show_and_clear_logs()
+        self.assert_any_brok_match('CONTACT DOWNTIME ALERT.*;STARTED')
 
         print "downtime was scheduled. check its activity and the comment"
-        self.assertEqual(1, len(self.sched.contact_downtimes))
-        self.assertEqual(1, len(test_contact.downtimes))
-        self.assertIn(test_contact.downtimes[0], self.sched.contact_downtimes.values())
+        assert len(test_contact.downtimes) == 1
 
-        self.assertTrue(test_contact.downtimes[0].is_in_effect)
-        self.assertFalse(test_contact.downtimes[0].can_be_deleted)
+        downtime = test_contact.downtimes.values()[0]
+        assert downtime.is_in_effect
+        assert not downtime.can_be_deleted
 
         time.sleep(1)
         # Ok, we define the downtime like we should, now look at if it does the job: do not
@@ -181,36 +181,31 @@ class TestContactDowntime(AlignakTest):
         self.scheduler_loop(3, [[svc, 2, 'CRITICAL']])
 
         # We should NOT see any service notification
-        self.assert_no_log_match('SERVICE NOTIFICATION.*;CRITICAL')
-        self.show_and_clear_logs()
+        self.assert_no_brok_match('SERVICE NOTIFICATION.*;CRITICAL')
 
-        downtime_id = test_contact.downtimes[0]._id
+        downtime_id = list(test_contact.downtimes)[0]
         # OK, Now we cancel this downtime, we do not need it anymore
-        cmd = "[%lu] DEL_CONTACT_DOWNTIME;%d" % (now, downtime_id)
-        self.sched.run_external_command(cmd)
+        cmd = "[%lu] DEL_CONTACT_DOWNTIME;%s" % (now, downtime_id)
+        self._sched.run_external_command(cmd)
 
         # We check if the downtime is tag as to remove
-        self.assertTrue(test_contact.downtimes[0].can_be_deleted)
+        assert downtime.can_be_deleted
 
         # We really delete it
         self.scheduler_loop(1, [])
 
         # So we should be out now, with a log
-        self.assert_any_log_match('CONTACT DOWNTIME ALERT.*;CANCELLED')
-        self.show_and_clear_logs()
+        self.assert_any_brok_match('CONTACT DOWNTIME ALERT.*;CANCELLED')
 
         print "Downtime was cancelled"
-        self.assertEqual(0, len(self.sched.contact_downtimes))
-        self.assertEqual(0, len(test_contact.downtimes))
+        assert len(test_contact.downtimes) == 0
 
         time.sleep(1)
         # Now we want this contact to be really notify!
         # Ok, we define the downtime like we should, now look at if it does the job: do not
         # raise notif during a downtime for this contact
         self.scheduler_loop(3, [[svc, 2, 'CRITICAL']])
-        self.assert_any_log_match('SERVICE NOTIFICATION.*;CRITICAL')
-        self.show_and_clear_logs()
-
+        self.assert_any_brok_match('SERVICE NOTIFICATION.*;CRITICAL')
 
 
 if __name__ == '__main__':

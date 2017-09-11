@@ -22,6 +22,14 @@ with open(os.path.join('alignak', 'version.py')) as fh:
 
 os.environ['PBR_VERSION'] = VERSION
 
+# Ask pbr to not generate AUTHORS file if environment variable does not require it
+if not os.environ.get('SKIP_GENERATE_AUTHORS'):
+    os.environ['SKIP_GENERATE_AUTHORS'] = '1'
+
+# Ask pbr to not generate ChangeLog file if environment variable does not require it
+if not os.environ.get('SKIP_WRITE_GIT_CHANGELOG'):
+    os.environ['SKIP_WRITE_GIT_CHANGELOG'] = '1'
+
 setuptools.setup(
     setup_requires=['pbr'],
     version=VERSION,

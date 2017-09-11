@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -46,6 +46,4 @@
 This file has to be as small as possible in order to namespace to work.
 
 """
-from . import shinken_import_hook
-
 from .version import VERSION as __version__

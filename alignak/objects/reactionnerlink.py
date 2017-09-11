@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -52,7 +52,6 @@ class ReactionnerLink(SatelliteLink):
     """
     Class to manage the reactionner information
     """
-    _id = 0
     my_type = 'reactionner'
     properties = SatelliteLink.properties.copy()
     properties.update({
@@ -64,7 +63,7 @@ class ReactionnerLink(SatelliteLink):
         'reactionner_tags':      ListProp(default=['None'], to_send=True),
     })
 
-    def register_to_my_realm(self):
+    def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
         """
         Add this reactionner to the realm
 

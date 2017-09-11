@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -56,62 +56,32 @@ macros solving, sorting, parsing, file handling, filters.
 import time
 import re
 import sys
-import os
 import json
+import argparse
+import logging
+
 import numpy as np
 
-from alignak.macroresolver import MacroResolver
-from alignak.log import logger
+from alignak.version import VERSION
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 try:
     SAFE_STDOUT = (sys.stdout.encoding == 'UTF-8')
-except Exception, exp:
-    logger.error('Encoding detection error= %s', exp)
+except AttributeError, exp:  # pragma: no cover, should not happen!
+    logger.error('Encoding detection error for stdout = %s', exp)
     SAFE_STDOUT = False
 
 
 # ########## Strings #############
-def safe_print(*args):
-    """Try to print strings, but if there is an utf8 error, go in simple ascii mode
-    (Like if the terminal do not have en_US.UTF8 as LANG for example)
-
-    :param args: args to print
-    :type args:
-    :return: None
-    """
-    lst = []
-    for arg in args:
-        # If we got an str, go in unicode, and if we cannot print
-        # utf8, go in ascii mode
-        if isinstance(arg, str):
-            if SAFE_STDOUT:
-                string = unicode(arg, 'utf8', errors='ignore')
-            else:
-                string = arg.decode('ascii', 'replace').encode('ascii', 'replace').\
-                    decode('ascii', 'replace')
-            lst.append(string)
-        # Same for unicode, but skip the unicode pass
-        elif isinstance(arg, unicode):
-            if SAFE_STDOUT:
-                string = arg
-            else:
-                string = arg.encode('ascii', 'replace')
-            lst.append(string)
-        # Other types can be directly convert in unicode
-        else:
-            lst.append(unicode(arg))
-    # Ok, now print it :)
-    print u' '.join(lst)
-
-
 def split_semicolon(line, maxsplit=None):
     r"""Split a line on semicolons characters but not on the escaped semicolons
 
     :param line: line to split
     :type line: str
-    :param maxsplit: maximum of split to dot
-    :type maxsplitL int
-    :return: splitted line
+    :param maxsplit: maximal number of split (if None, no limit)
+    :type maxsplit: None | int
+    :return: split line
     :rtype: list
 
     >>> split_semicolon('a,b;c;;g')
@@ -124,42 +94,42 @@ def split_semicolon(line, maxsplit=None):
     ['a,b', 'c;', 'g']
     """
     # Split on ';' character
-    splitted_line = line.split(';')
+    split_line = line.split(';')
 
-    splitted_line_size = len(splitted_line)
+    split_line_size = len(split_line)
 
     # if maxsplit is not specified, we set it to the number of part
-    if maxsplit is None or 0 > maxsplit:
-        maxsplit = splitted_line_size
+    if maxsplit is None or maxsplit < 0:
+        maxsplit = split_line_size
 
     # Join parts  to the next one, if ends with a '\'
     # because we mustn't split if the semicolon is escaped
     i = 0
-    while i < splitted_line_size - 1:
+    while i < split_line_size - 1:
 
         # for each part, check if its ends with a '\'
-        ends = splitted_line[i].endswith('\\')
+        ends = split_line[i].endswith('\\')
 
         if ends:
             # remove the last character '\'
-            splitted_line[i] = splitted_line[i][:-1]
+            split_line[i] = split_line[i][:-1]
 
         # append the next part to the current if it is not the last and the current
         # ends with '\' or if there is more than maxsplit parts
-        if (ends or i >= maxsplit) and i < splitted_line_size - 1:
+        if (ends or i >= maxsplit) and i < split_line_size - 1:
 
-            splitted_line[i] = ";".join([splitted_line[i], splitted_line[i + 1]])
+            split_line[i] = ";".join([split_line[i], split_line[i + 1]])
 
             # delete the next part
-            del splitted_line[i + 1]
-            splitted_line_size -= 1
+            del split_line[i + 1]
+            split_line_size -= 1
 
         # increase i only if we don't have append because after append the new
         # string can end with '\'
         else:
             i += 1
 
-    return splitted_line
+    return split_line
 
 
 def jsonify_r(obj):
@@ -172,11 +142,11 @@ def jsonify_r(obj):
     """
     res = {}
     cls = obj.__class__
-    if not hasattr(cls, 'properties'):
+    if not hasattr(cls, 'properties'):  # pragma: no cover, should not happen, simple protection.
         try:
             json.dumps(obj)
             return obj
-        except Exception, exp:
+        except TypeError:
             return None
     properties = cls.properties.keys()
     if hasattr(cls, 'running_properties'):
@@ -193,7 +163,7 @@ def jsonify_r(obj):
                 val = sorted(val)
             json.dumps(val)
             res[prop] = val
-        except Exception, exp:
+        except TypeError:
             if isinstance(val, list):
                 lst = []
                 for subval in val:
@@ -201,32 +171,28 @@ def jsonify_r(obj):
                     if o_type == 'CommandCall':
                         try:
                             lst.append(subval.call)
-                        except Exception:
+                        except AttributeError:  # pragma: no cover, should not happen...
                             pass
                         continue
                     if o_type and hasattr(subval, o_type + '_name'):
                         lst.append(getattr(subval, o_type + '_name'))
                     else:
                         pass
-                        # print "CANNOT MANAGE OBJECT", _t, type(_t), t
                 res[prop] = lst
             else:
                 o_type = getattr(val.__class__, 'my_type', '')
                 if o_type == 'CommandCall':
                     try:
                         res[prop] = val.call
-                    except Exception:
+                    except AttributeError:  # pragma: no cover, should not happen...
                         pass
                     continue
                 if o_type and hasattr(val, o_type + '_name'):
                     res[prop] = getattr(val, o_type + '_name')
-                # else:
-                #    print "CANNOT MANAGE OBJECT", v, type(v), t
     return res
 
+
 # ################################## TIME ##################################
-
-
 def get_end_of_day(year, month_id, day):
     """Get the timestamp of the end (local) of a specific day
 
@@ -312,6 +278,7 @@ def get_start_of_day(year, month_id, day):
 
     TODO: Missing timezone
     """
+    # DST is not known
     start_time = (year, month_id, day, 00, 00, 00, 0, 0, -1)
     try:
         start_time_epoch = time.mktime(start_time)
@@ -341,6 +308,46 @@ def format_t_into_dhms_format(timestamp):
     hour, mins = divmod(mins, 60)
     day, hour = divmod(hour, 24)
     return '%sd %sh %sm %ss' % (day, hour, mins, timestamp)
+
+
+def merge_periods(data):
+    """
+    Merge periods to have better continous periods.
+    Like 350-450, 400-600 => 350-600
+
+    :param data: list of periods
+    :type data: list
+    :return: better continous periods
+    :rtype: list
+    """
+    # sort by start date
+    newdata = sorted(data, key=lambda drange: drange[0])
+    end = 0
+    for period in newdata:
+        if period[0] != end and period[0] != (end - 1):
+            end = period[1]
+
+    dat = np.array(newdata)
+    new_intervals = []
+    cur_start = None
+    cur_end = None
+    for (dt_start, dt_end) in dat:
+        if cur_end is None:
+            cur_start = dt_start
+            cur_end = dt_end
+            continue
+        else:
+            if cur_end >= dt_start:
+                # merge, keep existing cur_start, extend cur_end
+                cur_end = dt_end
+            else:
+                # new interval, save previous and reset current to this
+                new_intervals.append((cur_start, cur_end))
+                cur_start = dt_start
+                cur_end = dt_end
+    # make sure final interval is saved
+    new_intervals.append((cur_start, cur_end))
+    return new_intervals
 
 
 # ################################ Pythonization ###########################
@@ -387,7 +394,7 @@ def to_split(val, split_on_coma=True):
     :type val:
     :param split_on_coma:
     :type split_on_coma: bool
-    :return: splitted value on comma
+    :return: split value on comma
     :rtype: list
 
     >>> to_split('a,b,c')
@@ -420,7 +427,7 @@ def list_split(val, split_on_coma=True):
     :type val:
     :param split_on_coma:
     :type split_on_coma: bool
-    :return: list with splitted member on comma
+    :return: list with split member on comma
     :rtype: list
 
     >>> list_split(['a,b,c'], False)
@@ -437,6 +444,10 @@ def list_split(val, split_on_coma=True):
         return val
     new_val = []
     for subval in val:
+        # This happens when re-serializing
+        # TODO: Do not pythonize on re-serialization
+        if isinstance(subval, list):
+            continue
         new_val.extend(subval.split(','))
     return new_val
 
@@ -467,22 +478,20 @@ def to_best_int_float(val):
     return flt
 
 
-# bool('0') = true, so...
 def to_bool(val):
     """Convert value to bool
+
+    Because bool('0') = true, so...
 
     :param val: value to convert
     :type val:
     :return: True if val == '1' or val == 'on' or val == 'true' or val == 'True', else False
     :rtype: bool
     """
-    if val == '1' or val == 'on' or val == 'true' or val == 'True':
-        return True
-    else:
-        return False
+    return val in ['1', 'on', 'true', 'True']
 
 
-def from_bool_to_string(boolean):
+def from_bool_to_string(boolean):  # pragma: no cover, to be deprectaed?
     """Convert a bool to a string representation
 
     :param boolean: bool to convert
@@ -492,11 +501,11 @@ def from_bool_to_string(boolean):
     """
     if boolean:
         return '1'
-    else:
-        return '0'
+
+    return '0'
 
 
-def from_bool_to_int(boolean):
+def from_bool_to_int(boolean):  # pragma: no cover, to be deprectaed?
     """Convert a bool to a int representation
 
     :param boolean: bool to convert
@@ -506,11 +515,11 @@ def from_bool_to_int(boolean):
     """
     if boolean:
         return 1
-    else:
-        return 0
+
+    return 0
 
 
-def from_list_to_split(val):
+def from_list_to_split(val):  # pragma: no cover, to be deprectaed?
     """Convert list into a comma separated string
 
     :param val: value to convert
@@ -522,7 +531,7 @@ def from_list_to_split(val):
     return val
 
 
-def from_float_to_int(val):
+def from_float_to_int(val):  # pragma: no cover, to be deprectaed?
     """Convert float to int
 
     :param val: value to convert
@@ -539,7 +548,8 @@ def from_float_to_int(val):
 # ref is the item like a service, and value
 # if the value to preprocess
 
-def to_list_string_of_names(ref, tab):
+def to_list_string_of_names(ref, tab):  # pragma: no cover, to be deprectaed?
+    #  pylint: disable=W0613
     """Convert list into a comma separated list of element name
 
     :param ref: Not used
@@ -552,8 +562,9 @@ def to_list_string_of_names(ref, tab):
     return ",".join([e.get_name() for e in tab])
 
 
-def to_list_of_names(ref, tab):
-    """Convert list into a list of element name
+def from_set_to_list(ref, tab):  # pragma: no cover, to be deprectaed?
+    #  pylint: disable=W0613
+    """Convert set into a list of element name
 
     :param ref: Not used
     :type ref:
@@ -562,10 +573,11 @@ def to_list_of_names(ref, tab):
     :return: list of names
     :rtype: list
     """
-    return [e.get_name() for e in tab]
+    return list(tab)
 
 
-def to_name_if_possible(ref, value):
+def to_name_if_possible(ref, value):  # pragma: no cover, to be deprectaed?
+    #  pylint: disable=W0613
     """Try to get value name (call get_name method)
 
     :param ref: Not used
@@ -580,7 +592,8 @@ def to_name_if_possible(ref, value):
     return ''
 
 
-def to_hostnames_list(ref, tab):
+def to_hostnames_list(ref, tab):  # pragma: no cover, to be deprectaed?
+    #  pylint: disable=W0613
     """Convert Host list into a list of  host_name
 
     :param ref: Not used
@@ -597,7 +610,8 @@ def to_hostnames_list(ref, tab):
     return res
 
 
-def to_svc_hst_distinct_lists(ref, tab):
+def to_svc_hst_distinct_lists(ref, tab):  # pragma: no cover, to be deprectaed?
+    # pylint: disable=W0613
     """create a dict with 2 lists::
 
     * services: all services of the tab
@@ -621,24 +635,10 @@ def to_svc_hst_distinct_lists(ref, tab):
     return res
 
 
-def expand_with_macros(ref, value):
-    """Expand the value with macros from the
-       host/service ref before brok it
-
-    :param ref: host or service
-    :type ref:
-    :param value: value to expand macro
-    :type value:
-    :return: value with macro replaced
-    :rtype:
-    """
-    return MacroResolver().resolve_simple_macros_in_string(value, ref.get_data_for_checks())
-
-
 def get_obj_name(obj):
     """Get object name (call get_name) if not a string
 
-    :param obj: obj we wan the name
+    :param obj: obj we want the name
     :type obj: object
     :return: object name
     :rtype: str
@@ -650,7 +650,7 @@ def get_obj_name(obj):
     return obj.get_name()
 
 
-def get_obj_name_two_args_and_void(obj, value):
+def get_obj_name_two_args_and_void(obj, value):  # pylint: disable=W0613
     """Get value name (call get_name) if not a string
 
     :param obj: Not used
@@ -667,7 +667,7 @@ def get_obj_name_two_args_and_void(obj, value):
 
 
 def get_obj_full_name(obj):
-    """Wrapepr to call obj.get_full_name or obj.get_name
+    """Wrapper to call obj.get_full_name or obj.get_name
 
     :param obj: object name
     :type obj: object
@@ -676,11 +676,11 @@ def get_obj_full_name(obj):
     """
     try:
         return obj.get_full_name()
-    except Exception:
+    except AttributeError:
         return obj.get_name()
 
 
-def get_customs_keys(dic):
+def get_customs_keys(dic):  # pragma: no cover, to be deprectaed?
     """Get a list of keys of the custom dict
     without the first char
 
@@ -694,7 +694,7 @@ def get_customs_keys(dic):
     return [k[1:] for k in dic.keys()]
 
 
-def get_customs_values(dic):
+def get_customs_values(dic):  # pragma: no cover, to be deprectaed?
     """Wrapper for values() method
 
     :param dic: dict
@@ -715,38 +715,18 @@ def unique_value(val):
     :type val:
     :return: single value
     :rtype: str
-    TODO: Raise erro/warning instead of silently removing something
+    TODO: Raise error/warning instead of silently removing something
     """
     if isinstance(val, list):
         if val:
             return val[-1]
-        else:
-            return ''
-    else:
-        return val
+
+        return ''
+
+    return val
 
 
 # ##################### Sorting ################
-def scheduler_no_spare_first(x00, y00):
-    """Compare two satellite link based on spare attribute(scheduler usually)
-
-    :param x00: first link to compare
-    :type x00:
-    :param y00: second link to compare
-    :type y00:
-    :return: x00 > y00 (1) if x00.spare and not y00.spare,
-             x00 == y00 (0) if both spare,
-             x00 < y00 (-1) else
-    :rtype: int
-    """
-    if x00.spare and not y00.spare:
-        return 1
-    elif x00.spare and y00.spare:
-        return 0
-    else:
-        return -1
-
-
 def alive_then_spare_then_deads(sat1, sat2):
     """Compare two satellite link
     based on alive attribute then spare attribute
@@ -774,13 +754,31 @@ def sort_by_ids(x00, y00):
     :type x00: int
     :param y00: second elem to compare
     :type y00: int
-    :return: x00 > y00 (1) if x00._id > y00._id, x00 == y00 (0) if id equals, x00 < y00 (-1) else
+    :return: x00 > y00 (1) if x00.uuid > y00.uuid, x00 == y00 (0) if id equals, x00 < y00 (-1) else
     :rtype: int
     """
-    if x00._id < y00._id:
+    if x00.uuid < y00.uuid:
         return -1
-    if x00._id > y00._id:
+    if x00.uuid > y00.uuid:
         return 1
+    # So is equal
+    return 0
+
+
+def sort_by_number_values(x00, y00):
+    """Compare x00, y00 base on number of values
+
+    :param x00: first elem to compare
+    :type x00: list
+    :param y00: second elem to compare
+    :type y00: list
+    :return: x00 > y00 (-1) if len(x00) > len(y00), x00 == y00 (0) if id equals, x00 < y00 (1) else
+    :rtype: int
+    """
+    if len(x00) < len(y00):
+        return 1
+    if len(x00) > len(y00):
+        return -1
     # So is equal
     return 0
 
@@ -800,10 +798,10 @@ def average_percentile(values):
     if length == 0:
         return None, None, None
 
-    value_avg = round(float(sum(values)) / length, 1)
+    value_avg = round(float(sum(values)) / length, 2)
     # pylint: disable=E1101
-    value_max = round(np.percentile(values, 95), 1)
-    value_min = round(np.percentile(values, 5), 1)
+    value_max = round(np.percentile(values, 95), 2)
+    value_min = round(np.percentile(values, 5), 2)
     return value_avg, value_min, value_max
 
 
@@ -825,7 +823,6 @@ def strip_and_uniq(tab):
 
 
 # ################### Pattern change application (mainly for host) #######
-
 class KeyValueSyntaxError(ValueError):
     """Syntax error on a duplicate_foreach value"""
 
@@ -835,8 +832,8 @@ KEY_VALUES_REGEX = re.compile(
     # r"\s*"
     r'(?P<key>[^$]+?)'   # key, composed of anything but a $, optionally followed by some spaces
     r'\s*'
-    r'(?P<values>'       # optional values, composed of a bare '$(something)$' zero or more times
-    + (
+    r'(?P<values>' +     # optional values, composed of a bare '$(something)$' zero or more times
+    (
         r'(?:\$\([^)]+?\)\$\s*)*'
     ) +
     r')\s*'   # followed by optional values, which are composed of ..
@@ -932,43 +929,12 @@ def generate_key_value_sequences(entry, default_value):
         raise KeyValueSyntaxError('At least one key must be present')
 
 
-# ############################## Files management #######################
-
-def expect_file_dirs(root, path):
-    """We got a file like /tmp/toto/toto2/bob.png And we want to be sure the dir
-    /tmp/toto/toto2/ will really exists so we can copy it. Try to make if  needed
-
-    :param root: root directory
-    :type root: str
-    :param path: path to verify
-    :type path: str
-    :return: True on success, False otherwise
-    :rtype: bool
-    """
-    dirs = os.path.normpath(path).split('/')
-    dirs = [d for d in dirs if d != '']
-    # We will create all directory until the last one
-    # so we are doing a mkdir -p .....
-    # TODO: and windows????
-    tmp_dir = root
-    for directory in dirs:
-        path = os.path.join(tmp_dir, directory)
-        logger.info('Verify the existence of file %s', path)
-        if not os.path.exists(path):
-            try:
-                os.mkdir(path)
-            except Exception:
-                return False
-        tmp_dir = path
-    return True
-
-
 # ####################### Services/hosts search filters  #######################
 # Filters used in services or hosts find_by_filter method
 # Return callback functions which are passed host or service instances, and
-# should return a boolean value that indicates if the inscance mached the
+# should return a boolean value that indicates if the instance matched the
 # filter
-def filter_any(name):
+def filter_any(name):  # pylint: disable=W0613
     """Filter for host
     Filter nothing
 
@@ -978,14 +944,14 @@ def filter_any(name):
     :rtype: bool
     """
 
-    def inner_filter(host):
+    def inner_filter(items):  # pylint: disable=W0613
         """Inner filter for host. Accept all"""
         return True
 
     return inner_filter
 
 
-def filter_none(name):
+def filter_none(name):  # pylint: disable=W0613
     """Filter for host
     Filter all
 
@@ -995,7 +961,7 @@ def filter_none(name):
     :rtype: bool
     """
 
-    def inner_filter(host):
+    def inner_filter(items):  # pylint: disable=W0613
         """Inner filter for host. Accept nothing"""
         return False
 
@@ -1012,8 +978,9 @@ def filter_host_by_name(name):
     :rtype: bool
     """
 
-    def inner_filter(host):
+    def inner_filter(items):
         """Inner filter for host. Accept if host_name == name"""
+        host = items["host"]
         if host is None:
             return False
         return host.host_name == name
@@ -1032,8 +999,9 @@ def filter_host_by_regex(regex):
     """
     host_re = re.compile(regex)
 
-    def inner_filter(host):
+    def inner_filter(items):
         """Inner filter for host. Accept if regex match host_name"""
+        host = items["host"]
         if host is None:
             return False
         return host_re.match(host.host_name) is not None
@@ -1051,11 +1019,12 @@ def filter_host_by_group(group):
     :rtype: bool
     """
 
-    def inner_filter(host):
+    def inner_filter(items):
         """Inner filter for host. Accept if group in host.hostgroups"""
+        host = items["host"]
         if host is None:
             return False
-        return group in [g.hostgroup_name for g in host.hostgroups]
+        return group in [items["hostgroups"][g].hostgroup_name for g in host.hostgroups]
 
     return inner_filter
 
@@ -1070,8 +1039,9 @@ def filter_host_by_tag(tpl):
     :rtype: bool
     """
 
-    def inner_filter(host):
+    def inner_filter(items):
         """Inner filter for host. Accept if tag in host.tags"""
+        host = items["host"]
         if host is None:
             return False
         return tpl in [t.strip() for t in host.tags]
@@ -1089,8 +1059,9 @@ def filter_service_by_name(name):
     :rtype: bool
     """
 
-    def inner_filter(service):
+    def inner_filter(items):
         """Inner filter for service. Accept if service_description == name"""
+        service = items["service"]
         if service is None:
             return False
         return service.service_description == name
@@ -1109,8 +1080,9 @@ def filter_service_by_regex_name(regex):
     """
     host_re = re.compile(regex)
 
-    def inner_filter(service):
+    def inner_filter(items):
         """Inner filter for service. Accept if regex match service_description"""
+        service = items["service"]
         if service is None:
             return False
         return host_re.match(service.service_description) is not None
@@ -1128,11 +1100,13 @@ def filter_service_by_host_name(host_name):
     :rtype: bool
     """
 
-    def inner_filter(service):
+    def inner_filter(items):
         """Inner filter for service. Accept if service.host.host_name == host_name"""
-        if service is None or service.host is None:
+        service = items["service"]
+        host = items["hosts"][service.host]
+        if service is None or host is None:
             return False
-        return service.host.host_name == host_name
+        return host.host_name == host_name
 
     return inner_filter
 
@@ -1148,11 +1122,13 @@ def filter_service_by_regex_host_name(regex):
     """
     host_re = re.compile(regex)
 
-    def inner_filter(service):
+    def inner_filter(items):
         """Inner filter for service. Accept if regex match service.host.host_name"""
-        if service is None or service.host is None:
+        service = items["service"]
+        host = items["hosts"][service.host]
+        if service is None or host is None:
             return False
-        return host_re.match(service.host.host_name) is not None
+        return host_re.match(host.host_name) is not None
 
     return inner_filter
 
@@ -1167,11 +1143,13 @@ def filter_service_by_hostgroup_name(group):
     :rtype: bool
     """
 
-    def inner_filter(service):
+    def inner_filter(items):
         """Inner filter for service. Accept if hostgroup in service.host.hostgroups"""
-        if service is None or service.host is None:
+        service = items["service"]
+        host = items["hosts"][service.host]
+        if service is None or host is None:
             return False
-        return group in [g.hostgroup_name for g in service.host.hostgroups]
+        return group in [items["hostgroups"][g].hostgroup_name for g in host.hostgroups]
 
     return inner_filter
 
@@ -1186,11 +1164,13 @@ def filter_service_by_host_tag_name(tpl):
     :rtype: bool
     """
 
-    def inner_filter(service):
+    def inner_filter(items):
         """Inner filter for service. Accept if tpl in service.host.tags"""
-        if service is None or service.host is None:
+        service = items["service"]
+        host = items["hosts"][service.host]
+        if service is None or host is None:
             return False
-        return tpl in [t.strip() for t in service.host.tags]
+        return tpl in [t.strip() for t in host.tags]
 
     return inner_filter
 
@@ -1205,11 +1185,12 @@ def filter_service_by_servicegroup_name(group):
     :rtype: bool
     """
 
-    def inner_filter(service):
+    def inner_filter(items):
         """Inner filter for service. Accept if group in service.servicegroups"""
+        service = items["service"]
         if service is None:
             return False
-        return group in [g.servicegroup_name for g in service.servicegroups]
+        return group in [items["servicegroups"][g].servicegroup_name for g in service.servicegroups]
 
     return inner_filter
 
@@ -1224,8 +1205,9 @@ def filter_host_by_bp_rule_label(label):
     :rtype: bool
     """
 
-    def inner_filter(host):
+    def inner_filter(items):
         """Inner filter for host. Accept if label in host.labels"""
+        host = items["host"]
         if host is None:
             return False
         return label in host.labels
@@ -1243,11 +1225,13 @@ def filter_service_by_host_bp_rule_label(label):
     :rtype: bool
     """
 
-    def inner_filter(service):
+    def inner_filter(items):
         """Inner filter for service. Accept if label in service.host.labels"""
-        if service is None or service.host is None:
+        service = items["service"]
+        host = items["hosts"][service.host]
+        if service is None or host is None:
             return False
-        return label in service.host.labels
+        return label in host.labels
 
     return inner_filter
 
@@ -1261,8 +1245,9 @@ def filter_service_by_bp_rule_label(label):
     :return: Filter
     :rtype: bool
     """
-    def inner_filter(service):
+    def inner_filter(items):
         """Inner filter for service. Accept if label in service.labels"""
+        service = items["service"]
         if service is None:
             return False
         return label in service.labels
@@ -1282,3 +1267,61 @@ def is_complex_expr(expr):
         if char in expr:
             return True
     return False
+
+
+# ####################### Command line arguments parsing #######################
+def parse_daemon_args(arbiter=False):
+    """Generic parsing function for daemons
+
+    Arbiter only:
+            "-a", "--arbiter": Monitored configuration file(s),
+            (multiple -a can be used, and they will be concatenated to make a global configuration
+            file)
+            "-V", "--verify-config": Verify configuration file(s) and exit
+            "-n", "--config-name": Set the name of the arbiter to pick in the configuration files.
+            This allows an arbiter to find its own configuration in the whole Alignak configuration
+            Using this parameter is mandatory when several arbiters are existing in the
+            configuration to determine which one is the master/spare. The spare arbiter must be
+            launched with this parameter!
+
+    All daemons:
+        '-c', '--config': Daemon configuration file (ini file)
+        '-d', '--daemon': Run as a daemon
+        '-r', '--replace': Replace previous running daemon
+        '-f', '--debugfile': File to dump debug logs
+
+
+    :param arbiter: Do we parse args for arbiter?
+    :type arbiter: bool
+    :return: args
+    """
+    parser = argparse.ArgumentParser(version='%(prog)s ' + VERSION)
+    if arbiter:
+        parser.add_argument('-a', '--arbiter', action='append', required=True,
+                            dest='monitoring_files',
+                            help='Monitored configuration file(s), '
+                                 '(multiple -a can be used, and they will be concatenated '
+                                 'to make a global configuration file)')
+        parser.add_argument('-V', '--verify-config', dest='verify_only', action='store_true',
+                            help='Verify configuration file(s) and exit')
+        parser.add_argument('-k', '--alignak-name', dest='alignak_name',
+                            default='arbiter-master',
+                            help='Set the name of the arbiter to pick in the configuration files '
+                                 'For a spare arbiter, this parameter must contain its name!')
+
+    parser.add_argument('-n', '--name', dest='daemon_name',
+                        help='Daemon unique name. Must be unique for the same daemon type.')
+    parser.add_argument('-c', '--config', dest='config_file',
+                        help='Daemon configuration file')
+    parser.add_argument('-d', '--daemon', dest='is_daemon', action='store_true',
+                        help='Run as a daemon')
+    parser.add_argument('-r', '--replace', dest='do_replace', action='store_true',
+                        help='Replace previous running daemon')
+    parser.add_argument('-f', '--debugfile', dest='debug_file',
+                        help='File to dump debug logs')
+    parser.add_argument('-p', '--port', dest='port',
+                        help='Port used by the daemon')
+    parser.add_argument('-l', '--local_log', dest='local_log',
+                        help='File to use for daemon log')
+
+    return parser.parse_args()

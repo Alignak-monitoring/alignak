@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -47,38 +47,47 @@
 # This file is used to test reading and processing of config files
 #
 
-from alignak_test import *
+import unittest
+from alignak_test import AlignakTest
 
 
 class TestCustomsonservicehosgroups(AlignakTest):
+    """
+    Class for testing custom macros on service hostgroups
+    """
+
 
     def setUp(self):
-        self.setup_with_file(['etc/alignak_customs_on_service_hosgroups.cfg'])
+        self.setup_with_file('cfg/cfg_customs_on_service_hosgroups.cfg')
+        self._sched = self.schedulers['scheduler-master'].sched
 
     # We look for 3 services: on defined as direct on 1 hosts, on other
     # on 2 hsots, and a last one on a hostgroup
     def test_check_for_custom_copy_on_serice_hostgroups(self):
+        """
+        Test custom macros on service hostgroups
+        """
         # The one host service
-        svc_one_host = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_on_1_host")
-        self.assertIsNot(svc_one_host, None)
+        svc_one_host = self._sched.services.find_srv_by_name_and_hostname("test_host_0",
+                                                                          "test_on_1_host")
+        assert svc_one_host is not None
         # The 2 hosts service(s)
-        svc_two_hosts_1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_on_2_hosts")
-        self.assertIsNot(svc_two_hosts_1, None)
-        svc_two_hosts_2 = self.sched.services.find_srv_by_name_and_hostname("test_router_0", "test_on_2_hosts")
-        self.assertIsNot(svc_two_hosts_2, None)
+        svc_two_hosts_1 = self._sched.services.find_srv_by_name_and_hostname("test_host_0",
+                                                                             "test_on_2_hosts")
+        assert svc_two_hosts_1 is not None
+        svc_two_hosts_2 = self._sched.services.find_srv_by_name_and_hostname("test_router_0",
+                                                                             "test_on_2_hosts")
+        assert svc_two_hosts_2 is not None
         # Then the one defined on a hostgroup
-        svc_on_group = self.sched.services.find_srv_by_name_and_hostname("test_router_0", "test_on_group")
-        self.assertIsNot(svc_on_group, None)
+        svc_on_group = self._sched.services.find_srv_by_name_and_hostname("test_router_0",
+                                                                          "test_on_group")
+        assert svc_on_group is not None
 
         # Each one should have customs
-        self.assertEqual('custvalue', svc_one_host.customs['_CUSTNAME'])
-        self.assertEqual('custvalue', svc_two_hosts_1.customs['_CUSTNAME'])
-        self.assertEqual('custvalue', svc_two_hosts_2.customs['_CUSTNAME'])
-        self.assertEqual('custvalue', svc_on_group.customs['_CUSTNAME'])
-
-
-
-
+        assert 'custvalue' == svc_one_host.customs['_CUSTNAME']
+        assert 'custvalue' == svc_two_hosts_1.customs['_CUSTNAME']
+        assert 'custvalue' == svc_two_hosts_2.customs['_CUSTNAME']
+        assert 'custvalue' == svc_on_group.customs['_CUSTNAME']
 
 
 if __name__ == '__main__':

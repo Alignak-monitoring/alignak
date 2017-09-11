@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -47,7 +47,7 @@
 This modules provides class for the Poller daemon
 """
 from alignak.satellite import Satellite
-from alignak.property import PathProp, IntegerProp
+from alignak.property import PathProp, IntegerProp, StringProp
 
 
 class Poller(Satellite):
@@ -60,11 +60,21 @@ class Poller(Satellite):
 
     properties = Satellite.properties.copy()
     properties.update({
-        'pidfile':   PathProp(default='pollerd.pid'),
-        'port':      IntegerProp(default=7771),
-        'local_log': PathProp(default='pollerd.log'),
+        'daemon_type':
+            StringProp(default='poller'),
+        'pidfile':
+            PathProp(default='pollerd.pid'),
+        'port':
+            IntegerProp(default=7771),
+        'local_log':
+            PathProp(default='pollerd.log'),
     })
 
-    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file, profile):
-        super(Poller, self).__init__('poller', config_file, is_daemon, do_replace, debug,
-                                     debug_file)
+    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file,
+                 port=None, local_log=None, daemon_name=None):
+        self.daemon_name = 'poller'
+        if daemon_name:
+            self.daemon_name = daemon_name
+
+        super(Poller, self).__init__(self.daemon_name, config_file, is_daemon, do_replace,
+                                     debug, debug_file, port, local_log)

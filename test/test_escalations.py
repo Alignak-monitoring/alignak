@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -44,606 +44,531 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
-#
-# This file is used to test host- and service-downtimes.
-#
+"""
+ This file is used to test escalations.
+"""
 
-from alignak_test import *
+import time
+from alignak.misc.serialization import unserialize
+from alignak.objects.escalation import Escalation
 from alignak.objects.serviceescalation import Serviceescalation
 
-class TestEscalations(AlignakTest):
+from alignak_test import AlignakTest, unittest, time_hacker
 
+class TestEscalations(AlignakTest):
+    """
+    This class tests for escalations
+    """
     def setUp(self):
-        self.setup_with_file(['etc/alignak_escalations.cfg'])
+        """
+        For each test load and check the configuration
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('./cfg/cfg_escalations.cfg')
+        assert self.conf_is_correct
+
+        # Our scheduler
+        self._sched = self.schedulers['scheduler-master'].sched
+
+        # Our broker
+        self._broker = self._sched.brokers['broker-master']
+
+        # No error messages
+        assert len(self.configuration_errors) == 0
+        # No warning messages
+        assert len(self.configuration_warnings) == 0
+
         time_hacker.set_real_time()
 
-    def test_wildcard_in_service_descrption(self):
+    def check_monitoring_logs(self, expected_logs, dump=False):
+        """
+
+        :param expected_logs: expected monitoring logs
+        :param dump: True to print out the monitoring logs
+        :return:
+        """
+        # Our scheduler
+        self._sched = self.schedulers['scheduler-master'].sched
+        # Our broker
+        self._broker = self._sched.brokers['broker-master']
+
+        # We got 'monitoring_log' broks for logging to the monitoring logs...
+        monitoring_logs = []
+        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+            if brok.type == 'monitoring_log':
+                data = unserialize(brok.data)
+                monitoring_logs.append((data['level'], data['message']))
+        if dump:
+            print("Monitoring logs: %s" % monitoring_logs)
+
+        for log_level, log_message in expected_logs:
+            assert (log_level, log_message) in monitoring_logs
+
+        assert len(expected_logs) == len(monitoring_logs), monitoring_logs
+
+    def test_wildcard_in_service_description(self):
+        """ Test wildcards in service description """
         self.print_header()
-        sid = int(Serviceescalation._id) - 1
-        generated = self.sched.conf.escalations.find_by_name('Generated-Serviceescalation-%d' % sid)
-        for svc in self.sched.services.find_srvs_by_hostname("test_host_0_esc"):
-            self.assertIn(generated, svc.escalations)
+
+        self_generated = [e for e in self._sched.conf.escalations
+                          if e.escalation_name.startswith('Generated-ServiceEscalation-')]
+        host_services = self._sched.services.find_srvs_by_hostname("test_host_0_esc")
+
+        # Todo: confirm this assertion
+        # We only found one, but there are 3 services for this host ... perharps normal?
+        assert 1 == len(self_generated)
+        assert 3 == len(host_services)
+
+        # We must find at least one self generated escalation in our host services
+        for svc in host_services:
+            print("Service: %s" % self._sched.services[svc])
+            assert self_generated[0].uuid in self._sched.services[svc].escalations
 
     def test_simple_escalation(self):
+        """ Test a simple escalation (NAGIOS legacy) """
         self.print_header()
-        # retry_interval 2
-        # critical notification
-        # run loop -> another notification
-        now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0_esc")
+
+        # Get host and services
+        host = self._sched.hosts.find_by_name("test_host_0_esc")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0_esc", "test_ok_00")
 
-        # To make tests quicker we make notifications send very quickly
+        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0_esc",
+                                                                 "test_svc_esc")
+        svc.checks_in_progress = []
+        svc.act_depend_of = []  # ignore the host
+        svc.event_handler_enabled = False
+        # The service has 3 defined escalations:
+        assert 3 == len(svc.escalations)
+
+        # Service escalation levels
+        # Generated service escalation has a name based upon SE uuid ... too hard to get it simply:)
+        # self_generated = self._sched.escalations.find_by_name('Generated-ServiceEscalation-%s-%s')
+        # self.assertIsNotNone(self_generated)
+        # self.assertIs(self_generated, Serviceescalation)
+        # self.assertIn(self_generated.uuid, svc.escalations)
+
+        tolevel2 = self._sched.escalations.find_by_name('ToLevel2')
+        assert tolevel2 is not None
+        # Todo: do not match any of both assertions ... wtf?
+        # self.assertIs(tolevel2, Serviceescalation)
+        # self.assertIs(tolevel2, Escalation)
+        assert tolevel2.uuid in svc.escalations
+
+        tolevel3 = self._sched.escalations.find_by_name('ToLevel3')
+        assert tolevel3 is not None
+        # Todo: do not match any of both assertions ... wtf?
+        # self.assertIs(tolevel3, Serviceescalation)
+        # self.assertIs(tolevel3, Escalation)
+        assert tolevel3.uuid in svc.escalations
+
+        # To make tests quicker we make notifications sent very quickly
         svc.notification_interval = 0.001
 
-        svc.checks_in_progress = []
-        svc.act_depend_of = []  # no hostchecks on critical checkresults
         #--------------------------------------------------------------
         # initialize host/service state
         #--------------------------------------------------------------
-        self.scheduler_loop(1, [[host, 0, 'UP']], do_sleep=True, sleep_time=0.1)
-        print "- 1 x OK -------------------------------------"
-        self.scheduler_loop(1, [[svc, 0, 'OK']], do_sleep=True, sleep_time=0.1)
+        self.scheduler_loop(1, [
+            [host, 0, 'UP'], [svc, 0, 'OK']
+        ])
+        assert "HARD" == host.state_type
+        assert "UP" == host.state
+        assert 0 == host.current_notification_number
 
-        self.assertEqual(0, svc.current_notification_number)
+        assert "HARD" == svc.state_type
+        assert "OK" == svc.state
+        assert 0 == svc.current_notification_number
 
-        tolevel2 = self.sched.conf.escalations.find_by_name('ToLevel2')
-        self.assertIsNot(tolevel2, None)
-        self.assertIn(tolevel2, svc.escalations)
-        tolevel3 = self.sched.conf.escalations.find_by_name('ToLevel3')
-        self.assertIsNot(tolevel3, None)
-        self.assertIn(tolevel3, svc.escalations)
+        # Service goes to CRITICAL/SOFT
+        self.scheduler_loop(1, [[svc, 2, 'BAD']])
+        assert "SOFT" == svc.state_type
+        assert "CRITICAL" == svc.state
+        # No notification...
+        assert 0 == svc.current_notification_number
 
-
-        for es in svc.escalations:
-            print es.__dict__
-
-        #--------------------------------------------------------------
-        # service reaches soft;1
-        # there must not be any notification
-        #--------------------------------------------------------------
-        print "- 1 x BAD get soft -------------------------------------"
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        # check_notification: not (soft)
-        print "---current_notification_number", svc.current_notification_number
-        #--------------------------------------------------------------
-        # service reaches hard;2
-        # a notification must have been created
-        # notification number must be 1
-        #--------------------------------------------------------------
-        print "- 1 x BAD get hard -------------------------------------"
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-
-        # We check if we really notify the level1
-        self.assert_any_log_match('SERVICE NOTIFICATION: level1.*;CRITICAL;')
-        self.show_and_clear_logs()
-        #self.show_and_clear_actions()
-        self.show_actions()
-        print svc.notifications_in_progress
-        for n in svc.notifications_in_progress.values():
-            print n
-        # check_notification: yes (hard)
-        print "---current_notification_number", svc.current_notification_number
-        # notification_number is already sent. the next one has been scheduled
-        # and is waiting for notification_interval to pass. so the current
-        # number is 2
-        self.assertEqual(1, svc.current_notification_number)
-        print "OK, level1 is notified, notif nb = 1"
-
-        print "---------------------------------1st round with a hard"
-        print "find a way to get the number of the last reaction"
-        cnn = svc.current_notification_number
-        print "- 1 x BAD repeat -------------------------------------"
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.assertIn(True, [n.escalated for n in self.sched.actions.values()])
-
-        # Now we raise the notif number of 2, so we can escalade
-        self.assert_any_log_match('SERVICE NOTIFICATION: level2.*;CRITICAL;')
-        self.show_and_clear_logs()
-        self.show_actions()
-        print "cnn and cur", cnn, svc.current_notification_number
-        self.assertGreater(svc.current_notification_number, cnn)
+        # ---
+        # 1/
+        # ---
+        # Service goes to CRITICAL/HARD
+        time.sleep(1)
+        self.scheduler_loop(1, [[svc, 2, 'BAD']])
+        assert "HARD" == svc.state_type
+        assert "CRITICAL" == svc.state
+        # Service notification number must be 1
+        assert 1 == svc.current_notification_number
         cnn = svc.current_notification_number
 
-        # One more bad, we go 3
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.assertIn(True, [n.escalated for n in self.sched.actions.values()])
-        self.assert_any_log_match('SERVICE NOTIFICATION: level2.*;CRITICAL;')
-        self.show_and_clear_logs()
+        # We did not yet got an escalated notification
+        assert 0 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
 
-        # We go 4, still level2
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.assertIn(True, [n.escalated for n in self.sched.actions.values()])
-        self.assert_any_log_match('SERVICE NOTIFICATION: level2.*;CRITICAL;')
-        self.show_and_clear_logs()
-        # We go 5! we escalade to level3
+        # We should have had 2 ALERT and a NOTIFICATION to the service defined contact
+        # We also have a notification to level1 contact which is a contact defined for the host
+        expected_logs = [
+            (u'error', u'SERVICE ALERT: test_host_0_esc;test_svc_esc;CRITICAL;SOFT;1;BAD'),
+            (u'error', u'SERVICE ALERT: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
+            (u'error', u'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc;'
+                       u'CRITICAL;notify-service;BAD'),
+            (u'error', u'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc;'
+                       u'CRITICAL;notify-service;BAD')
+        ]
+        self.check_monitoring_logs(expected_logs, dump=True)
 
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.assertIn(True, [n.escalated for n in self.sched.actions.values()])
-        self.assert_any_log_match('SERVICE NOTIFICATION: level3.*;CRITICAL;')
-        self.show_and_clear_logs()
+        # ---
+        # 2/
+        # ---
+        # Service is still CRITICAL/HARD
+        time.sleep(1)
+        self.scheduler_loop(1, [[svc, 2, 'BAD']])
 
-        # Now we send 10 more notif, we must be still level5
+        # Service notification number increased
+        assert 2 == svc.current_notification_number
+
+        # We got an escalated notification
+        assert 1 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
+
+        # Now also notified to the level2
+        expected_logs += [
+            (u'error', u'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
+                       u'CRITICAL;notify-service;BAD')
+        ]
+        self.check_monitoring_logs(expected_logs)
+
+        # ---
+        # 3/
+        # ---
+        # Service is still CRITICAL/HARD
+        time.sleep(1)
+        self.scheduler_loop(1, [[svc, 2, 'BAD']])
+
+        # Service notification number increased
+        assert 3 == svc.current_notification_number
+
+        # We got one more escalated notification
+        assert 2 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
+        expected_logs += [
+            (u'error', u'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
+                       u'CRITICAL;notify-service;BAD')
+        ]
+        self.check_monitoring_logs(expected_logs)
+
+        # ---
+        # 4/
+        # ---
+        # Service is still CRITICAL/HARD
+        time.sleep(1)
+        self.scheduler_loop(1, [[svc, 2, 'BAD']])
+
+        # Service notification number increased
+        assert 4 == svc.current_notification_number
+
+        # We got one more escalated notification
+        assert 3 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
+        expected_logs += [
+            (u'error', u'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
+                       u'CRITICAL;notify-service;BAD')
+        ]
+        self.check_monitoring_logs(expected_logs)
+
+        # ---
+        # 5/
+        # ---
+        # Service is still CRITICAL/HARD
+        time.sleep(1)
+        self.scheduler_loop(1, [[svc, 2, 'BAD']])
+
+        # Service notification number increased
+        assert 5 == svc.current_notification_number
+
+        # We got one more escalated notification
+        assert 4 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
+        expected_logs += [
+            (u'error', u'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
+                       u'CRITICAL;notify-service;BAD'),
+        ]
+        self.check_monitoring_logs(expected_logs)
+
+        # ---
+        # 6/
+        # ---
+        # Service is still CRITICAL/HARD
+        time.sleep(1)
+        self.scheduler_loop(1, [[svc, 2, 'BAD']])
+
+        # Service notification number increased
+        assert 6 == svc.current_notification_number
+
+        # We got one more escalated notification but we notified level 3 !
+        assert 5 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
+        expected_logs += [
+            (u'error', u'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc;'
+                       u'CRITICAL;notify-service;BAD')
+        ]
+        self.check_monitoring_logs(expected_logs)
+
+        # ---
+        # 7/
+        # ---
+        # Now we send 10 more alerts and we are still always notifying only level3
         for i in range(10):
-            self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-            self.assert_any_log_match('SERVICE NOTIFICATION: level3.*;CRITICAL;')
-            self.show_and_clear_logs()
+            # Service is still CRITICAL/HARD
+            time.sleep(.2)
+            self.scheduler_loop(1, [[svc, 2, 'BAD']])
 
-        # Now we recover, it will be fun because all of level{1,2,3} must be send a
-        # notif
-        self.scheduler_loop(2, [[svc, 0, 'OK']], do_sleep=True, sleep_time=0.1)
-        self.show_actions()
-        self.assert_any_log_match('SERVICE NOTIFICATION: level1.*;OK;')
-        self.assert_any_log_match('SERVICE NOTIFICATION: level2.*;OK;')
-        self.assert_any_log_match('SERVICE NOTIFICATION: level3.*;OK;')
-        self.show_and_clear_logs()
+            # Service notification number increased
+            assert 7 + i == svc.current_notification_number
+
+            # We got one more escalated notification
+            assert 6 + i == \
+                             len([n.escalated for n in
+                                  self._sched.actions.values() if n.escalated])
+            expected_logs += [
+                (u'error', u'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc;'
+                           u'CRITICAL;notify-service;BAD')
+            ]
+            self.check_monitoring_logs(expected_logs)
+
+        # ---
+        # 8/
+        # ---
+        # The service recovers, all the notified contact will be contacted
+        self.scheduler_loop(2, [[svc, 0, 'OK']])
+        expected_logs += [
+            (u'info', u'SERVICE ALERT: test_host_0_esc;test_svc_esc;OK;HARD;2;OK'),
+            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc;'
+                      u'OK;notify-service;OK'),
+            (u'info', u'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
+                      u'OK;notify-service;OK'),
+            (u'info', u'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc;'
+                      u'OK;notify-service;OK'),
+            (u'info', u'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc;'
+                      u'OK;notify-service;OK')
+        ]
+        self.check_monitoring_logs(expected_logs)
 
     def test_time_based_escalation(self):
+        """ Time based escalations """
         self.print_header()
-        # retry_interval 2
-        # critical notification
-        # run loop -> another notification
-        now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0_esc")
+
+        # Get host and services
+        host = self._sched.hosts.find_by_name("test_host_0_esc")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0_esc", "test_ok_0_time")
 
-        # To make tests quicker we make notifications send very quickly
+        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0_esc",
+                                                                 "test_svc_esc_time")
+        svc.checks_in_progress = []
+        svc.act_depend_of = []  # ignore the host
+        svc.event_handler_enabled = False
+        # The service has 3 defined escalations:
+        assert 3 == len(svc.escalations)
+
+        # Service escalation levels
+        # Generated service escalation has a name based upon SE uuid ... too hard to get it simply:)
+        # self_generated = self._sched.escalations.find_by_name('Generated-ServiceEscalation-%s-%s')
+        # self.assertIsNotNone(self_generated)
+        # self.assertIs(self_generated, Serviceescalation)
+        # self.assertIn(self_generated.uuid, svc.escalations)
+
+        tolevel2 = self._sched.escalations.find_by_name('ToLevel2-time')
+        assert tolevel2 is not None
+        # Todo: do not match any of both assertions ... wtf?
+        # self.assertIs(tolevel2, Serviceescalation)
+        # self.assertIs(tolevel2, Escalation)
+        assert tolevel2.uuid in svc.escalations
+
+        tolevel3 = self._sched.escalations.find_by_name('ToLevel3-time')
+        assert tolevel3 is not None
+        # Todo: do not match any of both assertions ... wtf?
+        # self.assertIs(tolevel3, Serviceescalation)
+        # self.assertIs(tolevel3, Escalation)
+        assert tolevel3.uuid in svc.escalations
+
+        # To make tests quicker we make notifications sent very quickly
         svc.notification_interval = 0.001
 
-        svc.checks_in_progress = []
-        svc.act_depend_of = []  # no hostchecks on critical checkresults
         #--------------------------------------------------------------
         # initialize host/service state
         #--------------------------------------------------------------
-        self.scheduler_loop(1, [[host, 0, 'UP']], do_sleep=True, sleep_time=0.1)
-        print "- 1 x OK -------------------------------------"
-        self.scheduler_loop(1, [[svc, 0, 'OK']], do_sleep=True, sleep_time=0.1)
+        self.scheduler_loop(1, [
+            [host, 0, 'UP'], [svc, 0, 'OK']
+        ])
+        assert "HARD" == host.state_type
+        assert "UP" == host.state
+        assert 0 == host.current_notification_number
 
-        self.assertEqual(0, svc.current_notification_number)
+        assert "HARD" == svc.state_type
+        assert "OK" == svc.state
+        assert 0 == svc.current_notification_number
 
-        # We check if we correclty linked our escalations
-        tolevel2_time = self.sched.conf.escalations.find_by_name('ToLevel2-time')
-        self.assertIsNot(tolevel2_time, None)
-        self.assertIn(tolevel2_time, svc.escalations)
-        tolevel3_time = self.sched.conf.escalations.find_by_name('ToLevel3-time')
-        self.assertIsNot(tolevel3_time, None)
-        self.assertIn(tolevel3_time, svc.escalations)
+        # Service goes to CRITICAL/SOFT
+        self.scheduler_loop(1, [[svc, 2, 'BAD']])
+        assert "SOFT" == svc.state_type
+        assert "CRITICAL" == svc.state
+        # No notification...
+        assert 0 == svc.current_notification_number
 
-        # Go for the running part!
-
-        #--------------------------------------------------------------
-        # service reaches soft;1
-        # there must not be any notification
-        #--------------------------------------------------------------
-        print "- 1 x BAD get soft -------------------------------------"
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        # check_notification: not (soft)
-        print "---current_notification_number", svc.current_notification_number
-        #--------------------------------------------------------------
-        # service reaches hard;2
-        # a notification must have been created
-        # notification number must be 1
-        #--------------------------------------------------------------
-        print "- 1 x BAD get hard -------------------------------------"
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-
-        # We check if we really notify the level1
-        self.assert_any_log_match('SERVICE NOTIFICATION: level1.*;CRITICAL;')
-        self.show_and_clear_logs()
-        self.show_actions()
-
-        # check_notification: yes (hard)
-        print "---current_notification_number", svc.current_notification_number
-        # notification_number is already sent. the next one has been scheduled
-        # and is waiting for notification_interval to pass. so the current
-        # number is 2
-        self.assertEqual(1, svc.current_notification_number)
-        print "OK, level1 is notified, notif nb = 1"
-
-        print "---------------------------------1st round with a hard"
-        print "find a way to get the number of the last reaction"
+        # ---
+        # 1/
+        # ---
+        # Service goes to CRITICAL/HARD
+        time.sleep(1)
+        self.scheduler_loop(1, [[svc, 2, 'BAD']])
+        assert "HARD" == svc.state_type
+        assert "CRITICAL" == svc.state
+        # Service notification number must be 1
+        assert 1 == svc.current_notification_number
         cnn = svc.current_notification_number
-        print "- 1 x BAD repeat -------------------------------------"
 
-        # For the test, we hack the notif value because we do not wan to wait 1 hour!
+        # We did not yet got an escalated notification
+        assert 0 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
+
+        # We should have had 2 ALERT and a NOTIFICATION to the service defined contact
+        # We also have a notification to level1 contact which is a contact defined for the host
+        expected_logs = [
+            (u'error', u'SERVICE ALERT: test_host_0_esc;test_svc_esc_time;CRITICAL;SOFT;1;BAD'),
+            (u'error', u'SERVICE ALERT: test_host_0_esc;test_svc_esc_time;CRITICAL;HARD;2;BAD'),
+            (u'error', u'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;'
+                       u'CRITICAL;notify-service;BAD'),
+            (u'error', u'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc_time;'
+                       u'CRITICAL;notify-service;BAD')
+        ]
+        self.check_monitoring_logs(expected_logs)
+
+        # ---
+        # time warp :)
+        # ---
+        # For the test, we hack the notification value because we do not want to wait 1 hour!
         for n in svc.notifications_in_progress.values():
-            # HOP, we say: it's already 3600 second since the last notif,
+            # We say that it's already 3600 seconds since the last notification
             svc.notification_interval = 3600
-            # and we say that there is still 1hour since the notification creation
-            # so it will say the notification time is huge, and so it will escalade
+            # and we say that there is still 1 hour since the notification creation
+            # so it will say the notification time is huge, and it will escalade
             n.creation_time = n.creation_time - 3600
 
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.001)
+        # ---
+        # 2/
+        # ---
+        # Service is still CRITICAL/HARD
+        time.sleep(1)
+        self.scheduler_loop(1, [[svc, 2, 'BAD']])
 
-        # Now we raise a notification time of 1hour, we escalade to level2
-        self.assert_any_log_match('SERVICE NOTIFICATION: level2.*;CRITICAL;')
-        self.show_and_clear_logs()
-        self.show_actions()
+        # Service notification number increased
+        assert 2 == svc.current_notification_number
 
-        print "cnn and cur", cnn, svc.current_notification_number
-        # We check that we really raise the notif number too
-        self.assertGreater(svc.current_notification_number, cnn)
-        cnn = svc.current_notification_number
+        # Todo: check if it should be ok - test_contact notification is considered escalated.
+        # We got 2 escalated notifications!
+        assert 2 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
 
+        # Now also notified to the level2 and a second notification to the service defined contact
+        expected_logs += [
+            (u'error', u'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;'
+                       u'CRITICAL;notify-service;BAD'),
+            (u'error', u'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc_time;'
+                       u'CRITICAL;notify-service;BAD')
+        ]
+        self.check_monitoring_logs(expected_logs)
+
+        # ---
+        # time warp :)
+        # ---
+        # For the test, we hack the notification value because we do not want to wait 1 hour!
         for n in svc.notifications_in_progress.values():
-            # HOP, we say: it's already 3600 second since the last notif
+            # Notifications must be raised now...
             n.t_to_go = time.time()
 
-        # One more bad, we say: he, it's still near 1 hour, so still level2
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.assert_any_log_match('SERVICE NOTIFICATION: level2.*;CRITICAL;')
-        self.show_and_clear_logs()
+        # ---
+        # 3/
+        # ---
+        # Service is still CRITICAL/HARD
+        time.sleep(1)
+        self.scheduler_loop(1, [[svc, 2, 'BAD']])
 
+        # Service notification number increased
+        assert 3 == svc.current_notification_number
+
+        # We got 2 more escalated notification
+        assert 4 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
+        expected_logs += [
+            (u'error', u'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;'
+                       u'CRITICAL;notify-service;BAD'),
+            (u'error', u'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc_time;'
+                       u'CRITICAL;notify-service;BAD')
+        ]
+        self.check_monitoring_logs(expected_logs)
+
+        # ---
+        # time warp :)
+        # ---
         # Now we go for level3, so again we say: he, in fact we start one hour earlyer,
         # so the total notification duration is near 2 hour, so we will raise level3
         for n in svc.notifications_in_progress.values():
-            # HOP, we say: it's already 3600 second since the last notif,
+            # We say that it's already 3600 seconds since the last notification
             n.t_to_go = time.time()
             n.creation_time = n.creation_time - 3600
 
-        # One more, we bypass 7200, so now it's level3
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.assert_any_log_match('SERVICE NOTIFICATION: level3.*;CRITICAL;')
-        self.show_and_clear_logs()
+        # ---
+        # 4/
+        # ---
+        # Service is still CRITICAL/HARD
+        time.sleep(1)
+        self.scheduler_loop(1, [[svc, 2, 'BAD']])
 
+        # Service notification number increased
+        assert 4 == svc.current_notification_number
 
-        # Now we send 10 more notif, we must be still level5
+        # We got one more escalated notification
+        assert 5 == len([n.escalated for n in self._sched.actions.values() if n.escalated])
+        expected_logs += [
+            (u'error', u'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;'
+                       u'CRITICAL;notify-service;BAD')
+        ]
+        self.check_monitoring_logs(expected_logs)
+
+        # ---
+        # 5/
+        # ---
+        # Now we send 10 more alerts and we are still always notifying only level3
         for i in range(10):
+            # And still a time warp :)
             for n in svc.notifications_in_progress.values():
-                # HOP, we say: it's already 3600 second since the last notif,
+                # We say that it's already 3600 seconds since the last notification
                 n.t_to_go = time.time()
 
-            self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-            self.assert_any_log_match('SERVICE NOTIFICATION: level3.*;CRITICAL;')
-            self.show_and_clear_logs()
+            # Service is still CRITICAL/HARD
+            time.sleep(.1)
+            self.scheduler_loop(1, [[svc, 2, 'BAD']])
 
-        # Now we recover, it will be fun because all of level{1,2,3} must be send a
-        # recovery notif
-        self.scheduler_loop(2, [[svc, 0, 'OK']], do_sleep=True, sleep_time=0.1)
-        self.show_actions()
-        self.assert_any_log_match('SERVICE NOTIFICATION: level1.*;OK;')
-        self.assert_any_log_match('SERVICE NOTIFICATION: level2.*;OK;')
-        self.assert_any_log_match('SERVICE NOTIFICATION: level3.*;OK;')
-        self.show_and_clear_logs()
+            # Service notification number increased
+            assert 5 + i == svc.current_notification_number
 
-    # Here we search to know if a escalation really short the notification
-    # interval if the escalation if BEFORE the next notification. For example
-    # let say we notify one a day, if the escalation if at 4hour, we need
-    # to notify at t=0, and get the next notification at 4h, and not 1day.
-    def test_time_based_escalation_with_shorting_interval(self):
-        self.print_header()
-        # retry_interval 2
-        # critical notification
-        # run loop -> another notification
-        now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0_esc")
-        host.checks_in_progress = []
-        host.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0_esc", "test_ok_0_time")
+            # We got one more escalated notification
+            assert 6 + i == \
+                             len([n.escalated for n in
+                                  self._sched.actions.values() if n.escalated])
+            expected_logs += [
+                (u'error', u'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;'
+                           u'CRITICAL;notify-service;BAD')
+            ]
+            self.check_monitoring_logs(expected_logs)
 
-        # To make tests quicker we make notifications send very quickly
-        # 1 day notification interval
-        svc.notification_interval = 1400
-
-        svc.checks_in_progress = []
-        svc.act_depend_of = []  # no hostchecks on critical checkresults
-        #--------------------------------------------------------------
-        # initialize host/service state
-        #--------------------------------------------------------------
-        self.scheduler_loop(1, [[host, 0, 'UP']], do_sleep=True, sleep_time=0.1)
-        print "- 1 x OK -------------------------------------"
-        self.scheduler_loop(1, [[svc, 0, 'OK']], do_sleep=True, sleep_time=0.1)
-
-        self.assertEqual(0, svc.current_notification_number)
-
-        # We check that we really linked our escalations :)
-        tolevel2_time = self.sched.conf.escalations.find_by_name('ToLevel2-time')
-        self.assertIsNot(tolevel2_time, None)
-        self.assertIn(tolevel2_time, svc.escalations)
-        tolevel3_time = self.sched.conf.escalations.find_by_name('ToLevel3-time')
-        self.assertIsNot(tolevel3_time, None)
-        self.assertIn(tolevel3_time, svc.escalations)
-
-        #--------------------------------------------------------------
-        # service reaches soft;1
-        # there must not be any notification
-        #--------------------------------------------------------------
-        print "- 1 x BAD get soft -------------------------------------"
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        # check_notification: not (soft)
-        print "---current_notification_number", svc.current_notification_number
-        #--------------------------------------------------------------
-        # service reaches hard;2
-        # a notification must have been created
-        # notification number must be 1
-        #--------------------------------------------------------------
-        print "- 1 x BAD get hard -------------------------------------"
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-
-        print "  ** LEVEL1 ** " * 20
-        # We check if we really notify the level1
-        self.assert_any_log_match('SERVICE NOTIFICATION: level1.*;CRITICAL;')
-        self.show_and_clear_logs()
-        self.show_actions()
-
-        # check_notification: yes (hard)
-        print "---current_notification_number", svc.current_notification_number
-        # notification_number is already sent. the next one has been scheduled
-        # and is waiting for notification_interval to pass. so the current
-        # number is 2
-        self.assertEqual(1, svc.current_notification_number)
-        print "OK, level1 is notified, notif nb = 1"
-
-        print "---------------------------------1st round with a hard"
-        print "find a way to get the number of the last reaction"
-        cnn = svc.current_notification_number
-        print "- 1 x BAD repeat -------------------------------------"
-
-        # Now we go for the level2 escalation, so we will need to say: he, it's 1 hour since the begining:p
-        print "*************Next", svc.notification_interval * svc.__class__.interval_length
-
-        # first, we check if the next notification will really be near 1 hour because the escalation
-        # to level2 is asking for it. If it don't, the standard was 1 day!
-        for n in svc.notifications_in_progress.values():
-            next = svc.get_next_notification_time(n)
-            print abs(next - now)
-            # Check if we find the next notification for the next hour,
-            # and not for the next day like we ask before
-            self.assertLess(abs(next - now - 3600), 10)
-
-        # And we hack the notification so we can raise really the level2 escalation
-        for n in svc.notifications_in_progress.values():
-            n.t_to_go = time.time()
-            n.creation_time -= 3600
-
-        print "  ** LEVEL2 ** " * 20
-
-        # We go in trouble too
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.001)
-
-        # Now we raise the time since the begining at 1 hour, so we can escalade
-        self.assert_any_log_match('SERVICE NOTIFICATION: level2.*;CRITICAL;')
-        self.show_and_clear_logs()
-        self.show_actions()
-
-        print "Level 2 got warn, now we search for level3"
-        print "cnn and cur", cnn, svc.current_notification_number
-        self.assertGreater(svc.current_notification_number, cnn)
-        cnn = svc.current_notification_number
-
-        # Now the same thing, but for level3, so one more hour
-        for n in svc.notifications_in_progress.values():
-            # HOP, we say: it's already 3600 second since the last notif,
-            n.t_to_go = time.time()
-            n.creation_time -= 3600
-
-        # One more bad, we say: he, it's 7200 sc of notif, so must be still level3
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.assert_any_log_match('SERVICE NOTIFICATION: level3.*;CRITICAL;')
-        self.show_and_clear_logs()
-
-        for n in svc.notifications_in_progress.values():
-            # we say that the next notif will be right now
-            # so we can raise a notif now
-            n.t_to_go = time.time()
-
-        # One more, we bypass 7200, so now it's still level3
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.assert_any_log_match('SERVICE NOTIFICATION: level3.*;CRITICAL;')
-        self.show_and_clear_logs()
-
-
-        # Now we send 10 more notif, we must be still level3
-        for i in range(10):
-            for n in svc.notifications_in_progress.values():
-                # HOP, we say: it's already 3600 second since the last notif,
-                n.t_to_go = time.time()
-
-            self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-            self.assert_any_log_match('SERVICE NOTIFICATION: level3.*;CRITICAL;')
-            self.show_and_clear_logs()
-
-        # Ok now we get the normal stuff, we do NOT want to raise so soon a
-        # notification.
-        self.scheduler_loop(2, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.show_actions()
-        print svc.notifications_in_progress
-        # Should be far away
-        for n in svc.notifications_in_progress.values():
-            print n, n.t_to_go, time.time(), n.t_to_go - time.time()
-            # Should be "near" one day now, so 84000s
-            self.assertLess(8300 < abs(n.t_to_go - time.time()), 85000)
-        # And so no notification
-        self.assert_no_log_match('SERVICE NOTIFICATION: level3.*;CRITICAL;')
-
-        # Now we recover, it will be fun because all of level{1,2,3} must be send a
-        # recovery notif
-        self.scheduler_loop(2, [[svc, 0, 'OK']], do_sleep=True, sleep_time=0.1)
-        self.show_actions()
-        self.assert_any_log_match('SERVICE NOTIFICATION: level1.*;OK;')
-        self.assert_any_log_match('SERVICE NOTIFICATION: level2.*;OK;')
-        self.assert_any_log_match('SERVICE NOTIFICATION: level3.*;OK;')
-        self.show_and_clear_logs()
-
-    def test_time_based_escalation_with_short_notif_interval(self):
-        self.print_header()
-        # retry_interval 2
-        # critical notification
-        # run loop -> another notification
-        now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0_esc")
-        host.checks_in_progress = []
-        host.act_depend_of = [] # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0_esc", "test_ok_0_time_long_notif_interval")
-        # For this specific test, notif interval will be something like 10s
-        #svc.notification_interval = 0.1
-
-        svc.checks_in_progress = []
-        svc.act_depend_of = [] # no hostchecks on critical checkresults
-        #--------------------------------------------------------------
-        # initialize host/service state
-        #--------------------------------------------------------------
-        self.scheduler_loop(1, [[host, 0, 'UP']], do_sleep=True, sleep_time=0.1)
-        print "- 1 x OK -------------------------------------"
-        self.scheduler_loop(1, [[svc, 0, 'OK']], do_sleep=True, sleep_time=0.1)
-
-        self.assertEqual(0, svc.current_notification_number)
-
-        # We hack the interval_length for short time, like 10s
-        svc.__class__.interval_length = 5
-
-        # We check if we correclty linked our escalations
-        tolevel2_time = self.sched.conf.escalations.find_by_name('ToLevel2-shortinterval')
-        self.assertIsNot(tolevel2_time, None)
-        self.assertIn(tolevel2_time, svc.escalations)
-        #tolevel3_time = self.sched.conf.escalations.find_by_name('ToLevel3-time')
-        #self.assertIsNot(tolevel3_time, None)
-        #self.assertIn(tolevel3_time, svc.escalations)
-
-        # Go for the running part!
-
-        #--------------------------------------------------------------
-        # service reaches soft;1
-        # there must not be any notification
-        #--------------------------------------------------------------
-        print "- 1 x BAD get soft -------------------------------------"
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        # check_notification: not (soft)
-        print "---current_notification_number", svc.current_notification_number
-        #--------------------------------------------------------------
-        # service reaches hard;2
-        # a notification must have been created
-        # notification number must be 1
-        #--------------------------------------------------------------
-        print "- 1 x BAD get hard -------------------------------------"
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-
-        # We check if we really notify the level1
-        self.assert_any_log_match('SERVICE NOTIFICATION: level1.*;CRITICAL;')
-        self.show_and_clear_logs()
-        self.show_actions()
-
-        # check_notification: yes (hard)
-        print "---current_notification_number", svc.current_notification_number
-        # notification_number is already sent. the next one has been scheduled
-        # and is waiting for notification_interval to pass. so the current
-        # number is 2
-        self.assertEqual(1, svc.current_notification_number)
-        print "OK, level1 is notified, notif nb = 1"
-
-        print "---------------------------------1st round with a hard"
-        print "find a way to get the number of the last reaction"
-        cnn = svc.current_notification_number
-        print "- 1 x BAD repeat -------------------------------------"
-
-        # For the test, we hack the notif value because we do not wan to wait 1 hour!
-        #for n in svc.notifications_in_progress.values():
-            # HOP, we say: it's already 3600 second since the last notif,
-        #    svc.notification_interval = 3600
-            # and we say that there is still 1hour since the notification creation
-            # so it will say the notification time is huge, and so it will escalade
-        #    n.creation_time = n.creation_time - 3600
-
-        # Sleep 1min and look how the notification is going, only 6s because we will go in
-        # escalation in 5s (5s = interval_length, 1 for escalation time)
-        print "---" * 200
-        print "We wait a bit, but not enough to go in escalation level2"
-        time.sleep(2)
-
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.001)
-
-        # Now we raise a notification time of 1hour, we escalade to level2
-        self.assert_no_log_match('SERVICE NOTIFICATION: level2.*;CRITICAL;')
-        self.show_and_clear_logs()
-        self.show_actions()
-
-        print "---" * 200
-        print "OK NOW we will have an escalation!"
-        time.sleep(5)
-
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.001)
-
-        # Now we raise a notification time of 1hour, we escalade to level2
-        self.assert_any_log_match('SERVICE NOTIFICATION: level2.*;CRITICAL;')
-        self.show_and_clear_logs()
-        self.show_actions()
-
-        print "cnn and cur", cnn, svc.current_notification_number
-        # We check that we really raise the notif number too
-        self.assertGreater(svc.current_notification_number, cnn)
-        cnn = svc.current_notification_number
-        
-        # Ok we should have one notification
-        next_notifications = svc.notifications_in_progress.values()
-        print "LEN", len(next_notifications)
-        for n in next_notifications:
-            print n
-        self.assertEqual(1, len(next_notifications))
-        n = next_notifications.pop()
-        print "Current NOTIFICATION", n.__dict__, n.t_to_go, time.time(), n.t_to_go - time.time(), n.already_start_escalations
-        # Should be in the escalation ToLevel2-shortinterval
-        self.assertIn('ToLevel2-shortinterval', n.already_start_escalations)
-
-        # Ok we want to be sure we are using the current escalation interval, the 1 interval = 5s
-        # So here we should have a new notification for level2
-        print "*--*--" * 20
-        print "Ok now another notification during the escalation 2"
-        time.sleep(10)
-
-        # One more bad, we say: he, it's still near 1 hour, so still level2
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.assert_any_log_match('SERVICE NOTIFICATION: level2.*;CRITICAL;')
-        self.show_and_clear_logs()
-
-        # Ok now go in the Level3 thing
-        print "*--*--" * 20
-        print "Ok now goes in level3 too"
-        time.sleep(10)
-
-        # One more, we bypass 7200, so now it's level3
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.assert_any_log_match('SERVICE NOTIFICATION: level2.*;CRITICAL;')
-        self.assert_any_log_match('SERVICE NOTIFICATION: level3.*;CRITICAL;')
-        self.show_and_clear_logs()
-
-        # Ok we should have one notification
-        next_notifications = svc.notifications_in_progress.values()
-        self.assertEqual(1, len(next_notifications))
-        n = next_notifications.pop()
-        print "Current NOTIFICATION", n.__dict__, n.t_to_go, time.time(), n.t_to_go - time.time(), n.already_start_escalations
-        # Should be in the escalation ToLevel2-shortinterval
-        self.assertIn('ToLevel2-shortinterval', n.already_start_escalations)
-        self.assertIn('ToLevel3-shortinterval', n.already_start_escalations)
-
-        # Make a loop for pass the next notification
-        time.sleep(5)
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.assert_any_log_match('SERVICE NOTIFICATION: level3.*;CRITICAL;')
-        self.show_and_clear_logs()
-
-        print "Current NOTIFICATION", n.__dict__, n.t_to_go, time.time(), n.t_to_go - time.time(), n.already_start_escalations
-
-        # Now way a little bit, and with such low value, the escalation3 value must be ok for this test to pass
-        time.sleep(5)
-
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.assert_any_log_match('SERVICE NOTIFICATION: level3.*;CRITICAL;')
-        self.show_and_clear_logs()
-
-        # Now we recover, it will be fun because all of level{1,2,3} must be send a
-        # recovery notif
-        self.scheduler_loop(2, [[svc, 0, 'OK']], do_sleep=True, sleep_time=0.1)
-        self.show_actions()
-        self.assert_any_log_match('SERVICE NOTIFICATION: level1.*;OK;')
-        self.assert_any_log_match('SERVICE NOTIFICATION: level2.*;OK;')
-        self.assert_any_log_match('SERVICE NOTIFICATION: level3.*;OK;')
-        self.show_and_clear_logs()
-
-
+        # ---
+        # 6/
+        # ---
+        # The service recovers, all the notified contact will be contacted
+        self.scheduler_loop(2, [[svc, 0, 'OK']])
+        expected_logs += [
+            (u'info', u'SERVICE ALERT: test_host_0_esc;test_svc_esc_time;OK;HARD;2;OK'),
+            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;'
+                      u'OK;notify-service;OK'),
+            (u'info', u'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc_time;'
+                      u'OK;notify-service;OK'),
+            (u'info', u'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc_time;'
+                      u'OK;notify-service;OK'),
+            (u'info', u'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;'
+                      u'OK;notify-service;OK')
+        ]
+        self.check_monitoring_logs(expected_logs)
 
 
 if __name__ == '__main__':

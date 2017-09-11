@@ -1,34 +1,48 @@
 language: python
-sudo: true
+dist: trusty
+sudo: required
 python:
   - "2.6"
   - "2.7"
-  
-# command to install dependencies
-# some are only used for travis/coveralls so we are installing them here only
+
+env:
+  - TEST_SUITE=unit
+  # Alignak daemons run tests
+  - TEST_SUITE=run
+  - TEST_SUITE=load
+  - TEST_SUITE=codingstandard
+  - TEST_SUITE=virtualenv
+
+matrix:
+  exclude:
+  - python: "2.6"
+    env: TEST_SUITE=load
+  - python: "2.6"
+    env: TEST_SUITE=codingstandard
+  - python: "2.6"
+    env: TEST_SUITE=virtualenv
+
 install:
-  - ./test/setup_test.sh
-# command to run tests
-# notice: the nose-cov is used because it is compatible with --processes, but produce a .coverage by process
-# so we must combine them in the end
-script:
-  - cd test
-  - pip freeze  # so to help eventual debug: know what exact versions are in use can be rather useful.
-  - nosetests -xv --process-restartworker --processes=1 --process-timeout=300  --with-coverage --cover-package=alignak
-  - coverage combine
-  - cd .. && pep8 --max-line-length=100 --exclude='*.pyc' alignak/*
+  # Remove python warnings
   - unset PYTHONWARNINGS
-  - if [[ $TRAVIS_PYTHON_VERSION == 2.7 ]]; then pylint --rcfile=.pylintrc --disable=all --enable=C0111 --enable=W0403 --enable=W0106 --enable=W1401 --enable=W0614 --enable=W0107 --enable=C0204 --enable=W0109  --enable=W0223  --enable=W0311  --enable=W0404  --enable=W0623  --enable=W0633 --enable=W0640  --enable=W0105 --enable=W0141 --enable=C0325 --enable=W1201 --enable=W0231 --enable=W0611 --enable=C0326 --enable=W0122 --enable=E0102 --enable=W0401 --enable=W0622 --enable=C0103 --enable=E1101 -r no alignak/*; fi
-  - export PYTHONWARNINGS=all
-  - pep257 --select=D300 alignak
-  - cd test && (pkill -6 -f "alignak_-" || :) && python full_tst.py && cd ..
-  - if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then ./test/test_all_setup.sh; fi
+  # command to install dependencies
+  # some are only used for travis/coveralls so we are installing them here only
+  - ./test/setup_test.sh
+  # some are specific for daemons run tests
+  - ./test_run/setup_test.sh
+
+# command to run tests
+script:
+  # so to help eventual debug: know what exact versions are in use can be rather useful.
+  - pip freeze
+  # run test suite (wait no more than 30 minutes)
+  - travis_wait 60 ./.travis/$TEST_SUITE.sh
+
 # specific call to launch coverage data into coveralls.io
 after_success:
-  # to get coverage data with relative paths and not absolute we have to
-  # execute coveralls from the base directory of the project,
-  # so we need to move the .coverage file here :
-  mv test/.coverage . && coveralls --rcfile=test/.coveragerc
+  - echo "Test Success - Branch($TRAVIS_BRANCH) Pull Request($TRAVIS_PULL_REQUEST) Tag($TRAVIS_TAG)"
+  # Send coverage report only for the Python 2.7 unit tests
+  - if [[ $TEST_SUITE == 'unit' && $TRAVIS_PYTHON_VERSION == '2.7' ]]; then ./.travis/report_coveralls.sh; fi
 
 notifications:
   webhooks:
@@ -36,4 +50,4 @@ notifications:
       - https://webhooks.gitter.im/e/b40202d91150d5c75582
     on_success: change  # options: [always|never|change] default: always
     on_failure: always  # options: [always|never|change] default: always
-    on_start: false     # default: false
+    on_start: never     # default: false

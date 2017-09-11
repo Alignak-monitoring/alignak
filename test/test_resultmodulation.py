@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -44,52 +44,116 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
-#
-# This file is used to test reading and processing of config files
-#
+"""
+This file is used to test result modulations
+"""
 
-from alignak_test import *
+from alignak_test import AlignakTest, unittest
 
 
-class TestConfig(AlignakTest):
+class TestResultModulation(AlignakTest):
     def setUp(self):
-        self.setup_with_file(['etc/alignak_resultmodulation.cfg'])
+        self.setup_with_file('cfg/cfg_result_modulation.cfg')
+        assert self.conf_is_correct
 
-    def get_svc(self):
-        return self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0_resmod")
-
-    def get_host(self):
-        return self.sched.hosts.find_by_name("test_host_0")
-
-    def get_router(self):
-        return self.sched.hosts.find_by_name("test_router_0_resmod")
+        # Our scheduler
+        self._sched = self.schedulers['scheduler-master'].sched
 
     def test_service_resultmodulation(self):
-        svc = self.get_svc()
-        host = self.get_host()
-        router = self.get_router()
+        """ Test result modulations """
+        self.print_header()
 
-        self.scheduler_loop(2, [[host, 0, 'UP | value1=1 value2=2'], [svc, 2, 'BAD | value1=0 value2=0'],])
-        self.assertEqual('UP', host.state)
-        self.assertEqual('HARD', host.state_type)
+        # Get the host
+        host = self._sched.hosts.find_by_name("test_host_0")
+        assert host is not None
+        host.checks_in_progress = []
+        host.act_depend_of = []
+        assert len(host.resultmodulations) == 0
 
-        # This service got a result modulation. So Criticals are in fact
-        # Warnings. So even with some CRITICAL (2), it must be warning
+        # Get the host modulated service
+        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0",
+                                                                 "test_ok_0_resmod")
+        assert svc is not None
+        svc.checks_in_progress = []
+        svc.act_depend_of = []
+        assert len(svc.resultmodulations) == 1
+
+        # Get the result modulations
+        mod = self._sched.resultmodulations.find_by_name("critical_is_warning")
+        assert mod is not None
+        assert mod.get_name() == "critical_is_warning"
+        assert mod.is_active(self._sched.timeperiods)
+        assert mod.uuid in svc.resultmodulations
+
+        # The host is UP
+        # The service is going CRITICAL/HARD ...
+        self.scheduler_loop(3, [
+            [host, 0, 'UP'],
+            [svc, 2, 'BAD | value1=0 value2=0']
+        ])
+        # The service has a result modulation. So CRITICAL is transformed as WARNING.
         self.assertEqual('WARNING', svc.state)
+        self.assertEqual('HARD', svc.state_type)
 
-        # If we remove the resultmodulations, we should have theclassic behavior
+        # Even after a second run
+        self.scheduler_loop(3, [
+            [host, 0, 'UP'],
+            [svc, 2, 'BAD | value1=0 value2=0']
+        ])
+        # The service has a result modulation. So CRITICAL is transformed as WARNING.
+        self.assertEqual('WARNING', svc.state)
+        self.assertEqual('HARD', svc.state_type)
+
+        # Without the resultmodulations, we should have the usual behavior
         svc.resultmodulations = []
-        self.scheduler_loop(2, [[host, 0, 'UP | value1=1 value2=2'], [svc, 2, 'BAD | value1=0 value2=0']])
+        self.scheduler_loop(3, [
+            [host, 0, 'UP'],
+            [svc, 2, 'BAD | value1=0 value2=0']
+        ])
         self.assertEqual('CRITICAL', svc.state)
+        self.assertEqual('HARD', svc.state_type)
 
-        # Now look for the inheritaed thing
-        # resultmodulation is a inplicit inherited parameter
-        # and router define it, but not test_router_0_resmod/test_ok_0_resmod. So this service should also be impacted
-        svc2 = self.sched.services.find_srv_by_name_and_hostname("test_router_0_resmod", "test_ok_0_resmod")
-        self.assertEqual(router.resultmodulations, svc2.resultmodulations)
+    def test_inherited_modulation(self):
+        """ Test inherited host/service result modulations
+         Resultmodulation is a implicit inherited parameter and router defines it,
+         but not test_router_0_resmod/test_ok_0_resmod.
 
-        self.scheduler_loop(2, [[svc2, 2, 'BAD | value1=0 value2=0']])
+         Despite this service should also be impacted
+        """
+        self.print_header()
+
+        # Get the router
+        router = self._sched.hosts.find_by_name("test_router_0_resmod")
+        router.checks_in_progress = []
+        router.act_depend_of = []
+        assert router is not None
+        assert len(router.resultmodulations) == 1
+
+        # Get the service
+        svc2 = self._sched.services.find_srv_by_name_and_hostname("test_router_0_resmod",
+                                                                  "test_ok_0_resmod")
+        assert svc2 is not None
+        svc2.checks_in_progress = []
+        svc2.act_depend_of = []
+        assert len(svc2.resultmodulations) == 1
+        assert router.resultmodulations == svc2.resultmodulations
+
+        # Get the result modulations
+        mod = self._sched.resultmodulations.find_by_name("critical_is_warning")
+        assert mod is not None
+        assert mod.get_name() == "critical_is_warning"
+        assert mod.is_active(self._sched.timeperiods)
+        assert mod.uuid in svc2.resultmodulations
+
+        # The router is UP
+        # The service is going CRITICAL/HARD ...
+        self.scheduler_loop(3, [
+            [router, 0, 'UP'],
+            [svc2, 2, 'BAD | value1=0 value2=0']
+        ])
+        # The service has a result modulation. So CRITICAL is transformed as WARNING.
         self.assertEqual('WARNING', svc2.state)
+        self.assertEqual('HARD', svc2.state_type)
 
 
 if __name__ == '__main__':

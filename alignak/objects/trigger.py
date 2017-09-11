@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -53,18 +53,19 @@ Typical use is for passive results. This allows passive check data to be modifie
 import os
 import re
 import traceback
+import logging
 
 from alignak.objects.item import Item, Items
 from alignak.property import BoolProp, StringProp
-from alignak.log import logger
 from alignak.trigger_functions import OBJS, TRIGGER_FUNCTIONS, set_value
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Trigger(Item):
     """Trigger class provides a simple set of method to compile and execute a python file
 
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'trigger'
 
     properties = Item.properties.copy()
@@ -76,6 +77,19 @@ class Trigger(Item):
     running_properties.update({'code_bin': StringProp(default=None),
                                'trigger_broker_raise_enabled': BoolProp(default=False)
                                })
+
+    def __init__(self, params=None, parsing=True):
+        if params is None:
+            params = {}
+
+        super(Trigger, self).__init__(params, parsing=parsing)
+        if 'code_src' in params:
+            self.compile()
+
+    def serialize(self):
+        res = super(Trigger, self).serialize()
+        del res['code_bin']
+        return res
 
     def get_name(self):
         """Accessor to trigger_name attribute
@@ -93,40 +107,30 @@ class Trigger(Item):
 
         :return: None
         """
-        self.code_bin = compile(self.code_src, "<irc>", "exec")
+        if self.code_src:
+            self.code_bin = compile(self.code_src, "<irc>", "exec")
 
-    def eval(myself, ctx):
+    def eval(self, ctx):
         """Execute the trigger
 
-        :param myself: self object but self will be use after exec (locals)
-        :type myself: object
         :param ctx: host or service object
         :type ctx: alignak.objects.schedulingitem.SchedulingItem
         :return: None
         """
-        self = ctx
-
         # Ok we can declare for this trigger call our functions
         for (name, fun) in TRIGGER_FUNCTIONS.iteritems():
             locals()[name] = fun
 
-        code = myself.code_bin  # Comment? => compile(myself.code_bin, "<irc>", "exec")
+        code = self.code_bin
+        env = dict(locals())
+        env["self"] = ctx
+        del env["ctx"]
         try:
-            exec code in dict(locals())  # pylint: disable=W0122
-        except Exception as err:
-            set_value(self, "UNKNOWN: Trigger error: %s" % err, "", 3)
+            exec code in env  # pylint: disable=W0122
+        except Exception as err:  # pylint: disable=W0703
+            set_value(ctx, "UNKNOWN: Trigger error: %s" % err, "", 3)
             logger.error('%s Trigger %s failed: %s ; '
-                         '%s', self.host_name, myself.trigger_name, err, traceback.format_exc())
-
-    def __getstate__(self):
-        return {'trigger_name': self.trigger_name,
-                'code_src': self.code_src,
-                'trigger_broker_raise_enabled': self.trigger_broker_raise_enabled}
-
-    def __setstate__(self, dic):
-        self.trigger_name = dic['trigger_name']
-        self.code_src = dic['code_src']
-        self.trigger_broker_raise_enabled = dic['trigger_broker_raise_enabled']
+                         '%s', ctx.host_name, self.trigger_name, err, traceback.format_exc())
 
 
 class Triggers(Items):
@@ -145,7 +149,7 @@ class Triggers(Items):
         :return: None
         """
         # Now walk for it
-        for root, dirs, files in os.walk(path):
+        for root, _, files in os.walk(path):
             for t_file in files:
                 if re.search(r"\.trig$", t_file):
                     path = os.path.join(root, t_file)
@@ -173,7 +177,7 @@ class Triggers(Items):
         trigger = Trigger({'trigger_name': name, 'code_src': src})
         trigger.compile()
         # Ok, add it
-        self[trigger._id] = trigger
+        self[trigger.uuid] = trigger
         return trigger
 
     def compile(self):
@@ -184,7 +188,8 @@ class Triggers(Items):
         for i in self:
             i.compile()
 
-    def load_objects(self, conf):
+    @staticmethod
+    def load_objects(conf):
         """Set hosts and services from conf as global var
 
         :param conf: alignak configuration
@@ -194,3 +199,7 @@ class Triggers(Items):
         """
         OBJS['hosts'] = conf.hosts
         OBJS['services'] = conf.services
+        OBJS['timeperiods'] = conf.timeperiods
+        OBJS['macromodulations'] = conf.macromodulations
+        OBJS['checkmodulations'] = conf.checkmodulations
+        OBJS['checks'] = conf.checks

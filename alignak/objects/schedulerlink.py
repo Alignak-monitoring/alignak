@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -43,18 +43,20 @@
 """
 This module provide SchedulerLink and SchedulerLinks classes used to manage schedulers
 """
-
+import logging
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
-from alignak.property import BoolProp, IntegerProp, StringProp
-from alignak.log import logger
-from alignak.http.client import HTTPEXCEPTIONS
+from alignak.property import BoolProp, IntegerProp, StringProp, DictProp
+
+from alignak.http.client import HTTPClientException, HTTPClientConnectionException, \
+    HTTPClientTimeoutException
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class SchedulerLink(SatelliteLink):
     """
     Class to manage the scheduler information
     """
-    _id = 0
 
     # Ok we lie a little here because we are a mere link in fact
     my_type = 'scheduler'
@@ -71,12 +73,13 @@ class SchedulerLink(SatelliteLink):
     running_properties = SatelliteLink.running_properties.copy()
     running_properties.update({
         'conf': StringProp(default=None),
+        'conf_package': DictProp(default={}),
         'need_conf': StringProp(default=True),
         'external_commands': StringProp(default=[]),
         'push_flavor': IntegerProp(default=0),
     })
 
-    def run_external_commands(self, commands):
+    def run_external_commands(self, commands):  # pragma: no cover, seems not to be used anywhere
         """
         Run external commands
 
@@ -84,21 +87,41 @@ class SchedulerLink(SatelliteLink):
         :type commands:
         :return: False, None
         :rtype: bool | None
-        TODO: need recode this fonction because return types are too many
+
+        TODO: this function seems to be used by the arbiter when it needs to make its schedulers
+        run external commands. Currently, it is not used, but will it be?
+
+        TODO: need to recode this function because return shouod always be boolean
         """
+        logger.debug("[%s] run_external_commands", self.get_name())
+
         if self.con is None:
             self.create_connection()
         if not self.alive:
             return None
-        logger.debug("[SchedulerLink] Sending %d commands", len(commands))
+        logger.debug("[%s] Sending %d commands", self.get_name(), len(commands))
+
         try:
             self.con.post('run_external_commands', {'cmds': commands})
-        except HTTPEXCEPTIONS, exp:
+        except HTTPClientConnectionException as exp:
+            logger.warning("[%s] Connection error when sending run_external_commands",
+                           self.get_name())
+            self.add_failed_check_attempt(reason=str(exp))
+            self.set_dead()
+        except HTTPClientTimeoutException as exp:
+            logger.warning("[%s] Connection timeout when sending run_external_commands: %s",
+                           self.get_name(), str(exp))
+            self.add_failed_check_attempt(reason=str(exp))
+        except HTTPClientException as exp:  # pragma: no cover, simple protection
+            logger.error("[%s] Error when sending run_external_commands: %s",
+                         self.get_name(), str(exp))
             self.con = None
-            logger.debug(exp)
-            return False
+        else:
+            return True
 
-    def register_to_my_realm(self):
+        return False
+
+    def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
         """
         Add this reactionner to the realm
 
@@ -114,9 +137,10 @@ class SchedulerLink(SatelliteLink):
         :rtype: dict
         """
         return {'port': self.port, 'address': self.address,
-                'name': self.scheduler_name, 'instance_id': self._id,
+                'name': self.get_name(), 'instance_id': self.uuid,
                 'active': self.conf is not None, 'push_flavor': self.push_flavor,
                 'timeout': self.timeout, 'data_timeout': self.data_timeout,
+                'max_check_attempts': self.max_check_attempts,
                 'use_ssl': self.use_ssl, 'hard_ssl_name_check': self.hard_ssl_name_check}
 
     def get_override_configuration(self):

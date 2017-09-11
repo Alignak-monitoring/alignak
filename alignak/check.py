@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -47,7 +47,7 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-"""This module provides Check classe which is a simple abstraction for monitoring checks
+"""This module provides Check class which is a simple abstraction for monitoring checks
 
 """
 from alignak.action import Action
@@ -55,7 +55,7 @@ from alignak.property import BoolProp, IntegerProp, ListProp
 from alignak.property import StringProp
 
 
-class Check(Action):
+class Check(Action):  # pylint: disable=R0902
     """Check class implements monitoring concepts of checks :(status, state, output)
     Check instance are used to store monitoring plugins data (exit status, output)
     and used by schedule to raise alert, reschedule check etc.
@@ -64,79 +64,38 @@ class Check(Action):
     # AutoSlots create the __slots__ with properties and
     # running_properties names
 
-    # FIXME : reenable AutoSlots if possible
+    # FIXME : re-enable AutoSlots if possible
     # __metaclass__ = AutoSlots
 
     my_type = 'check'
 
     properties = Action.properties.copy()
     properties.update({
-        'is_a':             StringProp(default='check'),
-        'state':            IntegerProp(default=0),
-        'long_output':      StringProp(default=''),
-        'ref':              IntegerProp(default=-1),
-        'depend_on':        ListProp(default=[]),
-        'dep_check':        ListProp(default=[]),
-        'perf_data':        StringProp(default=''),
-        'check_type':       IntegerProp(default=0),
-        'poller_tag':       StringProp(default='None'),
-        'internal':         BoolProp(default=False),
-        'from_trigger':     BoolProp(default=False),
+        'is_a':
+            StringProp(default='check'),
+        'state':
+            IntegerProp(default=0),
+        'long_output':
+            StringProp(default=''),
+        'depend_on':
+            ListProp(default=[]),
+        'depend_on_me':
+            ListProp(default=[], split_on_coma=False),
+        'perf_data':
+            StringProp(default=''),
+        'passive_check':
+            BoolProp(default=False),
+        'freshness_expired':
+            BoolProp(default=False),
+        'poller_tag':
+            StringProp(default='None'),
+        'internal':
+            BoolProp(default=False),
+        'from_trigger':
+            BoolProp(default=False),
+        'dependency_check':
+            BoolProp(default=False),
     })
-
-    def __init__(self, status, command, ref, t_to_go, dep_check=None, _id=None,
-                 timeout=10, poller_tag='None', reactionner_tag='None',
-                 env={}, module_type='fork', from_trigger=False, dependency_check=False):
-
-        self.is_a = 'check'
-        self.type = ''
-        if _id is None:  # id != None is for copy call only
-            self._id = Action._id
-            Action._id += 1
-        self._in_timeout = False
-        self.timeout = timeout
-        self.status = status
-        self.exit_status = 3
-        self.command = command
-        self.output = ''
-        self.long_output = ''
-        self.ref = ref
-        # self.ref_type = ref_type
-        self.t_to_go = t_to_go
-        self.depend_on = []
-        if dep_check is None:
-            self.depend_on_me = []
-        else:
-            self.depend_on_me = [dep_check]
-        self.check_time = 0
-        self.execution_time = 0.0
-        self.u_time = 0.0  # user executon time
-        self.s_time = 0.0  # system execution time
-        self.perf_data = ''
-        self.check_type = 0  # which kind of check result? 0=active 1=passive
-        self.poller_tag = poller_tag
-        self.reactionner_tag = reactionner_tag
-        self.module_type = module_type
-        self.env = env
-        # we keep the reference of the poller that will take us
-        self.worker = 'none'
-        # If it's a business rule, manage it as a special check
-        if ref and ref.got_business_rule or command.startswith('_internal'):
-            self.internal = True
-        else:
-            self.internal = False
-        self.from_trigger = from_trigger
-        self.dependency_check = dependency_check
-
-    def copy_shell(self):
-        """return a copy of the check but just what is important for execution
-        So we remove the ref and all
-
-        :return: a copy of check
-        :rtype: object
-        """
-        # We create a dummy check with nothing in it, just defaults values
-        return self.copy_shell__(Check('', '', '', '', '', _id=self._id))
 
     def get_return_from(self, check):
         """Update check data from action (notification for instance)
@@ -145,14 +104,9 @@ class Check(Action):
         :type check: alignak.action.Action
         :return: None
         """
-        self.exit_status = check.exit_status
-        self.output = check.output
-        self.long_output = check.long_output
-        self.check_time = check.check_time
-        self.execution_time = check.execution_time
-        self.perf_data = check.perf_data
-        self.u_time = check.u_time
-        self.s_time = check.s_time
+        for prop in ['exit_status', 'output', 'long_output', 'check_time', 'execution_time',
+                     'perf_data', 'u_time', 's_time']:
+            setattr(self, prop, getattr(check, prop))
 
     def is_launchable(self, timestamp):
         """Check if the check can be launched
@@ -165,35 +119,45 @@ class Check(Action):
         return timestamp > self.t_to_go
 
     def __str__(self):
-        return "Check %d status:%s command:%s ref:%s" % \
-               (self._id, self.status, self.command, self.ref)
-
-    def get_id(self):
-        """Getter for id attribute
-
-        :return: id
-        :rtype: int
-        """
-        return self._id
+        return "Check %s %s status:%s command:%s ref:%s" % \
+               (self.uuid,
+                "active" if not self.passive_check else "passive",
+                self.status, self.command, self.ref)
 
     def set_type_active(self):
-        """Set check_type attribute to 0
+        """Set this check as an active one (indeed, not passive)
 
         :return: None
         """
-        self.check_type = 0
+        self.passive_check = False
 
     def set_type_passive(self):
-        """Set check_type attribute to 1
+        """Set this check as a passive one
 
         :return: None
         """
-        self.check_type = 1
+        self.passive_check = True
 
     def is_dependent(self):
         """Getter for dependency_check attribute
 
-        :return: True if this check was created for dependent one, False otherwise
+        :return: True if this check was created for a dependent one, False otherwise
         :rtype: bool
         """
         return self.dependency_check
+
+    def serialize(self):
+        """This function serializes into a simple dict object.
+
+        The only usage is to send to poller, and it does not need to have the
+        depend_on and depend_on_me properties.
+
+        :return: json representation of a Check
+        :rtype: dict
+        """
+        res = super(Check, self).serialize()
+        if 'depend_on' in res:
+            del res['depend_on']
+        if 'depend_on_me' in res:
+            del res['depend_on_me']
+        return res

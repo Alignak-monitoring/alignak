@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -44,6 +44,17 @@ This module is used for common variables in Alignak.
 Previously some of those variables were linked to a specific class which made no sense.
 """
 from collections import namedtuple
+try:
+    from setproctitle import setproctitle  # pylint: disable=unused-import
+except ImportError as err:  # pragma: no cover, setproctitle is in the requirements.txt
+    def setproctitle(title):  # pylint: disable=unused-argument
+        """
+        Return name
+        :param title: name of process
+        :type title: str
+        :return: None
+        """
+        return None
 
 ModAttr = namedtuple('ModAttr', ['modattr', 'attribute', 'value'])
 
@@ -66,18 +77,10 @@ DICT_MODATTR = {
         ModAttr("MODATTR_FLAP_DETECTION_ENABLED", "flap_detection_enabled", 16),
     "flap_detection_enabled":
         ModAttr("MODATTR_FLAP_DETECTION_ENABLED", "flap_detection_enabled", 16),
-    "MODATTR_FAILURE_PREDICTION_ENABLED":
-        ModAttr("MODATTR_FAILURE_PREDICTION_ENABLED", "failure_prediction_enabled", 32),
-    "failure_prediction_enabled":
-        ModAttr("MODATTR_FAILURE_PREDICTION_ENABLED", "failure_prediction_enabled", 32),
     "MODATTR_PERFORMANCE_DATA_ENABLED":
         ModAttr("MODATTR_PERFORMANCE_DATA_ENABLED", "process_performance_data", 64),
     "process_performance_data":
         ModAttr("MODATTR_PERFORMANCE_DATA_ENABLED", "process_performance_data", 64),
-    "MODATTR_OBSESSIVE_HANDLER_ENABLED":
-        ModAttr("MODATTR_OBSESSIVE_HANDLER_ENABLED", "obsess_over_service", 128),
-    "obsess_over_service":
-        ModAttr("MODATTR_OBSESSIVE_HANDLER_ENABLED", "obsess_over_service", 128),
     "MODATTR_EVENT_HANDLER_COMMAND": ModAttr("MODATTR_EVENT_HANDLER_COMMAND", "event_handler", 256),
     "event_handler": ModAttr("MODATTR_EVENT_HANDLER_COMMAND", "event_handler", 256),
     "MODATTR_CHECK_COMMAND": ModAttr("MODATTR_CHECK_COMMAND", "check_command", 512),
@@ -101,8 +104,3 @@ DICT_MODATTR = {
     "notification_period": ModAttr("MODATTR_NOTIFICATION_TIMEPERIOD", "notification_period", 65536),
 
 }
-
-try:
-    from setproctitle import setproctitle  # pylint: disable=W0611
-except ImportError as err:
-    setproctitle = lambda s: None  # pylint: disable=C0103

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -45,445 +45,164 @@
 Test alignak.logging
 """
 
-import sys
-import os
 import time
-import ujson
-from cStringIO import StringIO
-
-from tempfile import NamedTemporaryFile
-
-
 import logging
-from logging import NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, StreamHandler
-from alignak.log import logger as alignak_logger, naglog_result, Log, HUMAN_TIMESTAMP_LOG
-from alignak.log import DEFAULT_FORMATTER, BrokHandler, ColorStreamHandler
+import unittest
+import os.path
+from datetime import datetime
 
-alignak_logger.set_log = True
+from logging import DEBUG, INFO, WARNING
+from alignak.log import setup_logger, DEFAULT_FORMATTER_NAMED
 
-from alignak.brok import Brok
-from alignak_test import *
-
-# The logging module requires some object for collecting broks
-class Dummy:
-    """Dummy class for collecting broks"""
-    def add(self, o):
-        pass
-
-class Collector:
-    """Dummy class for collecting broks"""
-    def __init__(self):
-        self.list = []
-
-    def add(self, o):
-        self.list.append(o)
+from alignak_test import AlignakTest, CollectorHandler
 
 
+class TestLogging(AlignakTest):
 
-class NoSetup:
     def setUp(self):
-        pass
+        # By default get alignak logger and setup to Info level and add collector
+        self.logger = logging.getLogger("alignak")
+        self.logger.handlers = []
 
+        # Add collector for test purpose.
+        collector_h = CollectorHandler()
+        collector_h.setFormatter(DEFAULT_FORMATTER_NAMED)
+        self.logger.addHandler(collector_h)
+        # self.assertEqual(len(self.logger.handlers), 1)
 
+        self.logger.setLevel(INFO)
 
-#logger.load_obj(Dummy())
+    def test_default_logger_values(self):
+        """ Test default logger values
 
-
-
-class TestLevels(NoSetup, AlignakTest):
-
-    def test_default_level(self):
-        logger = Log(name=None, log_set=True)
-        self.assertEqual(logger.level, logging.NOTSET)
-
-    def test_setLevel(self):
-        logger = Log(name=None, log_set=True)
-        logger.setLevel(logging.WARNING)
-        self.assertEqual(logger.level, min(WARNING, INFO))
-
-    def test_setLevel_non_integer_raises(self):
-        logger = Log(name=None, log_set=True)
-        self.assertRaises(TypeError, logger.setLevel, 1.0)
-
-    def test_load_obj_must_not_change_level(self):
-        logger = Log(name=None, log_set=True)
-        # argl, load_obj() unsets the level! save and restore it
-        logger.setLevel(logging.CRITICAL)
-        logger.load_obj(Dummy())
-        self.assertEqual(logger.level, min(CRITICAL, INFO))
-
-
-class TestBasics(NoSetup, AlignakTest):
-
-    def test_setting_and_unsetting_human_timestamp_format(self):
-        # :hack: alignak.log.human_timestamp_log is a global variable
-        self.assertEqual(alignak.log.HUMAN_TIMESTAMP_LOG, False)
-        logger.set_human_format(True)
-        self.assertEqual(alignak.log.HUMAN_TIMESTAMP_LOG, True)
-        logger.set_human_format(False)
-        self.assertEqual(alignak.log.HUMAN_TIMESTAMP_LOG, False)
-        logger.set_human_format(True)
-        self.assertEqual(alignak.log.HUMAN_TIMESTAMP_LOG, True)
-        logger.set_human_format(False)
-        self.assertEqual(alignak.log.HUMAN_TIMESTAMP_LOG, False)
-
-
-class LogCollectMixin:
-    def _get_brok_log_messages(self, collector):
+        :return:
         """
-        Return the log messages stored as Broks into the collector.
+        assert self.logger.level == INFO
+        assert self.logger.name == "alignak"
+        test_logger = logging.getLogger("alignak.test.name")
+        assert test_logger.parent is not None
+        assert test_logger.parent == self.logger
 
-        This also tests whether all objects collected by the collector
-        are log entries.
+    def test_drop_low_level_msg(self):
+        """ Drop low level messages
+
+        :return:
         """
-        for obj in collector.list:
-            self.assertIsInstance(obj, Brok)
-            self.assertEqual(obj.type, 'log')
-            data = ujson.loads(obj.data)
-            self.assertEqual(data.keys(), ['log'])
-            yield data['log']
+        self.logger.debug("This message will not be emitted")
+        self.assert_no_log_match("This message will not be emitted")
 
-    def _prepare_logging(self):
-        self._collector = Collector()
-        self._stdout = sys.stdout
-        sys.stdout = StringIO()
-        logger = Log(name=None, log_set=True)
+    def test_change_level_and_get_msg(self):
+        """ Test change log level
 
-        sh = StreamHandler(sys.stdout)
-        sh.setFormatter(DEFAULT_FORMATTER)
-        logger.addHandler(sh)
-        logger.load_obj(self._collector)
-        logger.pre_log_buffer = [] # reset the pre_log for several tests
-        return logger
+        :return:
+        """
+        self.logger.setLevel(DEBUG)
+        self.logger.debug("This message is emitted in DEBUG")
+        self.assert_any_log_match("This message is emitted in DEBUG")
 
+    def test_log_and_change_level(self):
+        """ Test change log level 2
 
-    def _get_logging_output(self):
-        broklogs = list(self._get_brok_log_messages(self._collector))
+        :return:
+        """
+        self.logger.info("This message will be collected")
+        self.logger.setLevel(WARNING)
+        self.logger.info("This message won't be collected")
+        self.assert_any_log_match("This message will be collected")
+        self.assert_no_log_match("This message won't be collected")
 
-        stdoutlogs = sys.stdout.getvalue().splitlines()
-        sys.stdout = sys.__stdout__
+    def test_log_config_console(self):
+        """ Default logger setup updates root logger and adds a console handler
 
-        if hasattr(self, 'logfile_name'):
-            f = open(self.logfile_name)
-            filelogs = list(f.readlines())
-            f.close()
-            try:
-                os.remove(self.logfile_name)
-            except Exception: # On windows, the file is still lock. But should be close!?!
-                pass
-        else:
-            filelogs = None
-        return broklogs, stdoutlogs, filelogs
+        :return:
+        """
+        # No console handler
+        my_logger = setup_logger(None, log_console=False)
+        assert my_logger == self.logger
+        assert my_logger.level == INFO
+        assert my_logger.name == "alignak"
+        assert len(my_logger.handlers) == 1
 
+        # With console handler
+        my_logger = setup_logger(None)
+        assert my_logger == self.logger
+        assert my_logger.level == INFO
+        assert my_logger.name == "alignak"
+        assert len(my_logger.handlers) == 2
 
-    def _put_log(self, log_method, *messages):
-        #self._prepare_logging()
-        try:
-            for msg in messages:
-                log_method(msg)
-        finally:
-            return self._get_logging_output()
+        # Only append one console handler but update the logger level if required
+        my_logger = setup_logger(None, level=DEBUG)
+        assert my_logger.level == DEBUG
+        assert len(my_logger.handlers) == 2
+        # Back to INFO (default level value)
+        my_logger = setup_logger(None, log_console=True)
+        assert my_logger.level == INFO
+        assert len(my_logger.handlers) == 2
 
+        msg = "test message"
+        self.logger.info(msg)
+        self.assert_any_log_match('[\[0-9\]*] INFO: \[%s\] %s' % (self.logger.name, msg))
 
-    def generic_tst(self, fun, msg, lenlist, patterns):
-        #sys.stdout = StringIO()
-        loglist = self._put_log(fun, msg)
-        for i, length in enumerate(lenlist):
-            self.assertEqual(len(loglist[i]), length)
-            if length != 0:
-                self.assertRegex(loglist[i][0], patterns[i])
-        return loglist
+    def test_log_config_human_date(self):
+        """ Default logger setup uses a timestamp date format, a human date can be used instead
 
+        :return:
+        """
+        # With console handler and human date
+        my_logger = setup_logger(None, human_log=True, human_date_format=u'%Y-%m-%d %H:%M:%S')
+        assert my_logger == self.logger
+        assert my_logger.level == INFO
+        assert my_logger.name == "alignak"
+        assert len(my_logger.handlers) == 2
 
-class TestDefaultLoggingMethods(NoSetup, AlignakTest, LogCollectMixin):
+    def test_log_config_file(self):
+        """ Logger setup allows to update alignak root logger with a timed rotating file handler
 
-    def test_basic_logging_log(self):
-        sys.stdout = StringIO()
-        self._collector = Collector()
-        sh = StreamHandler(sys.stdout)
-        sh.setFormatter(DEFAULT_FORMATTER)
-        alignak_logger.handlers = []
-        alignak_logger.addHandler(sh)
-        alignak_logger.load_obj(self._collector)
-        alignak_logger.log_set = True
-        alignak_logger.setLevel(DEBUG)
-        self.generic_tst(lambda x: naglog_result('info', x), 'Some log-message',
-                         [1, 1], [r'^\[\d+\] Some log-message\n$', r'^\[\d+\] Some log-message$'])
+        :return:
+        """
+        my_logger = setup_logger(None, log_file='./test.log')
+        assert my_logger == self.logger
+        assert my_logger.level == INFO
+        assert my_logger.name == "alignak"
+        assert len(my_logger.handlers) == 3
+        assert os.path.exists('./test.log')
 
-    def test_basic_logging_debug_does_not_send_broks(self):
-        logger = self._prepare_logging()
-        logger.setLevel(DEBUG)
-        self.generic_tst(logger.debug, 'Some log-message',
-                         [0, 1], ['', r'^\[\d+\] DEBUG:\s+Some log-message$'])
+        # Only append one file handler if file used is the same
+        my_logger = setup_logger(None, log_file='./test.log')
+        assert my_logger == self.logger
+        assert my_logger.level == INFO
+        assert my_logger.name == "alignak"
+        assert len(my_logger.handlers) == 3
 
+        # Only append one file handler if file used is the same
+        my_logger = setup_logger(None, log_file=os.path.abspath('./test.log'))
+        assert len(my_logger.handlers) == 3
 
-    def test_basic_logging_info(self):
-        logger = self._prepare_logging()
-        logger.setLevel(INFO)
-        self.generic_tst(logger.info, 'Some log-message',
-                         [1, 1], [r'^\[\d+\] INFO:\s+Some log-message\n$', r'^\[\d+\] INFO:\s+Some log-message$'])
+        # Only append one file handler if file used is the same
+        my_logger = setup_logger(None, log_file=os.path.abspath('./test2.log'))
+        assert len(my_logger.handlers) == 4
+        assert os.path.exists('./test2.log')
 
+    def test_log_utf8(self):
+        """ Log as UTF8 format
 
-    def test_basic_logging_warning(self):
-        logger = self._prepare_logging()
-        logger.setLevel(WARNING)
-        self.generic_tst(logger.warning, 'Some log-message',
-                         [1, 1], [r'^\[\d+\] WARNING:\s+Some log-message\n$', r'^\[\d+\] WARNING:\s+Some log-message$'])
+        :return:
+        """
+        stuff = 'h\351h\351'  # Latin Small Letter E with acute in Latin-1
+        self.logger.info(stuff)
+        sutf8 = u'I love myself $£¤'  # dollar, pound, currency
+        self.logger.info(sutf8)
+        s = unichr(40960) + u'abcd' + unichr(1972)
+        self.logger.info(s)
 
-    def test_basic_logging_error(self):
-        logger = self._prepare_logging()
-        logger.setLevel(ERROR)
-        self.generic_tst(logger.error, 'Some log-message',
-                         [1, 1], [r'^\[\d+\] ERROR:\s+Some log-message\n$', r'^\[\d+\] ERROR:\s+Some log-message$'])
+    def test_log_format(self):
+        """ Log string format
 
-
-    def test_basic_logging_critical(self):
-        logger = self._prepare_logging()
-        logger.setLevel(CRITICAL)
-        self.generic_tst(logger.critical, 'Some log-message',
-                         [1, 1],
-                         [r'^\[\d+\] CRITICAL:\s+Some log-message\n$', r'^\[\d+\] CRITICAL:\s+Some log-message$'])
-
-    def test_level_is_higher_then_the_one_set(self):
-        logger = self._prepare_logging()
-        # just test two samples
-        logger.setLevel(CRITICAL)
-        self.generic_tst(logger.error, 'Some log-message',
-                         [1, 0], [r'^\[\d+\] ERROR:\s+Some log-message\n$', ''])
-
-        # need to prepare again to have stdout=StringIO()
-        logger = self._prepare_logging()
-        logger.setLevel(logging.INFO)
-        self.generic_tst(logger.debug, 'Some log-message',
-                         [0, 0], ['', ''])
-
-
-    def test_human_timestamp_format(self):
-        """test output using the human timestamp format"""
-        logger = self._prepare_logging()
-        logger.setLevel(logging.INFO)
-        logger.set_human_format(True)
-        loglist = self.generic_tst(logger.info, 'Some ] log-message',
-                         [1, 1], [r'^\[\d+\] INFO:\s+Some \] log-message\n$', r'^\[[^\]]+] INFO:\s+Some \] log-message$'])
-
-        time.strptime(loglist[1][0].split(' INFO: ', 1)[0], '[%a %b %d %H:%M:%S %Y]')
-        logger.set_human_format(False)
-
-    def test_reset_human_timestamp_format(self):
-        """test output after switching of the human timestamp format"""
-        # ensure the human timestamp format is set, ...
-        self.test_human_timestamp_format()
-        # ... then turn it off
-        logger.set_human_format(False)
-        # test whether the normal format is used again
-        self.test_basic_logging_info()
-
-
-class TestColorConsoleLogger(NoSetup, AlignakTest, LogCollectMixin):
-
-    def test_basic_logging_info_colored(self):
-        alignak_logger.setLevel(INFO)
-        self._collector = Collector()
-        sys.stdout = StringIO()
-        alignak_logger.handlers[0].stream = sys.stdout
-        alignak_logger.load_obj(self._collector)
-        if isinstance(alignak_logger.handlers[0], ColorStreamHandler):
-            self.generic_tst(alignak_logger.info, 'Some log-message',
-                             [1, 1],
-                             [r'^\[.+?\] INFO: \[Alignak\] Some log-message$',
-                              r'^\x1b\[35m\[.+?\] INFO: \[Alignak\] Some log-message\x1b\[0m$'])
-        else:
-            self.generic_tst(alignak_logger.info, 'Some log-message',
-                             [1, 1],
-                             [r'^\[.+?\] INFO:\s+Some log-message$',
-                              r'^\[.+?\] INFO:\s+Some log-message$'])
-
-    def test_human_timestamp_format(self):
-        """test output using the human timestamp format"""
-        alignak_logger.setLevel(INFO)
-        self._collector = Collector()
-        sys.stdout = StringIO()
-        alignak_logger.handlers[0].stream = sys.stdout
-        alignak_logger.load_obj(self._collector)
-        alignak_logger.set_human_format(True)
-        if isinstance(alignak_logger.handlers[0], ColorStreamHandler):
-            loglist = self.generic_tst(alignak_logger.info, 'Some log-message',
-                             [1, 1],
-                             [r'^\[.+?\] INFO: \[Alignak\] Some log-message$',
-                              r'^\x1b\[35m\[.+?\] INFO: \[Alignak\] Some log-message\x1b\[0m$'])
-        else:
-            loglist = self.generic_tst(alignak_logger.info, 'Some log-message',
-                             [1, 1],
-                             [r'^\[.+?\] INFO: \[Alignak\] Some log-message$',
-                              r'^\[.+?\] INFO: \[Alignak\] Some log-message$'])
-
-
-        times = loglist[1][0].split(' INFO: ', 1)[0]
-        _, time2 = times.rsplit('[', 1)
-        time.strptime(time2.rsplit(']')[0], '%a %b %d %H:%M:%S %Y')
-
-        logger.set_human_format(False)
-
-    def test_reset_human_timestamp_format(self):
-        """test output after switching of the human timestamp format"""
-        # ensure the human timestamp format is set, ...
-        self.test_human_timestamp_format()
-        # ... then turn it off
-        logger.set_human_format(False)
-        # test whether the normal format is used again
-        self.test_basic_logging_info_colored()
-
-
-class TestWithLocalLogging(NoSetup, AlignakTest, LogCollectMixin):
-
-    def _prepare_logging(self):
-        logger = super(TestWithLocalLogging, self)._prepare_logging()
-        # set up a temporary file for logging
-        logfile = NamedTemporaryFile("w", delete=False)
-        logfile.close()
-        self.logfile_name = logfile.name
-        logger.register_local_log(logfile.name, purge_buffer=False)
-        return logger
-
-    def test_register_local_log_keeps_level(self):
-        logger = self._prepare_logging()
-        logger.setLevel(ERROR)
-        self.assertEqual(logger.level, min(ERROR, INFO))
-        for handler in logger.handlers:
-            if isinstance(handler, Collector) or isinstance(handler, BrokHandler):
-                self.assertEqual(handler.level, INFO)
-            else:
-                self.assertEqual(handler.level, ERROR)
-        logfile = NamedTemporaryFile("w", delete=False)
-        logfile.close()
-        logfile_name = logfile.name
-        logger.register_local_log(logfile_name, purge_buffer=False)
-        self.assertEqual(logger.level, min(ERROR, INFO))
-
-
-    def test_basic_logging_log(self):
-        sys.stdout = StringIO()
-        self._collector = Collector()
-        sh = StreamHandler(sys.stdout)
-        sh.setFormatter(DEFAULT_FORMATTER)
-        alignak_logger.handlers = []
-        alignak_logger.addHandler(sh)
-        alignak_logger.load_obj(self._collector)
-        alignak_logger.log_set = True
-        logfile = NamedTemporaryFile("w", delete=False)
-        logfile.close()
-        self.logfile_name = logfile.name
-        alignak_logger.register_local_log(logfile.name, purge_buffer=False)
-        alignak_logger.setLevel(DEBUG)
-        self.generic_tst(lambda x: naglog_result('info', x), 'Some log-message',
-                         [1, 1, 1], ['', r'^\[\d+\] Some log-message$', r'^\[\d+\] Some log-message$'])
-
-
-    def test_basic_logging_debug_does_not_send_broks(self):
-        logger = self._prepare_logging()
-        logger.setLevel(DEBUG)
-        self.generic_tst(logger.debug, 'Some log-message',
-                         [0, 1, 1], ['', '', r'\[\d+\] DEBUG:\s+Some log-message$'])
-
-    def test_basic_logging_info(self):
-        logger = self._prepare_logging()
-        logger.setLevel(INFO)
-        self.generic_tst(logger.info, 'Some log-message',
-                         [1, 1, 1], ['', '', r'\[\d+\] INFO:\s+Some log-message\n$'])
-
-    def test_basic_logging_error(self):
-        logger = self._prepare_logging()
-        logger.setLevel(ERROR)
-        self.generic_tst(logger.error, 'Some log-message',
-                         [1, 1, 1], ['', '', r'\[\d+\] ERROR:\s+Some log-message\n$'])
-
-    def test_basic_logging_critical(self):
-        logger = self._prepare_logging()
-        logger.setLevel(CRITICAL)
-        self.generic_tst(logger.critical, 'Some log-message',
-                         [1, 1, 1], ['', '', r'\[\d+\] CRITICAL:\s+Some log-message\n$'])
-
-    def test_level_is_higher_then_the_one_set(self):
-        logger = self._prepare_logging()
-        # just test two samples
-        logger.setLevel(CRITICAL)
-        self.generic_tst(logger.debug, 'Some log-message', [0, 0, 0], ['', '', ''])
-
-        # need to prepare again to have stdout=StringIO() and a local log file
-        logger = self._prepare_logging()
-        logger.setLevel(INFO)
-        self.generic_tst(logger.debug, 'Some log-message', [0, 0, 0], ['', '', ''])
-
-    def test_human_timestamp_format(self):
-        logger = self._prepare_logging()
-        logger.setLevel(logging.INFO)
-        logger.set_human_format(True)
-        loglist = self.generic_tst(logger.info, 'Some log-message',
-                         [1, 1, 1],
-                         [r'', r'', r'\[[^\]]+] INFO:\s+Some log-message\n$'])
-
-        # :fixme: Currently, the local log gets prefixed another
-        # timestamp. As it is yet unclear, whether this intended or
-        # not, we test it, too.
-        times = loglist[2][0].split(' INFO:    ', 1)[0]
-        _, time2 = times.rsplit('[', 1)
-        time.strptime(time2.rsplit(']')[0], '%a %b %d %H:%M:%S %Y')
-        logger.set_human_format(False)
-
-    def test_reset_human_timestamp_format(self):
-        """test output after switching of the human timestamp format"""
-        # ensure the human timestamp format is set, ...
-        self.test_human_timestamp_format()
-        # ... then turn it off
-        logger.set_human_format(False)
-        # test whether the normal format is used again
-        self.test_basic_logging_info()
-
-
-class TestNamedCollector(NoSetup, AlignakTest, LogCollectMixin):
-
-    # :todo: add a test for the local log file, too
-
-    def _prepare_logging(self):
-        self._collector = Collector()
-        self._stdout = sys.stdout
-        sys.stdout = StringIO()
-        logger = Log(name=None, log_set=True)
-        from alignak.log import DEFAULT_FORMATTER
-        from logging import StreamHandler
-        sh = StreamHandler(sys.stdout)
-        sh.setFormatter(DEFAULT_FORMATTER)
-        logger.addHandler(sh)
-        logger.load_obj(self._collector, 'Tiroler Schinken')
-        return logger
-
-    def test_basic_logging_info(self):
-        logger = self._prepare_logging()
-        logger.setLevel(logging.INFO)
-        self.generic_tst(logger.info, 'Some log-message',
-                         [1, 1],
-                         [r'^\[\d+\] INFO:\s+\[Tiroler Schinken\] Some log-message\n$',
-                          r'^\[\d+\] INFO:\s+\[Tiroler Schinken\] Some log-message$'])
-
-    def test_human_timestamp_format(self):
-        logger = self._prepare_logging()
-        logger.setLevel(logging.INFO)
-        logger.set_human_format(True)
-        loglist = self.generic_tst(logger.info, 'Some ] log-message',
-                         [1, 1],
-                         [r'^\[\d+\] INFO:\s+\[Tiroler Schinken\] Some \] log-message\n$',
-                          r'^\[[^\]]+] INFO:\s+\[Tiroler Schinken\] Some \] log-message$'])
-        # No TS for broker!
-        time.strptime(loglist[1][0].split(' INFO: ', 1)[0], '[%a %b %d %H:%M:%S %Y]')
-        logger.set_human_format(False)
-
-    def test_reset_human_timestamp_format(self):
-        # ensure human timestamp format is set and working
-        self.test_human_timestamp_format()
-        # turn of human timestamp format
-        logger.set_human_format(False)
-        # test for normal format
-        self.test_basic_logging_info()
+        :return:
+        """
+        msg = "Message"
+        self.logger.info(msg)
+        self.assert_any_log_match('[\[0-9\]*] INFO: \[%s\] %s' % (self.logger.name, msg))
 
 
 if __name__ == '__main__':

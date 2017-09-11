@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -54,10 +54,12 @@
 implements dependencies between services. Basically used for parsing.
 
 """
+import logging
 from alignak.property import BoolProp, StringProp, ListProp
-from alignak.log import logger
 
 from .item import Item, Items
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Servicedependency(Item):
@@ -65,7 +67,6 @@ class Servicedependency(Item):
     defined in a monitoring context (dependency period, notification_failure_criteria ..)
 
     """
-    _id = 0
     my_type = "servicedependency"
 
     # F is dep of D
@@ -108,7 +109,8 @@ class Servicedependency(Item):
 
 
 class Servicedependencies(Items):
-    """Servicedependencies manage a list of Servicedependency objects, used for parsing configuration
+    """Servicedependencies manage a list of Servicedependency objects,
+       used for parsing configuration
 
     """
     inner_class = Servicedependency  # use for know what is in items
@@ -178,7 +180,7 @@ class Servicedependencies(Items):
                 self.configuration_errors.append(err)
                 continue
             hnames = []
-            hnames.extend([m.strip() for m in hostgroup.members])
+            hnames.extend([m.strip() for m in hostgroup.get_hosts()])
             for hname in hnames:
                 for dep_sname in dep_snames:
                     for sname in snames:
@@ -207,14 +209,19 @@ class Servicedependencies(Items):
         servicedeps = self.items.keys()
         for s_id in servicedeps:
             servicedep = self.items[s_id]
-            # Have we to explode the hostgroup into many service?
-            if bool(getattr(servicedep, 'explode_hostgroup', 0)) and \
-               hasattr(servicedep, 'hostgroup_name'):
+
+            # First case: we only have to propagate the services dependencies to all the hosts
+            # of some hostgroups
+            # Either a specific property is defined (Shinken) or no dependent hosts groups
+            # is defined
+            if bool(getattr(servicedep, 'explode_hostgroup', 0)) or \
+                    (hasattr(servicedep, 'hostgroup_name') and
+                        not hasattr(servicedep, 'dependent_hostgroup_name')):
                 self.explode_hostgroup(servicedep, hostgroups)
                 srvdep_to_remove.append(s_id)
                 continue
 
-            # Get the list of all FATHER hosts and service deps
+            # Get the list of all FATHER hosts and service dependenciess
             hnames = []
             if hasattr(servicedep, 'hostgroup_name'):
                 hg_names = [n.strip() for n in servicedep.hostgroup_name.split(',')]
@@ -226,7 +233,7 @@ class Servicedependencies(Items):
                               " unknown hostgroup_name '%s'" % hg_name
                         hostgroup.configuration_errors.append(err)
                         continue
-                    hnames.extend([m.strip() for m in hostgroup.members])
+                    hnames.extend([m.strip() for m in hostgroup.get_hosts()])
 
             if not hasattr(servicedep, 'host_name'):
                 servicedep.host_name = ''
@@ -243,7 +250,7 @@ class Servicedependencies(Items):
                     and hasattr(servicedep, 'hostgroup_name'):
                 servicedep.dependent_hostgroup_name = servicedep.hostgroup_name
 
-            # Now the dep part (the sons)
+            # Now the dependent part (the sons)
             dep_hnames = []
             if hasattr(servicedep, 'dependent_hostgroup_name'):
                 hg_names = [n.strip() for n in servicedep.dependent_hostgroup_name.split(',')]
@@ -255,7 +262,7 @@ class Servicedependencies(Items):
                               "unknown dependent_hostgroup_name '%s'" % hg_name
                         hostgroup.configuration_errors.append(err)
                         continue
-                    dep_hnames.extend([m.strip() for m in hostgroup.members])
+                    dep_hnames.extend([m.strip() for m in hostgroup.get_hosts()])
 
             if not hasattr(servicedep, 'dependent_host_name'):
                 servicedep.dependent_host_name = getattr(servicedep, 'host_name', '')
@@ -299,7 +306,7 @@ class Servicedependencies(Items):
         """
         self.linkify_sd_by_s(hosts, services)
         self.linkify_sd_by_tp(timeperiods)
-        self.linkify_s_by_sd()
+        self.linkify_s_by_sd(services)
 
     def linkify_sd_by_s(self, hosts, services):
         """Replace dependent_service_description and service_description
@@ -331,7 +338,7 @@ class Servicedependencies(Items):
                                      % (s_name, hst_name))
                     to_del.append(servicedep)
                     continue
-                servicedep.dependent_service_description = serv
+                servicedep.dependent_service_description = serv.uuid
 
                 s_name = servicedep.service_description
                 hst_name = servicedep.host_name
@@ -348,7 +355,7 @@ class Servicedependencies(Items):
                                      % (s_name, hst_name))
                     to_del.append(servicedep)
                     continue
-                servicedep.service_description = serv
+                servicedep.service_description = serv.uuid
 
             except AttributeError as err:
                 logger.error("[servicedependency] fail to linkify by service %s: %s",
@@ -369,34 +376,75 @@ class Servicedependencies(Items):
             try:
                 tp_name = servicedep.dependency_period
                 timeperiod = timeperiods.find_by_name(tp_name)
-                servicedep.dependency_period = timeperiod
+                if timeperiod:
+                    servicedep.dependency_period = timeperiod.uuid
+                else:
+                    servicedep.dependency_period = ''
             except AttributeError, exp:
                 logger.error("[servicedependency] fail to linkify by timeperiods: %s", exp)
 
-    def linkify_s_by_sd(self):
+    def linkify_s_by_sd(self, services):
         """Add dependency in service objects
 
         :return: None
         """
         for servicedep in self:
-            dsc = servicedep.dependent_service_description
-            sdval = servicedep.service_description
-            if dsc is not None and sdval is not None:
-                dep_period = getattr(servicedep, 'dependency_period', None)
-                dsc.add_service_act_dependency(sdval, servicedep.notification_failure_criteria,
-                                               dep_period, servicedep.inherits_parent)
-                dsc.add_service_chk_dependency(sdval, servicedep.execution_failure_criteria,
-                                               dep_period, servicedep.inherits_parent)
+            # Only used for debugging purpose when loops are detected
+            setattr(servicedep, "service_description_string", "undefined")
+            setattr(servicedep, "dependent_service_description_string", "undefined")
+
+            if getattr(servicedep, 'service_description', None) is None or\
+                    getattr(servicedep, 'dependent_service_description', None) is None:
+                continue
+
+            services.add_act_dependency(servicedep.dependent_service_description,
+                                        servicedep.service_description,
+                                        servicedep.notification_failure_criteria,
+                                        getattr(servicedep, 'dependency_period', ''),
+                                        servicedep.inherits_parent)
+
+            services.add_chk_dependency(servicedep.dependent_service_description,
+                                        servicedep.service_description,
+                                        servicedep.execution_failure_criteria,
+                                        getattr(servicedep, 'dependency_period', ''),
+                                        servicedep.inherits_parent)
+
+            # Only used for debugging purpose when loops are detected
+            setattr(servicedep, "service_description_string",
+                    services[servicedep.service_description].get_name())
+            setattr(servicedep, "dependent_service_description_string",
+                    services[servicedep.dependent_service_description].get_name())
 
     def is_correct(self):
-        """Check if this host configuration is correct ::
+        """Check if this servicedependency configuration is correct ::
 
-        * All required parameter are specified
-        * Go through all configuration warnings and errors that could have been raised earlier
+        * Check our own specific properties
+        * Call our parent class is_correct checker
 
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        valid = super(Servicedependencies, self).is_correct()
-        return valid and self.no_loop_in_parents("service_description",
-                                                 "dependent_service_description")
+        state = True
+
+        # Internal checks before executing inherited function...
+        loop = self.no_loop_in_parents("service_description", "dependent_service_description")
+        if loop:
+            msg = "Loop detected while checking service dependencies"
+            self.configuration_errors.append(msg)
+            state = False
+            for item in self:
+                for elem in loop:
+                    if elem == item.service_description:
+                        msg = "Service %s is parent service_description in dependency "\
+                              "defined in %s" % (
+                                  item.service_description_string, item.imported_from
+                              )
+                        self.configuration_errors.append(msg)
+                    elif elem == item.dependent_service_description:
+                        msg = "Service %s is child service_description in dependency"\
+                              " defined in %s" % (
+                                  item.dependent_service_description_string, item.imported_from
+                              )
+                        self.configuration_errors.append(msg)
+
+        return super(Servicedependencies, self).is_correct() and state

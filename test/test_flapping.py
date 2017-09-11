@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -44,134 +44,315 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
-#
-# This file is used to test reading and processing of config files
-#
+"""
+ This file is used to test the flapping management
+"""
 
-from alignak_test import *
+from alignak.misc.serialization import unserialize
+from alignak_test import AlignakTest, unittest
 
 
 class TestFlapping(AlignakTest):
+    """
+    This class tests the flapping management
+    """
 
     def setUp(self):
-        self.setup_with_file(['etc/alignak_flapping.cfg'])
+        self.setup_with_file('cfg/cfg_flapping.cfg')
+        assert self.conf_is_correct
+
+        self._sched = self.schedulers['scheduler-master'].sched
+        self._broker = self._sched.brokers['broker-master']
 
     def test_flapping(self):
-        #
-        # Config is not correct because of a wrong relative path
-        # in the main config file
-        #
-        print "Get the hosts and services"
-        now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
-        router = self.sched.hosts.find_by_name("test_router_0")
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-        self.scheduler_loop(2, [[host, 0, 'UP | value1=1 value2=2'], [router, 0, 'UP | rtt=10'], [svc, 0, 'OK']])
-        self.assertEqual('UP', host.state)
-        self.assertEqual('HARD', host.state_type)
-        self.assertTrue(svc.flap_detection_enabled)
+        """Test host/service flapping detection
 
-        print 'A' * 41, svc.low_flap_threshold
-        self.assertEqual(-1, svc.low_flap_threshold)
+        :return:
+        """
+        # Get the hosts and services"
+        host = self._sched.hosts.find_by_name("test_host_0")
+        host.act_depend_of = []
+        assert host.flap_detection_enabled
+        router = self._sched.hosts.find_by_name("test_router_0")
+        router.act_depend_of = []
+        assert router.flap_detection_enabled
+        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc.event_handler_enabled = False
+        svc.act_depend_of = []
+        # Force because the default configuration disables the flapping detection
+        svc.flap_detection_enabled = True
 
-        # Now 1 test with a bad state
-        self.scheduler_loop(1, [[svc, 2, 'Crit']])
-        print "******* Current flap change lsit", svc.flapping_changes
-        self.scheduler_loop(1, [[svc, 2, 'Crit']])
-        print "****** Current flap change lsit", svc.flapping_changes
+        self.scheduler_loop(2, [
+            [host, 0, 'UP | value1=1 value2=2'],
+            [router, 0, 'UP | rtt=10'],
+            [svc, 0, 'OK']
+        ])
+        assert 'UP' == host.state
+        assert 'HARD' == host.state_type
+        assert 'UP' == router.state
+        assert 'HARD' == router.state_type
+        assert 'OK' == svc.state
+        assert 'HARD' == svc.state_type
+
+        assert 25 == svc.low_flap_threshold
+
+        # Set the service as a problem
+        self.scheduler_loop(3, [
+            [svc, 2, 'Crit']
+        ])
+        assert 'CRITICAL' == svc.state
+        assert 'HARD' == svc.state_type
         # Ok, now go in flap!
         for i in xrange(1, 10):
-            "**************************************************"
-            print "I:", i
             self.scheduler_loop(1, [[svc, 0, 'Ok']])
-            print "******* Current flap change lsit", svc.flapping_changes
             self.scheduler_loop(1, [[svc, 2, 'Crit']])
-            print "****** Current flap change lsit", svc.flapping_changes
-            print "In flapping?", svc.is_flapping
 
-        # Should get in flapping now
-        self.assertTrue(svc.is_flapping)
-        # and get a log about it
-        self.assert_any_log_match('SERVICE FLAPPING ALERT.*;STARTED')
-        self.assert_any_log_match('SERVICE NOTIFICATION.*;FLAPPINGSTART')
+        # Should be in flapping state now
+        assert svc.is_flapping
+
+        # We got 'monitoring_log' broks for logging to the monitoring logs...
+        monitoring_logs = []
+        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+            if brok.type == 'monitoring_log':
+                data = unserialize(brok.data)
+                monitoring_logs.append((data['level'], data['message']))
+
+        expected_logs = [
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Crit'),
+            (u'error', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;'
+                       u'notify-service;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Ok'),
+            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;'
+                      u'notify-service;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STARTED; '
+                      u'Service appears to have started flapping (83.8% change >= 50.0% threshold)'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      u'FLAPPINGSTART (OK);notify-service;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+        ]
+        for log_level, log_message in expected_logs:
+            assert (log_level, log_message) in monitoring_logs
 
         # Now we put it as back :)
         # 10 is not enouth to get back as normal
         for i in xrange(1, 11):
             self.scheduler_loop(1, [[svc, 0, 'Ok']])
-            print "In flapping?", svc.is_flapping
-        self.assertTrue(svc.is_flapping)
+        assert svc.is_flapping
 
         # 10 others can be good (near 4.1 %)
         for i in xrange(1, 11):
             self.scheduler_loop(1, [[svc, 0, 'Ok']])
-            print "In flapping?", svc.is_flapping
-        self.assertFalse(svc.is_flapping)
-        self.assert_any_log_match('SERVICE FLAPPING ALERT.*;STOPPED')
-        self.assert_any_log_match('SERVICE NOTIFICATION.*;FLAPPINGSTOP')
+        assert not svc.is_flapping
 
-        ############ Now get back in flap, and try the exteral commands change
 
-        # Now 1 test with a bad state
-        self.scheduler_loop(1, [[svc, 2, 'Crit']])
-        print "******* Current flap change lsit", svc.flapping_changes
-        self.scheduler_loop(1, [[svc, 2, 'Crit']])
-        print "****** Current flap change lsit", svc.flapping_changes
+        # We got 'monitoring_log' broks for logging to the monitoring logs...
+        monitoring_logs = []
+        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+            if brok.type == 'monitoring_log':
+                data = unserialize(brok.data)
+                monitoring_logs.append((data['level'], data['message']))
+
+        print("Logs: %s" % monitoring_logs)
+        expected_logs = [
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Crit'),
+            (u'error', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;'
+                       u'notify-service;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Ok'),
+            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;'
+                      u'notify-service;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STARTED; '
+                      u'Service appears to have started flapping '
+                      u'(83.8% change >= 50.0% threshold)'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      u'FLAPPINGSTART (OK);notify-service;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STOPPED; '
+                      u'Service appears to have stopped flapping '
+                      u'(21.5% change < 25.0% threshold)'),
+            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      u'FLAPPINGSTOP (OK);notify-service;Ok')
+        ]
+        for log_level, log_message in expected_logs:
+            assert (log_level, log_message) in monitoring_logs
+
+    def test_flapping(self):
+        """
+
+        :return:
+        """
+        # Get the hosts and services"
+        host = self._sched.hosts.find_by_name("test_host_0")
+        host.act_depend_of = []
+        assert host.flap_detection_enabled
+        router = self._sched.hosts.find_by_name("test_router_0")
+        router.act_depend_of = []
+        assert router.flap_detection_enabled
+        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc.event_handler_enabled = False
+        svc.act_depend_of = []
+        # Force because the default configuration disables the flapping detection
+        svc.flap_detection_enabled = True
+
+        self.scheduler_loop(2, [
+            [host, 0, 'UP | value1=1 value2=2'],
+            [router, 0, 'UP | rtt=10'],
+            [svc, 0, 'OK']
+        ])
+        assert 'UP' == host.state
+        assert 'HARD' == host.state_type
+        assert 'UP' == router.state
+        assert 'HARD' == router.state_type
+        assert 'OK' == svc.state
+        assert 'HARD' == svc.state_type
+
+        assert 25 == svc.low_flap_threshold
+
+        # Set the service as a problem
+        self.scheduler_loop(3, [
+            [svc, 2, 'Crit']
+        ])
+        assert 'CRITICAL' == svc.state
+        assert 'HARD' == svc.state_type
         # Ok, now go in flap!
         for i in xrange(1, 10):
-            "**************************************************"
-            print "I:", i
             self.scheduler_loop(1, [[svc, 0, 'Ok']])
-            print "******* Current flap change lsit", svc.flapping_changes
             self.scheduler_loop(1, [[svc, 2, 'Crit']])
-            print "****** Current flap change lsit", svc.flapping_changes
-            print "In flapping?", svc.is_flapping
 
-        # Should get in flapping now
-        self.assertTrue(svc.is_flapping)
-        # and get a log about it
-        self.assert_any_log_match('SERVICE FLAPPING ALERT.*;STARTED')
-        self.assert_any_log_match('SERVICE NOTIFICATION.*;FLAPPINGSTART')
+        # Should be in flapping state now
+        assert svc.is_flapping
 
-        # We run a globa lflap disable, so we should stop flapping now
-        cmd = "[%lu] DISABLE_FLAP_DETECTION" % int(time.time())
-        self.sched.run_external_command(cmd)
+        # We got 'monitoring_log' broks for logging to the monitoring logs...
+        monitoring_logs = []
+        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+            if brok.type == 'monitoring_log':
+                data = unserialize(brok.data)
+                monitoring_logs.append((data['level'], data['message']))
 
-        self.assertFalse(svc.is_flapping)
+        expected_logs = [
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Crit'),
+            (u'error', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;'
+                       u'notify-service;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Ok'),
+            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;'
+                      u'notify-service;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STARTED; '
+                      u'Service appears to have started flapping (83.8% change >= 50.0% threshold)'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      u'FLAPPINGSTART (OK);notify-service;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+        ]
+        for log_level, log_message in expected_logs:
+            assert (log_level, log_message) in monitoring_logs
 
-        ############# NOW a local command for this service
-        # First reenable flap:p
-        cmd = "[%lu] ENABLE_FLAP_DETECTION" % int(time.time())
-        self.sched.run_external_command(cmd)
-
-        # Now 1 test with a bad state
-        self.scheduler_loop(1, [[svc, 2, 'Crit']])
-        print "******* Current flap change lsit", svc.flapping_changes
-        self.scheduler_loop(1, [[svc, 2, 'Crit']])
-        print "****** Current flap change lsit", svc.flapping_changes
-        # Ok, now go in flap!
-        for i in xrange(1, 10):
-            "**************************************************"
-            print "I:", i
+        # Now we put it as back :)
+        # 10 is not enouth to get back as normal
+        for i in xrange(1, 11):
             self.scheduler_loop(1, [[svc, 0, 'Ok']])
-            print "******* Current flap change lsit", svc.flapping_changes
-            self.scheduler_loop(1, [[svc, 2, 'Crit']])
-            print "****** Current flap change lsit", svc.flapping_changes
-            print "In flapping?", svc.is_flapping
+        assert svc.is_flapping
 
-        # Should get in flapping now
-        self.assertTrue(svc.is_flapping)
-        # and get a log about it
-        self.assert_any_log_match('SERVICE FLAPPING ALERT.*;STARTED')
-        self.assert_any_log_match('SERVICE NOTIFICATION.*;FLAPPINGSTART')
-
-        # We run a globa lflap disable, so we should stop flapping now
-        cmd = "[%lu] DISABLE_SVC_FLAP_DETECTION;test_host_0;test_ok_0" % int(time.time())
-        self.sched.run_external_command(cmd)
-
-        self.assertFalse(svc.is_flapping)
+        # 10 others can be good (near 4.1 %)
+        for i in xrange(1, 11):
+            self.scheduler_loop(1, [[svc, 0, 'Ok']])
+        assert not svc.is_flapping
 
 
+        # We got 'monitoring_log' broks for logging to the monitoring logs...
+        monitoring_logs = []
+        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+            if brok.type == 'monitoring_log':
+                data = unserialize(brok.data)
+                monitoring_logs.append((data['level'], data['message']))
+
+        print("Logs: %s" % monitoring_logs)
+        expected_logs = [
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Crit'),
+            (u'error', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;'
+                       u'notify-service;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Ok'),
+            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;'
+                      u'notify-service;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STARTED; '
+                      u'Service appears to have started flapping '
+                      u'(83.8% change >= 50.0% threshold)'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      u'FLAPPINGSTART (OK);notify-service;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            (u'info', u'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STOPPED; '
+                      u'Service appears to have stopped flapping '
+                      u'(21.5% change < 25.0% threshold)'),
+            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      u'FLAPPINGSTOP (OK);notify-service;Ok')
+        ]
+        for log_level, log_message in expected_logs:
+            assert (log_level, log_message) in monitoring_logs
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -53,7 +53,6 @@ class PollerLink(SatelliteLink):
     Class to manage the link between Arbiter and Poller. With it, arbiter
     can see if a poller is alive, and can send it new configuration
     """
-    _id = 0
     my_type = 'poller'
     # To_send: send or not to satellite conf
     properties = SatelliteLink.properties.copy()
@@ -66,7 +65,7 @@ class PollerLink(SatelliteLink):
         'poller_tags':  ListProp(default=['None'], to_send=True),
     })
 
-    def register_to_my_realm(self):
+    def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
         """
         Add this relation to the realm
 

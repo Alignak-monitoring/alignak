@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -31,6 +31,7 @@
 from types import ModuleType
 
 
+# pylint: disable=super-on-old-class,too-few-public-methods
 class CustomModule(ModuleType):
     """Custom module that can be used to customize a module namespace,
 

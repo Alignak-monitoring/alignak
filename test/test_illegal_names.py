@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -43,29 +43,41 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+"""
+This file test illegal characters in configuration
 
-#
-# This file is used to test reading and processing of config files
-#
+"""
 
-from alignak_test import *
+from alignak_test import AlignakTest
 
 
 class TestConfig(AlignakTest):
+    """
+    This class test illegal characters in configuration
+    """
     # setUp is inherited from AlignakTest
 
-    def test_illegal_caracter_in_names(self):
-        illegal_caracts = self.sched.conf.illegal_object_name_chars
-        print "Illegal caracters: %s" % illegal_caracts
-        host = self.sched.hosts.find_by_name("test_host_0")
+    def test_illegal_character_in_names(self):
+        """ Test illegal characters in host_name
+
+        :return: None
+        """
+        self.setup_with_file('cfg/cfg_default.cfg')
+
+        illegal_characts = self.arbiter.conf.illegal_object_name_chars
+        print "Illegal caracters: %s" % illegal_characts
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
         # should be correct
-        self.assertTrue(host.is_correct())
+        assert host.is_correct()
 
         # Now change the name with incorrect caract
-        for c in illegal_caracts:
-            host.host_name = 'test_host_0' + c
+        for charact in illegal_characts:
+            host.host_name = 'test_host_0' + charact
             # and Now I want an incorrect here
-            self.assertEqual(False, host.is_correct())
+            assert False == host.is_correct()
 
-if __name__ == '__main__':
-    unittest.main()
+        # test special cases manually to be sure
+        for charact in ['!']:
+            host.host_name = 'test_host_0' + charact
+            # and Now I want an incorrect here
+            assert False == host.is_correct()

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -57,10 +57,8 @@ This module provide Itemgroup and Itemgroups class used to define group of items
 import warnings
 
 from alignak.objects.item import Item, Items
-
 from alignak.brok import Brok
 from alignak.property import ListProp
-from alignak.log import logger
 
 
 class Itemgroup(Item):
@@ -68,13 +66,12 @@ class Itemgroup(Item):
     Class to manage a group of items
     An itemgroup is used to regroup items (group)
     """
-    _id = 0
 
     properties = Item.properties.copy()
     properties.update({
         'members': ListProp(fill_brok=['full_status'], default=None, split_on_coma=True),
         # Alignak specific
-        'unknown_members': ListProp(default=None),
+        'unknown_members': ListProp(default=[]),
     })
 
     def copy_shell(self):
@@ -87,14 +84,12 @@ class Itemgroup(Item):
         :return: None
         """
         cls = self.__class__
-        old_id = cls._id
         new_i = cls()  # create a new group
-        new_i._id = self._id  # with the same id
-        cls._id = old_id  # Reset the Class counter
+        new_i.uuid = self.uuid  # with the same id
 
         # Copy all properties
         for prop in cls.properties:
-            if prop is not 'members':
+            if prop not in ['members']:
                 if hasattr(self, prop):
                     val = getattr(self, prop)
                     setattr(new_i, prop, val)
@@ -132,6 +127,9 @@ class Itemgroup(Item):
         :type member: str
         :return: None
         """
+        # Avoid empty elements in lists ...
+        if not member:
+            return
         add_fun = list.extend if isinstance(member, list) else list.append
         if not hasattr(self, "members"):
             self.members = []
@@ -146,7 +144,7 @@ class Itemgroup(Item):
         :return: None
         """
         add_fun = list.extend if isinstance(member, list) else list.append
-        if not self.unknown_members:
+        if not hasattr(self, 'unknown_members') or not self.unknown_members:
             self.unknown_members = []
         add_fun(self.unknown_members, member)
 
@@ -167,20 +165,17 @@ class Itemgroup(Item):
         :return: True if group is correct, otherwise False
         :rtype: bool
         """
-        res = True
+        state = True
 
         if self.unknown_members:
             for member in self.unknown_members:
-                logger.error("[itemgroup::%s] as %s, got unknown member %s",
-                             self.get_name(), self.__class__.my_type, member)
-            res = False
+                msg = "[%s::%s] as %s, got unknown member '%s'" % (
+                    self.my_type, self.get_name(), self.__class__.my_type, member
+                )
+                self.configuration_errors.append(msg)
+            state = False
 
-        if self.configuration_errors != []:
-            for err in self.configuration_errors:
-                logger.error("[itemgroup] %s", err)
-            res = False
-
-        return res
+        return super(Itemgroup, self).is_correct() and state
 
     def has(self, prop):
         """
@@ -198,14 +193,15 @@ class Itemgroup(Item):
             DeprecationWarning, stacklevel=2)
         return hasattr(self, prop)
 
-    def get_initial_status_brok(self):
+    def get_initial_status_brok(self, items=None):  # pylint:disable=W0221
         """
         Get a brok with hostgroup info (like id, name)
         Members contain list of (id, host_name)
 
+        :param items: monitoring items, used to recover members
+        :type items: alignak.objects.item.Items
         :return:Brok object
         :rtype: object
-        :return: None
         """
         cls = self.__class__
         data = {}
@@ -216,10 +212,11 @@ class Itemgroup(Item):
                     data[prop] = getattr(self, prop)
         # Here members is just a bunch of host, I need name in place
         data['members'] = []
-        for i in self.members:
+        for m_id in self.members:
+            member = items[m_id]
             # it look like lisp! ((( ..))), sorry....
-            data['members'].append((i._id, i.get_name()))
-        brok = Brok('initial_' + cls.my_type + '_status', data)
+            data['members'].append((member.uuid, member.get_name()))
+        brok = Brok({'type': 'initial_' + cls.my_type + '_status', 'data': data})
         return brok
 
 

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -67,31 +67,55 @@ class MacroResolver(Borg):
     """MacroResolver class is used to resolve macros (in command call). See above for details"""
 
     my_type = 'macroresolver'
+
     # Global macros
     macros = {
-        'TOTALHOSTSUP':         '_get_total_hosts_up',
-        'TOTALHOSTSDOWN':       '_get_total_hosts_down',
-        'TOTALHOSTSUNREACHABLE': '_get_total_hosts_unreachable',
-        'TOTALHOSTSDOWNUNHANDLED': '_get_total_hosts_unhandled',
-        'TOTALHOSTSUNREACHABLEUNHANDLED': '_get_total_hosts_unreachable_unhandled',
-        'TOTALHOSTPROBLEMS':    '_get_total_host_problems',
-        'TOTALHOSTPROBLEMSUNHANDLED': '_get_total_host_problems_unhandled',
-        'TOTALSERVICESOK':      '_get_total_service_ok',
-        'TOTALSERVICESWARNING': '_get_total_services_warning',
-        'TOTALSERVICESCRITICAL': '_get_total_services_critical',
-        'TOTALSERVICESUNKNOWN': '_get_total_services_unknown',
-        'TOTALSERVICESWARNINGUNHANDLED': '_get_total_services_warning_unhandled',
-        'TOTALSERVICESCRITICALUNHANDLED': '_get_total_services_critical_unhandled',
-        'TOTALSERVICESUNKNOWNUNHANDLED': '_get_total_services_unknown_unhandled',
-        'TOTALSERVICEPROBLEMS': '_get_total_service_problems',
-        'TOTALSERVICEPROBLEMSUNHANDLED': '_get_total_service_problems_unhandled',
-        'LONGDATETIME':         '_get_long_date_time',
-        'SHORTDATETIME':        '_get_short_date_time',
-        'DATE':                 '_get_date',
-        'TIME':                 '_get_time',
-        'TIMET':                '_get_timet',
-        'PROCESSSTARTTIME':     '_get_process_start_time',
-        'EVENTSTARTTIME':       '_get_events_start_time',
+        'TOTALHOSTSUP':
+            '_get_total_hosts_up',
+        'TOTALHOSTSDOWN':
+            '_get_total_hosts_down',
+        'TOTALHOSTSUNREACHABLE':
+            '_get_total_hosts_unreachable',
+        'TOTALHOSTSDOWNUNHANDLED':
+            '_get_total_hosts_down_unhandled',
+        'TOTALHOSTSUNREACHABLEUNHANDLED':
+            '_get_total_hosts_unreachable_unhandled',
+        'TOTALHOSTPROBLEMS':
+            '_get_total_host_problems',
+        'TOTALHOSTPROBLEMSUNHANDLED':
+            '_get_total_host_problems_unhandled',
+        'TOTALSERVICESOK':
+            '_get_total_services_ok',
+        'TOTALSERVICESWARNING':
+            '_get_total_services_warning',
+        'TOTALSERVICESCRITICAL':
+            '_get_total_services_critical',
+        'TOTALSERVICESUNKNOWN':
+            '_get_total_services_unknown',
+        'TOTALSERVICESWARNINGUNHANDLED':
+            '_get_total_services_warning_unhandled',
+        'TOTALSERVICESCRITICALUNHANDLED':
+            '_get_total_services_critical_unhandled',
+        'TOTALSERVICESUNKNOWNUNHANDLED':
+            '_get_total_services_unknown_unhandled',
+        'TOTALSERVICEPROBLEMS':
+            '_get_total_service_problems',
+        'TOTALSERVICEPROBLEMSUNHANDLED':
+            '_get_total_service_problems_unhandled',
+        'LONGDATETIME':
+            '_get_long_date_time',
+        'SHORTDATETIME':
+            '_get_short_date_time',
+        'DATE':
+            '_get_date',
+        'TIME':
+            '_get_time',
+        'TIMET':
+            '_get_timet',
+        'PROCESSSTARTTIME':
+            '_get_process_start_time',
+        'EVENTSTARTTIME':
+            '_get_events_start_time',
     }
 
     output_macros = [
@@ -106,15 +130,15 @@ class MacroResolver(Borg):
     ]
 
     def init(self, conf):
-        """Init macroresolver instance with conf.
-        Must be called once.
+        """Initialize macroresolver instance with conf.
+        Must be called at least once.
 
-        :param conf: conf to load
-        :type conf:
+        :param conf: configuration to load
+        :type conf: alignak.objects.Config
         :return: None
         """
 
-        # For searching class and elements for ondemand
+        # For searching class and elements for on-demand
         # we need link to types
         self.conf = conf
         self.lists_on_demand = []
@@ -134,10 +158,8 @@ class MacroResolver(Borg):
         self.lists_on_demand.append(self.contactgroups)
         self.illegal_macro_output_chars = conf.illegal_macro_output_chars
 
-        # Try cache :)
-        # self.cache = {}
-
-    def _get_macros(self, chain):
+    @staticmethod
+    def _get_macros(chain):
         """Get all macros of a chain
         Cut '$' char and create a dict with the following structure::
 
@@ -150,9 +172,6 @@ class MacroResolver(Borg):
         :return: dict with macro parsed as key
         :rtype: dict
         """
-        # if chain in self.cache:
-        #    return self.cache[chain]
-
         regex = re.compile(r'(\$)')
         elts = regex.split(chain)
         macros = {}
@@ -163,14 +182,13 @@ class MacroResolver(Borg):
             elif in_macro:
                 macros[elt] = {'val': '', 'type': 'unknown'}
 
-        # self.cache[chain] = macros
-        if '' in macros:
-            del macros['']
         return macros
 
     def _get_value_from_element(self, elt, prop):
         """Get value from a element's property
         the property may be a function to call.
+
+        If the property is not resolved (because not implemented), this function will return 'n/a'
 
         :param elt: element
         :type elt: object
@@ -180,19 +198,37 @@ class MacroResolver(Borg):
         :rtype: str
         """
         try:
+            args = None
+            # We have args to provide to the function
+            if isinstance(prop, tuple):
+                prop, args = prop
             value = getattr(elt, prop)
             if callable(value):
+                # Case where we need args to the function
+                # ex : HOSTGROUPNAME (we need hostgroups)
+                # ex : SHORTSTATUS (we need hosts and services if bp_rule)
+                if args:
+                    real_args = []
+                    for arg in args:
+                        real_args.append(getattr(self, arg, None))
+                    return unicode(value(*real_args))
+
                 return unicode(value())
-            else:
-                return unicode(value)
-        except AttributeError, exp:
-            # Return no value
-            return ''
-        except UnicodeError, exp:
+
+            return unicode(value)
+        except AttributeError:
+            # Todo: there is too much macros that are not resolved that this log is spamming :/
+            # # Raise a warning and return a strange value when macro cannot be resolved
+            # warnings.warn(
+            #     'Error when getting the property value for a macro: %s',
+            #     MacroWarning, stacklevel=2)
+            # Return a strange value when macro cannot be resolved
+            return 'n/a'
+        except UnicodeError:
             if isinstance(value, str):
                 return unicode(value, 'utf8', errors='ignore')
-            else:
-                return ''
+
+            return 'n/a'
 
     def _delete_unwanted_caracters(self, chain):
         """Remove not wanted char from chain
@@ -239,7 +275,8 @@ class MacroResolver(Borg):
 
         return env
 
-    def resolve_simple_macros_in_string(self, c_line, data, args=None):
+    def resolve_simple_macros_in_string(self, c_line, data, macromodulations, timeperiods,
+                                        args=None):
         """Replace macro in the command line with the real value
 
         :param c_line: command line to modify
@@ -255,7 +292,6 @@ class MacroResolver(Borg):
         data.append(self)  # For getting global MACROS
         if hasattr(self, 'conf'):
             data.append(self.conf)  # For USERN macros
-        clss = [d.__class__ for d in data]
 
         # we should do some loops for nested macros
         # like $USER1$ hiding like a ninja in a $ARG2$ Macro. And if
@@ -270,53 +306,63 @@ class MacroResolver(Borg):
             macros = self._get_macros(c_line)
 
             # We can get out if we do not have macros this loop
-            still_got_macros = (len(macros) != 0)
-            # print "Still go macros:", still_got_macros
+            still_got_macros = False
+            if macros:
+                still_got_macros = True
 
             # Put in the macros the type of macro for all macros
-            self._get_type_of_macro(macros, clss)
+            self._get_type_of_macro(macros, data)
             # Now we get values from elements
             for macro in macros:
                 # If type ARGN, look at ARGN cutting
                 if macros[macro]['type'] == 'ARGN' and args is not None:
                     macros[macro]['val'] = self._resolve_argn(macro, args)
                     macros[macro]['type'] = 'resolved'
-                # If class, get value from properties
-                if macros[macro]['type'] == 'class':
-                    cls = macros[macro]['class']
+                # If object type, get value from a property
+                if macros[macro]['type'] == 'object':
+                    obj = macros[macro]['object']
                     for elt in data:
-                        if elt is not None and elt.__class__ == cls:
-                            prop = cls.macros[macro]
-                            macros[macro]['val'] = self._get_value_from_element(elt, prop)
-                            # Now check if we do not have a 'output' macro. If so, we must
-                            # delete all special characters that can be dangerous
-                            if macro in self.output_macros:
-                                macros[macro]['val'] = \
-                                    self._delete_unwanted_caracters(macros[macro]['val'])
+                        if elt is None or elt != obj:
+                            continue
+                        prop = obj.macros[macro]
+                        macros[macro]['val'] = self._get_value_from_element(elt, prop)
+                        # Now check if we do not have a 'output' macro. If so, we must
+                        # delete all special characters that can be dangerous
+                        if macro in self.output_macros:
+                            macros[macro]['val'] = \
+                                self._delete_unwanted_caracters(macros[macro]['val'])
+                # If custom type, get value from an object custom variables
                 if macros[macro]['type'] == 'CUSTOM':
                     cls_type = macros[macro]['class']
-                    # Beware : only cut the first _HOST value, so the macro name can have it on it..
+                    # Beware : only cut the first _HOST or _SERVICE or _CONTACT value,
+                    # so the macro name can have it on it..
                     macro_name = re.split('_' + cls_type, macro, 1)[1].upper()
                     # Ok, we've got the macro like MAC_ADDRESS for _HOSTMAC_ADDRESS
                     # Now we get the element in data that have the type HOST
                     # and we check if it got the custom value
                     for elt in data:
-                        if elt is not None and elt.__class__.my_type.upper() == cls_type:
-                            if '_' + macro_name in elt.customs:
-                                macros[macro]['val'] = elt.customs['_' + macro_name]
-                            # Then look on the macromodulations, in reserver order, so
-                            # the last to set, will be the firt to have. (yes, don't want to play
-                            # with break and such things sorry...)
-                            mms = getattr(elt, 'macromodulations', [])
-                            for macromod in mms[::-1]:
-                                # Look if the modulation got the value,
-                                # but also if it's currently active
-                                if '_' + macro_name in macromod.customs and macromod.is_active():
-                                    macros[macro]['val'] = macromod.customs['_' + macro_name]
+                        if not elt or elt.__class__.my_type.upper() != cls_type:
+                            continue
+                        if not getattr(elt, 'customs'):
+                            continue
+                        if '_' + macro_name in elt.customs:
+                            macros[macro]['val'] = elt.customs['_' + macro_name]
+                        # Then look on the macromodulations, in reverse order, so
+                        # the last to set, will be the first to have. (yes, don't want to play
+                        # with break and such things sorry...)
+                        mms = getattr(elt, 'macromodulations', [])
+                        for macromod_id in mms[::-1]:
+                            macromod = macromodulations[macromod_id]
+                            # Look if the modulation got the value,
+                            # but also if it's currently active
+                            if '_' + macro_name in macromod.customs and \
+                                    macromod.is_active(timeperiods):
+                                macros[macro]['val'] = macromod.customs['_' + macro_name]
+                # If on-demand type, get value from an dynamic provided data objects
                 if macros[macro]['type'] == 'ONDEMAND':
                     macros[macro]['val'] = self._resolve_ondemand(macro, data)
 
-            # We resolved all we can, now replace the macro in the command call
+            # We resolved all we can, now replace the macros in the command call
             for macro in macros:
                 c_line = c_line.replace('$' + macro + '$', macros[macro]['val'])
 
@@ -330,10 +376,9 @@ class MacroResolver(Borg):
         # We now replace the big dirty token we made by only a simple $
         c_line = c_line.replace("DOUBLEDOLLAR", "$")
 
-        # print "Retuning c_line", c_line.strip()
         return c_line.strip()
 
-    def resolve_command(self, com, data):
+    def resolve_command(self, com, data, macromodulations, timeperiods):
         """Resolve command macros with data
 
         :param com: check / event handler or command call object
@@ -344,9 +389,11 @@ class MacroResolver(Borg):
         :rtype: str
         """
         c_line = com.command.command_line
-        return self.resolve_simple_macros_in_string(c_line, data, args=com.args)
+        return self.resolve_simple_macros_in_string(c_line, data, macromodulations, timeperiods,
+                                                    args=com.args)
 
-    def _get_type_of_macro(self, macros, clss):
+    @staticmethod
+    def _get_type_of_macro(macros, objs):
         r"""Set macros types
 
         Example::
@@ -358,8 +405,8 @@ class MacroResolver(Borg):
 
         :param macros: macros list
         :type macros: list[str]
-        :param clss: classes list, used to tag class macros
-        :type clss:
+        :param objs: objects list, used to tag object macros
+        :type objs: list
         :return: None
         """
         for macro in macros:
@@ -388,13 +435,14 @@ class MacroResolver(Borg):
                 macros[macro]['type'] = 'ONDEMAND'
                 continue
             # OK, classical macro...
-            for cls in clss:
-                if macro in cls.macros:
-                    macros[macro]['type'] = 'class'
-                    macros[macro]['class'] = cls
+            for obj in objs:
+                if macro in obj.macros:
+                    macros[macro]['type'] = 'object'
+                    macros[macro]['object'] = obj
                     continue
 
-    def _resolve_argn(self, macro, args):
+    @staticmethod
+    def _resolve_argn(macro, args):
         """Get argument from macro name
         ie : $ARG3$ -> args[2]
 
@@ -413,10 +461,14 @@ class MacroResolver(Borg):
             try:
                 return args[_id]
             except IndexError:
+                # Required argument not found, returns an empty string
                 return ''
 
     def _resolve_ondemand(self, macro, data):
         """Get on demand macro value
+
+        If the macro cannot be resolved, this function will return 'n/a' rather than
+        an empty string, this to alert the caller of a potential problem.
 
         :param macro: macro to parse
         :type macro:
@@ -425,14 +477,12 @@ class MacroResolver(Borg):
         :return: macro value
         :rtype: str
         """
-        # print "\nResolving macro", macro
         elts = macro.split(':')
         nb_parts = len(elts)
         macro_name = elts[0]
-        # Len 3 == service, 2 = all others types...
+        # 3 parts for a service, 2 for all others types...
         if nb_parts == 3:
             val = ''
-            # print "Got a Service on demand asking...", elts
             (host_name, service_description) = (elts[1], elts[2])
             # host_name can be void, so it's the host in data
             # that is important. We use our self.host_class to
@@ -447,7 +497,6 @@ class MacroResolver(Borg):
                 cls = serv.__class__
                 prop = cls.macros[macro_name]
                 val = self._get_value_from_element(serv, prop)
-                # print "Got val:", val
                 return val
         # Ok, service was easy, now hard part
         else:
@@ -470,9 +519,12 @@ class MacroResolver(Borg):
                         # Ok we got our value :)
                         break
             return val
-        return ''
 
-    def _get_long_date_time(self):
+        # Return a strange value in this case rather than an empty string
+        return 'n/a'
+
+    @staticmethod
+    def _get_long_date_time():
         """Get long date time
 
         Example : Fri 15 May 11:42:39 CEST 2009
@@ -484,7 +536,8 @@ class MacroResolver(Borg):
         """
         return time.strftime("%a %d %b %H:%M:%S %Z %Y").decode('UTF-8', 'ignore')
 
-    def _get_short_date_time(self):
+    @staticmethod
+    def _get_short_date_time():
         """Get short date time
 
         Example : 10-13-2000 00:30:28
@@ -496,7 +549,8 @@ class MacroResolver(Borg):
         """
         return time.strftime("%d-%m-%Y %H:%M:%S")
 
-    def _get_date(self):
+    @staticmethod
+    def _get_date():
         """Get date
 
         Example : 10-13-2000
@@ -508,7 +562,8 @@ class MacroResolver(Borg):
         """
         return time.strftime("%d-%m-%Y")
 
-    def _get_time(self):
+    @staticmethod
+    def _get_time():
         """Get date time
 
         Example : 00:30:28
@@ -520,7 +575,8 @@ class MacroResolver(Borg):
         """
         return time.strftime("%H:%M:%S")
 
-    def _get_timet(self):
+    @staticmethod
+    def _get_timet():
         """Get epoch time
 
         Example : 1437143291
@@ -543,20 +599,63 @@ class MacroResolver(Borg):
         """
         return sum(1 for h in self.hosts if h.state == state)
 
-    _get_total_hosts_up = lambda s: s._tot_hosts_by_state('UP')
-    _get_total_hosts_down = lambda s: s._tot_hosts_by_state('DOWN')
-    _get_total_hosts_unreachable = lambda s: s._tot_hosts_by_state('UNREACHABLE')
+    def _tot_unhandled_hosts_by_state(self, state):
+        """Generic function to get the number of unhandled problem hosts in the specified state
+
+        :param state: state to filter on
+        :type state:
+        :return: number of host in state *state* and which are not acknowledged problems
+        :rtype: int
+        """
+        return sum(1 for h in self.hosts if h.state == state and
+                   h.is_problem and not h.problem_has_been_acknowledged)
+
+    def _get_total_hosts_up(self):
+        """
+        Get the number of hosts up
+
+        :return: number of hosts
+        :rtype: int
+        """
+        return self._tot_hosts_by_state('UP')
+
+    def _get_total_hosts_down(self):
+        """
+        Get the number of hosts down
+
+        :return: number of hosts
+        :rtype: int
+        """
+        return self._tot_hosts_by_state('DOWN')
+
+    def _get_total_hosts_down_unhandled(self):
+        """
+        Get the number of down hosts not handled
+
+        :return: Number of hosts down and not handled
+        :rtype: int
+        """
+        return self._tot_unhandled_hosts_by_state('DOWN')
+
+    def _get_total_hosts_unreachable(self):
+        """
+        Get the number of hosts unreachable
+
+        :return: number of hosts
+        :rtype: int
+        """
+        return self._tot_hosts_by_state('UNREACHABLE')
 
     def _get_total_hosts_unreachable_unhandled(self):
-        """DOES NOTHING( Should get the number of unreachable hosts not handled)
-
-        :return: 0 always
-        :rtype: int
-        TODO: Implement this
         """
-        return 0
+        Get the number of unreachable hosts not handled
 
-    def _get_total_hosts_problems(self):
+        :return: Number of hosts unreachable and not handled
+        :rtype: int
+        """
+        return self._tot_unhandled_hosts_by_state('UNREACHABLE')
+
+    def _get_total_host_problems(self):
         """Get the number of hosts that are a problem
 
         :return: number of hosts with is_problem attribute True
@@ -564,17 +663,17 @@ class MacroResolver(Borg):
         """
         return sum(1 for h in self.hosts if h.is_problem)
 
-    def _get_total_hosts_problems_unhandled(self):
-        """DOES NOTHING( Should get the number of host problems not handled)
-
-        :return: 0 always
-        :rtype: int
-        TODO: Implement this
+    def _get_total_host_problems_unhandled(self):
         """
-        return 0
+        Get the number of host problems not handled
+
+        :return: Number of hosts which are problems and not handled
+        :rtype: int
+        """
+        return sum(1 for h in self.hosts if h.is_problem and not h.problem_has_been_acknowledged)
 
     def _tot_services_by_state(self, state):
-        """Generic function to get the number of service in the specified state
+        """Generic function to get the number of services in the specified state
 
         :param state: state to filter on
         :type state:
@@ -584,40 +683,79 @@ class MacroResolver(Borg):
         """
         return sum(1 for s in self.services if s.state == state)
 
-    _get_total_service_ok = lambda s: s._tot_services_by_state('OK')
+    def _tot_unhandled_services_by_state(self, state):
+        """Generic function to get the number of unhandled problem services in the specified state
 
-    _get_total_service_warning = lambda s: s._tot_services_by_state('WARNING')
+        :param state: state to filter on
+        :type state:
+        :return: number of service in state *state* and which are not acknowledged problems
+        :rtype: int
+        """
+        return sum(1 for s in self.services if s.state == state and
+                   s.is_problem and not s.problem_has_been_acknowledged)
 
-    _get_total_service_critical = lambda s: s._tot_services_by_state('CRITICAL')
+    def _get_total_services_ok(self):
+        """
+        Get the number of services ok
 
-    _get_total_service_unknown = lambda s: s._tot_services_by_state('UNKNOWN')
+        :return: number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state('OK')
+
+    def _get_total_services_warning(self):
+        """
+        Get the number of services warning
+
+        :return: number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state('WARNING')
+
+    def _get_total_services_critical(self):
+        """
+        Get the number of services critical
+
+        :return: number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state('CRITICAL')
+
+    def _get_total_services_unknown(self):
+        """
+        Get the number of services unknown
+
+        :return: number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state('UNKNOWN')
 
     def _get_total_services_warning_unhandled(self):
-        """DOES NOTHING (Should get the number of warning services not handled)
-
-        :return: 0 always
-        :rtype: int
-        TODO: Implement this
         """
-        return 0
+        Get the number of warning services not handled
+
+        :return: Number of services warning and not handled
+        :rtype: int
+        """
+        return self._tot_unhandled_services_by_state('WARNING')
 
     def _get_total_services_critical_unhandled(self):
-        """DOES NOTHING (Should get the number of critical services not handled)
-
-        :return: 0 always
-        :rtype: int
-        TODO: Implement this
         """
-        return 0
+        Get the number of critical services not handled
+
+        :return: Number of services critical and not handled
+        :rtype: int
+        """
+        return self._tot_unhandled_services_by_state('CRITICAL')
 
     def _get_total_services_unknown_unhandled(self):
-        """DOES NOTHING (Should get the number of unknown services not handled)
-
-        :return: 0 always
-        :rtype: int
-        TODO: Implement this
         """
-        return 0
+        Get the number of unknown services not handled
+
+        :return: Number of services unknown and not handled
+        :rtype: int
+        """
+        return self._tot_unhandled_services_by_state('UNKNOWN')
 
     def _get_total_service_problems(self):
         """Get the number of services that are a problem
@@ -628,28 +766,32 @@ class MacroResolver(Borg):
         return sum(1 for s in self.services if s.is_problem)
 
     def _get_total_service_problems_unhandled(self):
-        """DOES NOTHING (Should get the number of service problems not handled)
+        """Get the number of services that are a problem and that are not acknowledged
 
-        :return: 0 always
+        :return: number of problem services which are not acknowledged
         :rtype: int
-        TODO: Implement this
         """
-        return 0
+        return sum(1 for s in self.services if s.is_problem and not s.problem_has_been_acknowledged)
 
-    def _get_process_start_time(self):
+    @staticmethod
+    def _get_process_start_time():
         """DOES NOTHING ( Should get process start time)
 
-        :return: 0 always
-        :rtype: int
+        This function always returns 'n/a' to inform that it is not available
+
+        :return: n/a always
+        :rtype: str
         TODO: Implement this
         """
-        return 0
+        return 'n/a'
 
-    def _get_events_start_time(self):
+    @staticmethod
+    def _get_events_start_time():
         """DOES NOTHING ( Should get events start time)
 
-        :return: 0 always
-        :rtype: int
-        TODO: Implement this
+        This function always returns 'n/a' to inform that it is not available
+
+        :return: n/a always
+        :rtype: str
         """
-        return 0
+        return 'n/a'

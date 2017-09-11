@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -17,43 +17,27 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 """This module provide a specific HTTP interface for a Arbiter."""
-import cherrypy
-import json
-import time
 
-from alignak.log import logger
+import time
+import logging
+import json
+import cherrypy
+
 from alignak.http.generic_interface import GenericInterface
 from alignak.util import jsonify_r
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class ArbiterInterface(GenericInterface):
     """Interface for HA Arbiter. The Slave/Master arbiter can get /push conf
 
     """
-
     @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def have_conf(self, magic_hash):
-        """Does the daemon got a configuration (internal) (HTTP GET)
-
-        :param magic_hash: magic hash of configuration
-        :type magic_hash: int
-        :return: True if the arbiter has the specified conf, False otherwise
-        :rtype: bool
-        """
-        # Beware, we got an str in entry, not an int
-        magic_hash = int(magic_hash)
-        # I've got a conf and a good one
-        if self.app.cur_conf and self.app.cur_conf.magic_hash == magic_hash:
-            return True
-        else:  # I've no conf or a bad one
-            return False
-
-    @cherrypy.expose
-    def put_conf(self, conf):
+    def put_conf(self, conf=None):
         """HTTP POST to the arbiter with the new conf (master send to slave)
 
-        :param conf: pickled the new configuration
+        :param conf: serialized new configuration
         :type conf:
         :return: None
         """
@@ -64,31 +48,23 @@ class ArbiterInterface(GenericInterface):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_config(self):
-        """Get the managed configuration (internal) (HTTP GET)
-
-        :return: Currently managed configuration
-        :rtype: object
-        """
-        return self.app.conf
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
     def do_not_run(self):
         """Master tells to slave to not run (HTTP GET)
         Master will ignore this call
 
         :return: None
         """
-        # If I'm the master, ignore the command
+        # If I'm the master, ignore the command and raise a log
         if self.app.is_master:
-            logger.debug("Received message to not run. "
-                         "I am the Master, ignore and continue to run.")
+            logger.warning("Received message to not run. "
+                           "I am the Master, ignore and continue to run.")
+            return False
+
         # Else, I'm just a spare, so I listen to my master
-        else:
-            logger.debug("Received message to not run. I am the spare, stopping.")
-            self.app.last_master_speack = time.time()
-            self.app.must_run = False
+        logger.debug("Received message to not run. I am the spare, stopping.")
+        self.app.last_master_speack = time.time()
+        self.app.must_run = False
+        return True
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -99,6 +75,7 @@ class ArbiterInterface(GenericInterface):
         :return: None
         """
         with self.app.conf_lock:
+            logger.warning("Arbiter wants me to wait for a new configuration")
             self.app.cur_conf = None
 
     @cherrypy.expose
@@ -170,25 +147,29 @@ class ArbiterInterface(GenericInterface):
 
                 for props in all_props:
                     for prop in props:
-                        if hasattr(daemon, prop):
-                            val = getattr(daemon, prop)
-                            if prop == "realm":
-                                if hasattr(val, "realm_name"):
-                                    env[prop] = val.realm_name
-                            # give a try to a json able object
-                            try:
-                                json.dumps(val)
-                                env[prop] = val
-                            except Exception, exp:
-                                logger.debug('%s', exp)
+                        if not hasattr(daemon, prop):
+                            continue
+                        if prop in ["realms", "conf", "con", "tags", "modules", "conf_package",
+                                    "broks"]:
+                            continue
+                        val = getattr(daemon, prop)
+                        # give a try to a json able object
+                        try:
+                            json.dumps(val)
+                            env[prop] = val
+                        except TypeError as exp:
+                            logger.warning('get_all_states, %s: %s', prop, str(exp))
                 lst.append(env)
         return res
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def get_objects_properties(self, table):
-        """'Dump all objects of the type in
-        [hosts, services, contacts, commands, hostgroups, servicegroups]
+        """'Dump all objects of the required type existing in the configuration:
+            - hosts, services, contacts,
+            - hostgroups, servicegroups, contactgroups
+            - commands, timeperiods
+            - ...
 
         :param table: table name
         :type table: str
@@ -199,7 +180,7 @@ class ArbiterInterface(GenericInterface):
             logger.debug('ASK:: table= %s', str(table))
             objs = getattr(self.app.conf, table, None)
             logger.debug("OBJS:: %s", str(objs))
-            if objs is None or len(objs) == 0:
+            if objs is None or not objs:
                 return []
             res = []
             for obj in objs:

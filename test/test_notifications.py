@@ -18,542 +18,758 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 #
-#
-# This file incorporates work covered by the following copyright and
-# permission notice:
-#
-#  Copyright (C) 2009-2014:
-#     Hartmut Goebel, h.goebel@goebel-consult.de
-#     Grégory Starck, g.starck@gmail.com
-#     Sebastien Coavoux, s.coavoux@free.fr
-#     Jean Gabes, naparuba@gmail.com
-#     Zoran Zaric, zz@zoranzaric.de
-#     Gerhard Lausser, gerhard.lausser@consol.de
-
-#  This file is part of Shinken.
-#
-#  Shinken is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU Affero General Public License as published by
-#  the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-#
-#  Shinken is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-#
-#  You should have received a copy of the GNU Affero General Public License
-#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
-
-#
-# This file is used to test host- and service-downtimes.
-#
+"""
+This file test notifications
+"""
 
 import time
+import copy
+from alignak_test import AlignakTest
 
-from alignak_test import unittest, AlignakTest
-from alignak_test import time_hacker
 
+class TestNotifications(AlignakTest):
+    """
+    This class test notifications
+    """
 
-class TestNotif(AlignakTest):
+    def test_0_nonotif(self):
+        """ Test with notifications disabled in service definition
 
-    def test_continuous_notifications(self):
+        :return: None
+        """
         self.print_header()
-        # retry_interval 2
-        # critical notification
-        # run loop -> another notification
-        now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
+        self.setup_with_file('cfg/cfg_nonotif.cfg')
+
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
 
-        # To make tests quicker we make notifications send very quickly
-        svc.notification_interval = 0.001
-
-        svc.checks_in_progress = []
-        svc.act_depend_of = []  # no hostchecks on critical checkresults
-        #--------------------------------------------------------------
-        # initialize host/service state
-        #--------------------------------------------------------------
-        self.scheduler_loop(1, [[host, 0, 'UP']], do_sleep=True, sleep_time=0.1)
-        print "- 1 x OK -------------------------------------"
-        self.scheduler_loop(1, [[svc, 0, 'OK']], do_sleep=True, sleep_time=0.1)
-
-        self.assertEqual(0, svc.current_notification_number)
-        #--------------------------------------------------------------
-        # service reaches soft;1
-        # there must not be any notification
-        #--------------------------------------------------------------
-        print "- 1 x BAD get soft -------------------------------------"
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        # check_notification: not (soft)
-        print "---current_notification_number", svc.current_notification_number
-        #--------------------------------------------------------------
-        # service reaches hard;2
-        # a notification must have been created
-        # notification number must be 1
-        #--------------------------------------------------------------
-        print "- 1 x BAD get hard -------------------------------------"
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.show_and_clear_logs()
-        #self.show_and_clear_actions()
-        self.show_actions()
-        print svc.notifications_in_progress
-        for n in svc.notifications_in_progress.values():
-            print n
-        # check_notification: yes (hard)
-        print "---current_notification_number", svc.current_notification_number
-        # notification_number is already sent. the next one has been scheduled
-        # and is waiting for notification_interval to pass. so the current
-        # number is 2
-        self.assertEqual(1, svc.current_notification_number)
-        print "---------------------------------1st round with a hard"
-        print "find a way to get the number of the last reaction"
-        cnn = svc.current_notification_number
-        print "- 5 x BAD repeat -------------------------------------"
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.show_and_clear_logs()
-        self.show_actions()
-        print "cnn and cur", cnn, svc.current_notification_number
-        self.assertGreater(svc.current_notification_number, cnn)
-        cnn = svc.current_notification_number
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.show_and_clear_logs()
-        self.show_actions()
-        print "svc.current_notification_number, cnn", svc.current_notification_number, cnn
-        self.assertGreater(svc.current_notification_number, cnn)
-        #--------------------------------------------------------------
-        # 2 cycles = 2 minutes = 2 new notifications
-        #--------------------------------------------------------------
-        cnn = svc.current_notification_number
-        self.scheduler_loop(2, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.show_and_clear_logs()
-        self.show_actions()
-        print "svc.current_notification_number, cnn", svc.current_notification_number, cnn
-        self.assertGreater(svc.current_notification_number, cnn)
-        #--------------------------------------------------------------
-        # 2 cycles = 2 minutes = 2 new notifications (theoretically)
-        # BUT: test_contact filters notifications
-        # we do not raise current_notification_number if no mail was sent
-        #--------------------------------------------------------------
-        now = time.time()
-        cmd = "[%lu] DISABLE_CONTACT_SVC_NOTIFICATIONS;test_contact" % now
-        self.sched.run_external_command(cmd)
-        cnn = svc.current_notification_number
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.show_and_clear_logs()
-        self.show_actions()
-        self.assertEqual(cnn, svc.current_notification_number)
-        #--------------------------------------------------------------
-        # again a normal cycle
-        # test_contact receives his mail
-        #--------------------------------------------------------------
-        now = time.time()
-        cmd = "[%lu] ENABLE_CONTACT_SVC_NOTIFICATIONS;test_contact" % now
-        self.sched.run_external_command(cmd)
-        #cnn = svc.current_notification_number
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.show_and_clear_logs()
-        self.show_actions()
-        print "svc.current_notification_number, cnn", svc.current_notification_number, cnn
-        self.assertEqual(cnn + 1, svc.current_notification_number)
-        #--------------------------------------------------------------
-        # now recover. there must be no scheduled/inpoller notification
-        #--------------------------------------------------------------
-        self.scheduler_loop(1, [[svc, 0, 'GOOD']], do_sleep=True, sleep_time=0.1)
-        self.show_and_clear_logs()
-        self.show_and_clear_actions()
-        self.assertEqual(0, svc.current_notification_number)
-
-    def test_continuous_notifications_delayed(self):
-        self.print_header()
-        # retry_interval 2
-        # critical notification
-        # run loop -> another notification
-        now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
-        host.checks_in_progress = []
-        host.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-
-        # To make tests quicker we make notifications send very quickly
-        svc.notification_interval = 0.001  # and send imediatly then
-
-        svc.first_notification_delay = 0.1  # set 6s for first notif delay
-        svc.checks_in_progress = []
-        svc.act_depend_of = []  # no hostchecks on critical checkresults
-        self.scheduler_loop(1, [[host, 0, 'UP']], do_sleep=True, sleep_time=1)
-        #-----------------------------------------------------------------
-        # initialize with a good check. there must be no pending notification
-        #-----------------------------------------------------------------
-        self.scheduler_loop(1, [[svc, 0, 'OK']], do_sleep=True, sleep_time=1)
-        self.show_and_clear_logs()
-        self.show_and_clear_actions()
-        self.assertEqual(0, svc.current_notification_number)
-        #-----------------------------------------------------------------
-        # check fails and enters soft state.
-        # there must be no notification, only the event handler
-        #-----------------------------------------------------------------
-        self.scheduler_loop(1, [[svc, 1, 'BAD']], do_sleep=True, sleep_time=1)
-        self.assertEqual(1, self.count_actions())
-        now = time.time()
-        print svc.last_time_warning, svc.last_time_critical, svc.last_time_unknown, svc.last_time_ok
-        last_time_not_ok = svc.last_time_non_ok_or_up()
-        deadline = svc.last_time_non_ok_or_up() + svc.first_notification_delay * svc.__class__.interval_length
-        print("deadline is in %s secs" % (deadline - now))
-        #-----------------------------------------------------------------
-        # check fails again and enters hard state.
-        # now there is a (scheduled for later) notification and an event handler
-        # current_notification_number is still 0, until notifications
-        # have actually been sent
-        #-----------------------------------------------------------------
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.show_and_clear_logs()
-        self.show_actions()
-        self.assertEqual(0, svc.current_notification_number)
-        # sleep up to deadline:
-        time_hacker.time_warp(deadline - now)
-        # even if time_hacker is used here, we still call time.sleep()
-        # to show that we must wait the necessary delay time:
-        time.sleep(deadline - now)
-        #-----------------------------------------------------------------
-        # now the delay period is over and the notification can be sent
-        # with the next bad check
-        # there is 1 action, the notification (
-        # 1 notification was sent, so current_notification_number is 1
-        #-----------------------------------------------------------------
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=1)
-        print "Counted actions", self.count_actions()
-        self.assertEqual(2, self.count_actions())
-        # 1 master, 1 child
-        self.assertEqual(1, svc.current_notification_number)
-        self.show_actions()
-        self.assertEqual(1, len(svc.notifications_in_progress))  # master is zombieand removed_from_in_progress
-        self.show_logs()
-        self.assert_log_match(1, 'SERVICE NOTIFICATION.*;CRITICAL;')
-        self.show_and_clear_logs()
-        self.show_actions()
-        #-----------------------------------------------------------------
-        # relax with a successful check
-        # there are 2 actions, one notification and one eventhandler
-        # current_notification_number was reset to 0
-        #-----------------------------------------------------------------
-        self.scheduler_loop(2, [[svc, 0, 'GOOD']], do_sleep=True, sleep_time=1)
-        self.assert_log_match(1, 'SERVICE ALERT.*;OK;')
-        self.assert_log_match(2, 'SERVICE EVENT HANDLER.*;OK;')
-        self.assert_log_match(3, 'SERVICE NOTIFICATION.*;OK;')
-        # evt reap 2 loops
-        self.assertEqual(0, svc.current_notification_number)
-        self.assertEqual(0, len(svc.notifications_in_progress))
-        self.assertEqual(0, len(svc.notified_contacts))
-        #self.assertEqual(2, self.count_actions())
-        self.show_and_clear_logs()
-        self.show_and_clear_actions()
-
-    def test_continuous_notifications_delayed_recovers_fast(self):
-        self.print_header()
-        # retry_interval 2
-        # critical notification
-        # run loop -> another notification
-        now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
-        host.checks_in_progress = []
-        host.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-        svc.first_notification_delay = 5
-        svc.checks_in_progress = []
-        svc.act_depend_of = []  # no hostchecks on critical checkresults
-        self.scheduler_loop(1, [[host, 0, 'UP']], do_sleep=True, sleep_time=0.1)
-        #-----------------------------------------------------------------
-        # initialize with a good check. there must be no pending notification
-        #-----------------------------------------------------------------
-        self.scheduler_loop(1, [[svc, 0, 'OK']], do_sleep=True, sleep_time=0.1)
-        self.show_and_clear_logs()
-        self.show_and_clear_actions()
-        self.assertEqual(0, svc.current_notification_number)
-        #-----------------------------------------------------------------
-        # check fails and enters soft state.
-        # there must be no notification, only the event handler
-        #-----------------------------------------------------------------
-        self.scheduler_loop(1, [[svc, 1, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.show_and_clear_logs()
-        self.show_actions()
-        self.assertEqual(1, self.count_actions())
-        #-----------------------------------------------------------------
-        # check fails again and enters hard state.
-        # now there is a (scheduled for later) notification and an event handler
-        # current_notification_number is still 0 (will be raised when
-        # a notification is actually sent)
-        #-----------------------------------------------------------------
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.show_and_clear_logs()
-        self.show_actions()
-        self.assertEqual(2, self.count_actions())
-        self.assertEqual(0, svc.current_notification_number)
-        #-----------------------------------------------------------------
-        # repeat bad checks during the delay time
-        # but only one time. we don't want to reach the deadline
-        # there is one action: the pending notification
-        #-----------------------------------------------------------------
-        self.scheduler_loop(1, [[svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.show_and_clear_logs()
-        self.show_actions()
-        self.assertEqual(1, self.count_actions())
-        #-----------------------------------------------------------------
-        # relax with a successful check
-        # there is 1 action, the eventhandler.
-        #-----------------------------------------------------------------
-        self.scheduler_loop(1, [[svc, 0, 'GOOD']], do_sleep=True, sleep_time=0.1)
-        self.assert_log_match(1, 'SERVICE ALERT.*;OK;')
-        self.assert_log_match(2, 'SERVICE EVENT HANDLER.*;OK;')
-        self.assert_log_match(3, 'SERVICE NOTIFICATION.*;OK;',
-                              no_match=True)
-        self.show_actions()
-        self.assertEqual(0, len(svc.notifications_in_progress))
-        self.assertEqual(0, len(svc.notified_contacts))
-        self.assertEqual(1, self.count_actions())
-        self.show_and_clear_logs()
-        self.show_and_clear_actions()
-
-
-    def test_host_in_downtime_or_down_service_critical(self):
-        self.print_header()
-        # retry_interval 2
-        # critical notification
-        # run loop -> another notification
-        now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
-        host.checks_in_progress = []
-        host.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-
-        # To make tests quicker we make notifications send very quickly
-        svc.notification_interval = 0.001
-
-        svc.checks_in_progress = []
-        svc.act_depend_of = []  # no hostchecks on critical checkresults
-        #--------------------------------------------------------------
-        # initialize host/service state
-        #--------------------------------------------------------------
-        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']], do_sleep=True, sleep_time=0.1)
-        self.assertEqual(0, svc.current_notification_number)
-        #--------------------------------------------------------------
-        # service reaches hard;2
-        # a notification must have been created
-        # notification number must be 1
-        #--------------------------------------------------------------
-        self.scheduler_loop(2, [[host, 0, 'UP'], [svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.show_logs()
-        self.show_actions()
-        self.assert_log_match(1, 'SERVICE ALERT.*;CRITICAL;SOFT')
-        self.assert_log_match(2, 'SERVICE EVENT HANDLER.*;CRITICAL;SOFT')
-        self.assert_log_match(3, 'SERVICE ALERT.*;CRITICAL;HARD')
-        self.assert_log_match(4, 'SERVICE EVENT HANDLER.*;CRITICAL;HARD')
-        self.assert_log_match(5, 'SERVICE NOTIFICATION.*;CRITICAL;')
-        self.assertEqual(1, svc.current_notification_number)
-        self.clear_logs()
-        self.clear_actions()
-        #--------------------------------------------------------------
-        # reset host/service state
-        #--------------------------------------------------------------
-        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']], do_sleep=True, sleep_time=0.1)
-        self.assertEqual(0, svc.current_notification_number)
-        duration = 300
-        now = time.time()
-        # fixed downtime valid for the next 5 minutes
-        cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_host_0;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
-        self.sched.run_external_command(cmd)
-        #--------------------------------------------------------------
-        # service reaches hard;2
-        # no notificatio
-        #--------------------------------------------------------------
-        self.scheduler_loop(2, [[host, 0, 'UP'], [svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.assert_any_log_match('HOST NOTIFICATION.*;DOWNTIMESTART')
-        self.assert_no_log_match('SERVICE NOTIFICATION.*;CRITICAL;')
-        self.show_and_clear_logs()
-        self.show_and_clear_actions()
-
-    def test_only_notified_contacts_notifications(self):
-        self.print_header()
-        # retry_interval 2
-        # critical notification
-        # run loop -> another notification
-        now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
-        host.checks_in_progress = []
-        host.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-
-        # To make tests quicker we make notifications send very quickly
-        svc.notification_interval = 0.001
-
+        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+            "test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
-        # We want the contact to do not have a mail, so we remove tyhe 'u'
-        test_contact = self.sched.contacts.find_by_name('test_contact')
-        for nw in test_contact.notificationways:
-            nw.service_notification_options.remove('u')
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        time.sleep(0.1)
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
+        self.assert_actions_count(0)
 
-        #--------------------------------------------------------------
-        # initialize host/service state
-        #--------------------------------------------------------------
-        self.scheduler_loop(1, [[host, 0, 'UP']], do_sleep=True, sleep_time=0.1)
-        print "- 1 x OK -------------------------------------"
-        self.scheduler_loop(1, [[svc, 0, 'OK']], do_sleep=True, sleep_time=0.1)
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        assert "SOFT" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical SOFT, no notifications'
+        self.assert_actions_count(0)
 
-        self.assertEqual(0, svc.current_notification_number)
-        #--------------------------------------------------------------
-        # service reaches soft;1
-        # there must not be any notification
-        #--------------------------------------------------------------
-        print "- 1 x BAD get soft -------------------------------------"
-        self.scheduler_loop(1, [[svc, 3, 'UNKNOWN']], do_sleep=True, sleep_time=0.1)
-        # check_notification: not (soft)
-        print "---current_notification_number", svc.current_notification_number
-        print "Contact we notified", svc.notified_contacts
-        #--------------------------------------------------------------
-        # service reaches hard;2
-        # a notification must have been created
-        # notification number must be 1
-        #--------------------------------------------------------------
-        print "- 1 x BAD get hard -------------------------------------"
-        self.scheduler_loop(1, [[svc, 3, 'UNKNOWN']], do_sleep=True, sleep_time=0.1)
-        self.show_and_clear_logs()
-        #self.show_and_clear_actions()
-        print "TOTO2"
-        self.show_actions()
-        print "notif in progress", svc.notifications_in_progress
-        for n in svc.notifications_in_progress.values():
-            print "TOTO", n.__dict__
-        # check_notification: yes (hard)
-        print "---current_notification_number", svc.current_notification_number
-        # The contact refuse our notification, so we are still at 0
-        self.assertEqual(0, svc.current_notification_number)
-        print "---------------------------------1st round with a hard"
-        print "find a way to get the number of the last reaction"
-        cnn = svc.current_notification_number
-        print "- 5 x BAD repeat -------------------------------------"
-        self.scheduler_loop(1, [[svc, 3, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.show_and_clear_logs()
-        self.show_actions()
-        print "cnn and cur", cnn, svc.current_notification_number
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        assert "HARD" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical HARD, no notifications'
+        self.assert_actions_count(1)
+        self.assert_actions_match(0, 'VOID', 'command')
 
-        cnn = svc.current_notification_number
-        self.scheduler_loop(1, [[svc, 3, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.show_and_clear_logs()
-        self.show_actions()
-        print "svc.current_notification_number, cnn", svc.current_notification_number, cnn
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
+        time.sleep(0.1)
+        assert 0 == svc.current_notification_number, 'Ok HARD, no notifications'
+        self.assert_actions_count(0)
 
-        #--------------------------------------------------------------
-        # 2 cycles = 2 minutes = 2 new notifications
-        #--------------------------------------------------------------
-        cnn = svc.current_notification_number
-        self.scheduler_loop(2, [[svc, 3, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.show_and_clear_logs()
-        self.show_actions()
-        print "svc.current_notification_number, cnn", svc.current_notification_number, cnn
+    def test_1_nonotif_enablewithcmd(self):
+        """ Test notification disabled in service definition but enable after with external command
 
-        #--------------------------------------------------------------
-        # 2 cycles = 2 minutes = 2 new notifications (theoretically)
-        # BUT: test_contact filters notifications
-        # we do not raise current_notification_number if no mail was sent
-        #--------------------------------------------------------------
-        now = time.time()
-        cmd = "[%lu] DISABLE_CONTACT_SVC_NOTIFICATIONS;test_contact" % now
-        self.sched.run_external_command(cmd)
-        cnn = svc.current_notification_number
-        self.scheduler_loop(1, [[svc, 3, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.show_and_clear_logs()
-        self.show_actions()
-        self.assertEqual(cnn, svc.current_notification_number)
-        #--------------------------------------------------------------
-        # again a normal cycle
-        # test_contact receives his mail
-        #--------------------------------------------------------------
-        now = time.time()
-        cmd = "[%lu] ENABLE_CONTACT_SVC_NOTIFICATIONS;test_contact" % now
-        self.sched.run_external_command(cmd)
-        #cnn = svc.current_notification_number
-        self.scheduler_loop(1, [[svc, 3, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.show_and_clear_logs()
-        self.show_actions()
-        print "svc.current_notification_number, cnn", svc.current_notification_number, cnn
-        #self.assertEqual(cnn + 1, svc.current_notification_number)
-        #--------------------------------------------------------------
-        # now recover. there must be no scheduled/inpoller notification
-        #--------------------------------------------------------------
-        self.scheduler_loop(1, [[svc, 0, 'GOOD']], do_sleep=True, sleep_time=0.1)
-
-        # I do not want a notification of a recovery because
-        # the user did not have the notif first!
-        self.assert_no_log_match('notify-service')
-        self.show_and_clear_logs()
-        self.show_and_clear_actions()
-        self.assertEqual(0, svc.current_notification_number)
-
-    def test_svc_in_dt_and_crit_and_notif_interval_0(self):
+        :return: None
+        """
         self.print_header()
-        # retry_interval 2
-        # critical notification
-        # run loop -> another notification
-        now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
+        self.setup_with_file('cfg/cfg_nonotif.cfg')
+
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+
+        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+            "test_host_0", "test_ok_0")
+        # To make notifications not being re-sent, set this to 0
         svc.notification_interval = 0
-        host.notification_options = 'c'
-        svc.notification_options = 'c'
-
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
-        #--------------------------------------------------------------
-        # initialize host/service state
-        #--------------------------------------------------------------
-        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']], do_sleep=True, sleep_time=0.1)
-        self.assertEqual(0, svc.current_notification_number)
-        #--------------------------------------------------------------
-        # service reaches hard;2
-        # a notification must have been created
-        # notification number must be 1
-        #--------------------------------------------------------------
-        self.scheduler_loop(2, [[host, 0, 'UP'], [svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.show_logs()
-        self.show_actions()
-        self.assert_log_match(1, 'SERVICE ALERT.*;CRITICAL;SOFT')
-        self.assert_log_match(2, 'SERVICE EVENT HANDLER.*;CRITICAL;SOFT')
-        self.assert_log_match(3, 'SERVICE ALERT.*;CRITICAL;HARD')
-        self.assert_log_match(4, 'SERVICE EVENT HANDLER.*;CRITICAL;HARD')
-        self.assert_log_match(5, 'SERVICE NOTIFICATION.*;CRITICAL;')
-        self.assertEqual(1, svc.current_notification_number)
-        self.clear_logs()
-        self.clear_actions()
-        #--------------------------------------------------------------
-        # reset host/service state
-        #--------------------------------------------------------------
-        #self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']], do_sleep=True, sleep_time=0.1)
-        #self.assertEqual(0, svc.current_notification_number)
-        duration = 2
-        now = time.time()
-        # fixed downtime valid for the next 5 minutes
-        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
-        self.sched.run_external_command(cmd)
-        #--------------------------------------------------------------
-        # service reaches hard;2
-        # no notificatio
-        #--------------------------------------------------------------
-        self.scheduler_loop(2, [[host, 0, 'UP'], [svc, 2, 'BAD']], do_sleep=True, sleep_time=0.1)
-        self.assert_any_log_match('SERVICE DOWNTIME ALERT.*;STARTED')
-        self.assert_no_log_match('SERVICE NOTIFICATION.*;CRITICAL;')
-        # To get out of the DT.
-        self.scheduler_loop(2, [[host, 0, 'UP'], [svc, 2, 'BAD']], do_sleep=True, sleep_time=2)
-        self.assert_no_log_match('SERVICE NOTIFICATION.*;CRITICAL;')
-        self.assertEqual(1, svc.current_notification_number)
-        self.show_and_clear_logs()
-        self.show_and_clear_actions()
+        svc.event_handler_enabled = False
 
-if __name__ == '__main__':
-    unittest.main()
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        time.sleep(0.1)
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        assert "SOFT" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical SOFT, no notifications'
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        assert "HARD" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical HARD, no notifications'
+        self.assert_actions_count(0)
+        assert not svc.notifications_enabled
+
+        now = int(time.time())
+        cmd = "[{0}] ENABLE_SVC_NOTIFICATIONS;{1};{2}\n".format(now, svc.host_name,
+                                                                svc.service_description)
+        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self.external_command_loop()
+        assert svc.notifications_enabled
+        assert "HARD" == svc.state_type
+        assert "CRITICAL" == svc.state
+        time.sleep(0.2)
+        self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
+        assert "HARD" == svc.state_type
+        assert "CRITICAL" == svc.state
+        assert 1 == svc.current_notification_number, 'Critical HARD, must have 1 ' \
+                                                             'notification'
+        self.assert_actions_count(1)
+        self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
+
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
+        time.sleep(0.1)
+        assert 0 == svc.current_notification_number, 'Ok HARD, no notifications'
+        self.assert_actions_count(2)
+        self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(1, 'serviceoutput OK', 'command')
+
+        self.assert_actions_count(2)
+        self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(1, 'serviceoutput OK', 'command')
+
+    def test_1_notifications_service_with_no_contacts(self):
+        """ Test notifications are sent to host contacts for a service with no defined contacts
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_nonotif.cfg')
+
+        self._scheduler = self.schedulers['scheduler-master'].sched
+
+        host = self._scheduler.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore the router
+
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
+                                                                     "test_ok_no_contacts")
+        # To make tests quicker we make notifications send very quickly (1 second)
+        svc.notification_interval = 0.1 / 6
+        svc.checks_in_progress = []
+        svc.act_depend_of = []  # no hostchecks on critical checkresults
+        svc.event_handler_enabled = False
+        assert svc.notifications_enabled
+
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        time.sleep(0.1)
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        assert "SOFT" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical SOFT, no notifications'
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
+        assert "HARD" == svc.state_type
+        assert "CRITICAL" == svc.state
+        assert 1 == svc.current_notification_number, 'Critical HARD, must have 1 notification'
+        self.assert_actions_count(2)
+        self.assert_actions_match(1, 'VOID', 'command')
+        self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
+
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
+        time.sleep(0.1)
+        assert 0 == svc.current_notification_number, 'Ok HARD, no notifications'
+        self.assert_actions_count(2)
+        self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(1, 'serviceoutput OK', 'command')
+
+        self.assert_actions_count(2)
+        self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(1, 'serviceoutput OK', 'command')
+
+        self.show_actions()
+        # 1st notification for service critical
+        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_no_contacts --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+
+        # 2nd notification for service recovery
+        self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_no_contacts --notificationtype RECOVERY --servicestate OK --serviceoutput OK', 'command')
+        self.assert_actions_match(1, 'NOTIFICATIONTYPE=RECOVERY, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
+
+    def test_2_notifications(self):
+        """ Test notifications sent in normal mode
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default.cfg')
+
+        self._scheduler = self.schedulers['scheduler-master'].sched
+
+        host = self._scheduler.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore the router
+        host.event_handler_enabled = False
+
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        # notification_interval is in minute, to have 0.8s,
+        svc.notification_interval = 0.8 / 60
+        svc.checks_in_progress = []
+        svc.act_depend_of = []  # no hostchecks on critical checkresults
+        svc.event_handler_enabled = False
+
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        time.sleep(1)
+        assert svc.current_notification_number == 0, 'All OK no notifications'
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(1)
+        assert "SOFT" == svc.state_type
+        assert svc.current_notification_number == 0, 'Critical SOFT, no notifications'
+        self.assert_actions_count(0)
+
+        # create master notification + create first notification
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        assert "HARD" == svc.state_type
+        # 2 actions
+        # * 1 - VOID = notification master
+        # * 2 - notifier.pl to test_contact
+        self.assert_actions_count(2)
+        assert svc.current_notification_number == 1, 'Critical HARD, must have 1 ' \
+                                                     'notification'
+
+        # no changes, because we are not in period to create a second notification
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(1)
+        assert "HARD" == svc.state_type
+        self.assert_actions_count(2)
+
+        # second notification creation
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(1)
+        self.assert_actions_count(3)
+        assert svc.current_notification_number == 2
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        self.assert_actions_count(4)
+        assert svc.current_notification_number == 3
+
+        # test first notification sent
+        actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(),
+                         key=lambda x: x.creation_time)
+        action = copy.copy(actions[1])
+        action.exit_status = 0
+        action.status = 'launched'
+        action.status = ''
+        # and return to the scheduler
+        self.schedulers['scheduler-master'].sched.put_results(action)
+        # re-loop scheduler to manage this
+        self.external_command_loop()
+        self.external_command_loop()
+        self.assert_actions_count(3)
+        assert svc.current_notification_number == 3
+
+        now = time.time()
+        cmd = "[%lu] DISABLE_CONTACT_SVC_NOTIFICATIONS;test_contact" % now
+        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(1)
+        self.assert_actions_count(3)
+        assert svc.current_notification_number == 3
+
+        now = time.time()
+        cmd = "[%lu] ENABLE_CONTACT_SVC_NOTIFICATIONS;test_contact" % now
+        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(1)
+        self.assert_actions_count(4)
+        assert svc.current_notification_number == 4
+
+        self.show_actions()
+        # 1st notification for service critical => send so deleted (zombie)
+
+        # 2nd notification for service critical
+        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(0, 'HOSTNOTIFICATIONNUMBER=2, SERVICENOTIFICATIONNUMBER=2', 'command')
+
+        # 3rd notification for service critical
+        self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(1, 'HOSTNOTIFICATIONNUMBER=3, SERVICENOTIFICATIONNUMBER=3', 'command')
+
+        # 4th notification for service critical
+        self.assert_actions_match(2, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(2, 'HOSTNOTIFICATIONNUMBER=4, SERVICENOTIFICATIONNUMBER=4', 'command')
+
+        self.assert_actions_match(3, 'VOID', 'command')
+
+
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
+        time.sleep(1)
+        assert 0 == svc.current_notification_number
+        self.assert_actions_count(5)
+        self.show_actions()
+
+        # Notified simultaneously ... so -1 for the action index !
+        # 5th notification for service critical
+        self.assert_actions_match(-1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(-1, 'HOSTNOTIFICATIONNUMBER=5, SERVICENOTIFICATIONNUMBER=5', 'command')
+
+        # 1st recovery notification for service recovery
+        self.assert_actions_match(-1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype RECOVERY --servicestate OK --serviceoutput OK', 'command')
+        self.assert_actions_match(-1, 'NOTIFICATIONTYPE=RECOVERY, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
+
+    def test_3_notifications(self):
+        """ Test notifications of service states OK -> WARNING -> CRITICAL -> OK
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default.cfg')
+
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore the router
+        host.event_handler_enabled = False
+
+        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+            "test_host_0", "test_ok_0")
+        # To make notifications not being re-sent, set this to 0
+        svc.notification_interval = 0
+        svc.checks_in_progress = []
+        svc.act_depend_of = []  # no hostchecks on critical checkresults
+        svc.event_handler_enabled = False
+
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        time.sleep(0.1)
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
+        time.sleep(0.1)
+        assert "SOFT" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Warning SOFT, no notifications'
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
+        assert "WARNING" == svc.state
+        assert "HARD" == svc.state_type
+        assert 1 == svc.current_notification_number, 'Warning HARD, must have 1 notification'
+        self.assert_actions_count(1)
+        self.assert_actions_match(0, 'serviceoutput WARNING', 'command')
+        print("Last hard state: %s" % svc.last_hard_state)
+        assert "WARNING" == svc.last_hard_state
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        # assert False
+        assert "CRITICAL" == svc.state
+        assert "HARD" == svc.state_type
+        assert "CRITICAL" == svc.last_hard_state
+        assert 2 == svc.current_notification_number, 'Critical HARD,  must have 2 notifications'
+        self.assert_actions_count(2)
+        self.assert_actions_match(0, 'serviceoutput WARNING', 'command')
+        self.assert_actions_match(1, 'serviceoutput CRITICAL', 'command')
+
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
+        time.sleep(0.1)
+        assert 0 == svc.current_notification_number
+        self.show_actions()
+        self.assert_actions_count(3)
+        # 1st notification for service warning
+        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate WARNING --serviceoutput WARNING', 'command')
+        self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+
+        # # 2nd notification for service critical
+        self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(1, 'HOSTNOTIFICATIONNUMBER=2, SERVICENOTIFICATIONNUMBER=2', 'command')
+
+        # 1st recovery notification for service recovery
+        self.assert_actions_match(2, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype RECOVERY --servicestate OK --serviceoutput OK', 'command')
+        self.assert_actions_match(2, 'NOTIFICATIONTYPE=RECOVERY, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
+
+    def test_4_notifications(self):
+        """ Test notifications of service states OK -> CRITICAL -> WARNING -> OK
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default.cfg')
+
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore the router
+        host.event_handler_enabled = False
+
+        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+            "test_host_0", "test_ok_0")
+        # To make tests quicker we make notifications send quickly (6 second)
+        svc.notification_interval = 0.1
+        svc.checks_in_progress = []
+        svc.act_depend_of = []  # no hostchecks on critical checkresults
+        svc.event_handler_enabled = False
+
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        time.sleep(0.1)
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        assert "SOFT" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical SOFT, no notifications'
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.5)
+        assert "HARD" == svc.state_type
+        assert 1 == svc.current_notification_number, 'Critical HARD, must have 1 ' \
+                                                             'notification'
+        self.assert_actions_count(2)
+        self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(1, 'VOID', 'command')
+
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
+        time.sleep(1)
+        assert "HARD" == svc.state_type
+        assert 2 == svc.current_notification_number, 'Warning HARD,  must have 3 ' \
+                                                             'notification'
+        self.assert_actions_count(3)
+        self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(1, 'serviceoutput WARNING', 'command')
+        self.assert_actions_match(2, 'VOID', 'command')
+
+        self.show_actions()
+        # 1st notification for service critical
+        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+
+        # 2nd notification for service warning
+        self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate WARNING --serviceoutput WARNING', 'command')
+        self.assert_actions_match(1, 'HOSTNOTIFICATIONNUMBER=2, SERVICENOTIFICATIONNUMBER=2', 'command')
+
+        # 3rd notification is VOID
+        self.assert_actions_match(2, 'VOID', 'command')
+
+    def test_notifications_with_delay(self):
+        """ Test notifications with use property first_notification_delay
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default.cfg')
+
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore the router
+        host.event_handler_enabled = False
+
+        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+            "test_host_0", "test_ok_0")
+        svc.first_notification_delay = 0.1  # set 6s for first notification delay
+        svc.notification_interval = 0.1 / 6  # and send immediately then (1 second)
+        svc.checks_in_progress = []
+        svc.act_depend_of = []  # no host_checks on critical check_results
+        svc.event_handler_enabled = False
+
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        time.sleep(0.1)
+        assert 0 == svc.current_notification_number
+
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
+        self.assert_actions_count(0)
+        time.sleep(0.1)
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
+        assert "HARD" == svc.state_type
+        self.assert_actions_count(1)
+        time.sleep(7)
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
+        self.show_actions()
+        self.assert_actions_count(2)
+        self.assert_actions_match(0, 'serviceoutput WARNING', 'command')
+        self.assert_actions_match(0, 'HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+        self.assert_actions_match(1, 'VOID', 'command')
+        assert svc.last_time_critical == 0
+        assert svc.last_time_unknown == 0
+        assert svc.last_time_warning > 0
+        assert svc.last_time_ok > 0
+
+        time.sleep(2)
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
+        self.show_actions()
+        self.assert_actions_count(3)
+        self.assert_actions_match(0, 'serviceoutput WARNING', 'command')
+        self.assert_actions_match(0, 'HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+        # One more notification!
+        self.assert_actions_match(1, 'serviceoutput WARNING', 'command')
+        self.assert_actions_match(1, 'HOSTNOTIFICATIONNUMBER=2, SERVICENOTIFICATIONNUMBER=2', 'command')
+        self.assert_actions_match(2, 'VOID', 'command')
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        assert 3 == svc.current_notification_number
+        self.assert_actions_count(4)
+        assert svc.last_time_unknown == 0
+        assert svc.last_time_warning > 0
+        assert svc.last_time_critical > 0
+        assert svc.last_time_ok > 0
+        time.sleep(7)
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        assert 4 == svc.current_notification_number
+        self.show_actions()
+        self.assert_actions_count(5)
+        self.assert_actions_match(0, 'serviceoutput WARNING', 'command')
+        self.assert_actions_match(0, 'HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+        self.assert_actions_match(1, 'serviceoutput WARNING', 'command')
+        self.assert_actions_match(1, 'HOSTNOTIFICATIONNUMBER=2, SERVICENOTIFICATIONNUMBER=2', 'command')
+        # One more notification!
+        self.assert_actions_match(2, 'serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(2, 'HOSTNOTIFICATIONNUMBER=3, SERVICENOTIFICATIONNUMBER=3', 'command')
+        self.assert_actions_match(3, 'serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(3, 'HOSTNOTIFICATIONNUMBER=4, SERVICENOTIFICATIONNUMBER=4', 'command')
+        self.assert_actions_match(4, 'VOID', 'command')
+        assert 5 == len(svc.notifications_in_progress)
+
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
+        time.sleep(7)
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
+        assert 0 == svc.current_notification_number
+        self.assert_actions_count(5)
+
+    def test_notifications_delay_recover_before_notif(self):
+        """
+        TODO: @ddurieux ?
+
+        :return:
+        """
+        pass
+
+    def test_notifications_outside_period(self):
+        """ Test when we are not in notification_period, so do not send notifications
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default.cfg')
+
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore the router
+        host.event_handler_enabled = False
+
+        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+            "test_host_0", "test_ok_0")
+        # To make tests quicker we make notifications send very quickly (1 second)
+        svc.notification_interval = 0.1 / 6
+        svc.checks_in_progress = []
+        svc.act_depend_of = []  # no hostchecks on critical checkresults
+        svc.event_handler_enabled = False
+        timeperiod = self.schedulers['scheduler-master'].sched.timeperiods.find_by_name('none')
+        svc.notification_period = timeperiod.uuid
+
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        time.sleep(0.1)
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        assert "SOFT" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical SOFT, no notifications'
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        assert "HARD" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical HARD, no notifications'
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
+        time.sleep(0.1)
+        assert 0 == svc.current_notification_number
+        self.assert_actions_count(0)
+
+    def test_notifications_ack(self):
+        """ Test notifications not sent when an acknowledge is set
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default.cfg')
+
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore the router
+        host.event_handler_enabled = False
+
+        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+            "test_host_0", "test_ok_0")
+        # To make tests quicker we make notifications send very quickly (1 second)
+        svc.notification_interval = 0.1 / 6
+        svc.checks_in_progress = []
+        svc.act_depend_of = []  # no hostchecks on critical checkresults
+        svc.event_handler_enabled = False
+
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        time.sleep(0.1)
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        assert "SOFT" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical SOFT, no notifications'
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        assert "HARD" == svc.state_type
+        assert 1 == svc.current_notification_number, 'Critical HARD, must have 1 ' \
+                                                             'notification'
+        self.show_actions()
+        self.assert_actions_count(2)
+
+        now = int(time.time())
+        cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n".\
+            format(now, svc.host_name, svc.service_description, 1, 0, 1, 'darth vader',
+                   'normal process')
+        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        assert "HARD" == svc.state_type
+        assert 1 == svc.current_notification_number, 'Critical HARD, must have 1 ' \
+                                                             'notification'
+        self.show_actions()
+        self.assert_actions_count(2)
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        assert "HARD" == svc.state_type
+        assert 1 == svc.current_notification_number, 'Critical HARD, must have 1 ' \
+                                                             'notification'
+        self.assert_actions_count(2)
+
+        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
+        time.sleep(0.1)
+        assert "HARD" == svc.state_type
+        assert 2 == svc.current_notification_number, 'Warning HARD, must have 2 ' \
+                                                             'notifications'
+        self.assert_actions_count(3)
+
+    def test_notifications_downtime(self):
+        """ Test notifications not sent when a downtime is scheduled
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default.cfg')
+
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore the router
+        host.event_handler_enabled = False
+
+        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+            "test_host_0", "test_ok_0")
+        # To make tests quicker we make notifications send very quickly (1 second)
+        svc.notification_interval = 0.1 / 6
+        svc.checks_in_progress = []
+        svc.act_depend_of = []  # no hostchecks on critical checkresults
+        svc.event_handler_enabled = False
+
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        time.sleep(0.1)
+        assert 0 == svc.current_notification_number, 'All OK no notifications'
+        self.assert_actions_count(0)
+
+        now = int(time.time())
+        cmd = "[{0}] SCHEDULE_SVC_DOWNTIME;{1};{2};{3};{4};{5};{6};{7};{8};{9}\n".\
+            format(now, svc.host_name, svc.service_description, now, (now + 1000), 1, 0, 0,
+                   'darth vader', 'add downtime for maintenance')
+        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        assert "SOFT" == svc.state_type
+        assert "CRITICAL" == svc.state
+        assert 0 == svc.current_notification_number, 'Critical SOFT, no notifications'
+        self.assert_actions_count(1)
+        self.assert_actions_match(0, 'serviceoutput OK', 'command')
+        self.assert_actions_match(0, 'notificationtype DOWNTIMESTART', 'command')
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        assert "HARD" == svc.state_type
+        assert 0 == svc.current_notification_number, 'Critical HARD, no notifications'
+        self.assert_actions_count(2)
+        self.assert_actions_match(1, 'VOID', 'command')
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        self.assert_actions_count(2)
+
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
+        time.sleep(0.1)
+        assert 0 == svc.current_notification_number
+        self.assert_actions_count(1)
+        self.assert_actions_match(0, 'serviceoutput OK', 'command')
+        self.assert_actions_match(0, 'notificationtype DOWNTIMESTART', 'command')
+
+    def test_notifications_no_renotify(self):
+        """ Test notifications sent only once if configured for this
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default.cfg')
+
+        self._scheduler = self.schedulers['scheduler-master'].sched
+
+        host = self._scheduler.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore the router
+        host.event_handler_enabled = False
+
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        # To make notifications not being re-sent, set this to 0
+        svc.notification_interval = 0
+        svc.checks_in_progress = []
+        svc.act_depend_of = []  # no hostchecks on critical checkresults
+        svc.event_handler_enabled = False
+
+        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+        time.sleep(1)
+        assert svc.current_notification_number == 0, 'All OK no notifications'
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(1)
+        assert "SOFT" == svc.state_type
+        assert svc.current_notification_number == 0, 'Critical SOFT, no notifications'
+        self.assert_actions_count(0)
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(1)
+        assert "HARD" == svc.state_type
+        self.assert_actions_count(1)
+        assert svc.current_notification_number == 1, 'Critical HARD, must have 1 ' \
+                                                     'notification'
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(1)
+        # No re-notification!
+        self.assert_actions_count(1)
+        assert svc.current_notification_number == 1
+
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(1)
+        # No re-notification!
+        self.assert_actions_count(1)
+        assert svc.current_notification_number == 1
+
+        self.show_actions()
+        # 1st notification for service critical
+        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+        self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+

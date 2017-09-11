@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -50,11 +50,12 @@
 """
 This module provide Servicegroup and Servicegroups classes used to group services
 """
+import logging
 
-from alignak.property import StringProp, IntegerProp
-from alignak.log import logger
-
+from alignak.property import StringProp, ListProp
 from .itemgroup import Itemgroup, Itemgroups
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Servicegroup(Itemgroup):
@@ -62,18 +63,18 @@ class Servicegroup(Itemgroup):
     Class to manage a servicegroup
     A servicegroup is used to group services
     """
-    _id = 1  # zero is always a little bit special... like in database
     my_type = 'servicegroup'
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        '_id':                IntegerProp(default=0, fill_brok=['full_status']),
-        'servicegroup_name': StringProp(fill_brok=['full_status']),
-        'alias':             StringProp(fill_brok=['full_status']),
-        'notes':             StringProp(default='', fill_brok=['full_status']),
-        'notes_url':         StringProp(default='', fill_brok=['full_status']),
-        'action_url':        StringProp(default='', fill_brok=['full_status']),
-        'servicegroup_members': StringProp(default='', fill_brok=['full_status']),
+        'uuid':                 StringProp(default='', fill_brok=['full_status']),
+        'servicegroup_name':    StringProp(fill_brok=['full_status']),
+        'alias':                StringProp(fill_brok=['full_status']),
+        'servicegroup_members': ListProp(default=[], fill_brok=['full_status'],
+                                         merging='join', split_on_coma=True),
+        'notes':                StringProp(default='', fill_brok=['full_status']),
+        'notes_url':            StringProp(default='', fill_brok=['full_status']),
+        'action_url':           StringProp(default='', fill_brok=['full_status']),
     })
 
     macros = {
@@ -93,12 +94,12 @@ class Servicegroup(Itemgroup):
         """
         if getattr(self, 'members', None) is not None:
             return self.members
-        else:
-            return []
+
+        return []
 
     def get_name(self):
         """
-        Get the name of the servicegrop
+        Get list of groups members of this servicegroup
 
         :return: the servicegroup name string
         :rtype: str
@@ -109,14 +110,13 @@ class Servicegroup(Itemgroup):
         """
         Get list of members of this servicegroup
 
-        :return: list of services (members)
+        :return: list of services
         :rtype: list | str
         """
-        # TODO: a Servicegroup instance should always have its servicegroup_members defined.
         if hasattr(self, 'servicegroup_members'):
-            return [m.strip() for m in self.servicegroup_members.split(',')]
-        else:
-            return []
+            return self.servicegroup_members
+
+        return []
 
     def get_services_by_explosion(self, servicegroups):
         """
@@ -140,8 +140,8 @@ class Servicegroup(Itemgroup):
                          self.get_name())
             if hasattr(self, 'members'):
                 return self.members
-            else:
-                return ''
+
+            return ''
         # Ok, not a loop, we tag it and continue
         self.rec_tag = True
 
@@ -155,8 +155,8 @@ class Servicegroup(Itemgroup):
 
         if hasattr(self, 'members'):
             return self.members
-        else:
-            return ''
+
+        return ''
 
 
 class Servicegroups(Itemgroups):
@@ -182,7 +182,7 @@ class Servicegroups(Itemgroups):
         """
         We just search for each host the id of the host
         and replace the name by the id
-        TODO: very slow for hight services, so search with host list,
+        TODO: very slow for high services, so search with host list,
         not service one
 
         :param hosts: hosts object
@@ -207,7 +207,7 @@ class Servicegroups(Itemgroups):
                     service_desc = mbr.strip()
                     find = services.find_srv_by_name_and_hostname(host_name, service_desc)
                     if find is not None:
-                        new_mbrs.append(find)
+                        new_mbrs.append(find.uuid)
                     else:
                         host = hosts.find_by_name(host_name)
                         if not (host and host.is_excluded_for_sdesc(service_desc)):
@@ -225,8 +225,9 @@ class Servicegroups(Itemgroups):
 
             # We find the id, we replace the names
             servicegroup.replace_members(new_mbrs)
-            for serv in servicegroup.members:
-                serv.servicegroups.append(servicegroup)
+            for srv_id in servicegroup.members:
+                serv = services[srv_id]
+                serv.servicegroups.append(servicegroup.uuid)
                 # and make this uniq
                 serv.servicegroups = list(set(serv.servicegroups))
 
@@ -254,22 +255,22 @@ class Servicegroups(Itemgroups):
 
         :return: None
         """
-        # We do not want a same hg to be explode again and again
+        # We do not want a same service group to be exploded again and again
         # so we tag it
-        for servicegroup in self:
+        for servicegroup in self.items.values():
             servicegroup.already_explode = False
 
-        for servicegroup in self:
+        for servicegroup in self.items.values():
             if hasattr(servicegroup, 'servicegroup_members') and not \
                     servicegroup.already_explode:
                 # get_services_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
-                for sg2 in self:
+                for sg2 in self.items.values():
                     sg2.rec_tag = False
                 servicegroup.get_services_by_explosion(self)
 
         # We clean the tags
-        for servicegroup in self:
+        for servicegroup in self.items.values():
             try:
                 del servicegroup.rec_tag
             except AttributeError:

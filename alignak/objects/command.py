@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -58,23 +58,14 @@ from alignak.property import StringProp, IntegerProp, BoolProp
 from alignak.autoslots import AutoSlots
 
 
-class DummyCommand(object):
-    """
-    Class used to set __autoslots__ because can't set it
-    in same class you use
-    """
-    pass
-
-
 class Command(Item):
     """
     Class to manage a command
-    A command is an external command the poller module run to
-    see if something is ok or not
+    A command is an external command that a poller module runs to
+    check if something is ok or not
     """
     __metaclass__ = AutoSlots
 
-    _id = 0
     my_type = "command"
 
     properties = Item.properties.copy()
@@ -88,9 +79,11 @@ class Command(Item):
         'enable_environment_macros': BoolProp(default=False),
     })
 
-    def __init__(self, params={}):
+    def __init__(self, params=None, parsing=True):
 
-        super(Command, self).__init__(params)
+        if params is None:
+            params = {}
+        super(Command, self).__init__(params, parsing=parsing)
 
         if not hasattr(self, 'timeout'):
             self.timeout = -1
@@ -142,58 +135,6 @@ class Command(Item):
                     data[prop] = getattr(self, prop)
                 # elif 'default' in entry[prop]:
                 #    data[prop] = entry.default
-
-    def __getstate__(self):
-        """
-        Call by pickle to dataify the comment
-        because we DO NOT WANT REF in this pickleisation!
-
-        :return: dictionary with properties
-        :rtype: dict
-        """
-        cls = self.__class__
-        # id is not in *_properties
-        res = {'_id': self._id}
-        for prop in cls.properties:
-            if hasattr(self, prop):
-                res[prop] = getattr(self, prop)
-
-        return res
-
-    def __setstate__(self, state):
-        """
-        Inversed function of getstate
-
-        :param state:
-        :type state:
-        :return: None
-        """
-        cls = self.__class__
-        # We move during 1.0 to a dict state
-        # but retention file from 0.8 was tuple
-        if isinstance(state, tuple):
-            self.__setstate_pre_1_0__(state)
-            return
-        self._id = state['_id']
-        for prop in cls.properties:
-            if prop in state:
-                setattr(self, prop, state[prop])
-
-    def __setstate_pre_1_0__(self, state):
-        """
-        In 1.0 we move to a dict save. Before, it was
-        a tuple save, like
-        ({'_id': 11}, {'poller_tag': 'None', 'reactionner_tag': 'None',
-        'command_line': u'/usr/local/nagios/bin/rss-multiuser',
-        'module_type': 'fork', 'command_name': u'notify-by-rss'})
-
-        :param state: state dictionary
-        :type state: dict
-        :return: None
-        """
-        for state_d in state:
-            for key, val in state_d.items():
-                setattr(self, key, val)
 
 
 class Commands(Items):

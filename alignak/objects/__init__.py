@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -47,9 +47,8 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-The objects package contains definition classes of the different objects
+The objects package contains the definition of the classes for the different objects
  that can be declared in configuration files.
-
  """
 
 
@@ -58,6 +57,7 @@ from alignak.objects.timeperiod import Timeperiod, Timeperiods
 from alignak.objects.schedulingitem import SchedulingItem
 from alignak.objects.service import Service, Services
 from alignak.objects.command import Command, Commands
+from alignak.objects.config import Config
 from alignak.objects.resultmodulation import Resultmodulation, Resultmodulations
 from alignak.objects.escalation import Escalation, Escalations
 from alignak.objects.serviceescalation import Serviceescalation, Serviceescalations
@@ -76,5 +76,3 @@ from alignak.objects.trigger import Trigger, Triggers
 from alignak.objects.businessimpactmodulation import Businessimpactmodulation, \
     Businessimpactmodulations
 from alignak.objects.macromodulation import MacroModulation, MacroModulations
-
-# from config import Config

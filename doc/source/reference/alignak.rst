@@ -10,7 +10,6 @@ Subpackages
     alignak.daemons
     alignak.http
     alignak.misc
-    alignak.modules
     alignak.objects
 
 Submodules
@@ -28,6 +27,14 @@ alignak.action module
 ---------------------
 
 .. automodule:: alignak.action
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+alignak.alignakobject module
+----------------------------
+
+.. automodule:: alignak.alignakobject
     :members:
     :undoc-members:
     :show-inheritance:
@@ -136,38 +143,6 @@ alignak.daterange module
     :undoc-members:
     :show-inheritance:
 
-alignak.db module
------------------
-
-.. automodule:: alignak.db
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.db_mysql module
------------------------
-
-.. automodule:: alignak.db_mysql
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.db_oracle module
-------------------------
-
-.. automodule:: alignak.db_oracle
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.db_sqlite module
-------------------------
-
-.. automodule:: alignak.db_sqlite
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 alignak.dependencynode module
 -----------------------------
 
@@ -244,14 +219,6 @@ alignak.message module
 ----------------------
 
 .. automodule:: alignak.message
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.modulesctx module
--------------------------
-
-.. automodule:: alignak.modulesctx
     :members:
     :undoc-members:
     :show-inheritance:

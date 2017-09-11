@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -45,13 +45,15 @@
 This module provide ArbiterLink and ArbiterLinks classes used to manage link
 with Arbiter daemon
 """
-
+import logging
 import socket
 
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import IntegerProp, StringProp
-from alignak.http.client import HTTPEXCEPTIONS
-from alignak.log import logger
+from alignak.http.client import HTTPClientException, HTTPClientConnectionException, \
+    HTTPClientTimeoutException
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class ArbiterLink(SatelliteLink):
@@ -59,7 +61,6 @@ class ArbiterLink(SatelliteLink):
     Class to manage the link to Arbiter daemon.
     With it, arbiter can see if a Arbiter daemon is alive, and can send it new configuration
     """
-    _id = 0
     my_type = 'arbiter'
     properties = SatelliteLink.properties.copy()
     properties.update({
@@ -68,77 +69,90 @@ class ArbiterLink(SatelliteLink):
         'port':            IntegerProp(default=7770),
     })
 
-    def get_config(self):
-        """
-        Get the config of the arbiter
+    def is_me(self):  # pragma: no cover, seems not to be used anywhere
+        """Check if parameter name if same than name of this object
 
-        :return: the config
-        :rtype: object
-        """
-        return self.con.get('get_config')
+        TODO: is it useful?
 
-    def is_me(self, lookup_name):
-        """
-        Check if parameter name if same than name of this object
-
-        :param lookup_name: name of arbiter to check
-        :type lookup_name: str
         :return: true if parameter name if same than this name
         :rtype: bool
         """
         logger.info("And arbiter is launched with the hostname:%s "
                     "from an arbiter point of view of addr:%s", self.host_name, socket.getfqdn())
-        if lookup_name:
-            return lookup_name == self.get_name()
-        else:
-            return self.host_name == socket.getfqdn() or self.host_name == socket.gethostname()
+        return self.host_name == socket.getfqdn() or self.host_name == socket.gethostname()
 
     def give_satellite_cfg(self):
-        """
-        Get the config of this satellite
+        """Get the config of this satellite
 
         :return: dictionary with information of the satellite
         :rtype: dict
         """
-        return {'port': self.port, 'address': self.address, 'name': self.arbiter_name,
+        return {'port': self.port, 'address': self.address,
+                'name': self.get_name(), 'instance_id': self.uuid,
+                'timeout': self.timeout, 'data_timeout': self.data_timeout,
                 'use_ssl': self.use_ssl, 'hard_ssl_name_check': self.hard_ssl_name_check}
 
     def do_not_run(self):
-        """
-        Check if satellite running or not
+        """Check if satellite running or not
         If not, try to run
 
         :return: true if satellite not running
         :rtype: bool
         """
+        logger.debug("[%s] do_not_run", self.get_name())
+
         if self.con is None:
             self.create_connection()
+
         try:
             self.con.get('do_not_run')
-            return True
-        except HTTPEXCEPTIONS, exp:
+        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
+            logger.warning("[%s] Connection error when sending do_not_run", self.get_name())
+        except HTTPClientTimeoutException as exp:
+            logger.warning("[%s] Connection timeout when sending do_not_run", self.get_name())
+        except HTTPClientException as exp:  # pragma: no cover, simple protection
+            logger.error("[%s] Error when sending do_not_run: %s",
+                         self.get_name(), str(exp))
             self.con = None
-            return False
+        else:
+            return True
 
-    def get_all_states(self):
-        """
-        Get states of all satellites
+        return False
+
+    def get_all_states(self):  # pragma: no cover, seems not to be used anywhere
+        """Get states of all satellites
+
+        TODO: is it useful?
 
         :return: list of all states
         :rtype: list | None
         """
+        logger.debug("[%s] get_all_states", self.get_name())
+
         if self.con is None:
             self.create_connection()
+
         try:
             res = self.con.get('get_all_states')
-            return res
-        except HTTPEXCEPTIONS, exp:
+        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
+            logger.warning("[%s] %s", self.get_name(), str(exp))
+        except HTTPClientTimeoutException as exp:
+            logger.warning("[%s] Connection timeout when sending get_all_states: %s",
+                           self.get_name(), str(exp))
+        except HTTPClientException as exp:  # pragma: no cover, simple protection
+            logger.error("[%s] Error when sending get_all_states: %s",
+                         self.get_name(), str(exp))
             self.con = None
-            return None
+        else:
+            return res
 
-    def get_objects_properties(self, table, properties=[]):
-        """
-        Get properties of objects
+        return None
+
+    def get_objects_properties(self, table, properties=None):  # pragma: no cover,
+        # seems not to be used anywhere
+        """Get properties of objects
+
+        TODO: is it useful?
 
         :param table: name of table
         :type table: str
@@ -147,15 +161,28 @@ class ArbiterLink(SatelliteLink):
         :return: list of objects
         :rtype: list | None
         """
+        logger.debug("[%s] get_objects_properties", self.get_name())
+
+        if properties is None:
+            properties = []
         if self.con is None:
             self.create_connection()
+
         try:
-            print properties
             res = self.con.get('get_objects_properties', {'table': table, 'properties': properties})
-            return res
-        except HTTPEXCEPTIONS, exp:
+        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
+            logger.warning("[%s] %s", self.get_name(), str(exp))
+        except HTTPClientTimeoutException as exp:
+            logger.warning("[%s] Connection timeout when sending get_objects_properties: %s",
+                           self.get_name(), str(exp))
+        except HTTPClientException as exp:  # pragma: no cover, simple protection
+            logger.error("[%s] Error when sending get_objects_properties: %s",
+                         self.get_name(), str(exp))
             self.con = None
-            return None
+        else:
+            return res
+
+        return None
 
 
 class ArbiterLinks(SatelliteLinks):
@@ -166,10 +193,11 @@ class ArbiterLinks(SatelliteLinks):
     name_property = "arbiter_name"
     inner_class = ArbiterLink
 
-    def linkify(self, modules):
-        """
-        Link modules to Arbiter
+    def linkify(self, realms=None, modules=None):
+        """Link modules to Arbiter
 
+        :param realms: Realm object list (always None for an arbiter)
+        :type realms: list
         :param modules: list of modules
         :type modules: list
         :return: None

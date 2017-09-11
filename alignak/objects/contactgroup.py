@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -54,24 +54,27 @@
 """
 This module provide Contactgroup and Contactgroups class used to manage contact groups
 """
+import logging
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
-from alignak.property import IntegerProp, StringProp
-from alignak.log import logger
+from alignak.property import StringProp, ListProp
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Contactgroup(Itemgroup):
     """Class to manage a group of contacts
     A Contactgroup is used to manage a group of contacts
     """
-    _id = 1
     my_type = 'contactgroup'
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        '_id':                   IntegerProp(default=0, fill_brok=['full_status']),
+        'uuid':                 StringProp(default='', fill_brok=['full_status']),
         'contactgroup_name':    StringProp(fill_brok=['full_status']),
         'alias':                StringProp(fill_brok=['full_status']),
+        'contactgroup_members': ListProp(default=[], fill_brok=['full_status'],
+                                         merging='join', split_on_coma=True)
     })
 
     macros = {
@@ -88,8 +91,8 @@ class Contactgroup(Itemgroup):
         """
         if getattr(self, 'members', None) is not None:
             return [m.strip() for m in self.members]
-        else:
-            return []
+
+        return []
 
     def get_name(self):
         """
@@ -102,20 +105,15 @@ class Contactgroup(Itemgroup):
 
     def get_contactgroup_members(self):
         """
-        Get contactgroup members
+        Get list of groups members of this contactgroup
 
-        :return: list of hosts
+        :return: list of contacts
         :rtype: list
         """
-        # TODO: imho a Contactgroup instance should always have defined
-        # its contactgroup_members attribute, even if it's empty / the empty list.
         if hasattr(self, 'contactgroup_members'):
-            # more over: it should already be in the list form,
-            # not anymore in the "bare" string from as readed
-            # from configuration (files or db or whaterver)
-            return [m.strip() for m in self.contactgroup_members.split(',')]
-        else:
-            return []
+            return self.contactgroup_members
+
+        return []
 
     def get_contacts_by_explosion(self, contactgroups):
         """
@@ -139,8 +137,8 @@ class Contactgroup(Itemgroup):
                          self.get_name())
             if hasattr(self, 'members'):
                 return self.members
-            else:
-                return ''
+
+            return ''
         # Ok, not a loop, we tag it and continue
         self.rec_tag = True
 
@@ -153,8 +151,8 @@ class Contactgroup(Itemgroup):
                     self.add_string_member(value)
         if hasattr(self, 'members'):
             return self.members
-        else:
-            return ''
+
+        return ''
 
 
 class Contactgroups(Itemgroups):
@@ -165,7 +163,7 @@ class Contactgroups(Itemgroups):
     name_property = "contactgroup_name"  # is used for finding contactgroup
     inner_class = Contactgroup
 
-    def get_members_by_name(self, cgname):
+    def get_members_by_name(self, gname):
         """
         Get all members by name given in parameter
 
@@ -174,7 +172,7 @@ class Contactgroups(Itemgroups):
         :return: list of contacts with this name
         :rtype: list[alignak.objects.contact.Contact]
         """
-        contactgroup = self.find_by_name(cgname)
+        contactgroup = self.find_by_name(gname)
         if contactgroup is None:
             return []
         return contactgroup.get_contacts()
@@ -213,13 +211,13 @@ class Contactgroups(Itemgroups):
             # The new member list, in id
             new_mbrs = []
             for mbr in mbrs:
-                mbr = mbr.strip()  # protect with strip at the begining so don't care about spaces
+                mbr = mbr.strip()  # protect with strip at the beginning so don't care about spaces
                 if mbr == '':  # void entry, skip this
                     continue
                 member = contacts.find_by_name(mbr)
                 # Maybe the contact is missing, if so, must be put in unknown_members
                 if member is not None:
-                    new_mbrs.append(member)
+                    new_mbrs.append(member.uuid)
                 else:
                     contactgroup.add_string_unknown_member(mbr)
 
@@ -236,7 +234,7 @@ class Contactgroups(Itemgroups):
         :param cname: contact name
         :type cname: str
         :param cgname: contact group name
-        :type cgname: strr
+        :type cgname: str
         :return: None
         """
         contactgroup = self.find_by_name(cgname)

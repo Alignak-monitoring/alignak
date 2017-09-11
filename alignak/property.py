@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # -*- mode: python ; coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -56,9 +56,8 @@ Each class implements a pythonize method that cast data into the wanted type.
 
 """
 import re
-
-from alignak.util import to_float, to_split, to_char, to_int, unique_value, list_split
 import logging
+from alignak.util import to_float, to_split, to_char, to_int, unique_value, list_split
 
 __all__ = ('UnusedProp', 'BoolProp', 'IntegerProp', 'FloatProp',
            'CharProp', 'StringProp', 'ListProp',
@@ -84,13 +83,13 @@ class Property(object):
 
     """
 
-    def __init__(self, default=NONE_OBJECT, class_inherit=None,
+    def __init__(self, default=NONE_OBJECT, class_inherit=None,  # pylint: disable=R0913
                  unmanaged=False, _help='', no_slots=False,
                  fill_brok=None, conf_send_preparation=None,
                  brok_transformation=None, retention=False,
                  retention_preparation=None, to_send=False,
                  override=False, managed=True, split_on_coma=True,
-                 keep_empty=False, merging='uniq'):
+                 keep_empty=False, merging='uniq', special=False):
 
         """
         `default`: default value to be used if this property is not set.
@@ -111,7 +110,7 @@ class Property(object):
         `retention_preparation`: function, if set, will go this function before
                      being save to the retention data
         `split_on_coma`: indicates that list property value should not be
-                     splitted on coma delimiter (values conain comas that
+                     split on coma delimiter (values conain comas that
                      we want to keep).
 
         Only for the initial call:
@@ -134,6 +133,9 @@ class Property(object):
         merging: for merging properties, should we take only one or we can
                      link with ,
 
+        special: Is this property "special" : need a special management
+        see is_correct function in host and service
+
         """
 
         self.default = default
@@ -155,8 +157,9 @@ class Property(object):
         self.merging = merging
         self.split_on_coma = split_on_coma
         self.keep_empty = keep_empty
+        self.special = special
 
-    def pythonize(self, val):
+    def pythonize(self, val):  # pylint: disable=R0201
         """Generic pythonize method
 
         :param val: value to python
@@ -205,7 +208,6 @@ class BoolProp(Property):
     Boolean values are currently case insensitively defined as 0,
     false, no, off for False, and 1, true, yes, on for True).
     """
-
     @staticmethod
     def pythonize(val):
         """Convert value into a boolean
@@ -320,16 +322,34 @@ class ListProp(Property):
         * strip split values
 
         :param val: value to convert
-        :type val:
+        :type val: basestring
         :return: list corresponding to value
         :rtype: list
         """
         if isinstance(val, list):
-            return [s.strip() for s in list_split(val, self.split_on_coma)
-                    if s.strip() != '' or self.keep_empty]
-        else:
-            return [s.strip() for s in to_split(val, self.split_on_coma)
-                    if s.strip() != '' or self.keep_empty]
+            return [s.strip() if hasattr(s, "strip") else s
+                    for s in list_split(val, self.split_on_coma)
+                    if hasattr(s, "strip") and s.strip() != '' or self.keep_empty]
+
+        return [s.strip() if hasattr(s, "strip") else s
+                for s in to_split(val, self.split_on_coma)
+                if hasattr(s, "strip") and s.strip() != '' or self.keep_empty]
+
+
+class SetProp(ListProp):
+    """ Set property
+    """
+    def pythonize(self, val):
+        """Convert value into a set
+
+        * Simply convert to a set the value return by pythonize from ListProp
+
+        :param val: value to convert
+        :type val: basestring
+        :return: set corresponding to the value
+        :rtype: set
+        """
+        return set(super(SetProp, self).pythonize(val))
 
 
 class LogLevelProp(StringProp):
@@ -366,6 +386,8 @@ class DictProp(Property):
         if elts_prop is not None and not issubclass(elts_prop, Property):
             raise TypeError("DictProp constructor only accept Property"
                             "sub-classes as elts_prop parameter")
+        self.elts_prop = None
+
         if elts_prop is not None:
             self.elts_prop = elts_prop()
 
@@ -408,7 +430,6 @@ class DictProp(Property):
             return val
 
         # val is in the form "key1=addr:[port],key2=addr:[port],..."
-        print ">>>", dict([split(kv) for kv in to_split(val)])
         return dict([split(kv) for kv in to_split(val)])
 
 
@@ -454,9 +475,9 @@ class ToGuessProp(Property):
         if isinstance(val, list) and len(set(val)) == 1:
             # If we have a list with a unique value just use it
             return val[0]
-        else:
-            # Well, can't choose to remove somthing.
-            return val
+
+        # Well, can't choose to remove something.
+        return val
 
 
 class IntListProp(ListProp):

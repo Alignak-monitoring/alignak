@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -59,6 +59,7 @@
 """
 This module provides abstraction for creating daemon in Alignak
 """
+# pylint: disable=too-many-public-methods, unused-import
 from __future__ import print_function
 import os
 import errno
@@ -68,24 +69,14 @@ import signal
 import select
 import ConfigParser
 import threading
+import logging
+import warnings
 from Queue import Empty
 from multiprocessing.managers import SyncManager
 
-
-from alignak.http.daemon import HTTPDaemon, InvalidWorkDir
-from alignak.log import logger
-from alignak.stats import statsmgr
-from alignak.modulesmanager import ModulesManager
-from alignak.property import StringProp, BoolProp, PathProp, ConfigPathProp, IntegerProp, \
-    LogLevelProp
-from alignak.misc.common import setproctitle
-
-
 try:
-    import pwd
-    import grp
-    from pwd import getpwnam
-    from grp import getgrnam, getgrall
+    from pwd import getpwnam, getpwuid
+    from grp import getgrnam, getgrall, getgrgid
 
     def get_cur_user():
         """Wrapper for getpwuid
@@ -93,7 +84,7 @@ try:
         :return: user name
         :rtype: str
         """
-        return pwd.getpwuid(os.getuid()).pw_name
+        return getpwuid(os.getuid()).pw_name
 
     def get_cur_group():
         """Wrapper for getgrgid
@@ -101,16 +92,17 @@ try:
         :return: group name
         :rtype: str
         """
-        return grp.getgrgid(os.getgid()).gr_name
+        return getgrgid(os.getgid()).gr_name
 
-    def get_all_groups():
+    def get_all_groups():  # pragma: no cover, not used in the testing environment...
         """Wrapper for getgrall
 
         :return: all groups
         :rtype: list
         """
         return getgrall()
-except ImportError, exp:  # Like in nt system
+except ImportError, exp:  # pragma: no cover, not for unit tests...
+    # Like in Windows system
     # temporary workaround:
     def get_cur_user():
         """Fake getpwuid
@@ -136,6 +128,20 @@ except ImportError, exp:  # Like in nt system
         """
         return []
 
+from alignak.log import setup_logger, get_logger_fds
+from alignak.http.daemon import HTTPDaemon, PortNotFree
+from alignak.stats import statsmgr
+from alignak.modulesmanager import ModulesManager
+from alignak.property import StringProp, BoolProp, PathProp, ConfigPathProp, IntegerProp, \
+    LogLevelProp
+from alignak.misc.common import setproctitle
+from alignak.version import VERSION
+
+# Friendly names for the system signals
+SIGNALS_TO_NAMES_DICT = dict((k, v) for v, k in reversed(sorted(signal.__dict__.items()))
+                             if v.startswith('SIG') and not v.startswith('SIG_'))
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 IS_PY26 = sys.version_info[:2] < (2, 7)
 
@@ -144,24 +150,30 @@ IS_PY26 = sys.version_info[:2] < (2, 7)
 REDIRECT_TO = getattr(os, "devnull", "/dev/null")
 
 UMASK = 027
-from alignak.version import VERSION
 
 
-class InvalidPidFile(Exception):
-    """Exception raise when a pid file is invalid"""
+class InvalidWorkDir(Exception):
+    """Exception raised when daemon workdir is invalid"""
     pass
 
 
-DEFAULT_WORK_DIR = '/var/run/alignak/'
-DEFAULT_LIB_DIR = '/var/lib/alignak/'
+class InvalidPidFile(Exception):
+    """Exception raised when a pid file is invalid"""
+    pass
 
 
+DEFAULT_WORK_DIR = './'
+
+
+# pylint: disable=R0902
 class Daemon(object):
     """Class providing daemon level call for Alignak
         TODO: Consider clean this code and use standard libs
     """
 
     properties = {
+        'daemon_type':
+            StringProp(default='unknown'),
         # workdir is relative to $(dirname "$0"/..)
         # where "$0" is the path of the file being executed,
         # in python normally known as:
@@ -169,26 +181,69 @@ class Daemon(object):
         #  os.path.join( os.getcwd(), sys.argv[0] )
         #
         # as returned once the daemon is started.
-        'workdir':       PathProp(default=DEFAULT_WORK_DIR),
-        'host':          StringProp(default='0.0.0.0'),
-        'user':          StringProp(default=get_cur_user()),
-        'group':         StringProp(default=get_cur_group()),
-        'use_ssl':       BoolProp(default=False),
-        'server_key':     StringProp(default='etc/certs/server.key'),
-        'ca_cert':       StringProp(default='etc/certs/ca.pem'),
-        'server_cert':   StringProp(default='etc/certs/server.cert'),
-        'use_local_log': BoolProp(default=True),
-        'log_level':     LogLevelProp(default='WARNING'),
-        'hard_ssl_name_check':    BoolProp(default=False),
-        'idontcareaboutsecurity': BoolProp(default=False),
-        'daemon_enabled': BoolProp(default=True),
-        'spare':         BoolProp(default=False),
-        'max_queue_size': IntegerProp(default=0),
-        'daemon_thread_pool_size': IntegerProp(default=8),
+        'workdir':
+            PathProp(default=DEFAULT_WORK_DIR),
+        'logdir':
+            PathProp(default=DEFAULT_WORK_DIR),
+        'etcdir':
+            PathProp(default=DEFAULT_WORK_DIR),
+        'host':
+            StringProp(default='0.0.0.0'),
+        'user':
+            StringProp(default=get_cur_user()),
+        'group':
+            StringProp(default=get_cur_group()),
+        'use_ssl':
+            BoolProp(default=False),
+        'server_key':
+            StringProp(default='etc/certs/server.key'),
+        'ca_cert':
+            StringProp(default=''),
+        'server_dh':
+            StringProp(default=''),
+        'server_cert':
+            StringProp(default='etc/certs/server.cert'),
+        'use_local_log':
+            BoolProp(default=True),
+        'human_timestamp_log':
+            BoolProp(default=True),
+        'human_date_format':
+            StringProp(default='%Y-%m-%d %H:%M:%S %Z'),
+        'log_level':
+            LogLevelProp(default='INFO'),
+        'log_rotation_when':
+            StringProp(default='midnight'),
+        'log_rotation_interval':
+            IntegerProp(default=1),
+        'log_rotation_count':
+            IntegerProp(default=7),
+        'local_log':
+            StringProp(default='/usr/local/var/log/arbiter.log'),
+        'hard_ssl_name_check':
+            BoolProp(default=False),
+        'idontcareaboutsecurity':
+            BoolProp(default=True),
+        'daemon_enabled':
+            BoolProp(default=True),
+        'spare':
+            BoolProp(default=False),
+        'max_queue_size':
+            IntegerProp(default=0),
+        'daemon_thread_pool_size':
+            IntegerProp(default=8),
     }
 
-    def __init__(self, name, config_file, is_daemon, do_replace, debug, debug_file):
+    def __init__(self, name, config_file, is_daemon, do_replace,
+                 debug, debug_file, port=None, local_log=None):
+        """
 
+        :param name:
+        :param config_file:
+        :param is_daemon:
+        :param do_replace:
+        :param debug:
+        :param debug_file:
+        """
         self.check_shm()
 
         self.name = name
@@ -198,7 +253,23 @@ class Daemon(object):
         self.debug = debug
         self.debug_file = debug_file
         self.interrupted = False
-        self.pidfile = None
+        self.pidfile = "%s.pid" % self.name
+
+        if port:
+            self.port = int(port)
+            print("Daemon '%s' is started with an overidden port number: %d"
+                  % (self.name, self.port))
+
+        if local_log:
+            self.local_log = local_log
+            print("Daemon '%s' is started with an overidden log file: %s"
+                  % (self.name, self.local_log))
+
+        if self.debug:
+            print("Daemon '%s' is in debug mode" % self.name)
+
+        if self.is_daemon:
+            print("Daemon '%s' is in daemon mode" % self.name)
 
         # Track time
         now = time.time()
@@ -209,13 +280,7 @@ class Daemon(object):
         self.http_thread = None
         self.http_daemon = None
 
-        # Log init
-        # self.log = logger
-        # self.log.load_obj(self)
-        # pylint: disable=E1101
-        logger.load_obj(self)
-
-        self.new_conf = None  # used by controller to push conf
+        self.new_conf = None
         self.cur_conf = None
         self.conf_lock = threading.RLock()
         self.lock = threading.RLock()
@@ -229,8 +294,11 @@ class Daemon(object):
         # Flag to reload configuration
         self.need_config_reload = False
 
-        # Keep a trace of the local_log file desc if needed
-        self.local_log_fd = None
+        # Keep a trace of the file descriptors allocated by the logger
+        self.local_log_fds = None
+
+        # Log loop turns if environment variable is set
+        self.log_loop = 'TEST_LOG_LOOP' in os.environ
 
         # Put in queue some debug output we will raise
         # when we will be in daemon
@@ -238,10 +306,16 @@ class Daemon(object):
 
         # We will initialize the Manager() when we load modules
         # and be really forked()
-        self.manager = None
+        self.sync_manager = None
 
         os.umask(UMASK)
         self.set_exit_handler()
+
+        # Fill the properties
+        properties = self.__class__.properties
+        for prop, entry in properties.items():
+            if getattr(self, prop, None) is None:
+                setattr(self, prop, entry.pythonize(entry.default))
 
     # At least, lose the local log file if needed
     def do_stop(self):
@@ -253,54 +327,53 @@ class Daemon(object):
 
         :return: None
         """
-        logger.info("%s : Doing stop ..", self)
+        logger.info("Stopping %s...", self.name)
 
         if self.http_daemon:
-            logger.info("Shutting down http_daemon ..")
+            logger.info("Shutting down the HTTP daemon...")
             self.http_daemon.request_stop()
 
         if self.http_thread:
-            logger.info("Joining http_thread ..")
+            logger.debug("Joining HTTP thread...")
             # Add a timeout to join so that we can manually quit
             self.http_thread.join(timeout=15)
-            if self.http_thread.is_alive():
+            if self.http_thread.is_alive():  # pragma: no cover, should never happen...
                 logger.warning("http_thread failed to terminate. Calling _Thread__stop")
                 try:
-                    self.http_thread._Thread__stop()
-                except Exception:
+                    self.http_thread._Thread__stop()  # pylint: disable=E1101
+                except Exception:  # pylint: disable=W0703
                     pass
             self.http_thread = None
 
         if self.http_daemon:
             self.http_daemon = None
 
-        if self.manager:
-            logger.info("Shutting down manager ..")
-            self.manager.shutdown()
-            self.manager = None
+        if self.sync_manager:
+            logger.info("Shutting down synchronization manager...")
+            self.sync_manager.shutdown()
+            self.sync_manager = None
 
         # Maybe the modules manager is not even created!
         if getattr(self, 'modules_manager', None):
+            # todo: clean this!
             # We save what we can but NOT for the scheduler
             # because the current sched object is a dummy one
             # and the old one has already done it!
             if not hasattr(self, 'sched'):
                 self.hook_point('save_retention')
             # And we quit
-            logger.info('Stopping all modules')
+            logger.info('Shutting down modules...')
             self.modules_manager.stop_all()
 
-        logger.info("%s : All stop done.", self)
-
-    def request_stop(self):
+    def request_stop(self):  # pragma: no cover, not used during test because of sys.exit !
         """Remove pid and stop daemon
 
         :return: None
         """
         self.unlink()
         self.do_stop()
-        # Brok facilities are no longer available simply print the message to STDOUT
-        print("Stopping daemon. Exiting")
+
+        logger.info("Stopped %s.", self.name)
         sys.exit(0)
 
     def look_for_early_exit(self):
@@ -313,7 +386,7 @@ class Daemon(object):
             self.request_stop()
 
     def do_loop_turn(self):
-        """Abstract method for deamon loop turn.
+        """Abstract method for daemon loop turn.
         It must be overridden by class inheriting from Daemon
 
         :return: None
@@ -325,31 +398,57 @@ class Daemon(object):
 
         :return: None
         """
+        # Increased on each loop turn
+        self.loop_count = 0
         while True:
+            # Increment loop count
+            self.loop_count += 1
+            if self.log_loop:
+                logger.debug("[%s] --- %d", self.name, self.loop_count)
             self.do_loop_turn()
             # If ask us to dump memory, do it
             if self.need_dump_memory:
+                logger.debug('Dumping memory')
                 self.dump_memory()
                 self.need_dump_memory = False
             if self.need_objects_dump:
                 logger.debug('Dumping objects')
                 self.need_objects_dump = False
             if self.need_config_reload:
-                logger.debug('Reloading configuration')
-                self.need_config_reload = False
+                logger.debug('Ask for configuration reloading')
+                return
+
+            if self.log_loop:
+                logger.debug("[%s] +++ %d", self.name, self.loop_count)
             # Maybe we ask us to die, if so, do it :)
             if self.interrupted:
+                logger.info("[%s] Someone asked us to stop", self.name)
                 break
         self.request_stop()
 
-    def do_load_modules(self, mod_confs):
+    def do_load_modules(self, modules):
         """Wrapper for calling load_and_init method of modules_manager attribute
 
+        :param modules: list of modules that should be loaded by the daemon
         :return: None
         """
-        self.modules_manager.load_and_init(mod_confs)
-        logger.info("I correctly loaded the modules: [%s]",
-                    ','.join([inst.get_name() for inst in self.modules_manager.instances]))
+        logger.info("Loading modules...")
+
+        loading_result = self.modules_manager.load_and_init(modules)
+        if loading_result:
+            if self.modules_manager.instances:
+                logger.info("I correctly loaded my modules: [%s]",
+                            ','.join([inst.get_name() for inst in self.modules_manager.instances]))
+            else:
+                logger.info("I do not have any module")
+        else:  # pragma: no cover, not with unit tests...
+            logger.error("Errors were encountered when checking and loading modules:")
+            for msg in self.modules_manager.configuration_errors:
+                logger.error(msg)
+
+        if self.modules_manager.configuration_warnings:  # pragma: no cover, not tested
+            for msg in self.modules_manager.configuration_warning:
+                logger.warning(msg)
 
     def add(self, elt):
         """ Abstract method for adding brok
@@ -361,38 +460,24 @@ class Daemon(object):
         """
         pass
 
-    def dump_memory(self):
-        """Try to dump memory
-        Does not really work :/
+    @staticmethod
+    def dump_memory():
+        """ Try to dump memory
 
-        :return: None
-        TODO: Clean this
-        """
-        logger.info("I dump my memory, it can take a minute")
-        try:
-            from guppy import hpy
-            heap = hpy()
-            logger.info(heap.heap())
-        except ImportError:
-            logger.warning('I do not have the module guppy for memory dump, please install it')
-
-    def load_config_file(self):
-        """Parse config file and ensure full path in variables
+        Not currently implemented feature
 
         :return: None
         """
-        self.parse_config_file()
-        if self.config_file is not None:
-            # Some paths can be relatives. We must have a full path by taking
-            # the config file by reference
-            self.relative_paths_to_full(os.path.dirname(self.config_file))
+        logger.warning("Dumping daemon memory is not implemented. "
+                       "If you really need this feature, please log "
+                       "an issue in the project repository;)")
 
-    def load_modules_manager(self):
-        """Instanciate Modulesmanager and load the SyncManager (multiprocessing)
+    def load_modules_manager(self, daemon_name):
+        """Instantiate Modulesmanager and load the SyncManager (multiprocessing)
 
         :return: None
         """
-        self.modules_manager = ModulesManager(self.name, self.manager,
+        self.modules_manager = ModulesManager(daemon_name, self.sync_manager,
                                               max_queue_size=getattr(self, 'max_queue_size', 0))
 
     def change_to_workdir(self):
@@ -400,12 +485,14 @@ class Daemon(object):
 
         :return: None
         """
+        logger.info("Changing working directory to: %s", self.workdir)
         self.workdir = os.path.abspath(self.workdir)
         try:
             os.chdir(self.workdir)
         except Exception, exp:
             raise InvalidWorkDir(exp)
         self.debug_output.append("Successfully changed to workdir: %s" % (self.workdir))
+        logger.info("Using working directory: %s", os.path.abspath(self.workdir))
 
     def unlink(self):
         """Remove the daemon's pid file
@@ -415,25 +502,11 @@ class Daemon(object):
         logger.debug("Unlinking %s", self.pidfile)
         try:
             os.unlink(self.pidfile)
-        except Exception, exp:
+        except OSError, exp:
             logger.error("Got an error unlinking our pidfile: %s", exp)
 
-    def register_local_log(self):
-        """Open local log file for logging purpose
-
-        :return: None
-        """
-        # The arbiter doesn't have such attribute
-        if hasattr(self, 'use_local_log') and self.use_local_log:
-            try:
-                # self.local_log_fd = self.log.register_local_log(self.local_log)
-                self.local_log_fd = logger.register_local_log(self.local_log)
-            except IOError, exp:
-                logger.error("Opening the log file '%s' failed with '%s'", self.local_log, exp)
-                sys.exit(2)
-            logger.info("Using the local log file '%s'", self.local_log)
-
-    def check_shm(self):
+    @staticmethod
+    def check_shm():
         """ Check /dev/shm right permissions
 
         :return: None
@@ -468,7 +541,7 @@ class Daemon(object):
         except Exception as err:
             raise InvalidPidFile(err)
 
-    def check_parallel_run(self):
+    def check_parallel_run(self):  # pragma: no cover, not with unit tests...
         """Check (in pid file) if there isn't already a daemon running.
         If yes and do_replace: kill it.
         Keep in self.fpid the File object to the pid file. Will be used by writepid.
@@ -476,22 +549,33 @@ class Daemon(object):
         :return: None
         """
         # TODO: other daemon run on nt
-        if os.name == 'nt':
-            logger.warning("The parallel daemon check is not available on nt")
+        if os.name == 'nt':  # pragma: no cover, not currently tested with Windows...
+            logger.warning("The parallel daemon check is not available on Windows")
             self.__open_pidfile(write=True)
             return
 
         # First open the pid file in open mode
         self.__open_pidfile()
         try:
-            pid = int(self.fpid.readline().strip(' \r\n'))
-        except Exception as err:
-            logger.info("Stale pidfile exists at %s (%s). Reusing it.", err, self.pidfile)
+            pid_var = self.fpid.readline().strip(' \r\n')
+            if pid_var:
+                pid = int(pid_var)
+                logger.info("Found an existing pid (%s): '%s'", self.pidfile, pid_var)
+            else:
+                logger.debug("Not found an existing pid: %s", self.pidfile)
+                return
+        except (IOError, ValueError) as err:
+            logger.warning("pidfile is empty or has an invalid content: %s", self.pidfile)
+            return
+
+        if pid == os.getpid():
             return
 
         try:
+            logger.info("Killing process: '%s'", pid)
             os.kill(pid, 0)
-        except Exception as err:  # consider any exception as a stale pidfile.
+        except Exception as err:  # pylint: disable=W0703
+            # consider any exception as a stale pidfile.
             # this includes :
             #  * PermissionError when a process with same pid exists but is executed by another user
             #  * ProcessLookupError: [Errno 3] No such process
@@ -532,7 +616,8 @@ class Daemon(object):
         self.fpid.close()
         del self.fpid  # no longer needed
 
-    def close_fds(self, skip_close_fds):
+    @staticmethod
+    def close_fds(skip_close_fds):  # pragma: no cover, not with unit tests...
         """Close all the process file descriptors.
         Skip the descriptors present in the skip_close_fds list
 
@@ -550,13 +635,14 @@ class Daemon(object):
         # Iterate through and close all file descriptors.
         for file_d in range(0, maxfd):
             if file_d in skip_close_fds:
+                logger.debug("Do not close fd: %s", file_d)
                 continue
             try:
                 os.close(file_d)
             except OSError:  # ERROR, fd wasn't open to begin with (ignored)
                 pass
 
-    def daemonize(self, skip_close_fds=None):
+    def daemonize(self, skip_close_fds=None):  # pragma: no cover, not for unit tests...
         """Go in "daemon" mode: close unused fds, redirect stdout/err,
         chdir, umask, fork-setsid-fork-writepid
         Do the double fork to properly go daemon
@@ -565,8 +651,10 @@ class Daemon(object):
         :type skip_close_fds: list
         :return: None
         """
+        logger.info("Daemonizing...")
+
         if skip_close_fds is None:
-            skip_close_fds = tuple()
+            skip_close_fds = []
 
         self.debug_output.append("Redirecting stdout and stderr as necessary..")
         if self.debug:
@@ -575,7 +663,7 @@ class Daemon(object):
             fdtemp = os.open(REDIRECT_TO, os.O_RDWR)
 
         # We close all fd but what we need:
-        self.close_fds(skip_close_fds + (self.fpid.fileno(), fdtemp))
+        self.close_fds(skip_close_fds + [self.fpid.fileno(), fdtemp])
 
         os.dup2(fdtemp, 1)  # standard output (1)
         os.dup2(fdtemp, 2)  # standard error (2)
@@ -589,7 +677,7 @@ class Daemon(object):
         if pid != 0:
             # In the father: we check if our child exit correctly
             # it has to write the pid of our future little child..
-            def do_exit(sig, frame):
+            def do_exit(sig, frame):  # pylint: disable=W0613
                 """Exit handler if wait too long during fork
 
                 :param sig: signal
@@ -626,18 +714,12 @@ class Daemon(object):
         del self.fpid
         self.pid = os.getpid()
         self.debug_output.append("We are now fully daemonized :) pid=%d" % self.pid)
-        # We can now output some previously silenced debug output
-        logger.info("Printing stored debug messages prior to our daemonization")
-        for stored in self.debug_output:
-            logger.info(stored)
-        del self.debug_output
-        self.set_proctitle()
 
     # The Manager is a sub-process, so we must be sure it won't have
     # a socket of your http server alive
     @staticmethod
     def _create_manager():
-        """Instanciate and start a SyncManager
+        """Instantiate and start a SyncManager
 
         :return: the manager
         :rtype: multiprocessing.managers.SyncManager
@@ -646,53 +728,55 @@ class Daemon(object):
         manager.start()
         return manager
 
-    def do_daemon_init_and_start(self, fake=False):
+    def do_daemon_init_and_start(self):
         """Main daemon function.
         Clean, allocates, initializes and starts all necessary resources to go in daemon mode.
 
-        :param fake: use for test to do not launch runonly feature, like the stats reaper thread.
-        :type fake: bool
-        :return: None
+        :param daemon_name: daemon instance name (eg. arbiter-master). If not provided, only the
+        daemon name (eg. arbiter) will be used for the process title
+        :type daemon_name: str
+        :return: False if the HTTP daemon can not be initialized, else True
         """
+        self.set_proctitle()
         self.change_to_user_group()
         self.change_to_workdir()
         self.check_parallel_run()
-        self.setup_communication_daemon()
+        if not self.setup_communication_daemon():
+            logger.warning("I could not setup my communication daemon...")
+            return False
 
-        # Setting log level
-        logger.setLevel(self.log_level)
-        # Force the debug level if the daemon is said to start with such level
-        if self.debug:
-            logger.setLevel('DEBUG')
-
-        # Then start to log all in the local file if asked so
-        self.register_local_log()
         if self.is_daemon:
             # Do not close the local_log file too if it's open
-            if self.local_log_fd:
-                self.daemonize(skip_close_fds=(self.local_log_fd,))
+            if self.local_log_fds:
+                self.daemonize(skip_close_fds=self.local_log_fds)
+            else:
+                self.daemonize()
         else:
             self.write_pid()
 
-        logger.info("Creating manager ..")
-        self.manager = self._create_manager()
-        logger.info("done.")
+        # We can now output some previously silenced debug output
+        logger.debug("Printing stored debug messages prior to our daemonization:")
+        for stored in self.debug_output:
+            logger.debug("- %s", stored)
+        del self.debug_output
 
-        # We can start our stats thread but after the double fork() call and if we are not in
-        # a test launch (time.time() is hooked and will do BIG problems there)
-        if not fake:
-            statsmgr.launch_reaper_thread()
+        logger.info("Creating synchronization manager...")
+        self.sync_manager = self._create_manager()
+        logger.info("Created")
 
-        logger.info("Now starting http_daemon thread..")
+        logger.info("Starting http_daemon thread..")
         self.http_thread = threading.Thread(None, self.http_daemon_thread, 'http_thread')
         self.http_thread.daemon = True
         self.http_thread.start()
+        logger.info("HTTP daemon thread started")
+
+        return True
 
     def setup_communication_daemon(self):
         """ Setup HTTP server daemon to listen
         for incoming HTTP requests from other Alignak daemons
 
-        :return: None
+        :return: True if initialization is ok, else False
         """
         if hasattr(self, 'use_ssl'):  # "common" daemon
             ssl_conf = self
@@ -700,7 +784,7 @@ class Daemon(object):
             ssl_conf = self.conf     # arbiter daemon..
 
         use_ssl = ssl_conf.use_ssl
-        ca_cert = ssl_cert = ssl_key = ''
+        ca_cert = ssl_cert = ssl_key = server_dh = None
 
         # The SSL part
         if use_ssl:
@@ -709,8 +793,15 @@ class Daemon(object):
                 logger.error('Error : the SSL certificate %s is missing (server_cert).'
                              'Please fix it in your configuration', ssl_cert)
                 sys.exit(2)
-            ca_cert = os.path.abspath(str(ssl_conf.ca_cert))
-            logger.info("Using ssl ca cert file: %s", ca_cert)
+
+            if str(ssl_conf.server_dh) != '':
+                server_dh = os.path.abspath(str(ssl_conf.server_dh))
+                logger.info("Using ssl dh cert file: %s", server_dh)
+
+            if str(ssl_conf.ca_cert) != '':
+                ca_cert = os.path.abspath(str(ssl_conf.ca_cert))
+                logger.info("Using ssl ca cert file: %s", ca_cert)
+
             ssl_key = os.path.abspath(str(ssl_conf.server_key))
             if not os.path.exists(ssl_key):
                 logger.error('Error : the SSL key %s is missing (server_key).'
@@ -723,11 +814,19 @@ class Daemon(object):
 
         # Let's create the HTTPDaemon, it will be exec after
         # pylint: disable=E1101
-        self.http_daemon = HTTPDaemon(self.host, self.port, self.http_interface,
-                                      use_ssl, ca_cert, ssl_key,
-                                      ssl_cert, self.daemon_thread_pool_size)
+        try:
+            self.http_daemon = HTTPDaemon(self.host, self.port, self.http_interface,
+                                          use_ssl, ca_cert, ssl_key,
+                                          ssl_cert, server_dh, self.daemon_thread_pool_size)
+        except PortNotFree:
+            logger.error('The HTTP daemon port (%s:%d) is not free...', self.host, self.port)
+            # logger.exception('The HTTP daemon port is not free: %s', exp)
+            return False
 
-    def get_socks_activity(self, socks, timeout):
+        return True
+
+    @staticmethod
+    def get_socks_activity(socks, timeout):  # pylint: disable=unused-argument
         """ Global loop part : wait for socket to be ready
 
         :param socks: a socket file descriptor list
@@ -737,19 +836,24 @@ class Daemon(object):
         :return: A list of socket file descriptor ready to read
         :rtype: list
         """
-        # some os are not managing void socks list, so catch this
-        # and just so a simple sleep instead
-        if socks == []:
-            time.sleep(timeout)
-            return []
-        try:
-            ins, _, _ = select.select(socks, [], [], timeout)
-        except select.error, err:
-            errnum, _ = err
-            if errnum == errno.EINTR:
-                return []
-            raise
-        return ins
+        warnings.warn("get_socks_activity is now deprecated. No daemon needs to use this function.",
+                      DeprecationWarning, stacklevel=2)
+        return []
+
+        # @mohierf: did not yet remove the former code...
+        # # some os are not managing void socks list, so catch this
+        # # and just so a simple sleep instead
+        # if socks == []:
+        #     time.sleep(timeout)
+        #     return []
+        # try:  # pragma: no cover, not with unit tests on Travis...
+        #     ins, _, _ = select.select(socks, [], [], timeout)
+        # except select.error, err:
+        #     errnum, _ = err
+        #     if errnum == errno.EINTR:
+        #         return []
+        #     raise
+        # return ins
 
     def check_and_del_zombie_modules(self):
         """Check alive instance and try to restart the dead ones
@@ -769,7 +873,7 @@ class Daemon(object):
         """
         try:
             return getpwnam(self.user)[2]
-        except KeyError, exp:
+        except KeyError:  # pragma: no cover, should not happen...
             logger.error("The user %s is unknown", self.user)
             return None
 
@@ -781,7 +885,7 @@ class Daemon(object):
         """
         try:
             return getgrnam(self.group)[2]
-        except KeyError, exp:
+        except KeyError:  # pragma: no cover, should not happen
             logger.error("The group %s is unknown", self.group)
             return None
 
@@ -789,22 +893,22 @@ class Daemon(object):
         """ Change to user of the running program.
         If change failed we sys.exit(2)
 
-        :param insane: boolean to allow running as root
+        :param insane: boolean to allow running as root (True to allow)
         :type insane: bool
         :return: None
         """
         if insane is None:
-            insane = not self.idontcareaboutsecurity
+            insane = self.idontcareaboutsecurity
 
         # TODO: change user on nt
-        if os.name == 'nt':
+        if os.name == 'nt':  # pragma: no cover, no Windows implementation currently
             logger.warning("You can't change user on this system")
             return
 
-        if (self.user == 'root' or self.group == 'root') and not insane:
+        if (self.user == 'root' or self.group == 'root') and not insane:  # pragma: no cover
             logger.error("You want the application run under the root account?")
             logger.error("I do not agree with it. If you really want it, put:")
-            logger.error("idontcareaboutsecurity=yes")
+            logger.error("idontcareaboutsecurity=1")
             logger.error("in the config file")
             logger.error("Exiting")
             sys.exit(2)
@@ -818,37 +922,44 @@ class Daemon(object):
 
         # Maybe the os module got the initgroups function. If so, try to call it.
         # Do this when we are still root
+        logger.info('Trying to initialize additional groups for the daemon')
         if hasattr(os, 'initgroups'):
-            logger.info('Trying to initialize additional groups for the daemon')
             try:
                 os.initgroups(self.user, gid)
-            except OSError, err:
-                logger.warning('Cannot call the additional groups setting with initgroups (%s)',
+            except OSError as err:
+                logger.warning('Cannot call the additional groups setting with initgroups: %s',
                                err.strerror)
-        elif hasattr(os, 'setgroups'):
+        elif hasattr(os, 'setgroups'):  # pragma: no cover, not with unit tests on Travis
+            # Else try to call the setgroups if it exists...
             groups = [gid] + \
                      [group.gr_gid for group in get_all_groups() if self.user in group.gr_mem]
             try:
                 os.setgroups(groups)
-            except OSError, err:
-                logger.warning('Cannot call the additional groups setting with setgroups (%s)',
+            except OSError as err:
+                logger.warning('Cannot call the additional groups setting with setgroups: %s',
                                err.strerror)
         try:
             # First group, then user :)
             os.setregid(gid, gid)
             os.setreuid(uid, uid)
-        except OSError, err:
-            logger.error("cannot change user/group to %s/%s (%s [%d]). Exiting",
+        except OSError as err:  # pragma: no cover, not with unit tests...
+            logger.error("Cannot change user/group to %s/%s (%s [%d]). Exiting...",
                          self.user, self.group, err.strerror, err.errno)
             sys.exit(2)
 
-    def parse_config_file(self):
-        """Parse self.config_file and get all properties in it.
-        If some properties need a pythonization, we do it.
-        Also put default value in the properties if some are missing in the config_file
+    def load_config_file(self):
+        """Parse daemon configuration file
+
+        Parse self.config_file and get all its variables.
+        If some properties need a pythonization, do it.
+        Use default values for the properties if some are missing in the config_file
+        Ensure full path in variables
 
         :return: None
         """
+        # Note: do not use logger into this function because it is not yet initialized ;)
+        print("Loading daemon configuration file (%s)..." % self.config_file)
+
         properties = self.__class__.properties
         if self.config_file is not None:
             config = ConfigParser.ConfigParser()
@@ -861,14 +972,19 @@ class Daemon(object):
                     if key in properties:
                         value = properties[key].pythonize(value)
                     setattr(self, key, value)
-            except ConfigParser.InterpolationMissingOptionError, err:
+            except ConfigParser.InterpolationMissingOptionError as err:  # pragma: no cover,
                 err = str(err)
                 wrong_variable = err.split('\n')[3].split(':')[1].strip()
                 logger.error("Incorrect or missing variable '%s' in config file : %s",
                              wrong_variable, self.config_file)
                 sys.exit(2)
+
+            # Some paths can be relative. We must have a full path having for reference the
+            # configuration file
+            self.relative_paths_to_full(os.path.dirname(self.config_file))
         else:
-            logger.warning("No config file specified, use defaults parameters")
+            print("No daemon configuration file specified, using defaults parameters")
+
         # Now fill all defaults where missing parameters
         for prop, entry in properties.items():
             if not hasattr(self, prop):
@@ -876,26 +992,26 @@ class Daemon(object):
                 setattr(self, prop, value)
 
     def relative_paths_to_full(self, reference_path):
-        """Set a full path from a relative one with che config file as reference
+        """Set a full path from a relative one with the config file as reference
         TODO: This should be done in pythonize method of Properties.
+        TODO: @mohierf: why not doing this directly in load_config_file?
+        TODO: No property defined for the daemons is a ConfigPathProp ... ;)
+        This function is completely unuseful as is !!!
 
         :param reference_path: reference path for reading full path
         :type reference_path: str
         :return: None
         """
-        # print "Create relative paths with", reference_path
         properties = self.__class__.properties
         for prop, entry in properties.items():
-            if isinstance(entry, ConfigPathProp):
+            if isinstance(entry, ConfigPathProp):  # pragma: no cover, not with unit tests...
                 path = getattr(self, prop)
                 if not os.path.isabs(path):
                     new_path = os.path.join(reference_path, path)
-                    # print "DBG: changing", entry, "from", path, "to", new_path
                     path = new_path
                 setattr(self, prop, path)
-                # print "Setting %s for %s" % (path, prop)
 
-    def manage_signal(self, sig, frame):
+    def manage_signal(self, sig, frame):  # pylint: disable=W0613
         """Manage signals caught by the daemon
         signal.SIGUSR1 : dump_memory
         signal.SIGUSR2 : dump_object (nothing)
@@ -907,7 +1023,8 @@ class Daemon(object):
         :type frame:
         :return: None
         """
-        logger.debug("I'm process %d and I received signal %s", os.getpid(), str(sig))
+        logger.info("process '%s' (pid=%d) received a signal: %s",
+                    self.name, os.getpid(), SIGNALS_TO_NAMES_DICT[sig])
         if sig == signal.SIGUSR1:  # if USR1, ask a memory dump
             self.need_dump_memory = True
         elif sig == signal.SIGUSR2:  # if USR2, ask objects dump
@@ -915,6 +1032,7 @@ class Daemon(object):
         elif sig == signal.SIGHUP:  # if HUP, reload configuration in arbiter
             self.need_config_reload = True
         else:  # Ok, really ask us to die :)
+            logger.info("request to stop the daemon")
             self.interrupted = True
 
     def set_exit_handler(self):
@@ -924,7 +1042,7 @@ class Daemon(object):
         :return: None
         """
         func = self.manage_signal
-        if os.name == "nt":
+        if os.name == "nt":  # pragma: no cover, no Windows implementation currently
             try:
                 import win32api
                 win32api.SetConsoleCtrlHandler(func, True)
@@ -936,50 +1054,64 @@ class Daemon(object):
                         signal.SIGUSR2, signal.SIGHUP):
                 signal.signal(sig, func)
 
-    def set_proctitle(self):
+    # pylint: disable=no-member
+    def set_proctitle(self, daemon_name=None):
         """Set the proctitle of the daemon
 
+        :param daemon_name: daemon instance name (eg. arbiter-master). If not provided, only the
+        daemon name (eg. arbiter) will be used for the process title
+        :type daemon_name: str
         :return: None
         """
-        setproctitle("alignak-%s" % self.name)
+        if daemon_name:
+            setproctitle("alignak-%s %s" % (self.daemon_type, daemon_name))
+            if hasattr(self, 'modules_manager'):
+                self.modules_manager.set_daemon_name(daemon_name)
+        else:
+            setproctitle("alignak-%s" % self.daemon_type)
 
     def get_header(self):
         """Get the log file header
 
-        :return: A string list containing project name, version, licence etc.
+        :return: A string list containing project name, daemon name, version, licence etc.
         :rtype: list
         """
-        return ["Alignak %s" % VERSION,
-                "Copyright (c) 2015-2015:",
-                "Alignak Team",
-                "License: AGPL"]
-
-    def print_header(self):
-        """Log headers generated in get_header()
-
-        :return: None
-        """
-        for line in self.get_header():
-            logger.info(line)
+        return ["-----",
+                "Alignak %s - %s daemon" % (VERSION, self.name),
+                "Copyright (c) 2015-2016: Alignak Team",
+                "License: AGPL",
+                "-----"]
 
     def http_daemon_thread(self):
-        """Main fonction of the http daemon thread will loop forever unless we stop the root daemon
+        """Main function of the http daemon thread will loop forever unless we stop the root daemon
 
         :return: None
         """
-        logger.info("HTTP main thread: I'm running")
+        logger.info("HTTP main thread running")
         # The main thing is to have a pool of X concurrent requests for the http_daemon,
         # so "no_lock" calls can always be directly answer without having a "locked" version to
         # finish
         try:
             self.http_daemon.run()
-        except Exception, exp:
+        except PortNotFree as exp:
+            # print("Exception: %s" % str(exp))
+            # logger.exception('The HTTP daemon port is not free: %s', exp)
+            raise
+        except Exception as exp:  # pylint: disable=W0703
             logger.exception('The HTTP daemon failed with the error %s, exiting', str(exp))
-            raise exp
+            raise
+        logger.info("HTTP main thread exiting")
 
     def handle_requests(self, timeout, suppl_socks=None):
+        # pylint: disable=no-self-use, unused-argument
         """ Wait up to timeout to handle the requests.
         If suppl_socks is given it also looks for activity on that list of fd.
+
+        @mohierf, this function is never called with `suppl_socks`! Its behavior is
+         to replace the select on the sockets by a time.sleep() for the duration of
+         the provided timoeut... resulting in the caller daemon to sleep!
+         So I remove this useless parameter and the get_socks_activity function to
+         replace with a time.sleep(timeout) call.
 
         :param timeout: timeout to wait for activity
         :type timeout: float
@@ -993,35 +1125,64 @@ class Daemon(object):
             - third arg is possible system time change value, or 0 if no change
         :rtype: tuple
         """
-        if suppl_socks is None:
-            suppl_socks = []
-        before = time.time()
-        socks = []
-        if suppl_socks:
-            socks.extend(suppl_socks)
+        warnings.warn("handle_requests is now deprecated. The daemon using this function "
+                      "must use the make_a_pause function instead.",
+                      DeprecationWarning, stacklevel=2)
+        time.sleep(timeout)
+        return timeout, [], 0
 
-        # Ok give me the socks taht moved during the timeout max
-        ins = self.get_socks_activity(socks, timeout)
-        # Ok now get back the global lock!
-        tcdiff = self.check_for_system_time_change()
-        before += tcdiff
-        # Increase our sleep time for the time go in select
+    def make_a_pause(self, timeout=0.0001, check_time_change=True):
+        """ Wait up to timeout and check for system time change.
+
+        This function checks if the system time changed since the last call. If so,
+        the difference is returned to the caller.
+        The duration of this call is removed from the timeout. If this duration is
+        greater than the required timeout, no sleep is executed and the extra time
+        is returned to the caller
+
+        If the required timeout was overlapped, then the first return value will be
+        greater than the required timeout.
+
+        If the required timeout is null, then the timeout value is set as a very short time
+        to keep a nice behavior to the system CPU ;)
+
+        :param timeout: timeout to wait for activity
+        :type timeout: float
+        :param check_time_change: True (default) to check if the system time changed
+        :type check_time_change: bool
+        :return:Returns a 2-tuple:
+        * first value is the time spent for the time change check
+        * second value is the time change difference
+        :rtype: tuple
+        """
+        if timeout == 0:
+            timeout = 0.0001
+
+        if not check_time_change:
+            # Time to sleep
+            time.sleep(timeout)
+            self.sleep_time += timeout
+            return 0, 0
+
+        # Check is system time changed
+        before = time.time()
+        time_changed = self.check_for_system_time_change()
+        after = time.time()
+        elapsed = after - before
+
+        if elapsed > timeout:
+            return elapsed, time_changed
+        # Time to sleep
+        time.sleep(timeout - elapsed)
+
+        # Increase our sleep time for the time we slept
+        before += time_changed
         self.sleep_time += time.time() - before
-        if len(ins) == 0:  # trivial case: no fd activity:
-            return 0, [], tcdiff
-        # HERE WAS THE HTTP, but now it's managed in an other thread
-        # for sock in socks:
-        #    if sock in ins and sock not in suppl_socks:
-        #        ins.remove(sock)
-        # Track in elapsed the WHOLE time, even with handling requests
-        elapsed = time.time() - before
-        if elapsed == 0:  # we have done a few instructions in 0 second exactly!? quantum computer?
-            elapsed = 0.01  # but we absolutely need to return!= 0 to indicate that we got activity
-        return elapsed, ins, tcdiff
+
+        return elapsed, time_changed
 
     def check_for_system_time_change(self):
-        """
-        Check if our system time change. If so, change our
+        """Check if our system time change. If so, change our
 
         :return: 0 if the difference < 900, difference else
         :rtype: int
@@ -1031,8 +1192,13 @@ class Daemon(object):
         difference = now - self.t_each_loop
 
         # If we have more than 15 min time change, we need to compensate it
-        if abs(difference) > 900:
-            self.compensate_system_time_change(difference)
+        # todo: confirm that 15 minutes is a good choice...
+        if abs(difference) > 900:  # pragma: no cover, not with unit tests...
+            if hasattr(self, "sched"):
+                self.compensate_system_time_change(difference,
+                                                   self.sched.timeperiods)  # pylint: disable=E1101
+            else:
+                self.compensate_system_time_change(difference, None)
         else:
             difference = 0
 
@@ -1040,35 +1206,37 @@ class Daemon(object):
 
         return difference
 
-    def compensate_system_time_change(self, difference):
+    def compensate_system_time_change(self, difference, timeperiods):  # pylint: disable=R0201,W0613
         """Default action for system time change. Actually a log is done
 
         :return: None
         """
-
         logger.warning('A system time change of %s has been detected.  Compensating...', difference)
 
     def wait_for_initial_conf(self, timeout=1.0):
-        """Wait conf from arbiter.
+        """Wait initial configuration from the arbiter.
         Basically sleep 1.0 and check if new_conf is here
 
         :param timeout: timeout to wait from socket read
         :type timeout: int
         :return: None
-        TODO: Clean this
         """
         logger.info("Waiting for initial configuration")
         # Arbiter do not already set our have_conf param
+        _ts = time.time()
         while not self.new_conf and not self.interrupted:
-            # This is basically sleep(timeout) and returns 0, [], int
-            # We could only paste here only the code "used" but it could be
-            # harder to maintain.
-            _ = self.handle_requests(timeout)
-            sys.stdout.write(".")
-            sys.stdout.flush()
+            # Make a pause and check if the system time changed
+            _, _ = self.make_a_pause(timeout, check_time_change=True)
+            # sys.stdout.write(".")
+            # sys.stdout.flush()
+        if not self.interrupted:
+            logger.info("Got initial configuration, waited for: %.2f", time.time() - _ts)
+            statsmgr.timer('initial-configuration', time.time() - _ts)
+        else:
+            logger.info("Interrupted before getting the initial configuration")
 
     def hook_point(self, hook_name):
-        """Used to call module function that may define a hook fonction
+        """Used to call module function that may define a hook function
         for hook_name
 
         :param hook_name: function name we may hook in module
@@ -1082,13 +1250,14 @@ class Daemon(object):
                 fun = getattr(inst, full_hook_name)
                 try:
                     fun(self)
-                except Exception as exp:
+                except Exception as exp:  # pylint: disable=W0703
                     logger.warning('The instance %s raised an exception %s. I disabled it,'
                                    'and set it to restart later', inst.get_name(), str(exp))
+                    logger.exception('Exception %s', exp)
                     self.modules_manager.set_to_restart(inst)
-        statsmgr.incr('core.hook.%s' % hook_name, time.time() - _t0)
+        statsmgr.timer('core.hook.%s' % hook_name, time.time() - _t0)
 
-    def get_retention_data(self):
+    def get_retention_data(self):  # pylint: disable=R0201
         """Basic function to get retention data,
         Maybe be overridden by subclasses to implement real get
 
@@ -1112,21 +1281,26 @@ class Daemon(object):
 
         :return: A dict with the following structure
         ::
-
-           { 'metrics': [],
-             'version': VERSION,
-             'name': '',
-             'modules':
-                         {'internal': {'name': "MYMODULE1", 'state': 'ok'},
-                         {'external': {'name': "MYMODULE2", 'state': 'stopped'},
-                        ]
-           }
+            {
+                'metrics': [],
+                'version': VERSION,
+                'name': '',
+                'type': '',
+                'modules': {
+                    'internal': {'name': "MYMODULE1", 'state': 'ok'},
+                    'external': {'name': "MYMODULE2", 'state': 'stopped'},
+                }
+            }
 
         :rtype: dict
 
         """
-        res = {'metrics': [], 'version': VERSION, 'name': '', 'type': '', 'modules':
-               {'internal': {}, 'external': {}}}
+        res = {
+            'metrics': [], 'version': VERSION, 'name': self.name, 'type': self.daemon_type,
+            'modules': {
+                'internal': {}, 'external': {}
+            }
+        }
         modules = res['modules']
 
         # first get data for all internal modules
@@ -1154,8 +1328,9 @@ class Daemon(object):
         """
         logger.critical("I got an unrecoverable error. I have to exit.")
         logger.critical("You can get help at https://github.com/Alignak-monitoring/alignak")
-        logger.critical("If you think this is a bug, create a new ticket including"
-                        "details mentioned in the README")
+        logger.critical("If you think this is a bug, create a new issue including as much "
+                        "details as possible (version, configuration, ...")
+        logger.critical("-----")
         logger.critical("Back trace of the error: %s", trace)
 
     def get_objects_from_from_queues(self):
@@ -1166,14 +1341,70 @@ class Daemon(object):
         """
         had_some_objects = False
         for queue in self.modules_manager.get_external_from_queues():
-            while True:
-                try:
-                    obj = queue.get(block=False)
-                except (Empty, IOError, EOFError) as err:
-                    if not isinstance(err, Empty):
+            if queue is not None:
+                while True:
+                    try:
+                        obj = queue.get(block=False)
+                    except Empty:
+                        break
+                    except Exception as exp:  # pylint: disable=W0703
                         logger.error("An external module queue got a problem '%s'", str(exp))
-                    break
-                else:
-                    had_some_objects = True
-                    self.add(obj)
+                    else:
+                        had_some_objects = True
+                        self.add(obj)
         return had_some_objects
+
+    def setup_alignak_logger(self, reload_configuration=True):
+        """ Setup alignak logger:
+        - load the daemon configuration file
+        - configure the global daemon handler (root logger)
+        - log the daemon Alignak header
+        - log the damon configuration parameters
+
+        :param reload_configuration: Load configuration file if True,
+        else it uses current parameters
+        :type: bool
+        :return: None
+        """
+        if reload_configuration:
+            # Load the daemon configuration file
+            self.load_config_file()
+
+        # Force the debug level if the daemon is said to start with such level
+        log_level = self.log_level
+        if self.debug:
+            log_level = 'DEBUG'
+
+        # Set the human timestamp log if required
+        human_log_format = getattr(self, 'human_timestamp_log', False)
+
+        # Register local log file if required
+        if getattr(self, 'use_local_log', False):
+            try:
+                # pylint: disable=E1101
+                setup_logger(None, level=log_level, human_log=human_log_format,
+                             log_console=True, log_file=self.local_log,
+                             when=self.log_rotation_when, interval=self.log_rotation_interval,
+                             backup_count=self.log_rotation_count,
+                             human_date_format=self.human_date_format)
+            except IOError, exp:  # pragma: no cover, not with unit tests...
+                logger.error("Opening the log file '%s' failed with '%s'", self.local_log, exp)
+                sys.exit(2)
+            logger.debug("Using the local log file '%s'", self.local_log)
+            self.local_log_fds = get_logger_fds(None)
+        else:  # pragma: no cover, not with unit tests...
+            setup_logger(None, level=log_level, human_log=human_log_format,
+                         log_console=True, log_file=None)
+            logger.warning("No local log file")
+
+        logger.debug("Alignak daemon logger configured")
+
+        # Log daemon header
+        for line in self.get_header():
+            logger.info(line)
+
+        logger.info("My pid: %s", os.getpid())
+
+        logger.info("My configuration: ")
+        for prop, _ in sorted(self.properties.items()):
+            logger.info(" - %s=%s", prop, getattr(self, prop, 'Not found!'))

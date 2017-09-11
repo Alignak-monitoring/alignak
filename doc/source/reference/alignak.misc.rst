@@ -20,14 +20,6 @@ alignak.misc.custom_module module
     :undoc-members:
     :show-inheritance:
 
-alignak.misc.datamanager module
--------------------------------
-
-.. automodule:: alignak.misc.datamanager
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 alignak.misc.filter module
 --------------------------
 
@@ -56,6 +48,14 @@ alignak.misc.regenerator module
 -------------------------------
 
 .. automodule:: alignak.misc.regenerator
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+alignak.misc.serialization module
+---------------------------------
+
+.. automodule:: alignak.misc.serialization
     :members:
     :undoc-members:
     :show-inheritance:

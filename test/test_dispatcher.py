@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -18,521 +18,492 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 #
-#
-# This file incorporates work covered by the following copyright and
-# permission notice:
-#
-#  Copyright (C) 2009-2014:
-#     Jean Gabes, naparuba@gmail.com
-#     Hartmut Goebel, h.goebel@goebel-consult.de
-#     Grégory Starck, g.starck@gmail.com
-#     Sebastien Coavoux, s.coavoux@free.fr
+"""
+This file test the dispatcher (distribute configuration to satellites)
+"""
 
-#  This file is part of Shinken.
-#
-#  Shinken is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU Affero General Public License as published by
-#  the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-#
-#  Shinken is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-#
-#  You should have received a copy of the GNU Affero General Public License
-#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
-#
-# This file is used to test reading and processing of config files
-#
-
-from alignak_test import *
-
-
-class GoodArbiter(ArbiterLink):
-
-    # To lie about satellites
-    def ping(self):
-        print "Dummy OK for", self.get_name()
-        self.set_alive()
-
-    def have_conf(self, i):
-        return True
-
-    def do_not_run(self):
-        pass
-
-
-class GoodScheduler(SchedulerLink):
-
-    # To lie about satellites
-    def ping(self):
-        print "Dummy OK for", self.get_name()
-        self.set_alive()
-
-    def have_conf(self, i):
-        return True
-
-    def put_conf(self, conf):
-        return True
-
-
-class BadScheduler(SchedulerLink):
-    def ping(self):
-        print "Dummy bad ping", self.get_name()
-        self.add_failed_check_attempt()
-
-    def have_conf(self, i):
-        return False
-
-
-class GoodPoller(PollerLink):
-
-    # To lie about satellites
-    def ping(self):
-        print "Dummy OK for", self.get_name()
-        self.set_alive()
-
-    def put_conf(self, conf):
-        return True
-
-
-class BadPoller(PollerLink):
-    def ping(self):
-        print "Dummy bad ping", self.get_name()
-        self.add_failed_check_attempt()
-
-
-class GoodReactionner(ReactionnerLink):
-
-    # To lie about satellites
-    def ping(self):
-        print "Dummy OK for", self.get_name()
-        self.set_alive()
-
-    def put_conf(self, conf):
-        return True
-
-
-class BadReactionner(ReactionnerLink):
-    def ping(self):
-        print "Dummy bad ping", self.get_name()
-        self.add_failed_check_attempt()
-
-
-class GoodBroker(BrokerLink):
-
-    # To lie about satellites
-    def ping(self):
-        print "Dummy OK for", self.get_name()
-        self.set_alive()
-
-    def put_conf(self, conf):
-        return True
-
-
-class BadBroker(BrokerLink):
-    def ping(self):
-        print "Dummy bad ping", self.get_name()
-        self.add_failed_check_attempt()
+import time
+import pytest
+import requests_mock
+from requests.packages.urllib3.response import HTTPResponse
+from alignak_test import AlignakTest
+from alignak.misc.serialization import unserialize
 
 
 class TestDispatcher(AlignakTest):
+    """
+    This class test the dispatcher  (distribute configuration to satellites)
+    """
 
-    def setUp(self):
-        self.setup_with_file(['etc/alignak_dispatcher.cfg'])
+    def test_simple(self):
+        """ Simple test
 
-    def test_simple_dispatch(self):
-        for r in self.conf.realms:
-            print r.get_name()
-        r = self.conf.realms.find_by_name('All')
-        print "The dispatcher", self.dispatcher
-        # dummy for the arbiter
-        for a in self.conf.arbiters:
-            a.__class__ = GoodArbiter
-        elts_types = ['schedulers', 'pollers', 'reactionners', 'brokers', 'receivers']
-        for t in elts_types:
-            lst = getattr(self.conf, t)
-            for s in lst:
-                print "TAG s", s
-                s.realm = r
+        have one realm and:
+        * 1 scheduler
+        * 1 poller
+        * 1 receiver
+        * 1 reactionner
+        * 1 broker
 
-        print "Preparing schedulers"
-        scheduler1 = self.conf.schedulers.find_by_name('scheduler-all-1')
-        self.assertIsNot(scheduler1, None)
-        scheduler1.__class__ = GoodScheduler
-        scheduler2 = self.conf.schedulers.find_by_name('scheduler-all-2')
-        self.assertIsNot(scheduler2, None)
-        scheduler2.__class__ = BadScheduler
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_dispatcher_simple.cfg')
+        assert 1 == len(self.arbiter.dispatcher.realms)
+        for realm in self.arbiter.dispatcher.realms:
+            assert 1 == len(realm.confs)
+            for cfg in realm.confs.values():
+                assert cfg.is_assigned
+        assert 1 == len(self.arbiter.dispatcher.schedulers)
+        assert 4 == len(self.arbiter.dispatcher.satellites)
+        for satellite in self.arbiter.dispatcher.satellites:
+            assert {} != satellite.cfg['schedulers'], satellite.get_name()
+            assert 1 == len(satellite.cfg['schedulers']), 'must have 1 scheduler'
 
-        print "Preparing pollers"
-        poller1 = self.conf.pollers.find_by_name('poller-all-1')
-        self.assertIsNot(poller1, None)
-        poller1.__class__ = GoodPoller
-        poller2 = self.conf.pollers.find_by_name('poller-all-2')
-        self.assertIsNot(poller2, None)
-        poller2.__class__ = BadPoller
+        # check if scheduler has right the 6 hosts
+        assert 6 == len(self.schedulers['scheduler-master'].sched.hosts)
 
-        print "Preparing reactionners"
-        reactionner1 = self.conf.reactionners.find_by_name('reactionner-all-1')
-        self.assertIsNot(reactionner1, None)
-        reactionner1.__class__ = GoodReactionner
-        reactionner2 = self.conf.reactionners.find_by_name('reactionner-all-2')
-        self.assertIsNot(reactionner2, None)
-        reactionner2.__class__ = BadReactionner
+    def test_simple_multi_schedulers(self):
+        """ Simple test (one realm) but with multiple schedulers:
+        * 2 scheduler
+        * 1 poller
+        * 1 receiver
+        * 1 reactionner
+        * 1 broker
 
-        print "Preparing brokers"
-        broker1 = self.conf.brokers.find_by_name('broker-all-1')
-        self.assertIsNot(broker1, None)
-        broker1.__class__ = GoodBroker
-        broker2 = self.conf.brokers.find_by_name('broker-all-2')
-        self.assertIsNot(broker2, None)
-        broker2.__class__ = BadBroker
+        :return: None
+        """
+        self.setup_with_file('cfg/cfg_dispatcher_simple_multi_schedulers.cfg')
+        assert 1 == len(self.arbiter.dispatcher.realms)
+        for realm in self.arbiter.dispatcher.realms:
+            assert 2 == len(realm.confs)
+            for cfg in realm.confs.values():
+                assert cfg.is_assigned
+        assert 2 == len(self.arbiter.dispatcher.schedulers)
+        assert 4 == len(self.arbiter.dispatcher.satellites)
+        # for satellite in self.arbiter.dispatcher.satellites:
+        #     self.assertNotEqual({}, satellite.cfg['schedulers'], satellite.get_name())
+        #     self.assertEqual(2, len(satellite.cfg['schedulers']),
+        #                      'must have 2 schedulers in {0}'.format(satellite.get_name()))
 
-        # Ping all elements. Should have 1 as OK, 2 as
-        # one bad attempt (3 max)
-        self.dispatcher.check_alive()
+        assert 3 == len(self.schedulers['scheduler-master'].sched.hosts)
+        assert 3 == len(self.schedulers['scheduler-master2'].sched.hosts)
 
-        # Check good values
-        self.assertEqual(True, scheduler1.alive)
-        self.assertEqual(0, scheduler1.attempt)
-        self.assertEqual(True, scheduler1.reachable)
-        # still alive, just unreach
-        self.assertEqual(True, scheduler2.alive)
-        self.assertEqual(1, scheduler2.attempt)
-        self.assertEqual(False, scheduler2.reachable)
+    def test_simple_multi_pollers(self):
+        """ Simple test (one realm) but with multiple pollers:
+        * 1 scheduler
+        * 2 poller
+        * 1 receiver
+        * 1 reactionner
+        * 1 broker
 
-        # and others satellites too
-        self.assertEqual(True, poller1.alive)
-        self.assertEqual(0, poller1.attempt)
-        self.assertEqual(True, poller1.reachable)
-        # still alive, just unreach
-        self.assertEqual(True, poller2.alive)
-        self.assertEqual(1, poller2.attempt)
-        self.assertEqual(False, poller2.reachable)
+        :return: None
+        """
+        self.setup_with_file('cfg/cfg_dispatcher_simple_multi_pollers.cfg')
+        assert 1 == len(self.arbiter.dispatcher.realms)
+        for realm in self.arbiter.dispatcher.realms:
+            assert 1 == len(realm.confs)
+            for cfg in realm.confs.values():
+                assert cfg.is_assigned
+        assert 1 == len(self.arbiter.dispatcher.schedulers)
+        assert 5 == len(self.arbiter.dispatcher.satellites)
+        for satellite in self.arbiter.dispatcher.satellites:
+            assert {} != satellite.cfg['schedulers'], satellite.get_name()
+            assert 1 == len(satellite.cfg['schedulers']), \
+                             'must have 1 scheduler in {0}'.format(satellite.get_name())
 
-        # and others satellites too
-        self.assertEqual(True, reactionner1.alive)
-        self.assertEqual(0, reactionner1.attempt)
-        self.assertEqual(True, reactionner1.reachable)
-        # still alive, just unreach
-        self.assertEqual(True, reactionner2.alive)
-        self.assertEqual(1, reactionner2.attempt)
-        self.assertEqual(False, reactionner2.reachable)
+    def test_realms(self):
+        """ Test with 2 realms.
+        realm 1:
+        * 1 scheduler
+        * 1 poller
+        * 1 receiver
+        * 1 reactionner
+        * 1 broker
 
-        # and others satellites too
-        self.assertEqual(True, broker1.alive)
-        self.assertEqual(0, broker1.attempt)
-        self.assertEqual(True, broker1.reachable)
-        # still alive, just unreach
-        self.assertEqual(True, broker2.alive)
-        self.assertEqual(1, broker2.attempt)
-        self.assertEqual(False, broker2.reachable)
-        ### Now add another attempt, still alive, but attemp=2/3
+        realm 2:
+        * 1 scheduler
+        * 1 poller
+        * 1 receiver
+        * 1 reactionner
+        * 1 broker
 
-        print "CheckAlive " * 10
-        # We reset check time for the test
-        elts = [scheduler1, scheduler2, poller1, poller2, broker1, broker2, reactionner1, reactionner2]
-        for i in elts:
-            i.last_check = 0.0
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_dispatcher_realm.cfg')
+        assert 2 == len(self.arbiter.dispatcher.realms)
+        for realm in self.arbiter.dispatcher.realms:
+            assert 1 == len(realm.confs)
+            for cfg in realm.confs.values():
+                assert cfg.is_assigned
+        assert 2 == len(self.arbiter.dispatcher.schedulers)
+        assert 8 == len(self.arbiter.dispatcher.satellites)
 
-        self.dispatcher.check_alive()
+        assert set([4, 6]) == set([len(self.schedulers['scheduler-master'].sched.hosts),
+                                              len(self.schedulers['realm2scheduler-master'].sched.hosts)])
 
-        # Check good values
-        self.assertEqual(True, scheduler1.alive)
-        self.assertEqual(0, scheduler1.attempt)
-        self.assertEqual(True, scheduler1.reachable)
-        # still alive, just unreach
-        self.assertEqual(True, scheduler2.alive)
-        self.assertEqual(2, scheduler2.attempt)
-        self.assertEqual(False, scheduler2.reachable)
+        # for satellite in self.arbiter.dispatcher.satellites:
+        #     self.assertNotEqual({}, satellite.cfg['schedulers'], satellite.get_name())
+        #     self.assertEqual(1, len(satellite.cfg['schedulers']),
+        #                      'must have 1 scheduler in {0}'.format(satellite.get_name()))
 
-        # and others satellites too
-        self.assertEqual(True, poller1.alive)
-        self.assertEqual(0, poller1.attempt)
-        self.assertEqual(True, poller1.reachable)
-        # still alive, just unreach
-        self.assertEqual(True, poller2.alive)
-        self.assertEqual(2, poller2.attempt)
-        self.assertEqual(False, poller2.reachable)
+    def test_realms_with_sub(self):
+        """ Test with 2 realms but some satellites are sub_realms:
+            * All -> realm2
+            * realm3
 
-        # and others satellites too
-        self.assertEqual(True, reactionner1.alive)
-        self.assertEqual(0, reactionner1.attempt)
-        self.assertEqual(True, reactionner1.reachable)
-        # still alive, just unreach
-        self.assertEqual(True, reactionner2.alive)
-        self.assertEqual(2, reactionner2.attempt)
-        self.assertEqual(False, reactionner2.reachable)
+        realm All:
+        * 1 scheduler
+        * 1 receiver
 
-        # and others satellites too
-        self.assertEqual(True, broker1.alive)
-        self.assertEqual(0, broker1.attempt)
-        self.assertEqual(True, broker1.reachable)
-        # still alive, just unreach
-        self.assertEqual(True, broker2.alive)
-        self.assertEqual(2, broker2.attempt)
-        self.assertEqual(False, broker2.reachable)
+        realm realm2:
+        * 1 receiver
+        * 1 scheduler
+        * 1 poller
 
-        ### Now we get BAD, We go DEAD for N2!
-        print "CheckAlive " * 10
-        # We reset check time for the test
-        elts = [scheduler1, scheduler2, poller1, poller2, broker1, broker2, reactionner1, reactionner2]
-        for i in elts:
-            i.last_check = 0.0
-        self.dispatcher.check_alive()
+        realm All + realm2 (sub realm):
+        * 1 broker
+        * 1 poller
+        * 1 reactionner
 
-        # Check good values
-        self.assertEqual(True, scheduler1.alive)
-        self.assertEqual(0, scheduler1.attempt)
-        self.assertEqual(True, scheduler1.reachable)
-        # still alive, just unreach
-        self.assertEqual(False, scheduler2.alive)
-        self.assertEqual(3, scheduler2.attempt)
-        self.assertEqual(False, scheduler2.reachable)
+        realm realm3:
+        * 1 receiver
+        * 1 scheduler
+        * 1 reactionner
+        * 1 broker
+        * 1 poller
 
-        # and others satellites too
-        self.assertEqual(True, poller1.alive)
-        self.assertEqual(0, poller1.attempt)
-        self.assertEqual(True, poller1.reachable)
-        # still alive, just unreach
-        self.assertEqual(False, poller2.alive)
-        self.assertEqual(3, poller2.attempt)
-        self.assertEqual(False, poller2.reachable)
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_dispatcher_realm_with_sub.cfg')
+        # Got 3 realms
+        assert 3 == len(self.arbiter.dispatcher.realms)
+        for realm in self.arbiter.dispatcher.realms:
+            assert 1 == len(realm.confs)
+            for cfg in realm.confs.values():
+                assert cfg.is_assigned
+        # 3 schedulers
+        assert 3 == len(self.arbiter.dispatcher.schedulers)
+        for satellite in self.arbiter.dispatcher.satellites:
+            print("Satellite: %s" % (satellite))
+        # 2 reactionners
+        # 3 pollers
+        # 3 receivers
+        # 2 brokers
+        assert 10 == len(self.arbiter.dispatcher.satellites), self.arbiter.dispatcher.satellites
 
-        # and others satellites too
-        self.assertEqual(True, reactionner1.alive)
-        self.assertEqual(0, reactionner1.attempt)
-        self.assertEqual(True, reactionner1.reachable)
-        # still alive, just unreach
-        self.assertEqual(False, reactionner2.alive)
-        self.assertEqual(3, reactionner2.attempt)
-        self.assertEqual(False, reactionner2.reachable)
+        for satellite in self.arbiter.dispatcher.satellites:
+            print("Satellite: %s, schedulers: %s" % (satellite, satellite.cfg['schedulers']))
+            if satellite.get_name() in ['poller-master', 'reactionner-master', 'broker-master']:
+                assert {} != satellite.cfg['schedulers'], satellite.get_name()
+                assert 2 == len(satellite.cfg['schedulers']), \
+                                 'must have 2 schedulers in {0}'.format(satellite.get_name())
+            elif satellite.get_name() in ['realm3-poller-master', 'realm3-reactionner-master',
+                                          'realm3-broker-master']:
+                assert {} != satellite.cfg['schedulers'], satellite.get_name()
+                assert 1 == len(satellite.cfg['schedulers']), \
+                                 'must have 1 scheduler in {0}'.format(satellite.get_name())
 
-        # and others satellites too
-        self.assertEqual(True, broker1.alive)
-        self.assertEqual(0, broker1.attempt)
-        self.assertEqual(True, broker1.reachable)
-        # still alive, just unreach
-        self.assertEqual(False, broker2.alive)
-        self.assertEqual(3, broker2.attempt)
-        self.assertEqual(False, broker2.reachable)
+    def test_realms_with_sub_multi_scheduler(self):
+        """ Test with 3 realms but some satellites are sub_realms + multi schedulers
+        realm All
+           |----- realm All1
+                     |----- realm All1a
 
-        # Now we check how we should dispatch confs
-        self.dispatcher.check_dispatch()
-        # the conf should not be in a good shape
-        self.assertEqual(False, self.dispatcher.dispatch_ok)
+        realm All:
+        * 2 scheduler
 
-        # Now we really dispatch them!
-        self.dispatcher.dispatch()
-        self.assert_any_log_match('Dispatch OK of conf in scheduler scheduler-all-1')
-        self.assert_any_log_match('Dispatch OK of configuration 0 to reactionner reactionner-all-1')
-        self.assert_any_log_match('Dispatch OK of configuration 0 to poller poller-all-1')
-        self.assert_any_log_match('Dispatch OK of configuration 0 to broker broker-all-1')
-        self.clear_logs()
+        realm All1:
+        * 3 scheduler
 
-        # And look if we really dispatch conf as we should
-        for r in self.conf.realms:
-            for cfg in r.confs.values():
-                self.assertEqual(True, cfg.is_assigned)
-                self.assertEqual(scheduler1, cfg.assigned_to)
+        realm All1a:
+        * 2 scheduler
 
+        realm All + sub_realm:
+        * 1 poller
+        * 1 reactionner
+        * 1 broker
+        * 1 receiver
 
-class TestDispatcherMultiBroker(AlignakTest):
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_dispatcher_realm_with_sub_multi_schedulers.cfg')
+        self.show_logs()
+        assert self.conf_is_correct
 
-    def setUp(self):
-        self.setup_with_file(['etc/alignak_dispatcher_multibrokers.cfg'])
+        for poller in self.pollers:
+            print(poller)
+        pollers = [self.pollers['poller-master'].uuid]
+        reactionners = [self.reactionners['reactionner-master'].uuid]
 
-    def test_simple_dispatch(self):
-        print "The dispatcher", self.dispatcher
-        # dummy for the arbiter
-        for a in self.conf.arbiters:
-            a.__class__ = GoodArbiter
-        print "Preparing schedulers"
-        scheduler1 = self.conf.schedulers.find_by_name('scheduler-all-1')
-        self.assertIsNot(scheduler1, None)
-        scheduler1.__class__ = GoodScheduler
-        scheduler2 = self.conf.schedulers.find_by_name('scheduler-all-2')
-        self.assertIsNot(scheduler2, None)
-        scheduler2.__class__ = GoodScheduler
+        all_schedulers_uuid = []
+        # test schedulers
+        for name in ['scheduler-all-01', 'scheduler-all-02', 'scheduler-all1-01',
+                     'scheduler-all1-02', 'scheduler-all1-03', 'scheduler-all1a-01',
+                     'scheduler-all1a-02']:
+            assert self.schedulers[name].sched.pollers.keys() == pollers
+            assert self.schedulers[name].sched.reactionners.keys() == reactionners
+            assert self.schedulers[name].sched.brokers.keys() == ['broker-master']
+            all_schedulers_uuid.extend(self.schedulers[name].schedulers.keys())
 
-        print "Preparing pollers"
-        poller1 = self.conf.pollers.find_by_name('poller-all-1')
-        self.assertIsNot(poller1, None)
-        poller1.__class__ = GoodPoller
-        poller2 = self.conf.pollers.find_by_name('poller-all-2')
-        self.assertIsNot(poller2, None)
-        poller2.__class__ = BadPoller
+        # schedulers of realm All
+        gethosts = []
+        assert len(self.schedulers['scheduler-all-01'].sched.hosts) == 3
+        assert len(self.schedulers['scheduler-all-02'].sched.hosts) == 3
+        for h in self.schedulers['scheduler-all-01'].sched.hosts:
+            gethosts.append(h.host_name)
+        for h in self.schedulers['scheduler-all-02'].sched.hosts:
+            gethosts.append(h.host_name)
+        assert set(gethosts) == set(['srv_001', 'srv_002', 'srv_003', 'srv_004', 'test_router_0', 'test_host_0'])
 
-        print "Preparing reactionners"
-        reactionner1 = self.conf.reactionners.find_by_name('reactionner-all-1')
-        self.assertIsNot(reactionner1, None)
-        reactionner1.__class__ = GoodReactionner
-        reactionner2 = self.conf.reactionners.find_by_name('reactionner-all-2')
-        self.assertIsNot(reactionner2, None)
-        reactionner2.__class__ = BadReactionner
+        # schedulers of realm All1
+        gethosts = []
+        assert len(self.schedulers['scheduler-all1-01'].sched.hosts) == 2
+        assert len(self.schedulers['scheduler-all1-02'].sched.hosts) == 2
+        assert len(self.schedulers['scheduler-all1-03'].sched.hosts) == 2
+        for h in self.schedulers['scheduler-all1-01'].sched.hosts:
+            gethosts.append(h.host_name)
+        for h in self.schedulers['scheduler-all1-02'].sched.hosts:
+            gethosts.append(h.host_name)
+        for h in self.schedulers['scheduler-all1-03'].sched.hosts:
+            gethosts.append(h.host_name)
+        assert set(gethosts) == set(['srv_101', 'srv_102', 'srv_103', 'srv_104', 'srv_105', 'srv_106'])
 
-        print "Preparing brokers"
-        broker1 = self.conf.brokers.find_by_name('broker-all-1')
-        self.assertIsNot(broker1, None)
-        broker1.__class__ = GoodBroker
-        broker2 = self.conf.brokers.find_by_name('broker-all-2')
-        self.assertIsNot(broker2, None)
-        broker2.__class__ = GoodBroker
+        # schedulers of realm All1a
+        gethosts = []
+        assert len(self.schedulers['scheduler-all1a-01'].sched.hosts) == 2
+        assert len(self.schedulers['scheduler-all1a-02'].sched.hosts) == 2
+        for h in self.schedulers['scheduler-all1a-01'].sched.hosts:
+            gethosts.append(h.host_name)
+        for h in self.schedulers['scheduler-all1a-02'].sched.hosts:
+            gethosts.append(h.host_name)
+        assert set(gethosts) == set(['srv_201', 'srv_202', 'srv_203', 'srv_204'])
 
-        # Ping all elements. Should have 1 as OK, 2 as
-        # one bad attempt (3 max)
-        self.dispatcher.check_alive()
+        # test the poller
+        assert set(self.pollers['poller-master'].cfg['schedulers'].keys()) == set(all_schedulers_uuid)
 
-        # Check good values
-        self.assertEqual(True, scheduler1.alive)
-        self.assertEqual(0, scheduler1.attempt)
-        self.assertEqual(True, scheduler1.reachable)
-        # still alive, just unreach
-        self.assertEqual(True, scheduler2.alive)
-        self.assertEqual(0, scheduler2.attempt)
-        self.assertEqual(True, scheduler2.reachable)
+        # test the receiver has all hosts of all realms (the 3 realms)
+        assert set(self.receivers['receiver-master'].cfg['schedulers'].keys()) == set(all_schedulers_uuid)
+        # test get all hosts
+        hosts = []
+        for sched in self.receivers['receiver-master'].cfg['schedulers'].values():
+            hosts.extend(sched['hosts'])
+        assert set(hosts) == set(['srv_001', 'srv_002', 'srv_003', 'srv_004', 'srv_101', 'srv_102',
+                                 'srv_103', 'srv_104', 'srv_105', 'srv_106', 'srv_201', 'srv_202',
+                                 'srv_203', 'srv_204', 'test_router_0', 'test_host_0'])
 
-        # and others satellites too
-        self.assertEqual(True, poller1.alive)
-        self.assertEqual(0, poller1.attempt)
-        self.assertEqual(True, poller1.reachable)
-        # still alive, just unreach
-        self.assertEqual(True, poller2.alive)
-        self.assertEqual(1, poller2.attempt)
-        self.assertEqual(False, poller2.reachable)
+    @pytest.mark.skip("Currently disabled - spare feature - and wahtever this test seems broken!")
+    def test_simple_scheduler_spare(self):
+        """ Test simple but with spare of scheduler
 
-        # and others satellites too
-        self.assertEqual(True, reactionner1.alive)
-        self.assertEqual(0, reactionner1.attempt)
-        self.assertEqual(True, reactionner1.reachable)
-        # still alive, just unreach
-        self.assertEqual(True, reactionner2.alive)
-        self.assertEqual(1, reactionner2.attempt)
-        self.assertEqual(False, reactionner2.reachable)
+        :return: None
+        """
+        self.print_header()
+        with requests_mock.mock() as mockreq:
+            for port in ['7768', '7772', '7771', '7769', '7773', '8002']:
+                mockreq.get('http://localhost:%s/ping' % port, json='pong')
 
-        # and others satellites too
-        self.assertEqual(True, broker1.alive)
-        self.assertEqual(0, broker1.attempt)
-        self.assertEqual(True, broker1.reachable)
-        # still alive, just unreach
-        self.assertEqual(True, broker2.alive)
-        self.assertEqual(0, broker2.attempt)
-        self.assertEqual(True, broker2.reachable)
+            self.setup_with_file('cfg/cfg_dispatcher_scheduler_spare.cfg')
+            self.show_logs()
+            json_managed = {self.schedulers['scheduler-master'].conf.uuid:
+                            self.schedulers['scheduler-master'].conf.push_flavor}
+            for port in ['7768', '7772', '7771', '7769', '7773']:
+                mockreq.get('http://localhost:%s/what_i_managed' % port, json=json_managed)
+            mockreq.get('http://localhost:8002/what_i_managed', json='{}')
 
-        ### Now add another attempt, still alive, but attemp=2/3
-        print "CheckAlive " * 10
-        # We reset check time for the test
-        elts = [scheduler1, scheduler2, poller1, poller2, broker1, broker2, reactionner1, reactionner2]
-        for i in elts:
-            i.last_check = 0.0
-        self.dispatcher.check_alive()
+            self.arbiter.dispatcher.check_alive()
+            self.arbiter.dispatcher.prepare_dispatch()
+            self.arbiter.dispatcher.dispatch_ok = True
 
-        # Check good values
-        self.assertEqual(True, scheduler1.alive)
-        self.assertEqual(0, scheduler1.attempt)
-        self.assertEqual(True, scheduler1.reachable)
-        # still alive, just unreach
-        self.assertEqual(True, scheduler2.alive)
-        self.assertEqual(0, scheduler2.attempt)
-        self.assertEqual(True, scheduler2.reachable)
+            assert 2 == len(self.arbiter.dispatcher.schedulers)
+            assert 4 == len(self.arbiter.dispatcher.satellites)
+            master_sched = None
+            spare_sched = None
+            for scheduler in self.arbiter.dispatcher.schedulers:
+                if scheduler.get_name() == 'scheduler-master':
+                    scheduler.is_sent = True
+                    master_sched = scheduler
+                else:
+                    spare_sched = scheduler
 
-        # and others satellites too
-        self.assertEqual(True, poller1.alive)
-        self.assertEqual(0, poller1.attempt)
-        self.assertEqual(True, poller1.reachable)
-        # still alive, just unreach
-        self.assertEqual(True, poller2.alive)
-        self.assertEqual(2, poller2.attempt)
-        self.assertEqual(False, poller2.reachable)
+            assert master_sched.ping
+            assert 1 == master_sched.attempt
+            assert spare_sched.ping
+            assert 0 == spare_sched.attempt
 
-        # and others satellites too
-        self.assertEqual(True, reactionner1.alive)
-        self.assertEqual(0, reactionner1.attempt)
-        self.assertEqual(True, reactionner1.reachable)
-        # still alive, just unreach
-        self.assertEqual(True, reactionner2.alive)
-        self.assertEqual(2, reactionner2.attempt)
-        self.assertEqual(False, reactionner2.reachable)
+        for satellite in self.arbiter.dispatcher.satellites:
+            assert 1 == len(satellite.cfg['schedulers'])
+            scheduler = satellite.cfg['schedulers'].itervalues().next()
+            assert 'scheduler-master' == scheduler['name']
 
-        # and others satellites too
-        self.assertEqual(True, broker1.alive)
-        self.assertEqual(0, broker1.attempt)
-        self.assertEqual(True, broker1.reachable)
-        # still alive, just unreach
-        self.assertEqual(True, broker2.alive)
-        self.assertEqual(0, broker2.attempt)
-        self.assertEqual(True, broker2.reachable)
+        # now simulate master sched down
+        master_sched.check_interval = 1
+        spare_sched.check_interval = 1
+        for satellite in self.arbiter.dispatcher.receivers:
+            satellite.check_interval = 1
+        for satellite in self.arbiter.dispatcher.reactionners:
+            satellite.check_interval = 1
+        for satellite in self.arbiter.dispatcher.brokers:
+            satellite.check_interval = 1
+        for satellite in self.arbiter.dispatcher.pollers:
+            satellite.check_interval = 1
+        time.sleep(1)
 
-        ### Now we get BAD, We go DEAD for N2!
-        print "CheckAlive " * 10
-        # We reset check time for the test
-        elts = [scheduler1, scheduler2, poller1, poller2, broker1, broker2, reactionner1, reactionner2]
-        for i in elts:
-            i.last_check = 0.0
-        self.dispatcher.check_alive()
+        with requests_mock.mock() as mockreq:
+            for port in ['7772', '7771', '7769', '7773', '8002']:
+                mockreq.get('http://localhost:%s/ping' % port, json='pong')
 
-        # Check good values
-        self.assertEqual(True, scheduler1.alive)
-        self.assertEqual(0, scheduler1.attempt)
-        self.assertEqual(True, scheduler1.reachable)
-        # still alive, just unreach
-        self.assertEqual(True, scheduler2.alive)
-        self.assertEqual(0, scheduler2.attempt)
-        self.assertEqual(True, scheduler2.reachable)
+            for port in ['7772', '7771', '7769', '7773']:
+                mockreq.get('http://localhost:%s/what_i_managed' % port, json=json_managed)
+            mockreq.get('http://localhost:8002/what_i_managed', json='{}')
 
-        # and others satellites too
-        self.assertEqual(True, poller1.alive)
-        self.assertEqual(0, poller1.attempt)
-        self.assertEqual(True, poller1.reachable)
-        # still alive, just unreach
-        self.assertEqual(False, poller2.alive)
-        self.assertEqual(3, poller2.attempt)
-        self.assertEqual(False, poller2.reachable)
+            for port in ['7772', '7771', '7769', '7773', '8002']:
+                mockreq.post('http://localhost:%s/put_conf' % port, json='true')
 
-        # and others satellites too
-        self.assertEqual(True, reactionner1.alive)
-        self.assertEqual(0, reactionner1.attempt)
-        self.assertEqual(True, reactionner1.reachable)
-        # still alive, just unreach
-        self.assertEqual(False, reactionner2.alive)
-        self.assertEqual(3, reactionner2.attempt)
-        self.assertEqual(False, reactionner2.reachable)
+            self.arbiter.dispatcher.check_alive()
+            self.arbiter.dispatcher.check_dispatch()
+            self.arbiter.dispatcher.prepare_dispatch()
+            self.arbiter.dispatcher.dispatch()
+            self.arbiter.dispatcher.check_bad_dispatch()
 
-        # and others satellites too
-        self.assertEqual(True, broker1.alive)
-        self.assertEqual(0, broker1.attempt)
-        self.assertEqual(True, broker1.reachable)
-        # still alive, just unreach
-        self.assertEqual(True, broker2.alive)
-        self.assertEqual(0, broker2.attempt)
-        self.assertEqual(True, broker2.reachable)
+            assert master_sched.ping
+            assert 2 == master_sched.attempt
 
-        # Now we check how we should dispatch confs
-        self.dispatcher.check_dispatch()
-        # the conf should not be in a good shape
-        self.assertEqual(False, self.dispatcher.dispatch_ok)
+            time.sleep(1)
+            self.arbiter.dispatcher.check_alive()
+            self.arbiter.dispatcher.check_dispatch()
+            self.arbiter.dispatcher.prepare_dispatch()
+            self.arbiter.dispatcher.dispatch()
+            self.arbiter.dispatcher.check_bad_dispatch()
 
-        # Now we really dispatch them!
-        self.dispatcher.dispatch()
-        self.assert_any_log_match('Dispatch OK of conf in scheduler scheduler-all-1')
-        self.assert_any_log_match('Dispatch OK of configuration 0 to reactionner reactionner-all-1')
-        self.assert_any_log_match('Dispatch OK of configuration 0 to poller poller-all-1')
+            assert master_sched.ping
+            assert 3 == master_sched.attempt
+            # assert master_sched.alive
+            #
+            # time.sleep(1)
+            # self.arbiter.dispatcher.check_alive()
+            # self.arbiter.dispatcher.check_dispatch()
+            # self.arbiter.dispatcher.prepare_dispatch()
+            # self.arbiter.dispatcher.dispatch()
+            # self.arbiter.dispatcher.check_bad_dispatch()
 
-        self.assert_any_log_match('Dispatch OK of configuration [01] to broker broker-all-1')
-        self.assert_any_log_match('Dispatch OK of configuration [01] to broker broker-all-2')
-        self.clear_logs()
+            assert not master_sched.alive
 
+            history = mockreq.request_history
+            send_conf_to_sched_master = False
+            conf_sent = {}
+            for index, hist in enumerate(history):
+                if hist.url == 'http://localhost:7768/put_conf':
+                    send_conf_to_sched_master = True
+                elif hist.url == 'http://localhost:8002/put_conf':
+                    conf_sent['scheduler-spare'] = hist.json()
+                elif hist.url == 'http://localhost:7772/put_conf':
+                    conf_sent['broker'] = hist.json()
+                elif hist.url == 'http://localhost:7771/put_conf':
+                    conf_sent['poller'] = hist.json()
+                elif hist.url == 'http://localhost:7769/put_conf':
+                    conf_sent['reactionner'] = hist.json()
+                elif hist.url == 'http://localhost:7773/put_conf':
+                    conf_sent['receiver'] = hist.json()
 
-        # And look if we really dispatch conf as we should
-        for r in self.conf.realms:
-            for cfg in r.confs.values():
-                self.assertEqual(True, cfg.is_assigned)
-                self.assertIn(cfg.assigned_to, [scheduler1, scheduler2])
+            assert not send_conf_to_sched_master, 'Conf to scheduler master must not be sent' \
+                                                        'because it is not alive'
+            self.show_logs()
+            assert 5 == len(conf_sent)
+            assert ['conf'] == conf_sent['scheduler-spare'].keys()
 
+            json_managed_spare = {}
+            for satellite in self.arbiter.dispatcher.satellites:
+                assert 1 == len(satellite.cfg['schedulers'])
+                scheduler = satellite.cfg['schedulers'].itervalues().next()
+                assert 'scheduler-spare' == scheduler['name']
+                json_managed_spare[scheduler['instance_id']] = scheduler['push_flavor']
 
+        # return of the scheduler master
+        print "*********** Return of the king / master ***********"
+        with requests_mock.mock() as mockreq:
+            for port in ['7768', '7772', '7771', '7769', '7773', '8002']:
+                mockreq.get('http://localhost:%s/ping' % port, json='pong')
 
+            mockreq.get('http://localhost:7768/what_i_managed', json=json_managed)
+            for port in ['7772', '7771', '7769', '7773', '8002']:
+                mockreq.get('http://localhost:%s/what_i_managed' % port, json=json_managed_spare)
 
-if __name__ == '__main__':
-    unittest.main()
+            for port in ['7768', '7772', '7771', '7769', '7773', '8002']:
+                mockreq.post('http://localhost:%s/put_conf' % port, json='true')
+
+            time.sleep(1)
+            self.arbiter.dispatcher.check_alive()
+            self.arbiter.dispatcher.check_dispatch()
+            self.arbiter.dispatcher.prepare_dispatch()
+            self.arbiter.dispatcher.dispatch()
+            self.arbiter.dispatcher.check_bad_dispatch()
+
+            assert master_sched.ping
+            assert 0 == master_sched.attempt
+
+            history = mockreq.request_history
+            conf_sent = {}
+            for index, hist in enumerate(history):
+                if hist.url == 'http://localhost:7768/put_conf':
+                    conf_sent['scheduler-master'] = hist.json()
+                elif hist.url == 'http://localhost:8002/put_conf':
+                    conf_sent['scheduler-spare'] = hist.json()
+                elif hist.url == 'http://localhost:7772/put_conf':
+                    conf_sent['broker'] = hist.json()
+                elif hist.url == 'http://localhost:7771/put_conf':
+                    conf_sent['poller'] = hist.json()
+                elif hist.url == 'http://localhost:7769/put_conf':
+                    conf_sent['reactionner'] = hist.json()
+                elif hist.url == 'http://localhost:7773/put_conf':
+                    conf_sent['receiver'] = hist.json()
+
+            assert set(['scheduler-master', 'broker', 'poller', 'reactionner',
+                                  'receiver']) == \
+                             set(conf_sent.keys())
+
+            for satellite in self.arbiter.dispatcher.satellites:
+                assert 1 == len(satellite.cfg['schedulers'])
+                scheduler = satellite.cfg['schedulers'].itervalues().next()
+                assert 'scheduler-master' == scheduler['name']
+
+    @pytest.mark.skip("To be reactivated when spare will be implemented and tested")
+    def test_arbiter_spare(self):
+        """ Test with arbiter spare
+
+        :return: None
+        """
+        self.print_header()
+        with requests_mock.mock() as mockreq:
+            mockreq.get('http://localhost:8770/ping', json='pong')
+            mockreq.get('http://localhost:8770/what_i_managed', json='{}')
+            mockreq.post('http://localhost:8770/put_conf', json='true')
+            self.setup_with_file('cfg/cfg_dispatcher_arbiter_spare.cfg')
+            self.arbiter.dispatcher.check_alive()
+            # for arb in self.arbiter.dispatcher.arbiters:
+                # If not me and I'm a master
+                # if arb != self.arbiter.dispatcher.arbiter:
+                #     assert 0 == arb.attempt
+                #     assert {} == arb.managed_confs
+                # else:
+                #     assert 0 == arb.attempt
+                #     assert arb.managed_confs is not {}
+
+            print("start")
+            self.arbiter.dispatcher.check_dispatch()
+            print("dispatched")
+            # need time to have history filled
+            time.sleep(2)
+            history = mockreq.request_history
+            history_index = 0
+            for index, hist in enumerate(history):
+                if hist.url == 'http://localhost:8770/put_conf':
+                    history_index = index
+            conf_received = history[history_index].json()
+            assert ['conf'] == conf_received.keys()
+            spare_conf = unserialize(conf_received['conf'])
+            # Test a property to be sure conf loaded correctly
+            assert 5 == spare_conf.perfdata_timeout

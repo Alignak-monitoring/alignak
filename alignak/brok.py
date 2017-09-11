@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -48,85 +48,112 @@
 Brok are filled depending on their type (check_result, initial_state ...)
 
 """
-import cPickle
+import time
+import uuid
 import warnings
-try:
-    import ujson
-    UJSON_INSTALLED = True
-except ImportError:
-    UJSON_INSTALLED = False
+
+from alignak.misc.serialization import serialize, unserialize, AlignakClassLookupException
 
 
-class Brok:
+class Brok(object):
     """A Brok is a piece of information exported by Alignak to the Broker.
     Broker can do whatever he wants with it.
+
+    Broks types:
+    - log
+    - monitoring_log
+
+    - notification_raise
+    - acknowledge_raise
+    - downtime_raise
+    - acknowledge_expire
+    - downtime_expire
+    - initial_host_status, initial_service_status, initial_contact_status
+    - initial_broks_done
+
+    - update_host_status, update_service_status, initial_contact_status
+    - host_check_result, service_check_result
+    - host_next_schedule, service_next_scheduler
+    - host_snapshot, service_snapshot
+    - unknown_host_check_result, unknown_service_check_result
+
+    - program_status, initial program status
+    - update_program_status, program status updated (raised on each scheduler loop)
+    - clean_all_my_instance_id
+
+    - new_conf
     """
-    __slots__ = ('__dict__', '_id', 'type', 'data', 'prepared', 'instance_id')
-    _id = 0
     my_type = 'brok'
 
-    def __init__(self, _type, data):
-        self.type = _type
-        self._id = self.__class__._id
-        self.instance_id = None
-        self.__class__._id += 1
-        if self.use_ujson():
-            # pylint: disable=E1101
-            self.data = ujson.dumps(data)
+    def __init__(self, params, parsing=True):
+        if not parsing:
+            if params is None:
+                return
+            for key, value in params.iteritems():
+                setattr(self, key, value)
+
+            if not hasattr(self, 'uuid'):
+                self.uuid = uuid.uuid4().hex
+            return
+        self.uuid = params.get('uuid', uuid.uuid4().hex)
+        self.type = params['type']
+        self.instance_id = params.get('instance_id', None)
+        # Again need to behave differently when un-serializing
+        if 'uuid' in params:
+            self.data = params['data']
         else:
-            self.data = cPickle.dumps(data, cPickle.HIGHEST_PROTOCOL)
-        self.prepared = False
+            self.data = serialize(params['data'])
+        self.prepared = params.get('prepared', False)
+        self.creation_time = params.get('creation_time', time.time())
+
+    def serialize(self):
+        """This function serialize into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
+
+        Here we directly return all attributes
+
+        :return: json representation of a Brok
+        :rtype: dict
+        """
+        return {"type": self.type, "instance_id": self.instance_id, "data": self.data,
+                "prepared": self.prepared, "creation_time": self.creation_time, "uuid": self.uuid}
 
     def __str__(self):
         return str(self.__dict__) + '\n'
 
     @property
-    def id(self):  # pylint: disable=C0103
+    def id(self):  # pragma: no cover, should never happen...
+        # pylint: disable=C0103
         """Getter for id, raise deprecation warning
-        :return: self._id
+        :return: self.uuid
         """
         warnings.warn("Access to deprecated attribute id %s class" % self.__class__,
                       DeprecationWarning, stacklevel=2)
-        return self._id
+        return self.uuid
 
     @id.setter
-    def id(self, value):  # pylint: disable=C0103
+    def id(self, value):  # pragma: no cover, should never happen...
+        # pylint: disable=C0103
         """Setter for id, raise deprecation warning
         :param value: value to set
         :return: None
         """
         warnings.warn("Access to deprecated attribute id of %s class" % self.__class__,
                       DeprecationWarning, stacklevel=2)
-        self._id = value
+        self.uuid = value
 
     def prepare(self):
-        """Unpickle data from data attribute and add instance_id key if necessary
+        """Un-serialize data from data attribute and add instance_id key if necessary
 
         :return: None
         """
         # Maybe the brok is a old daemon one or was already prepared
         # if so, the data is already ok
         if hasattr(self, 'prepared') and not self.prepared:
-            if self.use_ujson():
-                # pylint: disable=E1101
-                self.data = ujson.loads(self.data)
-            else:
-                self.data = cPickle.loads(self.data)
+            try:
+                self.data = unserialize(self.data)
+            except AlignakClassLookupException:  # pragma: no cover, should never happen...
+                raise
             if self.instance_id:
                 self.data['instance_id'] = self.instance_id
         self.prepared = True
-
-    def use_ujson(self):
-        """
-        Check if we use ujson or cPickle
-
-        :return: True if type in list allowed, otherwise False
-        :rtype: bool
-        """
-        if not UJSON_INSTALLED:
-            return False
-        types_allowed = ['unknown_host_check_result', 'unknown_service_check_result', 'log',
-                         'notification_raise', 'clean_all_my_instance_id', 'initial_broks_done',
-                         'host_next_schedule', 'service_next_schedule', 'host_snapshot',
-                         'service_snapshot', 'host_check_result', 'service_check_result']
-        return self.type in types_allowed

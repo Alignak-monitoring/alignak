@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -53,12 +53,13 @@
 This module provide Hostgroup and Hostgroups class used to manage host groups
 """
 
-
+import logging
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
 from alignak.util import get_obj_name
-from alignak.property import StringProp, IntegerProp
-from alignak.log import logger
+from alignak.property import StringProp, ListProp
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Hostgroup(Itemgroup):
@@ -66,19 +67,20 @@ class Hostgroup(Itemgroup):
     Class to manage a group of host
     A Hostgroup is used to manage a group of hosts
     """
-    _id = 1  # zero is always a little bit special... like in database
     my_type = 'hostgroup'
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        '_id':             IntegerProp(default=0, fill_brok=['full_status']),
-        'hostgroup_name': StringProp(fill_brok=['full_status']),
-        'alias':          StringProp(fill_brok=['full_status']),
-        'notes':          StringProp(default='', fill_brok=['full_status']),
-        'notes_url':      StringProp(default='', fill_brok=['full_status']),
-        'action_url':     StringProp(default='', fill_brok=['full_status']),
-        'realm':          StringProp(default='', fill_brok=['full_status'],
-                                     conf_send_preparation=get_obj_name),
+        'uuid':                 StringProp(default='', fill_brok=['full_status']),
+        'hostgroup_name':       StringProp(fill_brok=['full_status']),
+        'alias':                StringProp(fill_brok=['full_status']),
+        'hostgroup_members':    ListProp(default=[], fill_brok=['full_status'],
+                                         merging='join', split_on_coma=True),
+        'notes':                StringProp(default='', fill_brok=['full_status']),
+        'notes_url':            StringProp(default='', fill_brok=['full_status']),
+        'action_url':           StringProp(default='', fill_brok=['full_status']),
+        'realm':                StringProp(default='', fill_brok=['full_status'],
+                                           conf_send_preparation=get_obj_name),
     })
 
     macros = {
@@ -107,25 +109,20 @@ class Hostgroup(Itemgroup):
         """
         if getattr(self, 'members', None) is not None:
             return self.members
-        else:
-            return []
+
+        return []
 
     def get_hostgroup_members(self):
         """
-        Get hostgroup members
+        Get list of groups members of this hostgroup
 
         :return: list of hosts
         :rtype: list
         """
-        # TODO: consistency : a Hostgroup instance should always
-        # have its hostgroup_members attribute defined, even if the empty list
         if hasattr(self, 'hostgroup_members'):
-            # consistency: any Hostgroup instance's hostgroup_members attribute
-            # should already be decoded/parsed:
-            # this should already be in its list form.
-            return [m.strip() for m in self.hostgroup_members.split(',')]
-        else:
-            return []
+            return self.hostgroup_members
+
+        return []
 
     def get_hosts_by_explosion(self, hostgroups):
         """
@@ -170,7 +167,7 @@ class Hostgroups(Itemgroups):
     name_property = "hostgroup_name"  # is used for finding hostgroups
     inner_class = Hostgroup
 
-    def get_members_by_name(self, hgname):
+    def get_members_by_name(self, gname):
         """
         Get all members by name given in parameter
 
@@ -179,7 +176,7 @@ class Hostgroups(Itemgroups):
         :return: list of hosts with this name
         :rtype: list
         """
-        hostgroup = self.find_by_name(hgname)
+        hostgroup = self.find_by_name(gname)
         if hostgroup is None:
             return []
         return hostgroup.get_hosts()
@@ -195,7 +192,7 @@ class Hostgroups(Itemgroups):
         :return: None
         """
         self.linkify_hg_by_hst(hosts)
-        self.linkify_hg_by_realms(realms)
+        self.linkify_hg_by_realms(realms, hosts)
 
     def linkify_hg_by_hst(self, hosts):
         """
@@ -211,15 +208,18 @@ class Hostgroups(Itemgroups):
             # The new member list, in id
             new_mbrs = []
             for mbr in mbrs:
-                mbr = mbr.strip()  # protect with strip at the begining so don't care about spaces
+                mbr = mbr.strip()  # protect with strip at the beginning so don't care about spaces
                 if mbr == '':  # void entry, skip this
                     continue
                 elif mbr == '*':
-                    new_mbrs.extend(hosts)
+                    new_mbrs.extend(hosts.items.keys())
                 else:
                     host = hosts.find_by_name(mbr)
                     if host is not None:
-                        new_mbrs.append(host)
+                        new_mbrs.append(host.uuid)
+                        host.hostgroups.append(hostgroup.uuid)
+                        # and be sure we are uniq in it
+                        host.hostgroups = list(set(host.hostgroups))
                     else:
                         hostgroup.add_string_unknown_member(mbr)
 
@@ -229,13 +229,7 @@ class Hostgroups(Itemgroups):
             # We find the id, we replace the names
             hostgroup.replace_members(new_mbrs)
 
-            # Now register us in our members
-            for host in hostgroup.members:
-                host.hostgroups.append(hostgroup)
-                # and be sure we are uniq in it
-                host.hostgroups = list(set(host.hostgroups))
-
-    def linkify_hg_by_realms(self, realms):
+    def linkify_hg_by_realms(self, realms, hosts):
         """
         More than an explode function, but we need to already
         have members so... Will be really linkify just after
@@ -258,7 +252,7 @@ class Hostgroups(Itemgroups):
 
             realm = realms.find_by_name(hostgroup.realm.strip())
             if realm is not None:
-                hostgroup.realm = realm
+                hostgroup.realm = realm.uuid
                 logger.debug("[hostgroups] %s is in %s realm",
                              hostgroup.get_name(), realm.get_name())
             else:
@@ -268,18 +262,20 @@ class Hostgroups(Itemgroups):
                 hostgroup.realm = None
                 continue
 
-            for host in hostgroup:
-                if host is None:
+            for host_id in hostgroup:
+                if host_id not in hosts:
                     continue
-                if host.realm is None or host.got_default_realm:  # default not hasattr(h, 'realm'):
+                host = hosts[host_id]
+                if host.realm == '' or host.got_default_realm:  # default not hasattr(h, 'realm'):
                     logger.debug("[hostgroups] apply a realm %s to host %s from a hostgroup "
-                                 "rule (%s)", hostgroup.realm.get_name(),
+                                 "rule (%s)", realms[hostgroup.realm].get_name(),
                                  host.get_name(), hostgroup.get_name())
                     host.realm = hostgroup.realm
                 else:
                     if host.realm != hostgroup.realm:
-                        logger.warning("[hostgroups] host %s it not in the same realm than it's "
-                                       "hostgroup %s", host.get_name(), hostgroup.get_name())
+                        msg = "[hostgroups] host %s is not in the same realm " \
+                              "than its hostgroup %s" % (host.get_name(), hostgroup.get_name())
+                        hostgroup.configuration_warnings.append(msg)
 
     def add_member(self, hname, hgname):
         """
@@ -306,7 +302,7 @@ class Hostgroups(Itemgroups):
 
         :return: None
         """
-        # We do not want a same hg to be explode again and again
+        # We do not want a same hostgroup to be exploded again and again
         # so we tag it
         for tmp_hg in self.items.values():
             tmp_hg.already_explode = False

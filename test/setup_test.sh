@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -28,7 +28,7 @@ pip install --upgrade pip
 
 # install prog AND tests requirements :
 pip install -e .
-pip install -r test/requirements.txt
+pip install --upgrade -r test/requirements.txt
 
 pyversion=$(python -c "import sys; print(''.join(map(str, sys.version_info[:2])))")
 if test -e "test/requirements.py${pyversion}.txt"

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -51,10 +51,14 @@
 """
 import time
 import calendar
+import logging
 import re
+from datetime import datetime, timedelta
 
 from alignak.util import get_sec_from_morning, get_day, get_start_of_day, get_end_of_day
-from alignak.log import logger
+from alignak.alignakobject import AlignakObject
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 def find_day_by_weekday_offset(year, month, weekday, offset):
@@ -92,7 +96,7 @@ def find_day_by_weekday_offset(year, month, weekday, offset):
             if nb_found == offset:
                 return cal[i][weekday]
         return None
-    except Exception:
+    except KeyError:
         return None
 
 
@@ -114,27 +118,51 @@ def find_day_by_offset(year, month, offset):
     (_, days_in_month) = calendar.monthrange(year, month)
     if offset >= 0:
         return min(offset, days_in_month)
-    else:
-        return max(1, days_in_month + offset + 1)
+
+    return max(1, days_in_month + offset + 1)
 
 
-class Timerange(object):
+class Timerange(AlignakObject):
     """Timerange class provides parsing facilities for time range declaration
 
     """
 
-    def __init__(self, entry):
+    def __init__(self, entry=None, params=None, parsing=True):
         """Entry is like 00:00-24:00
 
         :param entry: time range entry
         :return: Timerange instance
         :rtype: object
         """
-        pattern = r'(\d\d):(\d\d)-(\d\d):(\d\d)'
-        matches = re.match(pattern, entry)
-        self.is_valid = matches is not None
-        if self.is_valid:
-            self.hstart, self.mstart, self.hend, self.mend = [int(g) for g in matches.groups()]
+        if not parsing:
+            super(Timerange, self).__init__(params, parsing=parsing)
+            return
+        if entry is not None:
+            pattern = r'(\d\d):(\d\d)-(\d\d):(\d\d)'
+            matches = re.match(pattern, entry)
+            self.is_valid = matches is not None
+            if self.is_valid:
+                self.hstart, self.mstart, self.hend, self.mend = [int(g) for g in matches.groups()]
+
+        else:
+            self.hstart = params["hstart"]
+            self.mstart = params["mstart"]
+            self.hend = params["hend"]
+            self.mend = params["mend"]
+            self.is_valid = params["is_valid"]
+
+    def serialize(self):
+        """This function serialize into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
+
+        Here we directly return all attributes
+
+        :return: json representation of a Timerange
+        :rtype: dict
+        """
+        return {"hstart": self.hstart, "mstart": self.mstart,
+                "hend": self.hend, "mend": self.mend,
+                "is_valid": self.is_valid}
 
     def __str__(self):
         return str(self.__dict__)
@@ -181,7 +209,7 @@ class Timerange(object):
         return self.is_valid
 
 
-class AbstractDaterange(object):
+class AbstractDaterange(AlignakObject):
     """AbstractDaterange class provides functions to deal with a range of dates
     It is subclassed for more granularity (weekday, month ...)
     """
@@ -258,7 +286,7 @@ class AbstractDaterange(object):
         """
         return Daterange.rev_weekdays[weekday_id]
 
-    def get_start_and_end_time(self, ref=None):
+    def get_start_and_end_time(self, ref=None):  # pylint: disable=W0613,R0201
         """Generic function to get start time and end time
 
         :param ref: time in seconds
@@ -276,13 +304,9 @@ class AbstractDaterange(object):
         :return: True if one of the timerange is valid for t, False otherwise
         :rtype: bool
         """
-        # print "****Look for time valid for", time.asctime(time.localtime(t))
         if self.is_time_day_valid(timestamp):
-            # print "is time day valid"
             for timerange in self.timeranges:
-                # print tr, "is valid?", tr.is_time_valid(t)
                 if timerange.is_time_valid(timestamp):
-                    # print "return True"
                     return True
         return False
 
@@ -322,7 +346,7 @@ class AbstractDaterange(object):
         return t_day_epoch + tr_mins
 
     def is_time_day_valid(self, timestamp):
-        """Check if t is within start time and end time of the DateRange
+        """Check if it is within start time and end time of the DateRange
 
         :param timestamp: time to check
         :type timestamp: int
@@ -330,10 +354,7 @@ class AbstractDaterange(object):
         :rtype: bool
         """
         (start_time, end_time) = self.get_start_and_end_time(timestamp)
-        if start_time <= timestamp <= end_time:
-            return True
-        else:
-            return False
+        return start_time <= timestamp <= end_time
 
     def is_time_day_invalid(self, timestamp):
         """Check if t is out of start time and end time of the DateRange
@@ -347,8 +368,8 @@ class AbstractDaterange(object):
         (start_time, end_time) = self.get_start_and_end_time(timestamp)
         if start_time <= timestamp <= end_time:
             return False
-        else:
-            return True
+
+        return True
 
     def get_next_future_timerange_valid(self, timestamp):
         """Get the next valid timerange (next timerange start in timeranges attribute)
@@ -358,7 +379,6 @@ class AbstractDaterange(object):
         :return: next time when a timerange is valid
         :rtype: None | int
         """
-        # print "Look for get_next_future_timerange_valid for t", t, time.asctime(time.localtime(t))
         sec_from_morning = get_sec_from_morning(timestamp)
         starts = []
         for timerange in self.timeranges:
@@ -367,8 +387,8 @@ class AbstractDaterange(object):
                 starts.append(tr_start)
         if starts != []:
             return min(starts)
-        else:
-            return None
+
+        return None
 
     def get_next_future_timerange_invalid(self, timestamp):
         """Get next invalid time for timeranges
@@ -377,28 +397,20 @@ class AbstractDaterange(object):
         :type timestamp: int
         :return: next time when a timerange is not valid
         :rtype: None | int
-        TODO: Looks like this function is buggy, start time should not be
-        included in returned values
         """
-        # print 'Call for get_next_future_timerange_invalid from ', time.asctime(time.localtime(t))
         sec_from_morning = get_sec_from_morning(timestamp)
-        # print 'sec from morning', sec_from_morning
         ends = []
         for timerange in self.timeranges:
-            tr_start = timerange.hstart * 3600 + timerange.mstart * 60
-            if tr_start >= sec_from_morning:
-                ends.append(tr_start)
             tr_end = timerange.hend * 3600 + timerange.mend * 60
             if tr_end >= sec_from_morning:
+                # Remove the last second of the day for 00->24h"
+                if tr_end == 86400:
+                    tr_end = 86399
                 ends.append(tr_end)
-        # print "Ends:", ends
-        # Remove the last second of the day for 00->24h"
-        if 86400 in ends:
-            ends.remove(86400)
         if ends != []:
             return min(ends)
-        else:
-            return None
+
+        return None
 
     def get_next_valid_day(self, timestamp):
         """Get next valid day for timerange
@@ -410,9 +422,9 @@ class AbstractDaterange(object):
         """
         if self.get_next_future_timerange_valid(timestamp) is None:
             # this day is finish, we check for next period
-            (start_time, end_time) = self.get_start_and_end_time(get_day(timestamp) + 86400)
+            (start_time, _) = self.get_start_and_end_time(get_day(timestamp) + 86400)
         else:
-            (start_time, end_time) = self.get_start_and_end_time(timestamp)
+            (start_time, _) = self.get_start_and_end_time(timestamp)
 
         if timestamp <= start_time:
             return get_day(start_time)
@@ -429,24 +441,18 @@ class AbstractDaterange(object):
         :return: timestamp of the next valid time (LOCAL TIME)
         :rtype: int | None
         """
-        # print "\tDR Get next valid from:", time.asctime(time.localtime(t))
-        # print "DR Get next valid from:", t
         if self.is_time_valid(timestamp):
             return timestamp
 
-        # print "DR Get next valid from:", time.asctime(time.localtime(t))
-        # First we search fot the day of t
+        # First we search for the day of t
         t_day = self.get_next_valid_day(timestamp)
-
-        # print "DR: T next valid day", time.asctime(time.localtime(t_day))
 
         # We search for the min of all tr.start > sec_from_morning
         # if it's the next day, use a start of the day search for timerange
         if timestamp < t_day:
             sec_from_morning = self.get_next_future_timerange_valid(t_day)
-        else:  # t is in this day, so look from t (can be in the evening or so)
+        else:  # it is in this day, so look from t (can be in the evening or so)
             sec_from_morning = self.get_next_future_timerange_valid(timestamp)
-        # print "DR: sec from morning", sec_from_morning
 
         if sec_from_morning is not None:
             if t_day is not None and sec_from_morning is not None:
@@ -459,11 +465,12 @@ class AbstractDaterange(object):
         sec_from_morning = self.get_next_future_timerange_valid(t_day2)
         if t_day2 is not None and sec_from_morning is not None:
             return t_day2 + sec_from_morning
-        else:
-            # I'm not find any valid time
-            return None
+
+        # I did not found any valid time
+        return None
 
     def get_next_invalid_day(self, timestamp):
+        # pylint: disable=no-else-return
         """Get next day where timerange is not active
 
         :param timestamp: time we compute from
@@ -471,43 +478,31 @@ class AbstractDaterange(object):
         :return: timestamp of the next invalid day (midnight) in LOCAL time.
         :rtype: int | None
         """
-        # print "Look in", self.__dict__
-        # print 'DR: get_next_invalid_day for', time.asctime(time.localtime(t))
         if self.is_time_day_invalid(timestamp):
-            # print "EARLY RETURN"
             return timestamp
 
         next_future_timerange_invalid = self.get_next_future_timerange_invalid(timestamp)
-        # print "next_future_timerange_invalid:", next_future_timerange_invalid
 
         # If today there is no more unavailable timerange, search the next day
         if next_future_timerange_invalid is None:
-            # print 'DR: get_next_future_timerange_invalid is None'
             # this day is finish, we check for next period
             (start_time, end_time) = self.get_start_and_end_time(get_day(timestamp))
         else:
-            # print 'DR: get_next_future_timerange_invalid is',
-            # print time.asctime(time.localtime(next_future_timerange_invalid))
             (start_time, end_time) = self.get_start_and_end_time(timestamp)
 
         # (start_time, end_time) = self.get_start_and_end_time(t)
 
-        # print "START", time.asctime(time.localtime(start_time)),
-        # print "END", time.asctime(time.localtime(end_time))
         # The next invalid day can be t day if there a possible
         # invalid time range (timerange is not 00->24
         if next_future_timerange_invalid is not None:
             if start_time <= timestamp <= end_time:
-                # print "Early Return next invalid day:", time.asctime(time.localtime(get_day(t)))
                 return get_day(timestamp)
             if start_time >= timestamp:
-                # print "start_time >= t:", time.asctime(time.localtime(get_day(start_time)))
                 return get_day(start_time)
         else:
             # Else, there is no possibility than in our start_time<->end_time we got
             # any invalid time (full period out). So it's end_time+1 sec (tomorrow of end_time)
             return get_day(end_time + 1)
-
         return None
 
     def get_next_invalid_time_from_t(self, timestamp):
@@ -521,24 +516,21 @@ class AbstractDaterange(object):
         if not self.is_time_valid(timestamp):
             return timestamp
 
-        # First we search fot the day of t
+        # First we search for the day of time range
         t_day = self.get_next_invalid_day(timestamp)
-        # print "FUCK NEXT DAY", time.asctime(time.localtime(t_day))
 
         # We search for the min of all tr.start > sec_from_morning
         # if it's the next day, use a start of the day search for timerange
         if timestamp < t_day:
             sec_from_morning = self.get_next_future_timerange_invalid(t_day)
-        else:  # t is in this day, so look from t (can be in the evening or so)
+        else:  # it is in this day, so look from t (can be in the evening or so)
             sec_from_morning = self.get_next_future_timerange_invalid(timestamp)
-        # print "DR: sec from morning", sec_from_morning
 
         # tr can't be valid, or it will be return at the beginning
         # sec_from_morning = self.get_next_future_timerange_invalid(t)
 
         # Ok we've got a next invalid day and a invalid possibility in
         # timerange, so the next invalid is this day+sec_from_morning
-        # print "T_day", t_day, "Sec from morning", sec_from_morning
         if t_day is not None and sec_from_morning is not None:
             return t_day + sec_from_morning + 1
 
@@ -557,9 +549,9 @@ class AbstractDaterange(object):
 
         if t_day2 is not None and sec_from_morning is None:
             return t_day2
-        else:
-            # I'm not find any valid time
-            return None
+
+        # I did not found any valid time
+        return None
 
 
 class Daterange(AbstractDaterange):
@@ -579,8 +571,7 @@ class Daterange(AbstractDaterange):
     rev_weekdays = dict((v, k) for k, v in weekdays.items())
     rev_months = dict((v, k) for k, v in months.items())
 
-    def __init__(self, syear, smon, smday, swday, swday_offset,
-                 eyear, emon, emday, ewday, ewday_offset, skip_interval, other):
+    def __init__(self, params, parsing=True):
         """
 
         :param syear: start year
@@ -609,23 +600,44 @@ class Daterange(AbstractDaterange):
         :type other:
         :return: None
         """
+        if not parsing:
+            super(Daterange, self).__init__(params, parsing=parsing)
+            return
         super(Daterange, self).__init__()
-        self.syear = int(syear)
-        self.smon = int(smon)
-        self.smday = int(smday)
-        self.swday = int(swday)
-        self.swday_offset = int(swday_offset)
-        self.eyear = int(eyear)
-        self.emon = int(emon)
-        self.emday = int(emday)
-        self.ewday = int(ewday)
-        self.ewday_offset = int(ewday_offset)
-        self.skip_interval = int(skip_interval)
-        self.other = other
-        self.timeranges = []
+        self.syear = int(params['syear'])
+        self.smon = int(params['smon'])
+        self.smday = int(params['smday'])
+        self.swday = int(params['swday'])
+        self.swday_offset = int(params['swday_offset'])
+        self.eyear = int(params['eyear'])
+        self.emon = int(params['emon'])
+        self.emday = int(params['emday'])
+        self.ewday = int(params['ewday'])
+        self.ewday_offset = int(params['ewday_offset'])
+        self.skip_interval = int(params['skip_interval'])
+        self.other = params['other']
+        if 'timeranges' in params:
+            self.timeranges = [Timerange(params=t) for t in params['timeranges']]
+        else:
+            self.timeranges = []
+            for timeinterval in params['other'].split(','):
+                self.timeranges.append(Timerange(timeinterval.strip()))
 
-        for timeinterval in other.split(','):
-            self.timeranges.append(Timerange(timeinterval.strip()))
+    def serialize(self):
+        """This function serialize into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
+
+        Here we directly return all attributes
+
+        :return: json representation of a Daterange
+        :rtype: dict
+        """
+        return {'syear': self.syear, 'smon': self.smon, 'smday': self.smday,
+                'swday': self.swday, 'swday_offset': self.swday_offset,
+                'eyear': self.eyear, 'emon': self.emon, 'emday': self.emday,
+                'ewday': self.ewday, 'ewday_offset': self.ewday_offset,
+                'skip_interval': self.skip_interval, 'other': self.other,
+                'timeranges': [t.serialize() for t in self.timeranges]}
 
 
 class CalendarDaterange(Daterange):
@@ -649,7 +661,7 @@ class StandardDaterange(AbstractDaterange):
     """StandardDaterange is for standard entry (weekday - weekday)
 
     """
-    def __init__(self, day, other):
+    def __init__(self, params, parsing=True):
         """
         Init of StandardDaterange
 
@@ -659,12 +671,32 @@ class StandardDaterange(AbstractDaterange):
         :type other: str
         :return: None
         """
-        self.other = other
-        self.timeranges = []
+        if not parsing:
+            super(StandardDaterange, self).__init__(params, parsing)
+            return
 
-        for timeinterval in other.split(','):
-            self.timeranges.append(Timerange(timeinterval.strip()))
-        self.day = day
+        self.other = params['other']
+
+        if 'timeranges' in params:
+            self.timeranges = [Timerange(params=t) for t in params['timeranges']]
+        else:
+            self.timeranges = []
+            for timeinterval in params['other'].split(','):
+                self.timeranges.append(Timerange(timeinterval.strip()))
+
+        self.day = params['day']
+
+    def serialize(self):
+        """This function serialize into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
+
+        Here we directly return all attributes
+
+        :return: json representation of a Daterange
+        :rtype: dict
+        """
+        return {'day': self.day, 'other': self.other,
+                'timeranges': [t.serialize() for t in self.timeranges]}
 
     def is_correct(self):
         """Check if the Daterange is correct : weekdays are valid
@@ -690,14 +722,14 @@ class StandardDaterange(AbstractDaterange):
         now = time.localtime(ref)
         self.syear = now.tm_year
         self.month = now.tm_mon
-        # month_start_id = now.tm_mon
-        # month_start = Daterange.get_month_by_id(month_start_id)
         self.wday = now.tm_wday
         day_id = Daterange.get_weekday_id(self.day)
         today_morning = get_start_of_day(now.tm_year, now.tm_mon, now.tm_mday)
         tonight = get_end_of_day(now.tm_year, now.tm_mon, now.tm_mday)
         day_diff = (day_id - now.tm_wday) % 7
-        return (today_morning + day_diff * 86400, tonight + day_diff * 86400)
+        morning = datetime.fromtimestamp(today_morning) + timedelta(days=day_diff)
+        night = datetime.fromtimestamp(tonight) + timedelta(days=day_diff)
+        return (float(morning.strftime("%s")), float(night.strftime("%s")))
 
 
 class MonthWeekDayDaterange(Daterange):

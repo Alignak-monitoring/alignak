@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -48,6 +48,14 @@ Alignak.
 
 
 import sys
+from alignak.notification import Notification
+from alignak.eventhandler import EventHandler
+from alignak.check import Check
+from alignak.downtime import Downtime
+from alignak.contactdowntime import ContactDowntime
+from alignak.comment import Comment
+from alignak.objects.module import Module
+from ._deprecated_VERSION import DeprecatedAlignakBin
 
 
 # Make sure people are using Python 2.6 or higher
@@ -56,10 +64,6 @@ if sys.version_info < (2, 6):
     sys.exit("Alignak requires as a minimum Python 2.6.x, sorry")
 elif sys.version_info >= (3,):
     sys.exit("Alignak is not yet compatible with Python 3.x, sorry")
-
-
-from ._deprecated_VERSION import DeprecatedAlignakBin
-
 
 # in order to have available any attribute/value assigned in this module namespace,
 # this MUST be the last statement of this module:

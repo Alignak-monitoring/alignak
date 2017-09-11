@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -52,12 +52,13 @@ no use in running part
 
 
 from alignak.objects.item import Item, Items
+from alignak.objects.genericextinfo import GenericExtInfo
 
 from alignak.autoslots import AutoSlots
 from alignak.property import StringProp
 
 
-class ServiceExtInfo(Item):
+class ServiceExtInfo(GenericExtInfo):
     """ServiceExtInfo class is made to handle some parameters of SchedulingItem::
 
     * notes
@@ -72,7 +73,6 @@ class ServiceExtInfo(Item):
     # running_properties names
     __metaclass__ = AutoSlots
 
-    _id = 1  # zero is reserved for host (primary node for parents)
     my_type = 'serviceextinfo'
 
     # properties defined by configuration
@@ -89,73 +89,28 @@ class ServiceExtInfo(Item):
     #  the major times it will be to flatten the data (like realm_name instead of the realm object).
     properties = Item.properties.copy()
     properties.update({
-        'host_name':            StringProp(),
-        'service_description':  StringProp(),
-        'notes':                StringProp(default=''),
-        'notes_url':            StringProp(default=''),
-        'icon_image':           StringProp(default=''),
-        'icon_image_alt':       StringProp(default=''),
+        'host_name':
+            StringProp(),
+        'service_description':
+            StringProp(),
+        'notes':
+            StringProp(default=''),
+        'notes_url':
+            StringProp(default=''),
+        'icon_image':
+            StringProp(default=''),
+        'icon_image_alt':
+            StringProp(default=''),
     })
 
     # Hosts macros and prop that give the information
     # the prop can be callable or not
     macros = {
-        'SERVICEDESC':            'service_description',
-        'SERVICEACTIONURL':       'action_url',
-        'SERVICENOTESURL':        'notes_url',
-        'SERVICENOTES':           'notes'
+        'SERVICEDESC': 'service_description',
+        'SERVICEACTIONURL': 'action_url',
+        'SERVICENOTESURL': 'notes_url',
+        'SERVICENOTES': 'notes'
     }
-
-#######
-#                   __ _                       _   _
-#                  / _(_)                     | | (_)
-#   ___ ___  _ __ | |_ _  __ _ _   _ _ __ __ _| |_ _  ___  _ __
-#  / __/ _ \| '_ \|  _| |/ _` | | | | '__/ _` | __| |/ _ \| '_ \
-# | (_| (_) | | | | | | | (_| | |_| | | | (_| | |_| | (_) | | | |
-#  \___\___/|_| |_|_| |_|\__, |\__,_|_|  \__,_|\__|_|\___/|_| |_|
-#                         __/ |
-#                        |___/
-######
-
-    def is_correct(self):
-        """
-        Check if this object is correct
-
-        :return: True, always.
-        :rtype: bool
-        TODO: Clean this function
-        """
-        state = True
-        cls = self.__class__
-
-        return state
-
-    def get_name(self):
-        """Accessor to host_name attribute or name if first not defined
-
-        :return: host name (no sense)
-        :rtype: str
-        TODO: Clean this function
-        """
-        if not self.is_tpl():
-            try:
-                return self.host_name
-            except AttributeError:  # outch, no hostname
-                return 'UNNAMEDHOST'
-        else:
-            try:
-                return self.name
-            except AttributeError:  # outch, no name for this template
-                return 'UNNAMEDHOSTTEMPLATE'
-
-    def get_full_name(self):
-        """Get the full name for debugging (host_name)
-
-        :return: service extinfo  host name
-        :rtype: str
-        TODO: Remove this function, get_name is doing it
-        """
-        return self.host_name
 
 
 class ServicesExtInfo(Items):
@@ -182,10 +137,11 @@ class ServicesExtInfo(Items):
                 serv = services.find_srv_by_name_and_hostname(host_name,
                                                               extinfo.service_description)
                 if serv is not None:
-                    # FUUUUUUUUUUsion
+                    # Fusion
                     self.merge_extinfo(serv, extinfo)
 
-    def merge_extinfo(self, service, extinfo):
+    @staticmethod
+    def merge_extinfo(service, extinfo):
         """Merge extended host information into a service
 
         :param service: the service to edit

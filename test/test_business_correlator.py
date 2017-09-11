@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -49,1065 +49,1964 @@
 # This file is used to test reading and processing of config files
 #
 
-import re
-from alignak_test import *
+import time
+from alignak.dependencynode import DependencyNode
+
+from alignak_test import AlignakTest, unittest
 
 
-class TestBusinesscorrel(AlignakTest):
+class TestBusinessCorrelator(AlignakTest):
 
     def setUp(self):
-        self.setup_with_file(['etc/alignak_business_correlator.cfg'])
+        self.setup_with_file('cfg/cfg_business_correlator.cfg')
+        assert self.conf_is_correct
+        self._sched = self.schedulers['scheduler-master'].sched
 
-    # We will try a simple bd1 OR db2
-    def test_simple_or_business_correlator(self):
-        #
-        # Config is not correct because of a wrong relative path
-        # in the main config file
-        #
-        print "Get the hosts and services"
+    def launch_internal_check(self, svc_br):
+        """ Launch an internal check for the business rule service provided """
+        # Launch an internal check
         now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
-        host.checks_in_progress = []
-        host.act_depend_of = []  # ignore the router
-        router = self.sched.hosts.find_by_name("test_router_0")
-        router.checks_in_progress = []
-        router.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-        svc.checks_in_progress = []
-        svc.act_depend_of = []  # no hostchecks on critical checkresults
+        self._sched.add(svc_br.launch_check(now - 1, self._sched.hosts, self._sched.services,
+                                            self._sched.timeperiods, self._sched.macromodulations,
+                                            self._sched.checkmodulations, self._sched.checks))
+        c = svc_br.actions[0]
+        assert True == c.internal
+        assert c.is_launchable(now)
 
-        svc_bd1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
-        self.assertEqual(False, svc_bd1.got_business_rule)
-        self.assertIs(None, svc_bd1.business_rule)
-        svc_bd2 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "db2")
-        self.assertEqual(False, svc_bd2.got_business_rule)
-        self.assertIs(None, svc_bd2.business_rule)
-        svc_cor = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Simple_Or")
-        self.assertEqual(True, svc_cor.got_business_rule)
-        self.assertIsNot(svc_cor.business_rule, None)
-        bp_rule = svc_cor.business_rule
-        self.assertEqual('|', bp_rule.operand)
+        # ask the scheduler to launch this check
+        # and ask 2 loops: one to launch the check
+        # and another to get the result
+        self.scheduler_loop(2, [])
+
+        # We should not have the check anymore
+        assert 0 == len(svc_br.actions)
+
+    def test_br_creation(self):
+        """ BR - check creation of a simple services OR (db1 OR db2)
+
+        :return:
+        """
+        self.print_header()
+
+        # Get the hosts
+        host = self._sched.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore its parent
+        router = self._sched.hosts.find_by_name("test_router_0")
+        router.checks_in_progress = []
+        router.act_depend_of = []  # ignore its parent
+
+        # Get the services
+        svc_db1 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
+        # Not a BR, a simple service
+        assert not svc_db1.got_business_rule
+        assert svc_db1.business_rule is None
+
+        svc_db2 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db2")
+        # Not a BR, a simple service
+        assert not svc_db2.got_business_rule
+        assert svc_db2.business_rule is None
+
+        svc_cor = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "Simple_Or")
+        svc_cor.act_depend_of = []  # no host checks on critical check results
+        # Is a Business Rule, not a simple service...
+        assert svc_cor.got_business_rule
+        assert svc_cor.business_rule is not None
+
+        svc_cor2 = self.arbiter.conf.services.find_srv_by_name_and_hostname("test_host_0", "Simple_Or")
+        # Is a Business Rule, not a simple service...
+        assert svc_cor2.got_business_rule
+        assert svc_cor2.business_rule is not None
 
         # We check for good parent/childs links
-        # So svc_cor should be a son of svc_bd1 and svc_bd2
-        # and bd1 and bd2 should be parents of svc_cor
-        self.assertIn(svc_cor, svc_bd1.child_dependencies)
-        self.assertIn(svc_cor, svc_bd2.child_dependencies)
-        self.assertIn(svc_bd1, svc_cor.parent_dependencies)
-        self.assertIn(svc_bd2, svc_cor.parent_dependencies)
+        # So svc_cor should be a son of svc_db1 and svc_db2
+        # and db1 and db2 should be parents of svc_cor
+        assert svc_cor.uuid in svc_db1.child_dependencies
+        assert svc_cor.uuid in svc_db2.child_dependencies
+        assert svc_db1.uuid in svc_cor.parent_dependencies
+        assert svc_db2.uuid in svc_cor.parent_dependencies
 
-        sons = bp_rule.sons
-        print "Sons,", sons
-        # We've got 2 sons, 2 services nodes
-        self.assertEqual(2, len(sons))
-        self.assertEqual('service', sons[0].operand)
-        self.assertEqual(svc_bd1, sons[0].sons[0])
-        self.assertEqual('service', sons[1].operand)
-        self.assertEqual(svc_bd2, sons[1].sons[0])
+        # Get the BR associated with svc_cor
+        # The BR command is: bp_rule!test_host_0,db1|test_host_0,db2
+        bp_rule = svc_cor.business_rule
+        assert isinstance(bp_rule, DependencyNode)
+        print("BR scheduler: %s" % bp_rule)
 
-        # Now state working on the states
-        self.scheduler_loop(1, [[svc_bd2, 0, 'OK | value1=1 value2=2'], [svc_bd1, 0, 'OK | rtt=10']])
-        self.assertEqual('OK', svc_bd1.state)
-        self.assertEqual('HARD', svc_bd1.state_type)
-        self.assertEqual('OK', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
+        # Get the BR associated with svc_cor
+        # The BR command is: bp_rule!test_host_0,db1|test_host_0,db2
+        bp_rule_arbiter = svc_cor2.business_rule
+        assert isinstance(bp_rule_arbiter, DependencyNode)
+        print("BR arbiter: %s" % bp_rule_arbiter)
 
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
+        # Get the BR elements list
+        assert isinstance(bp_rule.list_all_elements(), list)
+        assert len(bp_rule.list_all_elements()) == 2
 
-        # Now we set the bd1 as soft/CRITICAL
-        self.scheduler_loop(1, [[svc_bd1, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd1.state)
-        self.assertEqual('SOFT', svc_bd1.state_type)
-        self.assertEqual(0, svc_bd1.last_hard_state_id)
+        assert bp_rule.operand == '|'
+        assert bp_rule.of_values == ('2', '2', '2')
+        assert bp_rule.not_value == False
+        assert bp_rule.is_of_mul == False
+        assert bp_rule.sons is not None
+
+        # We've got 2 sons for the BR which are 2 dependency nodes
+        # Each dependency node has a son which is the service
+        assert 2 == len(bp_rule.sons)
+
+        # First son is linked to a service and we have its uuid
+        son = bp_rule.sons[0]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_db1.uuid
+
+        # Second son is also a service
+        son = bp_rule.sons[1]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_db2.uuid
+
+    def test_simple_or_business_correlator(self):
+        """ BR - try a simple services OR (db1 OR db2)
+
+        bp_rule!test_host_0,db1|test_host_0,db2
+
+        :return:
+        """
+        self.print_header()
+        now = time.time()
+
+        # Get the hosts
+        host = self._sched.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore its parent
+        router = self._sched.hosts.find_by_name("test_router_0")
+        router.checks_in_progress = []
+        router.act_depend_of = []  # ignore its parent
+
+        # Get the services
+        svc_db1 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
+        svc_db1.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_db1.got_business_rule
+        assert svc_db1.business_rule is None
+
+        svc_db2 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db2")
+        svc_db2.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_db2.got_business_rule
+        assert svc_db2.business_rule is None
+
+        svc_cor = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "Simple_Or")
+        svc_cor.act_depend_of = []  # no host checks on critical check results
+        # Is a Business Rule, not a simple service...
+        assert svc_cor.got_business_rule
+        assert svc_cor.business_rule is not None
+
+        # We check for good parent/childs links
+        # So svc_cor should be a son of svc_db1 and svc_db2
+        # and db1 and db2 should be parents of svc_cor
+        assert svc_cor.uuid in svc_db1.child_dependencies
+        assert svc_cor.uuid in svc_db2.child_dependencies
+        assert svc_db1.uuid in svc_cor.parent_dependencies
+        assert svc_db2.uuid in svc_cor.parent_dependencies
+
+        # Get the BR associated with svc_cor
+        bp_rule = svc_cor.business_rule
+        assert bp_rule.operand == '|'
+        assert bp_rule.of_values == ('2', '2', '2')
+        assert bp_rule.not_value == False
+        assert bp_rule.is_of_mul == False
+        assert bp_rule.sons is not None
+        assert 2 == len(bp_rule.sons)
+
+        # First son is linked to a service and we have its uuid
+        son = bp_rule.sons[0]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_db1.uuid
+
+        # Second son is also a service
+        son = bp_rule.sons[1]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_db2.uuid
+
+        # Now start working on the states
+        self.scheduler_loop(1, [
+            [svc_db1, 0, 'OK | rtt=10'],
+            [svc_db2, 0, 'OK | value1=1 value2=2']
+        ])
+        assert 'OK' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 'OK' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+
+        # -----
+        # OK or OK -> OK
+        # -----
+        # When all is ok, the BP rule state is 0
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # Now we set the db1 as soft/CRITICAL
+        self.scheduler_loop(1, [
+            [svc_db1, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db1.state
+        assert 'SOFT' == svc_db1.state_type
+        assert 0 == svc_db1.last_hard_state_id
+
+        # The business rule must still be 0 - only hard states are considered
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # Now we get db1 CRITICAL/HARD
+        self.scheduler_loop(1, [
+            [svc_db1, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 2 == svc_db1.last_hard_state_id
+
+        # -----
+        # CRITICAL or OK -> OK
+        # -----
+        # The rule must still be a 0 (or inside)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # Now we also set db2 as CRITICAL/HARD... byebye 0 :)
+        self.scheduler_loop(2, [
+            [svc_db2, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 2 == svc_db2.last_hard_state_id
+
+        # -----
+        # CRITICAL or CRITICAL -> CRITICAL
+        # -----
+        # And now the state of the rule must be 2
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
+
+        # And If we set db2 to WARNING?
+        self.scheduler_loop(2, [
+            [svc_db2, 1, 'WARNING | value1=1 value2=2']
+        ])
+        assert 'WARNING' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 1 == svc_db2.last_hard_state_id
+
+        # -----
+        # CRITICAL or WARNING -> WARNING
+        # -----
+        # Must be WARNING (better no 0 value)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 1 == state
+
+        # We acknowledge db2
+        cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
+        self._sched.run_external_command(cmd)
+        assert True == svc_db2.problem_has_been_acknowledged
+
+        # -----
+        # CRITICAL or ACK(WARNING) -> OK
+        # -----
+        # Must be OK (ACK(WARNING) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # We unacknowledge then downtime db2
+        duration = 300
+        cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
+        self._sched.run_external_command(cmd)
+        assert False == svc_db2.problem_has_been_acknowledged
+
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc_cor, None, None]])
+        assert svc_db2.scheduled_downtime_depth > 0
+        assert True == svc_db2.in_scheduled_downtime
+
+        # -----
+        # CRITICAL or DOWNTIME(WARNING) -> OK
+        # -----
+        # Must be OK (DOWNTIME(WARNING) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+    def test_simple_or_business_correlator_with_schedule(self):
+        """ BR - try a simple services OR (db1 OR db2) with internal checks
+
+        bp_rule!test_host_0,db1|test_host_0,db2
+
+        :return:
+        """
+        self.print_header()
+        now = time.time()
+
+        # Get the hosts
+        host = self._sched.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore its parent
+        router = self._sched.hosts.find_by_name("test_router_0")
+        router.checks_in_progress = []
+        router.act_depend_of = []  # ignore its parent
+
+        # Get the services
+        svc_db1 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
+        svc_db1.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_db1.got_business_rule
+        assert svc_db1.business_rule is None
+
+        svc_db2 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db2")
+        svc_db2.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_db2.got_business_rule
+        assert svc_db2.business_rule is None
+
+        svc_cor = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "Simple_Or")
+        svc_cor.act_depend_of = []  # no host checks on critical check results
+        # Is a Business Rule, not a simple service...
+        assert svc_cor.got_business_rule
+        assert svc_cor.business_rule is not None
+
+        # We check for good parent/childs links
+        # So svc_cor should be a son of svc_db1 and svc_db2
+        # and db1 and db2 should be parents of svc_cor
+        assert svc_cor.uuid in svc_db1.child_dependencies
+        assert svc_cor.uuid in svc_db2.child_dependencies
+        assert svc_db1.uuid in svc_cor.parent_dependencies
+        assert svc_db2.uuid in svc_cor.parent_dependencies
+
+        # Get the BR associated with svc_cor
+        bp_rule = svc_cor.business_rule
+        assert bp_rule.operand == '|'
+        assert bp_rule.of_values == ('2', '2', '2')
+        assert bp_rule.not_value == False
+        assert bp_rule.is_of_mul == False
+        assert bp_rule.sons is not None
+        assert 2 == len(bp_rule.sons)
+
+        # First son is linked to a service and we have its uuid
+        son = bp_rule.sons[0]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_db1.uuid
+
+        # Second son is also a service
+        son = bp_rule.sons[1]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_db2.uuid
+
+        # Now start working on the states
+        self.scheduler_loop(1, [
+            [svc_db1, 0, 'OK | rtt=10'],
+            [svc_db2, 0, 'OK | value1=1 value2=2']
+        ])
+        assert 'OK' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 'OK' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+
+        # -----
+        # OK or OK -> OK
+        # -----
+        # When all is ok, the BP rule state is 0
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # Launch an internal check
+        self.launch_internal_check(svc_cor)
+
+        # What is the svc_cor state now?
+        assert 'OK' == svc_cor.state
+        assert 'HARD' == svc_cor.state_type
+        assert 0 == svc_cor.last_hard_state_id
+
+        # Now we set the db1 as soft/CRITICAL
+        self.scheduler_loop(1, [
+            [svc_db1, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db1.state
+        assert 'SOFT' == svc_db1.state_type
+        assert 0 == svc_db1.last_hard_state_id
 
         # The business rule must still be 0
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
 
-        # Now we get bd1 CRITICAL/HARD
-        self.scheduler_loop(1, [[svc_bd1, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd1.state)
-        self.assertEqual('HARD', svc_bd1.state_type)
-        self.assertEqual(2, svc_bd1.last_hard_state_id)
+        # Launch an internal check
+        self.launch_internal_check(svc_cor)
+
+        # What is the svc_cor state now?
+        assert 'OK' == svc_cor.state
+        assert 'HARD' == svc_cor.state_type
+        assert 0 == svc_cor.last_hard_state_id
+
+        # Now we get db1 CRITICAL/HARD
+        self.scheduler_loop(1, [
+            [svc_db1, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 2 == svc_db1.last_hard_state_id
 
         # The rule must still be a 0 (or inside)
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
 
-        # Now we also set bd2 as CRITICAL/HARD... byebye 0 :)
-        self.scheduler_loop(2, [[svc_bd2, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
-        self.assertEqual(2, svc_bd2.last_hard_state_id)
+        # Launch an internal check
+        self.launch_internal_check(svc_cor)
+
+        # What is the svc_cor state now?
+        assert 'OK' == svc_cor.state
+        assert 'HARD' == svc_cor.state_type
+        assert 0 == svc_cor.last_hard_state_id
+
+        # Now we also set db2 as CRITICAL/HARD... byebye 0 :)
+        self.scheduler_loop(2, [
+            [svc_db2, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 2 == svc_db2.last_hard_state_id
 
         # And now the state of the rule must be 2
-        state = bp_rule.get_state()
-        self.assertEqual(2, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
 
-        # And If we set one WARNING?
-        self.scheduler_loop(2, [[svc_bd2, 1, 'WARNING | value1=1 value2=2']])
-        self.assertEqual('WARNING', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
-        self.assertEqual(1, svc_bd2.last_hard_state_id)
+        # Launch an internal check
+        self.launch_internal_check(svc_cor)
+
+        # What is the svc_cor state now?
+        assert 'CRITICAL' == svc_cor.state
+        assert 'SOFT' == svc_cor.state_type
+        assert 0 == svc_cor.last_hard_state_id
+
+        # Launch an internal check
+        self.launch_internal_check(svc_cor)
+
+        # What is the svc_cor state now?
+        assert 'CRITICAL' == svc_cor.state
+        assert 'HARD' == svc_cor.state_type
+        assert 2 == svc_cor.last_hard_state_id
+
+        # And If we set db2 to WARNING?
+        self.scheduler_loop(2, [
+            [svc_db2, 1, 'WARNING | value1=1 value2=2']
+        ])
+        assert 'WARNING' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 1 == svc_db2.last_hard_state_id
 
         # Must be WARNING (better no 0 value)
-        state = bp_rule.get_state()
-        self.assertEqual(1, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 1 == state
 
+        # Launch an internal check
+        self.launch_internal_check(svc_cor)
 
+        # What is the svc_cor state now?
+        assert 'WARNING' == svc_cor.state
+        assert 'HARD' == svc_cor.state_type
+        assert 1 == svc_cor.last_hard_state_id
 
+        # Assert that Simple_Or Is an impact of the problem db2
+        assert svc_cor.uuid in svc_db2.impacts
+        # and db1 too
+        assert svc_cor.uuid in svc_db1.impacts
 
-    # We will try a simple bd1 AND db2
-    def test_simple_and_business_correlator(self):
-        #
-        # Config is not correct because of a wrong relative path
-        # in the main config file
-        #
-        print "Get the hosts and services"
+        # We acknowledge db2
+        cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
+        self._sched.run_external_command(cmd)
+        assert True == svc_db2.problem_has_been_acknowledged
+
+       # Must be OK
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+       # And in a HARD
+       # Launch internal check"
+        self.launch_internal_check(svc_cor)
+        assert 'OK' == svc_cor.state
+        assert'HARD' == svc_cor.state_type
+        assert 0 == svc_cor.last_hard_state_id
+
+        # db2 WARNING, db1 CRITICAL, we unacknowledge then downtime db2
+        duration = 300
+        cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
+        self._sched.run_external_command(cmd)
+        assert False == svc_db2.problem_has_been_acknowledged
+
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc_cor, None, None]])
+        assert svc_db2.scheduled_downtime_depth > 0
+        assert True == svc_db2.in_scheduled_downtime
+
+        # Must be OK
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # And in a HARD
+        # Launch internal check
+        self.launch_internal_check(svc_cor)
+        assert 'OK' == svc_cor.state
+        assert 'HARD'== svc_cor.state_type
+        assert 0 == svc_cor.last_hard_state_id
+
+    def test_simple_or_not_business_correlator(self):
+        """ BR - try a simple services OR (db1 OR NOT db2)
+
+        bp_rule!test_host_0,db1|!test_host_0,db2
+
+        :return:
+        """
+        self.print_header()
         now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
+
+        # Get the hosts
+        host = self._sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
-        host.act_depend_of = []  # ignore the router
-        router = self.sched.hosts.find_by_name("test_router_0")
+        host.act_depend_of = []  # ignore its parent
+        router = self._sched.hosts.find_by_name("test_router_0")
         router.checks_in_progress = []
-        router.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-        svc.checks_in_progress = []
-        svc.act_depend_of = []  # no hostchecks on critical checkresults
+        router.act_depend_of = []  # ignore its parent
 
-        svc_bd1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
-        self.assertEqual(False, svc_bd1.got_business_rule)
-        self.assertIs(None, svc_bd1.business_rule)
-        svc_bd2 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "db2")
-        self.assertEqual(False, svc_bd2.got_business_rule)
-        self.assertIs(None, svc_bd2.business_rule)
-        svc_cor = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Simple_And")
-        self.assertEqual(True, svc_cor.got_business_rule)
-        self.assertIsNot(svc_cor.business_rule, None)
+        # Get the services
+        svc_db1 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
+        svc_db1.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_db1.got_business_rule
+        assert svc_db1.business_rule is None
+
+        svc_db2 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db2")
+        svc_db2.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_db2.got_business_rule
+        assert svc_db2.business_rule is None
+
+        svc_cor = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "Simple_Or_not")
+        svc_cor.act_depend_of = []  # no host checks on critical check results
+        # Is a Business Rule, not a simple service...
+        assert svc_cor.got_business_rule
+        assert svc_cor.business_rule is not None
+
+        # We check for good parent/childs links
+        # So svc_cor should be a son of svc_db1 and svc_db2
+        # and db1 and db2 should be parents of svc_cor
+        assert svc_cor.uuid in svc_db1.child_dependencies
+        assert svc_cor.uuid in svc_db2.child_dependencies
+        assert svc_db1.uuid in svc_cor.parent_dependencies
+        assert svc_db2.uuid in svc_cor.parent_dependencies
+
+        # Get the BR associated with svc_cor
         bp_rule = svc_cor.business_rule
-        self.assertEqual('&', bp_rule.operand)
+        assert bp_rule.operand == '|'
+        assert bp_rule.of_values == ('2', '2', '2')
+        assert bp_rule.not_value == False
+        assert bp_rule.is_of_mul == False
+        assert bp_rule.sons is not None
+        assert 2 == len(bp_rule.sons)
 
-        sons = bp_rule.sons
-        print "Sons,", sons
-        # We've got 2 sons, 2 services nodes
-        self.assertEqual(2, len(sons))
-        self.assertEqual('service', sons[0].operand)
-        self.assertEqual(svc_bd1, sons[0].sons[0])
-        self.assertEqual('service', sons[1].operand)
-        self.assertEqual(svc_bd2, sons[1].sons[0])
+        # First son is linked to a service and we have its uuid
+        son = bp_rule.sons[0]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_db1.uuid
 
-        # Now state working on the states
-        self.scheduler_loop(1, [[svc_bd2, 0, 'OK | value1=1 value2=2'], [svc_bd1, 0, 'OK | rtt=10']])
-        self.assertEqual('OK', svc_bd1.state)
-        self.assertEqual('HARD', svc_bd1.state_type)
-        self.assertEqual('OK', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
+        # Second son is also a service
+        son = bp_rule.sons[1]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        # This service is NOT valued
+        assert son.not_value == True
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_db2.uuid
 
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
+        # Now start working on the states
+        self.scheduler_loop(1, [
+            [svc_db1, 0, 'OK | rtt=10'],
+            [svc_db2, 0, 'OK | value1=1 value2=2']
+        ])
+        assert 'OK' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 'OK' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
 
-        # Now we set the bd1 as soft/CRITICAL
-        self.scheduler_loop(1, [[svc_bd1, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd1.state)
-        self.assertEqual('SOFT', svc_bd1.state_type)
-        self.assertEqual(0, svc_bd1.last_hard_state_id)
+        # -----
+        # OK or NOT OK -> OK
+        # -----
+        # When all is ok, the BP rule state is 0
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # Now we set the db1 as soft/CRITICAL
+        self.scheduler_loop(1, [
+            [svc_db1, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db1.state
+        assert 'SOFT' == svc_db1.state_type
+        assert 0 == svc_db1.last_hard_state_id
+
+        # The business rule must still be 0 - only hard states are considered
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # Now we get db1 CRITICAL/HARD
+        self.scheduler_loop(1, [
+            [svc_db1, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 2 == svc_db1.last_hard_state_id
+
+        # -----
+        # CRITICAL or NOT OK -> CRITICAL
+        # -----
+        # The rule must still be a 0 (or inside)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
+
+        # Now we also set db2 as CRITICAL/HARD... byebye 0 :)
+        self.scheduler_loop(2, [
+            [svc_db2, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 2 == svc_db2.last_hard_state_id
+
+        # -----
+        # CRITICAL or NOT CRITICAL -> OK
+        # -----
+        # And now the state of the rule must be 2
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # And If we set db2 WARNING?
+        self.scheduler_loop(2, [
+            [svc_db2, 1, 'WARNING | value1=1 value2=2']
+        ])
+        assert 'WARNING' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 1 == svc_db2.last_hard_state_id
+
+        # -----
+        # CRITICAL or NOT WARNING -> WARNING
+        # -----
+        # Must be WARNING (better no 0 value)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 1 == state
+
+        # We acknowledge db2
+        cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
+        self._sched.run_external_command(cmd)
+        assert True == svc_db2.problem_has_been_acknowledged
+
+        # -----
+        # CRITICAL or NOT ACK(WARNING) -> CRITICAL
+        # -----
+        # Must be WARNING (ACK(WARNING) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
+
+        # We unacknowledge then downtime db2
+        duration = 300
+        cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
+        self._sched.run_external_command(cmd)
+        assert False == svc_db2.problem_has_been_acknowledged
+
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc_cor, None, None]])
+        assert svc_db2.scheduled_downtime_depth > 0
+        assert True == svc_db2.in_scheduled_downtime
+
+        # -----
+        # CRITICAL or NOT DOWNTIME(WARNING) -> CRITICAL
+        # -----
+        # Must be CRITICAL (business_rule_downtime_as_ok -> DOWNTIME(WARNING) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
+
+    def test_simple_and_business_correlator(self):
+        """ BR - try a simple services AND (db1 AND db2)
+
+        bp_rule!test_host_0,db1&test_host_0,db2
+
+        :return:
+        """
+        self.print_header()
+        now = time.time()
+
+        # Get the hosts
+        host = self._sched.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore its parent
+        router = self._sched.hosts.find_by_name("test_router_0")
+        router.checks_in_progress = []
+        router.act_depend_of = []  # ignore its parent
+
+        # Get the services
+        svc_db1 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
+        svc_db1.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_db1.got_business_rule
+        assert svc_db1.business_rule is None
+
+        svc_db2 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db2")
+        svc_db2.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_db2.got_business_rule
+        assert svc_db2.business_rule is None
+
+        svc_cor = self._sched.services.find_srv_by_name_and_hostname("test_host_0",
+                                                                     "Simple_And")
+        svc_cor.act_depend_of = []  # no host checks on critical check results
+        # Is a Business Rule, not a simple service...
+        assert svc_cor.got_business_rule
+        assert svc_cor.business_rule is not None
+
+        # We check for good parent/childs links
+        # So svc_cor should be a son of svc_db1 and svc_db2
+        # and db1 and db2 should be parents of svc_cor
+        assert svc_cor.uuid in svc_db1.child_dependencies
+        assert svc_cor.uuid in svc_db2.child_dependencies
+        assert svc_db1.uuid in svc_cor.parent_dependencies
+        assert svc_db2.uuid in svc_cor.parent_dependencies
+
+        # Get the BR associated with svc_cor
+        bp_rule = svc_cor.business_rule
+        assert bp_rule.operand == '&'
+        assert bp_rule.of_values == ('2', '2', '2')
+        assert bp_rule.not_value == False
+        assert bp_rule.is_of_mul == False
+        assert bp_rule.sons is not None
+        assert 2 == len(bp_rule.sons)
+
+        # First son is linked to a service and we have its uuid
+        son = bp_rule.sons[0]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_db1.uuid
+
+        # Second son is also a service
+        son = bp_rule.sons[1]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_db2.uuid
+
+        # Now start working on the states
+        self.scheduler_loop(1, [
+            [svc_db1, 0, 'OK | rtt=10'],
+            [svc_db2, 0, 'OK | value1=1 value2=2'] 
+        ])
+        assert 'OK' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 'OK' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+
+        # -----
+        # OK and OK -> OK
+        # -----
+        # When all is ok, the BP rule state is 0
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # Now we set the db1 as soft/CRITICAL
+        self.scheduler_loop(1, [
+            [svc_db1, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db1.state
+        assert 'SOFT' == svc_db1.state_type
+        assert 0 == svc_db1.last_hard_state_id
+
+        # The business rule must still be 0 because we want HARD states
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # Now we get db1 CRITICAL/HARD
+        self.scheduler_loop(2, [
+            [svc_db1, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 2 == svc_db1.last_hard_state_id
+
+        # -----
+        # CRITICAL and OK -> CRITICAL
+        # -----
+        # The rule must go CRITICAL
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
+
+        # Now we set db2 as WARNING/HARD...
+        self.scheduler_loop(2, [
+            [svc_db2, 1, 'WARNING | value1=1 value2=2']
+        ])
+        assert 'WARNING' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 1 == svc_db2.last_hard_state_id
+
+        # -----
+        # CRITICAL and WARNING -> CRITICAL
+        # -----
+        # The state of the rule remains 2
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
+
+        # And If we set db1 to WARNING too?
+        self.scheduler_loop(2, [
+            [svc_db1, 1, 'WARNING | value1=1 value2=2']
+        ])
+        assert 'WARNING' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 1 == svc_db1.last_hard_state_id
+
+        # -----
+        # WARNING and WARNING -> WARNING
+        # -----
+        # Must be WARNING (worse no 0 value for both)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 1 == state
+
+         # We set db2 CRITICAL then we acknowledge it
+        self.scheduler_loop(2, [
+            [svc_db2, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 2 == svc_db2.last_hard_state_id
+
+        cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
+        self._sched.run_external_command(cmd)
+        assert True == svc_db2.problem_has_been_acknowledged
+
+        # -----
+        # WARNING and ACK(CRITICAL) -> WARNING
+        # -----
+        # Must be WARNING (ACK(CRITICAL) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 1 == state
+
+        # We unacknowledge then downtime db2
+        duration = 300
+        cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
+        self._sched.run_external_command(cmd)
+        assert False == svc_db2.problem_has_been_acknowledged
+
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc_cor, None, None]])
+        assert svc_db2.scheduled_downtime_depth > 0
+        assert True == svc_db2.in_scheduled_downtime
+
+        # -----
+        # WARNING and DOWNTIME(CRITICAL) -> WARNING
+        # -----
+        # Must be OK (DOWNTIME(CRITICAL) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 1 == state
+
+    def test_simple_and_not_business_correlator(self):
+        """ BR - try a simple services AND NOT (db1 AND NOT db2)
+
+        bp_rule!test_host_0,db1&!test_host_0,db2
+        """
+        self.print_header()
+        now = time.time()
+
+        # Get the hosts
+        host = self._sched.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore its parent
+        router = self._sched.hosts.find_by_name("test_router_0")
+        router.checks_in_progress = []
+        router.act_depend_of = []  # ignore its parent
+
+        # Get the services
+        svc_db1 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
+        svc_db1.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_db1.got_business_rule
+        assert svc_db1.business_rule is None
+
+        svc_db2 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db2")
+        svc_db2.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_db2.got_business_rule
+        assert svc_db2.business_rule is None
+
+        svc_cor = self._sched.services.find_srv_by_name_and_hostname("test_host_0",
+                                                                     "Simple_And_not")
+        svc_cor.act_depend_of = []  # no host checks on critical check results
+        # Is a Business Rule, not a simple service...
+        assert svc_cor.got_business_rule
+        assert svc_cor.business_rule is not None
+
+        # We check for good parent/childs links
+        # So svc_cor should be a son of svc_db1 and svc_db2
+        # and db1 and db2 should be parents of svc_cor
+        assert svc_cor.uuid in svc_db1.child_dependencies
+        assert svc_cor.uuid in svc_db2.child_dependencies
+        assert svc_db1.uuid in svc_cor.parent_dependencies
+        assert svc_db2.uuid in svc_cor.parent_dependencies
+
+        # Get the BR associated with svc_cor
+        bp_rule = svc_cor.business_rule
+        assert bp_rule.operand == '&'
+        assert bp_rule.of_values == ('2', '2', '2')
+        # Not value remains False because one service is NOT ... but the BR is not NON
+        assert bp_rule.not_value == False
+        assert bp_rule.is_of_mul == False
+        assert bp_rule.sons is not None
+        assert 2 == len(bp_rule.sons)
+
+        # First son is linked to a service and we have its uuid
+        son = bp_rule.sons[0]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_db1.uuid
+
+        # Second son is also a service
+        son = bp_rule.sons[1]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        # This service is NOT valued
+        assert son.not_value == True
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_db2.uuid
+
+        # Now start working on the states
+        self.scheduler_loop(2, [
+            [svc_db1, 0, 'OK | value1=1 value2=2'],
+            [svc_db2, 2, 'CRITICAL | rtt=10']
+        ])
+        assert 'OK' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 'CRITICAL' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+
+        # -----
+        # OK and not CRITICAL -> OK
+        # -----
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # Now we set the db1 as soft/CRITICAL
+        self.scheduler_loop(1, [[svc_db1, 2, 'CRITICAL | value1=1 value2=2']])
+        assert 'CRITICAL' == svc_db1.state
+        assert 'SOFT' == svc_db1.state_type
+        assert 0 == svc_db1.last_hard_state_id
 
         # The business rule must still be 0
         # becase we want HARD states
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
 
-        # Now we get bd1 CRITICAL/HARD
-        self.scheduler_loop(1, [[svc_bd1, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd1.state)
-        self.assertEqual('HARD', svc_bd1.state_type)
-        self.assertEqual(2, svc_bd1.last_hard_state_id)
+        # Now we get db1 CRITICAL/HARD
+        self.scheduler_loop(1, [[svc_db1, 2, 'CRITICAL | value1=1 value2=2']])
+        assert 'CRITICAL' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 2 == svc_db1.last_hard_state_id
 
+        # -----
+        # CRITICAL and not CRITICAL -> CRITICAL
+        # -----
         # The rule must go CRITICAL
-        state = bp_rule.get_state()
-        self.assertEqual(2, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
 
-        # Now we also set bd2 as WARNING/HARD...
-        self.scheduler_loop(2, [[svc_bd2, 1, 'WARNING | value1=1 value2=2']])
-        self.assertEqual('WARNING', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
-        self.assertEqual(1, svc_bd2.last_hard_state_id)
+        # Now we also set db2 as WARNING/HARD...
+        self.scheduler_loop(2, [[svc_db2, 1, 'WARNING | value1=1 value2=2']])
+        assert 'WARNING' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 1 == svc_db2.last_hard_state_id
 
+        # -----
+        # CRITICAL and not WARNING -> CRITICAL
+        # -----
         # And now the state of the rule must be 2
-        state = bp_rule.get_state()
-        self.assertEqual(2, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
 
-        # And If we set one WARNING too?
-        self.scheduler_loop(2, [[svc_bd1, 1, 'WARNING | value1=1 value2=2']])
-        self.assertEqual('WARNING', svc_bd1.state)
-        self.assertEqual('HARD', svc_bd1.state_type)
-        self.assertEqual(1, svc_bd1.last_hard_state_id)
+        # And If we set db1 to WARNING too?
+        self.scheduler_loop(2, [[svc_db1, 1, 'WARNING | value1=1 value2=2']])
+        assert 'WARNING' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 1 == svc_db1.last_hard_state_id
 
+        # -----
+        # WARNING and not CRITICAL -> WARNING
+        # -----
         # Must be WARNING (worse no 0 value for both)
-        state = bp_rule.get_state()
-        self.assertEqual(1, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 1 == state
 
-    # We will try a simple 1of: bd1 OR/AND db2
+        # Now try to get ok in both place, should be bad :)
+        self.scheduler_loop(2, [[svc_db1, 0, 'OK | value1=1 value2=2'], [svc_db2, 0, 'OK | value1=1 value2=2']])
+        assert 'OK' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 0 == svc_db1.last_hard_state_id
+        assert 'OK' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 0 == svc_db2.last_hard_state_id
+
+        # -----
+        # OK and not OK -> CRITICAL
+        # -----
+        # Must be CRITICAL (ok and not ok IS no OK :) )
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
+
+        # We set db2 CRITICAL then we acknowledge it
+        self.scheduler_loop(2, [
+            [svc_db2, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 2 == svc_db2.last_hard_state_id
+
+        cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
+        self._sched.run_external_command(cmd)
+        assert True == svc_db2.problem_has_been_acknowledged
+
+        # -----
+        # OK and not ACK(CRITICAL) -> CRITICAL
+        # -----
+        # Must be CRITICAL (ACK(CRITICAL) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
+
+        # We unacknowledge then downtime db2
+        duration = 300
+        cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
+        self._sched.run_external_command(cmd)
+        assert False == svc_db2.problem_has_been_acknowledged
+
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc_cor, None, None]])
+        assert svc_db2.scheduled_downtime_depth > 0
+        assert True == svc_db2.in_scheduled_downtime
+
+        # -----
+        # OK and not DOWNTIME(CRITICAL) -> CRITICAL
+        # -----
+        # Must be CRITICAL (DOWNTIME(CRITICAL) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
+
     def test_simple_1of_business_correlator(self):
+        """ BR - simple 1of: db1 OR/AND db2
+
+        bp_rule!1 of: test_host_0,db1|test_host_0,db2
+        """
         self.run_simple_1of_business_correlator()
 
-    # We will try a simple -1of: bd1 OR/AND db2
     def test_simple_1of_neg_business_correlator(self):
+        """ BR - simple -1of: db1 OR/AND db2
+
+        bp_rule!-1 of: test_host_0,db1|test_host_0,db2
+        """
         self.run_simple_1of_business_correlator(with_neg=True)
 
-    # We will try a simple 50%of: bd1 OR/AND db2
     def test_simple_1of_pct_business_correlator(self):
+        """ BR - simple 50%of: db1 OR/AND db2
+
+        bp_rule!50% of: test_host_0,db1|test_host_0,db2
+        """
         self.run_simple_1of_business_correlator(with_pct=True)
 
-    # We will try a simple -50%of: bd1 OR/AND db2
     def test_simple_1of_pct_neg_business_correlator(self):
+        """ BR - simple -50%of: db1 OR/AND db2
+
+        bp_rule!-50% of: test_host_0,db1|test_host_0,db2
+        """
         self.run_simple_1of_business_correlator(with_pct=True, with_neg=True)
 
-
     def run_simple_1of_business_correlator(self, with_pct=False, with_neg=False):
-        #
-        # Config is not correct because of a wrong relative path
-        # in the main config file
-        #
-        print "Get the hosts and services"
-        now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
-        host.checks_in_progress = []
-        host.act_depend_of = []  # ignore the router
-        router = self.sched.hosts.find_by_name("test_router_0")
-        router.checks_in_progress = []
-        router.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-        svc.checks_in_progress = []
-        svc.act_depend_of = []  # no hostchecks on critical checkresults
+        """
 
-        svc_bd1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
-        self.assertEqual(False, svc_bd1.got_business_rule)
-        self.assertIs(None, svc_bd1.business_rule)
-        svc_bd2 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "db2")
-        self.assertEqual(False, svc_bd2.got_business_rule)
-        self.assertIs(None, svc_bd2.business_rule)
+        :param with_pct: True if a percentage is set
+        :param with_neg: True if a negation is set
+        :return:
+        """
+        self.print_header()
+        now = time.time()
+
+        # Get the hosts
+        host = self._sched.hosts.find_by_name("test_host_0")
+        host.checks_in_progress = []
+        host.act_depend_of = []  # ignore its parent
+        router = self._sched.hosts.find_by_name("test_router_0")
+        router.checks_in_progress = []
+        router.act_depend_of = []  # ignore its parent
+
+        # Get the services
+        svc_db1 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
+        svc_db1.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_db1.got_business_rule
+        assert svc_db1.business_rule is None
+
+        svc_db2 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db2")
+        svc_db2.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_db2.got_business_rule
+        assert svc_db2.business_rule is None
+
         if with_pct is True:
             if with_neg is True:
-                svc_cor = self.sched.services.find_srv_by_name_and_hostname(
+                svc_cor = self._sched.services.find_srv_by_name_and_hostname(
                         "test_host_0", "Simple_1Of_pct_neg")
             else:
-                svc_cor = self.sched.services.find_srv_by_name_and_hostname(
+                svc_cor = self._sched.services.find_srv_by_name_and_hostname(
                         "test_host_0", "Simple_1Of_pct")
         else:
             if with_neg is True:
-                svc_cor = self.sched.services.find_srv_by_name_and_hostname(
+                svc_cor = self._sched.services.find_srv_by_name_and_hostname(
                         "test_host_0", "Simple_1Of_neg")
             else:
-                svc_cor = self.sched.services.find_srv_by_name_and_hostname(
+                svc_cor = self._sched.services.find_srv_by_name_and_hostname(
                         "test_host_0", "Simple_1Of")
-        self.assertEqual(True, svc_cor.got_business_rule)
-        self.assertIsNot(svc_cor.business_rule, None)
+        svc_cor.act_depend_of = []  # no host checks on critical check results
+        # Is a Business Rule, not a simple service...
+        assert svc_cor.got_business_rule
+        assert svc_cor.business_rule is not None
+
+        # We check for good parent/childs links
+        # So svc_cor should be a son of svc_db1 and svc_db2
+        # and db1 and db2 should be parents of svc_cor
+        assert svc_cor.uuid in svc_db1.child_dependencies
+        assert svc_cor.uuid in svc_db2.child_dependencies
+        assert svc_db1.uuid in svc_cor.parent_dependencies
+        assert svc_db2.uuid in svc_cor.parent_dependencies
+
+        # Get the BR associated with svc_cor
         bp_rule = svc_cor.business_rule
-        self.assertEqual('of:', bp_rule.operand)
+        assert bp_rule.operand == 'of:'
         # Simple 1of: so in fact a triple ('1','2','2') (1of and MAX,MAX
         if with_pct is True:
             if with_neg is True:
-                self.assertEqual(('-50%', '2', '2'), bp_rule.of_values)
+                assert ('-50%', '2', '2') == bp_rule.of_values
             else:
-                self.assertEqual(('50%', '2', '2'), bp_rule.of_values)
+                assert ('50%', '2', '2') == bp_rule.of_values
         else:
             if with_neg is True:
-                self.assertEqual(('-1', '2', '2'), bp_rule.of_values)
+                assert ('-1', '2', '2') == bp_rule.of_values
             else:
-                self.assertEqual(('1', '2', '2'), bp_rule.of_values)
+                assert ('1', '2', '2') == bp_rule.of_values
+        assert bp_rule.not_value == False
+        assert bp_rule.is_of_mul == False
+        assert bp_rule.sons is not None
+        assert 2 == len(bp_rule.sons)
 
-        sons = bp_rule.sons
-        print "Sons,", sons
-        # We've got 2 sons, 2 services nodes
-        self.assertEqual(2, len(sons))
-        self.assertEqual('service', sons[0].operand)
-        self.assertEqual(svc_bd1, sons[0].sons[0])
-        self.assertEqual('service', sons[1].operand)
-        self.assertEqual(svc_bd2, sons[1].sons[0])
+        # We've got 2 sons for the BR which are 2 dependency nodes
+        # Each dependency node has a son which is the service
+        assert 2 == len(bp_rule.sons)
 
-        # Now state working on the states
-        self.scheduler_loop(1, [[svc_bd2, 0, 'OK | value1=1 value2=2'], [svc_bd1, 0, 'OK | rtt=10']])
-        self.assertEqual('OK', svc_bd1.state)
-        self.assertEqual('HARD', svc_bd1.state_type)
-        self.assertEqual('OK', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
+        # First son is linked to a service and we have its uuid
+        son = bp_rule.sons[0]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_db1.uuid
 
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
+        # Second son is also a service
+        son = bp_rule.sons[1]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_db2.uuid
 
-        # Now we set the bd1 as soft/CRITICAL
-        self.scheduler_loop(1, [[svc_bd1, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd1.state)
-        self.assertEqual('SOFT', svc_bd1.state_type)
-        self.assertEqual(0, svc_bd1.last_hard_state_id)
+        # Now start working on the states
+        self.scheduler_loop(1, [
+            [svc_db1, 0, 'OK | rtt=10'],
+            [svc_db2, 0, 'OK | value1=1 value2=2']
+        ])
+        assert 'OK' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 'OK' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+
+        # -----
+        # OK 1of OK -> OK
+        # -----
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # Now we set the db1 as soft/CRITICAL
+        self.scheduler_loop(1, [
+            [svc_db1, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db1.state
+        assert 'SOFT' == svc_db1.state_type
+        assert 0 == svc_db1.last_hard_state_id
 
         # The business rule must still be 0
         # becase we want HARD states
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
 
-        # Now we get bd1 CRITICAL/HARD
-        self.scheduler_loop(1, [[svc_bd1, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd1.state)
-        self.assertEqual('HARD', svc_bd1.state_type)
-        self.assertEqual(2, svc_bd1.last_hard_state_id)
+        # Now we get db1 CRITICAL/HARD
+        self.scheduler_loop(1, [
+            [svc_db1, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 2 == svc_db1.last_hard_state_id
 
+        # -----
+        # CRITCAL 1of OK -> OK
+        # -----
         # The rule still be OK
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
 
-        # Now we also set bd2 as CRITICAL/HARD...
-        self.scheduler_loop(2, [[svc_bd2, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
-        self.assertEqual(2, svc_bd2.last_hard_state_id)
+        # Now we also set db2 as CRITICAL/HARD...
+        self.scheduler_loop(2, [
+            [svc_db2, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 2 == svc_db2.last_hard_state_id
 
-        # And now the state of the rule must be 2 now
-        state = bp_rule.get_state()
-        self.assertEqual(2, state)
+        # -----
+        # CRITICAL 1of CRITICAL -> CRITICAL
+        # -----
+        # And now the state of the rule must be 2
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
 
-        # And If we set one WARNING now?
-        self.scheduler_loop(2, [[svc_bd1, 1, 'WARNING | value1=1 value2=2']])
-        self.assertEqual('WARNING', svc_bd1.state)
-        self.assertEqual('HARD', svc_bd1.state_type)
-        self.assertEqual(1, svc_bd1.last_hard_state_id)
+        # And If we set db1 WARNING now?
+        self.scheduler_loop(2, [[svc_db1, 1, 'WARNING | value1=1 value2=2']])
+        assert 'WARNING' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 1 == svc_db1.last_hard_state_id
 
+        # -----
+        # WARNING 1of CRITICAL -> WARNING
+        # -----
         # Must be WARNING (worse no 0 value for both, like for AND rule)
-        state = bp_rule.get_state()
-        self.assertEqual(1, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 1 == state
 
-    # We will try a simple 1of: test_router_0 OR/AND test_host_0
+        # We acknowledge bd2
+        cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
+        self._sched.run_external_command(cmd)
+        assert True == svc_db2.problem_has_been_acknowledged
+
+        # -----
+        # WARNING 1of ACK(CRITICAL) -> OK
+        # -----
+        # Must be OK (ACK(CRITICAL) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # We unacknowledge then downtime db2
+        duration = 300
+        cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
+        self._sched.run_external_command(cmd)
+        assert False == svc_db2.problem_has_been_acknowledged
+
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc_cor, None, None]])
+        assert svc_db2.scheduled_downtime_depth > 0
+        assert True == svc_db2.in_scheduled_downtime
+
+        # -----
+        # WARNING 1of DOWNTIME(CRITICAL) -> OK
+        # -----
+        # Must be OK (DOWNTIME(CRITICAL) is OK)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
     def test_simple_1of_business_correlator_with_hosts(self):
+        """ BR - simple 1of: test_router_0 OR/AND test_host_0"""
         self.run_simple_1of_business_correlator_with_hosts()
 
-    # We will try a simple -1of: test_router_0 OR/AND test_host_0
     def test_simple_1of_neg_business_correlator_with_hosts(self):
+        """ BR - -1of: test_router_0 OR/AND test_host_0 """
         self.run_simple_1of_business_correlator_with_hosts(with_neg=True)
 
-    # We will try a simple 50%of: test_router_0 OR/AND test_host_0
     def test_simple_1of_pct_business_correlator_with_hosts(self):
+        """ BR - simple 50%of: test_router_0 OR/AND test_host_0 """
         self.run_simple_1of_business_correlator_with_hosts(with_pct=True)
 
-    # We will try a simple -50%of: test_router_0 OR/AND test_host_0
     def test_simple_1of_pct_neg_business_correlator_with_hosts(self):
+        """ BR - simple -50%of: test_router_0 OR/AND test_host_0 """
         self.run_simple_1of_business_correlator_with_hosts(with_pct=True, with_neg=True)
 
     def run_simple_1of_business_correlator_with_hosts(self, with_pct=False, with_neg=False):
-        #
-        # Config is not correct because of a wrong relative path
-        # in the main config file
-        #
-        print "Get the hosts and services"
-        now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
+        """
+
+        :param with_pct: True if a percentage is set
+        :param with_neg: True if a negation is set
+        :return:
+        """
+        self.print_header()
+
+        # Get the hosts
+        host = self._sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
-        host.act_depend_of = []  # ignore the router
-        router = self.sched.hosts.find_by_name("test_router_0")
+        host.act_depend_of = []  # ignore its parent
+        router = self._sched.hosts.find_by_name("test_router_0")
         router.checks_in_progress = []
-        router.act_depend_of = []  # ignore the router
+        router.act_depend_of = []  # ignore its parent
+
         if with_pct is True:
             if with_neg is True:
-                svc_cor = self.sched.services.find_srv_by_name_and_hostname(
+                svc_cor = self._sched.services.find_srv_by_name_and_hostname(
                         "test_host_0", "Simple_1Of_with_host_pct_neg")
             else:
-                svc_cor = self.sched.services.find_srv_by_name_and_hostname(
+                svc_cor = self._sched.services.find_srv_by_name_and_hostname(
                         "test_host_0", "Simple_1Of_with_host_pct")
         else:
             if with_neg is True:
-                svc_cor = self.sched.services.find_srv_by_name_and_hostname(
+                svc_cor = self._sched.services.find_srv_by_name_and_hostname(
                         "test_host_0", "Simple_1Of_with_host_neg")
             else:
-                svc_cor = self.sched.services.find_srv_by_name_and_hostname(
+                svc_cor = self._sched.services.find_srv_by_name_and_hostname(
                         "test_host_0", "Simple_1Of_with_host")
-        self.assertEqual(True, svc_cor.got_business_rule)
-        self.assertIsNot(svc_cor.business_rule, None)
+        svc_cor.act_depend_of = []  # no host checks on critical check results
+        # Is a Business Rule, not a simple service...
+        assert svc_cor.got_business_rule
+        assert svc_cor.business_rule is not None
+
+        # Get the BR associated with svc_cor
         bp_rule = svc_cor.business_rule
-        self.assertEqual('of:', bp_rule.operand)
+        assert bp_rule.operand == 'of:'
         # Simple 1of: so in fact a triple ('1','2','2') (1of and MAX,MAX
         if with_pct is True:
             if with_neg is True:
-                self.assertEqual(('-50%', '2', '2'), bp_rule.of_values)
+                assert ('-50%', '2', '2') == bp_rule.of_values
             else:
-                self.assertEqual(('50%', '2', '2'), bp_rule.of_values)
+                assert ('50%', '2', '2') == bp_rule.of_values
         else:
             if with_neg is True:
-                self.assertEqual(('-1', '2', '2'), bp_rule.of_values)
+                assert ('-1', '2', '2') == bp_rule.of_values
             else:
-                self.assertEqual(('1', '2', '2'), bp_rule.of_values)
+                assert ('1', '2', '2') == bp_rule.of_values
 
         sons = bp_rule.sons
         print "Sons,", sons
         # We've got 2 sons, 2 services nodes
-        self.assertEqual(2, len(sons))
-        self.assertEqual('host', sons[0].operand)
-        self.assertEqual(host, sons[0].sons[0])
-        self.assertEqual('host', sons[1].operand)
-        self.assertEqual(router, sons[1].sons[0])
-
-    # We will try a simple bd1 OR db2, but this time we will
-    # schedule a real check and see if it's good
-    def test_simple_or_business_correlator_with_schedule(self):
-        #
-        # Config is not correct because of a wrong relative path
-        # in the main config file
-        #
-        print "Get the hosts and services"
-        now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
-        host.checks_in_progress = []
-        host.act_depend_of = []  # ignore the router
-        router = self.sched.hosts.find_by_name("test_router_0")
-        router.checks_in_progress = []
-        router.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-        svc.checks_in_progress = []
-        svc.act_depend_of = []  # no hostchecks on critical checkresults
-
-        svc_bd1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
-        self.assertEqual(False, svc_bd1.got_business_rule)
-        self.assertIs(None, svc_bd1.business_rule)
-        svc_bd2 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "db2")
-        self.assertEqual(False, svc_bd2.got_business_rule)
-        self.assertIs(None, svc_bd2.business_rule)
-        svc_cor = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Simple_Or")
-        self.assertEqual(True, svc_cor.got_business_rule)
-        self.assertIsNot(svc_cor.business_rule, None)
-        bp_rule = svc_cor.business_rule
-        self.assertEqual('|', bp_rule.operand)
-
-        sons = bp_rule.sons
-        print "Sons,", sons
-        # We've got 2 sons, 2 services nodes
-        self.assertEqual(2, len(sons))
-        self.assertEqual('service', sons[0].operand)
-        self.assertEqual(svc_bd1, sons[0].sons[0])
-        self.assertEqual('service', sons[1].operand)
-        self.assertEqual(svc_bd2, sons[1].sons[0])
-
-        # Now state working on the states
-        self.scheduler_loop(1, [[svc_bd2, 0, 'OK | value1=1 value2=2'], [svc_bd1, 0, 'OK | rtt=10']])
-        self.assertEqual('OK', svc_bd1.state)
-        self.assertEqual('HARD', svc_bd1.state_type)
-        self.assertEqual('OK', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
-
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
-
-        print "Launch internal check"
-        svc_cor.launch_check(now-1)
-        c = svc_cor.actions[0]
-        self.assertEqual(True, c.internal)
-        self.assertTrue(c.is_launchable(now))
-
-        # ask the scheduler to launch this check
-        # and ask 2 loops: one for launch the check
-        # and another to integer the result
-        self.scheduler_loop(2, [])
-
-        # We should have no more the check
-        self.assertEqual(0, len(svc_cor.actions))
-
-        print "Look at svc_cor state", svc_cor.state
-        # What is the svc_cor state now?
-        self.assertEqual('OK', svc_cor.state)
-        self.assertEqual('HARD', svc_cor.state_type)
-        self.assertEqual(0, svc_cor.last_hard_state_id)
-
-        # Now we set the bd1 as soft/CRITICAL
-        self.scheduler_loop(1, [[svc_bd1, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd1.state)
-        self.assertEqual('SOFT', svc_bd1.state_type)
-        self.assertEqual(0, svc_bd1.last_hard_state_id)
-
-        # The business rule must still be 0
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
-
-        print "Launch internal check"
-        svc_cor.launch_check(now-1)
-        c = svc_cor.actions[0]
-        self.assertEqual(True, c.internal)
-        self.assertTrue(c.is_launchable(now))
-
-        # ask the scheduler to launch this check
-        # and ask 2 loops: one for launch the check
-        # and another to integer the result
-        self.scheduler_loop(2, [])
-
-        # We should have no more the check
-        self.assertEqual(0, len(svc_cor.actions))
-
-        print "Look at svc_cor state", svc_cor.state
-        # What is the svc_cor state now?
-        self.assertEqual('OK', svc_cor.state)
-        self.assertEqual('HARD', svc_cor.state_type)
-        self.assertEqual(0, svc_cor.last_hard_state_id)
-
-        # Now we get bd1 CRITICAL/HARD
-        self.scheduler_loop(1, [[svc_bd1, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd1.state)
-        self.assertEqual('HARD', svc_bd1.state_type)
-        self.assertEqual(2, svc_bd1.last_hard_state_id)
-
-        # The rule must still be a 0 (or inside)
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
-
-        print "Launch internal check"
-        svc_cor.launch_check(now-1)
-        c = svc_cor.actions[0]
-        self.assertEqual(True, c.internal)
-        self.assertTrue(c.is_launchable(now))
-
-        # ask the scheduler to launch this check
-        # and ask 2 loops: one for launch the check
-        # and another to integer the result
-        self.scheduler_loop(2, [])
-
-        # We should have no more the check
-        self.assertEqual(0, len(svc_cor.actions))
-
-        print "Look at svc_cor state", svc_cor.state
-        # What is the svc_cor state now?
-        self.assertEqual('OK', svc_cor.state)
-        self.assertEqual('HARD', svc_cor.state_type)
-        self.assertEqual(0, svc_cor.last_hard_state_id)
-
-        # Now we also set bd2 as CRITICAL/HARD... byebye 0 :)
-        self.scheduler_loop(2, [[svc_bd2, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
-        self.assertEqual(2, svc_bd2.last_hard_state_id)
-
-        # And now the state of the rule must be 2
-        state = bp_rule.get_state()
-        self.assertEqual(2, state)
-
-        # And now we must be CRITICAL/SOFT!
-        print "Launch internal check"
-        svc_cor.launch_check(now-1)
-        c = svc_cor.actions[0]
-        self.assertEqual(True, c.internal)
-        self.assertTrue(c.is_launchable(now))
-
-        # ask the scheduler to launch this check
-        # and ask 2 loops: one for launch the check
-        # and another to integer the result
-        self.scheduler_loop(2, [])
-
-        # We should have no more the check
-        self.assertEqual(0, len(svc_cor.actions))
-
-        print "Look at svc_cor state", svc_cor.state
-        # What is the svc_cor state now?
-        self.assertEqual('CRITICAL', svc_cor.state)
-        self.assertEqual('SOFT', svc_cor.state_type)
-        self.assertEqual(0, svc_cor.last_hard_state_id)
-
-        # OK, re recheck again, GO HARD!
-        print "Launch internal check"
-        svc_cor.launch_check(now-1)
-        c = svc_cor.actions[0]
-        self.assertEqual(True, c.internal)
-        self.assertTrue(c.is_launchable(now))
-
-        # ask the scheduler to launch this check
-        # and ask 2 loops: one for launch the check
-        # and another to integer the result
-        self.scheduler_loop(2, [])
-
-        # We should have no more the check
-        self.assertEqual(0, len(svc_cor.actions))
-
-        print "Look at svc_cor state", svc_cor.state
-        # What is the svc_cor state now?
-        self.assertEqual('CRITICAL', svc_cor.state)
-        self.assertEqual('HARD', svc_cor.state_type)
-        self.assertEqual(2, svc_cor.last_hard_state_id)
-
-        # And If we set one WARNING?
-        self.scheduler_loop(2, [[svc_bd2, 1, 'WARNING | value1=1 value2=2']])
-        self.assertEqual('WARNING', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
-        self.assertEqual(1, svc_bd2.last_hard_state_id)
-
-        # Must be WARNING (better no 0 value)
-        state = bp_rule.get_state()
-        self.assertEqual(1, state)
-
-        # And in a HARD
-        print "Launch internal check"
-        svc_cor.launch_check(now-1)
-        c = svc_cor.actions[0]
-        self.assertEqual(True, c.internal)
-        self.assertTrue(c.is_launchable(now))
-
-        # ask the scheduler to launch this check
-        # and ask 2 loops: one for launch the check
-        # and another to integer the result
-        self.scheduler_loop(2, [])
-
-        # We should have no more the check
-        self.assertEqual(0, len(svc_cor.actions))
-
-        print "Look at svc_cor state", svc_cor.state
-        # What is the svc_cor state now?
-        self.assertEqual('WARNING', svc_cor.state)
-        self.assertEqual('HARD', svc_cor.state_type)
-        self.assertEqual(1, svc_cor.last_hard_state_id)
-
-        print "All elements", bp_rule.list_all_elements()
-
-        print "IMPACT:", svc_bd2.impacts
-        for i in svc_bd2.impacts:
-            print i.get_name()
-
-        # Assert that Simple_Or Is an impact of the problem bd2
-        self.assertIn(svc_cor, svc_bd2.impacts)
-        # and bd1 too
-        self.assertIn(svc_cor, svc_bd1.impacts)
+        assert 2 == len(sons)
+        assert 'host' == sons[0].operand
+        assert host.uuid == sons[0].sons[0]
+        assert 'host' == sons[1].operand
+        assert router.uuid == sons[1].sons[0]
 
     def test_dep_node_list_elements(self):
-        svc_bd1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
-        self.assertEqual(False, svc_bd1.got_business_rule)
-        self.assertIs(None, svc_bd1.business_rule)
-        svc_bd2 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "db2")
-        self.assertEqual(False, svc_bd2.got_business_rule)
-        self.assertIs(None, svc_bd2.business_rule)
-        svc_cor = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Simple_Or")
-        self.assertEqual(True, svc_cor.got_business_rule)
-        self.assertIsNot(svc_cor.business_rule, None)
+        """ BR - list all elements
+
+        :return:
+        """
+        svc_db1 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
+        assert False == svc_db1.got_business_rule
+        assert None is svc_db1.business_rule
+        svc_db2 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db2")
+        assert False == svc_db2.got_business_rule
+        assert None is svc_db2.business_rule
+        svc_cor = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "Simple_Or")
+        svc_cor.act_depend_of = []  # no host checks on critical check results
+        assert True == svc_cor.got_business_rule
+        assert svc_cor.business_rule is not None
         bp_rule = svc_cor.business_rule
-        self.assertEqual('|', bp_rule.operand)
+        assert '|' == bp_rule.operand
 
         print "All elements", bp_rule.list_all_elements()
-        all_elt = bp_rule.list_all_elements()
+        all_elements = bp_rule.list_all_elements()
 
-        self.assertIn(svc_bd2, all_elt)
-        self.assertIn(svc_bd1, all_elt)
+        assert 2 == len(all_elements)
+        assert svc_db2.uuid in all_elements
+        assert svc_db1.uuid in all_elements
 
-        print "DBG: bd2 depend_on_me", svc_bd2.act_depend_of_me
-
-    # We will try a full ERP rule and
-    # schedule a real check and see if it's good
     def test_full_erp_rule_with_schedule(self):
-        #
-        # Config is not correct because of a wrong relative path
-        # in the main config file
-        #
-        print "Get the hosts and services"
+        """ Full ERP rule with real checks scheduled
+
+        bp_rule!(test_host_0,db1|test_host_0,db2) & (test_host_0,web1|test_host_0,web2)
+         & (test_host_0,lvs1|test_host_0,lvs2) 
+
+        :return:
+        """
+        self.print_header()
         now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
+        
+        # Get the hosts
+        host = self._sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
-        router = self.sched.hosts.find_by_name("test_router_0")
+        router = self._sched.hosts.find_by_name("test_router_0")
         router.checks_in_progress = []
         router.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-        svc.checks_in_progress = []
-        svc.act_depend_of = []  # no hostchecks on critical checkresults
 
-        svc_bd1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
-        self.assertEqual(False, svc_bd1.got_business_rule)
-        self.assertIs(None, svc_bd1.business_rule)
-        svc_bd2 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "db2")
-        self.assertEqual(False, svc_bd2.got_business_rule)
-        self.assertIs(None, svc_bd2.business_rule)
-        svc_web1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "web1")
-        self.assertEqual(False, svc_web1.got_business_rule)
-        self.assertIs(None, svc_web1.business_rule)
-        svc_web2 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "web2")
-        self.assertEqual(False, svc_web2.got_business_rule)
-        self.assertIs(None, svc_web2.business_rule)
-        svc_lvs1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "lvs1")
-        self.assertEqual(False, svc_lvs1.got_business_rule)
-        self.assertIs(None, svc_lvs1.business_rule)
-        svc_lvs2 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "lvs2")
-        self.assertEqual(False, svc_lvs2.got_business_rule)
-        self.assertIs(None, svc_lvs2.business_rule)
-        svc_cor = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "ERP")
-        self.assertEqual(True, svc_cor.got_business_rule)
-        self.assertIsNot(svc_cor.business_rule, None)
+        # Get the services
+        svc_db1 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
+        svc_db1.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_db1.got_business_rule
+        assert svc_db1.business_rule is None
+
+        svc_db2 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db2")
+        svc_db2.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_db2.got_business_rule
+        assert svc_db2.business_rule is None
+
+        svc_web1 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "web1")
+        svc_web1.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_web1.got_business_rule
+        assert svc_web1.business_rule is None
+        
+        svc_web2 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "web2")
+        svc_web2.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_web2.got_business_rule
+        assert svc_web2.business_rule is None
+
+        svc_lvs1 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "lvs1")
+        svc_lvs1.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_lvs1.got_business_rule
+        assert svc_lvs1.business_rule is None
+
+        svc_lvs2 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "lvs2")
+        svc_lvs2.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_lvs2.got_business_rule
+        assert svc_lvs2.business_rule is None
+
+        svc_cor = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "ERP")
+        svc_cor.act_depend_of = []  # no host checks on critical check results
+        assert True == svc_cor.got_business_rule
+        assert svc_cor.business_rule is not None
         bp_rule = svc_cor.business_rule
-        self.assertEqual('&', bp_rule.operand)
+        assert '&' == bp_rule.operand
 
-        sons = bp_rule.sons
-        print "Sons,", sons
-        # We've got 3 sons, each 3 rules
-        self.assertEqual(3, len(sons))
-        bd_node = sons[0]
-        self.assertEqual('|', bd_node.operand)
-        self.assertEqual(svc_bd1, bd_node.sons[0].sons[0])
-        self.assertEqual(svc_bd2, bd_node.sons[1].sons[0])
+        # We check for good parent/childs links
+        # So svc_cor should be a son of svc_db1, svc_db2, ...
+        # and they should be parents of svc_cor
+        assert svc_cor.uuid in svc_db1.child_dependencies
+        assert svc_cor.uuid in svc_db2.child_dependencies
+        assert svc_cor.uuid in svc_web1.child_dependencies
+        assert svc_cor.uuid in svc_web2.child_dependencies
+        assert svc_cor.uuid in svc_lvs1.child_dependencies
+        assert svc_cor.uuid in svc_lvs2.child_dependencies
 
-        # Now state working on the states
-        self.scheduler_loop(1, [[svc_bd2, 0, 'OK | value1=1 value2=2'], [svc_bd1, 0, 'OK | rtt=10']])
-        self.assertEqual('OK', svc_bd1.state)
-        self.assertEqual('HARD', svc_bd1.state_type)
-        self.assertEqual('OK', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
+        assert svc_db1.uuid in svc_cor.parent_dependencies
+        assert svc_db2.uuid in svc_cor.parent_dependencies
+        assert svc_web1.uuid in svc_cor.parent_dependencies
+        assert svc_web2.uuid in svc_cor.parent_dependencies
+        assert svc_lvs1.uuid in svc_cor.parent_dependencies
+        assert svc_lvs2.uuid in svc_cor.parent_dependencies
 
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
+        # Get the BR associated with svc_cor
+        bp_rule = svc_cor.business_rule
+        assert bp_rule.operand == '&'
+        assert bp_rule.of_values == ('3', '3', '3')
+        assert bp_rule.not_value == False
+        assert bp_rule.is_of_mul == False
+        assert bp_rule.sons is not None
+        assert 3 == len(bp_rule.sons)
 
-        print "Launch internal check"
-        svc_cor.launch_check(now-1)
-        c = svc_cor.actions[0]
-        self.assertEqual(True, c.internal)
-        self.assertTrue(c.is_launchable(now))
+        # First son is an OR rule for the DB node
+        db_node = bp_rule.sons[0]
+        assert isinstance(db_node, DependencyNode)
+        assert db_node.operand == '|'
+        assert db_node.of_values == ('2', '2', '2')
+        assert db_node.not_value == False
+        assert db_node.sons is not None
+        assert db_node.sons is not []
+        assert 2 == len(db_node.sons)
 
-        # ask the scheduler to launch this check
-        # and ask 2 loops: one for launch the check
-        # and another to integer the result
-        self.scheduler_loop(2, [])
+        # First son of DB node is linked to a service and we have its uuid
+        son = db_node.sons[0]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_db1.uuid
 
-        # We should have no more the check
-        self.assertEqual(0, len(svc_cor.actions))
+        # Second son of DB node is also a service
+        son = db_node.sons[1]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_db2.uuid
 
-        print "Look at svc_cor state", svc_cor.state
+        # Second son is an OR rule for the Web node
+        web_node = bp_rule.sons[1]
+        assert isinstance(web_node, DependencyNode)
+        assert web_node.operand == '|'
+        assert web_node.of_values == ('2', '2', '2')
+        assert web_node.not_value == False
+        assert web_node.sons is not None
+        assert web_node.sons is not []
+        assert 2 == len(web_node.sons)
+
+        # First son of Web node is linked to a service and we have its uuid
+        son = web_node.sons[0]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_web1.uuid
+
+        # Second son of Web node is also a service
+        son = web_node.sons[1]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_web2.uuid
+
+        # First son is an OR rule for the LVS node
+        lvs_node = bp_rule.sons[2]
+        assert isinstance(lvs_node, DependencyNode)
+        assert lvs_node.operand == '|'
+        assert lvs_node.of_values == ('2', '2', '2')
+        assert lvs_node.not_value == False
+        assert lvs_node.sons is not None
+        assert lvs_node.sons is not []
+        assert 2 == len(lvs_node.sons)
+
+        # First son of LVS node is linked to a service and we have its uuid
+        son = lvs_node.sons[0]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_lvs1.uuid
+
+        # Second son of LVS node is also a service
+        son = lvs_node.sons[1]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_lvs2.uuid
+
+        # Now start working on the states
+        self.scheduler_loop(1, [
+            [svc_db1, 0, 'OK'],
+            [svc_db2, 0, 'OK'],
+            [svc_web1, 0, 'OK'],
+            [svc_web2, 0, 'OK'],
+            [svc_lvs1, 0, 'OK'],
+            [svc_lvs2, 0, 'OK'],
+        ])
+        assert 'OK' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 'OK' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 'OK' == svc_web1.state
+        assert 'HARD' == svc_web1.state_type
+        assert 'OK' == svc_web2.state
+        assert 'HARD' == svc_web2.state_type
+        assert 'OK' == svc_lvs1.state
+        assert 'HARD' == svc_lvs1.state_type
+        assert 'OK' == svc_lvs2.state
+        assert 'HARD' == svc_lvs2.state_type
+
+        # -----
+        # (OK or OK) and (OK or OK) and (OK or OK) -> OK
+        # -----
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # Launch an internal check
+        self.launch_internal_check(svc_cor)
+
         # What is the svc_cor state now?
-        self.assertEqual('OK', svc_cor.state)
-        self.assertEqual('HARD', svc_cor.state_type)
-        self.assertEqual(0, svc_cor.last_hard_state_id)
+        assert 'OK' == svc_cor.state
+        assert 'HARD' == svc_cor.state_type
+        assert 0 == svc_cor.last_hard_state_id
 
-        # Now we set the bd1 as soft/CRITICAL
-        self.scheduler_loop(1, [[svc_bd1, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd1.state)
-        self.assertEqual('SOFT', svc_bd1.state_type)
-        self.assertEqual(0, svc_bd1.last_hard_state_id)
+        # Now we get db1 CRITICAL/HARD
+        self.scheduler_loop(2, [
+            [svc_db1, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 2 == svc_db1.last_hard_state_id
 
-        # The business rule must still be 0
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
-
-        print "Launch internal check"
-        svc_cor.launch_check(now-1)
-        c = svc_cor.actions[0]
-        self.assertEqual(True, c.internal)
-        self.assertTrue(c.is_launchable(now))
-
-        # ask the scheduler to launch this check
-        # and ask 2 loops: one for launch the check
-        # and another to integer the result
-        self.scheduler_loop(2, [])
-
-        # We should have no more the check
-        self.assertEqual(0, len(svc_cor.actions))
-
-        print "ERP: Look at svc_cor state", svc_cor.state
-        # What is the svc_cor state now?
-        self.assertEqual('OK', svc_cor.state)
-        self.assertEqual('HARD', svc_cor.state_type)
-        self.assertEqual(0, svc_cor.last_hard_state_id)
-
-        # Now we get bd1 CRITICAL/HARD
-        self.scheduler_loop(1, [[svc_bd1, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd1.state)
-        self.assertEqual('HARD', svc_bd1.state_type)
-        self.assertEqual(2, svc_bd1.last_hard_state_id)
-
+        # -----
+        # (CRITICAL or OK) and (OK or OK) and (OK or OK) -> OK
+        # 1st OK because OK or CRITICAL -> OK
+        # -----
         # The rule must still be a 0 (or inside)
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
 
-        print "ERP: Launch internal check"
-        svc_cor.launch_check(now-1)
-        c = svc_cor.actions[0]
-        self.assertEqual(True, c.internal)
-        self.assertTrue(c.is_launchable(now))
-
-        # ask the scheduler to launch this check
-        # and ask 2 loops: one for launch the check
-        # and another to integer the result
-        self.scheduler_loop(2, [])
-
-        # We should have no more the check
-        self.assertEqual(0, len(svc_cor.actions))
+        # Launch an internal check
+        self.launch_internal_check(svc_cor)
 
         print "ERP: Look at svc_cor state", svc_cor.state
         # What is the svc_cor state now?
-        self.assertEqual('OK', svc_cor.state)
-        self.assertEqual('HARD', svc_cor.state_type)
-        self.assertEqual(0, svc_cor.last_hard_state_id)
+        assert 'OK' == svc_cor.state
+        assert 'HARD' == svc_cor.state_type
+        assert 0 == svc_cor.last_hard_state_id
 
-        # Now we also set bd2 as CRITICAL/HARD... byebye 0 :)
-        self.scheduler_loop(2, [[svc_bd2, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
-        self.assertEqual(2, svc_bd2.last_hard_state_id)
+        # Now we also set db2 as CRITICAL/HARD... byebye 0 :)
+        self.scheduler_loop(2, [
+            [svc_db2, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 2 == svc_db2.last_hard_state_id
 
+        # -----
+        # (CRITICAL or CRITICAL) and (OK or OK) and (OK or OK) -> OK
+        # 1st CRITICAL because CRITICAL or CRITICAL -> CRITICAL
+        # -----
         # And now the state of the rule must be 2
-        state = bp_rule.get_state()
-        self.assertEqual(2, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
 
-        # And now we must be CRITICAL/SOFT!
-        print "ERP: Launch internal check"
-        svc_cor.launch_check(now-1)
-        c = svc_cor.actions[0]
-        self.assertEqual(True, c.internal)
-        self.assertTrue(c.is_launchable(now))
+        # Launch an internal check
+        self.launch_internal_check(svc_cor)
 
-        # ask the scheduler to launch this check
-        # and ask 2 loops: one for launch the check
-        # and another to integer the result
-        self.scheduler_loop(2, [])
-
-        # We should have no more the check
-        self.assertEqual(0, len(svc_cor.actions))
-
-        print "ERP: Look at svc_cor state", svc_cor.state
         # What is the svc_cor state now?
-        self.assertEqual('CRITICAL', svc_cor.state)
-        self.assertEqual('SOFT', svc_cor.state_type)
-        self.assertEqual(0, svc_cor.last_hard_state_id)
+        # And now we must be CRITICAL/SOFT
+        assert 'CRITICAL' == svc_cor.state
+        assert 'SOFT' == svc_cor.state_type
+        assert 0 == svc_cor.last_hard_state_id
 
-        # OK, re recheck again, GO HARD!
-        print "ERP: Launch internal check"
-        svc_cor.launch_check(now-1)
-        c = svc_cor.actions[0]
-        self.assertEqual(True, c.internal)
-        self.assertTrue(c.is_launchable(now))
+        # Launch an internal check
+        self.launch_internal_check(svc_cor)
 
-        # ask the scheduler to launch this check
-        # and ask 2 loops: one for launch the check
-        # and another to integer the result
-        self.scheduler_loop(2, [])
-
-        # We should have no more the check
-        self.assertEqual(0, len(svc_cor.actions))
-
-        print "ERP: Look at svc_cor state", svc_cor.state
         # What is the svc_cor state now?
-        self.assertEqual('CRITICAL', svc_cor.state)
-        self.assertEqual('HARD', svc_cor.state_type)
-        self.assertEqual(2, svc_cor.last_hard_state_id)
+        # And now we must be CRITICAL/HARD
+        assert 'CRITICAL' == svc_cor.state
+        assert 'HARD' == svc_cor.state_type
+        assert 2 == svc_cor.last_hard_state_id
 
-        # And If we set one WARNING?
-        self.scheduler_loop(2, [[svc_bd2, 1, 'WARNING | value1=1 value2=2']])
-        self.assertEqual('WARNING', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
-        self.assertEqual(1, svc_bd2.last_hard_state_id)
+        # And If we set db2 to WARNING?
+        self.scheduler_loop(2, [
+            [svc_db2, 1, 'WARNING | value1=1 value2=2']
+        ])
+        assert 'WARNING' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 1 == svc_db2.last_hard_state_id
 
+        # -----
+        # (CRITICAL or WARNING) and (OK or OK) and (OK or OK) -> OK
+        # 1st WARNING because CRITICAL or WARNING -> WARNING
+        # -----
         # Must be WARNING (better no 0 value)
-        state = bp_rule.get_state()
-        self.assertEqual(1, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 1 == state
 
         # And in a HARD
-        print "ERP: Launch internal check"
-        svc_cor.launch_check(now-1)
-        c = svc_cor.actions[0]
-        self.assertEqual(True, c.internal)
-        self.assertTrue(c.is_launchable(now))
+        # Launch an internal check
+        self.launch_internal_check(svc_cor)
 
-        # ask the scheduler to launch this check
-        # and ask 2 loops: one for launch the check
-        # and another to integer the result
-        self.scheduler_loop(2, [])
-
-        # We should have no more the check
-        self.assertEqual(0, len(svc_cor.actions))
-
-        print "ERP: Look at svc_cor state", svc_cor.state
         # What is the svc_cor state now?
-        self.assertEqual('WARNING', svc_cor.state)
-        self.assertEqual('HARD', svc_cor.state_type)
-        self.assertEqual(1, svc_cor.last_hard_state_id)
+        assert 'WARNING' == svc_cor.state
+        assert 'HARD' == svc_cor.state_type
+        assert 1 == svc_cor.last_hard_state_id
 
-        print "All elements", bp_rule.list_all_elements()
-
-        print "IMPACT:", svc_bd2.impacts
-        for i in svc_bd2.impacts:
-            print i.get_name()
-
-        # Assert that Simple_Or Is an impact of the problem bd2
-        self.assertIn(svc_cor, svc_bd2.impacts)
-        # and bd1 too
-        self.assertIn(svc_cor, svc_bd1.impacts)
+        # Assert that ERP Is an impact of the problem db2
+        assert svc_cor.uuid in svc_db2.impacts
+        # and db1 too
+        assert svc_cor.uuid in svc_db1.impacts
 
         # And now all is green :)
-        self.scheduler_loop(2, [[svc_bd2, 0, 'OK | value1=1 value2=2'], [svc_bd1, 0, 'OK | value1=1 value2=2']])
+        self.scheduler_loop(2, [
+            [svc_db1, 0, 'OK'],
+            [svc_db2, 0, 'OK'],
+        ])
 
-        print "ERP: Launch internal check"
-        svc_cor.launch_check(now-1)
-        c = svc_cor.actions[0]
-        self.assertEqual(True, c.internal)
-        self.assertTrue(c.is_launchable(now))
+        # Launch an internal check
+        self.launch_internal_check(svc_cor)
 
-        # ask the scheduler to launch this check
-        # and ask 2 loops: one for launch the check
-        # and another to integer the result
-        self.scheduler_loop(2, [])
-
-        # We should have no more the check
-        self.assertEqual(0, len(svc_cor.actions))
-
-        print "ERP: Look at svc_cor state", svc_cor.state
         # What is the svc_cor state now?
-        self.assertEqual('OK', svc_cor.state)
-        self.assertEqual('HARD', svc_cor.state_type)
-        self.assertEqual(0, svc_cor.last_hard_state_id)
+        assert 'OK' == svc_cor.state
+        assert 'HARD' == svc_cor.state_type
+        assert 0 == svc_cor.last_hard_state_id
 
         # And no more in impact
-        self.assertNotIn(svc_cor, svc_bd2.impacts)
-        self.assertNotIn(svc_cor, svc_bd1.impacts)
+        assert svc_cor not in svc_db2.impacts
+        assert svc_cor not in svc_db1.impacts
 
         # And what if we set 2 service from distant rule CRITICAL?
         # ERP should be still OK
-        # And now all is green :)
-        self.scheduler_loop(2, [[svc_bd1, 2, 'CRITICAL | value1=1 value2=2'], [svc_web1, 2, 'CRITICAL | value1=1 value2=2']])
+        self.scheduler_loop(2, [
+            [svc_db1, 2, 'CRITICAL | value1=1 value2=2'],
+            [svc_web1, 2, 'CRITICAL | value1=1 value2=2'],
+            [svc_lvs1, 2, 'CRITICAL | value1=1 value2=2']
+        ])
 
-        print "ERP: Launch internal check"
-        svc_cor.launch_check(now-1)
-        c = svc_cor.actions[0]
-        self.assertEqual(True, c.internal)
-        self.assertTrue(c.is_launchable(now))
+        # Launch an internal check
+        self.launch_internal_check(svc_cor)
 
-        # ask the scheduler to launch this check
-        # and ask 2 loops: one for launch the check
-        # and another to integer the result
-        self.scheduler_loop(2, [])
-
-        # We should have no more the check
-        self.assertEqual(0, len(svc_cor.actions))
-
-        print "ERP: Look at svc_cor state", svc_cor.state
+        # -----
+        # (CRITICAL or OK) and (OK or OK) and (OK or OK) -> OK
+        # All OK because CRITICAL or OK -> OK
+        # -----
         # What is the svc_cor state now?
-        self.assertEqual('OK', svc_cor.state)
-        self.assertEqual('HARD', svc_cor.state_type)
-        self.assertEqual(0, svc_cor.last_hard_state_id)
+        assert 'OK' == svc_cor.state
+        assert 'HARD' == svc_cor.state_type
+        assert 0 == svc_cor.last_hard_state_id
 
-    # We will try a simple 1of: bd1 OR/AND db2
+        # We set bd 2 to CRITICAL and acknowledge it
+        self.scheduler_loop(2, [
+            [svc_db2, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 2 == svc_db2.last_hard_state_id
+
+        cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
+        self._sched.run_external_command(cmd)
+        assert True == svc_db2.problem_has_been_acknowledged
+
+        # -----
+        # (CRITICAL or ACK(CRITICAL)) and (OK or OK) and (OK or OK) -> OK
+        # All OK because CRITICAL or ACK(CRITICAL) -> OK
+        # -----
+        # Must be OK
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
+        # We unacknowledge then downtime db2
+        duration = 300
+        cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
+        self._sched.run_external_command(cmd)
+        assert False == svc_db2.problem_has_been_acknowledged
+
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc_cor, None, None]])
+        assert svc_db2.scheduled_downtime_depth > 0
+        assert True == svc_db2.in_scheduled_downtime
+
+        # -----
+        # (CRITICAL or DOWNTIME(CRITICAL)) and (OK or OK) and (OK or OK) -> OK
+        #  All OK because CRITICAL or DOWNTIME(CRITICAL) -> OK
+        # -----
+        # Must be OK
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
+
     def test_complex_ABCof_business_correlator(self):
+        """ BR - complex -bp_rule!5,1,1 of: test_host_0,A|test_host_0,B|test_host_0,C|
+        test_host_0,D|test_host_0,E """
         self.run_complex_ABCof_business_correlator(with_pct=False)
 
-    # We will try a simple 1of: bd1 OR/AND db2
     def test_complex_ABCof_pct_business_correlator(self):
+        """ BR - complex bp_rule!100%,20%,20% of: test_host_0,A|test_host_0,B|test_host_0,C|
+        test_host_0,D|test_host_0,E """
         self.run_complex_ABCof_business_correlator(with_pct=True)
 
     def run_complex_ABCof_business_correlator(self, with_pct=False):
-        #
-        # Config is not correct because of a wrong relative path
-        # in the main config file
-        #
-        print "Get the hosts and services"
-        now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
+        """
+
+        :param with_pct: True if a percentage is set
+        :return:
+        """
+        self.print_header()
+        now =time.time()
+
+        # Get the hosts
+        host = self._sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
-        host.act_depend_of = []  # ignore the router
-        router = self.sched.hosts.find_by_name("test_router_0")
+        host.act_depend_of = []  # ignore its parent
+        router = self._sched.hosts.find_by_name("test_router_0")
         router.checks_in_progress = []
-        router.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-        svc.checks_in_progress = []
-        svc.act_depend_of = []  # no hostchecks on critical checkresults
+        router.act_depend_of = []  # ignore its parent
 
-        A = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "A")
-        self.assertEqual(False, A.got_business_rule)
-        self.assertIs(None, A.business_rule)
-        B = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "B")
-        self.assertEqual(False, B.got_business_rule)
-        self.assertIs(None, B.business_rule)
-        C = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "C")
-        self.assertEqual(False, C.got_business_rule)
-        self.assertIs(None, C.business_rule)
-        D = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "D")
-        self.assertEqual(False, D.got_business_rule)
-        self.assertIs(None, D.business_rule)
-        E = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "E")
-        self.assertEqual(False, E.got_business_rule)
-        self.assertIs(None, E.business_rule)
+        # Get the services
+        A = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "A")
+        assert False == A.got_business_rule
+        assert None is A.business_rule
+        A.act_depend_of = []
+        B = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "B")
+        assert False == B.got_business_rule
+        assert None is B.business_rule
+        B.act_depend_of = []
+        C = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "C")
+        assert False == C.got_business_rule
+        assert None is C.business_rule
+        C.act_depend_of = []
+        D = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "D")
+        assert False == D.got_business_rule
+        assert None is D.business_rule
+        D.act_depend_of = []
+        E = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "E")
+        assert False == E.got_business_rule
+        assert None is E.business_rule
+        E.act_depend_of = []
 
         if with_pct == False:
-            svc_cor = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Complex_ABCOf")
+            svc_cor = self._sched.services.find_srv_by_name_and_hostname("test_host_0",
+                                                                         "Complex_ABCOf")
         else:
-            svc_cor = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Complex_ABCOf_pct")
-        self.assertEqual(True, svc_cor.got_business_rule)
-        self.assertIsNot(svc_cor.business_rule, None)
+            svc_cor = self._sched.services.find_srv_by_name_and_hostname("test_host_0",
+                                                                         "Complex_ABCOf_pct")
+        svc_cor.act_depend_of = []  # no host checks on critical check results
+        # Is a Business Rule, not a simple service...
+        assert svc_cor.got_business_rule
+        assert svc_cor.business_rule is not None
+
+        # Get the BR associated with svc_cor
         bp_rule = svc_cor.business_rule
-        self.assertEqual('of:', bp_rule.operand)
+        assert bp_rule.operand == 'of:'
         if with_pct == False:
-            self.assertEqual(('5', '1', '1'), bp_rule.of_values)
+            assert ('5', '1', '1') == bp_rule.of_values
         else:
-            self.assertEqual(('100%', '20%', '20%'), bp_rule.of_values)
+            assert ('100%', '20%', '20%') == bp_rule.of_values
+        assert bp_rule.is_of_mul == True
+        assert bp_rule.sons is not None
+        assert 5 == len(bp_rule.sons)
 
+        # We've got 5 sons for the BR which are 5 dependency nodes
+        # Each dependency node has a son which is the service
         sons = bp_rule.sons
-        print "Sons,", sons
-        # We've got 2 sons, 2 services nodes
-        self.assertEqual(5, len(sons))
-        self.assertEqual('service', sons[0].operand)
-        self.assertEqual(A, sons[0].sons[0])
-        self.assertEqual('service', sons[1].operand)
-        self.assertEqual(B, sons[1].sons[0])
-        self.assertEqual('service', sons[2].operand)
-        self.assertEqual(C, sons[2].sons[0])
-        self.assertEqual('service', sons[3].operand)
-        self.assertEqual(D, sons[3].sons[0])
-        self.assertEqual('service', sons[4].operand)
-        self.assertEqual(E, sons[4].sons[0])
+        assert 'service' == sons[0].operand
+        assert A.uuid == sons[0].sons[0]
+        assert 'service' == sons[1].operand
+        assert B.uuid == sons[1].sons[0]
+        assert 'service' == sons[2].operand
+        assert C.uuid == sons[2].sons[0]
+        assert 'service' == sons[3].operand
+        assert D.uuid == sons[3].sons[0]
+        assert 'service' == sons[4].operand
+        assert E.uuid == sons[4].sons[0]
 
-        # Now state working on the states
-        self.scheduler_loop(1, [[A, 0, 'OK'], [B, 0, 'OK'], [C, 0, 'OK'], [D, 0, 'OK'], [E, 0, 'OK']])
-        self.assertEqual('OK', A.state)
-        self.assertEqual('HARD', A.state_type)
-        self.assertEqual('OK', B.state)
-        self.assertEqual('HARD', B.state_type)
-        self.assertEqual('OK', C.state)
-        self.assertEqual('HARD', C.state_type)
-        self.assertEqual('OK', D.state)
-        self.assertEqual('HARD', D.state_type)
-        self.assertEqual('OK', E.state)
-        self.assertEqual('HARD', E.state_type)
+        # Now start working on the states
+        self.scheduler_loop(1, [
+            [A, 0, 'OK'], [B, 0, 'OK'], [C, 0, 'OK'], [D, 0, 'OK'], [E, 0, 'OK']
+        ])
+        assert 'OK' == A.state
+        assert 'HARD' == A.state_type
+        assert 'OK' == B.state
+        assert 'HARD' == B.state_type
+        assert 'OK' == C.state
+        assert 'HARD' == C.state_type
+        assert 'OK' == D.state
+        assert 'HARD' == D.state_type
+        assert 'OK' == E.state
+        assert 'HARD' == E.state_type
 
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
+        # -----
+        # All OK with a 5,1,1 of: -> OK
+        # -----
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
 
-        # Now we set the A as soft/CRITICAL
-        self.scheduler_loop(1, [[A, 2, 'CRITICAL']])
-        self.assertEqual('CRITICAL', A.state)
-        self.assertEqual('SOFT', A.state_type)
-        self.assertEqual(0, A.last_hard_state_id)
+        # Now we set the A as CRITICAL/HARD
+        self.scheduler_loop(2, [[A, 2, 'CRITICAL']])
+        assert 'CRITICAL' == A.state
+        assert 'HARD' == A.state_type
+        assert 2 == A.last_hard_state_id
 
-        # The business rule must still be 0
-        # becase we want HARD states
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
-
-        # Now we get A CRITICAL/HARD
-        self.scheduler_loop(1, [[A, 2, 'CRITICAL']])
-        self.assertEqual('CRITICAL', A.state)
-        self.assertEqual('HARD', A.state_type)
-        self.assertEqual(2, A.last_hard_state_id)
-
-        # The rule still be OK
-        state = bp_rule.get_state()
-        self.assertEqual(2, state)
+        # -----
+        # All OK except 1 with 5,1,1 of: -> CRITICAL
+        # -----
+        # The rule is 2
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
 
         # Now we also set B as CRITICAL/HARD...
         self.scheduler_loop(2, [[B, 2, 'CRITICAL']])
-        self.assertEqual('CRITICAL', B.state)
-        self.assertEqual('HARD', B.state_type)
-        self.assertEqual(2, B.last_hard_state_id)
+        assert 'CRITICAL' == B.state
+        assert 'HARD' == B.state_type
+        assert 2 == B.last_hard_state_id
 
-        # And now the state of the rule must be 2 now
-        state = bp_rule.get_state()
-        self.assertEqual(2, state)
+        # -----
+        # All OK except 2 with 5,1,1 of: -> CRITICAL
+        # -----
+        # The state of the rule remains 2
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
 
-        # And If we set A dn B WARNING now?
+        # And If we set A and B WARNING now?
         self.scheduler_loop(2, [[A, 1, 'WARNING'], [B, 1, 'WARNING']])
-        self.assertEqual('WARNING', A.state)
-        self.assertEqual('HARD', A.state_type)
-        self.assertEqual(1, A.last_hard_state_id)
-        self.assertEqual('WARNING', B.state)
-        self.assertEqual('HARD', B.state_type)
-        self.assertEqual(1, B.last_hard_state_id)
+        assert 'WARNING' == A.state
+        assert 'HARD' == A.state_type
+        assert 1 == A.last_hard_state_id
+        assert 'WARNING' == B.state
+        assert 'HARD' == B.state_type
+        assert 1 == B.last_hard_state_id
 
+        # -----
+        # All OK except 2 WARNING with 5,1,1 of: -> WARNING
+        # -----
         # Must be WARNING (worse no 0 value for both, like for AND rule)
-        state = bp_rule.get_state()
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
         print "state", state
-        self.assertEqual(1, state)
+        assert 1 == state
 
         # Ok now more fun, with changing of_values and states
 
@@ -1115,31 +2014,39 @@ class TestBusinesscorrel(AlignakTest):
         # 4 of: -> Ok (we got 4 OK, and not 4 warn or crit, so it's OK)
         # 5,1,1 -> Warning (at least one warning, and no crit -> warning)
         # 5,2,1 -> OK (we want warning only if we got 2 bad states, so not here)
-        self.scheduler_loop(2, [[A, 1, 'WARNING'], [B, 0, 'OK']])
+        # Set one as WARNING and all others as OK
+        self.scheduler_loop(1, [
+            [A, 1, 'WARNING'], [B, 0, 'OK'], [C, 0, 'OK'], [D, 0, 'OK'], [E, 0, 'OK']
+        ])
         # 4 of: -> 4,5,5
         if with_pct == False:
             bp_rule.of_values = ('4', '5', '5')
         else:
             bp_rule.of_values = ('80%', '100%', '100%')
         bp_rule.is_of_mul = False
-        self.assertEqual(0, bp_rule.get_state())
+        # -----
+        # All OK except 1 with 4of: -> OK
+        # -----
+        assert 0 == bp_rule.get_state(self._sched.hosts, self._sched.services)
+
         # 5,1,1
         if with_pct == False:
             bp_rule.of_values = ('5', '1', '1')
         else:
             bp_rule.of_values = ('100%', '20%', '20%')
         bp_rule.is_of_mul = True
-        self.assertEqual(1, bp_rule.get_state())
+        assert 1 == bp_rule.get_state(self._sched.hosts, self._sched.services)
+
         # 5,2,1
         if with_pct == False:
             bp_rule.of_values = ('5', '2', '1')
         else:
             bp_rule.of_values = ('100%', '40%', '20%')
         bp_rule.is_of_mul = True
-        self.assertEqual(0, bp_rule.get_state())
+        assert 0 == bp_rule.get_state(self._sched.hosts, self._sched.services)
 
         ###* W C O O O
-        # 4 of: -> Crtitical (not 4 ok, so we take the worse state, the critical)
+        # 4 of: -> Critical (not 4 ok, so we take the worse state, the critical)
         # 4,1,1 -> Critical (2 states raise the waring, but on raise critical, so worse state is critical)
         self.scheduler_loop(2, [[A, 1, 'WARNING'], [B, 2, 'Crit']])
         # 4 of: -> 4,5,5
@@ -1148,14 +2055,14 @@ class TestBusinesscorrel(AlignakTest):
         else:
             bp_rule.of_values = ('80%', '100%', '100%')
         bp_rule.is_of_mul = False
-        self.assertEqual(2, bp_rule.get_state())
+        assert 2 == bp_rule.get_state(self._sched.hosts, self._sched.services)
         # 4,1,1
         if with_pct == False:
             bp_rule.of_values = ('4', '1', '1')
         else:
             bp_rule.of_values = ('40%', '20%', '20%')
         bp_rule.is_of_mul = True
-        self.assertEqual(2, bp_rule.get_state())
+        assert 2 == bp_rule.get_state(self._sched.hosts, self._sched.services)
 
         ##* W C C O O
         # * 2 of: OK
@@ -1168,304 +2075,347 @@ class TestBusinesscorrel(AlignakTest):
         else:
             bp_rule.of_values = ('40%', '100%', '100%')
         bp_rule.is_of_mul = False
-        self.assertEqual(0, bp_rule.get_state())
+        assert 0 == bp_rule.get_state(self._sched.hosts, self._sched.services)
         # * 4,1,1
         if with_pct == False:
             bp_rule.of_values = ('4', '1', '1')
         else:
             bp_rule.of_values = ('80%', '20%', '20%')
         bp_rule.is_of_mul = True
-        self.assertEqual(2, bp_rule.get_state())
+        assert 2 == bp_rule.get_state(self._sched.hosts, self._sched.services)
         # * 4,1,3
         if with_pct == False:
             bp_rule.of_values = ('4', '1', '3')
         else:
             bp_rule.of_values = ('80%', '20%', '60%')
         bp_rule.is_of_mul = True
-        self.assertEqual(1, bp_rule.get_state())
+        assert 1 == bp_rule.get_state(self._sched.hosts, self._sched.services)
 
-    # We will try a simple bd1 AND NOT db2
-    def test_simple_and_not_business_correlator(self):
-        #
-        # Config is not correct because of a wrong relative path
-        # in the main config file
-        #
-        print "Get the hosts and services"
-        now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
-        host.checks_in_progress = []
-        host.act_depend_of = []  # ignore the router
-        router = self.sched.hosts.find_by_name("test_router_0")
-        router.checks_in_progress = []
-        router.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-        svc.checks_in_progress = []
-        svc.act_depend_of = []  # no hostchecks on critical checkresults
+        ##* W ACK(C) C O O
+        # * 3 of: OK
+        # * 4,1,1 -> Critical (same as before)
+        # * 4,1,2 -> Warning
+        cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;B;2;1;1;lausser;blablub" % (now)
+        self._sched.run_external_command(cmd)
 
-        svc_bd1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
-        self.assertEqual(False, svc_bd1.got_business_rule)
-        self.assertIs(None, svc_bd1.business_rule)
-        svc_bd2 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "db2")
-        self.assertEqual(False, svc_bd2.got_business_rule)
-        self.assertIs(None, svc_bd2.business_rule)
-        svc_cor = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Simple_And_not")
-        self.assertEqual(True, svc_cor.got_business_rule)
-        self.assertIsNot(svc_cor.business_rule, None)
-        bp_rule = svc_cor.business_rule
-        self.assertEqual('&', bp_rule.operand)
+        if with_pct == False:
+            bp_rule.of_values = ('3', '5', '5')
+        else:
+            bp_rule.of_values = ('60%', '100%', '100%')
+        bp_rule.is_of_mul = False
+        assert 0 == bp_rule.get_state(self._sched.hosts, self._sched.services)
+        # * 4,1,1
+        if with_pct == False:
+            bp_rule.of_values = ('4', '1', '1')
+        else:
+            bp_rule.of_values = ('80%', '20%', '20%')
+        bp_rule.is_of_mul = True
+        assert 2 == bp_rule.get_state(self._sched.hosts, self._sched.services)
+        # * 4,1,3
+        if with_pct == False:
+            bp_rule.of_values = ('4', '1', '2')
+        else:
+            bp_rule.of_values = ('80%', '20%', '40%')
+        bp_rule.is_of_mul = True
+        assert 1 == bp_rule.get_state(self._sched.hosts, self._sched.services)
 
-        sons = bp_rule.sons
-        print "Sons,", sons
-        # We've got 2 sons, 2 services nodes
-        self.assertEqual(2, len(sons))
-        self.assertEqual('service', sons[0].operand)
-        self.assertEqual(svc_bd1, sons[0].sons[0])
-        self.assertEqual('service', sons[1].operand)
-        self.assertEqual(svc_bd2, sons[1].sons[0])
+        ##* W DOWNTIME(C) C O O
+        # * 3 of: OK
+        # * 4,1,1 -> Critical (same as before)
+        # * 4,1,2 -> Warning
+        duration = 300
+        cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;B" % now
+        self._sched.run_external_command(cmd)
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;B;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc_cor, None, None]])
+        if with_pct == False:
+            bp_rule.of_values = ('3', '5', '5')
+        else:
+            bp_rule.of_values = ('60%', '100%', '100%')
+        bp_rule.is_of_mul = False
+        assert 0 == bp_rule.get_state(self._sched.hosts, self._sched.services)
+        # * 4,1,1
+        if with_pct == False:
+            bp_rule.of_values = ('4', '1', '1')
+        else:
+            bp_rule.of_values = ('80%', '20%', '20%')
+        bp_rule.is_of_mul = True
+        assert 2 == bp_rule.get_state(self._sched.hosts, self._sched.services)
+        # * 4,1,3
+        if with_pct == False:
+            bp_rule.of_values = ('4', '1', '2')
+        else:
+            bp_rule.of_values = ('80%', '20%', '40%')
+        bp_rule.is_of_mul = True
+        assert 1 == bp_rule.get_state(self._sched.hosts, self._sched.services)
 
-        # Now state working on the states
-        self.scheduler_loop(2, [[svc_bd1, 0, 'OK | value1=1 value2=2'], [svc_bd2, 2, 'CRITICAL | rtt=10']])
-        self.assertEqual('OK', svc_bd1.state)
-        self.assertEqual('HARD', svc_bd1.state_type)
-        self.assertEqual('CRITICAL', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
-
-        # We are a NOT, so should be OK here
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
-
-        # Now we set the bd1 as soft/CRITICAL
-        self.scheduler_loop(1, [[svc_bd1, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd1.state)
-        self.assertEqual('SOFT', svc_bd1.state_type)
-        self.assertEqual(0, svc_bd1.last_hard_state_id)
-
-        # The business rule must still be 0
-        # becase we want HARD states
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
-
-        # Now we get bd1 CRITICAL/HARD
-        self.scheduler_loop(1, [[svc_bd1, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd1.state)
-        self.assertEqual('HARD', svc_bd1.state_type)
-        self.assertEqual(2, svc_bd1.last_hard_state_id)
-
-        # The rule must go CRITICAL
-        state = bp_rule.get_state()
-        self.assertEqual(2, state)
-
-        # Now we also set bd2 as WARNING/HARD...
-        self.scheduler_loop(2, [[svc_bd2, 1, 'WARNING | value1=1 value2=2']])
-        self.assertEqual('WARNING', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
-        self.assertEqual(1, svc_bd2.last_hard_state_id)
-
-        # And now the state of the rule must be 2
-        state = bp_rule.get_state()
-        self.assertEqual(2, state)
-
-        # And If we set one WARNING too?
-        self.scheduler_loop(2, [[svc_bd1, 1, 'WARNING | value1=1 value2=2']])
-        self.assertEqual('WARNING', svc_bd1.state)
-        self.assertEqual('HARD', svc_bd1.state_type)
-        self.assertEqual(1, svc_bd1.last_hard_state_id)
-
-        # Must be WARNING (worse no 0 value for both)
-        state = bp_rule.get_state()
-        self.assertEqual(1, state)
-
-        # Now try to get ok in both place, should be bad :)
-        self.scheduler_loop(2, [[svc_bd1, 0, 'OK | value1=1 value2=2'], [svc_bd2, 0, 'OK | value1=1 value2=2']])
-        self.assertEqual('OK', svc_bd1.state)
-        self.assertEqual('HARD', svc_bd1.state_type)
-        self.assertEqual(0, svc_bd1.last_hard_state_id)
-        self.assertEqual('OK', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
-        self.assertEqual(0, svc_bd2.last_hard_state_id)
-
-        # Must be CRITICAL (ok and not ok IS no OK :) )
-        state = bp_rule.get_state()
-        self.assertEqual(2, state)
-
-
-
-
-
-
-    # We will try a simple bd1 OR db2
+    # We will try a simple db1 OR db2
     def test_multi_layers(self):
-        #
-        # Config is not correct because of a wrong relative path
-        # in the main config file
-        #
-        print "Get the hosts and services"
+        """ BR - multi-levels rule
+
+        bp_rule!(test_host_0,db1| (test_host_0,db2 & (test_host_0,lvs1|test_host_0,lvs2) ) )
+        & test_router_0
+        :return:
+        """
+        self.print_header()
         now = time.time()
-        host = self.sched.hosts.find_by_name("test_host_0")
+
+        # Get the hosts
+        host = self._sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
-        host.act_depend_of = []  # ignore the router
-        router = self.sched.hosts.find_by_name("test_router_0")
+        host.act_depend_of = []  # ignore its parent
+        router = self._sched.hosts.find_by_name("test_router_0")
         router.checks_in_progress = []
-        router.act_depend_of = []  # ignore the router
-        svc = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-        svc.checks_in_progress = []
-        svc.act_depend_of = []  # no hostchecks on critical checkresults
+        router.act_depend_of = []  # ignore its parent
 
-        # THE RULE IS (test_host_0,db1| (test_host_0,db2 & (test_host_0,lvs1|test_host_0,lvs2) ) ) & test_router_0
-        svc_lvs1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "lvs1")
-        self.assertIsNot(svc_lvs1, None)
-        svc_lvs2 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "lvs2")
-        self.assertIsNot(svc_lvs2, None)
+        # Get the services
+        svc_db1 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
+        svc_db1.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_db1.got_business_rule
+        assert svc_db1.business_rule is None
 
-        svc_bd1 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "db1")
-        self.assertEqual(False, svc_bd1.got_business_rule)
-        self.assertIs(None, svc_bd1.business_rule)
-        svc_bd2 = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "db2")
-        self.assertEqual(False, svc_bd2.got_business_rule)
-        self.assertIs(None, svc_bd2.business_rule)
-        svc_cor = self.sched.services.find_srv_by_name_and_hostname("test_host_0", "Multi_levels")
-        self.assertEqual(True, svc_cor.got_business_rule)
-        self.assertIsNot(svc_cor.business_rule, None)
+        svc_db2 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "db2")
+        svc_db2.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_db2.got_business_rule
+        assert svc_db2.business_rule is None
+
+        svc_lvs1 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "lvs1")
+        svc_lvs1.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_lvs1.got_business_rule
+        assert svc_lvs1.business_rule is None
+
+        svc_lvs2 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "lvs2")
+        svc_lvs2.act_depend_of = []  # no host checks on critical check results
+        # Not a BR, a simple service
+        assert not svc_lvs2.got_business_rule
+        assert svc_lvs2.business_rule is None
+
+        svc_cor = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "Multi_levels")
+        svc_cor.act_depend_of = []  # no host checks on critical check results
+        assert True == svc_cor.got_business_rule
+        assert svc_cor.business_rule is not None
         bp_rule = svc_cor.business_rule
-        self.assertEqual('&', bp_rule.operand)
+        assert '&' == bp_rule.operand
 
         # We check for good parent/childs links
-        # So svc_cor should be a son of svc_bd1 and svc_bd2
-        # and bd1 and bd2 should be parents of svc_cor
-        self.assertIn(svc_cor, svc_bd1.child_dependencies)
-        self.assertIn(svc_cor, svc_bd2.child_dependencies)
-        self.assertIn(svc_cor, router.child_dependencies)
-        self.assertIn(svc_bd1, svc_cor.parent_dependencies)
-        self.assertIn(svc_bd2, svc_cor.parent_dependencies)
-        self.assertIn(router, svc_cor.parent_dependencies)
+        # So svc_cor should be a son of svc_db1, svc_db2, ...
+        # and they should be parents of svc_cor
+        assert svc_cor.uuid in svc_db1.child_dependencies
+        assert svc_cor.uuid in svc_db2.child_dependencies
+        assert svc_cor.uuid in svc_lvs1.child_dependencies
+        assert svc_cor.uuid in svc_lvs2.child_dependencies
 
+        assert svc_db1.uuid in svc_cor.parent_dependencies
+        assert svc_db2.uuid in svc_cor.parent_dependencies
+        assert svc_lvs1.uuid in svc_cor.parent_dependencies
+        assert svc_lvs2.uuid in svc_cor.parent_dependencies
 
-        sons = bp_rule.sons
-        print "Sons,", sons
-        # We've got 2 sons, 2 services nodes
-        self.assertEqual(2, len(sons))
-        # Son0 is (test_host_0,db1| (test_host_0,db2 & (test_host_0,lvs1|test_host_0,lvs2) ) )
-        son0 = sons[0]
-        self.assertEqual('|', son0.operand)
-        # Son1 is test_router_0
-        self.assertEqual('host', sons[1].operand)
-        self.assertEqual(router, sons[1].sons[0])
+        # Get the BR associated with svc_cor
+        bp_rule = svc_cor.business_rule
+        assert bp_rule.operand == '&'
+        assert bp_rule.of_values == ('2', '2', '2')
+        assert bp_rule.not_value == False
+        assert bp_rule.is_of_mul == False
+        assert bp_rule.sons is not None
+        assert 2 == len(bp_rule.sons)
 
-        # Son0_0 is test_host_0,db1
-        # Son0_1 is test_host_0,db2 & (test_host_0,lvs1|test_host_0,lvs2)
-        son0_0 = son0.sons[0]
-        son0_1 = son0.sons[1]
-        self.assertEqual('service', son0_0.operand)
-        self.assertEqual(svc_bd1, son0_0.sons[0])
-        self.assertEqual('&', son0_1.operand)
+        # First son is an OR rule
+        first_node = bp_rule.sons[0]
+        assert isinstance(first_node, DependencyNode)
+        assert first_node.operand == '|'
+        assert first_node.of_values == ('2', '2', '2')
+        assert first_node.not_value == False
+        assert first_node.sons is not None
+        assert first_node.sons is not []
+        assert 2 == len(first_node.sons)
 
-        # Son0_1_0 is test_host_0,db2
-        # Son0_1_1 is test_host_0,lvs1|test_host_0,lvs2
-        son0_1_0 = son0_1.sons[0]
-        son0_1_1 = son0_1.sons[1]
-        self.assertEqual('service', son0_1_0.operand)
-        self.assertEqual(svc_bd2, son0_1_0.sons[0])
-        self.assertEqual('|', son0_1_1.operand)
+        # First son of the node is linked to a service and we have its uuid
+        son = first_node.sons[0]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_db1.uuid
 
-        # Son0_1_1_0 is test_host_0,lvs1
-        # Son0_1_1_1 is test_host_0,lvs2
-        son0_1_1_0 = son0_1_1.sons[0]
-        son0_1_1_1 = son0_1_1.sons[1]
+        # Second son of the node is also a rule (AND)
+        son = first_node.sons[1]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == '&'
+        assert son.of_values == ('2', '2', '2')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert isinstance(son.sons[0], DependencyNode)
 
+        # Second node is a rule
+        second_node = son
+        assert isinstance(second_node, DependencyNode)
+        assert second_node.operand == '&'
+        assert second_node.of_values == ('2', '2', '2')
+        assert second_node.not_value == False
+        assert second_node.sons is not None
+        assert second_node.sons is not []
+        assert isinstance(son.sons[0], DependencyNode)
 
-        self.assertEqual('service', son0_1_1_0.operand)
-        self.assertEqual(svc_lvs1, son0_1_1_0.sons[0])
-        self.assertEqual('service', son0_1_1_1.operand)
-        self.assertEqual(svc_lvs2, son0_1_1_1.sons[0])
+        # First son of the node is linked to a service and we have its uuid
+        son = second_node.sons[0]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_db2.uuid
 
+        # Second son of the node is also a rule (OR)
+        son = second_node.sons[1]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == '|'
+        assert son.of_values == ('2', '2', '2')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert isinstance(son.sons[0], DependencyNode)
 
-        # Now state working on the states
-        self.scheduler_loop(1, [[svc_bd2, 0, 'OK | value1=1 value2=2'], [svc_bd1, 0, 'OK | rtt=10'],
-                                [svc_lvs1, 0, 'OK'], [svc_lvs2, 0, 'OK'], [router, 0, 'UP'] ])
-        self.assertEqual('OK', svc_bd1.state)
-        self.assertEqual('HARD', svc_bd1.state_type)
-        self.assertEqual('OK', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
+        # Third node is a rule
+        third_node = son
+        assert isinstance(third_node, DependencyNode)
+        assert third_node.operand == '|'
+        assert third_node.of_values == ('2', '2', '2')
+        assert third_node.not_value == False
+        assert third_node.sons is not None
+        assert third_node.sons is not []
+        assert isinstance(son.sons[0], DependencyNode)
+
+        # First son of the node is linked to a service and we have its uuid
+        son = third_node.sons[0]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_lvs1.uuid
+
+        # Second son of the node is also a rule (OR)
+        son = third_node.sons[1]
+        assert isinstance(son, DependencyNode)
+        assert son.operand == 'service'
+        assert son.of_values == ('0', '0', '0')
+        assert son.not_value == False
+        assert son.sons is not None
+        assert son.sons is not []
+        assert son.sons[0] == svc_lvs2.uuid
+
+        # Now start working on the states
+        self.scheduler_loop(1, [
+            [svc_db1, 0, 'OK | rtt=10'],
+            [svc_db2, 0, 'OK | value1=1 value2=2'],
+            [svc_lvs1, 0, 'OK'],
+            [svc_lvs2, 0, 'OK'],
+            [host, 0, 'UP'],
+            [router, 0, 'UP']
+        ])
+        assert 'OK' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 'OK' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 'OK' == svc_lvs1.state
+        assert 'HARD' == svc_lvs1.state_type
+        assert 'OK' == svc_lvs2.state
+        assert 'HARD' == svc_lvs2.state_type
 
         # All is green, the rule should be green too
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
 
-        # Now we set the bd1 as soft/CRITICAL
-        self.scheduler_loop(1, [[svc_bd1, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd1.state)
-        self.assertEqual('SOFT', svc_bd1.state_type)
-        self.assertEqual(0, svc_bd1.last_hard_state_id)
+        # Now we get db1 CRITICAL/HARD
+        self.scheduler_loop(2, [
+            [svc_db1, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db1.state
+        assert 'HARD' == svc_db1.state_type
+        assert 2 == svc_db1.last_hard_state_id
 
-        # The business rule must still be 0
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
+        # The rule must still be a 0 (OR inside)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
 
-        # Now we get bd1 CRITICAL/HARD
-        self.scheduler_loop(1, [[svc_bd1, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd1.state)
-        self.assertEqual('HARD', svc_bd1.state_type)
-        self.assertEqual(2, svc_bd1.last_hard_state_id)
-
-        # The rule must still be a 0 (or inside)
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
-
-        # Now we also set bd2 as CRITICAL/HARD... byebye 0 :)
-        self.scheduler_loop(2, [[svc_bd2, 2, 'CRITICAL | value1=1 value2=2']])
-        self.assertEqual('CRITICAL', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
-        self.assertEqual(2, svc_bd2.last_hard_state_id)
+        # Now we also set db2 as CRITICAL/HARD...
+        self.scheduler_loop(2, [
+            [svc_db2, 2, 'CRITICAL | value1=1 value2=2']
+        ])
+        assert 'CRITICAL' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 2 == svc_db2.last_hard_state_id
 
         # And now the state of the rule must be 2
-        state = bp_rule.get_state()
-        self.assertEqual(2, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
 
-        # And If we set one WARNING?
-        self.scheduler_loop(2, [[svc_bd2, 1, 'WARNING | value1=1 value2=2']])
-        self.assertEqual('WARNING', svc_bd2.state)
-        self.assertEqual('HARD', svc_bd2.state_type)
-        self.assertEqual(1, svc_bd2.last_hard_state_id)
+        # And If we set db2 to WARNING?
+        self.scheduler_loop(2, [
+            [svc_db2, 1, 'WARNING | value1=1 value2=2']
+        ])
+        assert 'WARNING' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 1 == svc_db2.last_hard_state_id
 
         # Must be WARNING (better no 0 value)
-        state = bp_rule.get_state()
-        self.assertEqual(1, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 1 == state
 
-        # We should got now svc_bd2 and svc_bd1 as root problems
-        print "Root problems"
-        for p in svc_cor.source_problems:
-            print p.get_full_name()
-        self.assertIn(svc_bd1, svc_cor.source_problems)
-        self.assertIn(svc_bd2, svc_cor.source_problems)
+        # Acknowledge db2
+        cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % (now)
+        self._sched.run_external_command(cmd)
+        assert True == svc_db2.problem_has_been_acknowledged
 
+        # Must be OK
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
 
+        # Unacknowledge then downtime db2
+        duration = 300
+        cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
+        self._sched.run_external_command(cmd)
+        assert False == svc_db2.problem_has_been_acknowledged
 
-        # What about now with the router in DOWN?
+        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[svc_cor, None, None]])
+        assert svc_db2.scheduled_downtime_depth > 0
+
+        assert True == svc_db2.in_scheduled_downtime
+        assert 'WARNING' == svc_db2.state
+        assert 'HARD' == svc_db2.state_type
+        assert 1 == svc_db2.last_hard_state_id
+
+        # Must be OK
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        self.assertEqual(0, state)
+
+        # We should got now svc_db2 and svc_db1 as root problems
+        assert svc_db1.uuid in svc_cor.source_problems
+        assert svc_db2.uuid in svc_cor.source_problems
+
+        # What about now with the router in DOWN state?
         self.scheduler_loop(5, [[router, 2, 'DOWN']])
-        self.assertEqual('DOWN', router.state)
-        self.assertEqual('HARD', router.state_type)
-        self.assertEqual(1, router.last_hard_state_id)
+        assert 'DOWN' == router.state
+        assert 'HARD' == router.state_type
+        assert 1 == router.last_hard_state_id
 
         # Must be CRITICAL (CRITICAL VERSUS DOWN -> DOWN)
-        state = bp_rule.get_state()
-        self.assertEqual(2, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 2 == state
 
         # Now our root problem is router
-        print "Root problems"
-        for p in svc_cor.source_problems:
-            print p.get_full_name()
-        self.assertIn(router, svc_cor.source_problems)
-
-
-
-
-
-
-
-
-
-
-
+        assert router.uuid in svc_cor.source_problems
 
     # We will try a strange rule that ask UP&UP -> DOWN&DONW-> OK
     def test_darthelmet_rule(self):
@@ -1475,108 +2425,85 @@ class TestBusinesscorrel(AlignakTest):
         #
         print "Get the hosts and services"
         now = time.time()
-        host = self.sched.hosts.find_by_name("test_darthelmet")
+        host = self._sched.hosts.find_by_name("test_darthelmet")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
-        A = self.sched.hosts.find_by_name("test_darthelmet_A")
-        B = self.sched.hosts.find_by_name("test_darthelmet_B")
+        A = self._sched.hosts.find_by_name("test_darthelmet_A")
+        B = self._sched.hosts.find_by_name("test_darthelmet_B")
 
-        self.assertEqual(True, host.got_business_rule)
-        self.assertIsNot(host.business_rule, None)
+        assert True == host.got_business_rule
+        assert host.business_rule is not None
         bp_rule = host.business_rule
-        self.assertEqual('|', bp_rule.operand)
+        assert '|' == bp_rule.operand
 
         # Now state working on the states
         self.scheduler_loop(3, [[host, 0, 'UP'], [A, 0, 'UP'], [B, 0, 'UP'] ] )
-        self.assertEqual('UP', host.state)
-        self.assertEqual('HARD', host.state_type)
-        self.assertEqual('UP', A.state)
-        self.assertEqual('HARD', A.state_type)
+        assert 'UP' == host.state
+        assert 'HARD' == host.state_type
+        assert 'UP' == A.state
+        assert 'HARD' == A.state_type
 
-        state = bp_rule.get_state()
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
         print "WTF0", state
-        self.assertEqual(0, state)
+        assert 0 == state
 
         # Now we set the A as soft/DOWN
         self.scheduler_loop(1, [[A, 2, 'DOWN']])
-        self.assertEqual('DOWN', A.state)
-        self.assertEqual('SOFT', A.state_type)
-        self.assertEqual(0, A.last_hard_state_id)
+        assert 'DOWN' == A.state
+        assert 'SOFT' == A.state_type
+        assert 0 == A.last_hard_state_id
 
         # The business rule must still be 0
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
 
         # Now we get A DOWN/HARD
         self.scheduler_loop(3, [[A, 2, 'DOWN']])
-        self.assertEqual('DOWN', A.state)
-        self.assertEqual('HARD', A.state_type)
-        self.assertEqual(1, A.last_hard_state_id)
+        assert 'DOWN' == A.state
+        assert 'HARD' == A.state_type
+        assert 1 == A.last_hard_state_id
 
         # The rule must still be a 2 (or inside)
-        state = bp_rule.get_state()
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
         print "WFT", state
-        self.assertEqual(2, state)
+        assert 2 == state
 
         # Now we also set B as DOWN/HARD, should get back to 0!
         self.scheduler_loop(3, [[B, 2, 'DOWN']])
-        self.assertEqual('DOWN', B.state)
-        self.assertEqual('HARD', B.state_type)
-        self.assertEqual(1, B.last_hard_state_id)
+        assert 'DOWN' == B.state
+        assert 'HARD' == B.state_type
+        assert 1 == B.last_hard_state_id
 
         # And now the state of the rule must be 0 again! (strange rule isn't it?)
-        state = bp_rule.get_state()
-        self.assertEqual(0, state)
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
 
+        # We set B as UP and acknowledge A
+        self.scheduler_loop(3, [[B, 0, 'UP']])
+        assert 'UP' == B.state
+        assert 'HARD' == B.state_type
+        assert 0 == B.last_hard_state_id
 
+        cmd = "[%lu] ACKNOWLEDGE_HOST_PROBLEM;test_darthelmet_A;1;1;0;lausser;blablub" % now
+        self._sched.run_external_command(cmd)
+        assert 'DOWN' == A.state
+        assert 'HARD' == A.state_type
+        assert 1 == A.last_hard_state_id
 
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state
 
+        # We unacknowledge then downtime A
+        duration = 300
+        cmd = "[%lu] REMOVE_HOST_ACKNOWLEDGEMENT;test_darthelmet_A" % now
+        self._sched.run_external_command(cmd)
 
-class TestConfigBroken(AlignakTest):
-    """A class with a broken configuration, where business rules reference unknown hosts/services"""
+        cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_darthelmet_A;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
+        self._sched.run_external_command(cmd)
+        self.scheduler_loop(1, [[B, None, None]])
+        assert 'DOWN' == A.state
+        assert 'HARD' == A.state_type
+        assert 1 == A.last_hard_state_id
 
-    def setUp(self):
-        self.setup_with_file(['etc/alignak_business_correlator_broken.cfg'])
-
-
-    def test_conf_is_correct(self):
-        #
-        # Business rules use services which don't exist. We want
-        # the arbiter to output an error message and exit
-        # in a controlled manner.
-        #
-        print "conf_is_correct", self.conf.conf_is_correct
-        self.assertFalse(self.conf.conf_is_correct)
-
-        # Get the arbiter's log broks
-        [b.prepare() for b in self.broks.values()]
-        logs = [b.data['log'] for b in self.broks.values() if b.type == 'log']
-
-        # Info: Simple_1Of_1unk_svc: my business rule is invalid
-        # Info: Simple_1Of_1unk_svc: Business rule uses unknown service test_host_0/db3
-        # Error: [items] In Simple_1Of_1unk_svc is incorrect ; from etc/business_correlator_broken/services.cfg
-        self.assertEqual(3, len([log for log in logs if re.search('Simple_1Of_1unk_svc', log)]) )
-        self.assertEqual(1, len([log for log in logs if re.search('service test_host_0/db3', log)]) )
-        self.assertEqual(1, len([log for log in logs if re.search('Simple_1Of_1unk_svc.+from etc.+business_correlator_broken.cfg', log)]) )
-        # Info: ERP_unk_svc: my business rule is invalid
-        # Info: ERP_unk_svc: Business rule uses unknown service test_host_0/web100
-        # Info: ERP_unk_svc: Business rule uses unknown service test_host_0/lvs100
-        # Error: [items] In ERP_unk_svc is incorrect ; from etc/business_correlator_broken/services.cfg
-        self.assertEqual(4, len([log for log in logs if re.search('ERP_unk_svc', log)]) )
-        self.assertEqual(1, len([log for log in logs if re.search('service test_host_0/web100', log)]) )
-        self.assertEqual(1, len([log for log in logs if re.search('service test_host_0/lvs100', log)]) )
-        self.assertEqual(1, len([log for log in logs if re.search('ERP_unk_svc.+from etc.+business_correlator_broken.cfg', log)]) )
-        # Info: Simple_1Of_1unk_host: my business rule is invalid
-        # Info: Simple_1Of_1unk_host: Business rule uses unknown host test_host_9
-        # Error: [items] In Simple_1Of_1unk_host is incorrect ; from etc/business_correlator_broken/services.cfg
-        self.assertEqual(3, len([log for log in logs if re.search('Simple_1Of_1unk_host', log)]) )
-        self.assertEqual(1, len([log for log in logs if re.search('host test_host_9', log)]) )
-        self.assertEqual(1, len([log for log in logs if re.search('Simple_1Of_1unk_host.+from etc.+business_correlator_broken.cfg', log)]) )
-
-        # Now the number of all failed business rules.
-        self.assertEqual(3, len([log for log in logs if re.search('my business rule is invalid', log)]) )
-
-
-
-if __name__ == '__main__':
-    unittest.main()
+        state = bp_rule.get_state(self._sched.hosts, self._sched.services)
+        assert 0 == state

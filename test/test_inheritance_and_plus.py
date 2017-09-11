@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -44,60 +44,151 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
+from pprint import pprint
 from alignak_test import *
 
 
 class TestInheritanceAndPlus(AlignakTest):
 
-    def setUp(self):
-        self.setup_with_file(['etc/alignak_inheritance_and_plus.cfg'])
+    def test_inheritance(self):
+        """Test properties inheritance
+        """
+        self.setup_with_file('cfg/cfg_inheritance.cfg')
+        assert self.conf_is_correct
+        self._sched = self.schedulers['scheduler-master'].sched
+
+        print("Hosts: ")
+        pprint(self._sched.hosts.__dict__)
+
+        print("Services: ")
+        pprint(self._sched.services.__dict__)
+
+        # common objects
+        tp_24x7 = self._sched.timeperiods.find_by_name("24x7")
+        tp_none = self._sched.timeperiods.find_by_name("none")
+        tptest = self._sched.timeperiods.find_by_name("testperiod")
+        cgtest = self._sched.contactgroups.find_by_name("test_contact")
+        cgadm = self._sched.contactgroups.find_by_name("admins")
+        cmdsvc = self._sched.commands.find_by_name("check_service")
+        cmdtest = self._sched.commands.find_by_name("dummy_command")
+
+        # Checks we got the objects we need
+        assert tp_24x7 is not None
+        assert tptest is not None
+        assert cgtest is not None
+        assert cgadm is not None
+        assert cmdsvc is not None
+        assert cmdtest is not None
+
+        # Hosts
+        test_host_0 = self._sched.hosts.find_by_name("test_host_0")
+        assert test_host_0 is not None
+        test_router_0 = self._sched.hosts.find_by_name("test_router_0")
+        assert test_router_0 is not None
+        hst1 = self._sched.hosts.find_by_name("test_host_01")
+        assert hst1 is not None
+        hst2 = self._sched.hosts.find_by_name("test_host_02")
+        assert hst2 is not None
+
+        # Services
+        # svc1 = self._sched.services.find_by_name("test_host_01/srv-svc")
+        # svc2 = self._sched.services.find_by_name("test_host_02/srv-svc")
+        # assert svc1 is not None
+        # assert svc2 is not None
+
+        # Inherited services (through hostgroup property)
+        # Those services are attached to all hosts of an hostgroup and they both
+        # inherit from the srv-from-hostgroup template
+        svc12 = self._sched.services.find_srv_by_name_and_hostname("test_host_01",
+                                                                   "srv-from-hostgroup")
+        assert svc12 is not None
+
+        # business_impact inherited
+        assert svc12.business_impact == 5
+        # maintenance_period none inherited from the service template
+        assert svc12.maintenance_period == tp_24x7.uuid
+
+        assert svc12.use == ['generic-service']
+        # Todo: explain why we do not have generic-service in tags ...
+        assert svc12.tags == set([])
+
+        svc22 = self._sched.services.find_srv_by_name_and_hostname("test_host_02",
+                                                                   "srv-from-hostgroup")
+        # business_impact inherited
+        assert svc22.business_impact == 5
+        # maintenance_period none inherited from the service template
+        assert svc22.maintenance_period == tp_24x7.uuid
+
+        assert svc22 is not None
+        assert svc22.use == ['generic-service']
+        assert svc22.tags == set([])
+        # maintenance_period none inherited...
+        assert svc22.maintenance_period == tp_24x7.uuid
+
+        # Duplicate for each services (generic services for each host inheriting from srv template)
+        svc1proc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "proc proc1")
+        svc1proc2 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "proc proc2")
+        svc2proc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_02", "proc proc1")
+        svc2proc2 = self._sched.services.find_srv_by_name_and_hostname("test_host_02", "proc proc2")
+        assert svc1proc1 is not None
+        assert svc1proc2 is not None
+        assert svc2proc1 is not None
+        assert svc2proc2 is not None
 
     def test_inheritance_and_plus(self):
-        #
-        # Config is not correct because of a wrong relative path
-        # in the main config file
-        #
-        print "Get the hosts and services"
-        now = time.time()
-        linux = self.sched.hostgroups.find_by_name('linux')
-        self.assertIsNot(linux, None)
-        dmz = self.sched.hostgroups.find_by_name('DMZ')
-        self.assertIsNot(dmz, None)
-        mysql = self.sched.hostgroups.find_by_name('mysql')
-        self.assertIsNot(mysql, None)
+        """Test properties inheritance with + sign
+        """
+        self.setup_with_file('cfg/cfg_inheritance_and_plus.cfg')
+        assert self.conf_is_correct
+        self._sched = self.schedulers['scheduler-master'].sched
 
-        host1 = self.sched.hosts.find_by_name("test-server1")
-        host2 = self.sched.hosts.find_by_name("test-server2")
-        # HOST 1 is lin-servers,dmz, so should be in the hostsgroup named "linux" AND "DMZ"
-        for hg in host1.hostgroups:
-            print hg.get_name()
-        self.assertIn(linux.get_name(), [hg.get_name() for hg in host1.hostgroups])
-        self.assertIn(dmz.get_name(), [hg.get_name() for hg in host1.hostgroups])
+        # Get the hostgroups
+        linux = self._sched.hostgroups.find_by_name('linux')
+        assert linux is not None
+        dmz = self._sched.hostgroups.find_by_name('DMZ')
+        assert dmz is not None
+        mysql = self._sched.hostgroups.find_by_name('mysql')
+        assert mysql is not None
 
-        # HOST2 is in lin-servers,dmz and +mysql, so all three of them
-        for hg in host2.hostgroups:
-            print hg.get_name()
-        self.assertIn(linux.get_name(), [hg.get_name() for hg in host2.hostgroups])
-        self.assertIn(dmz.get_name(), [hg.get_name() for hg in host2.hostgroups])
-        self.assertIn(mysql.get_name(), [hg.get_name() for hg in host2.hostgroups])
+        # Get the hosts
+        host1 = self._sched.hosts.find_by_name("test-server1")
+        host2 = self._sched.hosts.find_by_name("test-server2")
 
-        service = self.sched.services.find_srv_by_name_and_hostname("pack-host", 'CHILDSERV')
-        sgs = [sg.get_name() for sg in service.servicegroups]
-        self.assertIn("generic-sg", sgs)
-        self.assertIn("another-sg", sgs)
+        # HOST 1 is using templates: linux-servers,dmz, so it should be in
+        # the hostsgroups named "linux" AND "DMZ"
+        assert len(host1.hostgroups) == 2
+        assert linux.uuid in host1.hostgroups
+        assert dmz.uuid in host1.hostgroups
+        assert mysql.uuid not in host1.hostgroups
 
-    def test_pack_like_inheritance(self):
-        # get our pack service
-        host = self.sched.hosts.find_by_name('pack-host')
-        service = host.find_service_by_name('CHECK-123')
+        # HOST2 is using templates linux-servers,dmz and is hostgroups +mysql,
+        # so it should be in all three hostgroups
+        assert linux.uuid in host2.hostgroups
+        assert dmz.uuid in host2.hostgroups
+        assert mysql.uuid in host2.hostgroups
 
-        # it should exist
-        self.assertIsNotNone(service)
+        # Get the servicegroups
+        generic = self._sched.servicegroups.find_by_name('generic-sg')
+        assert generic is not None
+        another = self._sched.servicegroups.find_by_name('another-sg')
+        assert another is not None
 
-        # it should contain the custom variable `_CUSTOM_123` because custom
+        # Get the service
+        service = self._sched.services.find_srv_by_name_and_hostname("pack-host", 'CHILDSERV')
+        assert service is not None
+
+        # The service inherits from a template with a service group and it has
+        # its own +servicegroup so it should be in both groups
+        assert generic.uuid in service.servicegroups
+        assert another.uuid in service.servicegroups
+
+        # Get another service, built by host/service templates relation
+        service = self._sched.services.find_srv_by_name_and_hostname('pack-host', 'CHECK-123')
+        assert service is not None
+
+        # The service should have inherited the custom variable `_CUSTOM_123` because custom
         # variables are always stored in upper case
-        customs = service.customs
-        self.assertIn('_CUSTOM_123', customs)
+        assert '_CUSTOM_123' in service.customs
 
 
 if __name__ == '__main__':

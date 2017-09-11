@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -49,87 +49,240 @@
 #
 
 import time
-
+import copy
+from alignak.objects.notificationway import NotificationWay
 from alignak_test import unittest, AlignakTest
 
 
-class TestConfig(AlignakTest):
+class TestNotificationWay(AlignakTest):
     def setUp(self):
-        self.setup_with_file(['etc/alignak_notif_way.cfg'])
+        self.setup_with_file('cfg/cfg_notification_ways.cfg')
+        assert self.conf_is_correct
 
-    def test_contact_def(self):
-        #
-        # Config is not correct because of a wrong relative path
-        # in the main config file
-        #
-        print "Get the contact"
+        # Our scheduler
+        self._sched = self.schedulers['scheduler-master'].sched
+
+    def test_create_nw(self):
+        """ Test notification ways creation and check"""
+
+        host_sms = self._sched.commands.find_by_name('notify-host-sms')
+
+        service_sms = self._sched.notificationways.find_by_name('notify-service-sms')
+
+        # Create a notification way with parameters
+        parameters = {
+            'definition_order': 100,
+            'host_notification_commands': 'notify-host-sms',
+            'host_notification_options': 'durfs',
+            'host_notification_period': '24x7',
+            'host_notifications_enabled': '1',
+            'min_business_impact': 0,
+            'notificationway_name': u'email_in_day',
+            'register': True,
+            'service_notification_commands': 'notify-service-sms',
+            'service_notification_options': 'wucrf',
+            'service_notification_period': '24x7',
+            'service_notifications_enabled': '1',
+            'use': ''
+        }
+        nw = NotificationWay(parameters)
+
+        # And it will add an uuid
+        parameters['uuid'] = nw.uuid
+        # Those parameters are missing in the provided parameters but they will exist in the object
+        parameters.update({
+            # Transformed properties
+            'host_notifications_enabled': True,
+            'host_notification_commands': ['notify-host-sms'],
+            'host_notification_options': ['durfs'],
+            'service_notifications_enabled': True,
+            'service_notification_commands': ['notify-service-sms'],
+            'service_notification_options': ['wucrf'],
+            'use': [],
+            # Some more properties
+            'configuration_errors': [],
+            'configuration_warnings': [],
+            'customs': {},
+            'plus': {},
+            'tags': set([]),
+            'downtimes': {}
+        })
+        # creation_time and log_actions will not be modified! They are set
+        # only if they do not yet exist
+        assert nw.__dict__ == parameters
+
+    def test_correct_nw(self):
+        """ Test check notification way is correct"""
         now = time.time()
-        contact = self.sched.contacts.find_by_name("test_contact")
-        print "The contact", contact.__dict__
+
+        # Get a NW
+        email_in_day = self._sched.notificationways.find_by_name('email_in_day')
+        saved_nw = email_in_day
+        assert email_in_day.is_correct()
+
+        # If no notifications enabled, it will be correct whatever else...
+        from pprint import pprint
+
+        test=copy.deepcopy(email_in_day)
+        test.host_notification_options = ['n']
+        test.service_notification_options = ['n']
+        assert test.is_correct()
+
+        test=copy.deepcopy(email_in_day)
+        test.__dict__.pop('host_notification_commands')
+        test.__dict__.pop('service_notification_commands')
+        assert not test.is_correct()
+        assert test.configuration_errors == [
+            '[notificationway::email_in_day] do not have any service_notification_commands defined',
+            '[notificationway::email_in_day] do not have any host_notification_commands defined'
+        ]
+
+        test=copy.deepcopy(email_in_day)
+        test.host_notification_period = None
+        test.host_notification_commands = [None]
+        test.service_notification_period = None
+        test.service_notification_commands = [None]
+        assert not test.is_correct()
+        pprint(test.__dict__)
+        assert '[notificationway::email_in_day] a service_notification_command is missing' in test.configuration_errors
+        assert '[notificationway::email_in_day] a host_notification_command is missing' in test.configuration_errors
+        assert '[notificationway::email_in_day] the service_notification_period is invalid' in test.configuration_errors
+        assert '[notificationway::email_in_day] the host_notification_period is invalid' in test.configuration_errors
+
+    def test_contact_nw(self):
+        """ Test notification ways for a contact"""
+        now = time.time()
+        
+        # Get the contact
+        contact = self._sched.contacts.find_by_name("test_contact")
 
         print "All notification Way:"
-        for nw in self.sched.notificationways:
+        for nw in self._sched.notificationways:
             print "\t", nw.notificationway_name
+            assert nw.is_correct()
+        # 3 defined NWs and 3 self created NWs
+        assert len(self._sched.notificationways) == 6
 
-        email_in_day = self.sched.notificationways.find_by_name('email_in_day')
-        self.assertIn(email_in_day, contact.notificationways)
-        email_s_cmd = email_in_day.service_notification_commands.pop()
-        email_h_cmd = email_in_day.host_notification_commands.pop()
+        email_in_day = self._sched.notificationways.find_by_name('email_in_day')
+        assert email_in_day.uuid in contact.notificationways
 
-        sms_the_night = self.sched.notificationways.find_by_name('sms_the_night')
-        self.assertIn(sms_the_night, contact.notificationways)
-        sms_s_cmd = sms_the_night.service_notification_commands.pop()
-        sms_h_cmd = sms_the_night.host_notification_commands.pop()
+        sms_the_night = self._sched.notificationways.find_by_name('sms_the_night')
+        assert sms_the_night.uuid in contact.notificationways
 
         # And check the criticity values
-        self.assertEqual(0, email_in_day.min_business_impact)
-        self.assertEqual(5, sms_the_night.min_business_impact)
+        assert 0 == email_in_day.min_business_impact
+        assert 5 == sms_the_night.min_business_impact
 
-        print "Contact notification way(s):"
-        for nw in contact.notificationways:
-            print "\t", nw.notificationway_name
+        print "Contact '%s' notification way(s):" % contact.get_name()
+        # 2 NWs for 'test_contact'
+        assert len(contact.notificationways) == 2
+        for nw_id in contact.notificationways:
+            nw = self._sched.notificationways[nw_id]
+            print "\t %s (or %s)" % (nw.notificationway_name, nw.get_name())
+            # Get host notifications commands
+            for c in nw.host_notification_commands:
+                print "\t\t", c.get_name()
+            for c in nw.get_notification_commands('host'):
+                print "\t\t", c.get_name()
+            # Get service notifications commands
             for c in nw.service_notification_commands:
                 print "\t\t", c.get_name()
+            for c in nw.get_notification_commands('service'):
+                print "\t\t", c.get_name()
 
-        contact_simple = self.sched.contacts.find_by_name("test_contact_simple")
-        # It's the created notifway for this simple contact
-        test_contact_simple_inner_notificationway = self.sched.notificationways.find_by_name("test_contact_simple_inner_notificationway")
+        print "Contact '%s' commands:" % (contact.get_name())
+        # 2 commands for host notification (one from the NW and one contact defined)
+        assert len(contact.host_notification_commands) == 2
+        # 2 commands for service notification (one from the NW and one contact defined)
+        assert len(contact.service_notification_commands) == 2
+        # Get host notifications commands
+        for c in contact.host_notification_commands:
+            print "\t\tcontact host property:", c.get_name()
+        for c in contact.get_notification_commands(self._sched.notificationways, 'host'):
+            print "\t\tcontact host get_notification_commands:", c.get_name()
+        # Get service notifications commands
+        for c in contact.service_notification_commands:
+            print "\t\tcontact service property:", c.get_name()
+        for c in contact.get_notification_commands(self._sched.notificationways, 'service'):
+            print "\t\tcontact service get_notification_commands:", c.get_name()
+
+        contact_simple = self._sched.contacts.find_by_name("test_contact_simple")
+        # It's the created notification way for this simple contact
+        test_contact_simple_inner_notificationway = \
+            self._sched.notificationways.find_by_name("test_contact_simple_inner_notificationway")
         print "Simple contact"
-        for nw in contact_simple.notificationways:
+        for nw_id in contact_simple.notificationways:
+            nw = self._sched.notificationways[nw_id]
             print "\t", nw.notificationway_name
             for c in nw.service_notification_commands:
                 print "\t\t", c.get_name()
-        self.assertIn(test_contact_simple_inner_notificationway, contact_simple.notificationways)
+        assert test_contact_simple_inner_notificationway.uuid in contact_simple.notificationways
 
         # we take as criticity a huge value from now
         huge_criticity = 5
 
         # Now all want* functions
         # First is ok with warning alerts
-        self.assertEqual(True, email_in_day.want_service_notification(now, 'WARNING', 'PROBLEM', huge_criticity) )
+        assert True == email_in_day.want_service_notification(self._sched.timeperiods,
+                                                              now, 'WARNING', 'PROBLEM',
+                                                              huge_criticity)
 
         # But a SMS is now WAY for warning. When we sleep, we wake up for critical only guy!
-        self.assertEqual(False, sms_the_night.want_service_notification(now, 'WARNING', 'PROBLEM', huge_criticity) )
+        assert False == sms_the_night.want_service_notification(self._sched.timeperiods,
+                                                                now, 'WARNING', 'PROBLEM',
+                                                                huge_criticity)
 
         # Same with contacts now
         # First is ok for warning in the email_in_day nw
-        self.assertEqual(True, contact.want_service_notification(now, 'WARNING', 'PROBLEM', huge_criticity) )
+        assert True == contact.want_service_notification(self._sched.notificationways,
+                                                         self._sched.timeperiods,
+                                                         now, 'WARNING', 'PROBLEM', huge_criticity)
         # Simple is not ok for it
-        self.assertEqual(False, contact_simple.want_service_notification(now, 'WARNING', 'PROBLEM', huge_criticity) )
+        assert False == contact_simple.want_service_notification(self._sched.notificationways,
+                                                                 self._sched.timeperiods,
+                                                                 now, 'WARNING', 'PROBLEM',
+                                                                 huge_criticity)
 
         # Then for host notification
         # First is ok for warning in the email_in_day nw
-        self.assertEqual(True, contact.want_host_notification(now, 'FLAPPING', 'PROBLEM', huge_criticity) )
+        assert True == contact.want_host_notification(self._sched.notificationways,
+                                                      self._sched.timeperiods,
+                                                      now, 'FLAPPING', 'PROBLEM', huge_criticity)
         # Simple is not ok for it
-        self.assertEqual(False, contact_simple.want_host_notification(now, 'FLAPPING', 'PROBLEM', huge_criticity) )
+        assert False == contact_simple.want_host_notification(self._sched.notificationways,
+                                                              self._sched.timeperiods,
+                                                              now, 'FLAPPING', 'PROBLEM',
+                                                              huge_criticity)
 
         # And now we check that we refuse SMS for a low level criticity
         # I do not want to be awaken by a dev server! When I sleep, I sleep!
         # (and my wife will kill me if I do...)
 
-        # We take the EMAIL test because SMS got the night ony, so we take a very low value for criticity here
-        self.assertEqual(False, email_in_day.want_service_notification(now, 'WARNING', 'PROBLEM', -1) )
+        # We take the EMAIL test because SMS got the night ony, so we
+        # take a very low value for criticity here
+        assert False == email_in_day.want_service_notification(self._sched.timeperiods,
+                                                               now, 'WARNING', 'PROBLEM', -1)
 
+        # Test the heritage for notification ways
+        host_template = self._sched.hosts.find_by_name("test_host_contact_template")
+        contact_template_1 = self._sched.contacts[host_template.contacts[0]]
+        commands_contact_template_1 = contact_template_1.get_notification_commands(self._sched.notificationways,'host')
+        contact_template_2 = self._sched.contacts[host_template.contacts[1]]
+        commands_contact_template_2 = contact_template_2.get_notification_commands(self._sched.notificationways,'host')
+
+        resp = sorted([sorted([command.get_name() for command in commands_contact_template_1]),
+                       sorted([command.get_name() for command in commands_contact_template_2])])
+
+        assert sorted([['notify-host', 'notify-host-work'], ['notify-host-sms', 'notify-host-work']]) == resp
+
+        contact_template_1 = self._sched.contacts[host_template.contacts[0]]
+        commands_contact_template_1 = contact_template_1.get_notification_commands(self._sched.notificationways,'service')
+        contact_template_2 = self._sched.contacts[host_template.contacts[1]]
+        commands_contact_template_2 = contact_template_2.get_notification_commands(self._sched.notificationways,'service')
+        resp = sorted([sorted([command.get_name() for command in commands_contact_template_1]),
+                       sorted([command.get_name() for command in commands_contact_template_2])])
+
+        assert sorted([['notify-service', 'notify-service-work'], ['notify-service-sms', 'notify-service-work']]) == resp
 
 
 if __name__ == '__main__':

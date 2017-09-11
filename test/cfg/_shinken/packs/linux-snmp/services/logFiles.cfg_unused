@@ -1,0 +1,12 @@
+define service {
+    service_description   Log_File_Health
+    use                   linux-service,10min_short
+    register              0
+    host_name             linux-snmp
+    check_command         check_linux_logfiles
+    is_volatile           1
+
+    _DETAILLEDESC         Detect warning and critical pattern in syslog messages
+    _IMPACT               Average/Critical : Depends on message detected, cause system instability
+    _FIXACTIONS           Depends on message detected
+}

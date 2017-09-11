@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -55,10 +55,8 @@
  schedulers (and the associated actions) and take the new ones instead.
 """
 
-import optparse
-
 from alignak.daemons.reactionnerdaemon import Reactionner
-from alignak.version import VERSION
+from alignak.util import parse_daemon_args
 
 
 def main():
@@ -66,29 +64,8 @@ def main():
 
     :return: None
     """
-    parser = optparse.OptionParser(
-        "%prog [options]", version="%prog " + VERSION)
-    parser.add_option('-c', '--config',
-                      dest="config_file", metavar="INI-CONFIG-FILE",
-                      help='Config file')
-    parser.add_option('-d', '--daemon', action='store_true',
-                      dest="is_daemon",
-                      help="Run in daemon mode")
-    parser.add_option('-r', '--replace', action='store_true',
-                      dest="do_replace",
-                      help="Replace previous running reactionner")
-    parser.add_option('--debugfile', dest='debug_file',
-                      help=("Debug file. Default: not used "
-                            "(why debug a bug free program? :) )"))
-    parser.add_option("-p", "--profile",
-                      dest="profile",
-                      help="Dump a profile file. Need the python cProfile librairy")
-
-    opts, args = parser.parse_args()
-    if args:
-        parser.error("Does not accept any argument.")
-
-    daemon = Reactionner(debug=opts.debug_file is not None, **opts.__dict__)
+    args = parse_daemon_args()
+    daemon = Reactionner(debug=args.debug_file is not None, **args.__dict__)
     daemon.main()
 
 

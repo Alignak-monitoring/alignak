@@ -2,13 +2,24 @@
 -r ../requirements.txt
 unittest2
 mock
-coveralls==0.5
-nose-cov==1.6
-coverage==3.7.1
-nose==1.3.7
-pylint==1.5.0
-pep8==1.5.7
+# Use psutil
+psutil
+# Use py.test as test-runner
+pytest
+pytest-cov
+# Let coverage use the most recent version
+coverage==4.3.4
+# Report coverage results to coveralls.io
+coveralls
+# Static code analysis libraries
+pylint
+pep8
 pep257
+# Tests time freeze
 freezegun
--e git+https://github.com/Alignak-monitoring/alignak-module-example.git#egg=alignak-module-example
+# Alignak example module (develop branch)
+-e git+git://github.com/Alignak-monitoring/alignak-module-example.git@develop#egg=alignak-module-example
 ordereddict==1.1
+requests_mock
+
+#psutil

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -53,13 +53,20 @@ Basically used to handle perfdata, exit status and output
 """
 import time
 import re
+import logging
 
 from alignak.misc.perfdata import PerfDatas
-from alignak.log import logger
 from alignak.objects.host import Hosts
 from alignak.objects.service import Services
+from alignak.objects.timeperiod import Timeperiods
+from alignak.objects.macromodulation import MacroModulations
+from alignak.objects.checkmodulation import CheckModulations
 
-OBJS = {'hosts': Hosts({}), 'services': Services({})}
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
+
+OBJS = {'hosts': Hosts({}), 'services': Services({}), 'timeperiods': Timeperiods({}),
+        'macromodulations': MacroModulations({}), 'checkmodulations': CheckModulations({}),
+        'checks': {}}
 TRIGGER_FUNCTIONS = {}
 
 
@@ -187,7 +194,9 @@ def set_value(obj_ref, output=None, perfdata=None, return_code=None):
 
     now = time.time()
 
-    chk = obj.launch_check(now, force=True)
+    chk = obj.launch_check(now, OBJS['hosts'], OBJS['services'], OBJS['timeperiods'],
+                           OBJS['macromodulations'], OBJS['checkmodulations'],
+                           OBJS['checks'], force=True)
     if chk is None:
         logger.debug("[trigger] %s > none check launched", obj.get_full_name())
     else:
@@ -251,8 +260,7 @@ def get_custom(obj_ref, cname, default=None):
 
 @declared
 def perfs(objs_ref, metric_name):
-    """ TODO: check this description
-        Get perfdatas from multiple services/hosts
+    """ Get the same performance data metric from multiple services/hosts
 
     :param objs_ref:
     :type objs_ref: object
@@ -297,19 +305,25 @@ def get_object(ref):
     if not isinstance(ref, basestring):
         return ref
 
+    # If it is an object uuid, get the real object and return it :)
+    if ref in OBJS['hosts']:
+        return OBJS['hosts'][ref]
+    if ref in OBJS['services']:
+        return OBJS['services'][ref]
+
     # Ok it's a string
     name = ref
     if '/' not in name:
         return OBJS['hosts'].find_by_name(name)
-    else:
-        elts = name.split('/', 1)
-        return OBJS['services'].find_srv_by_name_and_hostname(elts[0], elts[1])
+
+    elts = name.split('/', 1)
+    return OBJS['services'].find_srv_by_name_and_hostname(elts[0], elts[1])
 
 
 @declared
 def get_objects(ref):
     """ TODO: check this description
-        Retrive objects (service/host) from names
+        Retrieve objects (service/host) from names
 
     :param ref:
     :type ref:
@@ -320,12 +334,18 @@ def get_objects(ref):
     if not isinstance(ref, basestring):
         return [ref]
 
+    # If it is an object uuid, get the real object and return it :)
+    if ref in OBJS['hosts']:
+        return [OBJS['hosts'][ref]]
+    if ref in OBJS['services']:
+        return [OBJS['services'][ref]]
+
     name = ref
     # Maybe there is no '*'? if so, it's one element
     if '*' not in name:
         return [get_object(name)]
 
-    # Ok we look for spliting the host or service thing
+    # Ok we look for splitting the host or service thing
     hname = ''
     sdesc = ''
     if '/' not in name:
@@ -335,7 +355,6 @@ def get_objects(ref):
         hname = elts[0]
         sdesc = elts[1]
     logger.debug("[trigger get_objects] Look for %s %s", hname, sdesc)
-    res = []
     hosts = []
     services = []
 
@@ -352,19 +371,20 @@ def get_objects(ref):
             if regex.search(host.get_name()):
                 hosts.append(host)
 
-    # Maybe the user ask for justs hosts :)
+    # Maybe the user ask for only hosts :)
     if not sdesc:
         return hosts
 
     for host in hosts:
         if '*' not in sdesc:
-            serv = host.find_service_by_name(sdesc)
+            serv = OBJS['services'].find_by_name(sdesc)
             if serv:
                 services.append(serv)
         else:
             sdesc = sdesc.replace('*', '.*')
             regex = re.compile(sdesc)
-            for serv in host.services:
+            for serv_id in host.services:
+                serv = OBJS['services'][serv_id]
                 logger.debug("[trigger] Compare %s with %s", serv.service_description, sdesc)
                 if regex.search(serv.service_description):
                     services.append(serv)

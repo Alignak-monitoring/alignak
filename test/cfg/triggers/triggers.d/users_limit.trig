@@ -1,0 +1,17 @@
+# Get host custom variables
+os = get_custom(self.host, '_ostype', 'Windows!')
+license = get_custom(self.host, '_oslicense', 'Expensive!')
+
+# Get service custom variables
+var = get_custom(self, '_var')
+warn = get_custom(self, '_warn_users')
+crit = get_custom(self, '_crit_users')
+
+print "Host OS and license: ", os, license
+print "Service variable: ", var
+print "Thresholds: ", warn, crit
+
+users = perf(self, 'users')
+print "Got users: ", users
+
+set_value(self, output='OK all is green, my host is %s' % os, perfdata='users=%d' % (users*2), return_code=0)

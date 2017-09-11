@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -49,7 +49,7 @@
 """
 This module provide Pack and Packs classes used to define 'group' of configurations
 """
-
+import logging
 import os
 import re
 try:
@@ -59,15 +59,15 @@ except ImportError:
 
 from alignak.objects.item import Item, Items
 from alignak.property import StringProp
-from alignak.log import logger
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
-class Pack(Item):
+class Pack(Item):  # pragma: no cover, this class looks no more used - see #551
     """
     Class to manage a Pack
     A Pack contain multiple configuration files (like all checks for os 'FreeBSD')
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'pack'
 
     properties = Item.properties.copy()
@@ -90,7 +90,7 @@ class Pack(Item):
             return 'UnnamedPack'
 
 
-class Packs(Items):
+class Packs(Items):  # pragma: no cover, this class looks no more used - see #551
     """
     Class to manage all Pack
     """
@@ -107,7 +107,7 @@ class Packs(Items):
         :return: None
         """
         # Now walk for it
-        for root, dirs, files in os.walk(path):
+        for root, _, files in os.walk(path):
             for p_file in files:
                 if re.search(r"\.pack$", p_file):
                     path = os.path.join(root, p_file)
@@ -152,6 +152,6 @@ class Packs(Items):
             if not pack.path.endswith('/'):
                 pack.path += '/'
             # Ok, add it
-            self[pack._id] = pack
+            self[pack.uuid] = pack
         except ValueError, exp:
             logger.error("[Pack] error in loading pack file '%s': '%s'", name, exp)

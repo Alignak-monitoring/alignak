@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -52,21 +52,27 @@
 implements way of sending notifications. Basically used for parsing.
 
 """
-from alignak.objects.item import Item, Items
+import uuid
+import logging
+from alignak.objects.item import Item
+from alignak.objects.commandcallitem import CommandCallItems
 
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
-from alignak.log import logger
+from alignak.commandcall import CommandCall
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class NotificationWay(Item):
     """NotificationWay class is used to implement way of sending notifications (command, periods..)
 
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'notificationway'
 
     properties = Item.properties.copy()
     properties.update({
+        'uuid':
+            StringProp(default='', fill_brok=['full_status']),
         'notificationway_name':
             StringProp(fill_brok=['full_status']),
         'host_notifications_enabled':
@@ -103,6 +109,33 @@ class NotificationWay(Item):
     special_properties = ('service_notification_commands', 'host_notification_commands',
                           'service_notification_period', 'host_notification_period')
 
+    def __init__(self, params=None, parsing=True):
+        if params is None:
+            params = {}
+
+        # At deserialization, thoses are dict
+        # TODO: Separate parsing instance from recreated ones
+        for prop in ['service_notification_commands', 'host_notification_commands']:
+            if prop in params and isinstance(params[prop], list) and params[prop] \
+                    and isinstance(params[prop][0], dict):
+                new_list = [CommandCall(elem, parsing=parsing) for elem in params[prop]]
+                # We recreate the object
+                setattr(self, prop, new_list)
+                # And remove prop, to prevent from being overridden
+                del params[prop]
+        super(NotificationWay, self).__init__(params, parsing=parsing)
+
+    def serialize(self):
+        res = super(NotificationWay, self).serialize()
+
+        for prop in ['service_notification_commands', 'host_notification_commands']:
+            if getattr(self, prop) is None:
+                res[prop] = None
+            else:
+                res[prop] = [elem.serialize() for elem in getattr(self, prop)]
+
+        return res
+
     def get_name(self):
         """Accessor to notificationway_name attribute
 
@@ -111,7 +144,8 @@ class NotificationWay(Item):
         """
         return self.notificationway_name
 
-    def want_service_notification(self, timestamp, state, n_type, business_impact, cmd=None):
+    def want_service_notification(self, timeperiods,
+                                  timestamp, state, n_type, business_impact, cmd=None):
         """Check if notification options match the state of the service
         Notification is NOT wanted in ONE of the following case::
 
@@ -148,7 +182,8 @@ class NotificationWay(Item):
         if business_impact < self.min_business_impact:
             return False
 
-        valid = self.service_notification_period.is_time_valid(timestamp)
+        notif_period = timeperiods[self.service_notification_period]
+        valid = notif_period.is_time_valid(timestamp)
         if 'n' in self.service_notification_options:
             return False
         timestamp = {'WARNING': 'w', 'UNKNOWN': 'u', 'CRITICAL': 'c',
@@ -170,7 +205,8 @@ class NotificationWay(Item):
 
         return False
 
-    def want_host_notification(self, timestamp, state, n_type, business_impact, cmd=None):
+    def want_host_notification(self, timperiods, timestamp,
+                               state, n_type, business_impact, cmd=None):
         """Check if notification options match the state of the host
         Notification is NOT wanted in ONE of the following case::
 
@@ -207,7 +243,8 @@ class NotificationWay(Item):
         if cmd and cmd not in self.host_notification_commands:
             return False
 
-        valid = self.host_notification_period.is_time_valid(timestamp)
+        notif_period = timperiods[self.host_notification_period]
+        valid = notif_period.is_time_valid(timestamp)
         if 'n' in self.host_notification_options:
             return False
         timestamp = {'DOWN': 'd', 'UNREACHABLE': 'u', 'RECOVERY': 'r',
@@ -241,86 +278,87 @@ class NotificationWay(Item):
         return notif_commands
 
     def is_correct(self):
-        """Check if this host configuration is correct ::
+        """Check if this object configuration is correct ::
 
-        * All required parameter are specified
-        * Go through all configuration warnings and errors that could have been raised earlier
+        * Check our own specific properties
+        * Call our parent class is_correct checker
 
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
         state = True
-        cls = self.__class__
 
-        # Raised all previously saw errors like unknown commands or timeperiods
-        if self.configuration_errors != []:
-            state = False
-            for err in self.configuration_errors:
-                logger.error("[item::%s] %s", self.get_name(), err)
-
-        # A null notif way is a notif way that will do nothing (service = n, hot =n)
-        is_null_notifway = False
+        # Do not execute checks if notifications are disabled
         if (hasattr(self, 'service_notification_options') and
                 self.service_notification_options == ['n']):
             if (hasattr(self, 'host_notification_options') and
                     self.host_notification_options == ['n']):
-                is_null_notifway = True
                 return True
 
-        for prop, entry in cls.properties.items():
-            if prop not in self.special_properties:
-                if not hasattr(self, prop) and entry.required:
-                    logger.error("[notificationway::%s] %s property not set",
-                                 self.get_name(), prop)
-                    state = False  # Bad boy...
+        # Internal checks before executing inherited function...
 
-        # Ok now we manage special cases...
         # Service part
         if not hasattr(self, 'service_notification_commands'):
-            logger.error("[notificationway::%s] do not have any "
-                         "service_notification_commands defined", self.get_name())
+            msg = "[notificationway::%s] do not have any service_notification_commands defined" % (
+                self.get_name()
+            )
+            self.configuration_errors.append(msg)
             state = False
         else:
             for cmd in self.service_notification_commands:
                 if cmd is None:
-                    logger.error("[notificationway::%s] a "
-                                 "service_notification_command is missing", self.get_name())
+                    msg = "[notificationway::%s] a service_notification_command is missing" % (
+                        self.get_name()
+                    )
+                    self.configuration_errors.append(msg)
                     state = False
-                if not cmd.is_valid():
-                    logger.error("[notificationway::%s] a "
-                                 "service_notification_command is invalid", self.get_name())
+                elif not cmd.is_valid():
+                    msg = "[notificationway::%s] a service_notification_command is invalid" % (
+                        self.get_name()
+                    )
+                    self.configuration_errors.append(msg)
                     state = False
 
         if getattr(self, 'service_notification_period', None) is None:
-            logger.error("[notificationway::%s] the "
-                         "service_notification_period is invalid", self.get_name())
+            msg = "[notificationway::%s] the service_notification_period is invalid" % (
+                self.get_name()
+            )
+            self.configuration_errors.append(msg)
             state = False
 
         # Now host part
         if not hasattr(self, 'host_notification_commands'):
-            logger.error("[notificationway::%s] do not have any "
-                         "host_notification_commands defined", self.get_name())
+            msg = "[notificationway::%s] do not have any host_notification_commands defined" % (
+                self.get_name()
+            )
+            self.configuration_errors.append(msg)
             state = False
         else:
             for cmd in self.host_notification_commands:
                 if cmd is None:
-                    logger.error("[notificationway::%s] a "
-                                 "host_notification_command is missing", self.get_name())
+                    msg = "[notificationway::%s] a host_notification_command is missing" % (
+                        self.get_name()
+                    )
+                    self.configuration_errors.append(msg)
                     state = False
-                if not cmd.is_valid():
-                    logger.error("[notificationway::%s] a host_notification_command "
-                                 "is invalid (%s)", cmd.get_name(), str(cmd.__dict__))
+                elif not cmd.is_valid():
+                    msg = "[notificationway::%s] a host_notification_command is invalid (%s)" % (
+                        cmd.get_name(), str(cmd.__dict__)
+                    )
+                    self.configuration_errors.append(msg)
                     state = False
 
         if getattr(self, 'host_notification_period', None) is None:
-            logger.error("[notificationway::%s] the host_notification_period "
-                         "is invalid", self.get_name())
+            msg = "[notificationway::%s] the host_notification_period is invalid" % (
+                self.get_name()
+            )
+            self.configuration_errors.append(msg)
             state = False
 
-        return state
+        return super(NotificationWay, self).is_correct() and state
 
 
-class NotificationWays(Items):
+class NotificationWays(CommandCallItems):
     """NotificationWays manage a list of NotificationWay objects, used for parsing configuration
 
     """
@@ -344,7 +382,7 @@ class NotificationWays(Items):
         self.linkify_command_list_with_commands(commands, 'service_notification_commands')
         self.linkify_command_list_with_commands(commands, 'host_notification_commands')
 
-    def new_inner_member(self, name=None, params={}):
+    def new_inner_member(self, name=None, params=None):
         """Create new instance of NotificationWay with given name and parameters
         and add it to the item list
 
@@ -354,9 +392,12 @@ class NotificationWays(Items):
         :type params: dict
         :return: None
         """
+        new_uuid = uuid.uuid4().hex
         if name is None:
-            name = NotificationWay._id
+            name = 'Generated_notificationway_%s' % new_uuid
+        if params is None:
+            params = {}
         params['notificationway_name'] = name
-        # print "Asking a new inner notificationway from name %s with params %s" % (name, params)
+        params['uuid'] = new_uuid
         notificationway = NotificationWay(params)
         self.add_item(notificationway)

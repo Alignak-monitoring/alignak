@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -54,10 +54,11 @@
 implements dependencies between hosts. Basically used for parsing.
 
 """
+import logging
 from alignak.objects.item import Item, Items
-
 from alignak.property import BoolProp, StringProp, ListProp
-from alignak.log import logger
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Hostdependency(Item):
@@ -65,7 +66,6 @@ class Hostdependency(Item):
     defined in a monitoring context (dependency period, notification_failure_criteria ..)
 
     """
-    _id = 0
     my_type = 'hostdependency'
 
     # F is dep of D
@@ -89,6 +89,15 @@ class Hostdependency(Item):
         'notification_failure_criteria': ListProp(default=['n'], split_on_coma=True),
         'dependency_period':             StringProp(default='')
     })
+
+    def __init__(self, params=None, parsing=True):
+        if params is None:
+            params = {}
+
+        for prop in ['execution_failure_criteria', 'notification_failure_criteria']:
+            if prop in params:
+                params[prop] = [p.replace('u', 'x') for p in params[prop]]
+        super(Hostdependency, self).__init__(params, parsing=parsing)
 
     def get_name(self):
         """Get name based on dependent_host_name and host_name attributes
@@ -154,7 +163,7 @@ class Hostdependencies(Items):
                               "an unknown dependent_hostgroup_name '%s'" % dephg_name
                         hostdep.configuration_errors.append(err)
                         continue
-                    dephnames.extend([m.strip() for m in dephg.members])
+                    dephnames.extend([m.strip() for m in dephg.get_hosts()])
 
             if hasattr(hostdep, 'dependent_host_name'):
                 dephnames.extend([n.strip() for n in hostdep.dependent_host_name.split(',')])
@@ -170,7 +179,7 @@ class Hostdependencies(Items):
                               " an unknown hostgroup_name '%s'" % hg_name
                         hostdep.configuration_errors.append(err)
                         continue
-                    hnames.extend([m.strip() for m in hostgroup.members])
+                    hnames.extend([m.strip() for m in hostgroup.get_hosts()])
 
             if hasattr(hostdep, 'host_name'):
                 hnames.extend([n.strip() for n in hostdep.host_name.split(',')])
@@ -201,7 +210,7 @@ class Hostdependencies(Items):
         """
         self.linkify_hd_by_h(hosts)
         self.linkify_hd_by_tp(timeperiods)
-        self.linkify_h_by_hd()
+        self.linkify_h_by_hd(hosts)
 
     def linkify_hd_by_h(self, hosts):
         """Replace dependent_host_name and host_name
@@ -224,8 +233,10 @@ class Hostdependencies(Items):
                     err = "Error: the host dependency got " \
                           "a bad dependent_host_name definition '%s'" % dh_name
                     hostdep.configuration_errors.append(err)
-                hostdep.host_name = host
-                hostdep.dependent_host_name = dephost
+                if host:
+                    hostdep.host_name = host.uuid
+                if dephost:
+                    hostdep.dependent_host_name = dephost.uuid
             except AttributeError, exp:
                 err = "Error: the host dependency miss a property '%s'" % exp
                 hostdep.configuration_errors.append(err)
@@ -241,40 +252,76 @@ class Hostdependencies(Items):
             try:
                 tp_name = hostdep.dependency_period
                 timeperiod = timeperiods.find_by_name(tp_name)
-                hostdep.dependency_period = timeperiod
-            except AttributeError, exp:
+                if timeperiod:
+                    hostdep.dependency_period = timeperiod.uuid
+                else:
+                    hostdep.dependency_period = ''
+            except AttributeError as exp:  # pragma: no cover, simple protectionn
                 logger.error("[hostdependency] fail to linkify by timeperiod: %s", exp)
 
-    def linkify_h_by_hd(self):
+    def linkify_h_by_hd(self, hosts):
         """Add dependency in host objects
+        :param hosts: hosts list
+        :type hosts: alignak.objects.host.Hosts
 
         :return: None
         """
         for hostdep in self:
+            # Only used for debugging purpose when loops are detected
+            setattr(hostdep, "host_name_string", "undefined")
+            setattr(hostdep, "dependent_host_name_string", "undefined")
+
             # if the host dep conf is bad, pass this one
             if getattr(hostdep, 'host_name', None) is None or\
                     getattr(hostdep, 'dependent_host_name', None) is None:
                 continue
-            # Ok, link!
-            depdt_hname = hostdep.dependent_host_name
-            dep_period = getattr(hostdep, 'dependency_period', None)
-            depdt_hname.add_host_act_dependency(
-                hostdep.host_name, hostdep.notification_failure_criteria,
-                dep_period, hostdep.inherits_parent
-            )
-            depdt_hname.add_host_chk_dependency(
-                hostdep.host_name, hostdep.execution_failure_criteria,
-                dep_period, hostdep.inherits_parent
-            )
+
+            if hostdep.host_name not in hosts or hostdep.dependent_host_name not in hosts:
+                continue
+
+            hosts.add_act_dependency(hostdep.dependent_host_name, hostdep.host_name,
+                                     hostdep.notification_failure_criteria,
+                                     getattr(hostdep, 'dependency_period', ''),
+                                     hostdep.inherits_parent)
+
+            hosts.add_chk_dependency(hostdep.dependent_host_name, hostdep.host_name,
+                                     hostdep.execution_failure_criteria,
+                                     getattr(hostdep, 'dependency_period', ''),
+                                     hostdep.inherits_parent)
+
+            # Only used for debugging purpose when loops are detected
+            setattr(hostdep, "host_name_string", hosts[hostdep.host_name].get_name())
+            setattr(hostdep, "dependent_host_name_string",
+                    hosts[hostdep.dependent_host_name].get_name())
 
     def is_correct(self):
-        """Check if this host configuration is correct ::
+        """Check if this object configuration is correct ::
 
-        * All required parameter are specified
-        * Go through all configuration warnings and errors that could have been raised earlier
+        * Check our own specific properties
+        * Call our parent class is_correct checker
 
-        :return: True if the configuration is correct, False otherwise
+        :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        valid = super(Hostdependencies, self).is_correct()
-        return valid and self.no_loop_in_parents("host_name", "dependent_host_name")
+        state = True
+
+        # Internal checks before executing inherited function...
+        loop = self.no_loop_in_parents("host_name", "dependent_host_name")
+        if loop:
+            msg = "Loop detected while checking host dependencies"
+            self.configuration_errors.append(msg)
+            state = False
+            for item in self:
+                for elem in loop:
+                    if elem == item.host_name:
+                        msg = "Host %s is parent host_name in dependency defined in %s" % (
+                            item.host_name_string, item.imported_from
+                        )
+                        self.configuration_errors.append(msg)
+                    elif elem == item.dependent_host_name:
+                        msg = "Host %s is child host_name in dependency defined in %s" % (
+                            item.dependent_host_name_string, item.imported_from
+                        )
+                        self.configuration_errors.append(msg)
+
+        return super(Hostdependencies, self).is_correct() and state

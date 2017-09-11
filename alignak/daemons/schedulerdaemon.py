@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -56,19 +56,20 @@ import os
 import signal
 import time
 import traceback
-import cPickle
-from multiprocessing import process
+import logging
 
-
+from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.scheduler import Scheduler
 from alignak.macroresolver import MacroResolver
+from alignak.brok import Brok
 from alignak.external_command import ExternalCommandManager
 from alignak.daemon import Daemon
 from alignak.http.scheduler_interface import SchedulerInterface
-from alignak.property import PathProp, IntegerProp
-from alignak.log import logger
+from alignak.property import PathProp, IntegerProp, StringProp
 from alignak.satellite import BaseSatellite
 from alignak.stats import statsmgr
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Alignak(BaseSatellite):
@@ -78,15 +79,24 @@ class Alignak(BaseSatellite):
 
     properties = BaseSatellite.properties.copy()
     properties.update({
-        'pidfile':   PathProp(default='schedulerd.pid'),
-        'port':      IntegerProp(default=7768),
-        'local_log': PathProp(default='schedulerd.log'),
+        'daemon_type':
+            StringProp(default='scheduler'),
+        'pidfile':
+            PathProp(default='schedulerd.pid'),
+        'port':
+            IntegerProp(default=7768),
+        'local_log':
+            PathProp(default='schedulerd.log'),
     })
 
-    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file, profile=''):
+    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file,
+                 port=None, local_log=None, daemon_name=None):
+        self.daemon_name = 'scheduler'
+        if daemon_name:
+            self.daemon_name = daemon_name
 
-        BaseSatellite.__init__(self, 'scheduler', config_file, is_daemon, do_replace, debug,
-                               debug_file)
+        BaseSatellite.__init__(self, self.daemon_name, config_file, is_daemon, do_replace,
+                               debug, debug_file, port, local_log)
 
         self.http_interface = SchedulerInterface(self)
         self.sched = Scheduler(self)
@@ -97,13 +107,27 @@ class Alignak(BaseSatellite):
         self.uri = None
         self.uri2 = None
 
+        # stats part
+        # --- copied from scheduler.py
+        self.nb_pulled_checks = 0
+        self.nb_pulled_actions = 0
+        # self.nb_checks_send = 0
+
+        self.nb_pushed_checks = 0
+        self.nb_pushed_actions = 0
+
+        self.nb_broks_send = 0
+        self.nb_pulled_broks = 0
+        # ---
+
         # And possible links for satellites
         # from now only pollers
         self.pollers = {}
         self.reactionners = {}
         self.brokers = {}
 
-    def compensate_system_time_change(self, difference):
+    def compensate_system_time_change(self, difference, timeperiods):  # pragma: no cover,
+        # not with unit tests
         """Compensate a system time change of difference for all hosts/services/checks/notifs
 
         :param difference: difference in seconds
@@ -129,11 +153,12 @@ class Alignak(BaseSatellite):
             # Already launch checks should not be touch
             if chk.status == 'scheduled' and chk.t_to_go is not None:
                 t_to_go = chk.t_to_go
-                ref = chk.ref
+                ref = self.sched.find_item_by_id(chk.ref)
                 new_t = max(0, t_to_go + difference)
-                if ref.check_period is not None:
+                timeperiod = timeperiods[ref.check_period]
+                if timeperiod is not None:
                     # But it's no so simple, we must match the timeperiod
-                    new_t = ref.check_period.get_next_valid_time_from_t(new_t)
+                    new_t = timeperiod.get_next_valid_time_from_t(new_t)
                 # But maybe no there is no more new value! Not good :(
                 # Say as error, with error output
                 if new_t is None:
@@ -153,14 +178,16 @@ class Alignak(BaseSatellite):
                 t_to_go = act.t_to_go
 
                 #  Event handler do not have ref
-                ref = getattr(act, 'ref', None)
+                ref_id = getattr(act, 'ref', None)
                 new_t = max(0, t_to_go + difference)
 
                 # Notification should be check with notification_period
                 if act.is_a == 'notification':
+                    ref = self.sched.find_item_by_id(ref_id)
                     if ref.notification_period:
                         # But it's no so simple, we must match the timeperiod
-                        new_t = ref.notification_period.get_next_valid_time_from_t(new_t)
+                        notification_period = self.sched.timeperiods[ref.notification_period]
+                        new_t = notification_period.get_next_valid_time_from_t(new_t)
                     # And got a creation_time variable too
                     act.creation_time += difference
 
@@ -188,13 +215,14 @@ class Alignak(BaseSatellite):
         :return: None
         TODO: Refactor with Daemon one
         """
-        logger.warning("%s > Received a SIGNAL %s", process.current_process(), sig)
+        logger.info("scheduler process %d received a signal: %s", os.getpid(), str(sig))
         # If we got USR1, just dump memory
         if sig == signal.SIGUSR1:
             self.sched.need_dump_memory = True
         elif sig == signal.SIGUSR2:  # usr2, dump objects
             self.sched.need_objects_dump = True
         else:  # if not, die :)
+            logger.info("scheduler process %d is dying...", os.getpid())
             self.sched.die()
             self.must_run = False
             Daemon.manage_signal(self, sig, frame)
@@ -211,95 +239,104 @@ class Alignak(BaseSatellite):
             return
         logger.info("New configuration received")
         self.setup_new_conf()
-        logger.info("New configuration loaded")
+        logger.info("[%s] New configuration loaded, scheduling for Alignak: %s",
+                    self.name, self.sched.alignak_name)
         self.sched.run()
 
-    def setup_new_conf(self):
+    def setup_new_conf(self):  # pylint: disable=too-many-statements
         """Setup new conf received for scheduler
 
         :return: None
         """
         with self.conf_lock:
-            new_c = self.new_conf
-            conf_raw = new_c['conf']
-            override_conf = new_c['override_conf']
-            modules = new_c['modules']
-            satellites = new_c['satellites']
-            instance_name = new_c['instance_name']
-            push_flavor = new_c['push_flavor']
-            skip_initial_broks = new_c['skip_initial_broks']
-            accept_passive_unknown_chk_res = new_c['accept_passive_unknown_check_results']
-            api_key = new_c['api_key']
-            secret = new_c['secret']
-            http_proxy = new_c['http_proxy']
-            statsd_host = new_c['statsd_host']
-            statsd_port = new_c['statsd_port']
-            statsd_prefix = new_c['statsd_prefix']
-            statsd_enabled = new_c['statsd_enabled']
+            self.clean_previous_run()
+            new_conf = self.new_conf
+            logger.info("[%s] Sending us a configuration", self.name)
+            conf_raw = new_conf['conf']
+            override_conf = new_conf['override_conf']
+            modules = new_conf['modules']
+            satellites = new_conf['satellites']
+            instance_name = new_conf['instance_name']
+
+            # Ok now we can save the retention data
+            if hasattr(self.sched, 'conf'):
+                self.sched.update_retention_file(forced=True)
 
             # horay, we got a name, we can set it in our stats objects
-            statsmgr.register(self.sched, instance_name, 'scheduler',
-                              api_key=api_key, secret=secret, http_proxy=http_proxy,
-                              statsd_host=statsd_host, statsd_port=statsd_port,
-                              statsd_prefix=statsd_prefix, statsd_enabled=statsd_enabled)
+            statsmgr.register(instance_name, 'scheduler',
+                              statsd_host=new_conf['statsd_host'],
+                              statsd_port=new_conf['statsd_port'],
+                              statsd_prefix=new_conf['statsd_prefix'],
+                              statsd_enabled=new_conf['statsd_enabled'])
 
             t00 = time.time()
-            conf = cPickle.loads(conf_raw)
-            logger.debug("Conf received at %d. Unserialized in %d secs", t00, time.time() - t00)
+            try:
+                conf = unserialize(conf_raw)
+            except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
+                logger.error('Cannot un-serialize configuration received from arbiter: %s', exp)
+            logger.debug("Conf received at %d. Un-serialized in %d secs", t00, time.time() - t00)
             self.new_conf = None
+
+            if 'scheduler_name' in new_conf:
+                name = new_conf['scheduler_name']
+            else:
+                name = instance_name
+            self.name = name
+
+            # Set my own process title
+            self.set_proctitle(self.name)
+
+            logger.info("[%s] Received a new configuration, containing: ", self.name)
+            for key in new_conf:
+                logger.info("[%s] - %s", self.name, key)
+            logger.info("[%s] configuration identifiers: %s (%s)",
+                        self.name, new_conf['conf_uuid'], new_conf['push_flavor'])
 
             # Tag the conf with our data
             self.conf = conf
-            self.conf.push_flavor = push_flavor
+            self.conf.push_flavor = new_conf['push_flavor']
+            self.conf.alignak_name = new_conf['alignak_name']
             self.conf.instance_name = instance_name
-            self.conf.skip_initial_broks = skip_initial_broks
-            self.conf.accept_passive_unknown_check_results = accept_passive_unknown_chk_res
+            self.conf.skip_initial_broks = new_conf['skip_initial_broks']
+            self.conf.accept_passive_unknown_check_results = \
+                new_conf['accept_passive_unknown_check_results']
 
             self.cur_conf = conf
             self.override_conf = override_conf
-            self.modules = modules
+            self.modules = unserialize(modules, True)
             self.satellites = satellites
-            # self.pollers = self.app.pollers
 
-            if self.conf.human_timestamp_log:
-                # pylint: disable=E1101
-                logger.set_human_format()
+            # Now We create our pollers, reactionners and brokers
+            for sat_type in ['pollers', 'reactionners', 'brokers']:
+                if sat_type not in satellites:
+                    continue
+                for sat_id in satellites[sat_type]:
+                    # Must look if we already have it
+                    sats = getattr(self, sat_type)
+                    sat = satellites[sat_type][sat_id]
 
-            # Now We create our pollers
-            for pol_id in satellites['pollers']:
-                # Must look if we already have it
-                already_got = pol_id in self.pollers
-                poll = satellites['pollers'][pol_id]
-                self.pollers[pol_id] = poll
+                    sats[sat_id] = sat
 
-                if poll['name'] in override_conf['satellitemap']:
-                    poll = dict(poll)  # make a copy
-                    poll.update(override_conf['satellitemap'][poll['name']])
+                    if sat['name'] in override_conf['satellitemap']:
+                        sat = dict(sat)  # make a copy
+                        sat.update(override_conf['satellitemap'][sat['name']])
 
-                proto = 'http'
-                if poll['use_ssl']:
-                    proto = 'https'
-                uri = '%s://%s:%s/' % (proto, poll['address'], poll['port'])
-                self.pollers[pol_id]['uri'] = uri
-                self.pollers[pol_id]['last_connection'] = 0
+                    proto = 'http'
+                    if sat['use_ssl']:
+                        proto = 'https'
+                    uri = '%s://%s:%s/' % (proto, sat['address'], sat['port'])
 
-            # Now We create our reactionners
-            for reac_id in satellites['reactionners']:
-                # Must look if we already have it
-                already_got = reac_id in self.reactionners
-                reac = satellites['reactionners'][reac_id]
-                self.reactionners[reac_id] = reac
-
-                if reac['name'] in override_conf['satellitemap']:
-                    reac = dict(reac)  # make a copy
-                    reac.update(override_conf['satellitemap'][reac['name']])
-
-                proto = 'http'
-                if poll['use_ssl']:
-                    proto = 'https'
-                uri = '%s://%s:%s/' % (proto, reac['address'], reac['port'])
-                self.reactionners[reac_id]['uri'] = uri
-                self.reactionners[reac_id]['last_connection'] = 0
+                    sats[sat_id]['uri'] = uri
+                    sats[sat_id]['con'] = None
+                    sats[sat_id]['running_id'] = 0
+                    sats[sat_id]['last_connection'] = 0
+                    sats[sat_id]['connection_attempt'] = 0
+                    sats[sat_id]['max_failed_connections'] = 3
+                    setattr(self, sat_type, sats)
+                logger.debug("We have our %s: %s ", sat_type, satellites[sat_type])
+                logger.info("We have our %s:", sat_type)
+                for daemon in satellites[sat_type].values():
+                    logger.info(" - %s ", daemon['name'])
 
             # First mix conf and override_conf to have our definitive conf
             for prop in self.override_conf:
@@ -307,28 +344,23 @@ class Alignak(BaseSatellite):
                 setattr(self.conf, prop, val)
 
             if self.conf.use_timezone != '':
-                logger.debug("Setting our timezone to %s", str(self.conf.use_timezone))
+                logger.info("Setting our timezone to %s", str(self.conf.use_timezone))
                 os.environ['TZ'] = self.conf.use_timezone
                 time.tzset()
 
-            if len(self.modules) != 0:
-                logger.debug("I've got %s modules", str(self.modules))
-
-            # TODO: if scheduler had previous modules instanciated it must clean them!
             self.do_load_modules(self.modules)
 
             logger.info("Loading configuration.")
-            self.conf.explode_global_conf()
+            self.conf.explode_global_conf()  # pylint: disable=E1101
 
             # we give sched it's conf
             self.sched.reset()
             self.sched.load_conf(self.conf)
-            self.sched.load_satellites(self.pollers, self.reactionners)
+            self.sched.load_satellites(self.pollers, self.reactionners, self.brokers)
 
             # We must update our Config dict macro with good value
             # from the config parameters
             self.sched.conf.fill_resource_macros_names_macros()
-            # print "DBG: got macros", self.sched.conf.macros
 
             # Creating the Macroresolver Class & unique instance
             m_solver = MacroResolver()
@@ -337,32 +369,48 @@ class Alignak(BaseSatellite):
             # self.conf.dump()
             # self.conf.quick_debug()
 
-            # Now create the external commander
-            # it's a applyer: it role is not to dispatch commands,
-            # but to apply them
-            ecm = ExternalCommandManager(self.conf, 'applyer')
+            # Now create the external commands manager
+            # We are an applyer: our role is not to dispatch commands, but to apply them
+            ecm = ExternalCommandManager(self.conf, 'applyer', self.sched)
 
-            # Scheduler need to know about external command to
-            # activate it if necessary
-            self.sched.load_external_command(ecm)
-
-            # External command need the sched because he can raise checks
-            ecm.load_scheduler(self.sched)
+            # Scheduler needs to know about this external command manager to use it if necessary
+            self.sched.set_external_commands_manager(ecm)
+            # Update External Commands Manager
+            self.sched.external_commands_manager.accept_passive_unknown_check_results = \
+                self.sched.conf.accept_passive_unknown_check_results
 
             # We clear our schedulers managed (it's us :) )
-            # and set ourself in it
-            self.schedulers = {self.conf.instance_id: self.sched}
+            # and set ourselves in it
+            self.schedulers = {self.conf.uuid: self.sched}  # pylint: disable=E1101
+
+            # Ok now we can load the retention data
+            self.sched.retention_load()
+
+            # Create brok new conf
+            brok = Brok({'type': 'new_conf', 'data': {}})
+            self.sched.add_brok(brok)
 
     def what_i_managed(self):
+        # pylint: disable=no-member
         """Get my managed dict (instance id and push_flavor)
 
         :return: dict containing instance_id key and push flavor value
         :rtype: dict
         """
         if hasattr(self, 'conf'):
-            return {self.conf.instance_id: self.conf.push_flavor}
-        else:
-            return {}
+            return {self.conf.uuid: self.conf.push_flavor}  # pylint: disable=E1101
+
+        return {}
+
+    def clean_previous_run(self):
+        """Clean variables from previous configuration
+
+        :return: None
+        """
+        # Clean all lists
+        self.pollers.clear()
+        self.reactionners.clear()
+        self.brokers.clear()
 
     def main(self):
         """Main function for Scheduler, launch after the init::
@@ -375,20 +423,24 @@ class Alignak(BaseSatellite):
         :return: None
         """
         try:
-            self.load_config_file()
-            # Setting log level
-            logger.setLevel(self.log_level)
-            # Force the debug level if the daemon is said to start with such level
-            if self.debug:
-                logger.setLevel('DEBUG')
+            self.setup_alignak_logger()
 
+            # Look if we are enabled or not. If ok, start the daemon mode
             self.look_for_early_exit()
-            self.do_daemon_init_and_start()
-            self.load_modules_manager()
+
+            # todo:
+            # This function returns False if some problem is detected during initialization
+            # (eg. communication port not free)
+            # Perharps we should stop the initialization process and exit?
+            if not self.do_daemon_init_and_start():
+                return
+
+            self.load_modules_manager(self.name)
 
             self.uri = self.http_daemon.uri
-            logger.info("[scheduler] General interface is at: %s", self.uri)
+            logger.info("[Scheduler] General interface is at: %s", self.uri)
+
             self.do_mainloop()
-        except Exception, exp:
+        except Exception:
             self.print_unrecoverable(traceback.format_exc())
             raise

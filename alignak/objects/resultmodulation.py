@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -64,7 +64,6 @@ class Resultmodulation(Item):
     during a modulation_period.
 
     """
-    _id = 1  # zero is always special in database, so we do not take risk here
     my_type = 'resultmodulation'
 
     properties = Item.properties.copy()
@@ -75,15 +74,32 @@ class Resultmodulation(Item):
         'modulation_period':     StringProp(default=None),
     })
 
+    special_properties = ('modulation_period',)
+
     def get_name(self):
         """Accessor to resultmodulation_name attribute
 
         :return: result modulation name
         :rtype: str
         """
-        return self.resultmodulation_name
+        if hasattr(self, 'resultmodulation_name'):
+            return self.resultmodulation_name
+        return 'Unnamed'
 
-    def module_return(self, return_code):
+    def is_active(self, timperiods):
+        """
+        Know if this result modulation is active now
+
+        :return: True is we are in the period, otherwise False
+        :rtype: bool
+        """
+        now = int(time.time())
+        timperiod = timperiods[self.modulation_period]
+        if not timperiod or timperiod.is_time_valid(now):
+            return True
+        return False
+
+    def module_return(self, return_code, timeperiods):
         """Module the exit code if necessary ::
 
         * modulation_period is legit
@@ -96,7 +112,7 @@ class Resultmodulation(Item):
         :rtype: int
         """
         # Only if in modulation_period of modulation_period == None
-        if self.modulation_period is None or self.modulation_period.is_time_valid(time.time()):
+        if self.is_active(timeperiods):
             # Try to change the exit code only if a new one is defined
             if self.exit_code_modulation is not None:
                 # First with the exit_code_match
@@ -121,24 +137,4 @@ class Resultmodulations(Items):
         :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: None
         """
-        self.linkify_rm_by_tp(timeperiods)
-
-    def linkify_rm_by_tp(self, timeperiods):
-        """Replace check_period by real Timeperiod object into each Resultmodulation
-
-        :param timeperiods: timeperiods to link to
-        :type timeperiods: alignak.objects.timeperiod.Timeperiods
-        :return: None
-        """
-        for resultmod in self:
-            mtp_name = resultmod.modulation_period.strip()
-
-            # The new member list, in id
-            mtp = timeperiods.find_by_name(mtp_name)
-
-            if mtp_name != '' and mtp is None:
-                err = "Error: the result modulation '%s' got an unknown modulation_period '%s'" % \
-                      (resultmod.get_name(), mtp_name)
-                resultmod.configuration_errors.append(err)
-
-            resultmod.modulation_period = mtp
+        self.linkify_with_timeperiods(timeperiods, 'modulation_period')

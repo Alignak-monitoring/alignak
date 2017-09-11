@@ -1,0 +1,58 @@
+{
+"name":"glances",
+
+"description":"Standard checks, like CPU, LOAD, MEMORY and DISK space. Checks are done by checkglances.py.",
+
+"path":"os/",
+
+"macros":{
+         "_UPTIME_WARN": {"type":"integer",
+                             "description": "Warning threshold for uptime less than 15 min"
+                             },
+         "_UPTIME_CRIT": {"type":"integer",
+                             "description": "Critical threshold for uptime less than 5 min"
+                             },
+         "_LOAD_WARN": {"type":"integer",
+                             "description": "Warning threshold for load average at 5m"
+                             },
+         "_LOAD_CRIT": {"type":"integer",
+                             "description": "Critical threshold for load average at 5m"
+                             },
+         "_CPU_WARN": {"type":"percent",
+                                "description": "Warning level for the CPU usage"
+                             },
+         "_CPU_CRIT": {"type":"percent",
+                                "description": "Critical level for the CPU usage"
+                             },
+         "_MEMORY_WARN": {"type":"percent",
+                                "description": "Physical memory warning level"
+                             },
+         "_MEMORY_CRIT": {"type":"percent",
+                                "description": "Physical memory critical level"
+                             },
+         "_SWAP_WARN": {"type":"percent",
+                                "description": "Swap memory warning level"
+                             },
+         "_SWAP_CRIT": {"type":"percent",
+                                "description": "Swap memory critical level"
+                             },
+         "_FS": {"type":"string",
+                                "description": "partition list to monitor"
+                             },
+         "_FS_WARN": {"type":"percent",
+                                "description": "fs warn level"
+                             },
+         "_FS_CRIT": {"type":"percent",
+                                "description": "fs critical level"
+                             },
+         "_IFACES": {"type":"string",
+                                "description": "ifaces list to monitor"
+                             },
+         "_NET_WARN": {"type":"integer",
+                                "description": "net warn level"
+                             },
+         "_NET_CRIT": {"type":"integer",
+                                "description": "net critical level"
+                             },
+          }
+}
