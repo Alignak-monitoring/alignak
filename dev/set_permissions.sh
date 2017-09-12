@@ -62,6 +62,15 @@ if [ -d "/usr/local/etc/alignak-backend" ]; then
    find /usr/local/etc/alignak-backend -type f -exec chmod 664 {} +
    find /usr/local/etc/alignak-backend -type d -exec chmod 775 {} +
 fi
+### Set permissions on alignak-backend log directory
+if [ -d "/usr/local/var/log/alignak-backend" ]; then
+   echo "Setting '$ACCOUNT' ownership on /usr/local/var/log/alignak-backend"
+   chown -R $ACCOUNT:$ACCOUNT /usr/local/var/log/alignak-backend
+   
+   echo "Setting file permissions on: /usr/local/var/log/alignak-backend"
+   find /usr/local/var/log/alignak-backend -type f -exec chmod 664 {} +
+   find /usr/local/var/log/alignak-backend -type d -exec chmod 775 {} +
+fi
 
 ### Set permissions on alignak-webui settings
 if [ -d "/usr/local/etc/alignak-webui" ]; then
@@ -71,6 +80,15 @@ if [ -d "/usr/local/etc/alignak-webui" ]; then
    echo "Setting file permissions on: /usr/local/etc/alignak-webui"
    find /usr/local/etc/alignak-webui -type f -exec chmod 664 {} +
    find /usr/local/etc/alignak-webui -type d -exec chmod 775 {} +
+fi
+### Set permissions on alignak-webui log directory
+if [ -d "/usr/local/var/log/alignak-webui" ]; then
+   echo "Setting '$ACCOUNT' ownership on /usr/local/var/log/alignak-webui"
+   chown -R $ACCOUNT:$ACCOUNT /usr/local/var/log/alignak-webui
+   
+   echo "Setting file permissions on: /usr/local/var/log/alignak-webui"
+   find /usr/local/var/log/alignak-webui -type f -exec chmod 664 {} +
+   find /usr/local/var/log/alignak-webui -type d -exec chmod 775 {} +
 fi
 
 echo "Terminated"
