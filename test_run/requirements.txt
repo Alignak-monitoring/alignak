@@ -1,8 +1,5 @@
 # this is the requirements dedicated to tests for daemons run.
 
-# Use psutil
-psutil
-
 # Alignak backend module (develop branch)
 -e git+git://github.com/Alignak-monitoring-contrib/alignak-module-backend.git@develop#egg=alignak-module-backend
 
