@@ -34,6 +34,9 @@ class TestLaunchDaemonsPassive(AlignakTest):
     def setUp(self):
         self.procs = {}
 
+        # Alignak scheduler self-monitoring - report statistics every 5 loop counts
+        os.environ['TEST_LOG_MONITORING'] = ''
+
     def checkDaemonsLogsForErrors(self, daemons_list):
         """
         Check that the daemons all started correctly and that they got their configuration
