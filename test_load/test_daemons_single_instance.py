@@ -57,8 +57,8 @@ class TestDaemonsSingleInstance(AlignakTest):
         # Alignak do not run plugins but only simulate
         # os.environ['TEST_FAKE_ACTION'] = 'Yes'
 
-        # Alignak system self-monitoring
-        # os.environ['TEST_LOG_MONITORING'] = 'Yes'
+        # Alignak scheduler self-monitoring - report statistics every 5 loop counts
+        os.environ['TEST_LOG_MONITORING'] = ''
 
         # Declare environment to send stats to a file
         # os.environ['ALIGNAK_STATS_FILE'] = '/tmp/alignak.stats'

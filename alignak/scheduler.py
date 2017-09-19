@@ -93,6 +93,10 @@ from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.acknowledge import Acknowledge
 from alignak.log import make_monitoring_log
 
+if 'TEST_LOG_MONITORING' in os.environ:
+    import psutil
+
+
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
@@ -109,6 +113,17 @@ class Scheduler(object):  # pylint: disable=R0902
         self.sched_daemon = scheduler_daemon
         # When set to false by us, we die and arbiter launch a new Scheduler
         self.must_run = True
+
+        # Dump system health, defaults to report every 5 loop count
+        self.system_health = False
+        self.system_health_period = 5
+        if 'TEST_LOG_MONITORING' in os.environ:
+            self.system_health = True
+            if os.environ['TEST_LOG_MONITORING']:
+                try:
+                    self.system_health_period = int(os.environ['TEST_LOG_MONITORING'])
+                except ValueError:
+                    pass
 
         # protect this unique list
         # The actions results returned by satelittes or fetched from
@@ -2261,6 +2276,10 @@ class Scheduler(object):  # pylint: disable=R0902
         self.hook_point('pre_scheduler_mod_start')
         self.sched_daemon.modules_manager.start_external_instances(late_start=True)
 
+        if self.system_health:
+            logger.info("Scheduler system health is enabled, reporting every %d loop count.",
+                        self.system_health_period)
+
         # Ok, now all is initialized, we can make the initial broks
         logger.info("[%s] First scheduling launched", self.instance_name)
         _t1 = time.time()
@@ -2531,6 +2550,72 @@ class Scheduler(object):  # pylint: disable=R0902
                 logger.warning("We dropped %d checks, %d broks and %d actions",
                                self.nb_checks_dropped, self.nb_broks_dropped,
                                self.nb_actions_dropped)
+
+            if self.system_health and (loop_count % self.system_health_period == 1):
+                perfdatas = []
+                cpu_count = psutil.cpu_count()
+                perfdatas.append("'cpu_count'=%d" % cpu_count)
+                logger.debug("  . cpu count: %d", cpu_count)
+
+                cpu_percents = psutil.cpu_percent(percpu=True)
+                cpu = 1
+                for percent in cpu_percents:
+                    perfdatas.append("'cpu_%d_percent'=%.2f%%" % (cpu, percent))
+                    cpu += 1
+
+                cpu_times_percent = psutil.cpu_times_percent(percpu=True)
+                cpu = 1
+                for cpu_times_percent in cpu_times_percent:
+                    logger.debug("  . cpu time percent: %s", cpu_times_percent)
+                    for key in cpu_times_percent._fields:
+                        perfdatas.append(
+                            "'cpu_%d_%s_percent'=%.2f%%" % (cpu, key,
+                                                            getattr(cpu_times_percent, key)))
+                    cpu += 1
+
+                logger.info("Scheduler %s cpu|%s", self.instance_name, " ".join(perfdatas))
+
+                perfdatas = []
+                disk_partitions = psutil.disk_partitions(all=False)
+                for disk_partition in disk_partitions:
+                    logger.debug("  . disk partition: %s", disk_partition)
+
+                    disk = getattr(disk_partition, 'mountpoint')
+                    disk_usage = psutil.disk_usage(disk)
+                    logger.debug("  . disk usage: %s", disk_usage)
+                    for key in disk_usage._fields:
+                        if 'percent' in key:
+                            perfdatas.append("'disk_%s_percent_used'=%.2f%%"
+                                             % (disk, getattr(disk_usage, key)))
+                        else:
+                            perfdatas.append("'disk_%s_%s'=%dB"
+                                             % (disk, key, getattr(disk_usage, key)))
+
+                logger.info("Scheduler %s disks|%s", self.instance_name, " ".join(perfdatas))
+
+                perfdatas = []
+                virtual_memory = psutil.virtual_memory()
+                logger.debug("  . memory: %s", virtual_memory)
+                for key in virtual_memory._fields:
+                    if 'percent' in key:
+                        perfdatas.append("'mem_percent_used_%s'=%.2f%%"
+                                         % (key, getattr(virtual_memory, key)))
+                    else:
+                        perfdatas.append("'mem_%s'=%dB"
+                                         % (key, getattr(virtual_memory, key)))
+
+                perfdatas = []
+                swap_memory = psutil.swap_memory()
+                logger.debug("  . memory: %s", swap_memory)
+                for key in swap_memory._fields:
+                    if 'percent' in key:
+                        perfdatas.append("'swap_used_%s'=%.2f%%"
+                                         % (key, getattr(swap_memory, key)))
+                    else:
+                        perfdatas.append("'swap_%s'=%dB"
+                                         % (key, getattr(swap_memory, key)))
+
+                logger.info("Scheduler %s memory|%s", self.instance_name, " ".join(perfdatas))
 
             if self.log_loop:
                 logger.debug("+++ %d", loop_count)
