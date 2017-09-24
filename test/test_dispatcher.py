@@ -290,7 +290,7 @@ class TestDispatcher(AlignakTest):
         # test get all hosts
         hosts = []
         for sched in self.receivers['receiver-master'].cfg['schedulers'].values():
-            hosts.extend(sched['hosts'])
+            hosts.extend(sched['hosts_names'])
         assert set(hosts) == set(['srv_001', 'srv_002', 'srv_003', 'srv_004', 'srv_101', 'srv_102',
                                  'srv_103', 'srv_104', 'srv_105', 'srv_106', 'srv_201', 'srv_202',
                                  'srv_203', 'srv_204', 'test_router_0', 'test_host_0'])

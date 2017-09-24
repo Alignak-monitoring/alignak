@@ -265,6 +265,7 @@ class AlignakTest(unittest.TestCase):
 
         # Build receivers dictionary with the receivers involved in the configuration
         for receiver in self.arbiter.dispatcher.receivers:
+            print("Receiver: %s" % receiver)
             self.receivers[receiver.receiver_name] = receiver
 
         # Build reactionners dictionary with the reactionners involved in the configuration
@@ -277,6 +278,18 @@ class AlignakTest(unittest.TestCase):
 
         # Initialize the Receiver with no daemon configuration file
         self.receiver = Receiver(None, False, False, False, False)
+        # if self.arbiter.dispatcher.satellites:
+        #     some_receivers = False
+        #     for satellite in self.arbiter.dispatcher.satellites:
+        #         if satellite.get_my_type() == 'receiver':
+        #             # self.receiver.load_modules_manager(satellite.name)
+        #             self.receiver.modules_manager = \
+        #                 ModulesManager('receiver', self.receiver.sync_manager,
+        #                                max_queue_size=getattr(self, 'max_queue_size', 0))
+        #
+        #             self.receiver.new_conf = satellite.cfg
+        #             if self.receiver.new_conf:
+        #                 self.receiver.setup_new_conf()
 
         # Initialize the Receiver with no daemon configuration file
         self.broker = Broker(None, False, False, False, False)
@@ -297,8 +310,9 @@ class AlignakTest(unittest.TestCase):
             self.eca = self.schedulers['scheduler-master'].sched.external_commands_manager
 
         # Now we create an external commands manager in receiver mode
-        self.ecr = ExternalCommandManager(self.receiver.cur_conf, 'receiver', self.receiver,
+        self.ecr = ExternalCommandManager(None, 'receiver', self.receiver,
                                           accept_unknown=True)
+        self.receiver.external_commands_manager = self.ecr
 
         # and an external commands manager in dispatcher mode
         self.ecd = ExternalCommandManager(self.arbiter.conf, 'dispatcher', self.arbiter,

@@ -412,6 +412,7 @@ class TestRealms(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_realms_sub.cfg')
+        self.show_logs()
         assert self.conf_is_correct
 
         world = self.arbiter.conf.realms.find_by_name('World')

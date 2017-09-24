@@ -117,10 +117,6 @@ class Receiver(Satellite):
 
         self.http_interface = ReceiverInterface(self)
 
-        # Now create the external commands manager
-        # We are a receiver: our role is to get and dispatch commands to the schedulers
-        self.external_commands_manager = ExternalCommandManager(None, 'receiver', self)
-
     def add(self, elt):
         """Add an object to the receiver one
         Handles brok and externalcommand
@@ -239,18 +235,21 @@ class Receiver(Satellite):
 
             self.accept_passive_unknown_check_results = \
                 conf['global']['accept_passive_unknown_check_results']
-            # Update External Commands Manager
-            self.external_commands_manager.accept_passive_unknown_check_results = \
-                conf['global']['accept_passive_unknown_check_results']
 
             g_conf = conf['global']
 
             # If we've got something in the schedulers, we do not want it anymore
+            # Beware that schedulers are not SchedulerLink objects
+            # but only schedulers configuration!
             self.host_assoc = {}
             for sched_id in conf['schedulers']:
 
                 old_sched_id = self.get_previous_sched_id(conf['schedulers'][sched_id], sched_id)
 
+                wait_homerun = {}
+                actions = {}
+                external_commands = []
+                con = None
                 if old_sched_id:
                     logger.info("[%s] We already got the conf %s (%s)",
                                 self.name, old_sched_id, name)
@@ -263,7 +262,8 @@ class Receiver(Satellite):
                 sched = conf['schedulers'][sched_id]
                 self.schedulers[sched_id] = sched
 
-                self.push_host_names(sched_id, sched['hosts'])
+                # We received the hosts names for each scheduler
+                self.push_host_names(sched_id, sched['hosts_names'])
 
                 if sched['name'] in g_conf['satellitemap']:
                     sched.update(g_conf['satellitemap'][sched['name']])
@@ -273,27 +273,23 @@ class Receiver(Satellite):
                     proto = 'https'
                 uri = '%s://%s:%s/' % (proto, sched['address'], sched['port'])
 
+                # todo: All this stuff is perharps not necessary... to be cleaned!
+                self.schedulers[sched_id]['name'] = sched['name']
                 self.schedulers[sched_id]['uri'] = uri
-                if old_sched_id:
-                    self.schedulers[sched_id]['wait_homerun'] = wait_homerun
-                    self.schedulers[sched_id]['actions'] = actions
-                    self.schedulers[sched_id]['external_commands'] = external_commands
-                    self.schedulers[sched_id]['con'] = con
-                else:
-                    self.schedulers[sched_id]['wait_homerun'] = {}
-                    self.schedulers[sched_id]['actions'] = {}
-                    self.schedulers[sched_id]['external_commands'] = []
-                    self.schedulers[sched_id]['con'] = None
+                self.schedulers[sched_id]['wait_homerun'] = wait_homerun
+                self.schedulers[sched_id]['actions'] = actions
+                self.schedulers[sched_id]['external_commands'] = external_commands
+                self.schedulers[sched_id]['con'] = con
                 self.schedulers[sched_id]['running_id'] = 0
                 self.schedulers[sched_id]['active'] = sched['active']
                 self.schedulers[sched_id]['timeout'] = sched['timeout']
                 self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
-                self.schedulers[sched_id]['con'] = None
                 self.schedulers[sched_id]['last_connection'] = 0
                 self.schedulers[sched_id]['connection_attempt'] = 0
                 self.schedulers[sched_id]['max_failed_connections'] = 3
 
                 # Do not connect if we are a passive satellite
+                # Todo: 1/ this comment is incorrect, 2/ we should connect anyway...
                 if not old_sched_id:
                     # And then we connect to it :)
                     self.daemon_connection_init(sched_id)
@@ -318,6 +314,12 @@ class Receiver(Satellite):
                 os.environ['TZ'] = use_timezone
                 time.tzset()
 
+            # Now create the external commands manager
+            # We are a receiver: our role is to get and dispatch commands to the schedulers
+            self.external_commands_manager = \
+                ExternalCommandManager(None, 'receiver', self,
+                                       conf['global']['accept_passive_unknown_check_results'])
+
     def push_external_commands_to_schedulers(self):
         """Send a HTTP request to the schedulers (POST /run_external_commands)
         with external command list.
@@ -327,77 +329,83 @@ class Receiver(Satellite):
         if not self.unprocessed_external_commands:
             return
 
+        # Those are the global external commands
         commands_to_process = self.unprocessed_external_commands
         self.unprocessed_external_commands = []
         logger.debug("Commands: %s", commands_to_process)
         statsmgr.gauge('external-commands.pushed', len(self.unprocessed_external_commands))
 
-        # Now get all external commands and put them into the
-        # good schedulers
+        # Now get all external commands and put them into the good schedulers
+        logger.debug("Commands to process: %d commands", len(commands_to_process))
         for ext_cmd in commands_to_process:
-            self.external_commands_manager.resolve_command(ext_cmd)
-            logger.debug("Resolved command: %s", ext_cmd)
+            cmd = self.external_commands_manager.resolve_command(ext_cmd)
+            logger.debug("Resolved command: %s, result: %s", ext_cmd.cmd_line, cmd)
+            if cmd and cmd['global']:
+                # Send global command to all our schedulers
+                for scheduler_id in self.schedulers:
+                    scheduler = self.schedulers[scheduler_id]
+                    scheduler['external_commands'].append(ext_cmd)
 
         # Now for all alive schedulers, send the commands
-        for sched_id in self.schedulers:
-            sched = self.schedulers[sched_id]
+        for scheduler_id in self.schedulers:
+            scheduler = self.schedulers[scheduler_id]
             # TODO:  sched should be a SatelliteLink object and, thus, have a get_name() method
             # but sometimes when an exception is raised because the scheduler is not available
-            # this is not True ... sched is a simple dictionary!
+            # this is not True ... sched is a simple dictionary with a 'name' property!
 
-            is_active = sched['active']
+            is_active = scheduler['active']
             if not is_active:
                 logger.warning("The scheduler '%s' is not active, it is not possible to push "
-                               "external commands from its connection!", sched)
+                               "external commands from its connection!", scheduler['name'])
                 return
 
-            # If there are some commands...
-            extcmds = sched['external_commands']
+            # If there are some commands for this scheduler...
+            extcmds = scheduler['external_commands']
             cmds = [extcmd.cmd_line for extcmd in extcmds]
             if not cmds:
+                logger.debug("The scheduler '%s' has no commands.", scheduler['name'])
                 continue
 
             # ...and the scheduler is alive
-            con = sched['con']
+            con = scheduler['con']
             if con is None:
-                self.daemon_connection_init(sched_id, s_type='scheduler')
+                self.daemon_connection_init(scheduler_id, s_type='scheduler')
 
             if con is None:
                 logger.warning("The connection for the scheduler '%s' cannot be established, it is "
-                               "not possible to push external commands.", sched)
+                               "not possible to push external commands.", scheduler['name'])
                 continue
 
             sent = False
 
-            logger.debug("Sending %d commands to scheduler %s", len(cmds), sched)
+            logger.debug("Sending %d commands to scheduler %s", len(cmds), scheduler['name'])
             try:
-                # con.run_external_commands(cmds)
                 con.post('run_external_commands', {'cmds': cmds})
                 sent = True
             except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-                logger.warning("[%s] %s", sched, str(exp))
-                sched['con'] = None
+                logger.warning("[%s] %s", scheduler['name'], str(exp))
+                scheduler['con'] = None
                 continue
             except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
                 logger.warning("Connection timeout with the scheduler '%s' when "
-                               "sending external commands: %s", sched, str(exp))
-                sched['con'] = None
+                               "sending external commands: %s", scheduler['name'], str(exp))
+                scheduler['con'] = None
                 continue
             except HTTPClientException as exp:  # pragma: no cover, simple protection
                 logger.error("Error with the scheduler '%s' when "
-                             "sending external commands: %s", sched, str(exp))
-                sched['con'] = None
+                             "sending external commands: %s", scheduler['name'], str(exp))
+                scheduler['con'] = None
                 continue
             except AttributeError as exp:  # pragma: no cover, simple protection
                 logger.warning("The scheduler %s should not be initialized: %s",
-                               sched, str(exp))
+                               scheduler['name'], str(exp))
                 logger.exception(exp)
             except Exception as exp:  # pylint: disable=broad-except
                 logger.exception("A satellite raised an unknown exception (%s): %s", type(exp), exp)
                 raise
 
             # Whether we sent the commands or not, clean the scheduler list
-            self.schedulers[sched_id]['external_commands'] = []
+            scheduler['external_commands'] = []
 
             # If we didn't sent them, add the commands to the arbiter list
             if not sent:

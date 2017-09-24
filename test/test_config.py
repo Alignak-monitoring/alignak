@@ -137,7 +137,7 @@ class TestConfig(AlignakTest):
         # Default Alignak name is the arbiter name
         assert self.arbiter.conf.alignak_name == 'arbiter-master'
 
-    def test_config_conf_inner_properties(self):
+    def test_config_conf_inner_properties_named_alignak(self):
         """ Default configuration with an alignak_name property
 
         :return: None

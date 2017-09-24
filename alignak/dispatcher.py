@@ -497,7 +497,7 @@ class Dispatcher:
 
                     # Special case for receiver because need to send it the hosts list
                     hnames = [h.get_name() for h in conf.hosts]
-                    sat_cfg['hosts'] = hnames
+                    sat_cfg['hosts_names'] = hnames
                     realm.to_satellites['receiver'][cfg_id] = sat_cfg
 
                     # The config is prepared for a scheduler, no need check another scheduler

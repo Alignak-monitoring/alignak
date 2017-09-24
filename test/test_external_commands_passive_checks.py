@@ -662,7 +662,10 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         # Our receiver External Commands Manager DOES ACCEPT unknown passive checks...
         # This is to replace the normal setup_new_conf ...
         self._receiver.accept_passive_unknown_check_results = True
-        self._receiver.external_commands_manager.accept_passive_unknown_check_results = True
+        # Now create the external commands manager
+        # We are a receiver: our role is to get and dispatch commands to the schedulers
+        self._receiver.external_commands_manager = \
+            ExternalCommandManager(None, 'receiver', self._receiver,True)
 
         # Clear logs and broks
         self.clear_logs()

@@ -137,6 +137,7 @@ class TestExternalCommands(AlignakTest):
             )
         else:
             # Resolve command result is not None because the command is recognized
+            print("Result (mode=%s): %s" % (self.ecm_mode, res))
             assert res is not None
 
         # ---
@@ -152,6 +153,7 @@ class TestExternalCommands(AlignakTest):
             )
         else:
             # Resolve command result is not None because the command is recognized
+            print("Result (mode=%s): %s" % (self.ecm_mode, res))
             assert res is not None
 
         # ---
@@ -211,6 +213,10 @@ class TestExternalCommands(AlignakTest):
             assert len(broks) == 1
             # ...and some logs
             self.assert_any_log_match("External command 'unknown_command' is not recognized, sorry")
+        else:
+            # Resolve command result is not None because the command is recognized
+            print("Result unknown command (mode=%s): %s" % (self.ecm_mode, res))
+            assert res is None
 
         #  ---
         # External command: unknown host
@@ -232,6 +238,53 @@ class TestExternalCommands(AlignakTest):
             # ...and a warning log!
             self.assert_any_log_match("A command was received for the host 'not_found_host', "
                                       "but the host could not be found!")
+        else:
+            # Resolve command result is not None because the command is recognized
+            print("Result host check command (mode=%s): %s" % (self.ecm_mode, res))
+            assert res is None
+
+        # Now test different types of commands
+        # -----
+        # Get an host...
+        host = self._scheduler.hosts.find_by_name("test_host_0")
+        assert host is not None
+
+        # Get a service...
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        assert svc.customs is not None
+
+        # and a contact...
+        contact = self._scheduler.contacts[host.contacts[0]]
+        assert contact is not None
+        assert contact.contact_name == "test_contact"
+
+        #  ---
+        # A global host command
+        assert self._scheduler.external_commands_manager.conf.check_host_freshness
+        now = time.time()
+        excmd = '[%d] DISABLE_HOST_FRESHNESS_CHECKS' % now
+        res = self.manage_external_command(excmd)
+        print("Result (mode=%s): %s" % (self.ecm_mode, res))
+        if self.ecm_mode == 'applyer':
+            # Command is supposed to be managed
+            assert res is None
+        else:
+            # Command is to be managed by another daemon
+            assert res == {'cmd': '[%d] DISABLE_HOST_FRESHNESS_CHECKS' % now, 'global': True}
+
+        #  ---
+        # A specific host command
+        assert host.notifications_enabled
+        assert svc.notifications_enabled
+
+        self.clear_logs()
+        self._broker['broks'] = {}
+        excmd = '[%d] DISABLE_HOST_NOTIFICATIONS;test_host_0' % time.time()
+        res = self.manage_external_command(excmd)
+        print("Result (mode=%s): %s" % (self.ecm_mode, res))
+        self.show_logs()
+        # Command is supposed to be managed
+        assert res is None
 
     def test_several_commands(self):
         """ External command management - several commands at once
