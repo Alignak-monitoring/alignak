@@ -779,6 +779,9 @@ class Broker(BaseSatellite):
         # Maybe external modules raised 'objects'
         # we should get them
         self.get_objects_from_from_queues()
+        statsmgr.timer('core.get-objects-from-queues', time.time() - _t0)
+        statsmgr.gauge('got.external-commands', len(self.external_commands))
+        statsmgr.gauge('got.broks', len(self.broks))
 
         # Maybe we do not have something to do, so we wait a little
         # TODO: redone the diff management....
