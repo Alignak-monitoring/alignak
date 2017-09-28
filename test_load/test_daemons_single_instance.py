@@ -221,16 +221,17 @@ class TestDaemonsSingleInstance(AlignakTest):
             print("- removed /tmp/notifications.log")
 
         self.procs = []
-        daemons_list = ['poller', 'reactionner', 'receiver', 'broker', 'scheduler']
+        daemons_list = ['poller-master', 'reactionner-master', 'receiver-master',
+                        'broker-master', 'scheduler-master']
 
         print("Cleaning pid and log files...")
-        for daemon in ['arbiter'] + daemons_list:
-            if os.path.exists('/tmp/%s.pid' % daemon):
-                os.remove('/tmp/%s.pid' % daemon)
-                print("- removed /tmp/%s.pid" % daemon)
-            if os.path.exists('/tmp/%s.log' % daemon):
-                os.remove('/tmp/%s.log' % daemon)
-                print("- removed /tmp/%s.log" % daemon)
+        for daemon in ['arbiter-master'] + daemons_list:
+            if os.path.exists('./test_run/run/%s.pid' % daemon):
+                os.remove('./test_run/run/%s.pid' % daemon)
+                print("- removed ./test_run/run/%s.pid" % daemon)
+            if os.path.exists('./test_run/log/%s.log' % daemon):
+                os.remove('./test_run/log/%s.log' % daemon)
+                print("- removed ./test_run/log/%s.log" % daemon)
 
         shutil.copy(cfg_folder + '/check_command.sh', '/tmp/check_command.sh')
 
@@ -239,7 +240,7 @@ class TestDaemonsSingleInstance(AlignakTest):
         for daemon in daemons_list:
             alignak_daemon = "../alignak/bin/alignak_%s.py" % daemon.split('-')[0]
 
-            args = [alignak_daemon, "-c", cfg_folder + "/daemons/%s.ini" % daemon]
+            args = [alignak_daemon, "-e", cfg_folder + "/alignak.ini"]
             self.procs.append({
                 'name': daemon,
                 'pid': psutil.Popen(args)
@@ -253,7 +254,7 @@ class TestDaemonsSingleInstance(AlignakTest):
 
         print("Launching arbiter...")
         args = ["../alignak/bin/alignak_arbiter.py",
-                "-c", cfg_folder + "/daemons/arbiter.ini",
+                "-e", cfg_folder + "/alignak.ini",
                 "-a", cfg_folder + "/alignak.cfg"]
         # Prepend the arbiter process into the list
         self.procs= [{

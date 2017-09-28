@@ -168,8 +168,17 @@ class AlignakTest(unittest.TestCase):
         self.setup_logger()
 
         # Initialize the Arbiter with no daemon configuration file
-        self.arbiter = Arbiter(None, [configuration_file], False, False, False, False,
-                              '/tmp/arbiter.log', 'arbiter-master')
+        configuration_dir = os.path.dirname(configuration_file)
+        self.env_file = os.path.join(configuration_dir, 'alignak.ini')
+        args = {
+            'env_file': self.env_file,
+            'alignak_name': 'arbiter-master', 'daemon_name': None,
+            'daemon_enabled': False, 'do_replace': False, 'is_daemon': False,
+            'config_file': None, 'debug': False, 'debug_file': None,
+            'monitoring_files': [configuration_file],
+            'local_log': '/tmp/arbiter.log', 'verify_only': False, 'port': None
+        }
+        self.arbiter = Arbiter(**args)
 
         try:
             # The following is copy paste from setup_alignak_logger
@@ -205,7 +214,14 @@ class AlignakTest(unittest.TestCase):
 
         # Build schedulers dictionary with the schedulers involved in the configuration
         for scheduler in self.arbiter.dispatcher.schedulers:
-            sched = Alignak([], False, False, True, '/tmp/scheduler.log')
+            args = {
+                'env_file': self.env_file,
+                'alignak_name': 'arbiter-master', 'daemon_name': None,
+                'daemon_enabled': False, 'do_replace': False, 'is_daemon': False,
+                'config_file': None, 'debug': False, 'debug_file': None,
+                'local_log': '/tmp/scheduler.log', 'port': None
+            }
+            sched = Alignak(**args)
             sched.load_modules_manager(scheduler.name)
             sched.new_conf = scheduler.conf_package
             if sched.new_conf:
@@ -230,7 +246,26 @@ class AlignakTest(unittest.TestCase):
             self.brokers[broker.broker_name] = broker
 
         # Initialize the Receiver with no daemon configuration file
-        self.receiver = Receiver(None, False, False, False, False)
+        args = {
+            'env_file': self.env_file,
+            'alignak_name': 'arbiter-master', 'daemon_name': None,
+            'daemon_enabled': False, 'do_replace': False, 'is_daemon': False,
+            'config_file': None, 'debug': False, 'debug_file': None,
+            'local_log': '/tmp/receiver.log', 'port': None
+        }
+        self.receiver = Receiver(**args)
+        # if self.arbiter.dispatcher.satellites:
+        #     some_receivers = False
+        #     for satellite in self.arbiter.dispatcher.satellites:
+        #         if satellite.get_my_type() == 'receiver':
+        #             # self.receiver.load_modules_manager(satellite.name)
+        #             self.receiver.modules_manager = \
+        #                 ModulesManager('receiver', self.receiver.sync_manager,
+        #                                max_queue_size=getattr(self, 'max_queue_size', 0))
+        #
+        #             self.receiver.new_conf = satellite.cfg
+        #             if self.receiver.new_conf:
+        #                 self.receiver.setup_new_conf()
         # if self.arbiter.dispatcher.satellites:
         #     some_receivers = False
         #     for satellite in self.arbiter.dispatcher.satellites:
@@ -244,8 +279,15 @@ class AlignakTest(unittest.TestCase):
         #             if self.receiver.new_conf:
         #                 self.receiver.setup_new_conf()
 
-        # Initialize the Receiver with no daemon configuration file
-        self.broker = Broker(None, False, False, False, False)
+        # Initialize the broker with no daemon configuration file
+        args = {
+            'env_file': self.env_file,
+            'alignak_name': 'arbiter-master', 'daemon_name': None,
+            'daemon_enabled': False, 'do_replace': False, 'is_daemon': False,
+            'config_file': None, 'debug': False, 'debug_file': None,
+            'local_log': '/tmp/broker.log', 'port': None
+        }
+        self.broker = Broker(**args)
 
         # External commands manager default mode; default is tha pplyer (scheduler) mode
         self.ecm_mode = 'applyer'

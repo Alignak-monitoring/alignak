@@ -66,14 +66,14 @@ class TestLaunchDaemonsRealms(AlignakTest):
         assert self.conf_is_correct
 
         self.procs = {}
-        daemons_list = ['broker', 'broker-north', 'broker-south',
-                        'poller', 'poller-north', 'poller-south',
-                        'reactionner',
-                        'receiver', 'receiver-north',
-                        'scheduler', 'scheduler-north', 'scheduler-south',]
+        daemons_list = ['broker-master', 'broker-north', 'broker-south',
+                        'poller-master', 'poller-north', 'poller-south',
+                        'reactionner-master',
+                        'receiver-master', 'receiver-north',
+                        'scheduler-master', 'scheduler-north', 'scheduler-south',]
 
         print("Cleaning pid and log files...")
-        for daemon in ['arbiter'] + daemons_list:
+        for daemon in ['arbiter-master'] + daemons_list:
             if os.path.exists('/tmp/%s.pid' % daemon):
                 os.remove('/tmp/%s.pid' % daemon)
                 print("- removed /tmp/%s.pid" % daemon)
@@ -87,7 +87,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         for daemon in daemons_list:
             alignak_daemon = "../alignak/bin/alignak_%s.py" % daemon.split('-')[0]
 
-            args = [alignak_daemon, "-c", cfg_folder + "/daemons/%s.ini" % daemon]
+            args = [alignak_daemon, "-n", daemon, "-e", cfg_folder + "/alignak.ini"]
             self.procs[daemon] = \
                 subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             print("- %s launched (pid=%d)" % (daemon, self.procs[daemon].pid))
@@ -111,8 +111,8 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         print("Launching arbiter...")
         args = ["../alignak/bin/alignak_arbiter.py",
-                "-c", cfg_folder + "/daemons/arbiter.ini",
-                "-a", cfg_folder + "/alignak.cfg"]
+                "-n", "arbiter-master",
+                "-e", cfg_folder + "/alignak.ini"]
         self.procs['arbiter'] = \
             subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("- %s launched (pid=%d)" % ('arbiter', self.procs['arbiter'].pid))
@@ -137,26 +137,27 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         print("Get information from log files...")
         nb_errors = 0
-        nb_warnings = 0
-        for daemon in ['arbiter'] + daemons_list:
+        nb_warning = 0
+        for daemon in ['arbiter-master'] + daemons_list:
             assert os.path.exists('/tmp/%s.log' % daemon), '/tmp/%s.log does not exist!' % daemon
             daemon_errors = False
             print("-----\n%s log file\n-----\n" % daemon)
             with open('/tmp/%s.log' % daemon) as f:
                 for line in f:
-                    if 'WARNING:' in line or daemon_errors:
+                    if 'WARNING' in line or daemon_errors:
                         print(line[:-1])
-                        if daemon == 'arbiter' and 'Cannot call the additional groups ' not in line:
-                            nb_warnings += 1
-                    if 'ERROR:' in line or 'CRITICAL:' in line:
+                        if daemon == 'arbiter-master' \
+                                and 'Cannot call the additional groups setting ' not in line:
+                            nb_warning += 1
+                    if 'ERROR' in line or 'CRITICAL' in line:
                         if not daemon_errors:
                             print(line[:-1])
                         daemon_errors = True
                         nb_errors += 1
         assert nb_errors == 0, "Error logs raised!"
-        print("No error logs raised when daemons were running")
+        print("No error logs raised when daemons loaded the modules")
 
-        assert nb_warnings == 0, "Warning logs raised!"
+        assert nb_warning == 0, "Warning logs raised!"
 
         print("Stopping the daemons...")
         for name, proc in self.procs.items():
@@ -180,7 +181,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         self.print_header()
 
         # Set an environment variable to activate the logging of checks execution
-        # With this the pollers/schedulers will raise WARNING logs about the checks execution
+        # With this the pollers/schedulers will raise INFO logs about the checks execution
         os.environ['TEST_LOG_ACTIONS'] = 'INFO'
         os.environ['ALIGNAK_DAEMONS_MONITORING'] = '2'
 
@@ -189,7 +190,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         # Expected logs from the daemons
         expected_logs = {
-            'poller': [
+            'poller-master': [
                 # Check Ok
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0'",
                 "[alignak.action] Action '/tmp/dummy_command.sh 0' exited with return code 0",
@@ -246,7 +247,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
                 "[alignak.action] Launch command: '/tmp/dummy_command.sh 0 10'",
                 "[alignak.action] Action '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
             ],
-            'scheduler': [
+            'scheduler-master': [
                 # Internal host check
                 # "[alignak.objects.schedulingitem] Set host localhost as UP (internal check)",
                 # Check ok
@@ -281,8 +282,8 @@ class TestLaunchDaemonsRealms(AlignakTest):
         }
 
         errors_raised = 0
-        for name in ['poller', 'poller-north', 'poller-south',
-                     'scheduler', 'scheduler-north', 'scheduler-south']:
+        for name in ['poller-master', 'poller-north', 'poller-south',
+                     'scheduler-master', 'scheduler-north', 'scheduler-south']:
             assert os.path.exists('/tmp/%s.log' % name), '/tmp/%s.log does not exist!' % name
             print("-----\n%s log file\n" % name)
             with open('/tmp/%s.log' % name) as f:

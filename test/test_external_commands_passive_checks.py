@@ -654,7 +654,8 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self._scheduler = self.schedulers['scheduler-master'].sched
 
         # Our receiver
-        self._receiver = Receiver(None, False, False, False, None)
+        # self._receiver = Receiver(None, False, False, False, None)
+        self._receiver = self.receiver
 
         # ----- first part
         # Our receiver External Commands Manager DOES ACCEPT unknown passive checks...

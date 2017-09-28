@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-lines
 #
 # Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
 #
@@ -66,6 +67,7 @@ import errno
 import sys
 import time
 import signal
+from copy import copy
 import select
 import ConfigParser
 import threading
@@ -101,7 +103,7 @@ try:
         :rtype: list
         """
         return getgrall()
-except ImportError, exp:  # pragma: no cover, not for unit tests...
+except ImportError as exp:  # pragma: no cover, not for unit tests...
     # Like in Windows system
     # temporary workaround:
     def get_cur_user():
@@ -133,9 +135,11 @@ from alignak.http.daemon import HTTPDaemon, PortNotFree
 from alignak.stats import statsmgr
 from alignak.modulesmanager import ModulesManager
 from alignak.property import StringProp, BoolProp, PathProp, ConfigPathProp, IntegerProp, \
-    LogLevelProp
+    LogLevelProp, ListProp
 from alignak.misc.common import setproctitle
 from alignak.version import VERSION
+
+from alignak.bin.alignak_environment import AlignakConfigParser
 
 if 'ALIGNAK_DAEMONS_MONITORING' in os.environ:
     import psutil
@@ -146,8 +150,6 @@ SIGNALS_TO_NAMES_DICT = dict((k, v) for v, k in reversed(sorted(signal.__dict__.
                              if v.startswith('SIG') and not v.startswith('SIG_'))
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
-
-IS_PY26 = sys.version_info[:2] < (2, 7)
 
 # #########################   DAEMON PART    ###############################
 # The standard I/O file descriptors are redirected to /dev/null by default.
@@ -176,20 +178,21 @@ class Daemon(object):
     """
 
     properties = {
-        'daemon_type':
+        'type':
             StringProp(default='unknown'),
-        # workdir is relative to $(dirname "$0"/..)
-        # where "$0" is the path of the file being executed,
-        # in python normally known as:
-        #
-        #  os.path.join( os.getcwd(), sys.argv[0] )
-        #
-        # as returned once the daemon is started.
+        'daemon':
+            StringProp(default='unknown'),
+        'name':
+            StringProp(),
+        'etcdir':
+            PathProp(default=DEFAULT_WORK_DIR),
         'workdir':
             PathProp(default=DEFAULT_WORK_DIR),
-        'logdir':
+        'rundir':
             PathProp(default=DEFAULT_WORK_DIR),
-        'etcdir':
+        'vardir':
+            PathProp(default=DEFAULT_WORK_DIR),
+        'logdir':
             PathProp(default=DEFAULT_WORK_DIR),
         'host':
             StringProp(default='0.0.0.0'),
@@ -221,12 +224,14 @@ class Daemon(object):
             IntegerProp(default=1),
         'log_rotation_count':
             IntegerProp(default=7),
-        'local_log':
-            StringProp(default='/usr/local/var/log/arbiter.log'),
         'hard_ssl_name_check':
             BoolProp(default=False),
         'idontcareaboutsecurity':
-            BoolProp(default=True),
+            BoolProp(default=False),
+        'do_replace':
+            BoolProp(default=False),
+        'is_daemon':
+            BoolProp(default=False),
         'daemon_enabled':
             BoolProp(default=True),
         'spare':
@@ -235,53 +240,140 @@ class Daemon(object):
             IntegerProp(default=0),
         'daemon_thread_pool_size':
             IntegerProp(default=8),
+        'debug':
+            BoolProp(default=False),
+        'debug_file':
+            StringProp(default=None),
+        'debug_output':
+            ListProp(default=[]),
+        'monitoring_config_files':
+            ListProp(default=[])
     }
 
-    def __init__(self, name, config_file, is_daemon, do_replace,
-                 debug, debug_file, port=None, local_log=None):
+    def __init__(self, name, **kwargs):
+        # pylint: disable=too-many-branches, too-many-statements, no-member
         """
 
-        :param name:
-        :param config_file:
-        :param is_daemon:
-        :param do_replace:
-        :param debug:
-        :param debug_file:
+        :param name: the unique daemon name
+        :param kwargs: list of key/value pairs from the daemon command line
         """
+        self.monitoring_config_files = None
+        self.modules_manager = None
+
+        # First, do we debug?
+        self.debug = False
+        if 'debug' in kwargs and kwargs['debug']:
+            self.debug = kwargs['debug']
+        # Used to track debug, info warnings that will be logged once the logger is effective
+        self.pre_log = []
+
+        # Check if /dev/shm exists and usable...
         self.check_shm()
 
+        # I define my default properties
+        cls = self.__class__
+        for prop, entry in cls.properties.items():
+            if getattr(self, prop, None) is None:
+                # Set absolute paths for our paths
+                if isinstance(prop, PathProp):
+                    setattr(self, prop, os.path.abspath(entry.pythonize(entry.default)))
+                else:
+                    if hasattr(entry.default, '__iter__'):
+                        setattr(self, prop, copy(entry.default))
+                    else:
+                        setattr(self, prop, entry.pythonize(entry.default))
+
+        # I got my name
         self.name = name
-        self.config_file = config_file
-        self.is_daemon = is_daemon
-        self.do_replace = do_replace
-        self.debug = debug
-        self.debug_file = debug_file
-        self.interrupted = False
-        self.pidfile = "%s.pid" % self.name
 
-        # Self daemon monitoring (cpu, memory)
-        self.daemon_monitoring = False
-        self.daemon_monitoring_period = 10
-        if 'ALIGNAK_DAEMONS_MONITORING' in os.environ:
-            self.daemon_monitoring = True
-            if os.environ['ALIGNAK_DAEMONS_MONITORING']:
-                try:
-                    self.daemon_monitoring_period = int(os.environ['ALIGNAK_DAEMONS_MONITORING'])
-                except ValueError:
-                    pass
-        if self.daemon_monitoring:
-            logger.info("Daemon '%s' self monitoring is enabled, reporting every %d loop count.",
-                        self.name, self.daemon_monitoring_period)
+        self.pre_log.append(("DEBUG",
+                             "Daemon '%s' initial working directory: %s"
+                             % (self.name, os.getcwd())))
 
-        if port:
-            self.port = int(port)
+        # I probably got an Alignak environment file
+        self.env_file = None
+        if 'env_file' in kwargs:
+            self.env_file = kwargs['env_file']
+            print("Daemon '%s' is started with an environment file: %s"
+                  % (self.name, self.env_file))
+            self.pre_log.append(("DEBUG",
+                                 "Daemon '%s' is started with an environment file: %s"
+                                 % (self.name, self.env_file)))
+
+            # Read Alignak environment file
+            args = {'<cfg_file>': self.env_file, '--verbose': self.debug}
+            configuration_dir = os.path.dirname(self.env_file)
+            try:
+                parsed_configuration = AlignakConfigParser(args)
+                parsed_configuration.parse()
+                # Update my properties with those of the configuration file
+                for prop, value in parsed_configuration.__dict__.iteritems():
+                    # Global Alignak configuration
+                    if prop.startswith('alignak-configuration.'):
+                        prop = prop.replace('alignak-configuration.', '')
+                        if not prop.startswith('cfg') or not value:
+                            continue
+                        self.pre_log.append(("DEBUG",
+                                             " found Alignak monitoring "
+                                             "configuration parameter, %s = %s" % (prop, value)))
+                        if not os.path.isabs(value):
+                            value = os.path.abspath(os.path.join(configuration_dir, value))
+                        self.monitoring_config_files.append(value)
+                        continue
+
+                    # Daemon's configuration
+                    if prop.startswith('daemon.' + self.name + '.'):
+                        prop = prop.replace('daemon.' + self.name + '.', '')
+                        self.pre_log.append(("DEBUG",
+                                             " found daemon parameter, %s = %s" % (prop, value)))
+                        if getattr(self, prop, None) is None:
+                            # For an undeclared property, store the value as a string
+                            setattr(self, prop, value)
+                            self.pre_log.append(("DEBUG", " -> setting %s = %s" % (prop, value)))
+                        elif callable(getattr(self, prop)):
+                            # For a declared property, that match a self function name
+                            raise ValueError("Property %s cannot be defined "
+                                             "as a daemon property!" % prop)
+                        else:
+                            # For a declared property, cast the read value
+                            current_prop = getattr(self, prop)
+                            setattr(self, prop, cls.properties[prop].pythonize(value))
+                            self.pre_log.append(("DEBUG", " -> updating %s = %s to %s"
+                                                 % (prop, current_prop, getattr(self, prop))))
+            except ValueError as exp:
+                print("Daemon '%s' did not correctly read Alignak environment file: %s"
+                      % (self.name, args['<cfg_file>']))
+                print("Exception: %s" % (exp))
+
+        # And perhaps some other parameters from the initial command line
+        self.config_file = None
+        if 'config_file' in kwargs and kwargs['config_file']:
+            self.config_file = kwargs['config_file']
+        if self.config_file:
+            warnings.warn(
+                "Using daemon configuration file is now deprecated. The daemon -c parameter "
+                "should not be used anymore in favor the -e environment file parameter.",
+                DeprecationWarning, stacklevel=2)
+
+        print("Daemon command line parameters: %s" % kwargs)
+        if 'daemon_enabled' in kwargs:
+            self.daemon_enabled = kwargs['daemon_enabled']
+        if 'is_daemon' in kwargs:
+            self.is_daemon = kwargs['is_daemon']
+        if 'do_replace' in kwargs:
+            self.do_replace = kwargs['do_replace']
+        if 'debug' in kwargs:
+            self.debug = kwargs['debug']
+        if 'debug_file' in kwargs and kwargs['debug_file']:
+            self.debug_file = kwargs['debug_file']
+        if getattr(self, 'port', None) is not None:
+            self.port = int(getattr(self, 'port'))
+        if 'max_queue_size' in kwargs and kwargs['max_queue_size']:
+            self.max_queue_size = int(kwargs['max_queue_size'])
+        if 'port' in kwargs and kwargs['port']:
+            self.port = int(kwargs['port'])
             print("Daemon '%s' is started with an overidden port number: %d"
                   % (self.name, self.port))
-
-        if local_log:
-            self.local_log = local_log
-            print("Daemon '%s' is started with an overidden log file: %s"
-                  % (self.name, self.local_log))
 
         if self.debug:
             print("Daemon '%s' is in debug mode" % self.name)
@@ -289,11 +381,63 @@ class Daemon(object):
         if self.is_daemon:
             print("Daemon '%s' is in daemon mode" % self.name)
 
+        # Make my paths properties be absolute paths
+        properties = self.__class__.properties
+        for prop, entry in properties.items():
+            # Set absolute paths for
+            if isinstance(properties[prop], PathProp):
+                setattr(self, prop, os.path.abspath(getattr(self, prop)))
+                print("Daemon '%s' %s path: %s" % (self.name, prop, getattr(self, prop)))
+
+        # Default log file is stored in the log directory
+        self.local_log = os.path.join(self.logdir, self.name + ".log")
+        if 'local_log' in kwargs and kwargs['local_log']:
+            self.local_log = kwargs['local_log']
+        self.local_log = os.path.abspath(self.local_log)
+        dirname = os.path.dirname(self.local_log)
+        try:
+            os.makedirs(dirname)
+            print("Daemon '%s' log directory did not exist, I created: %s"
+                  % (self.name, dirname))
+        except OSError as exc:  # Python >2.5
+            if exc.errno == errno.EEXIST and os.path.isdir(dirname):
+                pass
+            else:
+                raise
+        if 'local_log' in kwargs and kwargs['local_log']:
+            print("Daemon '%s' is started with an overidden log file: %s"
+                  % (self.name, self.local_log))
+        else:
+            print("Daemon '%s' log file: %s" % (self.name, self.local_log))
+
+        # pid file is stored in the working directory
+        self.pidfile = os.path.join(self.workdir, self.name + ".pid")
+        if 'pidfile' in kwargs and kwargs['pidfile']:
+            self.pidfile = kwargs['pidfile']
+        self.fpid_name = os.path.abspath(self.pidfile)
+        dirname = os.path.dirname(self.fpid_name)
+        try:
+            os.makedirs(dirname)
+            print("Daemon '%s' run directory did not exist, I created: %s"
+                  % (self.name, dirname))
+        except OSError as exc:  # Python >2.5
+            if exc.errno == errno.EEXIST and os.path.isdir(dirname):
+                pass
+            else:
+                raise
+        if 'pidfile' in kwargs and kwargs['pidfile']:
+            print("Daemon '%s' is started with an overidden pid file: %s"
+                  % (self.name, self.fpid_name))
+        else:
+            print("Daemon '%s' pid file: %s" % (self.name, self.fpid_name))
+
         # Track time
         now = time.time()
         self.program_start = now
         self.t_each_loop = now  # used to track system time change
         self.sleep_time = 0.0  # used to track the time we wait
+
+        self.interrupted = False
 
         self.http_thread = None
         self.http_daemon = None
@@ -326,22 +470,17 @@ class Daemon(object):
         self.debug_output = []
 
         # We will initialize the Manager() when we load modules
-        # and be really forked()
+        # and are really forked
         self.sync_manager = None
 
         os.umask(UMASK)
-        self.set_exit_handler()
-
-        # Fill the properties
-        properties = self.__class__.properties
-        for prop, entry in properties.items():
-            if getattr(self, prop, None) is None:
-                setattr(self, prop, entry.pythonize(entry.default))
+        self.set_signal_handler()
 
     # At least, lose the local log file if needed
     def do_stop(self):
         """Execute the stop of this daemon:
-         - Stop the http thread and join it
+         - request the daemon to stop
+         - request the http thread to stop, else force stop the thread
          - Close the http socket
          - Shutdown the manager
          - Stop and join all started "modules"
@@ -375,13 +514,17 @@ class Daemon(object):
             self.sync_manager = None
 
         # Maybe the modules manager is not even created!
-        if getattr(self, 'modules_manager', None):
+        if self.modules_manager:
             # todo: clean this!
             # We save what we can but NOT for the scheduler
             # because the current sched object is a dummy one
             # and the old one has already done it!
-            if not hasattr(self, 'sched'):
-                self.hook_point('save_retention')
+            # todo: I comment this code because it looks unuseful !
+            # Only the scheduler needs retention module, the other daemons
+            # do not store anything in retention. Retention is to be removed from other daemons!
+            # if not hasattr(self, 'sched'):
+            #     self.hook_point('save_retention')
+
             # And we quit
             logger.info('Shutting down modules...')
             self.modules_manager.stop_all()
@@ -391,8 +534,10 @@ class Daemon(object):
 
         :return: None
         """
+        _ts = time.time()
         self.unlink()
         self.do_stop()
+        statsmgr.timer('stop-delay', time.time() - _ts)
 
         logger.info("Stopped %s.", self.name)
         sys.exit(0)
@@ -403,19 +548,19 @@ class Daemon(object):
         :return: None
         """
         if not self.daemon_enabled:
-            logger.info('This daemon is disabled in configuration. Bailing out')
+            logger.info('This daemon is disabled in Alignak configuration. Bailing out')
             self.request_stop()
 
     def do_loop_turn(self):
         """Abstract method for daemon loop turn.
-        It must be overridden by class inheriting from Daemon
+        It must be overridden by all classes inheriting from Daemon
 
         :return: None
         """
         raise NotImplementedError()
 
     def do_mainloop(self):
-        """ Main loop for alignak daemon (except scheduler)
+        """Main loop for an Alignak daemon
 
         :return: None
         """
@@ -426,8 +571,10 @@ class Daemon(object):
             self.loop_count += 1
             if self.log_loop:
                 logger.debug("[%s] --- %d", self.name, self.loop_count)
+            _ts = time.time()
             self.do_loop_turn()
-            # If ask us to dump memory, do it
+
+            # If someone asked us to dump memory, do it
             if self.need_dump_memory:
                 logger.debug('Dumping memory')
                 self.dump_memory()
@@ -435,6 +582,12 @@ class Daemon(object):
             if self.need_objects_dump:
                 logger.debug('Dumping objects')
                 self.need_objects_dump = False
+
+            statsmgr.timer('loop-turn', time.time() - _ts)
+            if self.log_loop:
+                logger.debug("[%s] +++ %d", self.name, self.loop_count)
+
+            # If someone asked us a configuration reloading
             if self.need_config_reload:
                 logger.debug('Ask for configuration reloading')
                 return
@@ -488,13 +641,13 @@ class Daemon(object):
         :param modules: list of modules that should be loaded by the daemon
         :return: None
         """
+        _ts = time.time()
         logger.info("Loading modules...")
 
-        loading_result = self.modules_manager.load_and_init(modules)
-        if loading_result:
+        if self.modules_manager.load_and_init(modules):
             if self.modules_manager.instances:
                 logger.info("I correctly loaded my modules: [%s]",
-                            ','.join([inst.get_name() for inst in self.modules_manager.instances]))
+                            ','.join([inst.name for inst in self.modules_manager.instances]))
             else:
                 logger.info("I do not have any module")
         else:  # pragma: no cover, not with unit tests...
@@ -505,6 +658,7 @@ class Daemon(object):
         if self.modules_manager.configuration_warnings:  # pragma: no cover, not tested
             for msg in self.modules_manager.configuration_warning:
                 logger.warning(msg)
+        statsmgr.timer('modules-loading', time.time() - _ts)
 
     def add(self, elt):
         """ Abstract method for adding brok
@@ -531,9 +685,11 @@ class Daemon(object):
     def load_modules_manager(self, daemon_name):
         """Instantiate Modulesmanager and load the SyncManager (multiprocessing)
 
+        :param daemon_name: daemon name
+        :type elt: str
         :return: None
         """
-        self.modules_manager = ModulesManager(daemon_name, self.sync_manager,
+        self.modules_manager = ModulesManager(self, self.sync_manager,
                                               max_queue_size=getattr(self, 'max_queue_size', 0))
 
     def change_to_workdir(self):
@@ -541,25 +697,24 @@ class Daemon(object):
 
         :return: None
         """
-        logger.info("Changing working directory to: %s", self.workdir)
         self.workdir = os.path.abspath(self.workdir)
+        logger.info("Changing working directory to: %s", self.workdir)
         try:
             os.chdir(self.workdir)
         except Exception, exp:
             raise InvalidWorkDir(exp)
-        self.debug_output.append("Successfully changed to workdir: %s" % (self.workdir))
-        logger.info("Using working directory: %s", os.path.abspath(self.workdir))
+        self.pre_log.append(("INFO", "Using working directory: %s" % os.path.abspath(self.workdir)))
 
     def unlink(self):
         """Remove the daemon's pid file
 
         :return: None
         """
-        logger.debug("Unlinking %s", self.pidfile)
+        logger.debug("Unlinking %s", self.fpid_name)
         try:
-            os.unlink(self.pidfile)
-        except OSError, exp:
-            logger.error("Got an error unlinking our pidfile: %s", exp)
+            os.unlink(self.fpid_name)
+        except OSError as exp:
+            logger.error("Got an error unlinking our pid file: %s", exp)
 
     @staticmethod
     def check_shm():
@@ -586,15 +741,19 @@ class Daemon(object):
         """
         # if problem on opening or creating file it'll be raised to the caller:
         try:
-            pid = os.path.abspath(self.pidfile)
-            self.debug_output.append("Opening pid file: %s" % pid)
+            self.pre_log.append(("DEBUG",
+                                 "Opening %s pid file: %s" % ('existing' if
+                                                              os.path.exists(self.fpid_name)
+                                                              else 'missing', self.fpid_name)))
             # Windows do not manage the rw+ mode,
             # so we must open in read mode first, then reopen it write mode...
-            if not write and os.path.exists(pid):
-                self.fpid = open(pid, 'r+')
-            else:  # If it doesn't exist too, we create it as void
-                self.fpid = open(pid, 'w+')
+            if not write and os.path.exists(self.fpid_name):
+                self.fpid = open(self.fpid_name, 'r+')
+            else:
+                # If it doesn't exist too, we create it as void
+                self.fpid = open(self.fpid_name, 'w+')
         except Exception as err:
+            print("Exception: %s" % err)
             raise InvalidPidFile(err)
 
     def check_parallel_run(self):  # pragma: no cover, not with unit tests...
@@ -616,12 +775,12 @@ class Daemon(object):
             pid_var = self.fpid.readline().strip(' \r\n')
             if pid_var:
                 pid = int(pid_var)
-                logger.info("Found an existing pid (%s): '%s'", self.pidfile, pid_var)
+                logger.info("Found an existing pid (%s): '%s'", self.fpid_name, pid_var)
             else:
-                logger.debug("Not found an existing pid: %s", self.pidfile)
+                logger.debug("Not found an existing pid: %s", self.fpid_name)
                 return
         except (IOError, ValueError) as err:
-            logger.warning("pidfile is empty or has an invalid content: %s", self.pidfile)
+            logger.warning("pidfile is empty or has an invalid content: %s", self.fpid_name)
             return
 
         if pid == os.getpid():
@@ -631,18 +790,18 @@ class Daemon(object):
             logger.info("Killing process: '%s'", pid)
             os.kill(pid, 0)
         except Exception as err:  # pylint: disable=W0703
-            # consider any exception as a stale pidfile.
+            # consider any exception as a stale pid file.
             # this includes :
             #  * PermissionError when a process with same pid exists but is executed by another user
             #  * ProcessLookupError: [Errno 3] No such process
-            logger.info("Stale pidfile exists (%s), Reusing it.", err)
+            logger.info("Stale pid file exists (%s), Reusing it.", err)
             return
 
         if not self.do_replace:
             raise SystemExit("valid pidfile exists (pid=%s) and not forced to replace. Exiting."
                              % pid)
 
-        self.debug_output.append("Replacing previous instance %d" % pid)
+        self.pre_log.append(("DEBUG", "Replacing previous instance: %d" % pid))
         try:
             pgid = os.getpgid(pid)
             os.killpg(pgid, signal.SIGQUIT)
@@ -658,7 +817,7 @@ class Daemon(object):
         self.__open_pidfile(write=True)
 
     def write_pid(self, pid=None):
-        """ Write pid to pidfile
+        """ Write pid to the pid file
 
         :param pid: pid of the process
         :type pid: None | int
@@ -712,8 +871,8 @@ class Daemon(object):
         if skip_close_fds is None:
             skip_close_fds = []
 
-        self.debug_output.append("Redirecting stdout and stderr as necessary..")
-        if self.debug:
+        self.pre_log.append(("DEBUG", "Redirecting stdout and stderr as necessary."))
+        if self.debug and self.debug_file:
             fdtemp = os.open(self.debug_file, os.O_CREAT | os.O_WRONLY | os.O_TRUNC)
         else:
             fdtemp = os.open(REDIRECT_TO, os.O_RDWR)
@@ -769,10 +928,10 @@ class Daemon(object):
         self.fpid.close()
         del self.fpid
         self.pid = os.getpid()
-        self.debug_output.append("We are now fully daemonized :) pid=%d" % self.pid)
+        self.pre_log.append(("DEBUG", "We are now fully daemonized :) pid=%d" % self.pid))
 
     # The Manager is a sub-process, so we must be sure it won't have
-    # a socket of your http server alive
+    # a socket of our http server alive
     @staticmethod
     def _create_manager():
         """Instantiate and start a SyncManager
@@ -793,12 +952,12 @@ class Daemon(object):
         :type daemon_name: str
         :return: False if the HTTP daemon can not be initialized, else True
         """
-        self.set_proctitle()
+        self.set_proctitle(self.name)
         self.change_to_user_group()
         self.change_to_workdir()
         self.check_parallel_run()
         if not self.setup_communication_daemon():
-            logger.warning("I could not setup my communication daemon...")
+            logger.error("I could not setup my communication daemon...")
             return False
 
         if self.is_daemon:
@@ -810,12 +969,22 @@ class Daemon(object):
         else:
             self.write_pid()
 
+        # # We can now output some previously silenced debug output
         # We can now output some previously silenced debug output
-        logger.debug("Printing stored debug messages prior to our daemonization:")
-        for stored in self.debug_output:
-            logger.debug("- %s", stored)
-        del self.debug_output
+        logger.debug("--- Messages stored prior to our daemonization:")
+        for level, message in self.pre_log:
+            if level.lower() == "debug":
+                logger.debug("--- %s", message)
+            elif level.lower() == "info":
+                logger.info("--- %s", message)
+            elif level.lower() == "warning":
+                logger.warning("--- %s", message)
+        logger.debug("---")
 
+        # logger.debug("Printing stored debug messages prior to our daemonization:")
+        # for stored in self.debug_output:
+        #     logger.debug("- %s", stored)
+        #
         logger.info("Creating synchronization manager...")
         self.sync_manager = self._create_manager()
         logger.info("Created")
@@ -880,36 +1049,6 @@ class Daemon(object):
             return False
 
         return True
-
-    @staticmethod
-    def get_socks_activity(socks, timeout):  # pylint: disable=unused-argument
-        """ Global loop part : wait for socket to be ready
-
-        :param socks: a socket file descriptor list
-        :type socks:
-        :param timeout: timeout to read from fd
-        :type timeout: int
-        :return: A list of socket file descriptor ready to read
-        :rtype: list
-        """
-        warnings.warn("get_socks_activity is now deprecated. No daemon needs to use this function.",
-                      DeprecationWarning, stacklevel=2)
-        return []
-
-        # @mohierf: did not yet remove the former code...
-        # # some os are not managing void socks list, so catch this
-        # # and just so a simple sleep instead
-        # if socks == []:
-        #     time.sleep(timeout)
-        #     return []
-        # try:  # pragma: no cover, not with unit tests on Travis...
-        #     ins, _, _ = select.select(socks, [], [], timeout)
-        # except select.error, err:
-        #     errnum, _ = err
-        #     if errnum == errno.EINTR:
-        #         return []
-        #     raise
-        # return ins
 
     def check_and_del_zombie_modules(self):
         """Check alive instance and try to restart the dead ones
@@ -1003,70 +1142,6 @@ class Daemon(object):
                          self.user, self.group, err.strerror, err.errno)
             sys.exit(2)
 
-    def load_config_file(self):
-        """Parse daemon configuration file
-
-        Parse self.config_file and get all its variables.
-        If some properties need a pythonization, do it.
-        Use default values for the properties if some are missing in the config_file
-        Ensure full path in variables
-
-        :return: None
-        """
-        # Note: do not use logger into this function because it is not yet initialized ;)
-        print("Loading daemon configuration file (%s)..." % self.config_file)
-
-        properties = self.__class__.properties
-        if self.config_file is not None:
-            config = ConfigParser.ConfigParser()
-            config.read(self.config_file)
-            if config._sections == {}:
-                logger.error("Bad or missing config file: %s ", self.config_file)
-                sys.exit(2)
-            try:
-                for (key, value) in config.items('daemon'):
-                    if key in properties:
-                        value = properties[key].pythonize(value)
-                    setattr(self, key, value)
-            except ConfigParser.InterpolationMissingOptionError as err:  # pragma: no cover,
-                err = str(err)
-                wrong_variable = err.split('\n')[3].split(':')[1].strip()
-                logger.error("Incorrect or missing variable '%s' in config file : %s",
-                             wrong_variable, self.config_file)
-                sys.exit(2)
-
-            # Some paths can be relative. We must have a full path having for reference the
-            # configuration file
-            self.relative_paths_to_full(os.path.dirname(self.config_file))
-        else:
-            print("No daemon configuration file specified, using defaults parameters")
-
-        # Now fill all defaults where missing parameters
-        for prop, entry in properties.items():
-            if not hasattr(self, prop):
-                value = entry.pythonize(entry.default)
-                setattr(self, prop, value)
-
-    def relative_paths_to_full(self, reference_path):
-        """Set a full path from a relative one with the config file as reference
-        TODO: This should be done in pythonize method of Properties.
-        TODO: @mohierf: why not doing this directly in load_config_file?
-        TODO: No property defined for the daemons is a ConfigPathProp ... ;)
-        This function is completely unuseful as is !!!
-
-        :param reference_path: reference path for reading full path
-        :type reference_path: str
-        :return: None
-        """
-        properties = self.__class__.properties
-        for prop, entry in properties.items():
-            if isinstance(entry, ConfigPathProp):  # pragma: no cover, not with unit tests...
-                path = getattr(self, prop)
-                if not os.path.isabs(path):
-                    new_path = os.path.join(reference_path, path)
-                    path = new_path
-                setattr(self, prop, path)
-
     def manage_signal(self, sig, frame):  # pylint: disable=W0613
         """Manage signals caught by the daemon
         signal.SIGUSR1 : dump_memory
@@ -1091,9 +1166,13 @@ class Daemon(object):
             logger.info("request to stop the daemon")
             self.interrupted = True
 
-    def set_exit_handler(self):
+    def set_signal_handler(self, sigs=None):
         """Set the signal handler to manage_signal (defined in this class)
-        Only set handlers for signal.SIGTERM, signal.SIGINT, signal.SIGUSR1, signal.SIGUSR2
+
+        Only set handlers for:
+        - signal.SIGTERM, signal.SIGINT
+        - signal.SIGUSR1, signal.SIGUSR2
+        - signal.SIGHUP
 
         :return: None
         """
@@ -1110,21 +1189,23 @@ class Daemon(object):
                         signal.SIGUSR2, signal.SIGHUP):
                 signal.signal(sig, func)
 
-    # pylint: disable=no-member
+    set_exit_handler = set_signal_handler
+
     def set_proctitle(self, daemon_name=None):
         """Set the proctitle of the daemon
 
         :param daemon_name: daemon instance name (eg. arbiter-master). If not provided, only the
-        daemon name (eg. arbiter) will be used for the process title
+        daemon type (eg. arbiter) will be used for the process title
         :type daemon_name: str
         :return: None
         """
+        logger.debug("Setting my process name: %s", daemon_name)
         if daemon_name:
-            setproctitle("alignak-%s %s" % (self.daemon_type, daemon_name))
-            if hasattr(self, 'modules_manager'):
+            setproctitle("alignak-%s %s" % (self.type, daemon_name))
+            if self.modules_manager:
                 self.modules_manager.set_daemon_name(daemon_name)
         else:
-            setproctitle("alignak-%s" % self.daemon_type)
+            setproctitle("alignak-%s" % self.type)
 
     def get_header(self):
         """Get the log file header
@@ -1132,11 +1213,18 @@ class Daemon(object):
         :return: A string list containing project name, daemon name, version, licence etc.
         :rtype: list
         """
-        return ["-----",
-                "Alignak %s - %s daemon" % (VERSION, self.name),
-                "Copyright (c) 2015-2016: Alignak Team",
-                "License: AGPL",
-                "-----"]
+        header = ["-----",
+                  "Alignak %s - %s daemon" % (VERSION, self.name),
+                  "Copyright (c) 2015-2017: Alignak Team",
+                  "License: AGPL",
+                  "-----",
+                  "My pid: %s", os.getpid(),
+                  "My configuration: "]
+
+        for prop, _ in sorted(self.properties.items()):
+            header.append(" - %s=%s" % (prop, getattr(self, prop)))
+
+        return header
 
     def http_daemon_thread(self):
         """Main function of the http daemon thread will loop forever unless we stop the root daemon
@@ -1299,19 +1387,19 @@ class Daemon(object):
         :type hook_name: str
         :return: None
         """
-        _t0 = time.time()
-        for inst in self.modules_manager.instances:
+        _ts = time.time()
+        for module in self.modules_manager.instances:
             full_hook_name = 'hook_' + hook_name
-            if hasattr(inst, full_hook_name):
-                fun = getattr(inst, full_hook_name)
+            if hasattr(module, full_hook_name):
+                fun = getattr(module, full_hook_name)
                 try:
                     fun(self)
                 except Exception as exp:  # pylint: disable=W0703
                     logger.warning('The instance %s raised an exception %s. I disabled it,'
-                                   'and set it to restart later', inst.get_name(), str(exp))
+                                   'and set it to restart later', module.name, str(exp))
                     logger.exception('Exception %s', exp)
-                    self.modules_manager.set_to_restart(inst)
-        statsmgr.timer('core.hook.%s' % hook_name, time.time() - _t0)
+                    self.modules_manager.set_to_restart(module)
+        statsmgr.timer('core.hook.%s' % hook_name, time.time() - _ts)
 
     def get_retention_data(self):  # pylint: disable=R0201
         """Basic function to get retention data,
@@ -1333,7 +1421,10 @@ class Daemon(object):
 
     def get_stats_struct(self):
         """Get state of modules and create a scheme for stats data of daemon
-        This may be overridden in subclasses
+        This may be overridden in subclasses (and it is...)
+
+        NOTE: This is overriden by all the daemons but it is never called anywhere. Inherited
+         from the shinken.io implementation in Shinken!
 
         :return: A dict with the following structure
         ::
@@ -1352,7 +1443,7 @@ class Daemon(object):
 
         """
         res = {
-            'metrics': [], 'version': VERSION, 'name': self.name, 'type': self.daemon_type,
+            'metrics': [], 'version': VERSION, 'name': self.name, 'type': self.type,
             'modules': {
                 'internal': {}, 'external': {}
             }
@@ -1360,17 +1451,15 @@ class Daemon(object):
         modules = res['modules']
 
         # first get data for all internal modules
-        for mod in self.modules_manager.get_internal_instances():
-            mname = mod.get_name()
-            state = {True: 'ok', False: 'stopped'}[(mod not in self.modules_manager.to_restart)]
-            env = {'name': mname, 'state': state}
-            modules['internal'][mname] = env
+        for instance in self.modules_manager.get_internal_instances():
+            state = {True: 'ok', False: 'stopped'}[(instance not in self.modules_manager.to_restart)]
+            env = {'name': instance.name, 'state': state}
+            modules['internal'][instance.name] = env
         # Same but for external ones
-        for mod in self.modules_manager.get_external_instances():
-            mname = mod.get_name()
-            state = {True: 'ok', False: 'stopped'}[(mod not in self.modules_manager.to_restart)]
-            env = {'name': mname, 'state': state}
-            modules['external'][mname] = env
+        for instance in self.modules_manager.get_external_instances():
+            state = {True: 'ok', False: 'stopped'}[(instance not in self.modules_manager.to_restart)]
+            env = {'name': instance.name, 'state': state}
+            modules['external'][instance.name] = env
 
         return res
 
@@ -1425,22 +1514,14 @@ class Daemon(object):
 
         return had_some_objects
 
-    def setup_alignak_logger(self, reload_configuration=True):
+    def setup_alignak_logger(self):
         """ Setup alignak logger:
-        - load the daemon configuration file
+        - with the daemon log configuration properties
         - configure the global daemon handler (root logger)
         - log the daemon Alignak header
-        - log the damon configuration parameters
 
-        :param reload_configuration: Load configuration file if True,
-        else it uses current parameters
-        :type: bool
         :return: None
         """
-        if reload_configuration:
-            # Load the daemon configuration file
-            self.load_config_file()
-
         # Force the debug level if the daemon is said to start with such level
         log_level = self.log_level
         if self.debug:
@@ -1458,7 +1539,7 @@ class Daemon(object):
                              when=self.log_rotation_when, interval=self.log_rotation_interval,
                              backup_count=self.log_rotation_count,
                              human_date_format=self.human_date_format)
-            except IOError, exp:  # pragma: no cover, not with unit tests...
+            except IOError as exp:  # pragma: no cover, not with unit tests...
                 logger.error("Opening the log file '%s' failed with '%s'", self.local_log, exp)
                 sys.exit(2)
             logger.debug("Using the local log file '%s'", self.local_log)
@@ -1473,9 +1554,3 @@ class Daemon(object):
         # Log daemon header
         for line in self.get_header():
             logger.info(line)
-
-        logger.info("My pid: %s", os.getpid())
-
-        logger.info("My configuration: ")
-        for prop, _ in sorted(self.properties.items()):
-            logger.info(" - %s=%s", prop, getattr(self, prop, 'Not found!'))

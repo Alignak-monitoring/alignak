@@ -130,42 +130,42 @@ class Modules(Items):
     inner_class = Module
 
     def linkify(self):
-        """
-        Link modules
-
-        :return: None
-        """
-        self.linkify_s_by_plug()
-
-    def linkify_s_by_plug(self, modules=None):
-        """
-        Link modules
-
-        :return: None
-        """
-        for module in self:
-            new_modules = []
-            mods = strip_and_uniq(module.modules)
-            for plug_name in mods:
-                plug_name = plug_name.strip()
-
-                # don't read void names
-                if plug_name == '':
-                    continue
-
-                # We are the modules, we search them :)
-                plug = self.find_by_name(plug_name)
-                if plug is not None:
-                    new_modules.append(plug)
-                else:
-                    err = "[module] unknown %s module from %s" % (plug_name, module.get_name())
-                    module.configuration_errors.append(err)
-            module.modules = new_modules
-
-    def explode(self):
-        """
-        Explode but not explode because this function is empty
+        """Link modules
 
         :return: None
         """
         pass
+        # self.linkify_s_by_plug()
+
+    # def linkify_s_by_plug(self, modules=None):
+    #     """
+    #     Link modules
+    #
+    #     :return: None
+    #     """
+    #     for module in self:
+    #         new_modules = []
+    #         mods = strip_and_uniq(module.modules)
+    #         for plug_name in mods:
+    #             plug_name = plug_name.strip()
+    #
+    #             # don't read void names
+    #             if plug_name == '':
+    #                 continue
+    #
+    #             # We are the modules, we search them :)
+    #             plug = self.find_by_name(plug_name)
+    #             if plug is not None:
+    #                 new_modules.append(plug)
+    #             else:
+    #                 err = "[module] unknown %s module from %s" % (plug_name, module.get_name())
+    #                 module.configuration_errors.append(err)
+    #         module.modules = new_modules
+
+    # def explode(self):
+    #     """
+    #     Explode but not explode because this function is empty
+    #
+    #     :return: None
+    #     """
+    #     pass

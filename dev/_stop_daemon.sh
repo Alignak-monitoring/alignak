@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -29,38 +29,45 @@ END
 }
 
 if [ $# -eq 0 ]; then
+    echo "No daemon name in the command parameters"
     usage >&2
     exit 1
 fi
 
 DAEMON_NAME="$1"
 
+# Replace - with _ in daemon name and uppercase the daemon name
+DAEMON_NAME_VAR="${DAEMON_NAME/-/_}"
+DAEMON_NAME_VAR=${DAEMON_NAME_VAR^^}
+
 # Alignak.ini file name
 echo "---"
-if [ ${ALIGNAKINI} ]; then
-    echo "Alignak ini configuration file is defined in the environment"
-    ALIGNAK_CONFIGURATION_INI="$ALIGNAKINI"
+if [ -z ${ALIGNAK_CONFIGURATION_INI} ]; then
+   if [ ${ALIGNAKINI} ]; then
+       echo "Alignak ini configuration file is defined in the environment"
+       ALIGNAK_CONFIGURATION_INI="$ALIGNAKINI"
+   else
+       if [ -f "/usr/local/etc/alignak/alignak.ini" ]; then
+           echo "Alignak ini configuration file found in /usr/local/etc/alignak folder"
+           ALIGNAK_CONFIGURATION_INI="/usr/local/etc/alignak/alignak.ini"
+       else
+           if [ -f "/etc/alignak/alignak.ini" ]; then
+               echo "Alignak ini configuration file found in /etc/alignak folder"
+               ALIGNAK_CONFIGURATION_INI="/etc/alignak/alignak.ini"
+           else
+               ALIGNAK_CONFIGURATION_INI="$DIR/../etc/alignak.ini"
+           fi
+       fi
+   fi
 else
-    if [ -f "/usr/local/etc/alignak/alignak.ini" ]; then
-        echo "Alignak ini configuration file found in /usr/local/etc/alignak folder"
-        ALIGNAK_CONFIGURATION_INI="/usr/local/etc/alignak/alignak.ini"
-    else
-        if [ -f "/etc/alignak/alignak.ini" ]; then
-            echo "Alignak ini configuration file found in /etc/alignak folder"
-            ALIGNAK_CONFIGURATION_INI="/etc/alignak/alignak.ini"
-        else
-            ALIGNAK_CONFIGURATION_INI="$DIR/../etc/alignak.ini"
-        fi
-    fi
+   if [ ! -f ${ALIGNAK_CONFIGURATION_INI} ]; then
+       echo "Alignak ini configuration file not found in $ALIGNAK_CONFIGURATION_INI!"
+       usage >&2
+       exit 1
+   fi
 fi
 echo "Alignak ini configuration file: $ALIGNAK_CONFIGURATION_INI"
 echo "---"
-
-# Get the daemon's variables names (only the name, not the value)
-scr_var="${DAEMON_NAME}_DAEMON"
-proc_var="${DAEMON_NAME}_PROCESS"
-cfg_var="${DAEMON_NAME}_CFG"
-dbg_var="${DAEMON_NAME}_DEBUGFILE"
 
 # Get Alignak configuration and parse the result to declare environment variables
 while IFS=';' read -ra VAR; do
@@ -69,6 +76,18 @@ while IFS=';' read -ra VAR; do
     done
 done <<< "$(alignak-environment $ALIGNAK_CONFIGURATION_INI)"
 
+# Get the daemon's variables names (only the name, not their values)
+type_var="DAEMON_${DAEMON_NAME_VAR}_TYPE"
+scr_var="alignak-${!type_var}"
+dbg_var="DAEMON_${DAEMON_NAME_VAR}_DEBUGFILE"
+
+if [ -z ${!type_var} ]; then
+   echo "Required daemon ($DAEMON_NAME) not found in the Alignak environment!"
+   exit 1
+else
+   echo "Found a configuration for the required daemon (${!type_var} - $DAEMON_NAME) in the Alignak environment"
+fi
+
 
 echo "---"
 echo "Alignak daemon: $DAEMON_NAME"
@@ -76,15 +95,13 @@ echo "---"
 echo "Alignak configuration file: $ALIGNAK_CONFIGURATION_CFG"
 echo "Alignak extra configuration file: $ALIGNAK_CONFIGURATION_SPECIFICCFG"
 echo "---"
-echo "Daemon script: $scr_var = ${!scr_var}"
-echo "Daemon process: $proc_var = ${!proc_var}"
-echo "Daemon configuration: $cfg_var = ${!cfg_var}"
-echo "Daemon debug file: $dbg_var = ${!dbg_var}"
+echo "Daemon type: $type_var = ${!type_var}"
+echo "Daemon script: $scr_var"
 echo "---"
 
 echo "---"
 echo "Stopping the daemon: $DAEMON_NAME"
-processes=${!proc_var:0:15}
+processes=${scr_var:0:15}
 echo "Killing process(es) starting with: $processes"
 pkill $processes
 if [ $? -eq 0 ]; then

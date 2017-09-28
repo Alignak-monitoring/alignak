@@ -94,15 +94,9 @@ except ImportError, exp:  # Like in nt system
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
-daemons_config = {
-    Broker: "cfg/daemons/brokerd.ini",
-    Poller: "cfg/daemons/pollerd.ini",
-    Reactionner: "cfg/daemons/reactionnerd.ini",
-    Receiver: "cfg/daemons/receiverd.ini",
-    Alignak:  "cfg/daemons/schedulerd.ini",
-    Arbiter: "cfg/daemons/arbiterd.ini"
-}
-alignak_config = "cfg/daemons/alignak.cfg"
+alignak_root = os.path.abspath("cfg/daemons")
+alignak_config = os.path.abspath("cfg/daemons/alignak.cfg")
+alignak_environment = os.path.abspath("cfg/daemons/alignak.ini")
 
 #############################################################################
 
@@ -127,18 +121,24 @@ class template_Daemon_Start():
     def tearDown(cls):
         os.chdir(cls._launch_dir)
 
-    def get_login_and_group(self, p):
+    def get_login_and_group(self, daemon):
         try:
-            p.user = get_cur_user()
-            p.group = get_cur_group()
+            daemon.user = get_cur_user()
+            daemon.group = get_cur_group()
         except OSError:  # on some rare case, we can have a problem here
             # so bypass it and keep default value
             return
 
     def create_daemon(self, is_daemon=False, do_replace=False, debug_file=None):
         cls = self.daemon_cls
-        # is_daemon, do_replace, debug, debug_file
-        return cls(daemons_config[cls], is_daemon, do_replace, debug_file is not None, debug_file)
+        args = {
+            'env_file': alignak_environment,
+            'alignak_name': 'arbiter-master', 'daemon_name': None,
+            'daemon_enabled': is_daemon, 'do_replace': do_replace,
+            'config_file': None, 'debug': debug_file is not None, 'debug_file': debug_file,
+            'local_log': None, 'port': None
+        }
+        return cls(**args)
 
     def get_daemon(self, is_daemon=False, do_replace=False, free_port=True, debug_file=None):
         """
@@ -147,7 +147,7 @@ class template_Daemon_Start():
         :return:
         """
 
-        d = self.create_daemon(is_daemon, do_replace, debug_file)
+        daemon = self.create_daemon(is_daemon, do_replace, debug_file)
 
         # configuration may be "relative" :
         # some config file reference others with a relative path (from THIS_DIR).
@@ -155,12 +155,12 @@ class template_Daemon_Start():
         # THIS_DIR should also be equal to self._launch_dir, so use that:
         os.chdir(self._launch_dir)
 
-        d.load_config_file()
+        # d.load_config_file()
         # Do not use the port in the configuration file, but get a free port
         if free_port:
-            d.port = get_free_port()
-        self.get_login_and_group(d)
-        return d
+            daemon.port = get_free_port()
+        self.get_login_and_group(daemon)
+        return daemon
 
     def start_daemon(self, daemon):
         """
@@ -168,6 +168,7 @@ class template_Daemon_Start():
         :param daemon:
         :return:
         """
+        print("Starting daemon: %s" % daemon.name)
         daemon.load_modules_manager(daemon.name)
         daemon.do_load_modules([])
         daemon.do_daemon_init_and_start()
@@ -189,225 +190,149 @@ class template_Daemon_Start():
 
         :return:
         """
-        self.print_header()
-
-        # Start normally
-        d = self.get_daemon(is_daemon=False, do_replace=False, free_port=False,
+        # Start normally with debug file
+        daemon = self.get_daemon(is_daemon=False, do_replace=False, free_port=False,
                             debug_file='/tmp/debug-daemon.log')
-        assert d.debug_file == '/tmp/debug-daemon.log'
-        assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
-        assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
-
-        # Update working dir to use temporary
-        d.workdir = tempfile.mkdtemp()
-        d.pidfile = os.path.join(d.workdir, "daemon.pid")
+        assert daemon.debug is True
+        assert daemon.debug_file == '/tmp/debug-daemon.log'
+        assert daemon.fpid_name == os.path.abspath('cfg/daemons/run/%s.pid' % daemon.name)
+        assert daemon.local_log == os.path.abspath('cfg/daemons/log/%s.log' % daemon.name)
 
         # Start the daemon
-        self.start_daemon(d)
-        assert os.path.exists(d.pidfile)
+        self.start_daemon(daemon)
+        assert os.path.exists(daemon.fpid_name)
         # This assertion is False on Travis build :(
         # assert os.path.exists(d.debug_file)
 
-        # Get daemon stratistics
-        stats = d.get_stats_struct()
-        assert 'metrics' in stats
-        assert 'version' in stats
-        assert 'name' in stats
-        assert stats['name'] == d.name
-        assert stats['type'] == d.daemon_type
-        assert 'modules' in stats
-
-        time.sleep(5)
-
-        # Stop the daemon
-        self.stop_daemon(d)
-        assert not os.path.exists(d.pidfile)
-
-    def test_default_config_and_start_and_stop(self):
-        """ Test configuration loaded, daemon started and stopped - default daemon configuration
-
-        :return:
-        """
-        self.print_header()
-
-        # Start normally
-        d = self.get_daemon(is_daemon=False, do_replace=False, free_port=False)
-        assert d.debug_file == None
-        assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
-        assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
-
-        # Update working dir to use temporary
-        d.workdir = tempfile.mkdtemp()
-        d.pidfile = os.path.join(d.workdir, "daemon.pid")
-
-        # Start the daemon
-        self.start_daemon(d)
-        assert os.path.exists(d.pidfile)
-
-        # Get daemon stratistics
-        stats = d.get_stats_struct()
-        assert 'metrics' in stats
-        assert 'version' in stats
-        assert 'name' in stats
-        assert stats['name'] == d.name
-        assert stats['type'] == d.daemon_type
-        assert 'modules' in stats
-
         time.sleep(2)
 
         # Stop the daemon
-        self.stop_daemon(d)
-        assert not os.path.exists(d.pidfile)
-
-        # Start as a daemon and replace if still exists
-        d = self.get_daemon(is_daemon=False, do_replace=True, free_port=False)
-        assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
-        assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
-
-        # Update working dir to use temporary
-        d.workdir = tempfile.mkdtemp()
-        d.pidfile = os.path.join(d.workdir, "daemon.pid")
-
-        # Start the daemon
-        self.start_daemon(d)
-        assert os.path.exists(d.pidfile)
-
-        time.sleep(2)
-
-        #  Stop the daemon
-        self.stop_daemon(d)
-        assert not os.path.exists(d.pidfile)
+        self.stop_daemon(daemon)
+        assert not os.path.exists(daemon.fpid_name)
 
     def test_config_and_start_and_stop(self):
         """ Test configuration loaded, daemon started and stopped
 
         :return:
         """
-        self.print_header()
-
-        # Start normally
-        d = self.get_daemon(is_daemon=False, do_replace=False, free_port=False)
-        assert d.debug_file == None
-        assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
-        assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
-
-        # Update working dir to use temporary
-        d.workdir = tempfile.mkdtemp()
-        d.pidfile = os.path.join(d.workdir, "daemon.pid")
+        # # Start normally
+        daemon = self.get_daemon(is_daemon=False, do_replace=False, free_port=False)
+        assert daemon.debug_file == None
+        assert daemon.fpid_name == os.path.abspath('cfg/daemons/run/%s.pid' % daemon.name)
+        save_pid_fname = daemon.fpid_name
+        assert daemon.local_log == os.path.abspath('cfg/daemons/log/%s.log' % daemon.name)
 
         # Start the daemon
-        self.start_daemon(d)
-        assert os.path.exists(d.pidfile)
+        self.start_daemon(daemon)
 
-        # Get daemon stratistics
-        stats = d.get_stats_struct()
-        assert 'metrics' in stats
-        assert 'version' in stats
-        assert 'name' in stats
-        assert stats['name'] == d.name
-        assert stats['type'] == d.daemon_type
-        assert 'modules' in stats
+        # Check PID
+        assert os.path.exists(daemon.fpid_name)
+        # Check log file
+        assert os.path.exists(daemon.local_log)
 
         time.sleep(2)
 
-        # Stop the daemon
-        self.stop_daemon(d)
-        assert not os.path.exists(d.pidfile)
+        # Stop the daemon and unlink the pid file
+        self.stop_daemon(daemon)
+        assert not os.path.exists(daemon.fpid_name)
+
+        # Reset initial working dir
+        os.chdir(self._launch_dir)
 
         # Start as a daemon and replace if still exists
-        d = self.get_daemon(is_daemon=False, do_replace=True, free_port=False)
-        assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
-        assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
+        print("Cwd: %s" % self._launch_dir)
+        daemon = self.get_daemon(is_daemon=False, do_replace=False, free_port=False)
+        print("Cwd: %s" % self._launch_dir)
+        # Use the same pid file
+        assert daemon.fpid_name == save_pid_fname
+        assert daemon.local_log == os.path.abspath('cfg/daemons/log/%s.log' % daemon.name)
 
         # Update working dir to use temporary
-        d.workdir = tempfile.mkdtemp()
-        d.pidfile = os.path.join(d.workdir, "daemon.pid")
+        daemon.workdir = tempfile.mkdtemp()
+        daemon.fpid_name = os.path.join(daemon.workdir, "daemon.pid")
 
         # Start the daemon
-        self.start_daemon(d)
-        assert os.path.exists(d.pidfile)
+        self.start_daemon(daemon)
+        assert os.path.exists(daemon.fpid_name)
 
         time.sleep(2)
 
         #  Stop the daemon
-        self.stop_daemon(d)
-        assert not os.path.exists(d.pidfile)
+        self.stop_daemon(daemon)
+        assert not os.path.exists(daemon.fpid_name)
 
     def test_config_and_replace_and_stop(self):
         """ Test configuration loaded, daemon started, replaced and stopped
 
         :return:
         """
-        self.print_header()
+        # # Start normally
+        daemon = self.get_daemon(is_daemon=False, do_replace=False, free_port=False)
+        assert daemon.debug_file == None
+        assert daemon.fpid_name == os.path.abspath('cfg/daemons/run/%s.pid' % daemon.name)
+        assert daemon.local_log == os.path.abspath('cfg/daemons/log/%s.log' % daemon.name)
 
-        # Start normally
-        d = self.get_daemon(is_daemon=False, do_replace=False, free_port=False)
-        assert d.debug_file == None
-        assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
-        assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
-
-        # Update working dir to use temporary
-        d.workdir = tempfile.mkdtemp()
-        d.pidfile = os.path.join(d.workdir, "daemon.pid")
-
-        # Update log file information
-        d.logdir = os.path.abspath('.')
-        d.local_log = os.path.abspath('./test.log')
-
-        # Do not reload the configuration file (avoid replacing modified properties for the test...)
-        d.setup_alignak_logger(reload_configuration=False)
+        # Setup logger
+        daemon.setup_alignak_logger()
 
         # Start the daemon
-        self.start_daemon(d)
-        assert os.path.exists(d.pidfile)
-        fpid = open(d.pidfile, 'r+')
+        self.start_daemon(daemon)
+        # Get PID
+        assert os.path.exists(daemon.fpid_name)
+        fpid = open(daemon.fpid_name, 'r+')
         pid_var = fpid.readline().strip(' \r\n')
         print("Daemon's pid: %s" % pid_var)
+        # Check log file
+        assert os.path.exists(daemon.local_log)
 
         # Get daemon stratistics
-        stats = d.get_stats_struct()
+        stats = daemon.get_stats_struct()
         assert 'metrics' in stats
         assert 'version' in stats
         assert 'name' in stats
-        assert stats['name'] == d.name
-        assert stats['type'] == d.daemon_type
+        assert stats['name'] == daemon.name
+        assert stats['type'] == daemon.daemon_type
         assert 'modules' in stats
 
         time.sleep(2)
 
-        # Stop the daemon, do not unlink the pidfile
-        d.do_stop()
+        # Stop the daemon, but do not unlink the pid file
         # self.stop_daemon(d)
-        assert os.path.exists(d.pidfile)
+        daemon.do_stop()
+        assert os.path.exists(daemon.fpid_name)
 
         # Update log file information
-        d.logdir = os.path.abspath('.')
-        d.local_log = os.path.abspath('./test.log')
+        daemon.local_log = os.path.abspath(os.path.join(daemon.logdir, daemon.name + ".log"))
+        print("Daemon's logdir: %s" % daemon.logdir)
+        print("Daemon's log: %s" % daemon.local_log)
 
         # Do not reload the configuration file (avoid replacing modified properties for the test...)
-        d.setup_alignak_logger(reload_configuration=False)
+        daemon.setup_alignak_logger()
+
+        # Reset initial working dir
+        os.chdir(self._launch_dir)
 
         # Start as a daemon and replace if still exists
-        d = self.get_daemon(is_daemon=False, do_replace=True, free_port=False)
-        assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
-        assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
+        daemon = self.get_daemon(is_daemon=False, do_replace=True, free_port=False)
+        assert daemon.fpid_name == os.path.abspath('cfg/daemons/run/%s.pid' % daemon.name)
+        assert daemon.local_log == os.path.abspath('cfg/daemons/log/%s.log' % daemon.name)
 
         # Update working dir to use temporary
-        d.workdir = tempfile.mkdtemp()
-        d.pidfile = os.path.join(d.workdir, "daemon.pid")
+        daemon.workdir = tempfile.mkdtemp()
+        daemon.fpid_name = os.path.join(daemon.workdir, "daemon.pid")
 
         # Start the daemon
-        self.start_daemon(d)
-        assert os.path.exists(d.pidfile)
-        fpid = open(d.pidfile, 'r+')
+        self.start_daemon(daemon)
+        assert os.path.exists(daemon.fpid_name)
+        fpid = open(daemon.fpid_name, 'r+')
         pid_var = fpid.readline().strip(' \r\n')
         print("Daemon's (new) pid: %s" % pid_var)
 
         time.sleep(2)
 
         #  Stop the daemon
-        self.stop_daemon(d)
-        assert not os.path.exists(d.pidfile)
+        self.stop_daemon(daemon)
+        assert not os.path.exists(daemon.fpid_name)
 
     def test_bad_piddir(self):
         """ Test bad PID directory
@@ -416,15 +341,13 @@ class template_Daemon_Start():
         """
         self.print_header()
 
-        d = self.get_daemon()
-        d.workdir = tempfile.mkdtemp()
-        d.pidfile = os.path.join('/DONOTEXISTS', "daemon.pid")
+        daemon = self.get_daemon()
+        daemon.workdir = tempfile.mkdtemp()
+        daemon.fpid_name = os.path.abspath(os.path.join('/DONOTEXISTS', "daemon.pid"))
 
         with pytest.raises(InvalidPidFile):
-            self.start_daemon(d)
-        d.do_stop()
-
-        shutil.rmtree(d.workdir)
+            self.start_daemon(daemon)
+        daemon.do_stop()
 
     def test_bad_workdir(self):
         """ Test bad working directory
@@ -433,12 +356,12 @@ class template_Daemon_Start():
         """
         self.print_header()
 
-        d = self.get_daemon()
-        d.workdir = '/DONOTEXISTS'
+        daemon = self.get_daemon()
+        daemon.workdir = '/DONOTEXISTS'
 
         with pytest.raises(InvalidWorkDir):
-            self.start_daemon(d)
-        d.do_stop()
+            self.start_daemon(daemon)
+        daemon.do_stop()
 
     def test_logger(self):
         """ Test logger setup
@@ -447,21 +370,22 @@ class template_Daemon_Start():
         """
         self.print_header()
 
-        d = self.get_daemon()
-        assert d.pidfile == '/usr/local/var/run/alignak/%sd.pid' % d.name
-        assert d.local_log == '/usr/local/var/log/alignak/%sd.log' % d.name
+        daemon = self.get_daemon()
+        print("Daemon: %s" % daemon)
+        assert daemon.fpid_name == os.path.abspath('cfg/daemons/run/%s.pid' % daemon.name)
+        assert daemon.local_log == os.path.abspath('cfg/daemons/log/%s.log' % daemon.name)
 
-        # Update log file information
-        d.logdir = os.path.abspath('.')
-        d.local_log = os.path.abspath('./test.log')
+        # # Update log file information
+        # daemon.logdir = os.path.abspath('.')
+        # daemon.local_log = os.path.abspath('./test.log')
 
         # Do not reload the configuration file (avoid replacing modified properties for the test...)
-        d.setup_alignak_logger(reload_configuration=False)
+        daemon.setup_alignak_logger()
 
         # Log file exists...
-        assert os.path.exists(d.local_log)
+        assert os.path.exists(daemon.local_log)
 
-        with open(d.local_log) as f:
+        with open(daemon.local_log) as f:
             content = f.readlines()
 
     def test_daemon_header(self):
@@ -471,15 +395,15 @@ class template_Daemon_Start():
         """
         self.print_header()
 
-        d = self.get_daemon()
+        daemon = self.get_daemon()
         expected_result = [
             "-----",
-            "Alignak %s - %s daemon" % (VERSION, d.name),
+            "Alignak %s - %s daemon" % (VERSION, daemon.name),
             "Copyright (c) 2015-2016: Alignak Team",
             "License: AGPL",
             "-----"
         ]
-        assert d.get_header() == expected_result
+        assert daemon.get_header() == expected_result
 
     def test_trace_unrecoverable(self):
         """ Test unrecoverable trace
@@ -500,22 +424,23 @@ class template_Daemon_Start():
         print("Testing port not free ... mypid=%d" % (os.getpid()))
         d1 = self.get_daemon()
 
+        print("PID file: %s" % d1.fpid_name)
         d1.workdir = tempfile.mkdtemp()
-        d1.pidfile = os.path.join(d1.workdir, "daemon.pid")
+        d1.fpid_name = os.path.abspath(os.path.join(d1.workdir, "daemon.pid"))
         d1.host = "127.0.0.1"  # Force all interfaces
 
         self.start_daemon(d1)
         time.sleep(1)
-        print("PID file: %s" % d1.pidfile)
-        assert os.path.exists(d1.pidfile)
+        print("PID file: %s" % d1.fpid_name)
+        assert os.path.exists(d1.fpid_name)
 
         # so that second daemon will not see first started one:
-        os.unlink(d1.pidfile)
+        os.unlink(d1.fpid_name)
 
         d2 = self.get_daemon()
 
         d2.workdir = d1.workdir
-        d2.pidfile = d1.pidfile
+        d2.fpid_name = d1.fpid_name
         d2.host = "127.0.0.1"  # Force all interfaces
         d2.port = d1.http_daemon.port
 
@@ -568,10 +493,14 @@ class Test_Arbiter_Start(template_Daemon_Start, AlignakTest):
     def create_daemon(self, is_daemon=False, do_replace=False, debug_file=None):
         """ arbiter is always a bit special .. """
         cls = self.daemon_cls
-        # verify is always False
-        return cls(daemons_config[cls], alignak_config,
-                   is_daemon, do_replace, False,
-                   debug_file is not None, debug_file,
-                   'arbiter-master', None)
+        args = {
+            'env_file': alignak_environment,
+            'alignak_name': 'arbiter-master', 'daemon_name': None,
+            'daemon_enabled': is_daemon, 'do_replace': do_replace,
+            'config_file': None, 'debug': True, 'debug_file': debug_file,
+            'local_log': None, 'port': None,
+            'verify_only': False, 'monitoring_files': [alignak_config],
+        }
+        return cls(**args)
 
 #############################################################################

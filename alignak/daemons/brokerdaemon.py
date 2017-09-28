@@ -89,24 +89,18 @@ class Broker(BaseSatellite):
     """
     properties = BaseSatellite.properties.copy()
     properties.update({
-        'daemon_type':
+        'type':
             StringProp(default='broker'),
-        'pidfile':
-            PathProp(default='brokerd.pid'),
         'port':
-            IntegerProp(default=7772),
-        'local_log':
-            PathProp(default='brokerd.log'),
+            IntegerProp(default=7772)
     })
 
-    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file,
-                 port=None, local_log=None, daemon_name=None):
-        self.daemon_name = 'broker'
-        if daemon_name:
-            self.daemon_name = daemon_name
+    def __init__(self, **kwargs):
+        self.daemon_name = 'broker-master'
+        if 'daemon_name' in kwargs and kwargs['daemon_name']:
+            self.daemon_name = kwargs['daemon_name']
 
-        super(Broker, self).__init__(self.daemon_name, config_file, is_daemon, do_replace, debug,
-                                     debug_file, port, local_log)
+        super(Broker, self).__init__(self.daemon_name, **kwargs)
 
         # Our arbiters
         self.arbiters = {}

@@ -104,10 +104,8 @@ class BaseSatellite(Daemon):
 
     """
 
-    def __init__(self, name, config_file, is_daemon, do_replace, debug, debug_file,
-                 port, local_log):
-        super(BaseSatellite, self).__init__(name, config_file, is_daemon, do_replace, debug,
-                                            debug_file, port, local_log)
+    def __init__(self, name, **kwargs):
+        super(BaseSatellite, self).__init__(name, **kwargs)
         # Ours schedulers
         self.schedulers = {}
 
@@ -329,7 +327,7 @@ class BaseSatellite(Daemon):
 
         # If I am a broker and I reconnect to my scheduler
         # pylint: disable=E1101
-        if self.daemon_type == 'broker' and s_type == 'scheduler':
+        if self.type == 'broker' and s_type == 'scheduler':
             logger.info("[%s] Asking initial broks from '%s'", self.name, link['name'])
             try:
                 _t0 = time.time()
@@ -397,11 +395,9 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
     do_actions = False
     my_type = ''
 
-    def __init__(self, name, config_file, is_daemon, do_replace, debug, debug_file,
-                 port, local_log):
+    def __init__(self, name, **kwargs):
 
-        super(Satellite, self).__init__(name, config_file, is_daemon, do_replace,
-                                        debug, debug_file, port, local_log)
+        super(Satellite, self).__init__(name, **kwargs)
 
         # Keep broks so they can be eaten by a broker
         self.broks = {}

@@ -653,25 +653,25 @@ class Scheduler(object):  # pylint: disable=R0902
         TODO: find a way to merge this and the version in daemon.py
         """
         _t0 = time.time()
-        for inst in self.sched_daemon.modules_manager.instances:
+        for instance in self.sched_daemon.modules_manager.instances:
             full_hook_name = 'hook_' + hook_name
             logger.debug("hook_point: %s: %s %s",
-                         inst.get_name(), str(hasattr(inst, full_hook_name)), hook_name)
+                         instance.name, str(hasattr(instance, full_hook_name)), hook_name)
 
-            if hasattr(inst, full_hook_name):
-                fun = getattr(inst, full_hook_name)
+            if hasattr(instance, full_hook_name):
+                fun = getattr(instance, full_hook_name)
                 try:
                     fun(self)
                 # pylint: disable=W0703
                 except Exception as exp:  # pragma: no cover, never happen during unit tests...
                     logger.error("The instance %s raise an exception %s."
                                  "I disable it and set it to restart it later",
-                                 inst.get_name(), str(exp))
+                                 instance.name, str(exp))
                     output = cStringIO.StringIO()
                     traceback.print_exc(file=output)
                     logger.error("Exception trace follows: %s", output.getvalue())
                     output.close()
-                    self.sched_daemon.modules_manager.set_to_restart(inst)
+                    self.sched_daemon.modules_manager.set_to_restart(instance)
         statsmgr.timer('core.hook.%s' % hook_name, time.time() - _t0)
 
     def clean_queues(self):

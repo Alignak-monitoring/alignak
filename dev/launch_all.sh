@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -20,6 +20,10 @@
 #
 DIR="$(cd $(dirname "$0"); pwd)"
 
+# ----------------------------------------------------------------------------
+#  This script is an example script that starts a list of Alignak daemons. It
+# starts one instance of each daemon type
+# ----------------------------------------------------------------------------
 #
 # Run this script with the -d parameter to start all the daemons in debug mode
 #
