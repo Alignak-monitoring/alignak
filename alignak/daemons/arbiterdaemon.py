@@ -93,32 +93,53 @@ class Arbiter(Daemon):  # pylint: disable=R0902
     """
     properties = Daemon.properties.copy()
     properties.update({
-        'daemon_type':
+        'type':
             StringProp(default='arbiter'),
-        'pidfile':
-            PathProp(default='arbiterd.pid'),
         'port':
-            IntegerProp(default=7770),
-        'local_log':
-            PathProp(default='arbiterd.log'),
+            IntegerProp(default=7770)
     })
 
     # pylint: disable=too-many-arguments
-    def __init__(self, config_file, monitoring_files, is_daemon, do_replace, verify_only, debug,
-                 debug_file, alignak_name, analyse=None,
-                 port=None, local_log=None, daemon_name=None):
-        self.daemon_name = 'arbiter'
-        if daemon_name:
-            self.daemon_name = daemon_name
+    def __init__(self, **kwargs):
+        self.monitoring_config_files = []
 
-        super(Arbiter, self).__init__(self.daemon_name, config_file, is_daemon, do_replace,
-                                      debug, debug_file, port, local_log)
+        self.daemon_name = 'arbiter-master'
+        if 'daemon_name' in kwargs and kwargs['daemon_name']:
+            self.daemon_name = kwargs['daemon_name']
 
-        self.config_files = monitoring_files
-        self.verify_only = verify_only
-        self.analyse = analyse
-        self.arbiter_name = alignak_name
-        self.alignak_name = None
+        super(Arbiter, self).__init__(self.daemon_name, **kwargs)
+
+        # Specific arbiter command line parameters
+        if 'monitoring_files' in kwargs and kwargs['monitoring_files']:
+            logger.warning(
+                "Using daemon configuration file is now deprecated. The arbiter daemon -a "
+                "parameter should not be used anymore. Use the -e environment file "
+                "parameter to provide a global Alignak configuration file. "
+                "** Note that this feature is not removed because it is still used "
+                "for the unit tests of the Alignak framework! If some monitoring files are "
+                "present in the command line parameters, they will supersede the ones "
+                "declared in the environment configuration file.")
+            # Monitoring files in the arguments overload the ones defined
+            # in the environment configuration file
+            self.monitoring_config_files = kwargs['monitoring_files']
+        if not self.monitoring_config_files:
+            sys.exit("The Alignak environment file is not existing or do not define "
+                     "any monitoring configuration files. "
+                     "The arbiter can not start correctly.")
+
+        print("Arbiter daemon '%s' has some monitoring configuration files: %s"
+              % (self.name, self.monitoring_config_files))
+
+        self.verify_only = False
+        if 'verify_only' in kwargs and kwargs['verify_only']:
+            self.verify_only = kwargs.get('verify_only', False)
+        self.analyse = None
+        if 'analyse' in kwargs and kwargs['analyse']:
+            self.analyse = kwargs.get('analyse', False)
+        self.alignak_name = self.daemon_name
+        if 'alignak_name' in kwargs and kwargs['alignak_name']:
+            self.alignak_name = kwargs['alignak_name']
+        self.arbiter_name = self.alignak_name
 
         self.broks = {}
         self.is_master = False
@@ -251,7 +272,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         logger.info("Loading configuration")
         # REF: doc/alignak-conf-dispatching.png (1)
-        buf = self.conf.read_config(self.config_files)
+        buf = self.conf.read_config(self.monitoring_config_files)
         raw_objects = self.conf.read_config_buf(buf)
         # Maybe conf is already invalid
         if not self.conf.conf_is_correct:
@@ -548,10 +569,12 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 ret = self.my_satellites[daemon_name].poll()
                 if ret is not None:
                     logger.error("*** %s exited on start!", daemon_name)
-                    for line in iter(self.my_satellites[daemon_name].stdout.readline, b''):
-                        logger.error(">>> %s", line.rstrip())
-                    for line in iter(self.my_satellites[daemon_name].stderr.readline, b''):
-                        logger.error(">>> %s", line.rstrip())
+                    if self.my_satellites[daemon_name].stdout:
+                        for line in iter(self.my_satellites[daemon_name].stdout.readline, b''):
+                            logger.error(">>> %s", line.rstrip())
+                    if self.my_satellites[daemon_name].stderr:
+                        for line in iter(self.my_satellites[daemon_name].stderr.readline, b''):
+                            logger.error(">>> %s", line.rstrip())
                     result = False
                 else:
                     logger.info("%s running (pid=%d)",
@@ -570,17 +593,17 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """
         # Now we ask for configuration modules if they
         # got items for us
-        for inst in self.modules_manager.instances:
+        for instance in self.modules_manager.instances:
             # TODO : clean
-            if not hasattr(inst, 'get_objects'):
+            if not hasattr(instance, 'get_objects'):
                 return
 
             _t0 = time.time()
             try:
-                objs = inst.get_objects()
+                objs = instance.get_objects()
             except Exception, exp:  # pylint: disable=W0703
                 logger.error("Module %s get_objects raised an exception %s. "
-                             "Log and continue to run", inst.get_name(), str(exp))
+                             "Log and continue to run", instance.name, str(exp))
                 output = cStringIO.StringIO()
                 traceback.print_exc(file=output)
                 logger.error("Back trace of this remove: %s", output.getvalue())
@@ -591,7 +614,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             for type_c in types_creations:
                 (_, _, prop, dummy) = types_creations[type_c]
                 if prop not in objs:
-                    logger.warning("Did not get '%s' objects from module %s", prop, inst.get_name())
+                    logger.warning("Did not get '%s' objects from module %s", prop, instance.name)
                     continue
                 for obj in objs[prop]:
                     # test if raw_objects[k] are already set - if not, add empty array
@@ -600,11 +623,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     # put the imported_from property if the module is not already setting
                     # it so we know where does this object came from
                     if 'imported_from' not in obj:
-                        obj['imported_from'] = 'module:%s' % inst.get_name()
+                        obj['imported_from'] = 'module:%s' % instance.name
                     # now append the object
                     raw_objects[type_c].append(obj)
                 logger.debug("Added %i objects to %s from module %s",
-                             len(objs[prop]), type_c, inst.get_name())
+                             len(objs[prop]), type_c, instance.name)
 
     def load_modules_alignak_configuration(self):  # pragma: no cover, not yet with unit tests.
         """Load Alignak configuration from the arbiter modules
@@ -616,19 +639,18 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """
         alignak_cfg = {}
         # Ask configured modules if they got configuration for us
-        for inst in self.modules_manager.instances:
-            if not hasattr(inst, 'get_alignak_configuration'):
+        for instance in self.modules_manager.instances:
+            if not hasattr(instance, 'get_alignak_configuration'):
                 return
 
             _t0 = time.time()
             try:
-                logger.info("Getting Alignak global configuration from module '%s'",
-                            inst.get_name())
-                cfg = inst.get_alignak_configuration()
+                logger.info("Getting Alignak global configuration from module '%s'", instance.name)
+                cfg = instance.get_alignak_configuration()
                 alignak_cfg.update(cfg)
             except Exception, exp:  # pylint: disable=W0703
                 logger.error("Module get_alignak_configuration %s raised an exception %s. "
-                             "Log and continue to run", inst.get_name(), str(exp))
+                             "Log and continue to run", instance.name, str(exp))
                 output = cStringIO.StringIO()
                 traceback.print_exc(file=output)
                 logger.error("Back trace of this remove: %s", output.getvalue())
@@ -730,7 +752,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             # With a 2.4 interpreter the sys.exit() in load_config_file
             # ends up here and must be handled.
             sys.exit(exp.code)
-        except Exception, exp:
+        except Exception as exp:
             self.print_unrecoverable(traceback.format_exc())
             raise
 

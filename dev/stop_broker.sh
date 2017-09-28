@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -20,12 +20,11 @@
 #
 DIR="$(cd $(dirname "$0"); pwd)"
 
-DAEMON_TYPE="BROKER"
+DAEMON_TYPE="broker"
 if [ $# -eq 0 ]; then
-    DAEMON_NAME="${DAEMON_TYPE}_MASTER"
+    DAEMON_NAME="${DAEMON_TYPE}-master"
 else
-    # Make parameter as uppercase for daemon name
-    DAEMON_NAME="${DAEMON_TYPE}_${1^^}"
+    # Make parameter as lowercase for daemon name
+    DAEMON_NAME="${1,,}"
 fi
-
-"$DIR/_stop_daemon.sh" $@ "$DAEMON_NAME"
+"$DIR/_stop_daemon.sh" $@ -a "$DAEMON_NAME"

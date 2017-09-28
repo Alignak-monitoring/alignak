@@ -73,6 +73,7 @@ class TestModules(AlignakTest):
         self.setup_with_file('./cfg/cfg_default_with_modules.cfg')
         assert self.conf_is_correct
         self.show_configuration_logs()
+        self.show_logs()
 
         # The only existing arbiter module is Example declared in the configuration
         modules = [m.module_alias for m in self.arbiter.myself.modules]

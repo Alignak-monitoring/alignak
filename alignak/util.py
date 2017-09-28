@@ -1290,6 +1290,7 @@ def parse_daemon_args(arbiter=False):
         '-d', '--daemon': Run as a daemon
         '-r', '--replace': Replace previous running daemon
         '-f', '--debugfile': File to dump debug logs
+        '-e', '--environment': Alignak environment file
 
 
     :param arbiter: Do we parse args for arbiter?
@@ -1298,7 +1299,7 @@ def parse_daemon_args(arbiter=False):
     """
     parser = argparse.ArgumentParser(version='%(prog)s ' + VERSION)
     if arbiter:
-        parser.add_argument('-a', '--arbiter', action='append', required=True,
+        parser.add_argument('-a', '--arbiter', action='append',
                             dest='monitoring_files',
                             help='Monitored configuration file(s), '
                                  '(multiple -a can be used, and they will be concatenated '
@@ -1314,9 +1315,9 @@ def parse_daemon_args(arbiter=False):
                         help='Daemon unique name. Must be unique for the same daemon type.')
     parser.add_argument('-c', '--config', dest='config_file',
                         help='Daemon configuration file')
-    parser.add_argument('-d', '--daemon', dest='is_daemon', action='store_true',
+    parser.add_argument('-d', '--daemon', dest='is_daemon', default=False, action='store_true',
                         help='Run as a daemon')
-    parser.add_argument('-r', '--replace', dest='do_replace', action='store_true',
+    parser.add_argument('-r', '--replace', dest='do_replace', default=False, action='store_true',
                         help='Replace previous running daemon')
     parser.add_argument('-f', '--debugfile', dest='debug_file',
                         help='File to dump debug logs')
@@ -1324,5 +1325,9 @@ def parse_daemon_args(arbiter=False):
                         help='Port used by the daemon')
     parser.add_argument('-l', '--local_log', dest='local_log',
                         help='File to use for daemon log')
+    parser.add_argument('-e', '--environment', dest='env_file', required=True,
+                        default='../../etc/alignak.ini',
+                        help='Alignak global environment file. This file defines all the daemons '
+                             'of this Alignak instance and their configuration')
 
     return parser.parse_args()

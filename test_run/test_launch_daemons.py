@@ -133,8 +133,7 @@ class DaemonsStartTest(AlignakTest):
 
         print("Launching arbiter with bad configuration file...")
         args = ["../alignak/bin/alignak_arbiter.py",
-                "-c", "run/test_launch_daemons/daemons/fake.ini",
-                "-a", "run/test_launch_daemons/alignak.cfg"]
+                "-e", "run/test_launch_daemons/daemons/fake.ini"]
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 

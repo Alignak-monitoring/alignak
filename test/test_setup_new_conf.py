@@ -43,8 +43,11 @@ class TestSetupNewConf(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default_with_modules.cfg')
 
-        sched = schedulerdaemon('cfg/setup_new_conf/daemons/schedulerd.ini', False, False, False,
-                                '/tmp/scheduler.log')
+        args = {
+            'env_file': self.env_file,
+            'alignak_name': 'my-alignak', 'daemon_name': None,
+        }
+        sched = schedulerdaemon(**args)
         sched.load_config_file()
         sched.load_modules_manager('scheduler-name')
         if hasattr(sched, 'modules'):
@@ -86,8 +89,11 @@ class TestSetupNewConf(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default_with_modules.cfg')
 
-        receiv = receiverdaemon('cfg/setup_new_conf/daemons/receiverd.ini', False, False, True,
-                                '/tmp/receiver.log')
+        args = {
+            'env_file': self.env_file,
+            'alignak_name': 'my-alignak', 'daemon_name': None,
+        }
+        receiv = receiverdaemon(**args)
         receiv.load_config_file()
         receiv.load_modules_manager('receiver-name')
         if hasattr(receiv, 'modules'):
@@ -126,8 +132,11 @@ class TestSetupNewConf(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default_with_modules.cfg')
 
-        poller = pollerdaemon('cfg/setup_new_conf/daemons/pollerd.ini', False, False, False,
-                              '/tmp/poller.log')
+        args = {
+            'env_file': self.env_file,
+            'alignak_name': 'my-alignak', 'daemon_name': None,
+        }
+        poller = pollerdaemon(**args)
         poller.load_config_file()
         poller.load_modules_manager('poller-name')
         if hasattr(poller, 'modules'):
@@ -161,8 +170,11 @@ class TestSetupNewConf(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default_with_modules.cfg')
 
-        broker = brokerdaemon('cfg/setup_new_conf/daemons/brokerd.ini', False, False, False,
-                              '/tmp/broker.log')
+        args = {
+            'env_file': self.env_file,
+            'alignak_name': 'my-alignak', 'daemon_name': None,
+        }
+        broker = brokerdaemon(**args)
         broker.load_config_file()
         broker.load_modules_manager('broker-name')
         if hasattr(broker, 'modules'):
@@ -204,8 +216,11 @@ class TestSetupNewConf(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default_with_modules.cfg')
 
-        reac = reactionnerdaemon('cfg/setup_new_conf/daemons/reactionnerd.ini', False, False,
-                                 False, '/tmp/reactionner.log')
+        args = {
+            'env_file': self.env_file,
+            'alignak_name': 'my-alignak', 'daemon_name': None,
+        }
+        reac = reactionnerdaemon(**args)
         reac.load_config_file()
         reac.load_modules_manager('reactionner-name')
         if hasattr(reac, 'modules'):

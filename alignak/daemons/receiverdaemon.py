@@ -77,24 +77,18 @@ class Receiver(Satellite):
 
     properties = Satellite.properties.copy()
     properties.update({
-        'daemon_type':
+        'type':
             StringProp(default='receiver'),
-        'pidfile':
-            PathProp(default='receiverd.pid'),
         'port':
-            IntegerProp(default=7773),
-        'local_log':
-            PathProp(default='receiverd.log'),
+            IntegerProp(default=7773)
     })
 
-    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file,
-                 port=None, local_log=None, daemon_name=None):
-        self.daemon_name = 'receiver'
-        if daemon_name:
-            self.daemon_name = daemon_name
+    def __init__(self, **kwargs):
+        self.daemon_name = 'receiver-master'
+        if 'daemon_name' in kwargs and kwargs['daemon_name']:
+            self.daemon_name = kwargs['daemon_name']
 
-        super(Receiver, self).__init__(self.daemon_name, config_file, is_daemon, do_replace,
-                                       debug, debug_file, port, local_log)
+        super(Receiver, self).__init__(self.daemon_name, **kwargs)
 
         # Our arbiters
         self.arbiters = {}

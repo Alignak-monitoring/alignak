@@ -97,19 +97,20 @@ class TestLaunchDaemonsModules(AlignakTest):
             shutil.rmtree(tmp_folder)
 
         shutil.copytree(cfg_folder, tmp_folder)
-        files = [tmp_folder + '/daemons/arbiterd.ini',
-                 tmp_folder + '/daemons/brokerd.ini',
-                 tmp_folder + '/daemons/pollerd.ini',
-                 tmp_folder + '/daemons/reactionnerd.ini',
-                 tmp_folder + '/daemons/receiverd.ini',
-                 tmp_folder + '/daemons/schedulerd.ini',
-                 tmp_folder + '/alignak.cfg',
-                 tmp_folder + '/arbiter/daemons/arbiter-master.cfg',
-                 tmp_folder + '/arbiter/daemons/broker-master.cfg',
-                 tmp_folder + '/arbiter/daemons/poller-master.cfg',
-                 tmp_folder + '/arbiter/daemons/reactionner-master.cfg',
-                 tmp_folder + '/arbiter/daemons/receiver-master.cfg',
-                 tmp_folder + '/arbiter/daemons/scheduler-master.cfg']
+        # files = [tmp_folder + '/daemons/arbiter.ini',
+        #          tmp_folder + '/daemons/broker.ini',
+        #          tmp_folder + '/daemons/poller.ini',
+        #          tmp_folder + '/daemons/reactionner.ini',
+        #          tmp_folder + '/daemons/receiver.ini',
+        #          tmp_folder + '/daemons/scheduler.ini',
+        #          tmp_folder + '/alignak.cfg',
+        #          tmp_folder + '/arbiter/daemons/arbiter-master.cfg',
+        #          tmp_folder + '/arbiter/daemons/broker-master.cfg',
+        #          tmp_folder + '/arbiter/daemons/poller-master.cfg',
+        #          tmp_folder + '/arbiter/daemons/reactionner-master.cfg',
+        #          tmp_folder + '/arbiter/daemons/receiver-master.cfg',
+        #          tmp_folder + '/arbiter/daemons/scheduler-master.cfg']
+        files = [tmp_folder + '/alignak.ini']
         replacements = {
             '/usr/local/var/run/alignak': '/tmp',
             '/usr/local/var/log/alignak': '/tmp',
@@ -191,8 +192,8 @@ class TestLaunchDaemonsModules(AlignakTest):
 
         print("Testing that pid files and log files exist...")
         for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
-            assert os.path.exists('/tmp/%sd.pid' % daemon), '/tmp/%sd.pid does not exist!' % daemon
-            assert os.path.exists('/tmp/%sd.log' % daemon), '/tmp/%sd.log does not exist!' % daemon
+            assert os.path.exists('/tmp/run/%s.pid' % daemon), '/tmp/%s.pid does not exist!' % daemon
+            assert os.path.exists('/tmp/log/%s.log' % daemon), '/tmp/%s.log does not exist!' % daemon
 
         sleep(1)
 
