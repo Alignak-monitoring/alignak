@@ -130,10 +130,12 @@ class Receiver(Satellite):
             # For brok, we TAG brok with our instance_id
             elt.instance_id = 0
             self.broks[elt.uuid] = elt
+            statsmgr.gauge('broks.added', len(self.broks))
             return
         elif cls_type == 'externalcommand':
             logger.debug("Queuing an external command: %s", str(ExternalCommand.__dict__))
             self.unprocessed_external_commands.append(elt)
+            statsmgr.gauge('external-commands.added', len(self.unprocessed_external_commands))
 
     def push_host_names(self, sched_id, hnames):
         """Link hostnames to scheduler id.
@@ -333,7 +335,6 @@ class Receiver(Satellite):
         commands_to_process = self.unprocessed_external_commands
         self.unprocessed_external_commands = []
         logger.debug("Commands: %s", commands_to_process)
-        statsmgr.gauge('external-commands.pushed', len(self.unprocessed_external_commands))
 
         # Now get all external commands and put them into the good schedulers
         logger.debug("Commands to process: %d commands", len(commands_to_process))
@@ -347,6 +348,8 @@ class Receiver(Satellite):
                     scheduler['external_commands'].append(ext_cmd)
 
         # Now for all alive schedulers, send the commands
+        pushed_commands = 0
+        failed_commands = 0
         for scheduler_id in self.schedulers:
             scheduler = self.schedulers[scheduler_id]
             # TODO:  sched should be a SatelliteLink object and, thus, have a get_name() method
@@ -408,9 +411,17 @@ class Receiver(Satellite):
             scheduler['external_commands'] = []
 
             # If we didn't sent them, add the commands to the arbiter list
-            if not sent:
+            if sent:
+                statsmgr.gauge('external-commands.pushed.%s' % scheduler['name'], len(cmds))
+                pushed_commands = pushed_commands + len(cmds)
+            else:
+                statsmgr.gauge('external-commands.failed.%s' % scheduler['name'], len(cmds))
+                failed_commands = failed_commands + len(cmds)
                 for extcmd in extcmds:
                     self.external_commands.append(extcmd)
+
+        statsmgr.gauge('external-commands.pushed.all', pushed_commands)
+        statsmgr.gauge('external-commands.failed.all', failed_commands)
 
     def do_loop_turn(self):
         """Receiver daemon main loop
@@ -431,6 +442,8 @@ class Receiver(Satellite):
         _t0 = time.time()
         self.get_objects_from_from_queues()
         statsmgr.timer('core.get-objects-from-queues', time.time() - _t0)
+        statsmgr.gauge('got.external-commands', len(self.unprocessed_external_commands))
+        statsmgr.gauge('got.broks', len(self.broks))
 
         _t0 = time.time()
         self.push_external_commands_to_schedulers()

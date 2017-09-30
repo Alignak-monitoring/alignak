@@ -928,6 +928,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
             # Now get things from our module instances
             self.get_objects_from_from_queues()
+            statsmgr.timer('core.get-objects-from-queues', time.time() - _t0)
+            statsmgr.gauge('got.external-commands', len(self.external_commands))
+            statsmgr.gauge('got.broks', len(self.broks))
 
             # Maybe our satellites links raise new broks. Must reap them
             self.get_broks_from_satellitelinks()

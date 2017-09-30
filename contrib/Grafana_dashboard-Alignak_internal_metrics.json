@@ -1,8 +1,8 @@
 {
   "__inputs": [
     {
-      "name": "DS_ALIGNAK-GRAPHITE-MY_GRAPHITE",
-      "label": "alignak-graphite-my-graphite",
+      "name": "DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO",
+      "label": "alignak-graphite-graphite_demo",
       "description": "",
       "type": "datasource",
       "pluginId": "graphite",
@@ -11,10 +11,10 @@
   ],
   "__requires": [
     {
-      "type": "panel",
-      "id": "singlestat",
-      "name": "Singlestat",
-      "version": ""
+      "type": "grafana",
+      "id": "grafana",
+      "name": "Grafana",
+      "version": "4.4.1"
     },
     {
       "type": "panel",
@@ -23,33 +23,31 @@
       "version": ""
     },
     {
-      "type": "grafana",
-      "id": "grafana",
-      "name": "Grafana",
-      "version": "3.1.1"
-    },
-    {
       "type": "datasource",
       "id": "graphite",
       "name": "Graphite",
       "version": "1.0.0"
+    },
+    {
+      "type": "panel",
+      "id": "singlestat",
+      "name": "Singlestat",
+      "version": ""
     }
   ],
-  "id": null,
-  "title": "Alignak internal metrics - 1.0",
-  "tags": [
-    "alignak",
-    "statsd"
-  ],
-  "style": "dark",
-  "timezone": "browser",
+  "annotations": {
+    "list": []
+  },
   "editable": true,
+  "gnetId": null,
+  "graphTooltip": 1,
   "hideControls": false,
-  "sharedCrosshair": true,
+  "id": null,
+  "links": [],
+  "refresh": "5m",
   "rows": [
     {
       "collapse": true,
-      "editable": true,
       "height": "150px",
       "panels": [
         {
@@ -61,7 +59,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "format": "none",
@@ -74,7 +72,6 @@
           },
           "id": 23,
           "interval": null,
-          "isNew": true,
           "links": [],
           "mappingType": 1,
           "mappingTypes": [
@@ -108,6 +105,7 @@
             "lineColor": "rgb(31, 120, 193)",
             "show": false
           },
+          "tableColumn": "",
           "targets": [
             {
               "refId": "A",
@@ -136,7 +134,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "format": "none",
@@ -149,7 +147,6 @@
           },
           "id": 88,
           "interval": null,
-          "isNew": true,
           "links": [],
           "mappingType": 1,
           "mappingTypes": [
@@ -183,6 +180,7 @@
             "lineColor": "rgb(31, 120, 193)",
             "show": true
           },
+          "tableColumn": "",
           "targets": [
             {
               "refId": "A",
@@ -211,7 +209,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "format": "none",
@@ -224,7 +222,6 @@
           },
           "id": 89,
           "interval": null,
-          "isNew": true,
           "links": [],
           "mappingType": 1,
           "mappingTypes": [
@@ -258,6 +255,7 @@
             "lineColor": "rgb(31, 120, 193)",
             "show": true
           },
+          "tableColumn": "",
           "targets": [
             {
               "refId": "A",
@@ -282,12 +280,13 @@
             "Processing time": "#6ED0E0"
           },
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
           "id": 1,
-          "isNew": true,
           "legend": {
             "avg": false,
             "current": false,
@@ -311,6 +310,7 @@
               "yaxis": 1
             }
           ],
+          "spaceLength": 10,
           "span": 3,
           "stack": false,
           "steppedLine": false,
@@ -334,6 +334,7 @@
           "transparent": false,
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": false,
@@ -363,12 +364,13 @@
             "Metrics received count": "#BF1B00"
           },
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
           "id": 8,
-          "isNew": true,
           "legend": {
             "avg": false,
             "current": false,
@@ -391,6 +393,7 @@
               "alias": "Metrics received count"
             }
           ],
+          "spaceLength": 10,
           "span": 3,
           "stack": false,
           "steppedLine": false,
@@ -413,6 +416,7 @@
           "transparent": false,
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -443,12 +447,13 @@
             "Timestamp lag": "#EAB839"
           },
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
           "id": 90,
-          "isNew": true,
           "legend": {
             "avg": false,
             "current": false,
@@ -471,6 +476,7 @@
               "alias": "Metrics received count"
             }
           ],
+          "spaceLength": 10,
           "span": 3,
           "stack": false,
           "steppedLine": false,
@@ -493,6 +499,7 @@
           "transparent": false,
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -522,12 +529,13 @@
             "Calculation time": "#6ED0E0"
           },
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
           "id": 7,
-          "isNew": true,
           "legend": {
             "avg": false,
             "current": false,
@@ -546,6 +554,7 @@
           "points": false,
           "renderer": "flot",
           "seriesOverrides": [],
+          "spaceLength": 10,
           "span": 3,
           "stack": false,
           "steppedLine": false,
@@ -568,6 +577,7 @@
           "transparent": false,
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": false,
@@ -598,12 +608,13 @@
             "Flush time": "#6ED0E0"
           },
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
           "id": 91,
-          "isNew": true,
           "legend": {
             "avg": false,
             "current": false,
@@ -622,6 +633,7 @@
           "points": false,
           "renderer": "flot",
           "seriesOverrides": [],
+          "spaceLength": 10,
           "span": 3,
           "stack": false,
           "steppedLine": false,
@@ -644,6 +656,7 @@
           "transparent": false,
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": false,
@@ -674,12 +687,13 @@
             "Flush length": "#6ED0E0"
           },
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
           "id": 92,
-          "isNew": true,
           "legend": {
             "avg": false,
             "current": false,
@@ -698,6 +712,7 @@
           "points": false,
           "renderer": "flot",
           "seriesOverrides": [],
+          "spaceLength": 10,
           "span": 3,
           "stack": false,
           "steppedLine": false,
@@ -720,6 +735,7 @@
           "transparent": false,
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": false,
@@ -745,12 +761,15 @@
           ]
         }
       ],
+      "repeat": null,
+      "repeatIteration": null,
+      "repeatRowId": null,
       "showTitle": true,
-      "title": "StatsD metrics"
+      "title": "StatsD metrics",
+      "titleSize": "h6"
     },
     {
       "collapse": true,
-      "editable": true,
       "height": "100px",
       "panels": [
         {
@@ -762,7 +781,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "format": "none",
@@ -775,7 +794,6 @@
           },
           "id": 37,
           "interval": null,
-          "isNew": true,
           "links": [],
           "mappingType": 1,
           "mappingTypes": [
@@ -804,13 +822,14 @@
             }
           ],
           "repeat": "schedulers",
-          "span": 4,
+          "span": 12,
           "sparkline": {
             "fillColor": "rgba(31, 118, 189, 0.18)",
             "full": false,
             "lineColor": "rgb(31, 120, 193)",
             "show": false
           },
+          "tableColumn": "",
           "targets": [
             {
               "refId": "A",
@@ -840,7 +859,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "format": "none",
@@ -853,7 +872,6 @@
           },
           "id": 54,
           "interval": null,
-          "isNew": true,
           "links": [],
           "mappingType": 1,
           "mappingTypes": [
@@ -882,13 +900,14 @@
             }
           ],
           "repeat": "schedulers",
-          "span": 4,
+          "span": 12,
           "sparkline": {
             "fillColor": "rgba(31, 118, 189, 0.18)",
             "full": false,
             "lineColor": "rgb(31, 120, 193)",
             "show": false
           },
+          "tableColumn": "",
           "targets": [
             {
               "refId": "A",
@@ -918,7 +937,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "format": "none",
@@ -931,7 +950,6 @@
           },
           "id": 118,
           "interval": null,
-          "isNew": true,
           "links": [],
           "mappingType": 1,
           "mappingTypes": [
@@ -960,13 +978,14 @@
             }
           ],
           "repeat": "schedulers",
-          "span": 4,
+          "span": 12,
           "sparkline": {
             "fillColor": "rgba(31, 118, 189, 0.18)",
             "full": false,
             "lineColor": "rgb(31, 120, 193)",
             "show": false
           },
+          "tableColumn": "",
           "targets": [
             {
               "refId": "A",
@@ -988,12 +1007,15 @@
           "valueName": "avg"
         }
       ],
+      "repeat": null,
+      "repeatIteration": null,
+      "repeatRowId": null,
       "showTitle": true,
-      "title": "Scheduler objects"
+      "title": "Scheduler objects",
+      "titleSize": "h6"
     },
     {
       "collapse": true,
-      "editable": true,
       "height": "100px",
       "panels": [
         {
@@ -1005,7 +1027,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "format": "none",
@@ -1047,7 +1069,7 @@
             }
           ],
           "repeat": "schedulers",
-          "span": 4,
+          "span": 12,
           "sparkline": {
             "fillColor": "rgba(31, 118, 189, 0.18)",
             "full": false,
@@ -1084,7 +1106,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "format": "none",
@@ -1126,7 +1148,7 @@
             }
           ],
           "repeat": "schedulers",
-          "span": 4,
+          "span": 12,
           "sparkline": {
             "fillColor": "rgba(31, 118, 189, 0.18)",
             "full": false,
@@ -1162,7 +1184,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "format": "none",
@@ -1204,7 +1226,7 @@
             }
           ],
           "repeat": "schedulers",
-          "span": 4,
+          "span": 12,
           "sparkline": {
             "fillColor": "rgba(31, 118, 189, 0.18)",
             "full": false,
@@ -1240,7 +1262,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "format": "none",
@@ -1282,7 +1304,7 @@
             }
           ],
           "repeat": "schedulers",
-          "span": 4,
+          "span": 12,
           "sparkline": {
             "fillColor": "rgba(31, 118, 189, 0.18)",
             "full": false,
@@ -1319,7 +1341,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "format": "none",
@@ -1361,7 +1383,7 @@
             }
           ],
           "repeat": "schedulers",
-          "span": 4,
+          "span": 12,
           "sparkline": {
             "fillColor": "rgba(31, 118, 189, 0.18)",
             "full": false,
@@ -1390,12 +1412,15 @@
           "valueName": "current"
         }
       ],
+      "repeat": null,
+      "repeatIteration": null,
+      "repeatRowId": null,
       "showTitle": true,
-      "title": "Scheduler checks"
+      "title": "Scheduler checks",
+      "titleSize": "h6"
     },
     {
       "collapse": true,
-      "editable": true,
       "height": "100px",
       "panels": [
         {
@@ -1407,7 +1432,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "format": "none",
@@ -1449,7 +1474,7 @@
             }
           ],
           "repeat": "schedulers",
-          "span": 4,
+          "span": 12,
           "sparkline": {
             "fillColor": "rgba(31, 118, 189, 0.18)",
             "full": true,
@@ -1485,7 +1510,7 @@
             "rgba(237, 129, 40, 0.89)",
             "rgba(50, 172, 45, 0.97)"
           ],
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "format": "none",
@@ -1527,7 +1552,7 @@
             }
           ],
           "repeat": "schedulers",
-          "span": 4,
+          "span": 12,
           "sparkline": {
             "fillColor": "rgba(31, 118, 189, 0.18)",
             "full": true,
@@ -1555,32 +1580,37 @@
           "valueName": "avg"
         }
       ],
+      "repeat": null,
+      "repeatIteration": null,
+      "repeatRowId": null,
       "showTitle": true,
-      "title": "Scheduler notifications"
+      "title": "Scheduler notifications",
+      "titleSize": "h6"
     },
     {
       "collapse": true,
-      "editable": true,
       "height": "150px",
       "panels": [
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
           "height": "",
           "id": 2,
-          "isNew": true,
           "legend": {
+            "alignAsTable": true,
             "avg": false,
             "current": false,
-            "max": false,
-            "min": false,
+            "max": true,
+            "min": true,
             "show": true,
             "total": false,
-            "values": false
+            "values": true
           },
           "lines": true,
           "linewidth": 2,
@@ -1593,6 +1623,7 @@
           "renderer": "flot",
           "repeat": "brokers",
           "seriesOverrides": [],
+          "spaceLength": 10,
           "span": 4,
           "stack": false,
           "steppedLine": false,
@@ -1600,32 +1631,34 @@
             {
               "refId": "A",
               "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.get-new-broks.poller.mean, 'From poller')",
-              "textEditor": true
+              "textEditor": false
             },
             {
               "refId": "B",
               "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.get-new-broks.reactionner.mean, 'From reactionner')",
-              "textEditor": true
+              "textEditor": false
             },
             {
               "refId": "C",
               "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.get-new-broks.receiver.mean, 'From receiver')",
-              "textEditor": true
+              "textEditor": false
             },
             {
               "refId": "D",
               "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.get-new-broks.scheduler.mean, 'From scheduler')",
-              "textEditor": true
+              "textEditor": false
             },
             {
+              "hide": true,
               "refId": "E",
               "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.get-new-broks.arbiter.mean, 'From arbiter')",
-              "textEditor": true
+              "textEditor": false
             },
             {
+              "hide": true,
               "refId": "F",
               "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.get-new-broks.broker.mean, 'From self')",
-              "textEditor": true
+              "textEditor": false
             }
           ],
           "thresholds": [],
@@ -1640,6 +1673,7 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -1667,12 +1701,13 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
           "id": 5,
-          "isNew": true,
           "legend": {
             "avg": false,
             "current": false,
@@ -1693,6 +1728,7 @@
           "renderer": "flot",
           "repeat": "brokers",
           "seriesOverrides": [],
+          "spaceLength": 10,
           "span": 4,
           "stack": false,
           "steppedLine": false,
@@ -1700,12 +1736,12 @@
             {
               "refId": "A",
               "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.core.put-to-external-queue.mean, 'To external modules')",
-              "textEditor": true
+              "textEditor": false
             },
             {
               "refId": "B",
               "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.core.manage-broks.mean, 'With internal modules')",
-              "textEditor": true
+              "textEditor": false
             }
           ],
           "thresholds": [],
@@ -1720,6 +1756,113 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 214,
+          "legend": {
+            "alignAsTable": true,
+            "avg": false,
+            "current": true,
+            "max": true,
+            "min": true,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "minSpan": 4,
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "brokers",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "span": 4,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "hide": true,
+              "refId": "A",
+              "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.get-new-broks.arbiter.mean, 'From arbiter')",
+              "textEditor": false
+            },
+            {
+              "refId": "B",
+              "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.get-new-broks.scheduler.mean, 'From schedulers')",
+              "textEditor": false
+            },
+            {
+              "hide": true,
+              "refId": "C",
+              "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.get-new-broks.broker.mean, 'From brokers')",
+              "textEditor": false
+            },
+            {
+              "refId": "D",
+              "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.get-new-broks.poller.mean, 'From pollers')",
+              "textEditor": false
+            },
+            {
+              "refId": "E",
+              "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.get-new-broks.reactionner.mean, 'From reactionners')",
+              "textEditor": false
+            },
+            {
+              "refId": "F",
+              "target": "alias($statsd_prefix.$alignak_prefix.broker-$brokers.get-new-broks.receiver.mean, 'From receivers')",
+              "textEditor": false
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Broker $brokers, count broks",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -1745,18 +1888,21 @@
           ]
         }
       ],
+      "repeat": null,
+      "repeatIteration": null,
+      "repeatRowId": null,
       "showTitle": true,
-      "title": "Brokers metrics"
+      "title": "Brokers metrics",
+      "titleSize": "h6"
     },
     {
       "collapse": true,
-      "editable": true,
       "height": "250px",
       "panels": [
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -1844,7 +1990,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -1917,7 +2063,7 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -1988,18 +2134,21 @@
           ]
         }
       ],
+      "repeat": null,
+      "repeatIteration": null,
+      "repeatRowId": null,
       "showTitle": true,
-      "title": "Arbiters metrics"
+      "title": "Arbiters metrics",
+      "titleSize": "h6"
     },
     {
       "collapse": true,
-      "editable": true,
       "height": "250px",
       "panels": [
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
@@ -2025,7 +2174,7 @@
           "renderer": "flot",
           "repeat": "pollers",
           "seriesOverrides": [],
-          "span": 6,
+          "span": 4,
           "stack": false,
           "steppedLine": false,
           "targets": [
@@ -2072,23 +2221,27 @@
           ]
         }
       ],
+      "repeat": null,
+      "repeatIteration": null,
+      "repeatRowId": null,
       "showTitle": true,
-      "title": "Pollers metrics"
+      "title": "Pollers metrics",
+      "titleSize": "h6"
     },
     {
-      "collapse": false,
-      "editable": true,
+      "collapse": true,
       "height": "250px",
       "panels": [
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
           "id": 29,
-          "isNew": true,
           "legend": {
             "alignAsTable": true,
             "avg": false,
@@ -2118,7 +2271,8 @@
               "yaxis": 2
             }
           ],
-          "span": 4,
+          "spaceLength": 10,
+          "span": 12,
           "stack": false,
           "steppedLine": false,
           "targets": [
@@ -2159,6 +2313,7 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -2186,12 +2341,13 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
           "id": 28,
-          "isNew": true,
           "legend": {
             "alignAsTable": true,
             "avg": false,
@@ -2219,7 +2375,8 @@
               "yaxis": 1
             }
           ],
-          "span": 4,
+          "spaceLength": 10,
+          "span": 12,
           "stack": false,
           "steppedLine": false,
           "targets": [
@@ -2246,6 +2403,7 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -2273,12 +2431,13 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
           "id": 115,
-          "isNew": true,
           "legend": {
             "alignAsTable": true,
             "avg": false,
@@ -2308,7 +2467,8 @@
               "yaxis": 2
             }
           ],
-          "span": 4,
+          "spaceLength": 10,
+          "span": 12,
           "stack": false,
           "steppedLine": false,
           "targets": [
@@ -2349,6 +2509,7 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -2376,12 +2537,13 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
           "id": 155,
-          "isNew": true,
           "legend": {
             "alignAsTable": true,
             "avg": false,
@@ -2411,7 +2573,8 @@
               "yaxis": 2
             }
           ],
-          "span": 4,
+          "spaceLength": 10,
+          "span": 12,
           "stack": false,
           "steppedLine": false,
           "targets": [
@@ -2452,6 +2615,7 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -2479,12 +2643,13 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
           "id": 117,
-          "isNew": true,
           "legend": {
             "alignAsTable": true,
             "avg": false,
@@ -2514,7 +2679,8 @@
               "yaxis": 2
             }
           ],
-          "span": 4,
+          "spaceLength": 10,
+          "span": 12,
           "stack": false,
           "steppedLine": false,
           "targets": [
@@ -2543,6 +2709,7 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -2570,12 +2737,13 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
           "id": 116,
-          "isNew": true,
           "legend": {
             "alignAsTable": true,
             "avg": false,
@@ -2605,7 +2773,8 @@
               "yaxis": 2
             }
           ],
-          "span": 4,
+          "spaceLength": 10,
+          "span": 12,
           "stack": false,
           "steppedLine": false,
           "targets": [
@@ -2640,6 +2809,7 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -2665,31 +2835,36 @@
           ]
         }
       ],
+      "repeat": null,
+      "repeatIteration": null,
+      "repeatRowId": null,
       "showTitle": true,
-      "title": "Schedulers metrics"
+      "title": "Schedulers metrics",
+      "titleSize": "h6"
     },
     {
       "collapse": false,
-      "editable": true,
       "height": "250px",
       "panels": [
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
           "id": 36,
-          "isNew": true,
           "legend": {
-            "avg": false,
-            "current": false,
-            "max": false,
+            "alignAsTable": true,
+            "avg": true,
+            "current": true,
+            "max": true,
             "min": false,
             "show": true,
             "total": false,
-            "values": false
+            "values": true
           },
           "lines": true,
           "linewidth": 2,
@@ -2702,6 +2877,7 @@
           "renderer": "flot",
           "repeat": "receivers",
           "seriesOverrides": [],
+          "spaceLength": 10,
           "span": 12,
           "stack": false,
           "steppedLine": false,
@@ -2729,6 +2905,7 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -2752,25 +2929,201 @@
               "show": true
             }
           ]
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 213,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": true,
+            "max": true,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "minSpan": 4,
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "repeat": "receivers",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "span": 12,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "refId": "A",
+              "target": "alias($statsd_prefix.$alignak_prefix.receiver-$receivers.got.broks, 'Got broks')",
+              "textEditor": false
+            },
+            {
+              "refId": "B",
+              "target": "alias($statsd_prefix.$alignak_prefix.receiver-$receivers.got.external-commands, 'Got external commands')",
+              "textEditor": false
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Receiver $receivers objects",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
+        },
+        {
+          "aliasColors": {},
+          "bars": false,
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
+          "editable": true,
+          "error": false,
+          "fill": 1,
+          "id": 224,
+          "legend": {
+            "alignAsTable": true,
+            "avg": true,
+            "current": true,
+            "max": true,
+            "min": false,
+            "show": true,
+            "total": false,
+            "values": true
+          },
+          "lines": true,
+          "linewidth": 2,
+          "links": [],
+          "minSpan": 4,
+          "nullPointMode": "connected",
+          "percentage": false,
+          "pointradius": 5,
+          "points": false,
+          "renderer": "flot",
+          "seriesOverrides": [],
+          "spaceLength": 10,
+          "span": 4,
+          "stack": false,
+          "steppedLine": false,
+          "targets": [
+            {
+              "refId": "B",
+              "target": "alias($statsd_prefix.$alignak_prefix.receiver-$receivers.external-commands.pushed, 'Pushed external commands')",
+              "textEditor": false
+            },
+            {
+              "refId": "A",
+              "target": "alias($statsd_prefix.$alignak_prefix.receiver-$receivers.external-commands.failed.all, 'Failed external commands')",
+              "textEditor": false
+            },
+            {
+              "refId": "C",
+              "target": "alias($statsd_prefix.$alignak_prefix.receiver-$receivers.external-commands.added, 'Added external commands')",
+              "textEditor": false
+            }
+          ],
+          "thresholds": [],
+          "timeFrom": null,
+          "timeShift": null,
+          "title": "Receiver $receivers external commands",
+          "tooltip": {
+            "msResolution": false,
+            "shared": true,
+            "sort": 0,
+            "value_type": "cumulative"
+          },
+          "type": "graph",
+          "xaxis": {
+            "buckets": null,
+            "mode": "time",
+            "name": null,
+            "show": true,
+            "values": []
+          },
+          "yaxes": [
+            {
+              "format": "none",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": "0",
+              "show": true
+            },
+            {
+              "format": "short",
+              "label": null,
+              "logBase": 1,
+              "max": null,
+              "min": null,
+              "show": true
+            }
+          ]
         }
       ],
+      "repeat": null,
+      "repeatIteration": null,
+      "repeatRowId": null,
       "showTitle": true,
-      "title": "Receivers metrics"
+      "title": "Receivers metrics",
+      "titleSize": "h6"
     },
     {
-      "collapse": false,
-      "editable": true,
+      "collapse": true,
       "height": "250px",
       "panels": [
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
           "id": 113,
-          "isNew": true,
           "legend": {
             "alignAsTable": true,
             "avg": false,
@@ -2798,6 +3151,7 @@
               "yaxis": 1
             }
           ],
+          "spaceLength": 10,
           "span": 12,
           "stack": false,
           "steppedLine": false,
@@ -2833,6 +3187,7 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -2860,12 +3215,13 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
           "id": 114,
-          "isNew": true,
           "legend": {
             "alignAsTable": true,
             "avg": false,
@@ -2893,6 +3249,7 @@
               "yaxis": 1
             }
           ],
+          "spaceLength": 10,
           "span": 12,
           "stack": false,
           "steppedLine": false,
@@ -2922,6 +3279,7 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -2949,12 +3307,13 @@
         {
           "aliasColors": {},
           "bars": false,
-          "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+          "dashLength": 10,
+          "dashes": false,
+          "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
           "editable": true,
           "error": false,
           "fill": 1,
           "id": 154,
-          "isNew": true,
           "legend": {
             "alignAsTable": true,
             "avg": false,
@@ -2981,6 +3340,7 @@
               "yaxis": 1
             }
           ],
+          "spaceLength": 10,
           "span": 4,
           "stack": false,
           "steppedLine": false,
@@ -3010,6 +3370,7 @@
           },
           "type": "graph",
           "xaxis": {
+            "buckets": null,
             "mode": "time",
             "name": null,
             "show": true,
@@ -3036,46 +3397,19 @@
         }
       ],
       "repeat": "reactionners",
-      "scopedVars": {
-        "reactionners": {
-          "selected": false,
-          "text": "master",
-          "value": "master"
-        }
-      },
+      "repeatIteration": null,
+      "repeatRowId": null,
       "showTitle": true,
-      "title": "Reactionners metrics"
+      "title": "Reactionners metrics",
+      "titleSize": "h6"
     }
   ],
-  "time": {
-    "from": "now/d",
-    "to": "now"
-  },
-  "timepicker": {
-    "refresh_intervals": [
-      "5s",
-      "10s",
-      "30s",
-      "1m",
-      "5m",
-      "15m",
-      "30m",
-      "1h",
-      "2h",
-      "1d"
-    ],
-    "time_options": [
-      "5m",
-      "15m",
-      "1h",
-      "6h",
-      "12h",
-      "24h",
-      "2d",
-      "7d",
-      "30d"
-    ]
-  },
+  "schemaVersion": 14,
+  "style": "dark",
+  "tags": [
+    "alignak",
+    "statsd"
+  ],
   "templating": {
     "list": [
       {
@@ -3103,9 +3437,8 @@
       {
         "allValue": null,
         "current": {
-          "selected": true,
-          "text": "my-alignak",
-          "value": "my-alignak"
+          "text": "alignak-demo",
+          "value": "alignak-demo"
         },
         "hide": 0,
         "includeAll": false,
@@ -3115,17 +3448,17 @@
         "options": [
           {
             "selected": true,
-            "text": "my-alignak",
-            "value": "my-alignak"
+            "text": "alignak-demo",
+            "value": "alignak-demo"
           }
         ],
-        "query": "my-alignak",
+        "query": "alignak-demo",
         "type": "custom"
       },
       {
         "allValue": null,
         "current": {},
-        "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+        "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
         "hide": 0,
         "includeAll": true,
         "label": null,
@@ -3137,13 +3470,15 @@
         "regex": "/arbiter-(.*)/",
         "sort": 0,
         "tagValuesQuery": null,
+        "tags": [],
         "tagsQuery": null,
-        "type": "query"
+        "type": "query",
+        "useTags": false
       },
       {
         "allValue": null,
         "current": {},
-        "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+        "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
         "hide": 0,
         "includeAll": true,
         "label": null,
@@ -3155,13 +3490,15 @@
         "regex": "/scheduler-(.*)/",
         "sort": 0,
         "tagValuesQuery": null,
+        "tags": [],
         "tagsQuery": null,
-        "type": "query"
+        "type": "query",
+        "useTags": false
       },
       {
         "allValue": null,
         "current": {},
-        "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+        "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
         "hide": 0,
         "includeAll": true,
         "label": null,
@@ -3173,13 +3510,15 @@
         "regex": "/broker-(.*)/",
         "sort": 0,
         "tagValuesQuery": null,
+        "tags": [],
         "tagsQuery": null,
-        "type": "query"
+        "type": "query",
+        "useTags": false
       },
       {
         "allValue": null,
         "current": {},
-        "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+        "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
         "hide": 0,
         "includeAll": true,
         "label": null,
@@ -3191,13 +3530,15 @@
         "regex": "/poller-(.*)/",
         "sort": 0,
         "tagValuesQuery": null,
+        "tags": [],
         "tagsQuery": null,
-        "type": "query"
+        "type": "query",
+        "useTags": false
       },
       {
         "allValue": null,
         "current": {},
-        "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+        "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
         "hide": 0,
         "includeAll": true,
         "label": null,
@@ -3209,13 +3550,15 @@
         "regex": "/reactionner-(.*)/",
         "sort": 0,
         "tagValuesQuery": null,
+        "tags": [],
         "tagsQuery": null,
-        "type": "query"
+        "type": "query",
+        "useTags": false
       },
       {
         "allValue": null,
         "current": {},
-        "datasource": "${DS_ALIGNAK-GRAPHITE-MY_GRAPHITE}",
+        "datasource": "${DS_ALIGNAK-GRAPHITE-GRAPHITE_DEMO}",
         "hide": 0,
         "includeAll": true,
         "label": null,
@@ -3227,17 +3570,43 @@
         "regex": "/receiver-(.*)/",
         "sort": 0,
         "tagValuesQuery": null,
+        "tags": [],
         "tagsQuery": null,
-        "type": "query"
+        "type": "query",
+        "useTags": false
       }
     ]
   },
-  "annotations": {
-    "list": []
+  "time": {
+    "from": "now-1h",
+    "to": "now"
   },
-  "refresh": "5m",
-  "schemaVersion": 13,
-  "version": 15,
-  "links": [],
-  "gnetId": null
+  "timepicker": {
+    "refresh_intervals": [
+      "5s",
+      "10s",
+      "30s",
+      "1m",
+      "5m",
+      "15m",
+      "30m",
+      "1h",
+      "2h",
+      "1d"
+    ],
+    "time_options": [
+      "5m",
+      "15m",
+      "1h",
+      "6h",
+      "12h",
+      "24h",
+      "2d",
+      "7d",
+      "30d"
+    ]
+  },
+  "timezone": "browser",
+  "title": "Alignak internal metrics - 1.1",
+  "version": 4
 }

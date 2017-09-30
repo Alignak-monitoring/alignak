@@ -1040,6 +1040,9 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         if self.log_loop:
             logger.debug("[%s] get objects from queues", self.name)
         self.get_objects_from_from_queues()
+        statsmgr.timer('core.get-objects-from-queues', time.time() - _t0)
+        statsmgr.gauge('got.external-commands', len(self.external_commands))
+        statsmgr.gauge('got.broks', len(self.broks))
 
         # Say to modules it's a new tick :)
         self.hook_point('tick')
