@@ -468,17 +468,23 @@ class ExternalCommandManager:
         self.mode = mode
 
         # If we got a conf...
-        self.conf = conf
-        if conf:
+        if self.mode == 'receiver':
+            self.conf = {
+                'log_external_commands': False,
+                'schedulers': daemon.schedulers
+            }
+        else:
             self.conf = conf
-            self.hosts = conf.hosts
-            self.services = conf.services
-            self.contacts = conf.contacts
-            self.hostgroups = conf.hostgroups
-            self.commands = conf.commands
-            self.servicegroups = conf.servicegroups
-            self.contactgroups = conf.contactgroups
-            self.timeperiods = conf.timeperiods
+            if conf:
+                self.conf = conf
+                self.hosts = conf.hosts
+                self.services = conf.services
+                self.contacts = conf.contacts
+                self.hostgroups = conf.hostgroups
+                self.commands = conf.commands
+                self.servicegroups = conf.servicegroups
+                self.contactgroups = conf.contactgroups
+                self.timeperiods = conf.timeperiods
 
         self.confs = None
         if self.mode == 'dispatcher':
@@ -505,7 +511,7 @@ class ExternalCommandManager:
                 func(element)
                 return
 
-        logger.critical("External command Brok could not be sent to any daemon!")
+        logger.critical("External command or Brok could not be sent to any daemon!")
 
     def resolve_command(self, excmd):
         """Parse command and dispatch it (to sched for example) if necessary
@@ -524,39 +530,48 @@ class ExternalCommandManager:
             return None
 
         # Parse command
-        res = self.get_command_and_args(command.strip(), excmd)
-        if res is None:
-            return res
+        command = command.strip()
+        cmd = self.get_command_and_args(command, excmd)
+        if cmd is None:
+            return cmd
 
-        # If we are a receiver, bail out here
+        # If we are a receiver, bail out here... do not try to execute the command
         if self.mode == 'receiver':
-            return res
+            return cmd
 
         if self.mode == 'applyer' and self.conf.log_external_commands:
             make_a_log = True
             # #912: only log an external command if it is not a passive check
-            if self.conf.log_passive_checks and res['c_name'] in ['process_host_check_result',
+            if self.conf.log_passive_checks and cmd['c_name'] in ['process_host_check_result',
                                                                   'process_service_check_result']:
                 # Do not log the command
                 make_a_log = False
 
             if make_a_log:
                 # I am a command dispatcher, notifies to my arbiter
-                brok = make_monitoring_log('info', 'EXTERNAL COMMAND: ' + command.rstrip())
+                brok = make_monitoring_log('info', 'EXTERNAL COMMAND: ' + command)
                 # Send a brok to our daemon
                 self.send_an_element(brok)
 
-        is_global = res['global']
-        if not is_global:
-            c_name = res['c_name']
-            args = res['args']
-            logger.debug("Got commands %s %s", c_name, str(args))
+        if not cmd['global']:
+            # Execute the command
+            c_name = cmd['c_name']
+            args = cmd['args']
+            logger.debug("Execute command; %s %s", c_name, str(args))
             getattr(self, c_name)(*args)
         else:
-            command = res['cmd']
-            self.dispatch_global_command(command)
+            # Send command to all our schedulers
+            for scheduler in self.conf.schedulers:
+                if scheduler.alive:
+                    logger.debug("Sending an external command '%s' to the scheduler %s",
+                                 excmd, scheduler)
+                    scheduler.external_commands.append(excmd.cmd_line)
+                else:
+                    logger.warning("Could not send the external command '%s' "
+                                   "to the dead scheduler: %s",
+                                   excmd.cmd_line, scheduler)
 
-        return res
+        return cmd
 
     def search_host_and_dispatch(self, host_name, command, extcmd):
         """Try to dispatch a command for a specific host (so specific scheduler)
@@ -580,8 +595,7 @@ class ExternalCommandManager:
             sched = self.daemon.get_sched_from_hname(host_name)
             if sched:
                 host_found = True
-                logger.debug("Receiver found a scheduler: %s", sched)
-                logger.debug("Receiver pushing external command to scheduler %s", sched)
+                logger.debug("Receiver pushing external command to scheduler %s", sched['name'])
                 sched['external_commands'].append(extcmd)
         else:
             for cfg in self.confs.values():
@@ -647,19 +661,6 @@ class ExternalCommandManager:
 
         return Brok({'type': 'unknown_%s_check_result' % match.group(2).lower(), 'data': data})
 
-    def dispatch_global_command(self, command):
-        """Send command to scheduler, it's a global one
-
-        :param command: command to send
-        :type command: alignak.external_command.ExternalCommand
-        :return: None
-        """
-        for sched in self.conf.schedulers:
-            logger.debug("Sending a command '%s' to scheduler %s", command, sched)
-            if sched.alive:
-                # sched.run_external_command(command)
-                sched.external_commands.append(command)
-
     def get_command_and_args(self, command, extcmd=None):  # pylint: disable=R0914,R0915,R0912
         # pylint: disable=too-many-return-statements
         """Parse command and get args
@@ -690,7 +691,7 @@ class ExternalCommandManager:
                 logger.warning("Malformed command '%s'", command)
                 logger.exception("Malformed command exception: %s", exp)
 
-                if self.conf and self.conf.log_external_commands:
+                if self.conf and getattr(self.conf, 'log_external_commands', False):
                     # The command failed, make a monitoring log to inform
                     brok = make_monitoring_log('error',
                                                "Malformed command: '%s'" % command)
@@ -714,7 +715,7 @@ class ExternalCommandManager:
             logger.warning("Malformed command '%s'", command)
             logger.exception("Malformed command exception: %s", exp)
 
-            if self.conf and self.conf.log_external_commands:
+            if self.conf and getattr(self.conf, 'log_external_commands', False):
                 # The command failed, make a monitoring log to inform
                 brok = make_monitoring_log('error',
                                            "Malformed command: '%s'" % command)
@@ -725,7 +726,7 @@ class ExternalCommandManager:
         if c_name not in ExternalCommandManager.commands:
             logger.warning("External command '%s' is not recognized, sorry", c_name)
 
-            if self.conf and self.conf.log_external_commands:
+            if self.conf and getattr(self.conf, 'log_external_commands', False):
                 # The command failed, make a monitoring log to inform
                 brok = make_monitoring_log('error',
                                            "Command '%s' is not recognized, sorry" % command)
@@ -738,7 +739,7 @@ class ExternalCommandManager:
         # passive check results.
         entry = ExternalCommandManager.commands[c_name]
 
-        # Look if the command is purely internal or not
+        # Look if the command is purely internal (Alignak) or not
         internal = False
         if 'internal' in entry and entry['internal']:
             internal = True
@@ -749,7 +750,7 @@ class ExternalCommandManager:
         elts = split_semicolon(command, numargs)
 
         logger.debug("mode= %s, global= %s", self.mode, str(entry['global']))
-        if self.mode == 'dispatcher' and entry['global']:
+        if self.mode in ['dispatcher', 'receiver'] and entry['global']:
             if not internal:
                 logger.debug("Command '%s' is a global one, we resent it to all schedulers", c_name)
                 return {'global': True, 'cmd': command}
