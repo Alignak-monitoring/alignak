@@ -20,6 +20,8 @@
 """
 This module provides logging facilities for Alignak.
 """
+from __future__ import print_function
+
 import os
 import sys
 
@@ -66,7 +68,7 @@ class ColorStreamHandler(StreamHandler):
                       'WARNING': 'yellow', 'CRITICAL': 'magenta', 'ERROR': 'red'}
             cprint(msg, colors[record.levelname])
         except UnicodeEncodeError:
-            print msg.encode('ascii', 'ignore')
+            print(msg.encode('ascii', 'ignore'))
         except IOError:
             # May happen when process are closing
             pass

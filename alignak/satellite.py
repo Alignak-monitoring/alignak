@@ -63,7 +63,8 @@ If Arbiter wants it to have a new conf, the satellite forgets the previous
  Schedulers (and actions into) and takes the new ones.
 """
 
-from Queue import Empty, Full
+from future.utils import iteritems
+from queue import Empty, Full
 from multiprocessing import Queue, active_children, cpu_count
 
 import os
@@ -145,7 +146,7 @@ class BaseSatellite(Daemon):
         :rtype: dict
         """
         res = {}
-        for (key, val) in self.schedulers.iteritems():
+        for (key, val) in iteritems(self.schedulers):
             res[key] = val['push_flavor']
         return res
 
@@ -379,7 +380,7 @@ class BaseSatellite(Daemon):
             old_sched_id = sched_id
 
         # Check if it not a arbiter reload
-        similar_ids = [k for k, s in self.schedulers.iteritems()
+        similar_ids = [k for k, s in iteritems(self.schedulers)
                        if (s['name'], s['address'], s['port']) == (name, address, port)]
 
         if similar_ids:
@@ -835,7 +836,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         do_actions = self.__class__.do_actions
 
         # We check for new check in each schedulers and put the result in new_checks
-        for sched_id, sched in self.schedulers.iteritems():
+        for sched_id, sched in iteritems(self.schedulers):
             if not sched['active']:
                 logger.debug("My scheduler '%s' is not active currently", sched['name'])
                 continue
@@ -947,7 +948,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         self.check_and_del_zombie_modules()
 
         # Print stats for debug
-        for _, sched in self.schedulers.iteritems():
+        for _, sched in iteritems(self.schedulers):
             for mod in self.q_by_mod:
                 # In workers we've got actions sent to queue - queue size
                 for (worker_id, queue) in self.q_by_mod[mod].items():
@@ -1023,7 +1024,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         except Exception as exp:  # pylint: disable=W0703
             logger.error("Failed getting messages in returns queue: %s", str(exp))
 
-        for _, sched in self.schedulers.iteritems():
+        for _, sched in iteritems(self.schedulers):
             logger.debug("[%s] scheduler home run: %d results",
                          self.name, len(sched['wait_homerun']))
 

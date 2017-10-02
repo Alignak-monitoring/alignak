@@ -682,7 +682,7 @@ class Broker(BaseSatellite):
         for inst in insts:
             try:
                 logger.debug("External Queue len (%s): %s", inst.get_name(), inst.to_q.qsize())
-            except Exception, exp:  # pylint: disable=W0703
+            except Exception as exp:  # pylint: disable=W0703
                 logger.debug("External Queue len (%s): Exception! %s", inst.get_name(), exp)
 
         # Begin to clean modules

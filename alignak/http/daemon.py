@@ -33,7 +33,8 @@ from cherrypy.wsgiserver import CherryPyWSGIServer
 from cherrypy._cpreqbody import process_urlencoded, process_multipart, process_multipart_form_data
 
 from OpenSSL import SSL, crypto
-from cherrypy.wsgiserver.ssl_pyopenssl import pyOpenSSLAdapter  # pylint: disable=C0412
+from cheroot.ssl.builtin import BuiltinSSLAdapter as pyOpenSSLAdapter
+#from cherrypy.wsgiserver.ssl_pyopenssl import pyOpenSSLAdapter  # pylint: disable=C0412
 
 # load global helper objects for logs and stats computation
 from alignak.http.cherrypy_extend import zlib_processor
@@ -161,7 +162,7 @@ class HTTPDaemon(object):
         """
         try:
             self.srv.start()
-        except socket.error, exp:
+        except socket.error as exp:
             msg = "Error: Sorry, the port %d is not free: %s" % (self.port, str(exp))
             raise PortNotFree(msg)
 

@@ -21,7 +21,7 @@
 """
 This file test the check_result brok
 """
-
+from six import itervalues
 import time
 from alignak_test import AlignakTest
 from alignak.misc.serialization import unserialize
@@ -45,7 +45,7 @@ class TestMonitoringLogs(AlignakTest):
         self.scheduler_loop(1, [[item, state_id, state]])
         time.sleep(0.1)
         monitoring_logs = []
-        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+        for brok in itervalues(self._sched.brokers['broker-master']['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -388,7 +388,7 @@ class TestMonitoringLogs(AlignakTest):
         self.external_command_loop()
 
         monitoring_logs = []
-        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+        for brok in itervalues(self._sched.brokers['broker-master']['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -458,7 +458,7 @@ class TestMonitoringLogs(AlignakTest):
 
         # Extract monitoring logs
         monitoring_logs = []
-        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+        for brok in itervalues(self._sched.brokers['broker-master']['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -578,7 +578,7 @@ class TestMonitoringLogs(AlignakTest):
 
         # Extract monitoring logs
         monitoring_logs = []
-        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+        for brok in itervalues(self._sched.brokers['broker-master']['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -650,7 +650,7 @@ class TestMonitoringLogs(AlignakTest):
         self.external_command_loop()
 
         monitoring_logs = []
-        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+        for brok in itervalues(self._sched.brokers['broker-master']['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -684,7 +684,7 @@ class TestMonitoringLogs(AlignakTest):
         self.assert_any_log_match('RELOAD command : libexec/sleep_command.sh 2')
 
         monitoring_logs = []
-        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+        for brok in itervalues(self._sched.brokers['broker-master']['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))

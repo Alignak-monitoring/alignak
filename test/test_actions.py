@@ -49,7 +49,7 @@
 """
  This file is used to test actions
 """
-
+from __future__ import print_function
 import os
 import sys
 import time
@@ -83,7 +83,7 @@ class TestAction(AlignakTest):
                 return
             # 20s timeout
             if time.time() - start > 20:
-                print "Timeout: 20s!"
+                print("Timeout: 20s!")
                 return
 
     def test_action_creation(self):

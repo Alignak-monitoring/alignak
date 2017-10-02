@@ -67,14 +67,17 @@ The major part of monitoring "intelligence" is in this module.
 """
 # pylint: disable=C0302
 # pylint: disable=R0904
+from future.utils import iteritems
+from six import itervalues
 import time
 import os
-import cStringIO
+from io import StringIO
 import logging
 import tempfile
 import traceback
-from Queue import Queue
+from queue import Queue
 from collections import defaultdict
+from past.builtins import xrange
 
 from alignak.external_command import ExternalCommand
 from alignak.check import Check
@@ -667,7 +670,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     logger.error("The instance %s raise an exception %s."
                                  "I disable it and set it to restart it later",
                                  inst.get_name(), str(exp))
-                    output = cStringIO.StringIO()
+                    output = StringIO()
                     traceback.print_exc(file=output)
                     logger.error("Exception trace follows: %s", output.getvalue())
                     output.close()
@@ -1459,7 +1462,7 @@ class Scheduler(object):  # pylint: disable=R0902
             # manage special properties: the Notifications
             if 'notifications_in_progress' in h_dict and h_dict['notifications_in_progress'] != {}:
                 notifs = {}
-                for notif_uuid, notification in h_dict['notifications_in_progress'].iteritems():
+                for notif_uuid, notification in iteritems(h_dict['notifications_in_progress']):
                     notifs[notif_uuid] = notification.serialize()
                 h_dict['notifications_in_progress'] = notifs
             # manage special properties: the downtimes
@@ -1522,7 +1525,7 @@ class Scheduler(object):  # pylint: disable=R0902
             # manage special properties: the notifications
             if 'notifications_in_progress' in s_dict and s_dict['notifications_in_progress'] != {}:
                 notifs = {}
-                for notif_uuid, notification in s_dict['notifications_in_progress'].iteritems():
+                for notif_uuid, notification in iteritems(s_dict['notifications_in_progress']):
                     notifs[notif_uuid] = notification.serialize()
                 s_dict['notifications_in_progress'] = notifs
             # manage special properties: the downtimes
@@ -1614,7 +1617,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 if prop in data:
                     setattr(item, prop, data[prop])
         # Now manage all linked objects load from/ previous run
-        for notif_uuid, notif in item.notifications_in_progress.iteritems():
+        for notif_uuid, notif in iteritems(item.notifications_in_progress):
             notif['ref'] = item.uuid
             mynotif = Notification(params=notif)
             self.add(mynotif)
@@ -2127,7 +2130,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         res = defaultdict(int)
         res["total"] = len(checks)
-        for chk in checks.itervalues():
+        for chk in itervalues(checks):
             res[chk.status] += 1
         return res
 
@@ -2232,7 +2235,7 @@ class Scheduler(object):  # pylint: disable=R0902
             all_commands[cmd] = (old_u_time, old_s_time)
         # now sort it
         stats = []
-        for (cmd, elem) in all_commands.iteritems():
+        for (cmd, elem) in iteritems(all_commands):
             u_time, s_time = elem
             stats.append({'cmd': cmd, 'u_time': u_time, 's_time': s_time})
 
@@ -2477,10 +2480,10 @@ class Scheduler(object):  # pylint: disable=R0902
             # already pushed to the stats with the previous treatment?
             # checks_status = defaultdict(int)
             # checks_status["total"] = len(self.checks)
-            # for chk in self.checks.itervalues():
+            # for chk in itervalues(self.checks):
             #     checks_status[chk.status] += 1
             # dump_result = "Checks count (loop): "
-            # for status, count in checks_status.iteritems():
+            # for status, count in iteritems(checks_status):
             #     dump_result += "%s: %d, " % (status, count)
             #     statsmgr.gauge('checks.%s' % status, count)
             # if self.log_loop:

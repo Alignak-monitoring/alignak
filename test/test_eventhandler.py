@@ -23,7 +23,8 @@
 """
 This file test all cases of eventhandler
 """
-
+from __future__ import print_function
+from six import itervalues
 import time
 import pytest
 
@@ -62,18 +63,18 @@ class TestEventhandler(AlignakTest):
         self._sched = self.schedulers['scheduler-master'].sched
 
         host = self._sched.hosts.find_by_name("test_host_1")
-        print host.event_handler_enabled
+        print(host.event_handler_enabled)
         assert host.event_handler_enabled is True
-        print "host: %s" % host.event_handler
-        print "global: %s" % host.__class__.global_event_handler
+        print("host: %s" % host.event_handler)
+        print("global: %s" % host.__class__.global_event_handler)
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
         svc = self._sched.services.find_srv_by_name_and_hostname(
             "test_host_1", "test_ok_0")
         assert svc.event_handler_enabled is True
-        print "svc: %s" % svc.event_handler
-        print "global: %s" % svc.__class__.global_event_handler
+        print("svc: %s" % svc.event_handler)
+        print("global: %s" % svc.__class__.global_event_handler)
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         svc.enable_notifications = False
@@ -134,7 +135,7 @@ class TestEventhandler(AlignakTest):
         self.assert_actions_match(4, 'test_global_host_eventhandler.pl UP SOFT', 'command')
 
         monitoring_logs = []
-        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+        for brok in itervalues(self._sched.brokers['broker-master']['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))

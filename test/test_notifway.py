@@ -48,6 +48,7 @@
 # This file is used to test reading and processing of config files
 #
 
+from __future__ import print_function
 import time
 import copy
 from alignak.objects.notificationway import NotificationWay
@@ -156,9 +157,9 @@ class TestNotificationWay(AlignakTest):
         # Get the contact
         contact = self._sched.contacts.find_by_name("test_contact")
 
-        print "All notification Way:"
+        print("All notification Way:")
         for nw in self._sched.notificationways:
-            print "\t", nw.notificationway_name
+            print("\t", nw.notificationway_name)
             assert nw.is_correct()
         # 3 defined NWs and 3 self created NWs
         assert len(self._sched.notificationways) == 6
@@ -173,49 +174,49 @@ class TestNotificationWay(AlignakTest):
         assert 0 == email_in_day.min_business_impact
         assert 5 == sms_the_night.min_business_impact
 
-        print "Contact '%s' notification way(s):" % contact.get_name()
+        print("Contact '%s' notification way(s):" % contact.get_name())
         # 2 NWs for 'test_contact'
         assert len(contact.notificationways) == 2
         for nw_id in contact.notificationways:
             nw = self._sched.notificationways[nw_id]
-            print "\t %s (or %s)" % (nw.notificationway_name, nw.get_name())
+            print("\t %s (or %s)" % (nw.notificationway_name, nw.get_name()))
             # Get host notifications commands
             for c in nw.host_notification_commands:
-                print "\t\t", c.get_name()
+                print("\t\t", c.get_name())
             for c in nw.get_notification_commands('host'):
-                print "\t\t", c.get_name()
+                print("\t\t", c.get_name())
             # Get service notifications commands
             for c in nw.service_notification_commands:
-                print "\t\t", c.get_name()
+                print("\t\t", c.get_name())
             for c in nw.get_notification_commands('service'):
-                print "\t\t", c.get_name()
+                print("\t\t", c.get_name())
 
-        print "Contact '%s' commands:" % (contact.get_name())
+        print("Contact '%s' commands:" % (contact.get_name()))
         # 2 commands for host notification (one from the NW and one contact defined)
         assert len(contact.host_notification_commands) == 2
         # 2 commands for service notification (one from the NW and one contact defined)
         assert len(contact.service_notification_commands) == 2
         # Get host notifications commands
         for c in contact.host_notification_commands:
-            print "\t\tcontact host property:", c.get_name()
+            print("\t\tcontact host property:", c.get_name())
         for c in contact.get_notification_commands(self._sched.notificationways, 'host'):
-            print "\t\tcontact host get_notification_commands:", c.get_name()
+            print("\t\tcontact host get_notification_commands:", c.get_name())
         # Get service notifications commands
         for c in contact.service_notification_commands:
-            print "\t\tcontact service property:", c.get_name()
+            print("\t\tcontact service property:", c.get_name())
         for c in contact.get_notification_commands(self._sched.notificationways, 'service'):
-            print "\t\tcontact service get_notification_commands:", c.get_name()
+            print("\t\tcontact service get_notification_commands:", c.get_name())
 
         contact_simple = self._sched.contacts.find_by_name("test_contact_simple")
         # It's the created notification way for this simple contact
         test_contact_simple_inner_notificationway = \
             self._sched.notificationways.find_by_name("test_contact_simple_inner_notificationway")
-        print "Simple contact"
+        print("Simple contact")
         for nw_id in contact_simple.notificationways:
             nw = self._sched.notificationways[nw_id]
-            print "\t", nw.notificationway_name
+            print("\t", nw.notificationway_name)
             for c in nw.service_notification_commands:
-                print "\t\t", c.get_name()
+                print("\t\t", c.get_name())
         assert test_contact_simple_inner_notificationway.uuid in contact_simple.notificationways
 
         # we take as criticity a huge value from now

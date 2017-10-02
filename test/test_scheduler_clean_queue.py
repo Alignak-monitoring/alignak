@@ -23,6 +23,7 @@ This file test the cleaning queue in scheduler
 """
 
 import time
+from past.builtins import xrange
 from alignak_test import AlignakTest
 
 

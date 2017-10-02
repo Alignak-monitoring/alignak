@@ -237,7 +237,7 @@ class Hostdependencies(Items):
                     hostdep.host_name = host.uuid
                 if dephost:
                     hostdep.dependent_host_name = dephost.uuid
-            except AttributeError, exp:
+            except AttributeError as exp:
                 err = "Error: the host dependency miss a property '%s'" % exp
                 hostdep.configuration_errors.append(err)
 

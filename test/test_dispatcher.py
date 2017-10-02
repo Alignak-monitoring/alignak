@@ -22,6 +22,8 @@
 This file test the dispatcher (distribute configuration to satellites)
 """
 
+from __future__ import print_function
+from six import itervalues
 import time
 import pytest
 import requests_mock
@@ -336,7 +338,7 @@ class TestDispatcher(AlignakTest):
 
         for satellite in self.arbiter.dispatcher.satellites:
             assert 1 == len(satellite.cfg['schedulers'])
-            scheduler = satellite.cfg['schedulers'].itervalues().next()
+            scheduler = itervalues(satellite.cfg['schedulers']).next()
             assert 'scheduler-master' == scheduler['name']
 
         # now simulate master sched down
@@ -418,12 +420,12 @@ class TestDispatcher(AlignakTest):
             json_managed_spare = {}
             for satellite in self.arbiter.dispatcher.satellites:
                 assert 1 == len(satellite.cfg['schedulers'])
-                scheduler = satellite.cfg['schedulers'].itervalues().next()
+                scheduler = itervalues(satellite.cfg['schedulers']).next()
                 assert 'scheduler-spare' == scheduler['name']
                 json_managed_spare[scheduler['instance_id']] = scheduler['push_flavor']
 
         # return of the scheduler master
-        print "*********** Return of the king / master ***********"
+        print("*********** Return of the king / master ***********")
         with requests_mock.mock() as mockreq:
             for port in ['7768', '7772', '7771', '7769', '7773', '8002']:
                 mockreq.get('http://localhost:%s/ping' % port, json='pong')
@@ -467,7 +469,7 @@ class TestDispatcher(AlignakTest):
 
             for satellite in self.arbiter.dispatcher.satellites:
                 assert 1 == len(satellite.cfg['schedulers'])
-                scheduler = satellite.cfg['schedulers'].itervalues().next()
+                scheduler = itervalues(satellite.cfg['schedulers']).next()
                 assert 'scheduler-master' == scheduler['name']
 
     @pytest.mark.skip("To be reactivated when spare will be implemented and tested")

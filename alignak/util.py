@@ -68,7 +68,7 @@ logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 try:
     SAFE_STDOUT = (sys.stdout.encoding == 'UTF-8')
-except AttributeError, exp:  # pragma: no cover, should not happen!
+except AttributeError as exp:  # pragma: no cover, should not happen!
     logger.error('Encoding detection error for stdout = %s', exp)
     SAFE_STDOUT = False
 

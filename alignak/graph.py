@@ -46,7 +46,7 @@
 """This modules provide Graph class. Used to check for loop into dependencies
 
 """
-
+from future.utils import iteritems
 
 class Graph:
 
@@ -110,7 +110,7 @@ class Graph:
             node['dfs_loop_status'] = 'DFS_UNCHECKED'
 
         # Now do the job
-        for node_id, node in self.nodes.iteritems():
+        for node_id, node in iteritems(self.nodes):
             # Run the dfs only if the node has not been already done */
             if node['dfs_loop_status'] == 'DFS_UNCHECKED':
                 self.dfs_loop_search(node_id)
@@ -183,7 +183,7 @@ class Graph:
         for node in self.nodes.values():
             node['dfs_loop_status'] = 'DFS_UNCHECKED'
 
-        for node_id, node in self.nodes.iteritems():
+        for node_id, node in iteritems(self.nodes):
             # Run the dfs only if the node is not already done */
             if node['dfs_loop_status'] == 'DFS_UNCHECKED':
                 packs.append(self.dfs_get_all_childs(node_id))

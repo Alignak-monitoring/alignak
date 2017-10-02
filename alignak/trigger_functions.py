@@ -77,7 +77,7 @@ def declared(function):
     :type function: types.FunctionType
     :return : the function itself only update TRIGGER_FUNCTIONS variable
     """
-    name = function.func_name
+    name = function.__name__
     TRIGGER_FUNCTIONS[name] = function
     logger.debug("Added %s to trigger functions list ", name)
     return function

@@ -66,6 +66,7 @@
  them into independent parts. The main user of this is Arbiter, but schedulers
  use it too (but far less)"""
 # pylint: disable=C0302
+from future.utils import iteritems
 import re
 import sys
 import string
@@ -77,9 +78,11 @@ import random
 import tempfile
 import uuid
 import logging
-from StringIO import StringIO
+from io import StringIO, open
 from multiprocessing import Process, Manager
 import json
+from builtins import int
+from past.builtins import xrange
 
 from alignak.misc.serialization import serialize
 
@@ -628,7 +631,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             UnusedProp(text=None),
 
         'modified_attributes':
-            IntegerProp(default=0L),
+            IntegerProp(default=int(0)),
 
         'daemon_thread_pool_size':
             IntegerProp(default=8),
@@ -980,19 +983,18 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 logger.info("[config] opening '%s' configuration file", c_file)
             try:
                 # Open in Universal way for Windows, Mac, Linux-based systems
-                file_d = open(c_file, 'rU')
+                file_d = open(c_file, encoding='utf-8')
                 buf = file_d.readlines()
                 file_d.close()
                 self.config_base_dir = os.path.dirname(c_file)
                 # Update macro used properties
                 self.main_config_file = os.path.abspath(c_file)
-            except IOError, exp:
+            except IOError as exp:
                 msg = "[config] cannot open main config file '%s' for reading: %s" % (c_file, exp)
                 self.add_error(msg)
                 continue
 
             for line in buf:
-                line = line.decode('utf8', 'replace')
                 res.write(line)
                 if line.endswith('\n'):
                     line = line[:-1]
@@ -1009,11 +1011,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         if not self.read_config_silent:
                             logger.info("Processing object config file '%s'", cfg_file_name)
                         res.write(os.linesep + '# IMPORTEDFROM=%s' % (cfg_file_name) + os.linesep)
-                        res.write(file_d.read().decode('utf8', 'replace'))
+                        res.write(file_d.read())
                         # Be sure to add a line return so we won't mix files
                         res.write(os.linesep)
                         file_d.close()
-                    except IOError, exp:
+                    except IOError as exp:
                         msg = "[config] cannot open config file '%s' for reading: %s" % (
                             cfg_file_name, exp
                         )
@@ -1045,7 +1047,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                                 res.write(os.linesep + '# IMPORTEDFROM=%s' %
                                           (os.path.join(root, pack_file)) + os.linesep)
                                 file_d = open(os.path.join(root, pack_file), 'rU')
-                                res.write(file_d.read().decode('utf8', 'replace'))
+                                res.write(file_d.read())
                                 # Be sure to separate files data
                                 res.write(os.linesep)
                                 file_d.close()
@@ -1455,7 +1457,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         if os.name == 'nt' or not self.use_multiprocesses_serializer:
             logger.info('Using the default serialization pass')
             for realm in self.realms:
-                for (i, conf) in realm.confs.iteritems():
+                for (i, conf) in iteritems(realm.confs):
                     # Remember to protect the local conf hostgroups too!
                     conf.hostgroups.prepare_for_sending()
                     logger.debug('[%s] Serializing the configuration %d', realm.get_name(), i)
@@ -1484,7 +1486,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             child_q = manager.list()
             for realm in self.realms:
                 processes = []
-                for (i, conf) in realm.confs.iteritems():
+                for (i, conf) in iteritems(realm.confs):
                     def serialize_config(comm_q, rname, cid, conf):
                         """Serialized config. Used in subprocesses to serialize all config faster
 

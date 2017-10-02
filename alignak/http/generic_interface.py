@@ -20,6 +20,7 @@
 Any Alignak satellite have at least those functions exposed over network
 See : http://cherrypy.readthedocs.org/en/latest/tutorials.html for Cherrypy basic HTTP apps.
 """
+from future.utils import iteritems
 import inspect
 import logging
 import random
@@ -299,7 +300,7 @@ class GenericInterface(object):
         if hasattr(app, 'schedulers'):
             try:
                 # Get queue stats
-                for sched_id, sched in app.schedulers.iteritems():
+                for sched_id, sched in iteritems(app.schedulers):
                     lst = []
                     res[sched_id] = lst
                     for mod in app.q_by_mod:

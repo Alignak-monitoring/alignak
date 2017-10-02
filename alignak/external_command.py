@@ -60,6 +60,7 @@ Used to process command sent by users
 # pylint: disable=unused-argument
 # pylint: disable=C0302
 # pylint: disable=R0904
+from builtins import str
 import logging
 import time
 import re
@@ -985,7 +986,7 @@ class ExternalCommandManager:
             brok = make_monitoring_log('info', "SERVICE COMMENT: %s;%s;%s;%s"
                                        % (self.hosts[service.host].get_name(),
                                           service.get_name(),
-                                          unicode(author, 'utf-8'), unicode(comment, 'utf-8')))
+                                          str(author, 'utf-8'), str(comment, 'utf-8')))
         except TypeError:
             brok = make_monitoring_log('info', "SERVICE COMMENT: %s;%s;%s;%s"
                                        % (self.hosts[service.host].get_name(),
@@ -1017,7 +1018,7 @@ class ExternalCommandManager:
         try:
             brok = make_monitoring_log('info', u"HOST COMMENT: %s;%s;%s"
                                        % (host.get_name(),
-                                          unicode(author, 'utf-8'), unicode(comment, 'utf-8')))
+                                          str(author, 'utf-8'), str(comment, 'utf-8')))
         except TypeError:
             brok = make_monitoring_log('info', u"HOST COMMENT: %s;%s;%s"
                                        % (host.get_name(), author, comment))

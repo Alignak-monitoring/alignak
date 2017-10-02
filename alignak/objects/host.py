@@ -65,10 +65,11 @@ to look at the schedulingitem class that manage all
 scheduling/consume check smart things :)
 """
 # pylint: disable=too-many-lines
-
+from future.utils import iteritems
 import os
 import time
 import logging
+from six import itervalues
 
 from alignak.objects.schedulingitem import SchedulingItem, SchedulingItems
 
@@ -1434,7 +1435,7 @@ class Hosts(SchedulingItems):
         :type triggers: alignak.objects.trigger.Triggers
         :return: None
         """
-        for template in self.templates.itervalues():
+        for template in itervalues(self.templates):
             # items::explode_contact_groups_into_contacts
             # take all contacts from our contact_groups into our contact property
             self.explode_contact_groups_into_contacts(template, contactgroups)
@@ -1500,7 +1501,7 @@ class Hosts(SchedulingItems):
             msg = "Loop detected while checking hosts "
             self.configuration_errors.append(msg)
             state = False
-            for uuid, item in self.items.iteritems():
+            for uuid, item in iteritems(self.items):
                 for elem in loop:
                     if elem == uuid:
                         msg = "Host %s is parent in dependency defined in %s" % (

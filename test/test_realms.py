@@ -46,6 +46,7 @@
 """
 This file is used to test realms usage
 """
+from __future__ import print_function
 import os
 import re
 import shutil
@@ -537,7 +538,7 @@ class TestRealms(AlignakTest):
         reactionner_uuid = self.reactionners['reactionner-master'].uuid
 
         for realm in [Osaka, Tokyo, Japan, Asia, Turin, Rome, Italy, Lyon, Paris, France, Europe, World]:
-            print 'Realm name: %s' % realm.realm_name
+            print('Realm name: %s' % realm.realm_name)
             if realm.realm_name != 'France':
                 assert realm.brokers == [broker_uuid]
                 assert realm.potential_brokers == [broker_uuid]

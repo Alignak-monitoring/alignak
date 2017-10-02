@@ -59,12 +59,13 @@
 """
 This module provide Arbiter class used to run a arbiter daemon
 """
+from future.utils import iteritems
 import logging
 import sys
 import time
 import traceback
 import socket
-import cStringIO
+from io import StringIO
 import json
 
 import subprocess
@@ -576,10 +577,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             _t0 = time.time()
             try:
                 objs = inst.get_objects()
-            except Exception, exp:  # pylint: disable=W0703
+            except Exception as exp:  # pylint: disable=W0703
                 logger.error("Module %s get_objects raised an exception %s. "
                              "Log and continue to run", inst.get_name(), str(exp))
-                output = cStringIO.StringIO()
+                output = StringIO()
                 traceback.print_exc(file=output)
                 logger.error("Back trace of this remove: %s", output.getvalue())
                 output.close()
@@ -624,10 +625,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                             inst.get_name())
                 cfg = inst.get_alignak_configuration()
                 alignak_cfg.update(cfg)
-            except Exception, exp:  # pylint: disable=W0703
+            except Exception as exp:  # pylint: disable=W0703
                 logger.error("Module get_alignak_configuration %s raised an exception %s. "
                              "Log and continue to run", inst.get_name(), str(exp))
-                output = cStringIO.StringIO()
+                output = StringIO()
                 traceback.print_exc(file=output)
                 logger.error("Back trace of this remove: %s", output.getvalue())
                 output.close()
@@ -637,7 +638,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         params = []
         if alignak_cfg:
             logger.info("Got Alignak global configuration:")
-            for key, value in alignak_cfg.iteritems():
+            for key, value in iteritems(alignak_cfg):
                 logger.info("- %s = %s", key, value)
                 # properties starting with an _ character are "transformed" to macro variables
                 if key.startswith('_'):
@@ -728,7 +729,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             # With a 2.4 interpreter the sys.exit() in load_config_file
             # ends up here and must be handled.
             sys.exit(exp.code)
-        except Exception, exp:
+        except Exception as exp:
             self.print_unrecoverable(traceback.format_exc())
             raise
 

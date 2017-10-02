@@ -20,7 +20,7 @@
 #
 """ This module contains only a common class for all object created in Alignak: AlignakObject.
 """
-
+from future.utils import iteritems
 import uuid
 from copy import copy
 from alignak.property import SetProp, StringProp
@@ -42,7 +42,7 @@ class AlignakObject(object):
         all_props = {}
         all_props.update(getattr(self, "properties", {}))
         all_props.update(getattr(self, "running_properties", {}))
-        for key, value in params.iteritems():
+        for key, value in iteritems(params):
             if key in all_props and isinstance(all_props[key], SetProp):
                 setattr(self, key, set(value))
             else:

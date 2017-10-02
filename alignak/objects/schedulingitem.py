@@ -69,6 +69,7 @@ import time
 import datetime
 import traceback
 import logging
+from builtins import int
 
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
@@ -248,7 +249,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
     running_properties = Item.running_properties.copy()
     running_properties.update({
         'modified_attributes':
-            IntegerProp(default=0L, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=int(0), fill_brok=['full_status'], retention=True),
         'last_chk':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'next_chk':
@@ -2691,7 +2692,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                         logger.info("Resolved BR for '%s', output: %s",
                                     self.get_full_name(), check.output)
 
-            except Exception, err:  # pylint: disable=W0703
+            except Exception as err:  # pylint: disable=W0703
                 # Notifies the error, and return an UNKNOWN state.
                 check.output = "Error while re-evaluating business rule: %s" % err
                 logger.debug("[%s] Error while re-evaluating business rule:\n%s",

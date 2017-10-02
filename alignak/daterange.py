@@ -54,6 +54,7 @@ import calendar
 import logging
 import re
 from datetime import datetime, timedelta
+from past.builtins import xrange
 
 from alignak.util import get_sec_from_morning, get_day, get_start_of_day, get_end_of_day
 from alignak.alignakobject import AlignakObject

@@ -47,7 +47,8 @@
 """
  This file is used to test the flapping management
 """
-
+from past.builtins import xrange
+from six import itervalues
 from alignak.misc.serialization import unserialize
 from alignak_test import AlignakTest, unittest
 
@@ -112,7 +113,7 @@ class TestFlapping(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(itervalues(self._broker['broks']), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -164,7 +165,7 @@ class TestFlapping(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(itervalues(self._broker['broks']), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -257,7 +258,7 @@ class TestFlapping(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(itervalues(self._broker['broks']), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -309,7 +310,7 @@ class TestFlapping(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(itervalues(self._broker['broks']), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))

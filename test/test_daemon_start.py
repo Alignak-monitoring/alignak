@@ -83,7 +83,7 @@ try:
     def get_cur_group():
         return grp.getgrgid(os.getgid()).gr_name
 
-except ImportError, exp:  # Like in nt system
+except ImportError as exp:  # Like in nt system
     # temporary workaround:
     def get_cur_user():
         return os.getlogin()

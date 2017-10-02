@@ -21,7 +21,7 @@
 """
 This file test the dependencies between services, hosts
 """
-
+from __future__ import print_function
 import re
 import time
 from copy import copy
@@ -788,7 +788,7 @@ class TestDependencies(AlignakTest):
         self.assert_checks_count(9)
 
         # Service is CRITICAL
-        print "====================== svc CRITICAL ==================="
+        print("====================== svc CRITICAL ===================")
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         assert "UP" == router_00.state
@@ -801,7 +801,7 @@ class TestDependencies(AlignakTest):
         self.show_checks()
 
         # Host is DOWN
-        print "====================== host DOWN ==================="
+        print("====================== host DOWN ===================")
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
         assert "UP" == router_00.state
@@ -814,7 +814,7 @@ class TestDependencies(AlignakTest):
         self.show_checks()
 
         # Router is UP
-        print "====================== router UP ==================="
+        print("====================== router UP ===================")
         self.scheduler_loop(1, [[router_00, 0, 'UP']])
         time.sleep(0.1)
         self.show_checks()
@@ -878,7 +878,7 @@ class TestDependencies(AlignakTest):
         self.assert_checks_count(9)
 
         # Service is CRITICAL
-        print "====================== svc CRITICAL ==================="
+        print("====================== svc CRITICAL ===================")
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         assert "UP" == router_00.state
@@ -891,7 +891,7 @@ class TestDependencies(AlignakTest):
         self.show_checks()
 
         # Host is DOWN
-        print "====================== host DOWN ==================="
+        print("====================== host DOWN ===================")
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
         assert "UP" == router_00.state
@@ -905,7 +905,7 @@ class TestDependencies(AlignakTest):
         self.show_checks()
 
         # Router is UP
-        print "====================== router DOWN ==================="
+        print("====================== router DOWN ===================")
         self.scheduler_loop(1, [[router_00, 2, 'DOWN']])
         time.sleep(0.1)
         self.show_checks()
@@ -964,7 +964,7 @@ class TestDependencies(AlignakTest):
         self.assert_actions_count(0)
         self.assert_checks_count(9)
 
-        print "====================== svc1 && svc2 CRITICAL ==================="
+        print("====================== svc1 && svc2 CRITICAL ===================")
         self.scheduler_loop(1, [[svc1, 2, 'CRITICAL'], [svc2, 2, 'CRITICAL']])
         time.sleep(0.1)
         self.assert_actions_count(0)
@@ -975,7 +975,7 @@ class TestDependencies(AlignakTest):
         self.assert_checks_match(9, 'test_hostcheck.pl', 'command')
         self.assert_checks_match(9, 'hostname test_host_00', 'command')
 
-        print "====================== host UP ==================="
+        print("====================== host UP ===================")
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.1)
         assert "UP" == host.state
@@ -1272,7 +1272,7 @@ class TestDependencies(AlignakTest):
         assert self.conf_is_correct
 
         for s in self.schedulers['scheduler-master'].sched.services:
-            print s.get_full_name()
+            print(s.get_full_name())
 
         NRPE = self.schedulers['scheduler-master'].sched.services.\
             find_srv_by_name_and_hostname("myspecifichost", "NRPE")

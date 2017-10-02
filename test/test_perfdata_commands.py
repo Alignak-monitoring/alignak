@@ -47,7 +47,7 @@
 """
  This file is used to test acknowledge of problems
 """
-
+from __future__ import print_function
 import time
 
 from alignak.commandcall import CommandCall
@@ -191,10 +191,10 @@ class TestPerfdataCommands(AlignakTest):
         self.scheduler_loop(1, [])
 
         assert isinstance(svc, SchedulingItem)
-        print "Actions", self._sched.actions
-        print 'Output', svc.output
-        print 'Long output', svc.long_output
-        print 'Performance data', svc.perf_data
+        print("Actions", self._sched.actions)
+        print('Output', svc.output)
+        print('Long output', svc.long_output)
+        print('Performance data', svc.perf_data)
 
         # Note that the check output is stripped
         assert svc.output == u'DISK OK - free space: / 3326 MB (56%);'

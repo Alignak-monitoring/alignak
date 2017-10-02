@@ -21,15 +21,16 @@
 """
     This file contains classes and utilities for Alignak tests modules
 """
-
+from __future__ import print_function
+from six import itervalues
 import sys
 from sys import __stdout__
 from functools import partial
+from future.utils import iteritems
 
 import time
 import datetime
 import os
-import string
 import re
 import random
 import copy
@@ -176,7 +177,7 @@ class AlignakTest(unittest.TestCase):
             lines = []
             with open(filename) as infile:
                 for line in infile:
-                    for src, target in replacements.iteritems():
+                    for src, target in iteritems(replacements):
                         line = line.replace(src, target)
                     lines.append(line)
             with open(filename, 'w') as outfile:
@@ -500,13 +501,13 @@ class AlignakTest(unittest.TestCase):
         :param scheduler:
         :return:
         """
-        print "--- logs <<<----------------------------------"
+        print("--- logs <<<----------------------------------")
         collector_h = [hand for hand in self.logger.handlers
                        if isinstance(hand, CollectorHandler)][0]
         for log in collector_h.collector:
             safe_print(log)
 
-        print "--- logs >>>----------------------------------"
+        print("--- logs >>>----------------------------------")
 
     def show_actions(self):
         """"Show the inner actions"""
@@ -515,7 +516,7 @@ class AlignakTest(unittest.TestCase):
         macroresolver = MacroResolver()
         macroresolver.init(self._scheduler.conf)
 
-        print "--- actions <<<----------------------------------"
+        print("--- actions <<<----------------------------------")
         actions = sorted(self._scheduler.actions.values(), key=lambda x: (x.t_to_go, x.creation_time))
         for action in actions:
             print("Time to launch action: %s, creation: %s" % (action.t_to_go, action.creation_time))
@@ -526,25 +527,25 @@ class AlignakTest(unittest.TestCase):
                 else:
                     hst = self._scheduler.find_item_by_id(item.host)
                     ref = "svc: %s/%s" % (hst.get_name(), item.get_name())
-                print "NOTIFICATION %s (%s - %s) [%s], created: %s for '%s': %s" \
+                print("NOTIFICATION %s (%s - %s) [%s], created: %s for '%s': %s" \
                       % (action.type, action.uuid, action.status, ref,
-                         time.asctime(time.localtime(action.t_to_go)), action.contact_name, action.command)
+                         time.asctime(time.localtime(action.t_to_go)), action.contact_name, action.command))
             elif action.is_a == 'eventhandler':
-                print "EVENTHANDLER:", action
+                print("EVENTHANDLER:", action)
             else:
-                print "ACTION:", action
-        print "--- actions >>>----------------------------------"
+                print("ACTION:", action)
+        print("--- actions >>>----------------------------------")
 
     def show_checks(self):
         """
         Show checks from the scheduler
         :return:
         """
-        print "--- checks <<<--------------------------------"
+        print("--- checks <<<--------------------------------")
         checks = sorted(self.schedulers['scheduler-master'].sched.checks.values(), key=lambda x: x.creation_time)
         for check in checks:
             print("- %s" % check)
-        print "--- checks >>>--------------------------------"
+        print("--- checks >>>--------------------------------")
 
     def show_and_clear_logs(self):
         """
@@ -858,7 +859,7 @@ class AlignakTest(unittest.TestCase):
         regex = re.compile(pattern)
 
         monitoring_logs = []
-        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+        for brok in itervalues(self._sched.brokers['broker-master']['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -907,9 +908,9 @@ class AlignakTest(unittest.TestCase):
         return res
 
     def print_header(self):
-        print "\n" + "#" * 80 + "\n" + "#" + " " * 78 + "#"
-        print "#" + string.center(self.id(), 78) + "#"
-        print "#" + " " * 78 + "#\n" + "#" * 80 + "\n"
+        print("\n" + "#" * 80 + "\n" + "#" + " " * 78 + "#")
+        print("#" + str.center(self.id(), 78) + "#")
+        print("#" + " " * 78 + "#\n" + "#" * 80 + "\n")
 
     def show_configuration_logs(self):
         """

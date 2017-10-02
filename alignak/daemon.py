@@ -67,11 +67,11 @@ import sys
 import time
 import signal
 import select
-import ConfigParser
+import configparser
 import threading
 import logging
 import warnings
-from Queue import Empty
+from queue import Empty
 from multiprocessing.managers import SyncManager
 
 try:
@@ -101,7 +101,7 @@ try:
         :rtype: list
         """
         return getgrall()
-except ImportError, exp:  # pragma: no cover, not for unit tests...
+except ImportError as exp:  # pragma: no cover, not for unit tests...
     # Like in Windows system
     # temporary workaround:
     def get_cur_user():
@@ -149,7 +149,7 @@ IS_PY26 = sys.version_info[:2] < (2, 7)
 # The standard I/O file descriptors are redirected to /dev/null by default.
 REDIRECT_TO = getattr(os, "devnull", "/dev/null")
 
-UMASK = 027
+UMASK = 0o27
 
 
 class InvalidWorkDir(Exception):
@@ -489,7 +489,7 @@ class Daemon(object):
         self.workdir = os.path.abspath(self.workdir)
         try:
             os.chdir(self.workdir)
-        except Exception, exp:
+        except Exception as exp:
             raise InvalidWorkDir(exp)
         self.debug_output.append("Successfully changed to workdir: %s" % (self.workdir))
         logger.info("Using working directory: %s", os.path.abspath(self.workdir))
@@ -502,7 +502,7 @@ class Daemon(object):
         logger.debug("Unlinking %s", self.pidfile)
         try:
             os.unlink(self.pidfile)
-        except OSError, exp:
+        except OSError as exp:
             logger.error("Got an error unlinking our pidfile: %s", exp)
 
     @staticmethod
@@ -671,7 +671,7 @@ class Daemon(object):
         # Now the fork/setsid/fork..
         try:
             pid = os.fork()
-        except OSError, err:
+        except OSError as err:
             raise Exception("%s [%d]" % (err.strerror, err.errno))
 
         if pid != 0:
@@ -848,7 +848,7 @@ class Daemon(object):
         #     return []
         # try:  # pragma: no cover, not with unit tests on Travis...
         #     ins, _, _ = select.select(socks, [], [], timeout)
-        # except select.error, err:
+        # except select.error as err:
         #     errnum, _ = err
         #     if errnum == errno.EINTR:
         #         return []
@@ -962,7 +962,7 @@ class Daemon(object):
 
         properties = self.__class__.properties
         if self.config_file is not None:
-            config = ConfigParser.ConfigParser()
+            config = configparser.ConfigParser()
             config.read(self.config_file)
             if config._sections == {}:
                 logger.error("Bad or missing config file: %s ", self.config_file)
@@ -972,7 +972,7 @@ class Daemon(object):
                     if key in properties:
                         value = properties[key].pythonize(value)
                     setattr(self, key, value)
-            except ConfigParser.InterpolationMissingOptionError as err:  # pragma: no cover,
+            except configparser.InterpolationMissingOptionError as err:  # pragma: no cover,
                 err = str(err)
                 wrong_variable = err.split('\n')[3].split(':')[1].strip()
                 logger.error("Incorrect or missing variable '%s' in config file : %s",
@@ -1387,7 +1387,7 @@ class Daemon(object):
                              when=self.log_rotation_when, interval=self.log_rotation_interval,
                              backup_count=self.log_rotation_count,
                              human_date_format=self.human_date_format)
-            except IOError, exp:  # pragma: no cover, not with unit tests...
+            except IOError as exp:  # pragma: no cover, not with unit tests...
                 logger.error("Opening the log file '%s' failed with '%s'", self.local_log, exp)
                 sys.exit(2)
             logger.debug("Using the local log file '%s'", self.local_log)

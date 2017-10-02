@@ -42,6 +42,7 @@
 """
 This file is used to test properties types after config loaded and parsed
 """
+from __future__ import print_function
 import logging
 from alignak_test import AlignakTest
 from alignak.property import UnusedProp, StringProp, IntegerProp, \
@@ -153,7 +154,7 @@ class TestEndParsingType(AlignakTest):
                         self.arbiter.conf.notificationways, self.arbiter.conf.hosts):
             self.check_objects_from(objects)
 
-        print "== test Check() =="
+        print("== test Check() ==")
         check = Check({'status': 'OK', 'command': 'check_ping', 'ref': 0, 't_to_go': 10.0})
         for prop in check.properties:
             if hasattr(check, prop):
@@ -161,12 +162,12 @@ class TestEndParsingType(AlignakTest):
                 # We should get ride of None, maybe use the "neutral" value for type
                 if prop not in ['ref']:  # TODO : clean this
                     if value is not None:
-                        print "TESTING %s with value %s" % (prop, value)
+                        print("TESTING %s with value %s" % (prop, value))
                         assert isinstance(value, self.map_type(check.properties[prop]))
                     else:
-                        print "Skipping %s " % prop
+                        print("Skipping %s " % prop)
 
-        print "== test Notification() =="
+        print("== test Notification() ==")
         notification = Notification()
         for prop in notification.properties:
             if hasattr(notification, prop):
@@ -174,12 +175,12 @@ class TestEndParsingType(AlignakTest):
                 # We should get ride of None, maybe use the "neutral" value for type
                 if prop not in ['already_start_escalations']:  # TODO : clean this
                     if value is not None:
-                        print "TESTING %s with value %s" % (prop, value)
+                        print("TESTING %s with value %s" % (prop, value))
                         assert isinstance(value, self.map_type(notification.properties[prop]))
                     else:
-                        print "Skipping %s " % prop
+                        print("Skipping %s " % prop)
 
-        print "== test EventHandler() =="
+        print("== test EventHandler() ==")
         eventhandler = EventHandler({})
         for prop in eventhandler.properties:
             if hasattr(eventhandler, prop):
@@ -187,31 +188,31 @@ class TestEndParsingType(AlignakTest):
                 # We should get ride of None, maybe use the "neutral" value for type
                 if prop not in ['jjjj']:  # TODO : clean this
                     if value is not None:
-                        print "TESTING %s with value %s" % (prop, value)
+                        print("TESTING %s with value %s" % (prop, value))
                         assert isinstance(value, self.map_type(eventhandler.properties[prop]))
                     else:
-                        print "Skipping %s " % prop
+                        print("Skipping %s " % prop)
 
-        print "== test Timeperiod() =="
+        print("== test Timeperiod() ==")
         timeperiod = Timeperiod()
         for prop in timeperiod.properties:
             if hasattr(timeperiod, prop):
                 value = getattr(timeperiod, prop)
                 # We should get ride of None, maybe use the "neutral" value for type
                 if value is not None:
-                    print "TESTING %s with value %s" % (prop, value)
+                    print("TESTING %s with value %s" % (prop, value))
                     assert isinstance(value, self.map_type(timeperiod.properties[prop]))
                 else:
-                    print "Skipping %s " % prop
+                    print("Skipping %s " % prop)
 
-        print "== test Command() =="
+        print("== test Command() ==")
         command = Command({})
         for prop in command.properties:
             if hasattr(command, prop):
                 value = getattr(command, prop)
                 # We should get ride of None, maybe use the "neutral" value for type
                 if value is not None:
-                    print "TESTING %s with value %s" % (prop, value)
+                    print("TESTING %s with value %s" % (prop, value))
                     assert isinstance(value, self.map_type(command.properties[prop]))
                 else:
-                    print "Skipping %s " % prop
+                    print("Skipping %s " % prop)

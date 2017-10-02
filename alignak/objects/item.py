@@ -60,6 +60,9 @@ elements like service, hosts or contacts.
 """
 # pylint: disable=C0302
 # pylint: disable=R0904
+from future.utils import iteritems
+
+from six import itervalues
 import time
 import itertools
 import uuid
@@ -192,7 +195,7 @@ class Item(AlignakObject):
 
             if (isinstance(val, list) and
                     len(val) >= 1 and
-                    isinstance(val[0], unicode) and
+                    isinstance(val[0], str) and
                     len(val[0]) >= 1 and
                     val[0][0] == '+'):
                 # We manage a list property which first element is a string that starts with +
@@ -967,7 +970,7 @@ class Items(object):
         self.name_to_item.pop(getattr(item, name_property, ''), None)
 
     def __iter__(self):
-        return self.items.itervalues()
+        return itervalues(self.items)
 
     def __len__(self):
         return len(self.items)
@@ -1026,8 +1029,8 @@ class Items(object):
 
         :return: None
         """
-        for i in itertools.chain(self.items.itervalues(),
-                                 self.templates.itervalues()):
+        for i in itertools.chain(itervalues(self.items),
+                                 itervalues(self.templates)):
             i.old_properties_names_to_new()
 
     def find_tpl_by_name(self, name):
@@ -1096,8 +1099,8 @@ class Items(object):
         :return: None
         """
         # First we create a list of all templates
-        for i in itertools.chain(self.items.itervalues(),
-                                 self.templates.itervalues()):
+        for i in itertools.chain(itervalues(self.items),
+                                 itervalues(self.templates)):
             self.linkify_item_templates(i)
         for i in self:
             i.tags = self.get_all_tags(i)
@@ -1211,7 +1214,7 @@ class Items(object):
         :rtype: dict
         """
         res = {}
-        for key, item in self.items.iteritems():
+        for key, item in iteritems(self.items):
             res[key] = item.serialize()
         return res
 
@@ -1223,8 +1226,8 @@ class Items(object):
         :type prop: str
         :return: None
         """
-        for i in itertools.chain(self.items.itervalues(),
-                                 self.templates.itervalues()):
+        for i in itertools.chain(itervalues(self.items),
+                                 itervalues(self.templates)):
             self.get_property_by_inheritance(i, prop)
             # If a "null" attribute was inherited, delete it
             try:
@@ -1244,8 +1247,8 @@ class Items(object):
         cls = self.inner_class
         for prop in cls.properties:
             self.apply_partial_inheritance(prop)
-        for i in itertools.chain(self.items.itervalues(),
-                                 self.templates.itervalues()):
+        for i in itertools.chain(itervalues(self.items),
+                                 itervalues(self.templates)):
             self.get_customs_properties_by_inheritance(i)
 
     def linkify_with_contacts(self, contacts):
@@ -1567,7 +1570,7 @@ class Items(object):
             try:
                 hnames_list.extend(
                     self.get_hosts_from_hostgroups(hgnames, hostgroups))
-            except ValueError, err:  # pragma: no cover, simple protection
+            except ValueError as err:  # pragma: no cover, simple protection
                 item.configuration_errors.append(str(err))
 
         # Expands host names
@@ -1585,7 +1588,7 @@ class Items(object):
                 except KeyError:
                     pass
             elif host == '*':
-                hnames.update([host.host_name for host in hosts.items.itervalues()
+                hnames.update([host.host_name for host in itervalues(hosts.items)
                               if getattr(host, 'host_name', '')])
             # Else it's a host to add, but maybe it's ALL
             else:

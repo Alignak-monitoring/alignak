@@ -19,6 +19,7 @@
 """
 This module provide object serialization for Alignak objects. It basically converts objects to json
 """
+from future.utils import iteritems
 import sys
 
 try:
@@ -52,7 +53,7 @@ def serialize(obj, no_dump=False):
 
     elif isinstance(obj, dict):
         o_dict = {}
-        for key, value in obj.iteritems():
+        for key, value in iteritems(obj):
             o_dict[key] = serialize(value, True)
 
     elif isinstance(obj, (list, set)):
@@ -101,7 +102,7 @@ def unserialize(j_obj, no_load=False):
 
         else:
             data_dict = {}
-            for key, value in data.iteritems():
+            for key, value in iteritems(data):
                 data_dict[key] = unserialize(value, True)
             return data_dict
 

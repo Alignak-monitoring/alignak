@@ -20,6 +20,7 @@
 """
  This file is used to test poller tags
 """
+from __future__ import print_function
 from alignak_test import AlignakTest, unittest
 
 
@@ -141,7 +142,7 @@ class TestPollerTag(AlignakTest):
             check.t_to_go = 0
         checks = self._sched.get_to_run_checks(do_checks=True, poller_tags=['None'],
                                                module_types=['fork'])
-        print checks
+        print(checks)
         assert len(checks) == 3
         for check in checks:
             assert check.poller_tag == 'None'
@@ -157,7 +158,7 @@ class TestPollerTag(AlignakTest):
             check.t_to_go = 0
         checks = self._sched.get_to_run_checks(do_checks=True, poller_tags=['north'],
                                                module_types=['fork'])
-        print checks
+        print(checks)
         assert len(checks) == 3
         for check in checks:
             assert check.poller_tag == 'north'
@@ -174,7 +175,7 @@ class TestPollerTag(AlignakTest):
             check.t_to_go = 0
         checks = self._sched.get_to_run_checks(do_checks=True, poller_tags=['south'],
                                                module_types=['fork'])
-        print checks
+        print(checks)
         assert len(checks) == 4
         for check in checks:
             assert check.poller_tag == 'south'

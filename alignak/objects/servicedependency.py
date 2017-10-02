@@ -380,7 +380,7 @@ class Servicedependencies(Items):
                     servicedep.dependency_period = timeperiod.uuid
                 else:
                     servicedep.dependency_period = ''
-            except AttributeError, exp:
+            except AttributeError as exp:
                 logger.error("[servicedependency] fail to linkify by timeperiods: %s", exp)
 
     def linkify_s_by_sd(self, services):

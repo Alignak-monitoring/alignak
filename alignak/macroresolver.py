@@ -56,7 +56,7 @@ If callable, it's a method that is called to get the value. for example, to
 get the number of service in a host, you call a method to get the
 len(host.services)
 """
-
+from builtins import str
 import re
 import time
 
@@ -211,11 +211,11 @@ class MacroResolver(Borg):
                     real_args = []
                     for arg in args:
                         real_args.append(getattr(self, arg, None))
-                    return unicode(value(*real_args))
+                    return str(value(*real_args))
 
-                return unicode(value())
+                return str(value())
 
-            return unicode(value)
+            return str(value)
         except AttributeError:
             # Todo: there is too much macros that are not resolved that this log is spamming :/
             # # Raise a warning and return a strange value when macro cannot be resolved
@@ -226,7 +226,7 @@ class MacroResolver(Borg):
             return 'n/a'
         except UnicodeError:
             if isinstance(value, str):
-                return unicode(value, 'utf8', errors='ignore')
+                return str(value, 'utf8', errors='ignore')
 
             return 'n/a'
 

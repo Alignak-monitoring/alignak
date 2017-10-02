@@ -115,7 +115,7 @@ class Packs(Items):  # pragma: no cover, this class looks no more used - see #55
                         file_d = open(path, 'rU')
                         buf = file_d.read()
                         file_d.close()
-                    except IOError, exp:
+                    except IOError as exp:
                         logger.error("Cannot open pack file '%s' for reading: %s", path, exp)
                         # ok, skip this one
                         continue
@@ -153,5 +153,5 @@ class Packs(Items):  # pragma: no cover, this class looks no more used - see #55
                 pack.path += '/'
             # Ok, add it
             self[pack.uuid] = pack
-        except ValueError, exp:
+        except ValueError as exp:
             logger.error("[Pack] error in loading pack file '%s': '%s'", name, exp)

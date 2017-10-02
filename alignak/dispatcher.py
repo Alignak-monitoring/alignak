@@ -58,7 +58,7 @@
 """
 
 import sys
-import cPickle
+from six.moves.cPickle import dumps
 import logging
 import time
 import random
@@ -480,7 +480,7 @@ class Dispatcher:
                     conf.assigned_to = sched
 
                     # We updated all data for this scheduler
-                    pickled_conf = cPickle.dumps(conf_package)
+                    pickled_conf = dumps(conf_package)
                     logger.info('[%s] scheduler configuration %s size: %d bytes',
                                 realm.get_name(), sched.scheduler_name, sys.getsizeof(pickled_conf))
                     logger.info('[%s] configuration %s (%s) assigned to %s',
