@@ -105,6 +105,8 @@ def fix_alignak_cfg(config):
     # This file may exist on older installation... or for init.d start systems
     cfg_file_name = ''
     etc_default_alignak = os.path.join("etc", "default", "alignak")
+    if 'package-python-staging' in config.install_dir:
+        config.install_dir = re.sub(r"^/tmp/package-python-staging-[0-9a-f]+", "", config.install_dir)
     use_local_etc_default_alignak = os.path.join(config.install_dir, "etc", "default", "alignak")
     if os.path.exists(etc_default_alignak):
         cfg_file_name = etc_default_alignak
