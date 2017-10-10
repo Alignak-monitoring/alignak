@@ -87,7 +87,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         for daemon in daemons_list:
             alignak_daemon = "../alignak/bin/alignak_%s.py" % daemon.split('-')[0]
 
-            args = [alignak_daemon, "-n", daemon, "-e", cfg_folder + "/alignak.ini"]
+            args = [alignak_daemon, "-n", daemon, "-e", cfg_folder + "/alignak-realm2.ini"]
             self.procs[daemon] = \
                 subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             print("- %s launched (pid=%d)" % (daemon, self.procs[daemon].pid))
@@ -112,7 +112,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         print("Launching arbiter...")
         args = ["../alignak/bin/alignak_arbiter.py",
                 "-n", "arbiter-master",
-                "-e", cfg_folder + "/alignak.ini"]
+                "-e", cfg_folder + "/alignak-realm2.ini"]
         self.procs['arbiter'] = \
             subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("- %s launched (pid=%d)" % ('arbiter', self.procs['arbiter'].pid))

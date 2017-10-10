@@ -74,8 +74,6 @@ class Realm(Itemgroup):
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        'uuid':
-            StringProp(default='', fill_brok=['full_status']),
         'realm_name':
             StringProp(fill_brok=['full_status']),
         'alias':
@@ -91,7 +89,19 @@ class Realm(Itemgroup):
 
     running_properties = Item.running_properties.copy()
     running_properties.update({
-        'serialized_confs': DictProp(default={}),
+        # Those lists contain only the uuid of the satellite link, not the whole object!
+        'arbiters': ListProp(default=[]),
+        'schedulers': ListProp(default=[]),
+        'brokers': ListProp(default=[]),
+        'pollers': ListProp(default=[]),
+        'reactionners': ListProp(default=[]),
+        'receivers': ListProp(default=[]),
+        'potential_brokers': ListProp(default=[]),
+        'potential_pollers': ListProp(default=[]),
+        'potential_reactionners': ListProp(default=[]),
+        'potential_receivers': ListProp(default=[]),
+        'parts': DictProp(default={}),
+        'serialized_parts': DictProp(default={}),
         'unknown_higher_realms': ListProp(default=[]),
         'all_sub_members': ListProp(default=[]),
     })
@@ -101,10 +111,61 @@ class Realm(Itemgroup):
         'REALMMEMBERS': 'members',
     }
 
-    potential_pollers = []
-    potential_reactionners = []
-    potential_brokers = []
-    potential_receivers = []
+    def __init__(self, params=None, parsing=True):
+        super(Realm, self).__init__(params, parsing)
+
+        self.fill_default()
+
+        # Define a packs list for the configuration preparation
+        self.packs = []
+
+        # List of satellites related to the realm
+        self.to_satellites = {
+            'reactionner': {},
+            'poller': {},
+            'broker': {},
+            'receiver': {}
+        }
+
+        # List of satellites that need a configuration dispatch
+        self.to_satellites_need_dispatch = {
+            'reactionner': {},
+            'poller': {},
+            'broker': {},
+            'receiver': {}
+        }
+
+        # List of satellites with their managed configuration
+        self.to_satellites_managed_by = {
+            'reactionner': {},
+            'poller': {},
+            'broker': {},
+            'receiver': {}
+        }
+
+        # Attributes depending of the satellite type
+        for sat_type in ['arbiter', 'scheduler', 'reactionner', 'poller', 'broker', 'receiver']:
+            setattr(self, "nb_%ss" % sat_type, 0)
+            setattr(self, 'potential_%ss' % sat_type, [])
+
+    def __repr__(self):
+        res = '<%r %r' % (self.__class__.__name__, self.get_name())
+        if not self.members:
+            res = res + ', no members'
+        else:
+            res = res + ', %d members: %r' \
+                        % (len(self.members), ', '.join([str(s) for s in self.members]))
+        if not self.parts:
+            res = res + ', no parts'
+        else:
+            res = res + ', %d parts: %r' \
+                        % (len(self.parts), ', '.join([str(s) for s in self.parts]))
+        return res + '/>'
+    __str__ = __repr__
+
+    @property
+    def name(self):
+        return self.get_name()
 
     def get_name(self):
         """Accessor to realm_name attribute
@@ -121,6 +182,7 @@ class Realm(Itemgroup):
         :type member: list
         :return: None
         """
+        print("Realm, add sub member: %s" % member)
         self.all_sub_members.extend(member)
 
     def get_realm_members(self):
@@ -137,6 +199,49 @@ class Realm(Itemgroup):
             return [r.strip() for r in self.realm_members]
 
         return []
+
+    def prepare_for_satellites_conf(self, satellites):
+        """Update the following attributes of a realm::
+
+        * to_satellites (with *satellite type* keys)
+        * to_satellites_need_dispatch (with *satellite type* keys)
+        * to_satellites_managed_by (with *satellite type* keys)
+        * nb_*satellite type*s
+        * self.potential_*satellite type*s
+
+        (satellite type are reactionner, poller, broker and receiver)
+
+        :param satellites: list of SatelliteLink objects
+        :type satellites: SatelliteLink list
+        :return: None
+        """
+        # Generic loop to fill nb_* (counting) and fill potential_* attribute.
+        # Counting is not that difficult but as it's generic, getattr and setattr are required
+        for sat_type in ["reactionner", "poller", "broker", "receiver"]:
+            # We get potential TYPE at realm level first
+            for sat_link_uuid in getattr(self, "%ss" % sat_type):
+                for sat_link in satellites:
+                    if sat_link_uuid != sat_link.uuid:
+                        continue
+                    # Found our declared satellite in the provided satellites
+                    if not sat_link.spare:
+                        # Generic increment : realm.nb_TYPE += 1
+                        setattr(self, "nb_%ss" % sat_type, getattr(self, "nb_%ss" % sat_type) + 1)
+                    # Append elem to realm.potential_TYPE
+                    getattr(self, 'potential_%ss' % sat_type).append(sat_link.uuid)
+                    break
+                else:
+                    print("Not found: %s" % sat_link_uuid)
+                    logger.error("Satellite %s declared in the realm %s not found "
+                                 "in the configuration satellites!", sat_link_uuid, self.name)
+
+        logger.info("%s: (in/potential) (schedulers:%d) (pollers:%d/%d) "
+                    "(reactionners:%d/%d) (brokers:%d/%d) (receivers:%d/%d)"
+                    % (self.name, len(self.schedulers),
+                       self.nb_pollers, len(self.potential_pollers),
+                       self.nb_reactionners, len(self.potential_reactionners),
+                       self.nb_brokers, len(self.potential_brokers),
+                       self.nb_receivers, len(self.potential_receivers)))
 
     def fill_realm_members_with_higher_realms(self, realms):
         """
@@ -167,8 +272,7 @@ class Realm(Itemgroup):
         # so if True here, it must be a loop in HG
         # calls... not GOOD!
         if self.rec_tag:
-            err = "Error: we've got a loop in realm definition %s" % self.get_name()
-            self.configuration_errors.append(err)
+            self.add_error("Error: there is a loop in the realm definition %s" % self.get_name())
             return None
 
         # Ok, not a loop, we tag it and continue
@@ -226,23 +330,38 @@ class Realm(Itemgroup):
         if hasattr(self, s_type + 's'):
             return getattr(self, s_type + 's')
 
-        logger.debug("[realm] do not have this kind of satellites: %s", s_type)
+        logger.debug("[realm %s] do not have this kind of satellites: %s", self.name, s_type)
         return []
 
-    def get_potential_satellites_by_type(self, s_type):
+    def get_potential_satellites_by_type(self, satellites, s_type, alive=True):
         """Generic function to access one of the potential satellite attribute
         ie : self.potential_pollers, self.potential_reactionners ...
 
+        :param satellites: list of SatelliteLink objects
+        :type satellites: SatelliteLink list
         :param s_type: satellite type wanted
         :type s_type: str
+        :param alive: only the alive satellites
+        :type alive: bool
         :return: self.potential_*type*s
         :rtype: list
         """
-        if hasattr(self, 'potential_' + s_type + 's'):
-            return getattr(self, 'potential_' + s_type + 's')
+        if not hasattr(self, 'potential_' + s_type + 's'):
+            logger.debug("[realm %s] do not have this kind of satellites: %s", self.name, s_type)
+            return []
 
-        logger.debug("[realm] do not have this kind of satellites: %s", s_type)
-        return []
+        matching_satellites = []
+        for sat_link_uuid in getattr(self, 'potential_' + s_type + 's'):
+            for sat_link in satellites:
+                if sat_link_uuid != sat_link.uuid:
+                    continue
+
+                if not alive or (alive and sat_link.alive and sat_link.reachable):
+                    matching_satellites.append(sat_link)
+                break
+
+        print("- potential %ss: %s" % (s_type, matching_satellites))
+        return matching_satellites
 
     def get_nb_of_must_have_satellites(self, s_type):
         """Generic function to access one of the number satellite attribute
@@ -256,15 +375,14 @@ class Realm(Itemgroup):
         if hasattr(self, 'nb_' + s_type + 's'):
             return getattr(self, 'nb_' + s_type + 's')
 
-        logger.debug("[realm] do not have this kind of satellites: %s", s_type)
+        logger.debug("[realm %s] do not have this kind of satellites: %s", self.name, s_type)
         return 0
 
-    def fill_broker_with_poller_reactionner_links(self, broker, pollers, reactionners, receivers,
-                                                  realms):
-        """Fill brokerlink object with satellite data
+    def get_links_for_a_broker(self, pollers, reactionners, receivers, realms,
+                               manage_sub_realms=False):
+        """Get a configuration dictionary with pollers, reactionners and brokers links
+        for a scheduler
 
-        :param broker: broker link we want to fill
-        :type broker: alignak.objects.brokerlink.Brokerlink
         :param pollers: pollers
         :type pollers:
         :param reactionners: reactionners
@@ -273,81 +391,84 @@ class Realm(Itemgroup):
         :type receivers:
         :param realms: realms
         :type realms:
-        :return: None
+        :param manage_sub_realms:
+        :type manage_sub_realms: True if the borker manages sub realms
+
+        :return: dict containing pollers, reactionners and receivers links (key is satellite id)
+        :rtype: dict
         """
 
-        # TODO: find a better name...
-        # TODO: and if he goes active?
-        # First we create/void theses links
-        broker.cfg['pollers'] = {}
-        broker.cfg['reactionners'] = {}
-        broker.cfg['receivers'] = {}
+        # Create void satellite links
+        cfg = {
+            'pollers': {},
+            'reactionners': {},
+            'receivers': {},
+        }
 
-        # First our own level
+        # Our self.daemons are only identifiers... that we use to fill the satellite links
         for poller_id in self.pollers:
             poller = pollers[poller_id]
-            cfg = poller.give_satellite_cfg()
-            broker.cfg['pollers'][poller.uuid] = cfg
+            cfg['pollers'][poller.uuid] = poller.give_satellite_cfg()
 
         for reactionner_id in self.reactionners:
             reactionner = reactionners[reactionner_id]
-            cfg = reactionner.give_satellite_cfg()
-            broker.cfg['reactionners'][reactionner.uuid] = cfg
+            cfg['reactionners'][reactionner.uuid] = reactionner.give_satellite_cfg()
 
         for receiver_id in self.receivers:
             receiver = receivers[receiver_id]
-            cfg = receiver.give_satellite_cfg()
-            broker.cfg['receivers'][receiver.uuid] = cfg
+            cfg['receivers'][receiver.uuid] = receiver.give_satellite_cfg()
 
-        # Then sub if we must to it
-        if broker.manage_sub_realms:
+        # If the broker manages sub realms, fill the satellite links...
+        if manage_sub_realms:
+            print("Manage sub realms... broker.")
             # Now pollers
             for poller_id in self.get_all_subs_satellites_by_type('pollers', realms):
                 poller = pollers[poller_id]
-                cfg = poller.give_satellite_cfg()
-                broker.cfg['pollers'][poller.uuid] = cfg
+                cfg['pollers'][poller.uuid] = poller.give_satellite_cfg()
 
             # Now reactionners
             for reactionner_id in self.get_all_subs_satellites_by_type('reactionners', realms):
                 reactionner = reactionners[reactionner_id]
-                cfg = reactionner.give_satellite_cfg()
-                broker.cfg['reactionners'][reactionner.uuid] = cfg
+                cfg['reactionners'][reactionner.uuid] = reactionner.give_satellite_cfg()
 
             # Now receivers
             for receiver_id in self.get_all_subs_satellites_by_type('receivers', realms):
                 receiver = receivers[receiver_id]
-                cfg = receiver.give_satellite_cfg()
-                broker.cfg['receivers'][receiver.uuid] = cfg
+                cfg['receivers'][receiver.uuid] = receiver.give_satellite_cfg()
 
-    def get_satellites_links_for_scheduler(self, pollers, reactionners, brokers):
-        """Get a configuration dict with pollers, reactionners and brokers data for scheduler
+        return cfg
 
-        :return: dict containing pollers, reactionners and brokers config (key is satellite id)
+    def get_links_for_a_scheduler(self, pollers, reactionners, brokers):
+        """Get a configuration dictionary with pollers, reactionners and brokers links
+        for a scheduler
+
+        :return: dict containing pollers, reactionners and brokers links (key is satellite id)
         :rtype: dict
         """
 
-        # First we create/void theses links
+        # Create void satellite links
         cfg = {
             'pollers': {},
             'reactionners': {},
             'brokers': {},
         }
 
-        # First our own level
-        for poller_id in self.pollers:
-            poller = pollers[poller_id]
-            config = poller.give_satellite_cfg()
-            cfg['pollers'][poller.uuid] = config
+        # Our self.daemons are only identifiers... that we use to fill the satellite links
+        try:
+            for poller_id in self.pollers:
+                poller = pollers[poller_id]
+                cfg['pollers'][poller.uuid] = poller.give_satellite_cfg()
 
-        for reactionner_id in self.reactionners:
-            reactionner = reactionners[reactionner_id]
-            config = reactionner.give_satellite_cfg()
-            cfg['reactionners'][reactionner.uuid] = config
+            for reactionner_id in self.reactionners:
+                reactionner = reactionners[reactionner_id]
+                cfg['reactionners'][reactionner.uuid] = reactionner.give_satellite_cfg()
 
-        for broker_id in self.brokers:
-            broker = brokers[broker_id]
-            config = broker.give_satellite_cfg()
-            cfg['brokers'][broker.uuid] = config
+            for broker_id in self.brokers:
+                broker = brokers[broker_id]
+                cfg['brokers'][broker.uuid] = broker.give_satellite_cfg()
+        except Exception as exp:
+            logger.exception("realm.get_links_for_a_scheduler: %s", exp)
+            pass
 
         return cfg
 
@@ -356,35 +477,16 @@ class Realms(Itemgroups):
     """Realms manage a list of Realm objects, used for parsing configuration
 
     """
-    name_property = "realm_name"  # is used for finding hostgroups
+    name_property = "realm_name"  # is used for finding realms
     inner_class = Realm
 
     def linkify(self):
         """Links sub-realms (parent / son),
         add new realm_members,
-        and init each realm following attributes ::
-
-        * pollers      : []
-        * schedulers   : []
-        * reactionners.: []
-        * brokers:     : []
-        * receivers:   : []
-        * packs:       : []
-        * confs:       : {}
 
         :return: None
         """
         self.linkify_p_by_p()
-
-        # prepare list of satellites and confs
-        for realm in self:
-            realm.pollers = []
-            realm.schedulers = []
-            realm.reactionners = []
-            realm.brokers = []
-            realm.receivers = []
-            realm.packs = []
-            realm.confs = {}
 
     def linkify_p_by_p(self):
         """Links sub-realms (parent / son)
@@ -456,7 +558,7 @@ class Realms(Itemgroups):
             if check:
                 msg = "No realm is defined as the default one! I set %s as the default realm" \
                       % (default_realm_name)
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
 
         default_realm = found[0]
         if len(found) > 1:
@@ -474,7 +576,7 @@ class Realms(Itemgroups):
                 msg = "More than one realm is defined as the default one: %s. " \
                       "I set %s as the temporary default realm." \
                   % (','.join(found_names), default_realm_name)
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
 
         return default_realm
 
@@ -494,48 +596,4 @@ class Realms(Itemgroups):
         :return: None
         """
         for realm in self:
-            realm.to_satellites = {
-                'reactionner': {},
-                'poller': {},
-                'broker': {},
-                'receiver': {}
-            }
-
-            realm.to_satellites_need_dispatch = {
-                'reactionner': {},
-                'poller': {},
-                'broker': {},
-                'receiver': {}
-            }
-
-            realm.to_satellites_managed_by = {
-                'reactionner': {},
-                'poller': {},
-                'broker': {},
-                'receiver': {}
-            }
-
-            # Generic loop to fill nb_* (counting) and fill potential_* attribute.
-            # Counting is not that difficult but as it's generic, getattr and setattr are required
-            for i, sat in enumerate(["reactionner", "poller", "broker", "receiver"]):
-                setattr(realm, "nb_%ss" % sat, 0)  # Init nb_TYPE at 0
-                setattr(realm, 'potential_%ss' % sat, [])  # Init potential_TYPE at []
-                # We get potential TYPE at realm level first
-                for elem_id in getattr(realm, "%ss" % sat):  # For elem in realm.TYPEs
-                    elem = satellites[i][elem_id]  # Get the realm TYPE object
-                    if not elem.spare:
-                        # Generic increment : realm.nb_TYPE += 1
-                        setattr(realm, "nb_%ss" % sat, getattr(realm, "nb_%ss" % sat) + 1)
-                    # Append elem to realm.potential_TYPE
-                    getattr(realm, 'potential_%ss' % sat).append(elem.uuid)
-
-            line = "%s: (in/potential) (schedulers:%d) (pollers:%d/%d)" \
-                   " (reactionners:%d/%d) (brokers:%d/%d) (receivers:%d/%d)" % \
-                (realm.get_name(),
-                 len(realm.schedulers),
-                 realm.nb_pollers, len(realm.potential_pollers),
-                 realm.nb_reactionners, len(realm.potential_reactionners),
-                 realm.nb_brokers, len(realm.potential_brokers),
-                 realm.nb_receivers, len(realm.potential_receivers)
-                 )
-            logger.info(line)
+            realm.prepare_for_satellites_conf(satellites)

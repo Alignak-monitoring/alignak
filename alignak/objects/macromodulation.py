@@ -121,7 +121,7 @@ class MacroModulation(Item):
 
         if not hasattr(self, 'customs') or not self.customs:
             msg = "[macromodulation::%s] contains no macro definition" % (self.get_name())
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             state = False
 
         return super(MacroModulation, self).is_correct() and state

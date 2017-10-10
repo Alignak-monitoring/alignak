@@ -80,8 +80,8 @@ class Reactionner(Satellite):
     })
 
     def __init__(self, **kwargs):
-        self.daemon_name = 'reactionner-master'
-        if 'daemon_name' in kwargs and kwargs['daemon_name']:
-            self.daemon_name = kwargs['daemon_name']
+        """Reactionner daemon initialisation
 
-        super(Reactionner, self).__init__(self.daemon_name, **kwargs)
+        :param kwargs: command line arguments
+        """
+        super(Reactionner, self).__init__(kwargs.get('daemon_name', 'Default-reactionner'), **kwargs)

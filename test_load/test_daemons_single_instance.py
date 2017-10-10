@@ -240,7 +240,7 @@ class TestDaemonsSingleInstance(AlignakTest):
         for daemon in daemons_list:
             alignak_daemon = "../alignak/bin/alignak_%s.py" % daemon.split('-')[0]
 
-            args = [alignak_daemon, "-e", cfg_folder + "/alignak.ini"]
+            args = [alignak_daemon, "-e", cfg_folder + "/alignak-realm2.ini"]
             self.procs.append({
                 'name': daemon,
                 'pid': psutil.Popen(args)
@@ -254,7 +254,7 @@ class TestDaemonsSingleInstance(AlignakTest):
 
         print("Launching arbiter...")
         args = ["../alignak/bin/alignak_arbiter.py",
-                "-e", cfg_folder + "/alignak.ini",
+                "-e", cfg_folder + "/alignak-realm2.ini",
                 "-a", cfg_folder + "/alignak.cfg"]
         # Prepend the arbiter process into the list
         self.procs= [{

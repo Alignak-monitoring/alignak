@@ -69,10 +69,10 @@ class TestEscalations(AlignakTest):
         assert self.conf_is_correct
 
         # Our scheduler
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         # Our broker
-        self._broker = self._sched.brokers['broker-master']
+        # self._broker = self._sched.brokers['broker-master']
 
         # No error messages
         assert len(self.configuration_errors) == 0
@@ -87,13 +87,13 @@ class TestEscalations(AlignakTest):
         :return:
         """
         # Our scheduler
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
         # Our broker
-        self._broker = self._sched.brokers['broker-master']
+        # self._broker = self._sched.brokers['broker-master']
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(self._broker.broks.itervalues(), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))

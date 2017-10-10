@@ -236,27 +236,27 @@ class Escalation(Item):
         # Ok now we manage special cases...
         if not hasattr(self, 'contacts') and not hasattr(self, 'contact_groups'):
             msg = '%s: I do not have contacts nor contact_groups' % (self.get_name())
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             state = False
 
         # If time_based or not, we do not check all properties
         if self.time_based:
             if not hasattr(self, 'first_notification_time'):
                 msg = '%s: I do not have first_notification_time' % (self.get_name())
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
                 state = False
             if not hasattr(self, 'last_notification_time'):
                 msg = '%s: I do not have last_notification_time' % (self.get_name())
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
                 state = False
         else:  # we check classical properties
             if not hasattr(self, 'first_notification'):
                 msg = '%s: I do not have first_notification' % (self.get_name())
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
                 state = False
             if not hasattr(self, 'last_notification'):
                 msg = '%s: I do not have last_notification' % (self.get_name())
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
                 state = False
 
         # Change the special_properties definition according to time_based ...

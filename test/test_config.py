@@ -41,7 +41,7 @@ class TestConfig(AlignakTest):
         :return: None
         """
         self.print_header()
-        self.setup_with_file('../etc/alignak.cfg')
+        self.setup_with_file('../etc/alignak.cfg', './alignak.ini')
         assert self.conf_is_correct
 
         # No error messages
@@ -61,7 +61,7 @@ class TestConfig(AlignakTest):
         scheduler_link = self.arbiter.conf.schedulers.find_by_name('scheduler-master')
         assert scheduler_link is not None
         # Scheduler configuration is ok
-        assert self.schedulers['scheduler-master'].sched.conf.conf_is_correct
+        assert self._scheduler.conf.conf_is_correct
 
         # Broker, Poller, Reactionner named as in the configuration
         link = self.arbiter.conf.brokers.find_by_name('broker-master')
@@ -101,7 +101,7 @@ class TestConfig(AlignakTest):
         scheduler_link = self.arbiter.conf.schedulers.find_by_name('scheduler-master')
         assert scheduler_link is not None
         # Scheduler configuration is ok
-        assert self.schedulers['scheduler-master'].sched.conf.conf_is_correct
+        assert self._scheduler.conf.conf_is_correct
 
         # Broker, Poller, Reactionner and Receiver named as in the configuration
         link = self.arbiter.conf.brokers.find_by_name('broker-master')
@@ -132,10 +132,10 @@ class TestConfig(AlignakTest):
         assert self.arbiter.conf.conf_is_correct
 
         # Configuration inner properties are valued
-        assert self.arbiter.conf.main_config_file == os.path.abspath('cfg/cfg_default.cfg')
-        assert self.arbiter.conf.config_base_dir == 'cfg'
+        assert self.arbiter.conf.main_config_file == os.path.abspath('cfg/alignak.ini')
+        assert self.arbiter.conf.config_base_dir == '/home/alignak/alignak/test/cfg'
         # Default Alignak name is the arbiter name
-        assert self.arbiter.conf.alignak_name == 'arbiter-master'
+        assert self.arbiter.conf.alignak_name == 'My Alignak'
 
     def test_config_conf_inner_properties_named_alignak(self):
         """ Default configuration with an alignak_name property
@@ -155,21 +155,20 @@ class TestConfig(AlignakTest):
         assert self.arbiter.conf.conf_is_correct
 
         # Alignak name is defined in the arbiter
-        assert self.arbiter.conf.alignak_name == 'my_alignak'
-        assert self.arbiter.alignak_name == 'my_alignak'
+        assert self.arbiter.conf.alignak_name == 'My Alignak'
+        assert self.arbiter.alignak_name == 'My Alignak'
 
         # Alignak name is defined in the configuration dispatched to the schedulers
         assert len(self.arbiter.dispatcher.schedulers) == 1
         for scheduler in self.arbiter.dispatcher.schedulers:
-            assert 'alignak_name' in scheduler.conf_package
-            assert scheduler.conf_package.get('alignak_name') == 'my_alignak'
+            assert 'alignak_name' in scheduler.cfg
+            assert scheduler.cfg.get('alignak_name') == 'My Alignak'
 
         # Alignak name is defined in the configuration dispatched to the satellites
         assert len(self.arbiter.dispatcher.satellites) == 4
         for satellite in self.arbiter.dispatcher.satellites:
-            print(satellite.cfg)
             assert 'alignak_name' in satellite.cfg
-            assert satellite.cfg.get('alignak_name') == 'my_alignak'
+            assert satellite.cfg.get('alignak_name') == 'My Alignak'
 
     def test_config_ok_no_declared_daemons(self):
         """ Default configuration has no loading problems ... but no daemons are defined
@@ -178,7 +177,7 @@ class TestConfig(AlignakTest):
         :return: None
         """
         self.print_header()
-        self.setup_with_file('cfg/cfg_config_simple.cfg')
+        self.setup_with_file('cfg/cfg_default.cfg', 'cfg/config/alignak-no-daemons.ini')
         assert self.conf_is_correct
 
         # No error messages
@@ -241,7 +240,7 @@ class TestConfig(AlignakTest):
         # No warning messages
         assert len(self.configuration_warnings) == 0
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('spaced-host')
+        host = self._scheduler.hosts.find_by_name('spaced-host')
         assert host is not None
 
     def test_plus_syntax(self):
@@ -309,7 +308,7 @@ class TestConfig(AlignakTest):
         # No warning messages
         assert len(self.configuration_warnings) == 0
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "myhost", "same_service")
         assert svc is not None
         assert 'general1' == svc.check_command.command.command_name
@@ -327,18 +326,18 @@ class TestConfig(AlignakTest):
         self.setup_with_file('cfg/config/alignak_service_not_hostname.cfg')
         assert self.conf_is_correct
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         assert host is not None
         assert host.is_correct()
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
         # Check that the service is attached to test_host_0
         assert svc is not None
         assert svc.is_correct()
 
         # Check that the service is NOT attached to test_host_1
-        svc_not = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc_not = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_1", "test_ok_0")
         assert svc_not is None
 
@@ -356,7 +355,7 @@ class TestConfig(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/config/alignak_service_description_inheritance.cfg')
         assert self.conf_is_correct
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         # Service linked to an host
         svc = self._sched.services.find_srv_by_name_and_hostname("MYHOST", "SSH")
@@ -414,7 +413,7 @@ class TestConfig(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/config/alignak_service_description_inheritance.cfg')
         assert self.conf_is_correct
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         # An host
         host = self._sched.hosts.find_by_name("test.host.A")
@@ -507,14 +506,13 @@ class TestConfig(AlignakTest):
         assert len(self.configuration_errors) == 2
         self.assert_any_cfg_log_match(
             re.escape(
-                "[config] cannot open config file 'cfg/config/etc/broken_1/minimal.cfg' for "
-                "reading: [Errno 2] No such file or directory: "
-                "u'cfg/config/etc/broken_1/minimal.cfg'"
+                "cannot open file 'cfg/config/etc/broken_1/minimal.cfg' for reading: "
+                "[Errno 2] No such file or directory: u'cfg/config/etc/broken_1/minimal.cfg'"
             )
         )
         self.assert_any_cfg_log_match(
             re.escape(
-                "[config] cannot open config file 'cfg/config/resource.cfg' for reading: "
+                "cannot open file 'cfg/config/resource.cfg' for reading: "
                 "[Errno 2] No such file or directory: u'cfg/config/resource.cfg'"
             )
         )
@@ -578,27 +576,7 @@ class TestConfig(AlignakTest):
         ))
 
         # Warning messages
-        assert len(self.configuration_warnings) == 11
-        self.assert_any_cfg_log_match(re.escape(
-            "Guessing the property failure_prediction_enabled type because "
-            "it is not in Config object properties"
-        ))
-        self.assert_any_cfg_log_match(re.escape(
-            "Guessing the property obsess_over_hosts type because "
-            "it is not in Config object properties"
-        ))
-        self.assert_any_cfg_log_match(re.escape(
-            "Guessing the property ochp_command type because "
-            "it is not in Config object properties"
-        ))
-        self.assert_any_cfg_log_match(re.escape(
-            "Guessing the property obsess_over_services type because "
-            "it is not in Config object properties"
-        ))
-        self.assert_any_cfg_log_match(re.escape(
-            "Guessing the property ocsp_command type because "
-            "it is not in Config object properties"
-        ))
+        assert len(self.configuration_warnings) == 6
         self.assert_any_cfg_log_match(re.escape(
             "use_regexp_matching parameter is not managed."
         ))
@@ -629,27 +607,7 @@ class TestConfig(AlignakTest):
         assert len(self.configuration_errors) == 0
 
         # Warning messages
-        assert len(self.configuration_warnings) == 11
-        self.assert_any_cfg_log_match(re.escape(
-            "Guessing the property failure_prediction_enabled type because "
-            "it is not in Config object properties"
-        ))
-        self.assert_any_cfg_log_match(re.escape(
-            "Guessing the property obsess_over_hosts type because "
-            "it is not in Config object properties"
-        ))
-        self.assert_any_cfg_log_match(re.escape(
-            "Guessing the property ochp_command type because "
-            "it is not in Config object properties"
-        ))
-        self.assert_any_cfg_log_match(re.escape(
-            "Guessing the property obsess_over_services type because "
-            "it is not in Config object properties"
-        ))
-        self.assert_any_cfg_log_match(re.escape(
-            "Guessing the property ocsp_command type because "
-            "it is not in Config object properties"
-        ))
+        assert len(self.configuration_warnings) == 6
         self.assert_any_cfg_log_match(re.escape(
             "failure_prediction_enabled parameter is not managed."
         ))
@@ -683,12 +641,12 @@ class TestConfig(AlignakTest):
         assert len(self.configuration_errors) == 2
         self.assert_any_cfg_log_match(
             re.escape(
-                "[config] cannot open config dir 'cfg/config/not-existing-dir' for reading"
+                "cannot open directory 'cfg/config/not-existing-dir' for reading"
             )
         )
         self.assert_any_cfg_log_match(
             re.escape(
-                "[config] cannot open config file 'cfg/config/resource.cfg' for reading: "
+                "cannot open file 'cfg/config/resource.cfg' for reading: "
                 "[Errno 2] No such file or directory: u'cfg/config/resource.cfg'"
             )
         )
@@ -730,11 +688,13 @@ class TestConfig(AlignakTest):
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/cfg_bad_contact_in_service.cfg')
         assert not self.conf_is_correct
+        self.show_logs()
         self.show_configuration_logs()
 
         # The service got a unknown contact. It should raise an error
         svc = self.arbiter.conf.services.find_srv_by_name_and_hostname("test_host_0",
                                                                        "test_ok_0_badcon")
+        print "Svc:", svc
         print "Contacts:", svc.contacts
         assert not svc.is_correct()
         self.assert_any_cfg_log_match(
@@ -776,7 +736,7 @@ class TestConfig(AlignakTest):
         According to the order in which errors are detected, the reported error messages are not
         the same!
 
-        To avoid such a problem, the relma containing an unknown member for this test must
+        To avoid such a problem, the realm containing an unknown member for this test must
         not be used in an host configuration :)
 
         :return: None
@@ -987,49 +947,37 @@ class TestConfig(AlignakTest):
             "got hosts from another realm: Realm2"
         )
 
-    def test_bad_satellite_broker_realm_conf(self):
-        """ Configuration is not correct because a broker conf has an unknown realm
+    def test_bad_satellite_realm_conf(self):
+        """ Configuration is not correct because a daemon configuration has an unknown realm
 
         :return: None
         """
         self.print_header()
         with pytest.raises(SystemExit):
-            self.setup_with_file('cfg/cfg_bad_realm_in_broker.cfg')
+            self.setup_with_file('cfg/cfg_default.cfg', 'cfg/config/alignak-bad-realms.ini')
+            self.show_logs()
         assert not self.conf_is_correct
         self.show_configuration_logs()
 
-        self.assert_any_cfg_log_match(
-            "Configuration in broker::Broker-test is incorrect; "
-            "from: cfg/config/bad_realm_broker.cfg:1"
-        )
-        self.assert_any_cfg_log_match(
-            "The broker Broker-test got a unknown realm 'NoGood'"
-        )
-        self.assert_any_cfg_log_match(
-            "brokers configuration is incorrect!"
-        )
-
-    def test_bad_satellite_poller_realm_conf(self):
-        """ Configuration is not correct because a broker conf has an unknown realm
-
-        :return: None
-        """
-        self.print_header()
-        with pytest.raises(SystemExit):
-            self.setup_with_file('cfg/cfg_bad_realm_in_poller.cfg')
-        assert not self.conf_is_correct
-        self.show_configuration_logs()
-
-        self.assert_any_cfg_log_match(
-            "Configuration in poller::Poller-test is incorrect; "
-            "from: cfg/config/bad_realm_poller.cfg:1"
-        )
-        self.assert_any_cfg_log_match(
-            "The poller Poller-test got a unknown realm 'NoGood'"
-        )
-        self.assert_any_cfg_log_match(
-            "pollers configuration is incorrect!"
-        )
+        self.assert_any_cfg_log_match("Configuration in broker::broker-master is incorrect; from: ")
+        self.assert_any_cfg_log_match("The broker broker-master got a unknown realm 'Unknown'")
+        self.assert_any_cfg_log_match("brokers configuration is incorrect!"        )
+        self.assert_any_cfg_log_match("Configuration in scheduler::scheduler-master is incorrect; from: ")
+        self.assert_any_cfg_log_match("The scheduler scheduler-master got a unknown realm 'Unknown'")
+        self.assert_any_cfg_log_match("schedulers configuration is incorrect!")
+        self.assert_any_cfg_log_match("Configuration in poller::poller-master is incorrect; from: ")
+        self.assert_any_cfg_log_match("The poller poller-master got a unknown realm 'Unknown'")
+        self.assert_any_cfg_log_match("pollers configuration is incorrect!"        )
+        self.assert_any_cfg_log_match("Configuration in reactionner::reactionner-master is incorrect; from: ")
+        self.assert_any_cfg_log_match("The reactionner reactionner-master got a unknown realm 'Unknown'")
+        self.assert_any_cfg_log_match("reactionners configuration is incorrect!"        )
+        self.assert_any_cfg_log_match("Configuration in receiver::receiver-master is incorrect; from: ")
+        self.assert_any_cfg_log_match("The receiver receiver-master got a unknown realm 'Unknown'")
+        self.assert_any_cfg_log_match("receivers configuration is incorrect!")
+        # The arbiter may have an unknown realm...
+        # self.assert_any_cfg_log_match("Configuration in arbiter::arbiter-master is incorrect; from: ")
+        # self.assert_any_cfg_log_match("The arbiter arbiter-master got a unknown realm 'Unknown'")
+        # self.assert_any_cfg_log_match("arbiters configuration is incorrect!"        )
 
     def test_bad_service_interval(self):
         """ Configuration is not correct because of a bad check_interval in service
@@ -1060,7 +1008,7 @@ class TestConfig(AlignakTest):
         self.setup_with_file('cfg/cfg_default.cfg')
         assert self.conf_is_correct
 
-        contact = self.schedulers['scheduler-master'].sched.contacts.find_by_name('test_contact')
+        contact = self._scheduler.contacts.find_by_name('test_contact')
         assert contact.contact_name == 'test_contact'
         assert contact.email == 'nobody@localhost'
         assert contact.customs == {u'_VAR2': u'text', u'_VAR1': u'10'}
@@ -1074,16 +1022,16 @@ class TestConfig(AlignakTest):
         self.setup_with_file('cfg/config/host_config_all.cfg')
         assert self.conf_is_correct
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_000')
+        host = self._scheduler.hosts.find_by_name('test_host_000')
         assert 'DOWN' == host.state
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_001')
+        host = self._scheduler.hosts.find_by_name('test_host_001')
         assert 'UNREACHABLE' == host.state
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_002')
+        host = self._scheduler.hosts.find_by_name('test_host_002')
         assert 'UP' == host.state
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_003')
+        host = self._scheduler.hosts.find_by_name('test_host_003')
         assert 'UP' == host.state
 
     def test_config_hosts_names(self):
@@ -1118,7 +1066,7 @@ class TestConfig(AlignakTest):
         assert hst is not None, "host 'test_host_2;with_semicolon' not found"
         assert hst.is_correct(), "config of host '%s' is not true" % hst.get_name()
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name(
+        host = self._scheduler.hosts.find_by_name(
             "test_host_2;with_semicolon")
         assert host is not None, "host 'test_host_2;with_semicolon' not found"
         assert 'UP' == host.state
@@ -1126,7 +1074,7 @@ class TestConfig(AlignakTest):
         # We can send a command by escaping the semicolon.
         command = r'[%lu] PROCESS_HOST_CHECK_RESULT;test_host_2\;with_semicolon;2;down' % (
             time.time())
-        self.schedulers['scheduler-master'].sched.run_external_command(command)
+        self._scheduler.run_external_command(command)
         self.external_command_loop()
         assert 'DOWN' == host.state
 
@@ -1161,23 +1109,23 @@ class TestConfig(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/config/service_config_all.cfg')
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             'test_host_0', 'test_service_0')
         assert 'WARNING' == svc.state
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             'test_host_0', 'test_service_1')
         assert 'UNKNOWN' == svc.state
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             'test_host_0', 'test_service_2')
         assert 'CRITICAL' == svc.state
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             'test_host_0', 'test_service_3')
         assert 'OK' == svc.state
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             'test_host_0', 'test_service_4')
         assert 'OK' == svc.state
 

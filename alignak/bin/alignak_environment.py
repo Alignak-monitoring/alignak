@@ -33,7 +33,7 @@ alignak-environment command line interface::
         This script will parse the provided configuration file and it will output all the
         variables defined in this file as Linux/Unix shell export variables.
 
-        As an example for a file as the default ./etc/alignak.ini, the script will output:
+        As an example for a file as the default ./etc/alignak-realm2.ini, the script will output:
             export ALIGNAK_VERSION=1.0.0
             export ALIGNAK_CONFIGURATION_DIST_BIN=../alignak/bin
             export ALIGNAK_CONFIGURATION_DIST_ETC=../etc
@@ -230,10 +230,10 @@ alignak-environment command line interface::
             alignak-environment (-h | --help)
 
         Parse Alignak configuration file and define environment variables
-            cfg_file ../etc/alignak.ini
+            cfg_file ../etc/alignak-realm2.ini
 
         Parse Alignak configuration file and define environment variables and print information
-            cfg_file -v ../etc/alignak.ini
+            cfg_file -v ../etc/alignak-realm2.ini
 
         Exit code:
             0 if required operation succeeded
@@ -257,6 +257,7 @@ from docopt import docopt, DocoptExit
 
 from alignak.version import VERSION as __version__
 
+SECTION_CONFIGURATION = "alignak-configuration"
 
 class AlignakConfigParser(object):
     """
@@ -315,19 +316,19 @@ class AlignakConfigParser(object):
 
         :return: None
         """
-        config = ConfigParser.ConfigParser()
-        config.read(self.configuration_file)
-        if config._sections == {}:
+        self.config = ConfigParser.ConfigParser()
+        self.config.read(self.configuration_file)
+        if self.config._sections == {}:
             print("* bad formatted configuration file: %s " % self.configuration_file)
             if self.embedded:
                 raise ValueError
             sys.exit(2)
 
         try:
-            for section in config.sections():
+            for section in self.config.sections():
                 if self.verbose:
                     print("- section: %s" % section)
-                for (key, value) in config.items(section):
+                for (key, value) in self.config.items(section):
                     inner_property = "%s.%s" % (section, key)
 
                     # Set object property
@@ -356,6 +357,101 @@ class AlignakConfigParser(object):
         if self.verbose:
             print("Configuration file parsed correctly")
 
+    def _search_sections(self, searched_sections=''):
+        """
+        Search sections in the configuration which name starts with the provided search criteria
+        :param searched_sections:
+        :return: a dict containing the found sections and their parameters
+        """
+        found_sections = {}
+        # Get the daemons related properties
+        for section in self.config.sections():
+            if not section.startswith(searched_sections):
+                continue
+
+            if section not in found_sections:
+                found_sections.update({section: {'imported_from': self.configuration_file}})
+            for (key, value) in self.config.items(section):
+                found_sections[section].update({key: value})
+        return found_sections
+
+    def get_monitored_configuration(self):
+        """
+        Get the Alignak monitored configuration parameters
+
+        :return: a dict containing the Alignak configuration files
+        """
+        configuration = self._search_sections(SECTION_CONFIGURATION)
+        if SECTION_CONFIGURATION not in configuration:
+            return []
+        for prop, value in configuration[SECTION_CONFIGURATION].items():
+            if not prop.startswith('cfg'):
+                configuration[SECTION_CONFIGURATION].pop(prop)
+        return configuration[SECTION_CONFIGURATION]
+
+    def get_alignak_configuration(self):
+        """
+        Get the Alignak global parameters. Indeed all the parameters defined in the DEFAULT
+        ini file section...
+
+        :return: a dict containing the Alignak parameters
+        """
+        return self.config.defaults()
+
+    def get_daemons(self, name=None, type=None):
+        """
+        Get the daemons configuration parameters
+
+        If name is provided, get the configuration for this daemon, else,
+        If type is provided, get the configuration for all the daemons of this type, else
+        get the configuration of all the daemons.
+
+        :param name: the searched daemon name
+        :param type: the searched daemon type
+        :return: a dict containing the daemon(s) configuration parameters
+        """
+        if name is not None:
+            sections = self._search_sections('daemon.' + name)
+            if 'daemon.' + name in sections:
+                return sections['daemon.' + name]
+            return {}
+
+        if type is not None:
+            sections = self._search_sections('daemon.')
+            for name, daemon in sections.items():
+                if 'type' not in daemon or not daemon['type'] == type:
+                    sections.pop(name)
+            return sections
+
+        return self._search_sections('daemon.')
+
+    def get_modules(self, name=None, daemon_name=None):
+        """
+        Get the modules configuration parameters
+
+        If name is provided, get the configuration for this module, else,
+        If daemon_name is provided, get the configuration for all the modules of this daemon, else
+        get the configuration of all the modules.
+
+        :param name: the searched module name
+        :param daemon_name: the modules of this daemon
+        :return: a dict containing the module(s) configuration parameters
+        """
+        if name is not None:
+            sections = self._search_sections('module.' + name)
+            if 'module.' + name in sections:
+                return sections['module.' + name]
+            return {}
+
+        if daemon_name is not None:
+            section = self.get_daemons(daemon_name)
+            if 'modules' in section and section['modules']:
+                modules = []
+                for module in section['modules'].split(','):
+                    modules.append(self.get_modules(module))
+            return []
+
+        return self._search_sections('module.')
 
 def main():
     """

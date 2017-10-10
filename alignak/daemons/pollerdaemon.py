@@ -67,8 +67,8 @@ class Poller(Satellite):
     })
 
     def __init__(self, **kwargs):
-        self.daemon_name = 'poller-master'
-        if 'daemon_name' in kwargs and kwargs['daemon_name']:
-            self.daemon_name = kwargs['daemon_name']
+        """Poller daemon initialisation
 
-        super(Poller, self).__init__(self.daemon_name, **kwargs)
+        :param kwargs: command line arguments
+        """
+        super(Poller, self).__init__(kwargs.get('daemon_name', 'Default-poller'), **kwargs)

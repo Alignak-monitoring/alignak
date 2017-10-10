@@ -136,16 +136,16 @@ class CheckModulation(Item):
             msg = "[checkmodulation::%s] do not have any check_command defined" % (
                 self.get_name()
             )
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             state = False
         else:
             if self.check_command is None:
                 msg = "[checkmodulation::%s] a check_command is missing" % (self.get_name())
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
                 state = False
             if not self.check_command.is_valid():
                 msg = "[checkmodulation::%s] a check_command is invalid" % (self.get_name())
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
                 state = False
 
         # Ok just put None as check_period, means 24x7

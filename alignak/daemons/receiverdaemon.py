@@ -84,16 +84,14 @@ class Receiver(Satellite):
     })
 
     def __init__(self, **kwargs):
-        self.daemon_name = 'receiver-master'
-        if 'daemon_name' in kwargs and kwargs['daemon_name']:
-            self.daemon_name = kwargs['daemon_name']
+        """Receiver daemon initialisation
 
-        super(Receiver, self).__init__(self.daemon_name, **kwargs)
+        :param kwargs: command line arguments
+        """
+        super(Receiver, self).__init__(kwargs.get('daemon_name', 'Default-receiver'), **kwargs)
 
-        # Our arbiters
+        # Our related daemons
         self.arbiters = {}
-
-        # Our pollers and reactionners
         self.pollers = {}
         self.reactionners = {}
 
@@ -196,125 +194,57 @@ class Receiver(Satellite):
 
     def setup_new_conf(self):
         """Receiver custom setup_new_conf method
-        Implements specific setup for receiver
+
+        This function calls the base satellite treatment and manages the configuration needed
+        for a broker daemon:
+        - get and configure its pollers, reactionners and receivers relation
+        - configure the modules
 
         :return: None
         """
+        # Execute the base class treatment...
+        super(Receiver, self).setup_new_conf()
+
+        # ...then our own specific treatment!
         with self.conf_lock:
-            self.clean_previous_run()
-            conf = unserialize(self.new_conf, True)
-            self.new_conf = None
-            self.cur_conf = conf
-            # Got our name from the globals
-            if 'receiver_name' in conf['global']:
-                name = conf['global']['receiver_name']
-            else:
-                name = 'Unnamed receiver'
-            self.name = name
-            # Set my own process title
-            self.set_proctitle(self.name)
+            print("Receiver - New configuration for: %s / %s" % (self.type, self.name))
+            logger.info("[%s] Received a new configuration", self.name)
+            print("Receiver - My schedulers: %s" % self.schedulers)
 
-            logger.info("[%s] Received a new configuration, containing:", self.name)
-            for key in conf:
-                logger.info("[%s] - %s", self.name, key)
-            logger.debug("[%s] global configuration part: %s", self.name, conf['global'])
-
-            # local statsd
-            self.statsd_host = conf['global']['statsd_host']
-            self.statsd_port = conf['global']['statsd_port']
-            self.statsd_prefix = conf['global']['statsd_prefix']
-            self.statsd_enabled = conf['global']['statsd_enabled']
-
-            statsmgr.register(self.name, 'receiver',
-                              statsd_host=self.statsd_host, statsd_port=self.statsd_port,
-                              statsd_prefix=self.statsd_prefix, statsd_enabled=self.statsd_enabled)
-
-            self.accept_passive_unknown_check_results = \
-                conf['global']['accept_passive_unknown_check_results']
-
-            g_conf = conf['global']
+            # self_conf is our own configuration from the alignak environment
+            self_conf = self.cur_conf['self_conf']
 
             # If we've got something in the schedulers, we do not want it anymore
             # Beware that schedulers are not SchedulerLink objects
             # but only schedulers configuration!
             self.host_assoc = {}
-            for sched_id in conf['schedulers']:
-
-                old_sched_id = self.get_previous_sched_id(conf['schedulers'][sched_id], sched_id)
-
-                wait_homerun = {}
-                actions = {}
-                external_commands = []
-                con = None
-                if old_sched_id:
-                    logger.info("[%s] We already got the conf %s (%s)",
-                                self.name, old_sched_id, name)
-                    wait_homerun = self.schedulers[old_sched_id]['wait_homerun']
-                    actions = self.schedulers[old_sched_id]['actions']
-                    external_commands = self.schedulers[old_sched_id]['external_commands']
-                    con = self.schedulers[old_sched_id]['con']
-                    del self.schedulers[old_sched_id]
-
-                sched = conf['schedulers'][sched_id]
-                self.schedulers[sched_id] = sched
-
+            # For each scheduler, we received its managed hosts list
+            for link_uuid in self.schedulers:
                 # We received the hosts names for each scheduler
-                self.push_host_names(sched_id, sched['hosts_names'])
+                print("Received hosts names: %s" % self.schedulers[link_uuid].hosts_names)
+                self.push_host_names(link_uuid, self.schedulers[link_uuid].hosts_names)
 
-                if sched['name'] in g_conf['satellitemap']:
-                    sched.update(g_conf['satellitemap'][sched['name']])
-
-                proto = 'http'
-                if sched['use_ssl']:
-                    proto = 'https'
-                uri = '%s://%s:%s/' % (proto, sched['address'], sched['port'])
-
-                # todo: All this stuff is perharps not necessary... to be cleaned!
-                self.schedulers[sched_id]['name'] = sched['name']
-                self.schedulers[sched_id]['uri'] = uri
-                self.schedulers[sched_id]['wait_homerun'] = wait_homerun
-                self.schedulers[sched_id]['actions'] = actions
-                self.schedulers[sched_id]['external_commands'] = external_commands
-                self.schedulers[sched_id]['con'] = con
-                self.schedulers[sched_id]['running_id'] = 0
-                self.schedulers[sched_id]['active'] = sched['active']
-                self.schedulers[sched_id]['timeout'] = sched['timeout']
-                self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
-                self.schedulers[sched_id]['last_connection'] = 0
-                self.schedulers[sched_id]['connection_attempt'] = 0
-                self.schedulers[sched_id]['max_failed_connections'] = 3
-
-                # Do not connect if we are a passive satellite
-                # Todo: 1/ this comment is incorrect, 2/ we should connect anyway...
-                if not old_sched_id:
-                    # And then we connect to it :)
-                    self.daemon_connection_init(sched_id)
-
-            logger.debug("We have our schedulers: %s", self.schedulers)
-            logger.info("We have our schedulers:")
-            for daemon in self.schedulers.values():
-                logger.info(" - %s ", daemon['name'])
-
+            # Configure and start our modules
             if not self.have_modules:
-                self.modules = conf['global']['modules']
+                self.modules = self_conf['modules']
                 self.have_modules = True
 
                 self.do_load_modules(self.modules)
                 # and start external modules too
                 self.modules_manager.start_external_instances()
 
-            # Set our giving timezone from arbiter
-            use_timezone = conf['global']['use_timezone']
-            if use_timezone != 'NOTSET':
-                logger.info("Setting our timezone to %s", use_timezone)
-                os.environ['TZ'] = use_timezone
-                time.tzset()
-
             # Now create the external commands manager
             # We are a receiver: our role is to get and dispatch commands to the schedulers
             self.external_commands_manager = \
                 ExternalCommandManager(None, 'receiver', self,
-                                       conf['global']['accept_passive_unknown_check_results'])
+                                       self_conf.get('accept_passive_unknown_check_results', False))
+
+            # Initialize connection with all our satellites
+            my_satellites = self.get_links_of_type(s_type=None)
+            for sat_link in my_satellites:
+                satellite = my_satellites[sat_link]
+                print("Initialize connection with: %s" % satellite)
+                self.daemon_connection_init(satellite.uuid, s_type=satellite.type)
 
     def push_external_commands_to_schedulers(self):
         """Send a HTTP request to the schedulers (POST /run_external_commands)
@@ -339,7 +269,7 @@ class Receiver(Satellite):
                 # Send global command to all our schedulers
                 for scheduler_id in self.schedulers:
                     scheduler = self.schedulers[scheduler_id]
-                    scheduler['external_commands'].append(ext_cmd)
+                    scheduler.external_commands.append(ext_cmd)
 
         # Now for all alive schedulers, send the commands
         pushed_commands = 0
@@ -446,7 +376,7 @@ class Receiver(Satellite):
         # Maybe we do not have something to do, so we wait a little
         # todo: check broks in the receiver ???
         if not self.broks:
-            self.watch_for_new_conf(1.0)
+            self.watch_for_new_conf(0.1)
 
     def main(self):
         """Main receiver function

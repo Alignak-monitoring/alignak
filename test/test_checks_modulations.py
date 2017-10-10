@@ -56,7 +56,7 @@ class TestCheckModulations(AlignakTest):
         self.setup_with_file('./cfg/cfg_checks_modulations.cfg')
         assert self.conf_is_correct
 
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
     def test_checks_modulated_host_and_service(self):
         """ Check modulation for an host and its service """

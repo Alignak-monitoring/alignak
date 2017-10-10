@@ -47,15 +47,15 @@ if [ -z ${ALIGNAK_CONFIGURATION_INI} ]; then
        echo "Alignak ini configuration file is defined in the environment"
        ALIGNAK_CONFIGURATION_INI="$ALIGNAKINI"
    else
-       if [ -f "/usr/local/etc/alignak/alignak.ini" ]; then
+       if [ -f "/usr/local/etc/alignak/alignak-realm2.ini" ]; then
            echo "Alignak ini configuration file found in /usr/local/etc/alignak folder"
-           ALIGNAK_CONFIGURATION_INI="/usr/local/etc/alignak/alignak.ini"
+           ALIGNAK_CONFIGURATION_INI="/usr/local/etc/alignak/alignak-realm2.ini"
        else
-           if [ -f "/etc/alignak/alignak.ini" ]; then
+           if [ -f "/etc/alignak/alignak-realm2.ini" ]; then
                echo "Alignak ini configuration file found in /etc/alignak folder"
-               ALIGNAK_CONFIGURATION_INI="/etc/alignak/alignak.ini"
+               ALIGNAK_CONFIGURATION_INI="/etc/alignak/alignak-realm2.ini"
            else
-               ALIGNAK_CONFIGURATION_INI="$DIR/../etc/alignak.ini"
+               ALIGNAK_CONFIGURATION_INI="$DIR/../etc/alignak-realm2.ini"
            fi
        fi
    fi

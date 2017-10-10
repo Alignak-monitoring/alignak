@@ -79,8 +79,7 @@ class Hostgroup(Itemgroup):
         'notes':                StringProp(default='', fill_brok=['full_status']),
         'notes_url':            StringProp(default='', fill_brok=['full_status']),
         'action_url':           StringProp(default='', fill_brok=['full_status']),
-        'realm':                StringProp(default='', fill_brok=['full_status'],
-                                           conf_send_preparation=get_obj_name),
+        'realm':                StringProp(default='', fill_brok=['full_status']),
     })
 
     macros = {
@@ -258,7 +257,7 @@ class Hostgroups(Itemgroups):
             else:
                 err = "the hostgroup %s got an unknown realm '%s'" % \
                       (hostgroup.get_name(), hostgroup.realm)
-                hostgroup.configuration_errors.append(err)
+                hostgroup.add_error(err)
                 hostgroup.realm = None
                 continue
 

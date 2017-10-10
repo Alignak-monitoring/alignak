@@ -55,7 +55,7 @@ class TestBusinesscorrelNotifications(AlignakTest):
 
     def setUp(self):
         self.setup_with_file('cfg/cfg_business_correlator_notifications.cfg')
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
     def test_bprule_standard_notifications(self):
         """Standard notifications for BP rules"""

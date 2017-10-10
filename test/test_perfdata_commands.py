@@ -72,7 +72,7 @@ class TestPerfdataCommands(AlignakTest):
         """
         self.print_header()
 
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         # We want an event handler (the perfdata command) to be put in the actions dict
         # after we got a service check
@@ -115,7 +115,7 @@ class TestPerfdataCommands(AlignakTest):
         """
         self.print_header()
 
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         # We want an event handler (the perfdata command) to be put in the actions dict
         # after we got a service check
@@ -158,7 +158,7 @@ class TestPerfdataCommands(AlignakTest):
         """
         self.print_header()
 
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         # We want an event handler (the perfdata command) to be put in the actions dict
         # after we got a service check

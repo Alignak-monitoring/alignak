@@ -218,7 +218,8 @@ class SchedulerInterface(GenericInterface):
 
         :return: None
         """
-        self.app.sched.die()
+        # Stop the current scheduling loop
+        self.app.sched.stop_scheduling()
         conf = cherrypy.request.json
         super(SchedulerInterface, self).put_conf(conf['conf'])
 
@@ -230,6 +231,6 @@ class SchedulerInterface(GenericInterface):
         :return: None
         """
         with self.app.conf_lock:
-            logger.warning("Arbiter wants me to wait for a new configuration")
-            self.app.sched.die()
+            logger.warning("My Arbiter wants me to wait for a new configuration.")
+            self.app.sched.stop_scheduling()
             super(SchedulerInterface, self).wait_new_conf()

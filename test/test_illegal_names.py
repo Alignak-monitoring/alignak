@@ -66,7 +66,7 @@ class TestConfig(AlignakTest):
 
         illegal_characts = self.arbiter.conf.illegal_object_name_chars
         print "Illegal caracters: %s" % illegal_characts
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         # should be correct
         assert host.is_correct()
 

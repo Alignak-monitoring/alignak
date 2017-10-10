@@ -57,7 +57,7 @@ class TestPropertyOverride(AlignakTest):
     def setUp(self):
         self.setup_with_file('cfg/cfg_property_override.cfg')
         assert self.conf_is_correct
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
         
     def test_service_property_override(self):
         """ Property override """

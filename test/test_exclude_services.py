@@ -55,7 +55,7 @@ class TestExcludeServices(AlignakTest):
 
     def setUp(self):
         self.setup_with_file('cfg/cfg_exclude_include_services.cfg')
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
     def test_exclude_services(self):
         """

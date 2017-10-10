@@ -41,11 +41,12 @@ class TestMonitoringLogs(AlignakTest):
         :param expected_logs: expected monitoring logs
         :return:
         """
-        self._sched.brokers['broker-master']['broks'] = {}
+        # self._scheduler.brokers['broker-master']['broks'] = {}
+        self._broker.broks = {}
         self.scheduler_loop(1, [[item, state_id, state]])
         time.sleep(0.1)
         monitoring_logs = []
-        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+        for brok in self._broker.broks.itervalues():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -66,9 +67,7 @@ class TestMonitoringLogs(AlignakTest):
         assert self.conf_is_correct
 
 
-        self._sched = self.schedulers['scheduler-master'].sched
-
-        host = self._sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         # Make notifications sent very quickly
         host.notification_interval = 10.0
         host.checks_in_progress = []
@@ -132,14 +131,14 @@ class TestMonitoringLogs(AlignakTest):
         self.setup_with_file('cfg/cfg_monitoring_logs.cfg')
         assert self.conf_is_correct
 
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
-        host = self._sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = True
 
-        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         # Make notifications sent very quickly
         svc.notification_interval = 10.0
         svc.checks_in_progress = []
@@ -257,9 +256,9 @@ class TestMonitoringLogs(AlignakTest):
         self.setup_with_file('cfg/cfg_monitoring_logs_disabled.cfg')
         assert self.conf_is_correct
 
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
-        host = self._sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         # Make notifications sent very quickly
         host.notification_interval = 10.0
         host.checks_in_progress = []
@@ -305,14 +304,14 @@ class TestMonitoringLogs(AlignakTest):
         self.setup_with_file('cfg/cfg_monitoring_logs_disabled.cfg')
         assert self.conf_is_correct
 
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
-        host = self._sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         # Make notifications sent very quickly
         svc.notification_interval = 10.0
         svc.checks_in_progress = []
@@ -372,23 +371,23 @@ class TestMonitoringLogs(AlignakTest):
         self.setup_with_file('cfg/cfg_monitoring_logs.cfg')
         assert self.conf_is_correct
 
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         now = int(time.time())
 
-        host = self._sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
 
         # Receiver receives unknown host external command
         excmd = '[%d] CHANGE_SVC_MODATTR;test_host_0;test_ok_0;1' % time.time()
-        self._sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
 
         excmd = '[%d] CHANGE_RETRY_HOST_CHECK_INTERVAL;test_host_0;42' % now
-        self._sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
 
         monitoring_logs = []
-        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+        for brok in self._broker.broks.itervalues():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -419,16 +418,16 @@ class TestMonitoringLogs(AlignakTest):
         self.setup_with_file('cfg/cfg_monitoring_logs.cfg')
         assert self.conf_is_correct
 
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         # Force the log passive checks configuration parameter
-        self._sched.conf.log_passive_checks = log_passive_checks
+        self._scheduler.conf.log_passive_checks = log_passive_checks
 
         # -----------------------------
         # Host part
         # -----------------------------
         # Get and configure host
-        host = self._sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router which we depend of
         host.event_handler_enabled = False
@@ -438,19 +437,19 @@ class TestMonitoringLogs(AlignakTest):
 
         # Receive passive host check Down
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now
-        self._sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         assert 'DOWN' == host.state
         assert 'SOFT' == host.state_type
         assert 'Host is dead' == host.output
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now
-        self._sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         assert 'DOWN' == host.state
         assert 'SOFT' == host.state_type
         assert 'Host is dead' == host.output
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now
-        self._sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         assert 'DOWN' == host.state
         assert 'HARD' == host.state_type
@@ -458,7 +457,7 @@ class TestMonitoringLogs(AlignakTest):
 
         # Extract monitoring logs
         monitoring_logs = []
-        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+        for brok in self._broker.broks.itervalues():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -520,10 +519,10 @@ class TestMonitoringLogs(AlignakTest):
         self.setup_with_file('cfg/cfg_monitoring_logs.cfg')
         assert self.conf_is_correct
 
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         # Force the log passive checks configuration parameter
-        self._sched.conf.log_passive_checks = log_passive_checks
+        self._scheduler.conf.log_passive_checks = log_passive_checks
 
         now = int(time.time())
 
@@ -531,7 +530,7 @@ class TestMonitoringLogs(AlignakTest):
         # Service part
         # -----------------------------
         # Get host
-        host = self._sched.hosts.find_by_name('test_host_0')
+        host = self._scheduler.hosts.find_by_name('test_host_0')
         host.checks_in_progress = []
         host.event_handler_enabled = False
         host.active_checks_enabled = True
@@ -539,7 +538,7 @@ class TestMonitoringLogs(AlignakTest):
         assert host is not None
 
         # Get service
-        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.event_handler_enabled = False
         svc.active_checks_enabled = True
@@ -550,7 +549,7 @@ class TestMonitoringLogs(AlignakTest):
         # ---------------------------------------------
         # Receive passive host check Up
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is UP' % time.time()
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         assert 'UP' == host.state
         assert 'Host is UP' == host.output
@@ -558,7 +557,7 @@ class TestMonitoringLogs(AlignakTest):
         # Service is going ok ...
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;' \
                 'Service is OK|rtt=9999;5;10;0;10000' % now
-        self._sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         assert 'OK' == svc.state
         assert 'Service is OK' == svc.output
@@ -569,7 +568,7 @@ class TestMonitoringLogs(AlignakTest):
                 'Service is OK and have some special characters: àéèüäï' \
                 '|rtt=9999;5;10;0;10000' \
                 '\r\nLong output... also some specials: àéèüäï' % now
-        self._sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         assert 'OK' == svc.state
         assert u'Service is OK and have some special characters: àéèüäï' == svc.output
@@ -578,7 +577,7 @@ class TestMonitoringLogs(AlignakTest):
 
         # Extract monitoring logs
         monitoring_logs = []
-        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+        for brok in self._broker.broks.itervalues():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -624,33 +623,33 @@ class TestMonitoringLogs(AlignakTest):
         self.setup_with_file('cfg/cfg_monitoring_logs.cfg')
         assert self.conf_is_correct
 
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         now = int(time.time())
 
         # RESTART_PROGRAM
         excmd = '[%d] RESTART_PROGRAM' % now
-        self._sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         self.assert_any_log_match('RESTART command : libexec/sleep_command.sh 3')
 
         # RELOAD_CONFIG
         excmd = '[%d] RELOAD_CONFIG' % now
-        self._sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         self.assert_any_log_match('RELOAD command : libexec/sleep_command.sh 2')
 
         # UNKNOWN COMMAND
         excmd = '[%d] UNKNOWN_COMMAND' % now
-        self._sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         # Malformed command
         excmd = '[%d] MALFORMED COMMAND' % now
-        self._sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
 
         monitoring_logs = []
-        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+        for brok in self._broker.broks.itervalues():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -669,22 +668,22 @@ class TestMonitoringLogs(AlignakTest):
         self.setup_with_file('cfg/cfg_monitoring_logs_disabled.cfg')
         assert self.conf_is_correct
 
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         # RESTART_PROGRAM
         excmd = '[%d] RESTART_PROGRAM' % int(time.time())
-        self._sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
-        self.assert_any_log_match('RESTART command : libexec/sleep_command.sh 3')
+        self.assert_no_log_match('RESTART command : libexec/sleep_command.sh 3')
 
         # RELOAD_CONFIG
         excmd = '[%d] RELOAD_CONFIG' % int(time.time())
-        self._sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
-        self.assert_any_log_match('RELOAD command : libexec/sleep_command.sh 2')
+        self.assert_no_log_match('RELOAD command : libexec/sleep_command.sh 2')
 
         monitoring_logs = []
-        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+        for brok in self._broker.broks.itervalues():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -694,9 +693,9 @@ class TestMonitoringLogs(AlignakTest):
 
     def test_timeperiod_transition_log(self):
         self.setup_with_file('cfg/cfg_default.cfg')
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
-        tp = self._sched.timeperiods.find_by_name('24x7')
+        tp = self._scheduler.timeperiods.find_by_name('24x7')
 
         self.assertIsNot(tp, None)
 

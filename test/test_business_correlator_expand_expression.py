@@ -63,7 +63,7 @@ class TestBusinessCorrelatorExpand(AlignakTest):
     def setUp(self):
         self.setup_with_file('cfg/cfg_business_correlator_expression.cfg')
         assert self.conf_is_correct
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
     def test_hostgroup_expansion_bprule_simple_host_srv(self):
         """ BR expansion - simple host/service """
