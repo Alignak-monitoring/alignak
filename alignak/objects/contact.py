@@ -362,20 +362,22 @@ class Contact(Item):
             for prop in self.special_properties:
                 if not hasattr(self, prop):
                     msg = "[contact::%s] %s property is missing" % (self.get_name(), prop)
-                    self.configuration_errors.append(msg)
+                    self.add_error(msg)
                     state = False
 
-        if hasattr(self, 'contact_name'):
-            for char in cls.illegal_object_name_chars:
-                if char in self.contact_name:
-                    msg = "[contact::%s] %s character not allowed in contact_name" % (
-                        self.get_name(), char
-                    )
-                    self.configuration_errors.append(msg)
-                    state = False
-        else:
-            if hasattr(self, 'alias'):  # take the alias if we miss the contact_name
+        if not hasattr(self, 'contact_name'):
+            if hasattr(self, 'alias'):
+                # Use the alias if we miss the contact_name
                 self.contact_name = self.alias
+
+        for char in cls.illegal_object_name_chars:
+            if char not in self.contact_name:
+                continue
+
+            msg = "[contact::%s] %s character not allowed in contact_name" \
+                  % (self.get_name(), char)
+            self.add_error(msg)
+            state = False
 
         return super(Contact, self).is_correct() and state
 
@@ -464,7 +466,7 @@ class Contacts(CommandCallItems):
                 else:
                     err = "The 'notificationways' of the %s '%s' named '%s' is unknown!" %\
                           (i.__class__.my_type, i.get_name(), nw_name)
-                    i.configuration_errors.append(err)
+                    i.add_error(err)
             # Get the list, but first make elements unique
             i.notificationways = list(set(new_notificationways))
 

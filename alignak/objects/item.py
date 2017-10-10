@@ -98,23 +98,25 @@ class Item(AlignakObject):
             IntegerProp(default=100),
         # TODO: find why we can't uncomment this line below.
         'register':
-            BoolProp(default=True),
+            BoolProp(default=True)
     })
 
     running_properties = {
         # All errors and warning raised during the configuration parsing
-        # and that will raised real warning/errors during the is_correct
+        # and that will raise real warning/errors during the configuration is_correct check
+        'conf_is_correct':
+            BoolProp(default=True),
         'configuration_warnings':
             ListProp(default=[]),
         'configuration_errors':
             ListProp(default=[]),
-        # We save all template we asked us to load from
+        # We save all templates we asked us to load from
         'tags':
             SetProp(default=set(), fill_brok=['full_status']),
         # used by host, service and contact
+        # todo: conceptually this should be moved to the SchedulingItem and Contact objects...
         'downtimes':
             DictProp(default={}, fill_brok=['full_status'], retention=True),
-
     }
 
     macros = {
@@ -124,14 +126,20 @@ class Item(AlignakObject):
     ok_up = ''
 
     def __init__(self, params=None, parsing=True):
+        # Comment this to avoid too verbose log!
+        # logger.debug("Initializing a %s with %s", self.my_type, params)
         if not parsing:
+            # Unserializing an existing object
             super(Item, self).__init__(params, parsing)
             return
-        cls = self.__class__
+
+        # Creating a new Alignak object instance
         self.uuid = uuid.uuid4().hex
 
-        self.customs = {}  # for custom variables
-        self.plus = {}  # for value with a +
+        # For custom variables
+        self.customs = {}
+        # For values with a +
+        self.plus = {}
         if not hasattr(self, 'old_properties'):
             self.old_properties = {}
 
@@ -148,8 +156,7 @@ class Item(AlignakObject):
                 if key in self.properties:
                     val = self.properties[key].pythonize(params[key])
                 elif key in self.running_properties:
-                    warning = "using the running property %s in a config file" % key
-                    self.configuration_warnings.append(warning)
+                    self.add_warning("using the running property %s in a config file" % key)
                     val = self.running_properties[key].pythonize(params[key])
                 elif hasattr(self, 'old_properties') and key in self.old_properties:
                     val = self.properties[self.old_properties[key]].pythonize(params[key])
@@ -168,30 +175,23 @@ class Item(AlignakObject):
                         # a configuration warning is too much
                         logger.debug("%s, set the macro property '%s' as empty string",
                                      self.get_full_name(), key)
-                        # warning = "Set the macro property '%s' as empty string" % key
-                        # self.configuration_warnings.append(warning)
                         val = ''
                     # After this a macro is always containing a string value!
                 else:
-                    warning = "Guessing the property %s type because " \
-                              "it is not in %s object properties" % \
-                              (key, cls.__name__)
-                    self.configuration_warnings.append(warning)
+                    logger.debug("Guessing the property '%s' type because it "
+                                 "is not in %s object properties", key, self.__class__.__name__)
                     self.properties[key] = ToGuessProp(default='')
                     val = ToGuessProp.pythonize(params[key])
-                    warning = "Guessed the property %s type as a %s" % \
-                              (key, type(val))
-                    self.configuration_warnings.append(warning)
+                    logger.debug("Set the property '%s' type as %s", key, type(val))
             except (PythonizeError, ValueError) as expt:
-                err = "Error while pythonizing parameter '%s': %s" % (key, expt)
-                self.configuration_errors.append(err)
+                self.add_error("Error while pythonizing parameter '%s': %s" % (key, expt))
                 continue
 
             # checks for attribute value special syntax (+ or _)
             # we can have '+param' or ['+template1' , 'template2']
             if isinstance(val, basestring) and len(val) >= 1 and val[0] == '+':
                 err = "A + value for a single string (%s) is not handled" % key
-                self.configuration_errors.append(err)
+                self.add_error(err)
                 continue
 
             if (isinstance(val, list) and
@@ -207,6 +207,9 @@ class Item(AlignakObject):
                 self.customs[custom_name] = val
             else:
                 setattr(self, key, val)
+
+        # Change Nagios2 names to Nagios3 ones (before using them)
+        self.old_properties_names_to_new()
 
     @property
     def id(self):  # pragma: no cover, deprecation
@@ -241,8 +244,9 @@ class Item(AlignakObject):
         for prop, entry in self.__class__.running_properties.items():
             # Copy is slow, so we check type
             # Type with __iter__ are list or dict, or tuple.
-            # Item need it's own list, so we copy
+            # Item need its own list, so we copy
             val = entry.default
+            # todo: perharps isinstance(val, dict, list, set) ?
             if hasattr(val, '__iter__'):
                 setattr(self, prop, copy(val))
             else:
@@ -273,15 +277,13 @@ class Item(AlignakObject):
 
     def clean(self):
         """
-        Clean properties only need when initialize & configure
-
-        TODO: never called anywhere, still useful?
+        Clean properties only needed for initialization and configuration
 
         :return: None
         """
-        for name in ('imported_from', 'use', 'plus', 'templates',):
+        for property in ('imported_from', 'use', 'plus', 'templates',):
             try:
-                delattr(self, name)
+                delattr(self, property)
             except AttributeError:
                 pass
 
@@ -313,15 +315,12 @@ class Item(AlignakObject):
 
     def fill_default(self):
         """
-        Define properties with default value when not defined
+        Define the object properties with a default value when the property is not yet defined
 
         :return: None
         """
-        cls = self.__class__
-
-        for prop, entry in cls.properties.items():
-            if not hasattr(self, prop) and entry.has_default:
-                setattr(self, prop, entry.default)
+        # Simply call the super class method
+        super(Item, self).fill_default()
 
     def serialize(self):
         """This function serialize into a simple dict object.
@@ -353,27 +352,35 @@ class Item(AlignakObject):
         return res
 
     @classmethod
-    def load_global_conf(cls, conf):
+    def load_global_conf(cls, global_configuration):
         """
-        Load configuration of parent object
+        Apply global Alignak configuration.
+
+        Some objects inherit some properties from the global configuration if they do not
+        define their own value. E.g. the global 'accept_passive_service_checks' is inherited
+        by the services as 'accept_passive_checks'
 
         :param cls: parent object
         :type cls: object
-        :param conf: current object (child)
-        :type conf: object
+        :param global_configuration: current object (child)
+        :type global_configuration: object
         :return: None
         """
-        for prop, entry in conf.properties.items():
-            # If we have a class_inherit, and the arbiter really send us it
-            # if 'class_inherit' in entry and hasattr(conf, prop):
-            if hasattr(conf, prop):
-                for (cls_dest, change_name) in entry.class_inherit:
-                    if cls_dest == cls:  # ok, we've got something to get
-                        value = getattr(conf, prop)
-                        if change_name is None:
-                            setattr(cls, prop, value)
-                        else:
-                            setattr(cls, change_name, value)
+        logger.debug("Propagate global parameter for %s:", cls)
+        for property, entry in global_configuration.properties.items():
+            # If some global managed configuration properties have a class_inherit clause,
+            if not entry.managed or not getattr(entry, 'class_inherit'):
+                continue
+            for (cls_dest, change_name) in entry.class_inherit:
+                if cls_dest == cls:  # ok, we've got something to get
+                    value = getattr(global_configuration, property)
+                    logger.debug("- global parameter %s=%s -> %s=%s",
+                                 property, getattr(global_configuration, property),
+                                 change_name, value)
+                    if change_name is None:
+                        setattr(cls, property, value)
+                    else:
+                        setattr(cls, change_name, value)
 
     def get_templates(self):
         """
@@ -430,6 +437,29 @@ class Item(AlignakObject):
         del self.plus[prop]
         return val
 
+    def add_error(self, txt):
+        """Add a message in the configuration errors list so we can print them
+         all in one place
+
+         Set the object configuration as not correct
+
+        :param txt: error message
+        :type txt: str
+        :return: None
+        """
+        self.configuration_errors.append(txt)
+        self.conf_is_correct = False
+
+    def add_warning(self, txt):
+        """Add a message in the configuration warnings list so we can print them
+         all in one place
+
+        :param txt: warning message
+        :type txt: str
+        :return: None
+        """
+        self.configuration_warnings.append(txt)
+
     def is_correct(self):
         """
         Check if this object is correct
@@ -441,23 +471,17 @@ class Item(AlignakObject):
         :return: True if it's correct, otherwise False
         :rtype: bool
         """
-        state = True
+        state = self.conf_is_correct
         properties = self.__class__.properties
 
         for prop, entry in properties.items():
             if hasattr(self, 'special_properties') and prop in getattr(self, 'special_properties'):
                 continue
             if not hasattr(self, prop) and entry.required:
-                msg = "[%s::%s] %s property is missing" % (
-                    self.my_type, self.get_name(), prop
-                )
-                self.configuration_errors.append(msg)
-                state = False
+                msg = "[%s::%s] %s property is missing" % (self.my_type, self.get_name(), prop)
+                self.add_error(msg)
 
-        # Raise all previously sawn errors
-        if self.configuration_errors:
-            state = False
-
+        state = state & self.conf_is_correct
         return state
 
     def old_properties_names_to_new(self):
@@ -540,32 +564,6 @@ class Item(AlignakObject):
         """
         if comment_id in self.comments:
             del self.comments[comment_id]
-
-    def prepare_for_conf_sending(self):
-        """
-        Flatten some properties tagged by the 'conf_send_preparation' because
-        they are too 'linked' to be send like that (like realms)
-
-        :return: None
-        """
-        cls = self.__class__
-
-        for prop, entry in cls.properties.items():
-            # Is this property need preparation for sending?
-            if entry.conf_send_preparation is not None:
-                fun = entry.conf_send_preparation
-                if fun is not None:
-                    val = fun(getattr(self, prop))
-                    setattr(self, prop, val)
-
-        if hasattr(cls, 'running_properties'):
-            for prop, entry in cls.running_properties.items():
-                # Is this property need preparation for sending?
-                if entry.conf_send_preparation is not None:
-                    fun = entry.conf_send_preparation
-                    if fun is not None:
-                        val = fun(getattr(self, prop))
-                        setattr(self, prop, val)
 
     def get_property_value_for_brok(self, prop, tab):
         """
@@ -761,6 +759,29 @@ class Items(object):
 
         return ""
 
+    def add_error(self, txt):
+        """Add a message in the configuration errors list so we can print them
+         all in one place
+
+         Set the object configuration as not correct
+
+        :param txt: error message
+        :type txt: str
+        :return: None
+        """
+        self.configuration_errors.append(txt)
+        self.conf_is_correct = False
+
+    def add_warning(self, txt):
+        """Add a message in the configuration warnings list so we can print them
+         all in one place
+
+        :param txt: warning message
+        :type txt: str
+        :return: None
+        """
+        self.configuration_warnings.append(txt)
+
     def add_items(self, items, index_items):
         """
         Add items to template if is template, else add in item list
@@ -860,7 +881,7 @@ class Items(object):
         if not name:
             mesg = "a %s template has been defined without name, from: %s" % \
                    (objcls, tpl.imported_from)
-            tpl.configuration_errors.append(mesg)
+            tpl.add_error(mesg)
         elif name in self.name_to_template:
             tpl = self.manage_conflict(tpl, name)
         self.name_to_template[name] = tpl
@@ -948,11 +969,8 @@ class Items(object):
         # which would be rather odd :
         name = getattr(item, name_property, '')
         if not name:
-            objcls = self.inner_class.my_type
-            msg = "a %s item has been defined without %s, from: %s" % (
-                objcls, name_property, item.imported_from
-            )
-            item.configuration_errors.append(msg)
+            item.add_error("a %s item has been defined without %s, from: %s"
+                           % (self.inner_class.my_type, name_property, item.imported_from))
         elif name in self.name_to_item:
             item = self.manage_conflict(item, name)
         self.name_to_item[name] = item
@@ -1014,15 +1032,6 @@ class Items(object):
         """
         return self.name_to_item.get(name, None)
 
-    def prepare_for_sending(self):
-        """
-        flatten some properties
-
-        :return: None
-        """
-        for i in self:
-            i.prepare_for_conf_sending()
-
     def old_properties_names_to_new(self):  # pragma: no cover, never called
         """Convert old Nagios2 names to Nagios3 new names
 
@@ -1077,14 +1086,14 @@ class Items(object):
             template = self.find_tpl_by_name(name)
             if template is None:
                 # TODO: Check if this should not be better to report as an error ?
-                self.configuration_warnings.append(
+                self.add_warning(
                     "%s %s use/inherit from an unknown template: %s ! from: %s" % (
                         type(item).__name__, item.get_name(), name, item.imported_from
                     )
                 )
             else:
                 if template is item:
-                    self.configuration_errors.append(
+                    self.add_error(
                         "%s %s use/inherits from itself ! from: %s" % (
                             type(item).__name__, item._get_name(), item.imported_from
                         )
@@ -1134,7 +1143,7 @@ class Items(object):
                     i.__class__.my_type, i.get_name(),
                     i.imported_from
                 )
-                self.configuration_warnings.append(msg)
+                self.add_warning(msg)
 
         # Better check individual items before displaying the global items list errors and warnings
         for i in self:
@@ -1142,16 +1151,15 @@ class Items(object):
             prop_name = getattr(self.__class__, 'name_property', None)
             if prop_name and not hasattr(i, 'alias') and hasattr(i, prop_name):
                 setattr(i, 'alias', getattr(i, prop_name))
-            if prop_name and getattr(i, 'display_name', '') == '' and hasattr(i, prop_name):
+            if prop_name and getattr(i, 'display_name', '') and hasattr(i, prop_name):
                 setattr(i, 'display_name', getattr(i, prop_name))
 
             # Now other checks
             if not i.is_correct():
                 valid = False
-                msg = "Configuration in %s::%s is incorrect; from: %s" % (
-                    i.my_type, i.get_name(), i.imported_from
-                )
-                self.configuration_errors.append(msg)
+                msg = "Configuration in %s::%s is incorrect; from: %s" \
+                      % (i.my_type, i.get_name(), i.imported_from)
+                i.add_error(msg)
 
             if i.configuration_errors:
                 self.configuration_errors += i.configuration_errors
@@ -1179,16 +1187,14 @@ class Items(object):
         """
         del self.templates
 
-    def clean(self):  # pragma: no cover, never called
-        """Request to remove the unnecessary attributes/others from our items
-
-        TODO: still useful?
+    def clean(self):
+        """
+        Clean the list items
 
         :return: None
         """
         for i in self:
             i.clean()
-        Item.clean(self)
 
     def fill_default(self):
         """
@@ -1202,7 +1208,6 @@ class Items(object):
     def __str__(self):
         return '<%s nbr_elements=%s nbr_templates=%s />' % (
             self.__class__.__name__, len(self), len(self.name_to_template))
-
     __repr__ = __str__
 
     def serialize(self):
@@ -1261,22 +1266,22 @@ class Items(object):
         :return: None
         """
         for i in self:
-            if hasattr(i, 'contacts'):
-                contacts_tab = strip_and_uniq(i.contacts)
-                new_contacts = []
-                for c_name in contacts_tab:
-                    if c_name != '':
-                        contact = contacts.find_by_name(c_name)
-                        if contact is not None:
-                            new_contacts.append(contact.uuid)
-                        # Else: Add in the errors tab.
-                        # will be raised at is_correct
-                        else:
-                            err = "the contact '%s' defined for '%s' is unknown" % (c_name,
-                                                                                    i.get_name())
-                            i.configuration_errors.append(err)
-                # Get the list, but first make elements uniq
-                i.contacts = list(set(new_contacts))
+            if not hasattr(i, 'contacts'):
+                continue
+            contacts_tab = strip_and_uniq(i.contacts)
+            new_contacts = []
+            for c_name in contacts_tab:
+                if not c_name:
+                    continue
+
+                contact = contacts.find_by_name(c_name)
+                if contact is not None:
+                    new_contacts.append(contact.uuid)
+                else:
+                    err = "the contact '%s' defined for '%s' is unknown" % (c_name, i.get_name())
+                    i.add_error(err)
+            # Get the list, but first make elements unique
+            i.contacts = list(set(new_contacts))
 
     def linkify_with_escalations(self, escalations):
         """
@@ -1297,7 +1302,7 @@ class Items(object):
                     else:  # Escalation not find, not good!
                         err = "the escalation '%s' defined for '%s' is unknown" % (es_name,
                                                                                    i.get_name())
-                        i.configuration_errors.append(err)
+                        i.add_error(err)
                 i.escalations = new_escalations
 
     def linkify_with_resultmodulations(self, resultmodulations):
@@ -1342,7 +1347,7 @@ class Items(object):
                     else:
                         err = ("the business impact modulation '%s' defined on the %s "
                                "'%s' do not exist" % (rm_name, i.__class__.my_type, i.get_name()))
-                        i.configuration_errors.append(err)
+                        i.add_error(err)
                         continue
                 i.business_impact_modulations = new_business_impact_modulations
 
@@ -1370,7 +1375,7 @@ class Items(object):
                     err = "The contact group '%s' defined on the %s '%s' do " \
                           "not exist" % (cgname, item.__class__.my_type,
                                          item.get_name())
-                    item.configuration_errors.append(err)
+                    item.add_error(err)
                     continue
                 cnames = contactgroups.get_members_by_name(cgname)
                 # We add contacts into our contacts
@@ -1404,7 +1409,7 @@ class Items(object):
                 if timeperiod is None:
                     err = ("The %s of the %s '%s' named "
                            "'%s' is unknown!" % (prop, i.__class__.my_type, i.get_name(), tpname))
-                    i.configuration_errors.append(err)
+                    i.add_error(err)
                     continue
                 # Got a real one, just set it :)
                 setattr(i, prop, timeperiod.uuid)
@@ -1440,7 +1445,7 @@ class Items(object):
                 else:
                     err = ("The checkmodulations of the %s '%s' named "
                            "'%s' is unknown!" % (i.__class__.my_type, i.get_name(), cw_name))
-                    i.configuration_errors.append(err)
+                    i.add_error(err)
             # Get the list, but first make elements uniq
             i.checkmodulations = new_checkmodulations
 
@@ -1463,7 +1468,7 @@ class Items(object):
                 else:
                     err = ("The macromodulations of the %s '%s' named "
                            "'%s' is unknown!" % (i.__class__.my_type, i.get_name(), cw_name))
-                    i.configuration_errors.append(err)
+                    i.add_error(err)
             # Get the list, but first make elements uniq
             i.macromodulations = new_macromodulations
 
@@ -1488,7 +1493,7 @@ class Items(object):
                     new_modules.append(plug)
                 else:
                     err = "Error: the module %s is unknown for %s" % (plug_name, item.get_name())
-                    item.configuration_errors.append(err)
+                    item.add_error(err)
             item.modules = new_modules
 
     @staticmethod
@@ -1572,7 +1577,7 @@ class Items(object):
                 hnames_list.extend(
                     self.get_hosts_from_hostgroups(hgnames, hostgroups))
             except ValueError, err:  # pragma: no cover, simple protection
-                item.configuration_errors.append(str(err))
+                item.add_error(str(err))
 
         # Expands host names
         hname = getattr(item, "host_name", '')

@@ -58,7 +58,7 @@ class TestContactDowntime(AlignakTest):
 
     def setUp(self):
         self.setup_with_file("cfg/cfg_default.cfg")
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
     def test_contact_downtime(self):
         """
@@ -90,7 +90,7 @@ class TestContactDowntime(AlignakTest):
         host.act_depend_of = []  # ignore the router
 
         #time.sleep(20)
-        # We loop, the downtime wil be check and activate
+        # We loop, the downtime will be checked and activated
         self.scheduler_loop(1, [[svc, 0, 'OK'], [host, 0, 'UP']])
 
         self.assert_any_brok_match('CONTACT DOWNTIME ALERT.*;STARTED')

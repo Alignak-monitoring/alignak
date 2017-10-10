@@ -552,13 +552,13 @@ class Timeperiod(Item):
             good = daterange.is_correct()
             if not good:
                 msg = "[timeperiod::%s] invalid daterange '%s'" % (self.get_name(), daterange)
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
             state &= good
 
         # Warn about non correct entries
         for entry in self.invalid_entries:
             msg = "[timeperiod::%s] invalid entry '%s'" % (self.get_name(), entry)
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
 
         return super(Timeperiod, self).is_correct() and state
 
@@ -890,7 +890,7 @@ class Timeperiod(Item):
                     new_exclude.append(timepriod.uuid)
                 else:
                     msg = "[timeentry::%s] unknown %s timeperiod" % (self.get_name(), tp_name)
-                    self.configuration_errors.append(msg)
+                    self.add_error(msg)
         self.exclude = new_exclude
 
     def check_exclude_rec(self):
@@ -902,7 +902,7 @@ class Timeperiod(Item):
         """
         if self.rec_tag:
             msg = "[timeentry::%s] is in a loop in exclude parameter" % (self.get_name())
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             return False
         self.rec_tag = True
         for timeperiod in self.exclude:
@@ -1017,7 +1017,7 @@ class Timeperiods(Items):
                 msg = "Configuration in %s::%s is incorrect; from: %s" % (
                     timeperiod.my_type, timeperiod.get_name(), source
                 )
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
 
             self.configuration_errors += timeperiod.configuration_errors
             self.configuration_warnings += timeperiod.configuration_warnings

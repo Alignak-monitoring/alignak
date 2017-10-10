@@ -38,6 +38,7 @@ class GenericInterface(object):
         self.app = app
         self.start_time = int(time.time())
 
+        # Set a running identifier that will change if the attached daemon is restarted
         self.running_id = "%d.%d" % (
             self.start_time, random.randint(0, 100000000)
         )
@@ -74,7 +75,7 @@ class GenericInterface(object):
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def get_running_id(self):
-        """'Get the current running id of the daemon (scheduler)'
+        """Get the current running identifier of the daemon
 
         :return: running_ig
         :rtype: int
@@ -111,7 +112,7 @@ class GenericInterface(object):
             # I've got a conf and a good one
             return self.app.cur_conf and self.app.cur_conf.magic_hash == magic_hash
 
-        return self.app.cur_conf is not None
+        return getattr(self.app, 'cur_conf', None) is not None
 
     @cherrypy.expose
     @cherrypy.tools.json_in()
@@ -222,7 +223,7 @@ class GenericInterface(object):
         :return: None
         """
         with self.app.conf_lock:
-            logger.warning("Arbiter wants me to wait for a new configuration")
+            logger.warning("My Arbiter wants me to wait for a new configuration.")
             # Clear can occur while setting up a new conf and lead to error.
             self.app.schedulers.clear()
             self.app.cur_conf = None

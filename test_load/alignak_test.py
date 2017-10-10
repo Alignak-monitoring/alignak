@@ -118,7 +118,7 @@ class AlignakTest(unittest.TestCase):
         collector_h.setFormatter(DEFAULT_FORMATTER_NAMED)
         self.logger.addHandler(collector_h)
 
-    def files_update(self, files, replacements):
+    def _files_update(self, files, replacements):
         """Update files content with the defined replacements
 
         :param files: list of files to parse and replace
@@ -169,7 +169,7 @@ class AlignakTest(unittest.TestCase):
 
         # Initialize the Arbiter with no daemon configuration file
         configuration_dir = os.path.dirname(configuration_file)
-        self.env_file = os.path.join(configuration_dir, 'alignak.ini')
+        self.env_file = os.path.join(configuration_dir, 'alignak-realm2.ini')
         args = {
             'env_file': self.env_file,
             'alignak_name': 'arbiter-master', 'daemon_name': None,
@@ -208,8 +208,8 @@ class AlignakTest(unittest.TestCase):
 
         for arb in self.arbiter.conf.arbiters:
             if arb.get_name() == self.arbiter.arbiter_name:
-                self.arbiter.myself = arb
-        self.arbiter.dispatcher = Dispatcher(self.arbiter.conf, self.arbiter.myself)
+                self.arbiter.link_to_myself = arb
+        self.arbiter.dispatcher = Dispatcher(self.arbiter.conf, self.arbiter.link_to_myself)
         self.arbiter.dispatcher.prepare_dispatch()
 
         # Build schedulers dictionary with the schedulers involved in the configuration

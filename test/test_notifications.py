@@ -42,11 +42,11 @@ class TestNotifications(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_nonotif.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -82,11 +82,11 @@ class TestNotifications(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_nonotif.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
         # To make notifications not being re-sent, set this to 0
         svc.notification_interval = 0
@@ -115,7 +115,7 @@ class TestNotifications(AlignakTest):
         now = int(time.time())
         cmd = "[{0}] ENABLE_SVC_NOTIFICATIONS;{1};{2}\n".format(now, svc.host_name,
                                                                 svc.service_description)
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_command(cmd)
         self.external_command_loop()
         assert svc.notifications_enabled
         assert "HARD" == svc.state_type
@@ -148,7 +148,7 @@ class TestNotifications(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_nonotif.cfg')
 
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -210,7 +210,7 @@ class TestNotifications(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -262,14 +262,14 @@ class TestNotifications(AlignakTest):
         assert svc.current_notification_number == 3
 
         # test first notification sent
-        actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(),
+        actions = sorted(self._scheduler.actions.values(),
                          key=lambda x: x.creation_time)
         action = copy.copy(actions[1])
         action.exit_status = 0
         action.status = 'launched'
         action.status = ''
         # and return to the scheduler
-        self.schedulers['scheduler-master'].sched.put_results(action)
+        self._scheduler.put_results(action)
         # re-loop scheduler to manage this
         self.external_command_loop()
         self.external_command_loop()
@@ -278,7 +278,7 @@ class TestNotifications(AlignakTest):
 
         now = time.time()
         cmd = "[%lu] DISABLE_CONTACT_SVC_NOTIFICATIONS;test_contact" % now
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_command(cmd)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(1)
         self.assert_actions_count(3)
@@ -286,7 +286,7 @@ class TestNotifications(AlignakTest):
 
         now = time.time()
         cmd = "[%lu] ENABLE_CONTACT_SVC_NOTIFICATIONS;test_contact" % now
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_command(cmd)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(1)
         self.assert_actions_count(4)
@@ -333,12 +333,12 @@ class TestNotifications(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
         # To make notifications not being re-sent, set this to 0
         svc.notification_interval = 0
@@ -401,12 +401,12 @@ class TestNotifications(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
         # To make tests quicker we make notifications send quickly (6 second)
         svc.notification_interval = 0.1
@@ -464,13 +464,13 @@ class TestNotifications(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Check freshness on each scheduler tick
-        self._scheduler.update_recurrent_works_tick('check_freshness', 1)
+        self._scheduler.update_recurrent_works_tick({'check_freshness': 1})
 
         # Get host
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_0')
+        host = self._scheduler.hosts.find_by_name('test_host_0')
         host.act_depend_of = []  # ignore the router
         host.checks_in_progress = []
         host.event_handler_enabled = False
@@ -488,7 +488,7 @@ class TestNotifications(AlignakTest):
         assert host is not None
 
         # Get service
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.event_handler_enabled = False
         svc.active_checks_enabled = False
@@ -574,12 +574,12 @@ class TestNotifications(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
         svc.first_notification_delay = 0.1  # set 6s for first notification delay
         svc.notification_interval = 0.1 / 6  # and send immediately then (1 second)
@@ -666,19 +666,19 @@ class TestNotifications(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
         # To make tests quicker we make notifications send very quickly (1 second)
         svc.notification_interval = 0.1 / 6
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         svc.event_handler_enabled = False
-        timeperiod = self.schedulers['scheduler-master'].sched.timeperiods.find_by_name('none')
+        timeperiod = self._scheduler.timeperiods.find_by_name('none')
         svc.notification_period = timeperiod.uuid
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
@@ -711,12 +711,12 @@ class TestNotifications(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
         # To make tests quicker we make notifications send very quickly (1 second)
         svc.notification_interval = 0.1 / 6
@@ -747,7 +747,7 @@ class TestNotifications(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n".\
             format(now, svc.host_name, svc.service_description, 1, 0, 1, 'darth vader',
                    'normal process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_command(cmd)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         assert "HARD" == svc.state_type
@@ -778,12 +778,12 @@ class TestNotifications(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
         # To make tests quicker we make notifications send very quickly (1 second)
         svc.notification_interval = 0.1 / 6
@@ -800,7 +800,7 @@ class TestNotifications(AlignakTest):
         cmd = "[{0}] SCHEDULE_SVC_DOWNTIME;{1};{2};{3};{4};{5};{6};{7};{8};{9}\n".\
             format(now, svc.host_name, svc.service_description, now, (now + 1000), 1, 0, 0,
                    'darth vader', 'add downtime for maintenance')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_command(cmd)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         assert "SOFT" == svc.state_type
@@ -836,7 +836,7 @@ class TestNotifications(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []

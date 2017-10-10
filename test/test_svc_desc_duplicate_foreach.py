@@ -7,7 +7,7 @@ class ServiceDescriptionDuplicateForEach(AlignakTest):
 
     def setUp(self):
         self.setup_with_file('cfg/cfg_service_description_duplicate_foreach.cfg')
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
     def test_simple_get_key_value_sequence(self):
         rsp = list(generate_key_value_sequences("1", "default42"))

@@ -39,12 +39,12 @@ class TestBrokCheckResult(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
                                                                               "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc.notification_interval = 0.001
@@ -56,7 +56,7 @@ class TestBrokCheckResult(AlignakTest):
         time.sleep(0.1)
         host_check_results = []
         service_check_results = []
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks'].itervalues():
+        for brok in self._broker.broks.itervalues():
             if brok.type == 'host_check_result':
                 host_check_results.append(brok)
             elif brok.type == 'service_check_result':

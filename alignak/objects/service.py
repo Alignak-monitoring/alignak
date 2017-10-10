@@ -266,7 +266,7 @@ class Service(SchedulingItem):
             self.state = 'UNREACHABLE'
 
     def __repr__(self):
-        return '<Service host_name=%r desc=%r name=%r use=%r />' % (
+        return '<Service %r/%r name=%r use=%r />' % (
             getattr(self, 'host_name', None),
             getattr(self, 'service_description', None),
             getattr(self, 'name', None),
@@ -378,28 +378,28 @@ class Service(SchedulingItem):
         state = True
         cls = self.__class__
         # Set display_name if need
-        if getattr(self, 'display_name', '') == '':
+        if not getattr(self, 'display_name', ''):
             self.display_name = getattr(self, 'service_description', '')
 
         if not self.host_name:
             msg = "[%s::%s] not bound to any host." % (self.my_type, self.get_name())
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             state = False
         elif self.host is None:
-            msg = "[%s::%s] unknown host_name '%s'" % (
-                self.my_type, self.get_name(), self.host_name
-            )
-            self.configuration_errors.append(msg)
+            msg = "[%s::%s] unknown host_name '%s'" \
+                  % (self.my_type, self.get_name(), self.host_name)
+            self.add_error(msg)
             state = False
 
         if hasattr(self, 'service_description'):
             for char in cls.illegal_object_name_chars:
-                if char in self.service_description:
-                    msg = "[%s::%s] service_description got an illegal character: %s" % (
-                        self.my_type, self.get_name(), char
-                    )
-                    self.configuration_errors.append(msg)
-                    state = False
+                if char not in self.service_description:
+                    continue
+
+                msg = "[%s::%s] service_description got an illegal character: %s" \
+                      % (self.my_type, self.get_name(), char)
+                self.add_error(msg)
+                state = False
 
         return super(Service, self).is_correct() and state
 
@@ -444,7 +444,7 @@ class Service(SchedulingItem):
                 "host %(host)r is not a valid entry for a service generator: %(exc)s, "
                 "with entry=%(entry)r") % fmt_dict
             logger.warning(err)
-            host.configuration_errors.append(err)
+            host.add_error(err)
             return duplicates
 
         for key_value in key_values:
@@ -1241,11 +1241,11 @@ class Services(SchedulingItems):
         if not name and not hname:
             msg = "a %s template has been defined without name nor host_name. from: %s" \
                   % (objcls, tpl.imported_from)
-            tpl.configuration_errors.append(msg)
+            tpl.add_error(msg)
         elif not name and not sdesc:
             msg = "a %s template has been defined without name nor service_description. from: %s" \
                   % (objcls, tpl.imported_from)
-            tpl.configuration_errors.append(msg)
+            tpl.add_error(msg)
         elif not name:
             # If name is not defined, use the host_name_service_description as name (fix #791)
             setattr(tpl, 'name', "%s_%s" % (hname, sdesc))
@@ -1276,11 +1276,11 @@ class Services(SchedulingItems):
         if not hname and not hgname:
             msg = "a %s has been defined without " \
                   "host_name nor hostgroup_name, from: %s" % (objcls, item.imported_from)
-            item.configuration_errors.append(msg)
+            item.add_error(msg)
         if not sdesc:
             msg = "a %s has been defined without " \
                   "service_description, from: %s" % (objcls, item.imported_from)
-            item.configuration_errors.append(msg)
+            item.add_error(msg)
 
         if index is True:
             item = self.index_item(item)
@@ -1402,7 +1402,7 @@ class Services(SchedulingItems):
                 match = ovr_re.search(ovr)
                 if match is None:
                     err = "Error: invalid service override syntax: %s" % ovr
-                    host.configuration_errors.append(err)
+                    host.add_error(err)
                     continue
                 sdescr, prop, value = match.groups()
                 # Looks for corresponding service
@@ -1412,7 +1412,7 @@ class Services(SchedulingItems):
                 if service is None:
                     err = "Error: trying to override property '%s' on service '%s' " \
                           "but it's unknown for this host" % (prop, sdescr)
-                    host.configuration_errors.append(err)
+                    host.add_error(err)
                     continue
                 # Checks if override is allowed
                 excludes = ['host_name', 'service_description', 'use',
@@ -1421,7 +1421,7 @@ class Services(SchedulingItems):
                     err = "Error: trying to override '%s', " \
                           "a forbidden property for service '%s'" % \
                           (prop, sdescr)
-                    host.configuration_errors.append(err)
+                    host.add_error(err)
                     continue
 
                 # Pythonize the value because here value is str.
@@ -1484,7 +1484,7 @@ class Services(SchedulingItems):
                     else:
                         err = "Error: the servicegroup '%s' of the service '%s' is unknown" %\
                               (sg_name, serv.get_dbg_name())
-                        serv.configuration_errors.append(err)
+                        serv.add_error(err)
             serv.servicegroups = new_servicegroups
 
     def delete_services_by_id(self, ids):
@@ -1545,8 +1545,8 @@ class Services(SchedulingItems):
         for serv in self:
             if not serv.host:
                 to_del.append(serv.uuid)
-        for sid in to_del:
-            del self.items[sid]
+        for service_uuid in to_del:
+            del self.items[service_uuid]
 
     def explode_services_from_hosts(self, hosts, service, hnames):
         """
@@ -1589,7 +1589,7 @@ class Services(SchedulingItems):
             if host is None:
                 err = 'Error: The hostname %s is unknown for the service %s!' \
                       % (hname, service.get_name())
-                service.configuration_errors.append(err)
+                service.add_error(err)
                 continue
             if host.is_excluded_for(service):
                 continue
@@ -1666,7 +1666,7 @@ class Services(SchedulingItems):
         if host is None:
             err = 'Error: The hostname %s is unknown for the service %s!' \
                   % (hname, service.get_name())
-            service.configuration_errors.append(err)
+            service.add_error(err)
             return
 
         # Duplicate services

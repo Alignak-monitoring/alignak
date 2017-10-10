@@ -55,7 +55,7 @@ class TestInheritanceAndPlus(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_inheritance.cfg')
         assert self.conf_is_correct
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         print("Hosts: ")
         pprint(self._sched.hosts.__dict__)
@@ -140,7 +140,7 @@ class TestInheritanceAndPlus(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_inheritance_and_plus.cfg')
         assert self.conf_is_correct
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         # Get the hostgroups
         linux = self._sched.hostgroups.find_by_name('linux')

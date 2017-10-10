@@ -40,15 +40,14 @@ class TestPassiveChecks(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_passive_checks.cfg')
         assert self.conf_is_correct
-        self.sched_ = self.schedulers['scheduler-master'].sched
-        
+
         # Check freshness on each scheduler tick
-        self.sched_.update_recurrent_works_tick('check_freshness', 1)
+        self._scheduler.update_recurrent_works_tick({'check_freshness': 1})
 
         # Test if not schedule a check on passive service/host when start alignak.
         # So the freshness start (item.last_state_update) will begin with time.time() of start
         # Alignak
-        host = self.sched_.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.event_handler_enabled = False
 
@@ -68,10 +67,9 @@ class TestPassiveChecks(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_passive_checks.cfg')
         assert self.conf_is_correct
-        self.sched_ = self.schedulers['scheduler-master'].sched
 
         # Check freshness on each scheduler tick
-        self.sched_.update_recurrent_works_tick('check_freshness', 1)
+        self._scheduler.update_recurrent_works_tick({'check_freshness': 1})
 
         print("Global passive checks parameters:")
         print(" - accept_passive_host_checks: %s" %
@@ -81,15 +79,15 @@ class TestPassiveChecks(AlignakTest):
               (self.arbiter.conf.accept_passive_service_checks))
         assert self.arbiter.conf.accept_passive_service_checks is True
 
-        host = self.sched_.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.event_handler_enabled = False
 
-        host_a = self.sched_.hosts.find_by_name("test_host_A")
-        host_b = self.sched_.hosts.find_by_name("test_host_B")
-        host_c = self.sched_.hosts.find_by_name("test_host_C")
-        host_d = self.sched_.hosts.find_by_name("test_host_D")
-        host_e = self.sched_.hosts.find_by_name("test_host_E")
+        host_a = self._scheduler.hosts.find_by_name("test_host_A")
+        host_b = self._scheduler.hosts.find_by_name("test_host_B")
+        host_c = self._scheduler.hosts.find_by_name("test_host_C")
+        host_d = self._scheduler.hosts.find_by_name("test_host_D")
+        host_e = self._scheduler.hosts.find_by_name("test_host_E")
 
         assert "d" == host_a.freshness_state
         # Even if u is set in the configuration file, get "x"
@@ -100,12 +98,12 @@ class TestPassiveChecks(AlignakTest):
         # "x" as default value
         assert "x" == host_e.freshness_state
 
-        svc0 = self.sched_.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_0")
-        svc1 = self.sched_.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_1")
-        svc2 = self.sched_.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_2")
-        svc3 = self.sched_.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_3")
-        svc4 = self.sched_.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_4")
-        svc5 = self.sched_.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_5")
+        svc0 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_0")
+        svc1 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_1")
+        svc2 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_2")
+        svc3 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_3")
+        svc4 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_4")
+        svc5 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_5")
 
         assert "o" == svc0.freshness_state
         assert "w" == svc1.freshness_state
@@ -126,16 +124,15 @@ class TestPassiveChecks(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_passive_checks.cfg')
         assert self.conf_is_correct
-        self.sched_ = self.schedulers['scheduler-master'].sched
 
         # Check freshness on each scheduler tick
-        self.sched_.update_recurrent_works_tick('check_freshness', 1)
+        self._scheduler.update_recurrent_works_tick({'check_freshness': 1})
 
-        host_a = self.sched_.hosts.find_by_name("test_host_A")
-        host_b = self.sched_.hosts.find_by_name("test_host_B")
-        host_c = self.sched_.hosts.find_by_name("test_host_C")
-        host_d = self.sched_.hosts.find_by_name("test_host_D")
-        host_e = self.sched_.hosts.find_by_name("test_host_E")
+        host_a = self._scheduler.hosts.find_by_name("test_host_A")
+        host_b = self._scheduler.hosts.find_by_name("test_host_B")
+        host_c = self._scheduler.hosts.find_by_name("test_host_C")
+        host_d = self._scheduler.hosts.find_by_name("test_host_D")
+        host_e = self._scheduler.hosts.find_by_name("test_host_E")
 
         assert "d" == host_a.freshness_state
         assert "x" == host_b.freshness_state
@@ -150,12 +147,12 @@ class TestPassiveChecks(AlignakTest):
         host_d.last_state_update = int(time.time()) - 10000
         host_e.last_state_update = int(time.time()) - 10000
 
-        svc0 = self.sched_.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_0")
-        svc1 = self.sched_.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_1")
-        svc2 = self.sched_.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_2")
-        svc3 = self.sched_.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_3")
-        svc4 = self.sched_.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_4")
-        svc5 = self.sched_.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_5")
+        svc0 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_0")
+        svc1 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_1")
+        svc2 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_2")
+        svc3 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_3")
+        svc4 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_4")
+        svc5 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_5")
 
         assert "o" == svc0.freshness_state
         assert "w" == svc1.freshness_state
@@ -172,7 +169,7 @@ class TestPassiveChecks(AlignakTest):
         svc4.last_state_update = int(time.time()) - 10000
         svc5.last_state_update = int(time.time()) - 10000
 
-        host = self.sched_.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.event_handler_enabled = False
 
@@ -211,19 +208,18 @@ class TestPassiveChecks(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_passive_checks.cfg')
         assert self.conf_is_correct
-        self.sched_ = self.schedulers['scheduler-master'].sched
 
-        self.sched_.conf.check_host_freshness = False
-        self.sched_.conf.check_service_freshness = False
+        self._scheduler.conf.check_host_freshness = False
+        self._scheduler.conf.check_service_freshness = False
 
         # Check freshness on each scheduler tick
-        self.sched_.update_recurrent_works_tick('check_freshness', 1)
+        self._scheduler.update_recurrent_works_tick({'check_freshness': 1})
 
-        host_a = self.sched_.hosts.find_by_name("test_host_A")
-        host_b = self.sched_.hosts.find_by_name("test_host_B")
-        host_c = self.sched_.hosts.find_by_name("test_host_C")
-        host_d = self.sched_.hosts.find_by_name("test_host_D")
-        host_e = self.sched_.hosts.find_by_name("test_host_E")
+        host_a = self._scheduler.hosts.find_by_name("test_host_A")
+        host_b = self._scheduler.hosts.find_by_name("test_host_B")
+        host_c = self._scheduler.hosts.find_by_name("test_host_C")
+        host_d = self._scheduler.hosts.find_by_name("test_host_D")
+        host_e = self._scheduler.hosts.find_by_name("test_host_E")
 
         assert "d" == host_a.freshness_state
         assert "x" == host_b.freshness_state
@@ -238,12 +234,12 @@ class TestPassiveChecks(AlignakTest):
         host_d.last_state_update = int(time.time()) - 10000
         host_e.last_state_update = int(time.time()) - 10000
 
-        svc0 = self.sched_.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_0")
-        svc1 = self.sched_.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_1")
-        svc2 = self.sched_.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_2")
-        svc3 = self.sched_.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_3")
-        svc4 = self.sched_.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_4")
-        svc5 = self.sched_.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_5")
+        svc0 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_0")
+        svc1 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_1")
+        svc2 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_2")
+        svc3 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_3")
+        svc4 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_4")
+        svc5 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_5")
 
         assert "o" == svc0.freshness_state
         assert "w" == svc1.freshness_state
@@ -260,7 +256,7 @@ class TestPassiveChecks(AlignakTest):
         svc4.last_state_update = int(time.time()) - 10000
         svc5.last_state_update = int(time.time()) - 10000
 
-        host = self.sched_.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.event_handler_enabled = False
 
@@ -291,17 +287,16 @@ class TestPassiveChecks(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_passive_checks.cfg')
         assert self.conf_is_correct
-        self.sched_ = self.schedulers['scheduler-master'].sched
 
         # Check freshness on each scheduler tick
-        self.sched_.update_recurrent_works_tick('check_freshness', 1)
+        self._scheduler.update_recurrent_works_tick({'check_freshness': 1})
 
-        host_f = self.sched_.hosts.find_by_name("test_host_F")
+        host_f = self._scheduler.hosts.find_by_name("test_host_F")
 
         assert "x" == host_f.freshness_state
         assert 3600 == host_f.freshness_threshold
 
-        svc6 = self.sched_.services.find_srv_by_name_and_hostname("test_host_F", "test_svc_6")
+        svc6 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_F", "test_svc_6")
 
         assert "x" == svc6.freshness_state
         assert 3600 == svc6.freshness_threshold
@@ -316,9 +311,12 @@ class TestPassiveChecks(AlignakTest):
         self.setup_with_file('cfg/cfg_passive_checks.cfg')
         self.clear_logs()
         assert self.conf_is_correct
-        self.sched_ = self.schedulers['scheduler-master'].sched
 
-        host_b = self.sched_.hosts.find_by_name("test_host_B")
+        # Check freshness on each scheduler tick
+        self._scheduler.update_recurrent_works_tick({'check_freshness': 1})
+
+        host_b = self._scheduler.hosts.find_by_name("test_host_B")
+
         assert "x" == host_b.freshness_state
         # Check attempts
         assert 0 == host_b.attempt
@@ -328,7 +326,7 @@ class TestPassiveChecks(AlignakTest):
         host_b.freshness_threshold = 1
         host_b.__class__.additional_freshness_latency = 1
 
-        host = self.sched_.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.event_handler_enabled = False
 
@@ -418,7 +416,7 @@ class TestPassiveChecks(AlignakTest):
 
         # Now receive check_result (passive), so we must be outside of freshness_expired
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_B;0;Host is UP' % time.time()
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         assert 'UP' == host_b.state
         assert 'Host is UP' == host_b.output

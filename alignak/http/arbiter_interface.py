@@ -62,7 +62,7 @@ class ArbiterInterface(GenericInterface):
 
         # Else, I'm just a spare, so I listen to my master
         logger.debug("Received message to not run. I am the spare, stopping.")
-        self.app.last_master_speack = time.time()
+        self.app.last_master_speak = time.time()
         self.app.must_run = False
         return True
 
@@ -75,7 +75,7 @@ class ArbiterInterface(GenericInterface):
         :return: None
         """
         with self.app.conf_lock:
-            logger.warning("Arbiter wants me to wait for a new configuration")
+            logger.warning("My master Arbiter wants me to wait for a new configuration.")
             self.app.cur_conf = None
 
     @cherrypy.expose
@@ -94,17 +94,19 @@ class ArbiterInterface(GenericInterface):
         """
         with self.app.conf_lock:
             res = {}
-            for s_type in ['arbiter', 'scheduler', 'poller', 'reactionner', 'receiver',
-                           'broker']:
-                if daemon_type and daemon_type != s_type:
+            if not daemon_type:
+                return res
+
+            for s_type in ['arbiter', 'scheduler', 'poller', 'reactionner', 'receiver', 'broker']:
+                if daemon_type != s_type:
                     continue
                 satellite_list = []
                 res[s_type] = satellite_list
                 daemon_name_attr = s_type + "_name"
-                daemons = self.app.get_daemons(s_type)
-                for dae in daemons:
-                    if hasattr(dae, daemon_name_attr):
-                        satellite_list.append(getattr(dae, daemon_name_attr))
+                for daemon_link in self.app.get_daemon_links(s_type):
+                    # if hasattr(daemon_link, daemon_name_attr):
+                    #     satellite_list.append(getattr(daemon_link, daemon_name_attr))
+                    satellite_list.append(daemon_link.name)
             return res
 
     @cherrypy.expose
@@ -149,7 +151,7 @@ class ArbiterInterface(GenericInterface):
                     for prop in props:
                         if not hasattr(daemon, prop):
                             continue
-                        if prop in ["realms", "conf", "con", "tags", "modules", "conf_package",
+                        if prop in ["realms", "conf", "con", "tags", "modules", "cfg",
                                     "broks"]:
                             continue
                         val = getattr(daemon, prop)

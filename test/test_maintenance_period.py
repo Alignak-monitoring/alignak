@@ -56,10 +56,7 @@ class TestMaintenancePeriod(AlignakTest):
         assert self.conf_is_correct
 
         # Our scheduler
-        self._sched = self.schedulers['scheduler-master'].sched
-
-        # Our broker
-        self._broker = self._sched.brokers['broker-master']
+        self._sched = self._scheduler
 
         # No error messages
         assert len(self.configuration_errors) == 0
@@ -105,7 +102,7 @@ class TestMaintenancePeriod(AlignakTest):
         }
         timeperiod = Timeperiod(data)
         timeperiod.explode()
-        self.schedulers['scheduler-master'].sched.timeperiods[timeperiod.uuid] = timeperiod
+        self._scheduler.timeperiods[timeperiod.uuid] = timeperiod
         host.maintenance_period = timeperiod.uuid
 
         # Make the host be UP again

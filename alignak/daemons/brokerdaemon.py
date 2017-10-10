@@ -96,11 +96,11 @@ class Broker(BaseSatellite):
     })
 
     def __init__(self, **kwargs):
-        self.daemon_name = 'broker-master'
-        if 'daemon_name' in kwargs and kwargs['daemon_name']:
-            self.daemon_name = kwargs['daemon_name']
+        """Broker daemon initialisation
 
-        super(Broker, self).__init__(self.daemon_name, **kwargs)
+        :param kwargs: command line arguments
+        """
+        super(Broker, self).__init__(kwargs.get('daemon_name', 'Default-broker'), **kwargs)
 
         # Our arbiters
         self.arbiters = {}
@@ -241,7 +241,7 @@ class Broker(BaseSatellite):
         :return: None
         """
         # Get the good links tab for looping..
-        links = self.get_links_from_type(s_type)
+        links = self.get_links_of_type(s_type)
         if links is None:
             logger.debug('Type unknown for connection! %s', s_type)
             return
@@ -345,302 +345,106 @@ class Broker(BaseSatellite):
         super(Broker, self).do_stop()
 
     def setup_new_conf(self):  # pylint: disable=R0915,R0912
-        """Parse new configuration and initialize all required
+        """Broker custom setup_new_conf method
+
+        This function calls the base satellite treatment and manages the configuration needed
+        for a broker daemon:
+        - get and configure its pollers, reactionners and receivers relation
+        - configure the modules
 
         :return: None
         """
+        # Execute the base class treatment...
+        super(Broker, self).setup_new_conf()
 
+        # ...then our own specific treatment!
         with self.conf_lock:
-            self.clean_previous_run()
-            conf = unserialize(self.new_conf, True)
-            self.new_conf = None
-            self.cur_conf = conf
-            # Got our name from the globals
-            g_conf = conf['global']
-            if 'broker_name' in g_conf:
-                name = g_conf['broker_name']
-            else:
-                name = 'Unnamed broker'
-            self.name = name
-            # Set my own process title
-            self.set_proctitle(self.name)
+            print("Broker - New configuration for: %s / %s" % (self.type, self.name))
+            logger.info("[%s] Received a new configuration", self.name)
 
-            logger.info("[%s] Received a new configuration, containing:", self.name)
-            for key in conf:
-                logger.info("[%s] - %s", self.name, key)
-            logger.debug("[%s] global configuration part: %s", self.name, conf['global'])
+            # self_conf is our own configuration from the alignak environment
+            self_conf = self.cur_conf['self_conf']
 
-            # local statsd
-            self.statsd_host = g_conf['statsd_host']
-            self.statsd_port = g_conf['statsd_port']
-            self.statsd_prefix = g_conf['statsd_prefix']
-            self.statsd_enabled = g_conf['statsd_enabled']
-
-            # We got a name so we can update the logger and the stats global objects
-            statsmgr.register(name, 'broker',
-                              statsd_host=self.statsd_host, statsd_port=self.statsd_port,
-                              statsd_prefix=self.statsd_prefix, statsd_enabled=self.statsd_enabled)
-
-            # Get our Schedulers
-            for sched_id in conf['schedulers']:
-                # Must look if we already have it to do not overdie our broks
-
-                old_sched_id = self.get_previous_sched_id(conf['schedulers'][sched_id], sched_id)
-
-                if old_sched_id:
-                    logger.info("[%s] We already got the conf %s (%s)",
-                                self.name, old_sched_id, name)
-                    broks = self.schedulers[old_sched_id]['broks']
-                    running_id = self.schedulers[old_sched_id]['running_id']
-                    del self.schedulers[old_sched_id]
-                else:
-                    broks = {}
-                    running_id = 0
-                sched = conf['schedulers'][sched_id]
-                self.schedulers[sched_id] = sched
-
-                # replacing scheduler address and port by those defined in satellitemap
-                if sched['name'] in g_conf['satellitemap']:
-                    sched = dict(sched)  # make a copy
-                    sched.update(g_conf['satellitemap'][sched['name']])
-
-                # todo: why not using a SatteliteLink object?
-                proto = 'http'
-                if sched['use_ssl']:
-                    proto = 'https'
-                uri = '%s://%s:%s/' % (proto, sched['address'], sched['port'])
-                self.schedulers[sched_id]['uri'] = uri
-
-                self.schedulers[sched_id]['broks'] = broks
-                self.schedulers[sched_id]['instance_id'] = sched['instance_id']
-                self.schedulers[sched_id]['running_id'] = running_id
-                self.schedulers[sched_id]['active'] = sched['active']
-                self.schedulers[sched_id]['last_connection'] = 0
-                self.schedulers[sched_id]['timeout'] = sched['timeout']
-                self.schedulers[sched_id]['data_timeout'] = sched['data_timeout']
-                self.schedulers[sched_id]['con'] = None
-                self.schedulers[sched_id]['last_connection'] = 0
-                self.schedulers[sched_id]['connection_attempt'] = 0
-                self.schedulers[sched_id]['max_failed_connections'] = 3
-
-            logger.debug("We have our schedulers: %s", self.schedulers)
-            logger.info("We have our schedulers:")
-            for daemon in self.schedulers.values():
-                logger.info(" - %s ", daemon['name'])
-
-            # Now get arbiters
-            for arb_id in conf['arbiters']:
-                # Must look if we already have it
-                already_got = arb_id in self.arbiters
-                if already_got:
-                    broks = self.arbiters[arb_id]['broks']
-                else:
-                    broks = {}
-                arb = conf['arbiters'][arb_id]
-                self.arbiters[arb_id] = arb
-
-                # replacing arbiter address and port by those defined in satellitemap
-                if arb['name'] in g_conf['satellitemap']:
-                    arb = dict(arb)  # make a copy
-                    arb.update(g_conf['satellitemap'][arb['name']])
-
-                # todo: why not using a SatteliteLink object?
-                proto = 'http'
-                if arb['use_ssl']:
-                    proto = 'https'
-                uri = '%s://%s:%s/' % (proto, arb['address'], arb['port'])
-                self.arbiters[arb_id]['uri'] = uri
-
-                self.arbiters[arb_id]['broks'] = broks
-                self.arbiters[arb_id]['instance_id'] = 0  # No use so all to 0
-                self.arbiters[arb_id]['running_id'] = 0
-                self.arbiters[arb_id]['con'] = None
-                self.arbiters[arb_id]['last_connection'] = 0
-                self.arbiters[arb_id]['connection_attempt'] = 0
-                self.arbiters[arb_id]['max_failed_connections'] = 3
-
-                # We do not connect to the arbiter. Connection hangs
-
-            logger.debug("We have our arbiters: %s ", self.arbiters)
-            logger.info("We have our arbiters:")
-            for daemon in self.arbiters.values():
-                logger.info(" - %s ", daemon['name'])
-
-            # Now for pollers
-            # 658: temporary fix
-            if 'pollers' in conf:
-                for pol_id in conf['pollers']:
-                    # Must look if we already have it
-                    already_got = pol_id in self.pollers
+            # Get our satellites links
+            for link_type in ['pollers', 'reactionners', 'receivers']:
+                if link_type in self.cur_conf:
+                    logger.error("[%s] Missing %s in the configuration!", self.name, link_type)
+                    continue
+                for sat_uuid in self.cur_conf['satellites'][link_type]:
+                    my_satellites = getattr(self, link_type)
+                    # Must look if we already had a configuration and save our broks
+                    already_got = sat_uuid in my_satellites
                     if already_got:
-                        broks = self.pollers[pol_id]['broks']
-                        running_id = self.pollers[pol_id]['running_id']
+                        broks = my_satellites[sat_uuid]['broks']
+                        running_id = my_satellites[sat_uuid]['running_id']
                     else:
                         broks = {}
                         running_id = 0
-                    poll = conf['pollers'][pol_id]
-                    self.pollers[pol_id] = poll
+                    new_link = self.cur_conf[link_type][sat_uuid]
+                    my_satellites[sat_uuid] = new_link
 
-                    # replacing poller address and port by those defined in satellitemap
-                    if poll['name'] in g_conf['satellitemap']:
-                        poll = dict(poll)  # make a copy
-                        poll.update(g_conf['satellitemap'][poll['name']])
-
-                    # todo: why not using a SatteliteLink object?
-                    proto = 'http'
-                    if poll['use_ssl']:
-                        proto = 'https'
-
-                    uri = '%s://%s:%s/' % (proto, poll['address'], poll['port'])
-                    self.pollers[pol_id]['uri'] = uri
-
-                    self.pollers[pol_id]['broks'] = broks
-                    self.pollers[pol_id]['instance_id'] = 0  # No use so all to 0
-                    self.pollers[pol_id]['running_id'] = running_id
-                    self.pollers[pol_id]['con'] = None
-                    self.pollers[pol_id]['last_connection'] = 0
-                    self.pollers[pol_id]['connection_attempt'] = 0
-                    self.pollers[pol_id]['max_failed_connections'] = 3
-            else:
-                logger.warning("[%s] no pollers in the received configuration", self.name)
-
-            logger.debug("We have our pollers: %s", self.pollers)
-            logger.info("We have our pollers:")
-            for daemon in self.pollers.values():
-                logger.info(" - %s ", daemon['name'])
-
-            # Now reactionners
-            # 658: temporary fix
-            if 'reactionners' in conf:
-                for rea_id in conf['reactionners']:
-                    # Must look if we already have it
-                    already_got = rea_id in self.reactionners
-                    if already_got:
-                        broks = self.reactionners[rea_id]['broks']
-                        running_id = self.reactionners[rea_id]['running_id']
-                    else:
-                        broks = {}
-                        running_id = 0
-
-                    reac = conf['reactionners'][rea_id]
-                    self.reactionners[rea_id] = reac
-
-                    # replacing reactionner address and port by those defined in satellitemap
-                    if reac['name'] in g_conf['satellitemap']:
-                        reac = dict(reac)  # make a copy
-                        reac.update(g_conf['satellitemap'][reac['name']])
+                    # replacing sattelite address and port by those defined in satellitemap
+                    if new_link['name'] in self_conf.get('satellitemap', {}):
+                        new_link = dict(new_link)  # make a copy
+                        new_link.update(self_conf.get('satellitemap', {})[new_link['name']])
 
                     # todo: why not using a SatteliteLink object?
                     proto = 'http'
-                    if reac['use_ssl']:
+                    if new_link['use_ssl']:
                         proto = 'https'
-                    uri = '%s://%s:%s/' % (proto, reac['address'], reac['port'])
-                    self.reactionners[rea_id]['uri'] = uri
+                    uri = '%s://%s:%s/' % (proto, new_link['address'], new_link['port'])
+                    my_satellites[sat_uuid]['uri'] = uri
 
-                    self.reactionners[rea_id]['broks'] = broks
-                    self.reactionners[rea_id]['instance_id'] = 0  # No use so all to 0
-                    self.reactionners[rea_id]['running_id'] = running_id
-                    self.reactionners[rea_id]['con'] = None
-                    self.reactionners[rea_id]['last_connection'] = 0
-                    self.reactionners[rea_id]['connection_attempt'] = 0
-                    self.reactionners[rea_id]['max_failed_connections'] = 3
-            else:
-                logger.warning("[%s] no reactionners in the received configuration", self.name)
+                    my_satellites[sat_uuid]['broks'] = broks
+                    my_satellites[sat_uuid]['instance_id'] = 0
+                    my_satellites[sat_uuid]['running_id'] = running_id
+                    my_satellites[sat_uuid]['con'] = None
+                    my_satellites[sat_uuid]['last_connection'] = 0
+                    my_satellites[sat_uuid]['connection_attempt'] = 0
+                    my_satellites[sat_uuid]['max_failed_connections'] = 3
 
-            logger.debug("We have our reactionners: %s", self.reactionners)
-            logger.info("We have our reactionners:")
-            for daemon in self.reactionners.values():
-                logger.info(" - %s ", daemon['name'])
-
-            # Now receivers
-            # 658: temporary fix
-            if 'receivers' in conf:
-                for rec_id in conf['receivers']:
-                    # Must look if we already have it
-                    already_got = rec_id in self.receivers
-                    if already_got:
-                        broks = self.receivers[rec_id]['broks']
-                        running_id = self.receivers[rec_id]['running_id']
-                    else:
-                        broks = {}
-                        running_id = 0
-
-                    rec = conf['receivers'][rec_id]
-                    self.receivers[rec_id] = rec
-
-                    # replacing reactionner address and port by those defined in satellitemap
-                    if rec['name'] in g_conf['satellitemap']:
-                        rec = dict(rec)  # make a copy
-                        rec.update(g_conf['satellitemap'][rec['name']])
-
-                    # todo: why not using a SatteliteLink object?
-                    proto = 'http'
-                    if rec['use_ssl']:
-                        proto = 'https'
-                    uri = '%s://%s:%s/' % (proto, rec['address'], rec['port'])
-                    self.receivers[rec_id]['uri'] = uri
-
-                    self.receivers[rec_id]['broks'] = broks
-                    self.receivers[rec_id]['instance_id'] = rec['instance_id']
-                    self.receivers[rec_id]['running_id'] = running_id
-                    self.receivers[rec_id]['con'] = None
-                    self.receivers[rec_id]['last_connection'] = 0
-                    self.receivers[rec_id]['connection_attempt'] = 0
-                    self.receivers[rec_id]['max_failed_connections'] = 3
-            else:
-                logger.warning("[%s] no receivers in the received configuration", self.name)
-
-            logger.debug("We have our receivers: %s", self.receivers)
-            logger.info("We have our receivers:")
-            for daemon in self.receivers.values():
-                logger.info(" - %s ", daemon['name'])
+                logger.debug("We have our %s: %s", link_type, my_satellites)
+                logger.info("We have our %s:", link_type)
+                for link in my_satellites.values():
+                    logger.info(" - %s ", link['name'])
 
             if not self.have_modules:
-                self.modules = conf['global']['modules']
+                self.modules = self_conf['modules']
                 self.have_modules = True
 
                 # Ok now start, or restart them!
                 # Set modules, init them and start external ones
                 self.do_load_modules(self.modules)
+                # and start external modules too
                 self.modules_manager.start_external_instances()
 
-            # Set our giving timezone from arbiter
-            use_timezone = conf['global']['use_timezone']
-            if use_timezone != 'NOTSET':
-                logger.info("Setting our timezone to %s", use_timezone)
-                os.environ['TZ'] = use_timezone
-                time.tzset()
-
-            # Initialize connection with Schedulers, Pollers and Reactionners
-            for sched_id in self.schedulers:
-                self.daemon_connection_init(sched_id, s_type='scheduler')
-
-            for pol_id in self.pollers:
-                self.daemon_connection_init(pol_id, s_type='poller')
-
-            for rea_id in self.reactionners:
-                self.daemon_connection_init(rea_id, s_type='reactionner')
+            # Initialize connection with all our satellites
+            for sat_link in self.get_all_links():
+                print("Initialize connection with: %s" % sat_link)
+                self.daemon_connection_init(sat_link.uuid, s_type=sat_link.type)
 
     def clean_previous_run(self):
         """Clean all (when we received new conf)
 
         :return: None
         """
-        # Clean all lists
-        self.schedulers.clear()
+        # Clean all satellites relations
         self.pollers.clear()
         self.reactionners.clear()
         self.receivers.clear()
-        self.broks = self.broks[:]
+        self.schedulers.clear()
         self.arbiters.clear()
+
+        # Clean our internal objects
+        self.broks = self.broks[:]
         self.broks_internal_raised = self.broks_internal_raised[:]
         with self.arbiter_broks_lock:
             self.arbiter_broks = self.arbiter_broks[:]
         self.external_commands = self.external_commands[:]
 
         # And now modules
-        self.have_modules = False
-        self.modules_manager.clear_instances()
+        # self.have_modules = False
+        # self.modules_manager.clear_instances()
 
     def get_stats_struct(self):
         """Get information of modules (internal and external) and add metrics of them

@@ -53,137 +53,160 @@ class DaemonsStartTest(AlignakTest):
         except Exception as err:
             print("Problem on terminate and wait subproc %s: %s" % (name, err))
 
-    def kill_running_daemons(self):
-        """Kill the running daemons
-
-        :return:
-        """
-        print("Stopping the daemons...")
-        start = time.time()
-        for daemon in list(self.procs):
-            print("Daemon %s" % (daemon))
-            name = daemon
-            proc = self.procs[daemon]
-            print("Asking %s (pid=%d) to end..." % (name, proc.pid))
-            try:
-                daemon_process = psutil.Process(proc.pid)
-            except psutil.NoSuchProcess:
-                print("not existing!")
-                continue
-            children = daemon_process.children(recursive=True)
-            daemon_process.terminate()
-            try:
-                daemon_process.wait(10)
-            except psutil.TimeoutExpired:
-                print("***** timeout 10 seconds...")
-                daemon_process.kill()
-            except psutil.NoSuchProcess:
-                print("not existing!")
-                pass
-            # for child in children:
-            #     try:
-            #         print("Asking %s child (pid=%d) to end..." % (child.name(), child.pid))
-            #         child.terminate()
-            #     except psutil.NoSuchProcess:
-            #         pass
-            # gone, still_alive = psutil.wait_procs(children, timeout=10)
-            # for process in still_alive:
-            #     try:
-            #         print("Killing %s (pid=%d)!" % (child.name(), child.pid))
-            #         process.kill()
-            #     except psutil.NoSuchProcess:
-            #         pass
-            print("%s terminated" % (name))
-        print("Stopping daemons duration: %d seconds" % (time.time() - start))
-
     def setUp(self):
         self.procs = {}
+
+        # copy the default shipped configuration files in /tmp/etc and change the root folder
+        # used by the daemons for pid and log files in the alignak-realm2.ini file
+        if os.path.exists('/tmp/etc'):
+            shutil.rmtree('/tmp/etc')
+
+        print("Preparing configuration...")
+        shutil.copytree('../etc', '/tmp/etc')
+        files = ['/tmp/etc/alignak-realm2.ini']
+        replacements = {
+            '_dist=/usr/local/': '_dist=/tmp'
+        }
+        self._files_update(files, replacements)
+
+        # Clean the former existing pid and log files
+        print("Cleaning pid and log files...")
+        for daemon in ['arbiter-master', 'scheduler-master', 'broker-master',
+                       'poller-master', 'reactionner-master', 'receiver-master']:
+            if os.path.exists('/tmp/run/%s.pid' % daemon):
+                os.remove('/tmp/run/%s.pid' % daemon)
+            if os.path.exists('/tmp/log/%s.log' % daemon):
+                os.remove('/tmp/log/%s.log' % daemon)
 
     def tearDown(self):
         print("Test terminated!")
 
-    def test_arbiter_bad_configuration_file(self):
-        """ Running the Alignak Arbiter with a not existing daemon configuration file
+    def test_arbiter_unexisting_environment(self):
+        """ Running the Alignak Arbiter with a not existing environment file
 
         :return:
         """
-        # copy etc config files in test/run/test_launch_daemons and change folder
-        # in the files for pid and log files
-        if os.path.exists('./run/test_launch_daemons'):
-            shutil.rmtree('./run/test_launch_daemons')
-
-        shutil.copytree('../etc', './run/test_launch_daemons')
-        files = ['run/test_launch_daemons/daemons/arbiterd.ini',
-                 'run/test_launch_daemons/arbiter/daemons/arbiter-master.cfg']
-        replacements = {
-            '/usr/local/var/run/alignak': '/tmp',
-            '/usr/local/var/log/alignak': '/tmp',
-            '/usr/local/etc/alignak': '/tmp'
-        }
-        self.files_update(files, replacements)
-
-        print("Cleaning pid and log files...")
-        for daemon in ['arbiter']:
-            if os.path.exists('/tmp/%sd.pid' % daemon):
-                os.remove('/tmp/%sd.pid' % daemon)
-                print("- removed /tmp/%sd.pid" % daemon)
-            if os.path.exists('/tmp/%sd.log' % daemon):
-                os.remove('/tmp/%sd.log' % daemon)
-                print("- removed /tmp/%sd.log" % daemon)
-
-        print("Launching arbiter with bad configuration file...")
+        print("Launching arbiter with a not existing environment file...")
         args = ["../alignak/bin/alignak_arbiter.py",
-                "-e", "run/test_launch_daemons/daemons/fake.ini"]
+                "-e", "/tmp/etc/unexisting.ini"]
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
-        # Wait for arbiter parsing the configuration
-        sleep(5)
+        # Waiting for arbiter to parse the configuration
+        sleep(3)
 
         ret = arbiter.poll()
         print("*** Arbiter exited with code: %d" % ret)
         assert ret is not None, "Arbiter is still running!"
-        # Arbiter process must exit with a return code == 2
-        assert ret == 2
+        stdout = arbiter.stdout.read()
+        assert "Daemon 'arbiter-master' is started with an environment " \
+               "file: /tmp/etc/unexisting.ini" in stdout
+        stderr = arbiter.stderr.read()
+        assert "The Alignak environment file is not existing or do not " \
+               "define any monitoring configuration files. " \
+               "The arbiter can not start correctly." in stderr
+        # Arbiter process must exit with a return code == 1
+        assert ret == 1
 
-    def test_arbiter_bad_configuration(self):
-        """ Running the Alignak Arbiter with bad configuration (unknown file or dir)
+    def test_arbiter_no_monitoring_configuration(self):
+        """ Running the Alignak Arbiter with no monitoring configuration file
 
         :return:
         """
-        # copy etc config files in test/run/test_launch_daemons and change folder
-        # in the files for pid and log files
-        if os.path.exists('./run/test_launch_daemons'):
-            shutil.rmtree('./run/test_launch_daemons')
+        print("Launching arbiter with no monitoring configuration...")
 
-        shutil.copytree('../etc', './run/test_launch_daemons')
-        files = ['run/test_launch_daemons/daemons/arbiterd.ini',
-                 'run/test_launch_daemons/arbiter/daemons/arbiter-master.cfg']
+        # Update configuration with a bad file name
+        files = ['/tmp/etc/alignak-realm2.ini']
         replacements = {
-            '/usr/local/var/run/alignak': '/tmp',
-            '/usr/local/var/log/alignak': '/tmp',
-            '/usr/local/etc/alignak': '/tmp'
+            'CFG=%(etcdir)s/alignak.cfg': 'CFG='
         }
-        self.files_update(files, replacements)
+        self._files_update(files, replacements)
 
-        print("Cleaning pid and log files...")
-        for daemon in ['arbiter']:
-            if os.path.exists('/tmp/%sd.pid' % daemon):
-                os.remove('/tmp/%sd.pid' % daemon)
-                print("- removed /tmp/%sd.pid" % daemon)
-            if os.path.exists('/tmp/%sd.log' % daemon):
-                os.remove('/tmp/%sd.log' % daemon)
-                print("- removed /tmp/%sd.log" % daemon)
-
-        print("Launching arbiter with bad formatted configuration file...")
         args = ["../alignak/bin/alignak_arbiter.py",
-                "-c", "run/test_launch_daemons/daemons/arbiterd.ini",
-                "-a", "cfg/alignak_broken_2.cfg"]
+                "-e", "/tmp/etc/alignak-realm2.ini"]
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
-        # Wait for arbiter parsing the configuration
-        sleep(5)
+        # Waiting for arbiter to parse the configuration
+        sleep(3)
+
+        ret = arbiter.poll()
+        print("*** Arbiter exited with code: %d" % ret)
+        assert ret is not None, "Arbiter is still running!"
+        stdout = arbiter.stdout.read()
+        assert "Daemon 'arbiter-master' is started with an environment " \
+               "file: /tmp/etc/alignak-realm2.ini" in stdout
+        stderr = arbiter.stderr.read()
+        print(stderr)
+        assert "The Alignak environment file is not existing or do not " \
+               "define any monitoring configuration files. " \
+               "The arbiter can not start correctly." in stderr
+        # Arbiter process must exit with a return code == 1
+        assert ret == 1
+
+    def test_arbiter_unexisting_monitoring_configuration(self):
+        """ Running the Alignak Arbiter with a not existing monitoring configuration file
+
+        :return:
+        """
+        print("Launching arbiter with no monitoring configuration...")
+
+        # Update configuration with a bad file name
+        files = ['/tmp/etc/alignak-realm2.ini']
+        replacements = {
+            'CFG=%(etcdir)s/alignak.cfg': 'CFG=%(etcdir)s/unexisting.cfg'
+        }
+        self._files_update(files, replacements)
+
+        args = ["../alignak/bin/alignak_arbiter.py",
+                "-e", "/tmp/etc/alignak-realm2.ini"]
+        arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
+
+        # Waiting for arbiter to parse the configuration
+        sleep(3)
+
+        ret = arbiter.poll()
+        print("*** Arbiter exited with code: %d" % ret)
+        errors = False
+        stderr = False
+        for line in iter(arbiter.stdout.readline, b''):
+            if 'ERROR' in line:
+                print("*** " + line.rstrip())
+                errors = True
+            assert 'CRITICAL' not in line
+        for line in iter(arbiter.stderr.readline, b''):
+            print("*** " + line.rstrip())
+            stderr = True
+
+        # Arbiter process must exit with a return code == 1
+        assert ret == 1
+        # Error message must be sent to stderr
+        assert stderr
+        # Errors must exist in the logs
+        assert errors
+
+    def test_arbiter_bad_configuration(self):
+        """ Running the Alignak Arbiter with bad monitoring configuration (unknown sub directory)
+
+        :return:
+        """
+        print("Launching arbiter with a bad monitoring configuration...")
+
+        # Update configuration with a bad file name
+        files = ['/tmp/etc/alignak.cfg']
+        replacements = {
+            'cfg_dir=arbiter/objects/realms': 'cfg_dir=unexisting/objects/realms'
+        }
+        self._files_update(files, replacements)
+
+        args = ["../alignak/bin/alignak_arbiter.py",
+                "-e", "/tmp/etc/alignak-realm2.ini"]
+        arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
+
+        # Waiting for arbiter to parse the configuration
+        sleep(3)
 
         ret = arbiter.poll()
         print("*** Arbiter exited with code: %d" % ret)
@@ -207,89 +230,45 @@ class DaemonsStartTest(AlignakTest):
         assert errors
 
     def test_arbiter_verify(self):
-        """ Running the Alignak Arbiter in verify mode only
+        """ Running the Alignak Arbiter in verify mode only with the default shipped configuration
 
         :return:
         """
-        # copy etc config files in test/run/test_launch_daemons and change folder
-        # in the files for pid and log files
-        if os.path.exists('./run/test_launch_daemons'):
-            shutil.rmtree('./run/test_launch_daemons')
-
-        shutil.copytree('../etc', './run/test_launch_daemons')
-        files = ['run/test_launch_daemons/daemons/arbiterd.ini',
-                 'run/test_launch_daemons/arbiter/daemons/arbiter-master.cfg']
-        replacements = {
-            '/usr/local/var/run/alignak': '/tmp',
-            '/usr/local/var/log/alignak': '/tmp',
-            '/usr/local/etc/alignak': '/tmp'
-        }
-        self.files_update(files, replacements)
-
-        print("Cleaning pid and log files...")
-        for daemon in ['arbiter']:
-            if os.path.exists('/tmp/%sd.pid' % daemon):
-                os.remove('/tmp/%sd.pid' % daemon)
-                print("- removed /tmp/%sd.pid" % daemon)
-            if os.path.exists('/tmp/%sd.log' % daemon):
-                os.remove('/tmp/%sd.log' % daemon)
-                print("- removed /tmp/%sd.log" % daemon)
-
         print("Launching arbiter with configuration file...")
-        args = ["../alignak/bin/alignak_arbiter.py",
-                "-V",
-                "-a", "run/test_launch_daemons/alignak.cfg"]
+        args = ["../alignak/bin/alignak_arbiter.py", "-V", "-e", "/tmp/etc/alignak-realm2.ini"]
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
         sleep(5)
 
         ret = arbiter.poll()
-        print("*** Arbiter exited with code: %d" % ret)
+        print("*** Arbiter exited with code: %s" % ret)
         assert ret is not None, "Arbiter is still running!"
-        # Arbiter process must exit with a return code == 0
-        assert ret == 0
+        errors = 0
         for line in iter(arbiter.stdout.readline, b''):
             print(">>> " + line.rstrip())
-            assert 'ERROR' not in line
-            assert 'CRITICAL' not in line
+            if 'ERROR' in line:
+                errors = errors + 1
+            if 'CRITICAL' in line:
+                errors = errors + 1
         for line in iter(arbiter.stderr.readline, b''):
             print("*** " + line.rstrip())
-            if sys.version_info > (2, 7):
-                assert False, "stderr output!"
+            # if sys.version_info > (2, 7):
+            #     assert False, "stderr output!"
+        # Arbiter process must exit with a return code == 0 and no errors
+        assert errors == 0
+        assert ret == 0
 
     def test_arbiter_no_daemons(self):
         """ Run the Alignak Arbiter with other daemons missing
 
         :return:
         """
-        # copy etc config files in test/run/test_launch_daemons and change folder
-        # in the files for pid and log files
-        if os.path.exists('./run/test_launch_daemons'):
-            shutil.rmtree('./run/test_launch_daemons')
-
-        shutil.copytree('../etc', './run/test_launch_daemons')
-        files = ['run/test_launch_daemons/daemons/arbiterd.ini',
-                 'run/test_launch_daemons/arbiter/daemons/arbiter-master.cfg']
-        replacements = {
-            '/usr/local/var/run/alignak': '/tmp',
-            '/usr/local/var/log/alignak': '/tmp',
-            '/usr/local/etc/alignak': '/tmp'
-        }
-        self.files_update(files, replacements)
-
-        print("Cleaning pid and log files...")
-        for daemon in ['arbiter']:
-            if os.path.exists('/tmp/%sd.pid' % daemon):
-                os.remove('/tmp/%sd.pid' % daemon)
-                print("- removed /tmp/%sd.pid" % daemon)
-            if os.path.exists('/tmp/%sd.log' % daemon):
-                os.remove('/tmp/%sd.log' % daemon)
-                print("- removed /tmp/%sd.log" % daemon)
+        # All the default configuration files are in /tmp/etc
 
         print("Launching arbiter with bad configuration file...")
         args = ["../alignak/bin/alignak_arbiter.py",
-                "-a", "run/test_launch_daemons/alignak.cfg"]
+                "-e", "/tmp/etc/alignak-realm2.ini"]
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
@@ -297,6 +276,8 @@ class DaemonsStartTest(AlignakTest):
 
         ret = arbiter.poll()
         # Arbiter must still be running ... it is still trying to dispatch the configuration!
+        for line in iter(arbiter.stdout.readline, b''):
+            print(">>> " + line.rstrip())
         assert ret is None, "Arbiter exited!"
 
         sleep(10)
@@ -374,7 +355,7 @@ class DaemonsStartTest(AlignakTest):
             '/usr/local/etc/alignak': '/tmp',
             'arbiterd.log': 'arbiter-spare-configuration.log',
         }
-        self.files_update(files, replacements)
+        self._files_update(files, replacements)
 
         print("Cleaning pid and log files...")
         for daemon in ['arbiter']:
@@ -425,7 +406,7 @@ class DaemonsStartTest(AlignakTest):
             'arbiter-master': 'arbiter-spare',
             'spare                   0': 'spare                   1'
         }
-        self.files_update(files, replacements)
+        self._files_update(files, replacements)
 
         print("Cleaning pid and log files...")
         for daemon in ['arbiter']:
@@ -511,32 +492,29 @@ class DaemonsStartTest(AlignakTest):
         # Set an environment variable to activate the logging of system cpu, memory and disk
         os.environ['ALIGNAK_DAEMONS_MONITORING'] = '2'
 
-        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                  'run/test_launch_daemons')
-
-        # copy etc config files in test/run/test_launch_daemons and change folder
-        # in the files for pid and log files
+        cfg_folder = './run/test_launch_daemons'
         if os.path.exists(cfg_folder):
             shutil.rmtree(cfg_folder)
 
         shutil.copytree('../etc', cfg_folder)
-        files = [cfg_folder + '/daemons/arbiterd.ini',
-                 cfg_folder + '/daemons/brokerd.ini',
-                 cfg_folder + '/daemons/pollerd.ini',
-                 cfg_folder + '/daemons/reactionnerd.ini',
-                 cfg_folder + '/daemons/receiverd.ini',
-                 cfg_folder + '/daemons/schedulerd.ini',
-                 cfg_folder + '/alignak.cfg',
-                 cfg_folder + '/arbiter/daemons/arbiter-master.cfg',
-                 cfg_folder + '/arbiter/daemons/broker-master.cfg',
-                 cfg_folder + '/arbiter/daemons/poller-master.cfg',
-                 cfg_folder + '/arbiter/daemons/reactionner-master.cfg',
-                 cfg_folder + '/arbiter/daemons/receiver-master.cfg',
-                 cfg_folder + '/arbiter/daemons/scheduler-master.cfg']
+        files = []
+        # files = [cfg_folder + '/daemons/arbiterd.ini',
+        #          cfg_folder + '/daemons/brokerd.ini',
+        #          cfg_folder + '/daemons/pollerd.ini',
+        #          cfg_folder + '/daemons/reactionnerd.ini',
+        #          cfg_folder + '/daemons/receiverd.ini',
+        #          cfg_folder + '/daemons/schedulerd.ini',
+        #          cfg_folder + '/alignak.cfg',
+        #          cfg_folder + '/arbiter/daemons/arbiter-master.cfg',
+        #          cfg_folder + '/arbiter/daemons/broker-master.cfg',
+        #          cfg_folder + '/arbiter/daemons/poller-master.cfg',
+        #          cfg_folder + '/arbiter/daemons/reactionner-master.cfg',
+        #          cfg_folder + '/arbiter/daemons/receiver-master.cfg',
+        #          cfg_folder + '/arbiter/daemons/scheduler-master.cfg']
         replacements = {
-            '/usr/local/var/run/alignak': '/tmp',
-            '/usr/local/var/log/alignak': '/tmp',
-            '/usr/local/etc/alignak': '/tmp'
+            # '/usr/local/var/run/alignak': '/tmp',
+            # '/usr/local/var/log/alignak': '/tmp',
+            # '/usr/local/etc/alignak': '/tmp'
         }
         if ssl:
             shutil.copy('./cfg/ssl/server.crt', '/tmp/')
@@ -552,7 +530,7 @@ class DaemonsStartTest(AlignakTest):
                 'certs/': '',
                 'use_ssl	                0': 'use_ssl	                1'
             })
-        self.files_update(files, replacements)
+        self._files_update(files, replacements)
 
         self.procs = {}
         satellite_map = {

@@ -54,7 +54,7 @@ class TestHostExtended(AlignakTest):
     def setUp(self):
         self.setup_with_file('cfg/extended/extended_info.cfg')
         assert self.conf_is_correct
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
     def test_extended_host_information(self):
         """ Host extended information """

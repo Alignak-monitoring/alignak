@@ -34,9 +34,10 @@ class template_DaemonLink_get_name():
 
     def test_get_name(self):
         link = self.get_link()
+        print("Link: %s / %s" % (type(link), link.__dict__))
         link.fill_default()
 
-        print("Name: %s / %s" % (link.get_my_type(), link.get_name()))
+        print("Name: %s / %s" % (link.type, link.get_name()))
         print("Config: %s" % (link.give_satellite_cfg()))
         print("Config: %s" % (link.have_conf()))
         assert False == link.have_conf()

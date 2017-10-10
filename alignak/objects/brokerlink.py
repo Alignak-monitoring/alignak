@@ -54,8 +54,12 @@ class BrokerLink(SatelliteLink):
     my_type = 'broker'
     properties = SatelliteLink.properties.copy()
     properties.update({
-        'broker_name': StringProp(fill_brok=['full_status'], to_send=True),
-        'port': IntegerProp(default=7772, fill_brok=['full_status']),
+        'type':
+            StringProp(default='broker', fill_brok=['full_status']),
+        'broker_name':
+            StringProp(default='', fill_brok=['full_status'], to_send=True),
+        'port':
+            IntegerProp(default=7772, fill_brok=['full_status']),
     })
 
     def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
@@ -65,6 +69,16 @@ class BrokerLink(SatelliteLink):
         :return: None
         """
         self.realm.brokers.append(self)
+
+    def give_satellite_cfg(self):
+        """
+        Get configuration of the Reactionner satellite
+
+        :return: dictionary of link information
+        :rtype: dict
+        """
+        res = super(BrokerLink, self).give_satellite_cfg()
+        return res
 
 
 class BrokerLinks(SatelliteLinks):

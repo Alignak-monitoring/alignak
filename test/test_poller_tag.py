@@ -32,11 +32,11 @@ class TestPollerTag(AlignakTest):
         :return: None
         """
         self.print_header()
-        self.setup_with_file('cfg/cfg_poller_tag.cfg')
+        self.setup_with_file('cfg/cfg_poller_tag.cfg', 'cfg/poller_tag/alignak.ini')
         self.assertTrue(self.conf_is_correct)
 
         # Our scheduler
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         # Our pollers
         #print self._sched.pollers
@@ -57,7 +57,7 @@ class TestPollerTag(AlignakTest):
         self.print_header()
         host = self._sched.hosts.find_by_name("test_host_pt_01")
         self.external_command_loop()
-        checks = self.schedulers['scheduler-master'].sched.checks.values()
+        checks = self._scheduler.checks.values()
         mycheck = self._sched.checks[host.checks_in_progress[0]]
         assert mycheck.poller_tag == 'north'
 
@@ -69,7 +69,7 @@ class TestPollerTag(AlignakTest):
         self.print_header()
         host = self._sched.hosts.find_by_name("test_host_pt_02")
         self.external_command_loop()
-        checks = self.schedulers['scheduler-master'].sched.checks.values()
+        checks = self._scheduler.checks.values()
         mycheck = self._sched.checks[host.checks_in_progress[0]]
         assert mycheck.poller_tag == 'south'
 
@@ -82,7 +82,7 @@ class TestPollerTag(AlignakTest):
         self.print_header()
         host = self._sched.hosts.find_by_name("test_host_pt_03")
         self.external_command_loop()
-        checks = self.schedulers['scheduler-master'].sched.checks.values()
+        checks = self._scheduler.checks.values()
         mycheck = self._sched.checks[host.checks_in_progress[0]]
         assert mycheck.poller_tag == 'south'
 
@@ -96,7 +96,7 @@ class TestPollerTag(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []
         self.external_command_loop()
-        checks = self.schedulers['scheduler-master'].sched.checks.values()
+        checks = self._scheduler.checks.values()
         mycheck = self._sched.checks[svc.checks_in_progress[0]]
         assert mycheck.poller_tag == 'north'
 
@@ -111,7 +111,7 @@ class TestPollerTag(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []
         self.external_command_loop()
-        checks = self.schedulers['scheduler-master'].sched.checks.values()
+        checks = self._scheduler.checks.values()
         mycheck = self._sched.checks[svc.checks_in_progress[0]]
         assert mycheck.poller_tag == 'south'
 
@@ -126,7 +126,7 @@ class TestPollerTag(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []
         self.external_command_loop()
-        checks = self.schedulers['scheduler-master'].sched.checks.values()
+        checks = self._scheduler.checks.values()
         mycheck = self._sched.checks[svc.checks_in_progress[0]]
         assert mycheck.poller_tag == 'north'
 

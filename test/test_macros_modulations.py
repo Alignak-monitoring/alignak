@@ -56,7 +56,7 @@ class TestMacroModulations(AlignakTest):
         assert self.conf_is_correct
 
         # Our scheduler
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
     def test_macros_modulation(self):
         """ Test macros modulation """

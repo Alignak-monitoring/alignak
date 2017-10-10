@@ -39,7 +39,7 @@ class TestComments(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
@@ -52,7 +52,7 @@ class TestComments(AlignakTest):
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n".\
             format(int(now), host.host_name, 2, 0, 1, 'darth vader', 'normal process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_command(cmd)
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
@@ -65,7 +65,7 @@ class TestComments(AlignakTest):
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n".\
             format(int(now), host.host_name, 2, 0, 1, 'darth vader', 'normal new process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_command(cmd)
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
@@ -90,7 +90,7 @@ class TestComments(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
@@ -103,7 +103,7 @@ class TestComments(AlignakTest):
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM_EXPIRE;{1};{2};{3};{4};{5};{6};{7}\n".\
             format(int(now), host.host_name, 2, 0, 1, int(now) + 3, 'darth vader', 'normal process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_command(cmd)
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
@@ -129,12 +129,12 @@ class TestComments(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
                                                                               "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -152,7 +152,7 @@ class TestComments(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
             format(int(now), host.host_name, svc.service_description, 2, 0, 1, 'darth vader',
                    'normal process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_command(cmd)
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
@@ -175,7 +175,7 @@ class TestComments(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
@@ -186,7 +186,7 @@ class TestComments(AlignakTest):
         now = time.time()
         cmd = "[{0}] ADD_HOST_COMMENT;{1};{2};{3};{4}\n". \
             format(int(now), host.host_name, 1, 'darth vader', 'nice comment')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_command(cmd)
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.1)
@@ -198,7 +198,7 @@ class TestComments(AlignakTest):
         now = time.time()
         cmd = "[{0}] ADD_HOST_COMMENT;{1};{2};{3};{4}\n". \
             format(int(now), host.host_name, 1, 'emperor', 'nice comment yes')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_command(cmd)
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.1)
@@ -209,7 +209,7 @@ class TestComments(AlignakTest):
         now = time.time()
         cmd = "[{0}] DEL_ALL_HOST_COMMENTS;{1}\n". \
             format(int(now), host.host_name)
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_command(cmd)
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.1)

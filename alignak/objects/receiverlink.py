@@ -57,12 +57,18 @@ class ReceiverLink(SatelliteLink):
     my_type = 'receiver'
     properties = SatelliteLink.properties.copy()
     properties.update({
-        'receiver_name':      StringProp(fill_brok=['full_status'], to_send=True),
-        'port':               IntegerProp(default=7772, fill_brok=['full_status']),
-        'manage_sub_realms':  BoolProp(default=True, fill_brok=['full_status']),
-        'manage_arbiters':    BoolProp(default=False, fill_brok=['full_status'], to_send=True),
-        'accept_passive_unknown_check_results': BoolProp(default=False,
-                                                         fill_brok=['full_status'], to_send=True),
+        'type':
+            StringProp(default='receiver', fill_brok=['full_status']),
+        'receiver_name':
+            StringProp(default='', fill_brok=['full_status'], to_send=True),
+        'port':
+            IntegerProp(default=7772, fill_brok=['full_status']),
+        'manage_sub_realms':
+            BoolProp(default=False, fill_brok=['full_status']),
+        'manage_arbiters':
+            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
+        'accept_passive_unknown_check_results':
+            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
     })
 
     def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere

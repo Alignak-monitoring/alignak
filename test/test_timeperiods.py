@@ -602,7 +602,7 @@ class TestTimeperiods(AlignakTest):
         """
         self.print_header()
         self.setup_with_file('cfg/cfg_timeperiods.cfg')
-        tp = self.schedulers['scheduler-master'].sched.timeperiods.find_by_name("us-holidays")
+        tp = self._scheduler.timeperiods.find_by_name("us-holidays")
         self.assertEqual(7, len(tp.dateranges))
         mydateranges = []
         for daterange in tp.dateranges:

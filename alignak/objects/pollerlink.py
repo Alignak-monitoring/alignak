@@ -57,12 +57,20 @@ class PollerLink(SatelliteLink):
     # To_send: send or not to satellite conf
     properties = SatelliteLink.properties.copy()
     properties.update({
-        'poller_name':  StringProp(fill_brok=['full_status'], to_send=True),
-        'port':         IntegerProp(default=7771, fill_brok=['full_status']),
-        'min_workers':  IntegerProp(default=0, fill_brok=['full_status'], to_send=True),
-        'max_workers':  IntegerProp(default=30, fill_brok=['full_status'], to_send=True),
-        'processes_by_worker': IntegerProp(default=256, fill_brok=['full_status'], to_send=True),
-        'poller_tags':  ListProp(default=['None'], to_send=True),
+        'type':
+            StringProp(default='poller', fill_brok=['full_status']),
+        'poller_name':
+            StringProp(default='', fill_brok=['full_status'], to_send=True),
+        'port':
+            IntegerProp(default=7771, fill_brok=['full_status']),
+        'min_workers':
+            IntegerProp(default=0, fill_brok=['full_status'], to_send=True),
+        'max_workers':
+            IntegerProp(default=30, fill_brok=['full_status'], to_send=True),
+        'processes_by_worker':
+            IntegerProp(default=256, fill_brok=['full_status'], to_send=True),
+        'poller_tags':
+            ListProp(default=['None'], to_send=True),
     })
 
     def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
@@ -72,6 +80,20 @@ class PollerLink(SatelliteLink):
         :return: None
         """
         self.realm.pollers.append(self)
+
+    def give_satellite_cfg(self):
+        """
+        Get configuration of the Poller satellite
+
+        :return: dictionary of link information
+        :rtype: dict
+        """
+        res = super(PollerLink, self).give_satellite_cfg()
+        res.update({
+            'active': True, 'passive': self.passive,
+            'poller_tags': getattr(self, 'poller_tags', [])
+        })
+        return res
 
 
 class PollerLinks(SatelliteLinks):

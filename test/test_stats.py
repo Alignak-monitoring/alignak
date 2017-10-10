@@ -42,17 +42,17 @@ class TestStats(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_stats.cfg')
 
-        svc0 = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc0 = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
-        svc1 = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc1 = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_1")
-        svc2 = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc2 = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_2")
-        svc3 = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc3 = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_3")
-        svc4 = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc4 = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_4")
-        svc5 = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc5 = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_5")
 
         self.scheduler_loop(1, [[svc0, 0, 'OK'], [svc1, 0, 'OK'], [svc2, 0, 'OK'],
@@ -74,7 +74,7 @@ class TestStats(AlignakTest):
         svc4.last_chk = now-5
         svc5.last_chk = now-12
 
-        self.schedulers['scheduler-master'].sched.get_latency_average_percentile()
+        self._scheduler.get_latency_average_percentile()
 
         reference = {
             'min': 0.89,
@@ -83,8 +83,8 @@ class TestStats(AlignakTest):
         }
 
         assert reference['min'] == \
-                         self.schedulers['scheduler-master'].sched.stats['latency']['min']
+                         self._scheduler.stats['latency']['min']
         assert reference['max'] == \
-                         self.schedulers['scheduler-master'].sched.stats['latency']['max']
+                         self._scheduler.stats['latency']['max']
         assert reference['avg'] == \
-                         self.schedulers['scheduler-master'].sched.stats['latency']['avg']
+                         self._scheduler.stats['latency']['avg']

@@ -102,17 +102,17 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
+        self._broker = self._broker
 
         now = int(time.time())
 
         # ---
         # Lowercase command is allowed
         self.clear_logs()
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         excmd = '[%d] command' % (now)
         res = self.manage_external_command(excmd)
         # Resolve command result is None because the command is not recognized
@@ -125,7 +125,7 @@ class TestExternalCommands(AlignakTest):
         # ---
         # Some commands are not implemented
         self.clear_logs()
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         excmd = '[%d] shutdown_program' % (now)
         res = self.manage_external_command(excmd)
         if self.ecm_mode == 'applyer':
@@ -141,7 +141,7 @@ class TestExternalCommands(AlignakTest):
         # ---
         # Command may not have a timestamp
         self.clear_logs()
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         excmd = 'shutdown_program'
         res = self.manage_external_command(excmd)
         if self.ecm_mode == 'applyer':
@@ -157,7 +157,7 @@ class TestExternalCommands(AlignakTest):
         # ---
         # Timestamp must be an integer
         self.clear_logs()
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         excmd = '[fake] shutdown_program'
         res = self.manage_external_command(excmd)
         # Resolve command result is not None because the command is recognized
@@ -170,13 +170,13 @@ class TestExternalCommands(AlignakTest):
         # ---
         # Malformed command
         self.clear_logs()
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         excmd = '[%d] MALFORMED COMMAND' % now
         res = self.manage_external_command(excmd)
         assert res is None
         if self.ecm_mode == 'applyer':
             # We get 'monitoring_log' broks for logging to the monitoring logs...
-            broks = [b for b in self._broker['broks'].values()
+            broks = [b for b in self._broker.broks.values()
                      if b.type == 'monitoring_log']
             assert len(broks) == 1
         # ...and some logs
@@ -187,12 +187,12 @@ class TestExternalCommands(AlignakTest):
         # ---
         # Malformed command
         self.clear_logs()
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         excmd = '[%d] ADD_HOST_COMMENT;test_host_0;1;qdsqd' % now
         res = self.manage_external_command(excmd)
         if self.ecm_mode == 'applyer':
             # We get an 'monitoring_log' brok for logging to the monitoring logs...
-            broks = [b for b in self._broker['broks'].values()
+            broks = [b for b in self._broker.broks.values()
                      if b.type == 'monitoring_log']
             assert len(broks) == 1
             # ...and some logs
@@ -201,12 +201,12 @@ class TestExternalCommands(AlignakTest):
         # ---
         # Unknown command
         self.clear_logs()
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         excmd = '[%d] UNKNOWN_COMMAND' % now
         res = self.manage_external_command(excmd)
         if self.ecm_mode == 'applyer':
             # We get an 'monitoring_log' brok for logging to the monitoring logs...
-            broks = [b for b in self._broker['broks'].values()
+            broks = [b for b in self._broker.broks.values()
                      if b.type == 'monitoring_log']
             assert len(broks) == 1
             # ...and some logs
@@ -219,13 +219,13 @@ class TestExternalCommands(AlignakTest):
         #  ---
         # External command: unknown host
         self.clear_logs()
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         excmd = '[%d] DISABLE_HOST_CHECK;not_found_host' % time.time()
         self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         if self.ecm_mode == 'applyer':
             # No 'monitoring_log' brok
-            broks = [b for b in self._broker['broks'].values()
+            broks = [b for b in self._broker.broks.values()
                      if b.type == 'monitoring_log']
             assert len(broks) == 0
             # ...but an unknown check result brok is raised...
@@ -233,6 +233,7 @@ class TestExternalCommands(AlignakTest):
             # broks = [b for b in self._broker['broks'].values()
             #          if b.type == 'unknown_host_check_result']
             # assert len(broks) == 1
+            self.show_logs()
             # ...and a warning log!
             self.assert_any_log_match("A command was received for the host 'not_found_host', "
                                       "but the host could not be found!")
@@ -276,7 +277,7 @@ class TestExternalCommands(AlignakTest):
         assert svc.notifications_enabled
 
         self.clear_logs()
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         excmd = '[%d] DISABLE_HOST_NOTIFICATIONS;test_host_0' % time.time()
         res = self.manage_external_command(excmd)
         print("Result (mode=%s): %s" % (self.ecm_mode, res))
@@ -289,20 +290,20 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
+        self._broker = self._broker
 
         # Clear logs and broks
         self.clear_logs()
-        self._broker['broks'] = {}
+        self._broker.broks = {}
 
         now = int(time.time())
 
         # Clear logs and broks
         self.clear_logs()
-        self._broker['broks'] = {}
+        self._broker.broks = {}
 
         # Unknown command
         excmds = []
@@ -313,7 +314,7 @@ class TestExternalCommands(AlignakTest):
         self._scheduler.run_external_commands(excmds)
         self.external_command_loop()
         # We get an 'monitoring_log' brok for logging to the monitoring logs...
-        broks = [b for b in self._broker['broks'].values()
+        broks = [b for b in self._broker.broks.values()
                  if b.type == 'monitoring_log']
         assert len(broks) == 2
 
@@ -322,7 +323,7 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # An host...
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -379,7 +380,7 @@ class TestExternalCommands(AlignakTest):
         :return: None 
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # A service...
         svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
@@ -436,7 +437,7 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # A contact...
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -490,7 +491,7 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # A TP...
         tp = self._scheduler.timeperiods.find_by_name("24x7")
@@ -622,7 +623,7 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # A TP...
         tp = self._scheduler.timeperiods.find_by_name("24x7")
@@ -771,7 +772,7 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # A TP...
         tp = self._scheduler.timeperiods.find_by_name("24x7")
@@ -840,10 +841,10 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
+        self._broker = self._broker
 
         # An host...
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -907,7 +908,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in self._broker.broks.itervalues():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -939,10 +940,10 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
+        self._broker = self._broker
 
         # A service...
         svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
@@ -1006,7 +1007,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in self._broker.broks.itervalues():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -1038,10 +1039,10 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
+        self._broker = self._broker
 
         # Get host
         host = self._scheduler.hosts.find_by_name('test_host_0')
@@ -1099,7 +1100,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in self._broker.broks.itervalues():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -1128,10 +1129,10 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
+        self._broker = self._broker
 
         # Get host
         host = self._scheduler.hosts.find_by_name('test_host_0')
@@ -1167,7 +1168,7 @@ class TestExternalCommands(AlignakTest):
         # Receive passive service check Warning
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;' \
                 'test_host_0;test_ok_0;1;Service is WARNING' % now
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         self.scheduler_loop(1, [[host, 0, 'Host is UP']])
         assert 'WARNING' == svc.state
@@ -1177,21 +1178,21 @@ class TestExternalCommands(AlignakTest):
         # Acknowledge service
         excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;' \
                 'test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % now
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         assert 'WARNING' == svc.state
         assert True == svc.problem_has_been_acknowledged
 
         # Remove acknowledge service
         excmd = '[%d] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;test_ok_0' % now
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         assert 'WARNING' == svc.state
         assert False == svc.problem_has_been_acknowledged
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in self._broker.broks.itervalues():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -1221,10 +1222,10 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
+        self._broker = self._broker
 
         # An host...
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -1249,7 +1250,7 @@ class TestExternalCommands(AlignakTest):
             # ---------------------------------------------
             # Receive passive host check Host is up and alive
             excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is alive' % now
-            self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+            self._scheduler.run_external_command(excmd)
             self.external_command_loop()
             assert 'UP' == host.state
             assert 'HARD' == host.state_type
@@ -1320,7 +1321,7 @@ class TestExternalCommands(AlignakTest):
 
             # We got 'monitoring_log' broks for logging to the monitoring logs...
             monitoring_logs = []
-            for brok in self._broker['broks'].itervalues():
+            for brok in self._broker.broks.itervalues():
                 if brok.type == 'monitoring_log':
                     data = unserialize(brok.data)
                     monitoring_logs.append((data['level'], data['message']))
@@ -1359,10 +1360,10 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
+        self._broker = self._broker
 
         # An host...
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -1388,19 +1389,19 @@ class TestExternalCommands(AlignakTest):
             # ---------------------------------------------
             # Receive passive host check Down
             excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % time.time()
-            self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+            self._scheduler.run_external_command(excmd)
             self.external_command_loop()
             assert 'DOWN' == host.state
             assert 'SOFT' == host.state_type
             assert 'Host is dead' == host.output
             excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % time.time()
-            self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+            self._scheduler.run_external_command(excmd)
             self.external_command_loop()
             assert 'DOWN' == host.state
             assert 'SOFT' == host.state_type
             assert 'Host is dead' == host.output
             excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % time.time()
-            self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+            self._scheduler.run_external_command(excmd)
             self.external_command_loop()
             assert 'DOWN' == host.state
             assert 'HARD' == host.state_type
@@ -1492,7 +1493,7 @@ class TestExternalCommands(AlignakTest):
 
             # We got 'monitoring_log' broks for logging to the monitoring logs...
             monitoring_logs = []
-            for brok in self._broker['broks'].itervalues():
+            for brok in self._broker.broks.itervalues():
                 if brok.type == 'monitoring_log':
                     data = unserialize(brok.data)
                     monitoring_logs.append((data['level'], data['message']))
@@ -1544,10 +1545,10 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
+        self._broker = self._broker
 
         # An host...
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -1568,19 +1569,19 @@ class TestExternalCommands(AlignakTest):
         # ---------------------------------------------
         # Receive passive host check Down
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % time.time()
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         assert 'DOWN' == host.state
         assert 'SOFT' == host.state_type
         assert 'Host is dead' == host.output
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % time.time()
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         assert 'DOWN' == host.state
         assert 'SOFT' == host.state_type
         assert 'Host is dead' == host.output
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % time.time()
-        self.schedulers['scheduler-master'].sched.run_external_command(excmd)
+        self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         assert 'DOWN' == host.state
         assert 'HARD' == host.state_type
@@ -1656,7 +1657,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in self._broker.broks.itervalues():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -1711,10 +1712,10 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
+        self._broker = self._broker
 
         # A service...
         svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
@@ -1784,7 +1785,7 @@ class TestExternalCommands(AlignakTest):
     
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in self._broker.broks.itervalues():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -1811,10 +1812,10 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
+        self._broker = self._broker
 
         # An host and a contact...
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -1881,7 +1882,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in self._broker.broks.itervalues():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -1908,10 +1909,10 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
+        self._broker = self._broker
 
         # A contact...
         contact = self._scheduler.contacts.find_by_name("test_contact")
@@ -1952,10 +1953,10 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
+        self._broker = self._broker
 
         # An host...
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -2109,10 +2110,10 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
+        self._broker = self._broker
 
         # An host...
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -2236,7 +2237,7 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         #  ---
         # External command: disable / enable freshness checks for all hosts
@@ -2257,10 +2258,10 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
+        self._broker = self._broker
 
         # An host...
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -2364,10 +2365,10 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
+        self._broker = self._broker
 
         # An host...
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -2460,7 +2461,7 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         #  ---
         # External command: disable / enable freshness checks for all services
@@ -2481,7 +2482,7 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         #  ---
         # External command: disable / enable performance data for all hosts
@@ -2599,14 +2600,14 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
+        self._broker = self._broker
 
         # Clear logs and broks
         self.clear_logs()
-        self._broker['broks'] = {}
+        self._broker.broks = {}
 
         now = int(time.time())
 
@@ -2619,7 +2620,7 @@ class TestExternalCommands(AlignakTest):
         # self.assert_any_log_match('I awoke after sleeping 3 seconds')
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in self._broker.broks.itervalues():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -2633,7 +2634,7 @@ class TestExternalCommands(AlignakTest):
 
         # Clear logs and broks
         self.clear_logs()
-        self._broker['broks'] = {}
+        self._broker.broks = {}
 
         # RELOAD_CONFIG
         excmd = '[%d] RELOAD_CONFIG' % now
@@ -2644,7 +2645,7 @@ class TestExternalCommands(AlignakTest):
         # self.assert_any_log_match('I awoke after sleeping 2 seconds')
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in self._broker.broks.itervalues():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -2666,14 +2667,14 @@ class TestExternalCommands(AlignakTest):
         :return: None
         """
         # Our scheduler
-        self._scheduler = self.schedulers['scheduler-master'].sched
+        self._scheduler = self._scheduler
 
         # Our broker
-        self._broker = self._scheduler.brokers['broker-master']
+        self._broker = self._broker
 
         # Clear logs and broks
         self.clear_logs()
-        self._broker['broks'] = {}
+        self._broker.broks = {}
 
         now = int(time.time())
 
@@ -2683,7 +2684,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in self._broker.broks.itervalues():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -2696,146 +2697,146 @@ class TestExternalCommands(AlignakTest):
             assert (log_level, log_message) in monitoring_logs
 
         # Clear broks
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         now = int(time.time())
         excmd = '[%d] SET_HOST_NOTIFICATION_NUMBER;test_host_0;0' % (now)
         self._scheduler.run_external_command(excmd)
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._broker['broks'].values()
+        broks = [b for b in self._broker.broks.values()
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         now = int(time.time())
         excmd = '[%d] SET_SVC_NOTIFICATION_NUMBER;test_host_0;test_ok_0;1' % (now)
         self._scheduler.run_external_command(excmd)
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._broker['broks'].values()
+        broks = [b for b in self._broker.broks.values()
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         now = int(time.time())
         excmd = '[%d] SEND_CUSTOM_HOST_NOTIFICATION;test_host_0;100;' \
                 'test_contact;My notification' % (now)
         self._scheduler.run_external_command(excmd)
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._broker['broks'].values()
+        broks = [b for b in self._broker.broks.values()
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         now = int(time.time())
         excmd = '[%d] SEND_CUSTOM_SVC_NOTIFICATION;test_host_0;test_ok_0;100;' \
                 'test_contact;My notification' % (now)
         self._scheduler.run_external_command(excmd)
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._broker['broks'].values()
+        broks = [b for b in self._broker.broks.values()
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         now = int(time.time())
         excmd = '[%d] SCHEDULE_AND_PROPAGATE_HOST_DOWNTIME;test_host_0;%s;%s;' \
                 '1;0;1200;test_contact;My downtime' % (now, now + 120, now + 1200)
         self._scheduler.run_external_command(excmd)
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._broker['broks'].values()
+        broks = [b for b in self._broker.broks.values()
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         now = int(time.time())
         excmd = '[%d] SCHEDULE_AND_PROPAGATE_TRIGGERED_HOST_DOWNTIME;test_host_0;%s;%s;' \
                 '1;0;1200;test_contact;My downtime' % (now, now + 120, now + 1200)
         self._scheduler.run_external_command(excmd)
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._broker['broks'].values()
+        broks = [b for b in self._broker.broks.values()
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         excmd = '[%d] SAVE_STATE_INFORMATION' % int(time.time())
         self._scheduler.run_external_command(excmd)
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._broker['broks'].values()
+        broks = [b for b in self._broker.broks.values()
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         excmd = '[%d] READ_STATE_INFORMATION' % int(time.time())
         self._scheduler.run_external_command(excmd)
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._broker['broks'].values()
+        broks = [b for b in self._broker.broks.values()
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         excmd = '[%d] PROCESS_FILE;file;1' % int(time.time())
         self._scheduler.run_external_command(excmd)
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._broker['broks'].values()
+        broks = [b for b in self._broker.broks.values()
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         excmd = '[%d] ENABLE_HOST_AND_CHILD_NOTIFICATIONS;test_host_0' % int(time.time())
         self._scheduler.run_external_command(excmd)
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._broker['broks'].values()
+        broks = [b for b in self._broker.broks.values()
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         excmd = '[%d] DISABLE_HOST_AND_CHILD_NOTIFICATIONS;test_host_0' % int(time.time())
         self._scheduler.run_external_command(excmd)
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._broker['broks'].values()
+        broks = [b for b in self._broker.broks.values()
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         excmd = '[%d] DISABLE_ALL_NOTIFICATIONS_BEYOND_HOST;test_host_0' % int(time.time())
         self._scheduler.run_external_command(excmd)
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._broker['broks'].values()
+        broks = [b for b in self._broker.broks.values()
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         excmd = '[%d] ENABLE_ALL_NOTIFICATIONS_BEYOND_HOST;test_host_0' % int(time.time())
         self._scheduler.run_external_command(excmd)
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._broker['broks'].values()
+        broks = [b for b in self._broker.broks.values()
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         excmd = '[%d] CHANGE_GLOBAL_HOST_EVENT_HANDLER;check-host-alive' % int(time.time())
         self._scheduler.run_external_command(excmd)
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._broker['broks'].values()
+        broks = [b for b in self._broker.broks.values()
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._broker['broks'] = {}
+        self._broker.broks = {}
         excmd = '[%d] CHANGE_GLOBAL_SVC_EVENT_HANDLER;check-host-alive' % int(time.time())
         self._scheduler.run_external_command(excmd)
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._broker['broks'].values()
+        broks = [b for b in self._broker.broks.values()
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)

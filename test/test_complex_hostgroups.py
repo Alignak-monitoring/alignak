@@ -58,7 +58,7 @@ class TestComplexHostgroups(AlignakTest):
         assert self.conf_is_correct
 
         # Our scheduler
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
     def get_svc(self):
         return self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")

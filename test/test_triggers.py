@@ -81,7 +81,7 @@ class TestTriggers(AlignakTest):
         )
 
         # Our scheduler
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
     def test_ignored_inner_triggers(self):
         """ Test that inner host/service configured triggers are ignored """

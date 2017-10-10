@@ -64,9 +64,14 @@ class ArbiterLink(SatelliteLink):
     my_type = 'arbiter'
     properties = SatelliteLink.properties.copy()
     properties.update({
-        'arbiter_name':    StringProp(),
-        'host_name':       StringProp(default=socket.gethostname()),
-        'port':            IntegerProp(default=7770),
+        'type':
+            StringProp(default='arbiter', fill_brok=['full_status']),
+        'arbiter_name':
+            StringProp(default='', fill_brok=['full_status']),
+        'host_name':
+            StringProp(default=socket.gethostname()),
+        'port':
+            IntegerProp(default=7770),
     })
 
     def is_me(self):  # pragma: no cover, seems not to be used anywhere
@@ -81,16 +86,16 @@ class ArbiterLink(SatelliteLink):
                     "from an arbiter point of view of addr:%s", self.host_name, socket.getfqdn())
         return self.host_name == socket.getfqdn() or self.host_name == socket.gethostname()
 
-    def give_satellite_cfg(self):
-        """Get the config of this satellite
 
-        :return: dictionary with information of the satellite
+    def give_satellite_cfg(self):
+        """
+        Get configuration of the Arbiter satellite
+
+        :return: dictionary of link information
         :rtype: dict
         """
-        return {'port': self.port, 'address': self.address,
-                'name': self.get_name(), 'instance_id': self.uuid,
-                'timeout': self.timeout, 'data_timeout': self.data_timeout,
-                'use_ssl': self.use_ssl, 'hard_ssl_name_check': self.hard_ssl_name_check}
+        res = super(ArbiterLink, self).give_satellite_cfg()
+        return res
 
     def do_not_run(self):
         """Check if satellite running or not

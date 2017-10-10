@@ -330,7 +330,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                     msg = "[%s::%s] host_name got an illegal character: %s" % (
                         self.my_type, self.get_name(), char
                     )
-                    self.configuration_errors.append(msg)
+                    self.add_error(msg)
                     state = False
 
         # Ok now we manage special cases...
@@ -464,13 +464,11 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         """
         self.services.append(service)
 
-    def __repr__(self):
-        return '<Host host_name=%r name=%r use=%r />' % (
-            getattr(self, 'host_name', None),
-            getattr(self, 'name', None),
-            getattr(self, 'use', None))
-
-    __str__ = __repr__
+    def __str__(self):
+        return '<%s %s, realm: %s, use: %s />' \
+               % (self.__class__.__name__, self.get_full_name(),
+                  getattr(self, 'realm', 'Unset'), getattr(self, 'use', None))
+    __repr__ = __str__
 
     def is_excluded_for(self, service):
         """Check whether this host should have the passed service be "excluded" or "not included".
@@ -1341,7 +1339,7 @@ class Hosts(SchedulingItems):
                 else:
                     err = "the parent '%s' for the host '%s' is unknown!" % (parent,
                                                                              host.get_name())
-                    self.configuration_errors.append(err)
+                    self.add_error(err)
             # We find the id, we replace the names
             host.parents = new_parents
 
@@ -1358,7 +1356,7 @@ class Hosts(SchedulingItems):
                 realm = realms.find_by_name(host.realm.strip())
                 if realm is None:
                     err = "the host %s got an invalid realm (%s)!" % (host.get_name(), host.realm)
-                    host.configuration_errors.append(err)
+                    host.add_error(err)
                     # This to avoid having an host.realm as a string name
                     host.realm_name = host.realm
                     host.realm = None
@@ -1391,7 +1389,7 @@ class Hosts(SchedulingItems):
                     else:
                         err = ("the hostgroup '%s' of the host '%s' is "
                                "unknown" % (hg_name, host.host_name))
-                        host.configuration_errors.append(err)
+                        host.add_error(err)
             host.hostgroups = new_hostgroups
 
     def explode(self, hostgroups, contactgroups):
@@ -1473,7 +1471,7 @@ class Hosts(SchedulingItems):
         loop = self.no_loop_in_parents("self", "parents")
         if loop:
             msg = "Loop detected while checking hosts "
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             state = False
             for uuid, item in self.items.iteritems():
                 for elem in loop:
@@ -1481,11 +1479,11 @@ class Hosts(SchedulingItems):
                         msg = "Host %s is parent in dependency defined in %s" % (
                             item.get_name(), item.imported_from
                         )
-                        self.configuration_errors.append(msg)
+                        self.add_error(msg)
                     elif elem in item.parents:
                         msg = "Host %s is child in dependency defined in %s" % (
                             self[elem].get_name(), self[elem].imported_from
                         )
-                        self.configuration_errors.append(msg)
+                        self.add_error(msg)
 
         return super(Hosts, self).is_correct() and state

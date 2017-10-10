@@ -177,7 +177,7 @@ class Servicedependencies(Items):
             hostgroup = hostgroups.find_by_name(hg_name)
             if hostgroup is None:
                 err = "ERROR: the servicedependecy got an unknown hostgroup_name '%s'" % hg_name
-                self.configuration_errors.append(err)
+                self.add_error(err)
                 continue
             hnames = []
             hnames.extend([m.strip() for m in hostgroup.get_hosts()])
@@ -231,7 +231,7 @@ class Servicedependencies(Items):
                     if hostgroup is None:
                         err = "ERROR: the servicedependecy got an" \
                               " unknown hostgroup_name '%s'" % hg_name
-                        hostgroup.configuration_errors.append(err)
+                        hostgroup.add_error(err)
                         continue
                     hnames.extend([m.strip() for m in hostgroup.get_hosts()])
 
@@ -260,7 +260,7 @@ class Servicedependencies(Items):
                     if hostgroup is None:
                         err = "ERROR: the servicedependecy got an " \
                               "unknown dependent_hostgroup_name '%s'" % hg_name
-                        hostgroup.configuration_errors.append(err)
+                        hostgroup.add_error(err)
                         continue
                     dep_hnames.extend([m.strip() for m in hostgroup.get_hosts()])
 
@@ -430,7 +430,7 @@ class Servicedependencies(Items):
         loop = self.no_loop_in_parents("service_description", "dependent_service_description")
         if loop:
             msg = "Loop detected while checking service dependencies"
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             state = False
             for item in self:
                 for elem in loop:
@@ -439,12 +439,12 @@ class Servicedependencies(Items):
                               "defined in %s" % (
                                   item.service_description_string, item.imported_from
                               )
-                        self.configuration_errors.append(msg)
+                        self.add_error(msg)
                     elif elem == item.dependent_service_description:
                         msg = "Service %s is child service_description in dependency"\
                               " defined in %s" % (
                                   item.dependent_service_description_string, item.imported_from
                               )
-                        self.configuration_errors.append(msg)
+                        self.add_error(msg)
 
         return super(Servicedependencies, self).is_correct() and state

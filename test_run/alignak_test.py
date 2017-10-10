@@ -35,6 +35,8 @@ import random
 import copy
 import locale
 import socket
+import psutil
+import shutil
 
 import unittest2 as unittest
 
@@ -118,7 +120,217 @@ class AlignakTest(unittest.TestCase):
         collector_h.setFormatter(DEFAULT_FORMATTER_NAMED)
         self.logger.addHandler(collector_h)
 
-    def files_update(self, files, replacements):
+    def _kill_alignak_daemons(self):
+        """Kill the running daemons
+
+        :return:
+        """
+        print("Stopping the daemons...")
+        start = time.time()
+        for name, proc in self.procs.items():
+            print("Asking %s (pid=%d) to end..." % (name, proc.pid))
+            try:
+                daemon_process = psutil.Process(proc.pid)
+            except psutil.NoSuchProcess:
+                print("not existing!")
+                continue
+            children = daemon_process.children(recursive=True)
+            daemon_process.terminate()
+            try:
+                daemon_process.wait(10)
+            except psutil.TimeoutExpired:
+                print("timeout!")
+            except psutil.NoSuchProcess:
+                print("not existing!")
+                pass
+            for child in children:
+                try:
+                    print("Asking %s child (pid=%d) to end..." % (child.name(), child.pid))
+                    child.terminate()
+                except psutil.NoSuchProcess:
+                    print("-> still dead: %s" % child)
+                    pass
+            gone, still_alive = psutil.wait_procs(children, timeout=10)
+            for process in still_alive:
+                try:
+                    print("Killing %s (pid=%d)!" % (child.name(), child.pid))
+                    process.kill()
+                except psutil.NoSuchProcess:
+                    pass
+            print("%s terminated" % (name))
+        print("Stopping daemons duration: %d seconds" % (time.time() - start))
+
+    def _run_alignak_daemons_modules(self, cfg_folder='../etc',
+                                     tmp_folder='./run/test_launch_daemons_modules',
+                                     cfg_modules=None, runtime=5):
+        """Update the provided configuration with some informations on the run
+        Run the Alignak daemons with configured modules
+
+        :return: None
+        """
+        self.print_header()
+
+        # copy etc config files in test/run/test_launch_daemons_modules and change folder
+        # in the files for pid and log files
+        if os.path.exists(tmp_folder):
+            shutil.rmtree(tmp_folder)
+
+        shutil.copytree(cfg_folder, tmp_folder)
+        # files = [tmp_folder + '/daemons/arbiter.ini',
+        #          tmp_folder + '/daemons/broker.ini',
+        #          tmp_folder + '/daemons/poller.ini',
+        #          tmp_folder + '/daemons/reactionner.ini',
+        #          tmp_folder + '/daemons/receiver.ini',
+        #          tmp_folder + '/daemons/scheduler.ini',
+        #          tmp_folder + '/alignak.cfg',
+        #          tmp_folder + '/arbiter/daemons/arbiter-master.cfg',
+        #          tmp_folder + '/arbiter/daemons/broker-master.cfg',
+        #          tmp_folder + '/arbiter/daemons/poller-master.cfg',
+        #          tmp_folder + '/arbiter/daemons/reactionner-master.cfg',
+        #          tmp_folder + '/arbiter/daemons/receiver-master.cfg',
+        #          tmp_folder + '/arbiter/daemons/scheduler-master.cfg']
+        # files = [tmp_folder + '/alignak-realm2.ini']
+        # replacements = {
+        #     '/usr/local/var/run/alignak': '/tmp',
+        #     '/usr/local/var/log/alignak': '/tmp',
+        # }
+        # for filename in files:
+        #     lines = []
+        #     with open(filename) as infile:
+        #         for line in infile:
+        #             for src, target in replacements.iteritems():
+        #                 line = line.replace(src, target)
+        #             lines.append(line)
+        #     with open(filename, 'w') as outfile:
+        #         for line in lines:
+        #             outfile.write(line)
+
+        # declare modules in the daemons configuration
+        if cfg_modules is None:
+            shutil.copy('./cfg/default/mod-example.cfg', tmp_folder + '/arbiter/modules')
+            cfg_modules = {
+                'arbiter': 'Example', 'scheduler': 'Example', 'broker': 'Example',
+                'poller': 'Example', 'reactionner': 'Example', 'receiver': 'Example',
+            }
+
+        if cfg_modules:
+            print("Setting up daemons modules configuration...")
+            for daemon in ['arbiter', 'scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
+                if daemon not in cfg_modules:
+                    continue
+
+                filename = tmp_folder + '/arbiter/daemons/%s-master.cfg' % daemon
+                replacements = {'modules': 'modules ' + cfg_modules[daemon]}
+                lines = []
+                with open(filename) as infile:
+                    for line in infile:
+                        for src, target in replacements.iteritems():
+                            line = line.replace(src, target)
+                        lines.append(line)
+                with open(filename, 'w') as outfile:
+                    for line in lines:
+                        outfile.write(line)
+
+        self.setup_with_file(tmp_folder + '/alignak.cfg')
+        assert self.conf_is_correct
+
+        print("Cleaning pid and log files...")
+        for daemon in ['arbiter-master', 'scheduler-master', 'broker-master',
+                       'poller-master', 'reactionner-master', 'receiver-master']:
+            if os.path.exists('/tmp/run/%s.pid' % daemon):
+                os.remove('/tmp/run/%s.pid' % daemon)
+                print("- removed /tmp/run/%s.pid" % daemon)
+            if os.path.exists('/tmp/run/%s.log' % daemon):
+                os.remove('/tmp/run/%s.log' % daemon)
+                print("- removed /tmp/run/%s.log" % daemon)
+
+        print("Launching the daemons...")
+        self.procs = {}
+        for daemon in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
+            self.procs[daemon] = \
+                subprocess.Popen(["../alignak/bin/alignak_%s.py" %daemon,
+                                  "-e", tmp_folder + "/alignak-realm2.ini"],
+                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            sleep(0.1)
+            print("- %s launched (pid=%d)" % (daemon, self.procs[daemon].pid))
+
+        sleep(1)
+
+        print("Testing daemons start")
+        for name, proc in self.procs.items():
+            ret = proc.poll()
+            if ret is not None:
+                print("*** %s exited on start!" % (name))
+                for line in iter(proc.stdout.readline, b''):
+                    print(">>> " + line.rstrip())
+                for line in iter(proc.stderr.readline, b''):
+                    print(">>> " + line.rstrip())
+            assert ret is None, "Daemon %s not started!" % name
+            print("%s running (pid=%d)" % (name, self.procs[daemon].pid))
+
+        # Let the daemons initialize ...
+        sleep(3)
+
+        print("Testing that pid files and log files exist...")
+        for daemon in ['scheduler-master', 'broker-master',
+                       'poller-master', 'reactionner-master', 'receiver-master']:
+            assert os.path.exists('/tmp/run/%s.pid' % daemon), '/tmp/run/%s.pid does not exist!' % daemon
+            assert os.path.exists('/tmp/log/%s.log' % daemon), '/tmp/log/%s.log does not exist!' % daemon
+
+        sleep(1)
+
+        print("Launching arbiter...")
+        self.procs['arbiter'] = \
+            subprocess.Popen(["../alignak/bin/alignak_arbiter.py",
+                              "-e", tmp_folder + "/alignak-realm2.ini",
+                              "-a", tmp_folder + "/alignak.cfg"],
+                             stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print("%s launched (pid=%d)" % ('arbiter', self.procs['arbiter'].pid))
+
+        sleep(1)
+
+        name = 'arbiter'
+        print("Testing Arbiter start %s" % name)
+        ret = self.procs[name].poll()
+        if ret is not None:
+            print("*** %s exited on start!" % (name))
+            for line in iter(self.procs[name].stdout.readline, b''):
+                print(">>> " + line.rstrip())
+            for line in iter(self.procs[name].stderr.readline, b''):
+                print(">>> " + line.rstrip())
+        assert ret is None, "Daemon %s not started!" % name
+        print("%s running (pid=%d)" % (name, self.procs[name].pid))
+
+        sleep(1)
+
+        print("Testing that pid files and log files exist...")
+        for daemon in ['arbiter-master']:
+            assert os.path.exists('/tmp/run/%s.pid' % daemon), '/tmp/run/%s.pid does not exist!' % daemon
+            assert os.path.exists('/tmp/log/%s.log' % daemon), '/tmp/log/%s.log does not exist!' % daemon
+
+        # Let the arbiter build and dispatch its configuration
+        sleep(runtime)
+
+        print("Check if some errors were raised...")
+        nb_errors = 0
+        for daemon in ['arbiter-master', 'scheduler-master', 'broker-master',
+                       'poller-master', 'reactionner-master', 'receiver-master']:
+            assert os.path.exists('/tmp/log/%s.log' % daemon), '/tmp/log/%s.log does not exist!' % daemon
+            daemon_errors = False
+            print("-----\n%s log file\n-----\n" % daemon)
+            with open('/tmp/log/%s.log' % daemon) as f:
+                for line in f:
+                    if 'Example' in line:
+                        print("Example module log: %s" % line)
+                    if 'WARNING:' in line:
+                        print(line[:-1])
+                    if 'ERROR:' in line or 'CRITICAL:' in line:
+                        print(line[:-1])
+                        daemon_errors = True
+                        nb_errors += 1
+        return nb_errors
+
+    def _files_update(self, files, replacements):
         """Update files content with the defined replacements
 
         :param files: list of files to parse and replace
@@ -169,7 +381,7 @@ class AlignakTest(unittest.TestCase):
 
         # Initialize the Arbiter with no daemon configuration file
         configuration_dir = os.path.dirname(configuration_file)
-        self.env_file = os.path.join(configuration_dir, 'alignak.ini')
+        self.env_file = os.path.join(configuration_dir, 'alignak-realm2.ini')
         args = {
             'env_file': self.env_file,
             'alignak_name': 'arbiter-master', 'daemon_name': None,
@@ -208,8 +420,8 @@ class AlignakTest(unittest.TestCase):
 
         for arb in self.arbiter.conf.arbiters:
             if arb.get_name() == self.arbiter.arbiter_name:
-                self.arbiter.myself = arb
-        self.arbiter.dispatcher = Dispatcher(self.arbiter.conf, self.arbiter.myself)
+                self.arbiter.link_to_myself = arb
+        self.arbiter.dispatcher = Dispatcher(self.arbiter.conf, self.arbiter.link_to_myself)
         self.arbiter.dispatcher.prepare_dispatch()
 
         # Build schedulers dictionary with the schedulers involved in the configuration
@@ -962,6 +1174,9 @@ class AlignakTest(unittest.TestCase):
         """
         self._any_cfg_log_match(pattern, assert_not=True)
 
+
+# Time hacking for every test!
+time_hacker = AlignakTest.time_hacker
 
 if __name__ == '__main__':
     unittest.main()

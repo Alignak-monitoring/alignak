@@ -302,7 +302,7 @@ class NotificationWay(Item):
             msg = "[notificationway::%s] do not have any service_notification_commands defined" % (
                 self.get_name()
             )
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             state = False
         else:
             for cmd in self.service_notification_commands:
@@ -310,20 +310,20 @@ class NotificationWay(Item):
                     msg = "[notificationway::%s] a service_notification_command is missing" % (
                         self.get_name()
                     )
-                    self.configuration_errors.append(msg)
+                    self.add_error(msg)
                     state = False
                 elif not cmd.is_valid():
                     msg = "[notificationway::%s] a service_notification_command is invalid" % (
                         self.get_name()
                     )
-                    self.configuration_errors.append(msg)
+                    self.add_error(msg)
                     state = False
 
         if getattr(self, 'service_notification_period', None) is None:
             msg = "[notificationway::%s] the service_notification_period is invalid" % (
                 self.get_name()
             )
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             state = False
 
         # Now host part
@@ -331,7 +331,7 @@ class NotificationWay(Item):
             msg = "[notificationway::%s] do not have any host_notification_commands defined" % (
                 self.get_name()
             )
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             state = False
         else:
             for cmd in self.host_notification_commands:
@@ -339,20 +339,20 @@ class NotificationWay(Item):
                     msg = "[notificationway::%s] a host_notification_command is missing" % (
                         self.get_name()
                     )
-                    self.configuration_errors.append(msg)
+                    self.add_error(msg)
                     state = False
                 elif not cmd.is_valid():
                     msg = "[notificationway::%s] a host_notification_command is invalid (%s)" % (
                         cmd.get_name(), str(cmd.__dict__)
                     )
-                    self.configuration_errors.append(msg)
+                    self.add_error(msg)
                     state = False
 
         if getattr(self, 'host_notification_period', None) is None:
             msg = "[notificationway::%s] the host_notification_period is invalid" % (
                 self.get_name()
             )
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             state = False
 
         return super(NotificationWay, self).is_correct() and state

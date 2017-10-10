@@ -69,10 +69,14 @@ class Module(Item):
 
     properties = Item.properties.copy()
     properties.update({
-        'python_name': StringProp(),
-        'module_alias': StringProp(),
-        'module_types': ListProp(default=[''], split_on_coma=True),
-        'modules': ListProp(default=[''], split_on_coma=True)
+        'python_name':
+            StringProp(),
+        'module_alias':
+            StringProp(),
+        'module_types':
+            ListProp(default=[''], split_on_coma=True),
+        'modules':
+            ListProp(default=[''], split_on_coma=True)
     })
 
     macros = {}
@@ -91,10 +95,24 @@ class Module(Item):
         """
         Get name of module
 
-        :return: Name of module
-        :rtype: str
-        """
-        return self.module_alias
+        self.fill_default()
+
+        if 'name' not in params:
+            self.name = self.get_name()
+
+    def __repr__(self):
+        return '<%r %r, module: %r, alias: %r />' % \
+               (self.__class__.__name__, self.name, self.python_name, self.module_alias)
+    __str__ = __repr__
+
+    # def get_name(self):
+    #     """
+    #     Get name of module
+    #
+    #     :return: Name of module
+    #     :rtype: str
+    #     """
+    #     return getattr(self, 'module_alias', 'Unnamed module')
 
     def get_types(self):
         """
@@ -103,7 +121,7 @@ class Module(Item):
         :return: Name of module
         :rtype: str
         """
-        return self.module_types
+        return getattr(self, 'module_types', 'Untyped module')
 
     def is_a_module(self, module_type):
         """
@@ -114,11 +132,6 @@ class Module(Item):
         :return: True / False
         """
         return module_type in self.module_types
-
-    def __repr__(self):
-        return '<module module=%s alias=%s />' % (self.python_name, self.module_alias)
-
-    __str__ = __repr__
 
 
 class Modules(Items):
@@ -159,7 +172,7 @@ class Modules(Items):
     #                 new_modules.append(plug)
     #             else:
     #                 err = "[module] unknown %s module from %s" % (plug_name, module.get_name())
-    #                 module.configuration_errors.append(err)
+    #                 module.add_error(err)
     #         module.modules = new_modules
 
     # def explode(self):
