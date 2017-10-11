@@ -87,23 +87,6 @@ SHELLCHARS = ('!', '$', '^', '&', '*', '(', ')', '~', '[', ']',
                    '|', '{', '}', ';', '<', '>', '?', '`')
 
 
-def no_block_read(output):
-    """Try to read a file descriptor in a non blocking mode
-
-    :param output: file or socket to read from
-    :type output: file
-    :return: data read from fd
-    :rtype: str
-    """
-    o_fd = output.fileno()
-    o_fl = fcntl.fcntl(o_fd, fcntl.F_GETFL)
-    fcntl.fcntl(o_fd, fcntl.F_SETFL, o_fl | os.O_NONBLOCK)
-    try:
-        return output.read()
-    except Exception:  # pylint: disable=W0703
-        return ''
-
-
 class ActionBase(AlignakObject):
     """
     This abstract class is used just for having a common id for both
@@ -189,7 +172,7 @@ class ActionBase(AlignakObject):
         # instance).
         local_env = os.environ.copy()
         for local_var in self.env:
-            local_env[local_var] = self.env[local_var].encode('utf8')
+            local_env[local_var] = self.env[local_var]
         return local_env
 
     def execute(self):
@@ -241,10 +224,6 @@ class ActionBase(AlignakObject):
 
         # First line before | is output, strip it
         self.output = elts_line1[0].strip().replace('___PROTECT_PIPE___', '|')
-        try:
-            self.output = self.output.decode('utf8', 'ignore')
-        except UnicodeEncodeError:
-            pass
 
         # Init perfdata as empty
         self.perf_data = ''
@@ -301,23 +280,22 @@ class ActionBase(AlignakObject):
         self.last_poll = time.time()
 
         _, _, child_utime, child_stime, _ = os.times()
-
         if self.process.poll() is None:
             logger.debug("Process pid=%d is still alive", self.process.pid)
             # polling every 1/2 s ... for a timeout in seconds, this is enough
             self.wait_time = min(self.wait_time * 2, 0.5)
             now = time.time()
 
-            # If the fcntl is available (unix) we try to read in a
-            # asynchronous mode, so we won't block the PIPE at 64K buffer
-            # (deadlock...)
-            if fcntl:
-                self.stdoutdata += no_block_read(self.process.stdout)
-                self.stderrdata += no_block_read(self.process.stderr)
-
             if (now - self.check_time) > self.timeout:
                 logger.warning("Process pid=%d spent too much time: %d s",
                                self.process.pid, now - self.check_time)
+                try:
+                    (stdout, stderr) = self.process.communicate(timeout=1)
+                    self.stdoutdata = stdout
+                    self.stderrdata = stderr
+                except subprocess.TimeoutExpired as err:
+                    pass
+
                 self.kill__()
                 self.status = 'timeout'
                 self.execution_time = now - self.check_time
@@ -343,13 +321,10 @@ class ActionBase(AlignakObject):
         # Get standards outputs from the communicate function if we do
         # not have the fcntl module (Windows, and maybe some special
         # unix like AIX)
-        if not fcntl:
+        try:
             (self.stdoutdata, self.stderrdata) = self.process.communicate()
-        else:
-            # The command was too quick and finished even before we can
-            # poll it first. So finish the read.
-            self.stdoutdata += no_block_read(self.process.stdout)
-            self.stderrdata += no_block_read(self.process.stderr)
+        except ValueError as err:
+            pass
 
         self.exit_status = self.process.returncode
         if self.log_actions:
@@ -472,10 +447,10 @@ if os.name != 'nt':
             # 2.7 and higher Python version need a list of args for cmd
             # and if not force shell (if, it's useless, even dangerous)
             if force_shell:
-                cmd = self.command.encode('utf8', 'ignore')
+                cmd = self.command
             else:
                 try:
-                    cmd = shlex.split(self.command.encode('utf8', 'ignore'))
+                    cmd = shlex.split(self.command)
                 except Exception as exp:  # pylint: disable=W0703
                     self.output = 'Not a valid shell command: ' + exp.__str__()
                     self.exit_status = 3
@@ -561,7 +536,7 @@ else:  # pragma: no cover, not currently tested with Windows...
             """
             # 2.7 and higher Python version need a list of args for cmd
             try:
-                cmd = shlex.split(self.command.encode('utf8', 'ignore'))
+                cmd = shlex.split(self.command)
             except Exception as exp:  # pylint: disable=W0703
                 self.output = 'Not a valid shell command: ' + exp.__str__()
                 self.exit_status = 3

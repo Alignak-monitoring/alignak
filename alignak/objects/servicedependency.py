@@ -206,7 +206,7 @@ class Servicedependencies(Items):
 
         # Then for every host create a copy of the service with just the host
         # because we are adding services, we can't just loop in it
-        servicedeps = self.items.keys()
+        servicedeps = list(self.items)
         for s_id in servicedeps:
             servicedep = self.items[s_id]
 

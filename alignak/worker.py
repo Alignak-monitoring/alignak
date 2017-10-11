@@ -48,6 +48,7 @@
 """
 This module provide Worker class. It is used to spawn new processes in Poller and Reactionner
 """
+from builtins import str
 from queue import Empty, Full
 from multiprocessing import Process
 
@@ -291,7 +292,7 @@ class Worker(object):
                     logger.error("I am dying because of too many open files: %s", chk)
                     self.i_am_dying = True
                 else:
-                    if not isinstance(process, basestring):
+                    if not isinstance(process, str):
                         logger.debug("Launched check: %s, pid=%d", chk.uuid, process.pid)
 
     def manage_finished_checks(self, queue):

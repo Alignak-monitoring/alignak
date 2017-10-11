@@ -68,6 +68,7 @@ The major part of monitoring "intelligence" is in this module.
 # pylint: disable=C0302
 # pylint: disable=R0904
 from future.utils import iteritems
+from past.builtins import basestring
 from six import itervalues
 import time
 import os
@@ -826,6 +827,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         now = time.time()
+        add_notif = []
         for act in self.actions.values():
             # We only want notifications
             if act.is_a != 'notification':
@@ -855,7 +857,7 @@ class Scheduler(object):  # pylint: disable=R0902
                         for notif in childnotifs:
                             logger.debug(" - child notification: %s", notif)
                             notif.status = 'scheduled'
-                            self.add(notif)  # this will send a brok
+                            add_notif.append(notif)
 
                     # If we have notification_interval then schedule
                     # the next notification (problems only)
@@ -894,6 +896,9 @@ class Scheduler(object):  # pylint: disable=R0902
                         # We don't repeat recover/downtime/flap/etc...
                         item.remove_in_progress_notification(act)
                         act.status = 'zombie'
+
+        for notif in add_notif:
+            self.add(notif)  # this will send a brok
 
     def get_to_run_checks(self, do_checks=False, do_actions=False,
                           poller_tags=None, reactionner_tags=None,
@@ -1040,7 +1045,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
                 # Add protection for strange charset
                 if isinstance(action.output, str):
-                    action.output = action.output.decode('utf8', 'ignore')
+                    action.output = action.output
 
                 self.actions[action.uuid].get_return_from(action)
                 item = self.find_item_by_id(self.actions[action.uuid].ref)
@@ -1913,20 +1918,26 @@ class Scheduler(object):  # pylint: disable=R0902
         # A loop where those downtimes are removed
         # which were marked for deletion (mostly by dt.exit())
         for elt in self.iter_hosts_and_services():
+            to_delete = []
             for downtime in elt.downtimes.values():
                 if downtime.can_be_deleted is True:
-                    logger.info("Downtime to delete: %s", downtime.__dict__)
-                    ref = self.find_item_by_id(downtime.ref)
-                    elt.del_downtime(downtime.uuid)
-                    broks.append(ref.get_update_status_brok())
+                    to_delete.append(downtime)
+            for downtime in to_delete:
+                logger.info("Downtime to delete: %s", downtime.__dict__)
+                ref = self.find_item_by_id(downtime.ref)
+                elt.del_downtime(downtime.uuid)
+                broks.append(ref.get_update_status_brok())
 
         # Same for contact downtimes:
         for elt in self.contacts:
+            to_delete = []
             for downtime in elt.downtimes.values():
                 if downtime.can_be_deleted is True:
-                    ref = self.find_item_by_id(downtime.ref)
-                    elt.del_downtime(downtime.uuid)
-                    broks.append(ref.get_update_status_brok())
+                    to_delete.append(downtime)
+            for downtime in to_delete:
+                ref = self.find_item_by_id(downtime.ref)
+                elt.del_downtime(downtime.uuid)
+                broks.append(ref.get_update_status_brok())
 
         # Check start and stop times
         for elt in self.iter_hosts_and_services():

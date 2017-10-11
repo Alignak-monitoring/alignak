@@ -861,7 +861,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                     'poller_tags': self.poller_tags,
                     'reactionner_tags': self.reactionner_tags,
                     'worker_name': self.name,
-                    'module_types': self.q_by_mod.keys()
+                    'module_types': list(self.q_by_mod)
                 }, wait='long')
                 # Explicit serialization
                 tmp = unserialize(tmp, True)

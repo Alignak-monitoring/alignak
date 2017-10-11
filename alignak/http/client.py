@@ -200,7 +200,7 @@ class HTTPClient(object):
         except (requests.Timeout, requests.ConnectTimeout):
             raise HTTPClientTimeoutException(timeout, uri)
         except requests.ConnectionError as exp:
-            raise HTTPClientConnectionException(uri, exp.message)
+            raise HTTPClientConnectionException(uri, exp)
         except Exception as err:
             raise HTTPClientException('Request error to %s: %s' % (uri, err))
 

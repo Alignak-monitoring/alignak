@@ -364,8 +364,9 @@ class Dispatcher:
 
         # Now we sort the scheds so we take master, then spare
         # the dead, but we do not care about them
-        scheds.sort(alive_then_spare_then_deads)
-        scheds.reverse()  # pop is last, I need first
+
+        scheds =  alive_then_spare_then_deads(scheds)
+        scheds.reverse()
         return scheds
 
     def prepare_dispatch(self):

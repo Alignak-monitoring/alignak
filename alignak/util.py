@@ -53,6 +53,7 @@ You can find functions for time management, type management (pythonization),
 macros solving, sorting, parsing, file handling, filters.
 
 """
+from past.builtins import basestring
 import time
 import re
 import sys
@@ -148,9 +149,9 @@ def jsonify_r(obj):
             return obj
         except TypeError:
             return None
-    properties = cls.properties.keys()
+    properties = list(cls.properties)
     if hasattr(cls, 'running_properties'):
-        properties += cls.running_properties.keys()
+        properties += list(cls.running_properties)
     for prop in properties:
         if not hasattr(obj, prop):
             continue
@@ -691,7 +692,7 @@ def get_customs_keys(dic):  # pragma: no cover, to be deprectaed?
     :return: list of keys
     :rtype: list
     """
-    return [k[1:] for k in dic.keys()]
+    return [k[1:] for k in list(dic)]
 
 
 def get_customs_values(dic):  # pragma: no cover, to be deprectaed?
@@ -727,24 +728,22 @@ def unique_value(val):
 
 
 # ##################### Sorting ################
-def alive_then_spare_then_deads(sat1, sat2):
-    """Compare two satellite link
-    based on alive attribute then spare attribute
-
-    :param sat1: first link to compare
-    :type sat1:
-    :param sat2: second link to compare
-    :type sat2:
-    :return: sat1 > sat2 (1) if sat1 alive and not sat2 or both alive but sat1 not spare
-             sat1 == sat2 (0) if both alive and spare
-             sat1 < sat2 (-1) else
-    :rtype: int
-    """
-    if sat1.alive == sat2.alive and sat1.spare == sat2.spare:
-        return 0
-    if not sat2.alive or (sat2.alive and sat2.spare and sat1.alive):
-        return -1
-    return 1
+def alive_then_spare_then_deads(data):
+    alive = []
+    spare = []
+    deads = []
+    for sdata in data:
+        if sdata.alive and not sdata.spare:
+            alive.append(sdata)
+        elif sdata.alive and sdata.spare:
+            spare.append(sdata)
+        else:
+            deads.append(sdata)
+    rdata = []
+    rdata.extend(alive)
+    rdata.extend(spare)
+    rdata.extend(deads)
+    return rdata
 
 
 def sort_by_ids(x00, y00):
@@ -761,24 +760,6 @@ def sort_by_ids(x00, y00):
         return -1
     if x00.uuid > y00.uuid:
         return 1
-    # So is equal
-    return 0
-
-
-def sort_by_number_values(x00, y00):
-    """Compare x00, y00 base on number of values
-
-    :param x00: first elem to compare
-    :type x00: list
-    :param y00: second elem to compare
-    :type y00: list
-    :return: x00 > y00 (-1) if len(x00) > len(y00), x00 == y00 (0) if id equals, x00 < y00 (1) else
-    :rtype: int
-    """
-    if len(x00) < len(y00):
-        return 1
-    if len(x00) > len(y00):
-        return -1
     # So is equal
     return 0
 

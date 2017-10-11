@@ -95,7 +95,7 @@ class PropertiesTester(object):
         self.print_header()
 
         item = self.item # shortcut
-        prop_names = set(list(self.properties.keys()) + self.unused_props + self.without_default)
+        prop_names = set(list(self.properties) + self.unused_props + self.without_default)
 
         for name in item.properties:
             if name.startswith('$') and name.endswith('$'):

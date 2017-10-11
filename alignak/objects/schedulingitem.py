@@ -1360,9 +1360,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :return: None
         """
+        to_delete = []
         for notif in self.notifications_in_progress.values():
             if notif.is_a == 'notification' and not notif.contact:
-                self.remove_in_progress_notification(notif)
+                to_delete.append(notif)
+        for notif in to_delete:
+            self.remove_in_progress_notification(notif)
 
     def get_event_handlers(self, hosts, macromodulations, timeperiods, ext_cmd=False):
         """Raise event handlers if NONE of the following conditions is met::
@@ -1618,12 +1621,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # Protect against bad type output
         # if str, go in unicode
-        if isinstance(chk.output, str):
-            chk.output = chk.output.decode('utf8', 'ignore')
-            chk.long_output = chk.long_output.decode('utf8', 'ignore')
+        #if isinstance(chk.output, str):
+        #    chk.output = chk.output.decode('utf8', 'ignore')
+        #    chk.long_output = chk.long_output.decode('utf8', 'ignore')
 
-        if isinstance(chk.perf_data, str):
-            chk.perf_data = chk.perf_data.decode('utf8', 'ignore')
+        #if isinstance(chk.perf_data, str):
+        #    chk.perf_data = chk.perf_data.decode('utf8', 'ignore')
 
         # We check for stalking if necessary
         # so if check is here
@@ -2740,7 +2743,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # pylint: disable=W0703
             except Exception:  # pragma: no cover, simple protection
                 logger.error("We got an exception from a trigger on %s for %s",
-                             self.get_full_name().decode('utf8', 'ignore'),
+                             self.get_full_name(),
                              str(traceback.format_exc()))
 
     def fill_data_brok_from(self, data, brok_type):

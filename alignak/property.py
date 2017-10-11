@@ -227,7 +227,7 @@ class BoolProp(Property):
         if isinstance(val, bool):
             return val
         val = unique_value(val).lower()
-        if val in __boolean_states__.keys():
+        if val in list(__boolean_states__):
             return __boolean_states__[val]
         else:
             raise PythonizeError("Cannot convert '%s' to a boolean value" % val)

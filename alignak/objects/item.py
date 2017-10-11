@@ -61,6 +61,7 @@ elements like service, hosts or contacts.
 # pylint: disable=C0302
 # pylint: disable=R0904
 from future.utils import iteritems
+from past.builtins import basestring
 
 from six import itervalues
 import time
@@ -410,7 +411,7 @@ class Item(AlignakObject):
         :rtype: list
         """
         res = {}
-        props = self.plus.keys()  # we delete entries, so no for ... in ...
+        props = list(self.plus)  # we delete entries, so no for ... in ...
         for prop in props:
             res[prop] = self.get_plus_and_delete(prop)
         return res
@@ -486,7 +487,7 @@ class Item(AlignakObject):
         :rtype: dict
         """
         res = {}
-        properties = self.__class__.properties.keys()
+        properties = list(self.__class__.properties)
         # Register is not by default in the properties
         if 'register' not in properties:
             properties.append('register')

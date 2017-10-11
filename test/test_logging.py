@@ -44,7 +44,7 @@
 """
 Test alignak.logging
 """
-
+from builtins import chr
 import time
 import logging
 import unittest
@@ -192,7 +192,7 @@ class TestLogging(AlignakTest):
         self.logger.info(stuff)
         sutf8 = u'I love myself $£¤'  # dollar, pound, currency
         self.logger.info(sutf8)
-        s = unichr(40960) + u'abcd' + unichr(1972)
+        s = chr(40960) + u'abcd' + chr(1972)
         self.logger.info(s)
 
     def test_log_format(self):

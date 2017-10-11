@@ -127,7 +127,7 @@ class Trigger(Item):
         env["self"] = ctx
         del env["ctx"]
         try:
-            exec(code in env)  # pylint: disable=W0122
+            exec(code, env)  # pylint: disable=W0122
         except Exception as err:  # pylint: disable=W0703
             set_value(ctx, "UNKNOWN: Trigger error: %s" % err, "", 3)
             logger.error('%s Trigger %s failed: %s ; '

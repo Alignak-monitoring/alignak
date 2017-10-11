@@ -83,6 +83,7 @@ from multiprocessing import Process, Manager
 import json
 from builtins import int
 from past.builtins import xrange
+from six import next
 
 from alignak.misc.serialization import serialize
 
@@ -113,7 +114,7 @@ from alignak.objects.hostextinfo import HostExtInfo, HostsExtInfo
 from alignak.objects.serviceextinfo import ServiceExtInfo, ServicesExtInfo
 from alignak.objects.trigger import Triggers
 from alignak.objects.pack import Packs
-from alignak.util import split_semicolon, sort_by_number_values
+from alignak.util import split_semicolon
 from alignak.objects.arbiterlink import ArbiterLink, ArbiterLinks
 from alignak.objects.schedulerlink import SchedulerLink, SchedulerLinks
 from alignak.objects.reactionnerlink import ReactionnerLink, ReactionnerLinks
@@ -2443,7 +2444,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         """
         # We create a graph with host in nodes
         graph = Graph()
-        graph.add_nodes(self.hosts.items.keys())
+        graph.add_nodes(list(self.hosts.items))
 
         # links will be used for relations between hosts
         links = set()
@@ -2602,7 +2603,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # Now we explode the numerous packs into nb_packs reals packs:
             # we 'load balance' them in a round-robin way but with count number of hosts in
             # case have some packs with too many hosts and other with few
-            realm.packs.sort(sort_by_number_values)
+            realm.packs.sort(key=lambda x: len(x), reverse=True)
             pack_higher_hosts = 0
             for pack in realm.packs:
                 valid_value = False
@@ -2627,10 +2628,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     i = old_pack
                 else:
                     if isinstance(i, int):
-                        i = round_robin.next()
+                        i = next(round_robin)
                     elif (len(packs[packindices[i]]) + len(pack)) >= pack_higher_hosts:
                         pack_higher_hosts = (len(packs[packindices[i]]) + len(pack))
-                        i = round_robin.next()
+                        i = next(round_robin)
 
                 for elt_id in pack:
                     elt = self.hosts[elt_id]

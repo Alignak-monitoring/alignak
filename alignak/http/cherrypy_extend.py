@@ -54,7 +54,7 @@ def zlib_processor(entity):  # pragma: no cover, not used in the testing environ
     try:
         params = {}
         for key, value in iteritems(raw_params):
-            params[key] = unserialize(value.encode("utf8"))
+            params[key] = unserialize(value)
     except TypeError:
         raise cherrypy.HTTPError(400, 'Invalid serialized data in JSON document')
     except AlignakClassLookupException as exp:

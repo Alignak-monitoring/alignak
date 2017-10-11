@@ -537,7 +537,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     args.append(daemon_arguments)
                 logger.info("Trying to launch daemon: %s...", daemon_name)
                 logger.info("... with arguments: %s", args)
-                self.my_satellites[daemon_name] = subprocess.Popen(args)
+                self.my_satellites[daemon_name] = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
                 logger.info("%s launched (pid=%d)",
                             daemon_name, self.my_satellites[daemon_name].pid)
 
@@ -547,9 +547,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 ret = self.my_satellites[daemon_name].poll()
                 if ret is not None:
                     logger.error("*** %s exited on start!", daemon_name)
-                    for line in iter(self.my_satellites[daemon_name].stdout.readline, b''):
+                    (stdrout, stdrerr) = self.my_satellites[daemon_name].communicate()
+                    for line in stdrout.decode().split('\n'):
                         logger.error(">>> " + line.rstrip())
-                    for line in iter(self.my_satellites[daemon_name].stderr.readline, b''):
+                    for line in stdrerr.decode().split('\n'):
                         logger.error(">>> " + line.rstrip())
                     result = False
                 else:
