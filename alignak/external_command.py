@@ -981,10 +981,16 @@ class ExternalCommandManager:
         comm = Comment(data)
         service.add_comment(comm)
         # todo: create and send a brok for service comment
-        brok = make_monitoring_log('info', "SERVICE COMMENT: %s;%s;%s;%s"
-                                   % (self.hosts[service.host].get_name(),
-                                      service.get_name(),
-                                      unicode(author, 'utf-8'), unicode(comment, 'utf-8')))
+        try:
+            brok = make_monitoring_log('info', "SERVICE COMMENT: %s;%s;%s;%s"
+                                       % (self.hosts[service.host].get_name(),
+                                          service.get_name(),
+                                          unicode(author, 'utf-8'), unicode(comment, 'utf-8')))
+        except TypeError:
+            brok = make_monitoring_log('info', "SERVICE COMMENT: %s;%s;%s;%s"
+                                       % (self.hosts[service.host].get_name(),
+                                          service.get_name(), author, comment))
+
         self.send_an_element(brok)
 
     def add_host_comment(self, host, author, comment):
@@ -1008,9 +1014,14 @@ class ExternalCommandManager:
         comm = Comment(data)
         host.add_comment(comm)
         # todo: create and send a brok for host comment
-        brok = make_monitoring_log('info', u"HOST COMMENT: %s;%s;%s"
-                                   % (host.get_name(),
-                                      unicode(author, 'utf-8'), unicode(comment, 'utf-8')))
+        try:
+            brok = make_monitoring_log('info', u"HOST COMMENT: %s;%s;%s"
+                                       % (host.get_name(),
+                                          unicode(author, 'utf-8'), unicode(comment, 'utf-8')))
+        except TypeError:
+            brok = make_monitoring_log('info', u"HOST COMMENT: %s;%s;%s"
+                                       % (host.get_name(), author, comment))
+
         self.send_an_element(brok)
 
     def acknowledge_svc_problem(self, service, sticky, notify, author, comment):
