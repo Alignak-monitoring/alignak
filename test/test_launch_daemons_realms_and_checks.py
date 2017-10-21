@@ -142,9 +142,9 @@ class TestLaunchDaemonsRealms(AlignakTest):
             if ret is not None:
                 print("*** %s exited on start!" % (name))
                 for line in iter(proc.stdout.readline, b''):
-                    print(">>> " + line.rstrip())
+                    print(">>> " + line.rstrip().decode("utf-8"))
                 for line in iter(proc.stderr.readline, b''):
-                    print(">>> " + line.rstrip())
+                    print(">>> " + line.rstrip().decode("utf-8"))
             assert ret is None, "Daemon %s not started!" % name
             print("- %s running (pid=%d)" % (name, self.procs[daemon].pid))
 

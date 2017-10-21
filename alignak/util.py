@@ -1276,7 +1276,9 @@ def parse_daemon_args(arbiter=False):
     :type arbiter: bool
     :return: args
     """
-    parser = argparse.ArgumentParser(version='%(prog)s ' + VERSION)
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--version', action='version',
+                    version='%(prog)s ' + VERSION)
     if arbiter:
         parser.add_argument('-a', '--arbiter', action='append', required=True,
                             dest='monitoring_files',
