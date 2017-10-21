@@ -445,8 +445,12 @@ class TestAction(AlignakTest):
             # Todo: As of now, it fails on Windows:(
             return
         else:
-            a.command = r"""python -u -c 'print "."*%d'""" % max_output_length
+            if sys.version_info >= (3, 0):
+                a.command = r"""python3 -u -c 'print(u"."*%d)'""" % max_output_length
+            else:
+                a.command = r"""python -u -c 'print "."*%d'""" % max_output_length
 
+        print(a.command)
         ###
         ### 1 - output is less than the max output
         ###

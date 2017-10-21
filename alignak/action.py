@@ -291,8 +291,8 @@ class ActionBase(AlignakObject):
                                self.process.pid, now - self.check_time)
                 try:
                     (stdout, stderr) = self.process.communicate(timeout=1)
-                    self.stdoutdata = stdout
-                    self.stderrdata = stderr
+                    self.stdoutdata = stdout.decode("utf-8")
+                    self.stderrdata = stderr.decode("utf-8")
                 except subprocess.TimeoutExpired as err:
                     pass
 
@@ -322,7 +322,9 @@ class ActionBase(AlignakObject):
         # not have the fcntl module (Windows, and maybe some special
         # unix like AIX)
         try:
-            (self.stdoutdata, self.stderrdata) = self.process.communicate()
+            (stdout, stderr) = self.process.communicate()
+            self.stdoutdata = stdout.decode("utf-8")
+            self.stderrdata = stderr.decode("utf-8")
         except ValueError as err:
             pass
 
