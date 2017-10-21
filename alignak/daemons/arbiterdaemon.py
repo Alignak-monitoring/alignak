@@ -133,6 +133,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Used to work out if we must still be alive or not
         self.must_run = True
 
+        # For detected missibg daemons
+        self.my_satellites = {}
+
         self.http_interface = ArbiterInterface(self)
         self.conf = Config()
 
@@ -514,7 +517,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         started_daemons_count = 0
         # Parse the list of the missing daemons and try to run the corresponding processes
         satellites = [self.conf.schedulers, self.conf.pollers, self.conf.brokers]
-        self.my_satellites = {}
         for satellites_list in satellites:
             daemons_class = satellites_list.inner_class
             for daemon in self.conf.missing_daemons:
@@ -834,7 +836,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             # Main loop
             self.run()
 
-        if self.interrupted:
+        if self.interrupted and self.conf.missing_daemons:
             self.stop_missing_daemons()
 
     def wait_for_master_death(self):
