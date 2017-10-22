@@ -43,6 +43,7 @@
 This file is used to test properties types after config loaded and parsed
 """
 from __future__ import print_function
+from builtins import str
 import logging
 from alignak_test import AlignakTest
 from alignak.property import UnusedProp, StringProp, IntegerProp, \
@@ -104,10 +105,10 @@ class TestEndParsingType(AlignakTest):
             return list
 
         if isinstance(obj, StringProp):
-            return basestring
+            return str
 
         if isinstance(obj, UnusedProp):
-            return basestring
+            return str
 
         if isinstance(obj, BoolProp):
             return bool
@@ -119,16 +120,16 @@ class TestEndParsingType(AlignakTest):
             return float
 
         if isinstance(obj, CharProp):
-            return basestring
+            return str
 
         if isinstance(obj, DictProp):
             return dict
 
         if isinstance(obj, AddrProp):
-            return basestring
+            return str
 
         if isinstance(obj, ToGuessProp):
-            return basestring
+            return str
 
     def check_objects_from(self, container):
         """ Check properties of an alignak item

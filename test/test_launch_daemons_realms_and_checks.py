@@ -22,9 +22,9 @@
 import os
 import sys
 import signal
-
+from distutils.spawn import find_executable
 import subprocess
-from time import sleep
+from time import sleep, time
 import shutil
 
 from alignak_test import AlignakTest
@@ -54,7 +54,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         :return:
         """
         print("Stopping the daemons...")
-        start = time.time()
+        start = time()
         for daemon in list(self.procs):
             proc = daemon['pid']
             name = daemon['name']
@@ -88,7 +88,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
             #     except psutil.NoSuchProcess:
             #         pass
             print("%s terminated" % (name))
-        print("Stopping daemons duration: %d seconds" % (time.time() - start))
+        print("Stopping daemons duration: %d seconds" % (time() - start))
 
     def run_and_check_alignak_daemons(self, runtime=10):
         """ Run the Alignak daemons for a 3 realms configuration
@@ -127,7 +127,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         print("Launching the daemons...")
         for daemon in daemons_list:
-            alignak_daemon = "../alignak/bin/alignak_%s.py" % daemon.split('-')[0]
+            alignak_daemon = find_executable('alignak-%s' % daemon.split('-')[0])
 
             args = [alignak_daemon, "-c", cfg_folder + "/daemons/%s.ini" % daemon]
             self.procs[daemon] = \
@@ -152,7 +152,8 @@ class TestLaunchDaemonsRealms(AlignakTest):
         sleep(1)
 
         print("Launching arbiter...")
-        args = ["../alignak/bin/alignak_arbiter.py",
+        alignak_daemon = find_executable('alignak-arbiter')
+        args = [alignak_daemon,
                 "-c", cfg_folder + "/daemons/arbiter.ini",
                 "-a", cfg_folder + "/alignak.cfg"]
         self.procs['arbiter'] = \
@@ -166,9 +167,9 @@ class TestLaunchDaemonsRealms(AlignakTest):
         ret = self.procs[name].poll()
         if ret is not None:
             print("*** %s exited on start!" % (name))
-            for line in iter(self.procs[name].stdout.readline, b''):
+            for line in iter(self.procs[name].stdout.readline, ''):
                 print(">>> " + line.rstrip())
-            for line in iter(self.procs[name].stderr.readline, b''):
+            for line in iter(self.procs[name].stderr.readline, ''):
                 print(">>> " + line.rstrip())
         assert ret is None, "Daemon %s not started!" % name
         print("- %s running (pid=%d)" % (name, self.procs[name].pid))
