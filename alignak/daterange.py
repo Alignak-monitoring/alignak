@@ -447,6 +447,8 @@ class AbstractDaterange(AlignakObject):
 
         # First we search for the day of t
         t_day = self.get_next_valid_day(timestamp)
+        if t_day is None:
+            return None
 
         # We search for the min of all tr.start > sec_from_morning
         # if it's the next day, use a start of the day search for timerange
