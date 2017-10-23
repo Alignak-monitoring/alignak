@@ -436,6 +436,133 @@ class TestLaunchDaemonsModules(AlignakTest):
         assert count >= 2
 
     @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
+    def test_daemons_modules_logs_reload_configuration(self):
+        """Running the Alignak daemons with the monitoring logs module -
+        reload arbiter configuration
+
+        :return: None
+        """
+        if os.path.exists('/tmp/monitoring-logs.log'):
+            os.remove('/tmp/monitoring-logs.log')
+
+        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  'cfg/run_daemons_logs')
+        tmp_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  'run/test_launch_daemons_modules_logs')
+
+        # Currently it is the same as the default execution ... to be modified later.
+        cfg_modules = {
+            'arbiter': '', 'scheduler': '', 'broker': 'logs',
+            'poller': '', 'reactionner': '', 'receiver': ''
+        }
+        nb_errors = self._run_daemons_modules(cfg_folder, tmp_folder, cfg_modules, 10)
+        assert nb_errors == 0, "Error logs raised!"
+        print("No error logs raised when daemons started and loaded the modules")
+
+        time.sleep(1)
+        assert os.path.exists('/tmp/monitoring-logs.log'), '/tmp/monitoring-logs.log does not exist!'
+        count = 0
+        print("Monitoring logs:")
+        with open('/tmp/monitoring-logs.log') as f:
+            for line in f:
+                print("- : %s" % line)
+                count += 1
+        assert count >= 2
+
+        # Kill the logs module
+        module_pid = None
+        for proc in psutil.process_iter():
+            if "module: logs" in proc.name():
+                print("Found logs module in the ps: %s (pid=%d)" % (proc.name(), proc.pid))
+                module_pid = proc.pid
+        assert module_pid is not None
+
+        # Send a reload signal to the arbiter
+        arbiter_pid = None
+        for proc in psutil.process_iter():
+            if "arbiter-master" in proc.name():
+                print("Found Arbiter in the ps: %s (pid=%d)" % (proc.name(), proc.pid))
+                arbiter_pid = proc.pid
+        assert arbiter_pid is not None
+
+        print("Asking pid=%d to reload..." % (arbiter_pid))
+        daemon_process = psutil.Process(arbiter_pid)
+        daemon_process.send_signal(signal.SIGHUP)
+
+        # Wait for the module to restart
+        time.sleep(5)
+
+        self.kill_daemons()
+
+        # Search for some specific logs in the broker daemon logs
+        expected_logs = {
+            'broker': [
+                "[alignak.modulesmanager] Importing Python module 'alignak_module_logs' for logs...",
+                "[alignak.basemodule] Process for module logs is now running (pid=%s)" % module_pid,
+                "[alignak.module.logs] starting...",
+                "[alignak.modulesmanager] Module properties: {'daemons': ['broker'], 'phases': ['running'], 'type': 'logs', 'external': True}",
+                "[alignak.modulesmanager] Imported 'alignak_module_logs' for logs",
+                "[alignak.modulesmanager] Loaded Python module 'alignak_module_logs' (logs)",
+                # "[alignak.module] Give an instance of alignak_module_logs for alias: logs",
+                "[alignak.module.logs] logger default configuration:",
+                "[alignak.module.logs]  - rotating logs in /tmp/monitoring-logs.log",
+                "[alignak.module.logs]  - log level: 20",
+                "[alignak.module.logs]  - rotation every 1 midnight, keeping 365 files",
+                # This is the usual process stop sequence...
+                "[alignak.basemodule] Process for module logs received a signal: 15",
+                "[alignak.module.logs] stopping...",
+                "[alignak.module.logs] stopped",
+                "[alignak.basemodule] Process for module logs is now exiting (pid=%s)" % module_pid,
+                "[alignak.modulesmanager] External process stopped.",
+            ]
+        }
+
+        errors_raised = 0
+        for name in ['broker']:
+            assert os.path.exists('/tmp/%sd.log' % name), '/tmp/%sd.log does not exist!' % name
+            print("-----\n%s log file\n" % name)
+            with open('/tmp/%sd.log' % name) as f:
+                lines = f.readlines()
+                logs = []
+                for line in lines:
+                    # Catches WARNING and ERROR logs
+                    if 'WARNING' in line:
+                        line = line.split('WARNING: ')
+                        line = line[1]
+                        line = line.strip()
+                        print("--- %s" % line[:-1])
+                    if 'ERROR' in line:
+                        if "The external module logs died unexpectedly!" not in line:
+                            errors_raised += 1
+                        line = line.split('ERROR: ')
+                        line = line[1]
+                        line = line.strip()
+                        print("*** %s" % line[:-1])
+                    # Catches INFO logs
+                    if 'INFO' in line:
+                        line = line.split('INFO: ')
+                        line = line[1]
+                        line = line.strip()
+                        print("    %s" % line)
+                    logs.append(line)
+
+            for log in expected_logs[name]:
+                print("Last checked log %s: %s" % (name, log))
+                assert log in logs, log
+
+        # Still only two logs
+        assert os.path.exists('/tmp/monitoring-logs.log'), '/tmp/monitoring-logs.log does not exist!'
+        previous_count = count
+        count = 0
+        print("Monitoring logs:")
+        with open('/tmp/monitoring-logs.log') as f:
+            for line in f:
+                print("- : %s" % line)
+                count += 1
+        assert count >= 2
+        # assert count == previous_count + 1  # One more Current host state
+        assert count > previous_count
+
     def test_daemons_modules_ws(self):
         """Running the Alignak daemons with the Web services module
 
@@ -463,6 +590,21 @@ class TestLaunchDaemonsModules(AlignakTest):
                 module_pid = proc.pid
         assert module_pid is not None
 
+        # Send a reload signal to the arbiter
+        arbiter_pid = None
+        for proc in psutil.process_iter():
+            if "arbiter-master" in proc.name():
+                print("Found Arbiter in the ps: %s (pid=%d)" % (proc.name(), proc.pid))
+                arbiter_pid = proc.pid
+        assert arbiter_pid is not None
+
+        print("Asking pid=%d to reload..." % (arbiter_pid))
+        daemon_process = psutil.Process(arbiter_pid)
+        daemon_process.send_signal(signal.SIGHUP)
+
+        # Wait for Alignak to reload and dispatch again its configuration
+        time.sleep(5)
+
         self.kill_daemons()
 
         # Search for some specific logs in the broker daemon logs
@@ -482,12 +624,25 @@ class TestLaunchDaemonsModules(AlignakTest):
                 "[alignak.module.web-services] Alignak daemons get status period: 10",
                 "[alignak.module.web-services] SSL is not enabled, this is not recommended. You should consider enabling SSL!",
                 "[alignak.daemon] I correctly loaded my modules: [web-services]",
+
+                "[alignak.modulesmanager] Trying to initialize module: web-services",
+                "[alignak.modulesmanager] Starting external module web-services",
+                "[alignak.basemodule] Starting external process for module web-services...",
+                "[alignak.basemodule] web-services is now started (pid=%s)" % module_pid,
+                "[alignak.basemodule] Process for module web-services is now running (pid=%s)" % module_pid,
+                "[alignak.module.web-services] starting...",
+                "[alignak.module.web-services] starting http_daemon thread..",
+                "[alignak.module.web-services] HTTP daemon thread started",
+                "[alignak.module.web-services] HTTP main thread running",
+
                 # On arbiter stop:
                 # "[alignak.module.web-services] Alignak arbiter is currently not available.",
-
-                "[alignak.modulesmanager] Request external process to stop for web-services",
-                "[alignak.basemodule] I'm stopping module u'web-services' (pid=%d)" % module_pid,
+                "[alignak.basemodule] Process for module web-services received a signal: 15",
+                "[alignak.module.web-services] stopping...",
+                "[alignak.module.web-services] stopped",
+                "[alignak.basemodule] Process for module web-services is now exiting (pid=%s)" % module_pid,
                 "[alignak.modulesmanager] External process stopped.",
+
                 "[alignak.daemon] Stopped receiver-master."
             ]
         }
@@ -651,8 +806,6 @@ class TestLaunchDaemonsModules(AlignakTest):
                         print("    %s" % line)
                     logs.append(line)
 
-            for log in logs:
-                print("...%s" % log)
             for log in expected_logs[name]:
                 print("Last checked log %s: %s" % (name, log))
                 assert log in logs, logs

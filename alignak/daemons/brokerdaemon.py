@@ -357,6 +357,7 @@ class Broker(BaseSatellite):
         """
 
         with self.conf_lock:
+            logger.info("[%s] Setting-up a new configuration...", self.name)
             self.clean_previous_run()
             conf = unserialize(self.new_conf, True)
             self.new_conf = None
