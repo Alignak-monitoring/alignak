@@ -335,17 +335,21 @@ class TestPassiveChecks(AlignakTest):
         # Set the host UP - this will run the scheduler loop to check for freshness
         expiry_date = time.strftime("%Y-%m-%d %H:%M:%S %Z")
         self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(3)
+        time.sleep(1)
         self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(3)
+        time.sleep(1)
         self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(3)
+        time.sleep(1)
+        self.scheduler_loop(1, [[host, 0, 'UP']])
+        time.sleep(1)
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.1)
 
         assert "UNREACHABLE" == host_b.state
         assert True == host_b.freshness_expired
-        assert len(self.get_log_match("alignak.objects.host] The freshness period of host 'test_host_B'")) == 1
+        self.show_logs()
+        print len(self.get_log_match("alignak.objects.host] The freshness period of host 'test_host_B'"))
+        assert len(self.get_log_match("alignak.objects.host] The freshness period of host 'test_host_B'")) == 6
 
         # Now receive check_result (passive), so we must be outside of freshness_expired
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_B;0;Host is UP' % time.time()
@@ -355,4 +359,3 @@ class TestPassiveChecks(AlignakTest):
 
         assert "UP" == host_b.state
         assert False == host_b.freshness_expired
-

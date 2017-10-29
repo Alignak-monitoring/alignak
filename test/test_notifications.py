@@ -24,6 +24,8 @@ This file test notifications
 
 import time
 import copy
+import datetime
+from freezegun import freeze_time
 from alignak_test import AlignakTest
 
 
@@ -453,6 +455,104 @@ class TestNotifications(AlignakTest):
 
         # 3rd notification is VOID
         self.assert_actions_match(2, 'VOID', 'command')
+
+    def test_notifications_passive_host(self):
+        """ Test notifications for passively check hosts
+
+        :return: None
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default.cfg')
+
+        self._scheduler = self.schedulers['scheduler-master'].sched
+
+        # Check freshness on each scheduler tick
+        self._scheduler.update_recurrent_works_tick('check_freshness', 1)
+
+        # Get host
+        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name('test_host_0')
+        host.act_depend_of = []  # ignore the router
+        host.checks_in_progress = []
+        host.event_handler_enabled = False
+        host.active_checks_enabled = False
+        host.passive_checks_enabled = True
+        host.check_freshness = True
+        host.max_check_attempts = 1
+        host.freshness_threshold = 1800
+        host.freshness_state = 'd'
+        print("Host: %s - state: %s/%s, freshness: %s / %s, attempts: %s" % (
+            host, host.state_type, host.state, host.check_freshness, host.freshness_threshold,
+            host.max_check_attempts))
+        print("Host: %s - state: %s/%s, last state update: %s" % (
+            host, host.state_type, host.state, host.last_state_update))
+        assert host is not None
+
+        # Get service
+        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc.checks_in_progress = []
+        svc.event_handler_enabled = False
+        svc.active_checks_enabled = False
+        svc.passive_checks_enabled = True
+        svc.check_freshness = True
+        svc.freshness_threshold = 120
+        assert svc is not None
+        print("Service: %s - state: %s/%s, freshness: %s / %s" % (svc, svc.state_type, svc.state,
+                                                                  svc.check_freshness,
+                                                                  svc.freshness_threshold))
+
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2017, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
+
+            self.external_command_loop()
+            time.sleep(0.1)
+            # Freshness ok !
+            assert not host.freshness_expired
+            assert "UP" == host.state
+            assert "HARD" == host.state_type
+            assert host.attempt == 0
+            assert host.current_notification_number == 0, 'All OK no notifications'
+            self.assert_actions_count(0)
+            print("Host: %s - state: %s/%s, last state update: %s" % (
+                host, host.state_type, host.state, host.last_state_update))
+
+            # Time warp 1 hour
+            frozen_datetime.tick(delta=datetime.timedelta(hours=1))
+
+            self.external_command_loop()
+            self.show_logs()
+            time.sleep(0.1)
+            # Freshness expired !
+            assert host.freshness_expired
+            assert "DOWN" == host.state
+            assert "SOFT" == host.state_type
+            assert host.attempt == 1
+            assert host.current_notification_number == 0, 'All OK no notifications'
+            self.assert_actions_count(0)
+            print("Host: %s - state: %s/%s, last state update: %s" % (
+                host, host.state_type, host.state, host.last_state_update))
+
+            # Time warp 1 hour
+            frozen_datetime.tick(delta=datetime.timedelta(hours=1))
+
+            self.external_command_loop()
+            time.sleep(0.1)
+            assert host.freshness_expired
+            assert "DOWN" == host.state
+            assert "HARD" == host.state_type
+            # Perharps that attempt should have been incremented?
+            assert host.attempt == 1
+            assert host.is_max_attempts()
+            assert host.current_notification_number == 1, 'We should have 1 notification'
+            self.show_actions()
+            self.show_logs()
+
+            # 2 actions
+            # * 1 - VOID = notification master
+            # * 2 - notifier.pl to test_contact
+            self.assert_actions_count(2)
 
     def test_notifications_with_delay(self):
         """ Test notifications with use property first_notification_delay

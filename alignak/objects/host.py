@@ -517,15 +517,14 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 ####
 
     def set_state_from_exit_status(self, status, notif_period, hosts, services):
-        """Set the state in UP, DOWN, or UNDETERMINED
-        with the status of a check. Also update last_state
+        """Set the state in UP, DOWN, or UNREACHABLE according to the status of a check result.
 
         :param status: integer between 0 and 3 (but not 1)
         :type status: int
         :return: None
         """
         now = time.time()
-        self.last_state_update = now
+
         # we should put in last_state the good last state:
         # if not just change the state by an problem/impact
         # we can take current state. But if it's the case, the
@@ -667,7 +666,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             )
             self.broks.append(brok)
 
-    def raise_freshness_log_entry(self, t_stale_by, t_threshold):
+    def raise_freshness_log_entry(self, t_stale_by):
         """Raise freshness alert entry (warning level)
         Format is : "The results of host '*get_name()*' are stale by *t_stale_by*
                      (threshold=*t_threshold*).  I'm forcing an immediate check of the host."
@@ -676,16 +675,16 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         :param t_stale_by: time in seconds the host has been in a stale state
         :type t_stale_by: int
-        :param t_threshold: threshold (seconds) to trigger this log entry
-        :type t_threshold: int
         :return: None
         """
-        logger.warning("The freshness period of host '%s' is expired by %s "
-                       "(threshold=%s).  I'm forcing the state to freshness state (%s).",
+        logger.warning("The freshness period of host '%s' is expired by %s (threshold=%s). "
+                       "Attempt: %s / %s. "
+                       "I'm forcing the state to freshness state (%s / %s).",
                        self.get_name(),
                        format_t_into_dhms_format(t_stale_by),
-                       format_t_into_dhms_format(t_threshold),
-                       self.freshness_state)
+                       format_t_into_dhms_format(self.freshness_threshold),
+                       self.attempt, self.max_check_attempts,
+                       self.freshness_state, self.state_type)
 
     def raise_notification_log_entry(self, notif, contact, host_ref=None):
         """Raise HOST NOTIFICATION entry (critical level)
