@@ -665,23 +665,19 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         cls = self.__class__
         if not self.in_checking and cls.global_check_freshness:
             if self.freshness_threshold != 0:
-                # If we start alignak, we begin the freshness period
-                logger.debug("Freshness check (%s), last state update: %s, now: %s.",
-                             self, self.last_state_update, now)
+                logger.debug("Checking freshness for %s, last state update: %s, now: %s.",
+                             self.get_full_name(), self.last_state_update, now)
+                # If we just started alignak, we begin the freshness period
                 if self.last_state_update == 0.0:
                     self.last_state_update = now
                 if self.last_state_update < now - \
                         (self.freshness_threshold + cls.additional_freshness_latency):
                     # Do not raise a check for passive only checked hosts
                     # when not in check period ...
-                    if not self.active_checks_enabled and not self.freshness_expired:
+                    # if not self.active_checks_enabled and not self.freshness_expired:
+                    if not self.active_checks_enabled:
                         timeperiod = timeperiods[self.check_period]
                         if timeperiod is None or timeperiod.is_time_valid(now):
-                            # Raise a log
-                            self.raise_freshness_log_entry(
-                                int(now - self.last_state_update),
-                                int(now - self.freshness_threshold)
-                            )
                             self.freshness_expired = True
                             # And a new check
                             chk = self.launch_check(now, hosts, services, timeperiods,
@@ -708,6 +704,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                                     chk.exit_status = 3
                                 elif self.freshness_state == 'x':
                                     chk.exit_status = 4
+                            #
+                            # # Raise a log
+                            # self.raise_freshness_log_entry(int(now - self.last_state_update))
                             return chk
                         else:
                             logger.debug(
@@ -1567,9 +1566,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :rtype list[alignak.check.Check]
         """
         ok_up = self.__class__.ok_up  # OK for service, UP for host
+        now = int(time.time())
         if not chk.freshness_expired:
             self.freshness_expired = False
-        # ============ MANAGE THE CHECK ============ #
+
         if 'TEST_LOG_ACTIONS' in os.environ:
             if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
                 logger.warning("Got check result: %d for '%s'",
@@ -1578,6 +1578,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 logger.info("Got check result: %d for '%s'",
                             chk.exit_status, self.get_full_name())
 
+        # ============ MANAGE THE CHECK ============ #
         # Not OK, waitconsume and have dependencies, put this check in waitdep, create if
         # necessary the check of dependent items and nothing else ;)
         if chk.exit_status != 0 and chk.status == 'waitconsume' and self.act_depend_of:
@@ -1639,6 +1640,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 chk.exit_status = resultmod.module_return(chk.exit_status, timeperiods)
 
         if not chk.freshness_expired:
+            # Only update the last state date if not in freshness expriy
+            self.last_state_update = time.time()
             if chk.exit_status == 1 and self.__class__.my_type == 'host':
                 chk.exit_status = 2
 
@@ -1856,6 +1859,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # update event/problem-counters
         self.update_event_and_problem_id()
+
+        # Raise a log if freshness check expired
+        if chk.freshness_expired:
+            self.raise_freshness_log_entry(int(now - self.last_state_update))
 
         # Now launch trigger if need. If it's from a trigger raised check,
         # do not raise a new one
@@ -2886,17 +2893,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def raise_freshness_log_entry(self, t_stale_by, t_threshold):  # pragma: no cover, base function
-        """Raise freshness alert entry (warning level)
-        Format is : "The results of item '*get_name()*' are stale by *t_stale_by*
-                     (threshold=*t_threshold*).  I'm forcing an immediate check of the item."
-        Example : "Warning: The results of host 'Server' are stale by 0d 0h 0m 58s
-                   (threshold=0d 1h 0m 0s). ..."
+    def raise_freshness_log_entry(self, t_stale_by):  # pragma: no cover, base function
+        """Raise freshness alert entry - base function overriden by inherited objects
 
         :param t_stale_by: time in seconds the item has been in a stale state
         :type t_stale_by: int
-        :param t_threshold: threshold (seconds) to trigger this log entry
-        :type t_threshold: int
         :return: None
         """
         pass
