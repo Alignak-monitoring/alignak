@@ -312,7 +312,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'checks_in_progress':
             ListProp(default=[]),
         # no broks because notifications are too linked
-        'notifications_in_progress': DictProp(default={}, retention=True),
+        'notifications_in_progress':
+            DictProp(default={}, retention=True),
         'comments':
             DictProp(default={}, fill_brok=['full_status'], retention=True),
         'flapping_changes':
@@ -373,60 +374,77 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # we save only the names of the contacts, and we should RELINK
         # them when we load it.
         # use for having all contacts we have notified
-        'notified_contacts':  SetProp(default=set(),
-                                      retention=True,
-                                      retention_preparation=from_set_to_list),
-        'in_scheduled_downtime': BoolProp(
-            default=False, fill_brok=['full_status', 'check_result'], retention=True),
-        'in_scheduled_downtime_during_last_check': BoolProp(default=False, retention=True),
-        'actions':            ListProp(default=[]),  # put here checks and notif raised
-        'broks':              ListProp(default=[]),  # and here broks raised
+        'notified_contacts':
+            SetProp(default=set(), retention=True, retention_preparation=from_set_to_list),
+        'in_scheduled_downtime':
+            BoolProp(default=False, fill_brok=['full_status', 'check_result'], retention=True),
+        'in_scheduled_downtime_during_last_check':
+            BoolProp(default=False, retention=True),
+        'actions':
+            ListProp(default=[]),  # put here checks and notif raised
+        'broks':
+            ListProp(default=[]),  # and here broks raised
 
         # Problem/impact part
-        'is_problem':         BoolProp(default=False, fill_brok=['full_status']),
-        'is_impact':          BoolProp(default=False, fill_brok=['full_status']),
+        'is_problem':
+            BoolProp(default=False, fill_brok=['full_status']),
+        'is_impact':
+            BoolProp(default=False, fill_brok=['full_status']),
         # the save value of our business_impact for "problems"
-        'my_own_business_impact':   IntegerProp(default=-1, fill_brok=['full_status']),
+        'my_own_business_impact':
+            IntegerProp(default=-1, fill_brok=['full_status']),
         # list of problems that make us an impact
-        'source_problems':    ListProp(default=[],
-                                       fill_brok=['full_status'],
-                                       ),
+        'source_problems':
+            ListProp(default=[], fill_brok=['full_status']),
         # list of the impact I'm the cause of
-        'impacts':            ListProp(default=[],
-                                       fill_brok=['full_status'],
-                                       ),
+        'impacts':
+            ListProp(default=[], fill_brok=['full_status']),
         # keep a trace of the old state before being an impact
-        'state_before_impact': StringProp(default='PENDING'),
+        'state_before_impact':
+            StringProp(default='PENDING'),
         # keep a trace of the old state id before being an impact
-        'state_id_before_impact': IntegerProp(default=0),
+        'state_id_before_impact':
+            IntegerProp(default=0),
         # if the state change, we know so we do not revert it
-        'state_changed_since_impact': BoolProp(default=False),
+        'state_changed_since_impact':
+            BoolProp(default=False),
         # BUSINESS CORRELATOR PART
         # Say if we are business based rule or not
-        'got_business_rule': BoolProp(default=False, fill_brok=['full_status']),
+        'got_business_rule':
+            BoolProp(default=False, fill_brok=['full_status']),
         # Previously processed business rule (with macro expanded)
-        'processed_business_rule': StringProp(default="", fill_brok=['full_status']),
+        'processed_business_rule':
+            StringProp(default="", fill_brok=['full_status']),
         # Our Dependency node for the business rule
-        'business_rule': StringProp(default=None),
+        'business_rule':
+            StringProp(default=None),
         # Here it's the elements we are depending on
         # so our parents as network relation, or a host
         # we are depending in a hostdependency
         # or even if we are business based.
-        'parent_dependencies': SetProp(default=set(), fill_brok=['full_status']),
+        'parent_dependencies':
+            SetProp(default=set(), fill_brok=['full_status']),
         # Here it's the guys that depend on us. So it's the total
         # opposite of the parent_dependencies
-        'child_dependencies': SetProp(default=set(), fill_brok=['full_status']),
+        'child_dependencies':
+            SetProp(default=set(), fill_brok=['full_status']),
         # Manage the unknown/unreachable during hard state
-        'in_hard_unknown_reach_phase': BoolProp(default=False, retention=True),
-        'was_in_hard_unknown_reach_phase': BoolProp(default=False, retention=True),
+        'in_hard_unknown_reach_phase':
+            BoolProp(default=False, retention=True),
+        'was_in_hard_unknown_reach_phase':
+            BoolProp(default=False, retention=True),
         # Set if the element just change its father/son topology
-        'topology_change': BoolProp(default=False, fill_brok=['full_status']),
+        'topology_change':
+            BoolProp(default=False, fill_brok=['full_status']),
         # Trigger list
-        'triggers': ListProp(default=[]),
+        'triggers':
+            ListProp(default=[]),
         # snapshots part
-        'last_snapshot':  IntegerProp(default=0, fill_brok=['full_status'], retention=True),
+        'last_snapshot':
+            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
         # Keep the string of the last command launched for this element
-        'last_check_command': StringProp(default=''),
+        'last_check_command':
+            StringProp(default=''),
         # Define if we are in the freshness expiration period
         'freshness_expired':
             BoolProp(default=False, fill_brok=['full_status'], retention=True),
@@ -1525,9 +1543,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if self.state != self.state_before_hard_unknown_reach_phase:
                 self.was_in_hard_unknown_reach_phase = False
 
-    def consume_result(self, chk, notif_period, hosts,  # pylint: disable=R0915,R0912,R0913
+    def consume_result(self, chk, notif_period, hosts,
                        services, timeperiods, macromodulations, checkmodulations, bi_modulations,
                        res_modulations, triggers, checks):
+        # pylint: disable=R0915,R0912,R0913,E1101
         """Consume a check return and send action in return
         main function of reaction of checks like raise notifications
 
@@ -1862,7 +1881,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # Raise a log if freshness check expired
         if self.freshness_expired and not self.freshness_log_raised:
-            self.raise_freshness_log_entry(int(now - self.last_state_update))
+            self.raise_freshness_log_entry(int(now - self.last_state_update -
+                                               self.freshness_threshold))
 
         # Now launch trigger if need. If it's from a trigger raised check,
         # do not raise a new one
