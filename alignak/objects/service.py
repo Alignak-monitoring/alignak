@@ -675,22 +675,23 @@ class Service(SchedulingItem):
 
     def raise_freshness_log_entry(self, t_stale_by):
         """Raise freshness alert entry (warning level)
-        Format is : "The results of service '*get_name()*' on host '*host.get_name()*'
-                    are stale by *t_stale_by* (threshold=*t_threshold*).
-                    I'm forcing an immediate check of the service."
-        Example : "Warning: The results of service 'Load' on host 'Server' are stale by 0d 0h 0m 58s
-                   (threshold=0d 1h 0m 0s). ..."
+
+        Example : "The freshness period of service 'host_name/service_description' is expired
+                   by 0d 0h 17m 6s (threshold=0d 1h 0m 0s).
+                   Attempt: 1 / 1.
+                   I'm forcing the state to freshness state (x / HARD)"
 
         :param t_stale_by: time in seconds the service has been in a stale state
         :type t_stale_by: int
         :return: None
         """
-        logger.warning("The freshness period of service '%s' is expired by %s (threshold=%s). "
-                       "Attempt: %s / %s. "
+        logger.warning("The freshness period of service '%s' is expired by %s "
+                       "(threshold=%s + %ss). Attempt: %s / %s. "
                        "I'm forcing the state to freshness state (%s / %s).",
                        self.get_full_name(),
                        format_t_into_dhms_format(t_stale_by),
                        format_t_into_dhms_format(self.freshness_threshold),
+                       self.additional_freshness_latency,
                        self.attempt, self.max_check_attempts,
                        self.freshness_state, self.state_type)
         if self.is_max_attempts():
