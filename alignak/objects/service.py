@@ -693,6 +693,8 @@ class Service(SchedulingItem):
                        format_t_into_dhms_format(self.freshness_threshold),
                        self.attempt, self.max_check_attempts,
                        self.freshness_state, self.state_type)
+        if self.is_max_attempts():
+            self.freshness_log_raised = True
 
     def raise_notification_log_entry(self, notif, contact, host_ref):
         """Raise SERVICE NOTIFICATION entry (critical level)

@@ -346,16 +346,21 @@ class TestPassiveChecks(AlignakTest):
         time.sleep(0.1)
 
         assert "UNREACHABLE" == host_b.state
+        assert "HARD" == host_b.state_type
         assert True == host_b.freshness_expired
         self.show_logs()
-        print len(self.get_log_match("alignak.objects.host] The freshness period of host 'test_host_B'"))
-        assert len(self.get_log_match("alignak.objects.host] The freshness period of host 'test_host_B'")) == 6
+        # The freshness log is never raised more than the maximum check attempts
+        assert len(self.get_log_match("alignak.objects.host] The freshness period of host 'test_host_B'")) == 5
+        assert len(self.get_log_match("Attempt: 1 / 5. ")) == 1
+        assert len(self.get_log_match("Attempt: 2 / 5. ")) == 1
+        assert len(self.get_log_match("Attempt: 3 / 5. ")) == 1
+        assert len(self.get_log_match("Attempt: 4 / 5. ")) == 1
+        assert len(self.get_log_match("Attempt: 5 / 5. ")) == 1
 
         # Now receive check_result (passive), so we must be outside of freshness_expired
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_B;0;Host is UP' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        self.scheduler_loop(1, [[host, 0, 'UP']])
-
-        assert "UP" == host_b.state
+        assert 'UP' == host_b.state
+        assert 'Host is UP' == host_b.output
         assert False == host_b.freshness_expired

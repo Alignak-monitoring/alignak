@@ -430,6 +430,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Define if we are in the freshness expiration period
         'freshness_expired':
             BoolProp(default=False, fill_brok=['full_status'], retention=True),
+        # Store if the freshness log got raised
+        'freshness_log_raised':
+            BoolProp(default=False, retention=True),
     })
 
     macros = {
@@ -674,12 +677,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                         (self.freshness_threshold + cls.additional_freshness_latency):
                     # Do not raise a check for passive only checked hosts
                     # when not in check period ...
-                    # if not self.active_checks_enabled and not self.freshness_expired:
                     if not self.active_checks_enabled:
                         timeperiod = timeperiods[self.check_period]
                         if timeperiod is None or timeperiod.is_time_valid(now):
                             self.freshness_expired = True
-                            # And a new check
+                            # Add a new check for the scheduler
                             chk = self.launch_check(now, hosts, services, timeperiods,
                                                     macromodulations, checkmodulations, checks)
                             expiry_date = time.strftime("%Y-%m-%d %H:%M:%S %Z")
@@ -704,9 +706,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                                     chk.exit_status = 3
                                 elif self.freshness_state == 'x':
                                     chk.exit_status = 4
-                            #
-                            # # Raise a log
-                            # self.raise_freshness_log_entry(int(now - self.last_state_update))
+
                             return chk
                         else:
                             logger.debug(
@@ -1639,7 +1639,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if resultmod is not None:
                 chk.exit_status = resultmod.module_return(chk.exit_status, timeperiods)
 
-        if not chk.freshness_expired:
+        if not self.freshness_expired:
             # Only update the last state date if not in freshness expriy
             self.last_state_update = time.time()
             if chk.exit_status == 1 and self.__class__.my_type == 'host':
@@ -1861,7 +1861,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.update_event_and_problem_id()
 
         # Raise a log if freshness check expired
-        if chk.freshness_expired:
+        if self.freshness_expired and not self.freshness_log_raised:
             self.raise_freshness_log_entry(int(now - self.last_state_update))
 
         # Now launch trigger if need. If it's from a trigger raised check,
