@@ -27,6 +27,11 @@ PREFIX=$2
 if [ $# -eq 0 ]; then
     ACCOUNT="alignak"
     PREFIX="/usr/local"
+
+fi
+if [ $# -eq 1 ]; then
+    PREFIX="/usr/local"
+
 fi
 
 ## Create user and group
