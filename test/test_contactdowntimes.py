@@ -100,7 +100,7 @@ class TestContactDowntime(AlignakTest):
         print("downtime was scheduled. check its activity and the comment\n"*5)
         self.assertEqual(1, len(test_contact.downtimes))
 
-        downtime = test_contact.downtimes.values()[0]
+        downtime = list(test_contact.downtimes.values())[0]
         assert downtime.is_in_effect
         assert not downtime.can_be_deleted
 
@@ -172,7 +172,7 @@ class TestContactDowntime(AlignakTest):
         print("downtime was scheduled. check its activity and the comment")
         assert len(test_contact.downtimes) == 1
 
-        downtime = test_contact.downtimes.values()[0]
+        downtime = list(test_contact.downtimes.values())[0]
         assert downtime.is_in_effect
         assert not downtime.can_be_deleted
 

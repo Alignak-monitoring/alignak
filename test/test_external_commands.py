@@ -867,7 +867,7 @@ class TestExternalCommands(AlignakTest):
         self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         assert len(host.comments) == 1
-        comment = host.comments.values()[0]
+        comment = list(host.comments.values())[0]
         assert comment.comment == "My comment"
         assert comment.author == "test_contact"
 
@@ -965,7 +965,7 @@ class TestExternalCommands(AlignakTest):
         self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         assert len(svc.comments) == 1
-        comment = svc.comments.values()[0]
+        comment = list(svc.comments.values())[0]
         assert comment.comment == "My comment"
         assert comment.author == "test_contact"
 
@@ -1280,7 +1280,7 @@ class TestExternalCommands(AlignakTest):
             assert False == svc.is_problem
             assert False == svc.problem_has_been_acknowledged
             assert len(host.downtimes) == 1
-            downtime = host.downtimes.values()[0]
+            downtime = list(host.downtimes.values())[0]
             assert downtime.comment == "My first downtime"
             assert downtime.author == "test_contact"
             assert downtime.start_time == now
@@ -1440,7 +1440,7 @@ class TestExternalCommands(AlignakTest):
             self.external_command_loop()
 
             assert len(host.downtimes) == 1
-            downtime = host.downtimes.values()[0]
+            downtime = list(host.downtimes.values())[0]
             assert downtime.comment == "My first downtime"
             assert downtime.author == "test_contact"
             assert downtime.start_time == now + 2
@@ -1614,7 +1614,7 @@ class TestExternalCommands(AlignakTest):
         assert True == svc.is_problem
         assert False == svc.problem_has_been_acknowledged
         assert len(host.downtimes) == 1
-        downtime = host.downtimes.values()[0]
+        downtime = list(host.downtimes.values())[0]
         assert downtime.comment == "My first downtime"
         assert downtime.author == "test_contact"
         assert downtime.start_time == now + 2
@@ -1644,7 +1644,7 @@ class TestExternalCommands(AlignakTest):
 
         #  ---
         # External command: delete an host downtime
-        downtime = host.downtimes.values()[0]
+        downtime = list(host.downtimes.values())[0]
         excmd = '[%d] DEL_HOST_DOWNTIME;%s' % (now, downtime.uuid)
         self._scheduler.run_external_command(excmd)
         self.external_command_loop()
@@ -1738,7 +1738,7 @@ class TestExternalCommands(AlignakTest):
         self.external_command_loop()
         assert len(svc.downtimes) == 1
         downtime_id = list(svc.downtimes)[0]
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
         assert downtime.comment == "My downtime"
         assert downtime.author == "test_contact"
         assert downtime.start_time == now + 120
@@ -2077,7 +2077,7 @@ class TestExternalCommands(AlignakTest):
         for host_id in hostgroup.get_hosts():
             host = self._scheduler.hosts[host_id]
             downtime_id = list(host.downtimes)[0]
-            downtime = host.downtimes.values()[0]
+            downtime = list(host.downtimes.values())[0]
             assert downtime.comment == "My downtime"
             assert downtime.author == "test_contact"
             assert downtime.start_time == now + 120
@@ -2099,7 +2099,7 @@ class TestExternalCommands(AlignakTest):
             for service_id in host.services:
                 service = self._scheduler.services[service_id]
                 downtime_id = list(host.downtimes)[0]
-                downtime = host.downtimes.values()[0]
+                downtime = list(host.downtimes.values())[0]
                 assert downtime.comment == "My downtime"
                 assert downtime.author == "test_contact"
                 assert downtime.start_time == now + 120

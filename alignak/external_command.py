@@ -61,6 +61,7 @@ Used to process command sent by users
 # pylint: disable=C0302
 # pylint: disable=R0904
 from builtins import str
+from past.builtins import long
 import logging
 import time
 import re
