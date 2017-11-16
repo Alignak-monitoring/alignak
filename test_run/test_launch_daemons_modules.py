@@ -527,6 +527,136 @@ class LaunchDaemons(AlignakTest):
                 assert log in logs, logs
 
     @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
+    def test_daemons_modules_ws_logs(self):
+        """Running the Alignak daemons with the Web services and Logs modules
+
+        :return: None
+        """
+        if os.path.exists('/tmp/monitoring-logs.log'):
+            os.remove('/tmp/monitoring-logs.log')
+
+        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  'cfg/run_daemons_ws_logs')
+        tmp_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  'run/test_launch_daemons_modules_ws_logs')
+
+        # Currently it is the same as the default execution ... to be modified later.
+        cfg_modules = {
+            'arbiter': '', 'scheduler': '', 'broker': 'logs',
+            'poller': '', 'reactionner': '', 'receiver': 'web-services'
+        }
+        nb_errors = self._run_daemons_modules(cfg_folder, tmp_folder, cfg_modules, 10)
+        assert nb_errors == 0, "Error logs raised!"
+        print("No error logs raised when daemons started and loaded the modules")
+
+        # Search the modules
+        modules_pids = {}
+        for proc in psutil.process_iter():
+            if "module: web-services" in proc.name():
+                print("Found WS module in the ps: %s (pid=%d)" % (proc.name(), proc.pid))
+                modules_pids['ws'] = proc.pid
+            if "module: logs" in proc.name():
+                print("Found logs module in the ps: %s (pid=%d)" % (proc.name(), proc.pid))
+                modules_pids['logs'] = proc.pid
+        assert len(modules_pids) == 2
+
+        assert os.path.exists('/tmp/monitoring-logs.log'), '/tmp/monitoring-logs.log does not exist!'
+        count = 0
+        print("Monitoring logs:")
+        with open('/tmp/monitoring-logs.log') as f:
+            for line in f:
+                print("- : %s" % line)
+                count += 1
+        """
+        [1496076886] INFO: CURRENT HOST STATE: localhost;UP;HARD;0;
+        [1496076886] INFO: TIMEPERIOD TRANSITION: 24x7;-1;1
+        [1496076886] INFO: TIMEPERIOD TRANSITION: workhours;-1;1
+        """
+        assert count >= 2
+        self.kill_daemons()
+
+        # Search for some specific logs in the broker daemon logs
+        expected_logs = {
+            'receiver': [
+                "[alignak.modulesmanager] Importing Python module 'alignak_module_ws' for web-services...",
+                "[alignak.modulesmanager] Module properties: {'daemons': ['receiver'], 'phases': ['running'], 'type': 'web-services', 'external': True}",
+                "[alignak.modulesmanager] Imported 'alignak_module_ws' for web-services",
+                "[alignak.modulesmanager] Loaded Python module 'alignak_module_ws' (web-services)",
+                # "[alignak.module] Give an instance of alignak_module_ws for alias: web-services",
+                "[alignak.module.web-services] Alignak host creation allowed: False",
+                "[alignak.module.web-services] Alignak service creation allowed: False",
+                "[alignak.module.web-services] Alignak external commands, set timestamp: True",
+                "[alignak.module.web-services] Alignak Backend is not configured. Some module features will not be available.",
+                "[alignak.module.web-services] Alignak Arbiter configuration: 127.0.0.1:7770",
+                "[alignak.module.web-services] Alignak Arbiter polling period: 5",
+                "[alignak.module.web-services] Alignak daemons get status period: 10",
+                "[alignak.module.web-services] SSL is not enabled, this is not recommended. You should consider enabling SSL!",
+                "[alignak.daemon] I correctly loaded my modules: [web-services]",
+                # On arbiter stop:
+                # "[alignak.module.web-services] Alignak arbiter is currently not available.",
+
+                "[alignak.modulesmanager] Request external process to stop for web-services",
+                "[alignak.basemodule] I'm stopping module u'web-services' (pid=%d)" % modules_pids['ws'],
+                "[alignak.modulesmanager] External process stopped.",
+                "[alignak.daemon] Stopped receiver-master."
+            ],
+            'broker': [
+                "[alignak.modulesmanager] Importing Python module 'alignak_module_logs' for logs...",
+                "[alignak.modulesmanager] Module properties: {'daemons': ['broker'], 'phases': ['running'], 'type': 'logs', 'external': True}",
+                "[alignak.modulesmanager] Imported 'alignak_module_logs' for logs",
+                "[alignak.modulesmanager] Loaded Python module 'alignak_module_logs' (logs)",
+                # "[alignak.module] Give an instance of alignak_module_logs for alias: logs",
+                "[alignak.module.logs] logger default configuration:",
+                "[alignak.module.logs]  - rotating logs in /tmp/monitoring-logs.log",
+                "[alignak.module.logs]  - log level: 10",
+                "[alignak.module.logs]  - rotation every 1 midnight, keeping 365 files",
+                "[alignak.module.logs] Alignak Backend is not configured. Some module features will not be available.",
+                "[alignak.daemon] I correctly loaded my modules: [logs]",
+                # On arbiter stop:
+                # "[alignak.module.web-services] Alignak arbiter is currently not available.",
+
+                "[alignak.modulesmanager] Request external process to stop for logs",
+                "[alignak.basemodule] I'm stopping module u'logs' (pid=%d)" % modules_pids['logs'],
+                "[alignak.modulesmanager] External process stopped.",
+                "[alignak.daemon] Stopped broker-master."
+            ]
+        }
+
+        errors_raised = 0
+        for name in ['receiver', 'broker']:
+            assert os.path.exists('/tmp/%sd.log' % name), '/tmp/%sd.log does not exist!' % name
+            print("-----\n%s log file\n" % name)
+            with open('/tmp/%sd.log' % name) as f:
+                lines = f.readlines()
+                logs = []
+                for line in lines:
+                    # Catches WARNING and ERROR logs
+                    if 'WARNING' in line:
+                        line = line.split('WARNING: ')
+                        line = line[1]
+                        line = line.strip()
+                        print("--- %s" % line[:-1])
+                    if 'ERROR' in line:
+                        print("*** %s" % line[:-1])
+                        errors_raised += 1
+                        line = line.split('ERROR: ')
+                        line = line[1]
+                        line = line.strip()
+                    # Catches INFO logs
+                    if 'INFO' in line:
+                        line = line.split('INFO: ')
+                        line = line[1]
+                        line = line.strip()
+                        print("    %s" % line)
+                    logs.append(line)
+
+            for log in logs:
+                print("...%s" % log)
+            for log in expected_logs[name]:
+                print("Last checked log %s: %s" % (name, log))
+                assert log in logs, logs
+
+    @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
     def test_daemons_modules_backend(self):
         """Running the Alignak daemons with the backend modules - backend is not running so
         all modules are in error
