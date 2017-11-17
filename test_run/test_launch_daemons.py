@@ -504,6 +504,9 @@ class DaemonsStartTest(AlignakTest):
 
         :return:
         """
+        # Set an environment variable to change the default period of activity log (every 600 loops)
+        os.environ['ALIGNAK_ACTIVITY_LOG'] = '2'
+
         req = requests.Session()
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
