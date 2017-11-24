@@ -15,5 +15,6 @@ numpy>=1.9.0; python_version >= '2.7'
 pyopenssl>=0.15
 docopt
 
+# Use psutil for daemons memory monitoring (env ALIGNAK_DAEMONS_MONITORING)
 # Use psutil for scheduler TEST_LOG_MONITORING
 psutil

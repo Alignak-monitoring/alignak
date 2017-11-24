@@ -2697,7 +2697,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             cur_conf.contacts = self.contacts
             cur_conf.triggers = self.triggers
             cur_conf.escalations = self.escalations
-            # Create hostgroups with just the name and same id, but no members
+            # Create servicegroups with just the name and same id, but no members
             new_servicegroups = []
             for servicegroup in self.servicegroups:
                 new_servicegroups.append(servicegroup.copy_shell())

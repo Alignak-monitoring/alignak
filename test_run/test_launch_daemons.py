@@ -506,6 +506,9 @@ class DaemonsStartTest(AlignakTest):
         """
         req = requests.Session()
 
+        # Set an environment variable to activate the logging of system cpu, memory and disk
+        os.environ['ALIGNAK_DAEMONS_MONITORING'] = '2'
+
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   'run/test_launch_daemons')
 
