@@ -208,5 +208,6 @@ def main():
         # Export Alignak version
         print("export ALIGNAK_VERSION=%s" % (parsed_configuration.alignak_version))
 
+
 if __name__ == '__main__':
     main()

@@ -826,6 +826,7 @@ def strip_and_uniq(tab):
 class KeyValueSyntaxError(ValueError):
     """Syntax error on a duplicate_foreach value"""
 
+
 KEY_VALUES_REGEX = re.compile(
     '^'
     # should not be necessary, cause what we get is already stripped:
