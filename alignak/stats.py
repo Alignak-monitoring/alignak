@@ -509,5 +509,6 @@ class Stats(object):
 
         return None
 
+
 # pylint: disable=C0103
 statsmgr = Stats()

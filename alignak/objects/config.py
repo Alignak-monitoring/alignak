@@ -2878,5 +2878,6 @@ def lazy():
         Config.properties['$USER' + str(i) + '$'] = StringProp(default='')
         Config.macros['USER' + str(i)] = '$USER' + i + '$'
 
+
 lazy()
 del lazy

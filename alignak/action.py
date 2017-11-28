@@ -440,6 +440,7 @@ class ActionBase(AlignakObject):
 # definition:
 #
 
+
 if os.name != 'nt':
 
     class Action(ActionBase):
