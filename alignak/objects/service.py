@@ -694,7 +694,7 @@ class Service(SchedulingItem):
                        self.additional_freshness_latency,
                        self.attempt, self.max_check_attempts,
                        self.freshness_state, self.state_type)
-        if self.is_max_attempts():
+        if self.is_max_attempts() or self.state_type == 'HARD':
             self.freshness_log_raised = True
 
     def raise_notification_log_entry(self, notif, contact, host_ref):

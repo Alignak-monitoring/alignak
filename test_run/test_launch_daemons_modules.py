@@ -34,7 +34,7 @@ import pytest
 from alignak_test import AlignakTest
 
 
-class LaunchDaemons(AlignakTest):
+class TestLaunchDaemonsModules(AlignakTest):
     def setUp(self):
         self.procs = {}
 

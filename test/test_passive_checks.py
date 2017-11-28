@@ -179,7 +179,7 @@ class TestPassiveChecks(AlignakTest):
         # Set the host UP - this will run the scheduler loop to check for freshness
         expiry_date = time.strftime("%Y-%m-%d %H:%M:%S %Z")
         self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(0.1)
+        time.sleep(0.01)
 
         assert "OK" == svc0.state
         assert "WARNING" == svc1.state
