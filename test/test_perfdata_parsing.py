@@ -51,7 +51,7 @@ This file is used to test reading and processing of config files
 
 from alignak.misc.perfdata import Metric, PerfDatas
 
-from alignak_test import AlignakTest, unittest
+from alignak_test import AlignakTest
 
 
 class TestPerfdataParsing(AlignakTest):
@@ -266,4 +266,4 @@ class TestPerfdataParsing(AlignakTest):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

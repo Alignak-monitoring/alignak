@@ -22,21 +22,15 @@
     This file contains classes and utilities for Alignak tests modules
 """
 
+import os
 import sys
-from sys import __stdout__
-from functools import partial
 
 import time
-import datetime
-import os
 import string
 import re
-import random
-import copy
 import locale
-import socket
 
-import unittest2 as unittest
+import unittest2
 
 import logging
 from logging import Handler
@@ -71,59 +65,6 @@ from alignak.daemons.schedulerdaemon import Alignak
 from alignak.daemons.brokerdaemon import Broker
 from alignak.daemons.arbiterdaemon import Arbiter
 from alignak.daemons.receiverdaemon import Receiver
-from logging import ERROR
-
-from alignak_tst_utils import safe_print
-
-# Modules are by default on the ../modules
-myself = os.path.abspath(__file__)
-
-
-#############################################################################
-# We overwrite the functions time() and sleep()
-# This way we can modify sleep() so that it immediately returns although
-# for a following time() it looks like thee was actually a delay.
-# This massively speeds up the tests.
-
-
-class TimeHacker(object):
-
-    def __init__(self):
-        self.my_offset = 0
-        self.my_starttime = time.time()
-        self.my_oldtime = time.time
-        self.original_time_time = time.time
-        self.original_time_sleep = time.sleep
-        self.in_real_time = True
-
-    def my_time_time(self):
-        return self.my_oldtime() + self.my_offset
-
-    def my_time_sleep(self, delay):
-        self.my_offset += delay
-
-    def time_warp(self, duration):
-        self.my_offset += duration
-
-    def set_my_time(self):
-        if self.in_real_time:
-            time.time = self.my_time_time
-            time.sleep = self.my_time_sleep
-            self.in_real_time = False
-
-# If external processes or time stamps for files are involved, we must
-# revert the fake timing routines, because these externals cannot be fooled.
-# They get their times from the operating system.
-    def set_real_time(self):
-        if not self.in_real_time:
-            time.time = self.original_time_time
-            time.sleep = self.original_time_sleep
-            self.in_real_time = True
-
-
-class Pluginconf(object):
-    pass
-
 
 class CollectorHandler(Handler):
     """
@@ -144,10 +85,7 @@ class CollectorHandler(Handler):
             self.handleError(record)
 
 
-class AlignakTest(unittest.TestCase):
-
-    time_hacker = TimeHacker()
-    maxDiff = None
+class AlignakTest(unittest2.TestCase):
 
     if sys.version_info < (2, 7):
         def assertRegex(self, *args, **kwargs):
@@ -504,7 +442,7 @@ class AlignakTest(unittest.TestCase):
         collector_h = [hand for hand in self.logger.handlers
                        if isinstance(hand, CollectorHandler)][0]
         for log in collector_h.collector:
-            safe_print(log)
+            self.safe_print(log)
 
         print "--- logs >>>----------------------------------"
 
@@ -967,11 +905,54 @@ class AlignakTest(unittest.TestCase):
         """
         self._any_cfg_log_match(pattern, assert_not=True)
 
+    def guess_sys_stdout_encoding(self):
+        ''' Return the best guessed encoding to be used for printing on sys.stdout. '''
+        return (
+               getattr(sys.stdout, 'encoding', None)
+            or getattr(sys.__stdout__, 'encoding', None)
+            or locale.getpreferredencoding()
+            or sys.getdefaultencoding()
+            or 'ascii'
+        )
 
-ShinkenTest = AlignakTest
+    def safe_print(self, *args, **kw):
+        """" "print" args to sys.stdout,
+        If some of the args aren't unicode then convert them first to unicode,
+            using keyword argument 'in_encoding' if provided (else default to UTF8)
+            and replacing bad encoded bytes.
+        Write to stdout using 'out_encoding' if provided else best guessed encoding,
+            doing xmlcharrefreplace on errors.
+        """
+        in_bytes_encoding = kw.pop('in_encoding', 'UTF-8')
+        out_encoding = kw.pop('out_encoding', self.guess_sys_stdout_encoding())
+        if kw:
+            raise ValueError('unhandled named/keyword argument(s): %r' % kw)
+        #
+        make_in_data_gen = lambda: ( a if isinstance(a, unicode)
+                                    else
+                                unicode(str(a), in_bytes_encoding, 'replace')
+                            for a in args )
 
-# Time hacking for every test!
-time_hacker = AlignakTest.time_hacker
+        possible_codings = ( out_encoding, )
+        if out_encoding != 'ascii':
+            possible_codings += ( 'ascii', )
+
+        for coding in possible_codings:
+            data = u' '.join(make_in_data_gen()).encode(coding, 'xmlcharrefreplace')
+            try:
+                sys.stdout.write(data)
+                break
+            except UnicodeError as err:
+                # there might still have some problem with the underlying sys.stdout.
+                # it might be a StringIO whose content could be decoded/encoded in this same process
+                # and have encode/decode errors because we could have guessed a bad encoding with it.
+                # in such case fallback on 'ascii'
+                if coding == 'ascii':
+                    raise
+                sys.stderr.write('Error on write to sys.stdout with %s encoding: err=%s\nTrying with ascii' % (
+                    coding, err))
+        sys.stdout.write(b'\n')
+
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()

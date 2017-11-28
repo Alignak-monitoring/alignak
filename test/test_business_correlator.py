@@ -52,7 +52,7 @@
 import time
 from alignak.dependencynode import DependencyNode
 
-from alignak_test import AlignakTest, unittest
+from alignak_test import AlignakTest
 
 
 class TestBusinessCorrelator(AlignakTest):

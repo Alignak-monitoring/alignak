@@ -79,52 +79,6 @@ from alignak_tst_utils import safe_print
 myself = os.path.abspath(__file__)
 
 
-#############################################################################
-# We overwrite the functions time() and sleep()
-# This way we can modify sleep() so that it immediately returns although
-# for a following time() it looks like thee was actually a delay.
-# This massively speeds up the tests.
-
-
-class TimeHacker(object):
-
-    def __init__(self):
-        self.my_offset = 0
-        self.my_starttime = time.time()
-        self.my_oldtime = time.time
-        self.original_time_time = time.time
-        self.original_time_sleep = time.sleep
-        self.in_real_time = True
-
-    def my_time_time(self):
-        return self.my_oldtime() + self.my_offset
-
-    def my_time_sleep(self, delay):
-        self.my_offset += delay
-
-    def time_warp(self, duration):
-        self.my_offset += duration
-
-    def set_my_time(self):
-        if self.in_real_time:
-            time.time = self.my_time_time
-            time.sleep = self.my_time_sleep
-            self.in_real_time = False
-
-# If external processes or time stamps for files are involved, we must
-# revert the fake timing routines, because these externals cannot be fooled.
-# They get their times from the operating system.
-    def set_real_time(self):
-        if not self.in_real_time:
-            time.time = self.original_time_time
-            time.sleep = self.original_time_sleep
-            self.in_real_time = True
-
-
-class Pluginconf(object):
-    pass
-
-
 class CollectorHandler(Handler):
     """
     This log handler collecting all emitted log.
@@ -146,7 +100,6 @@ class CollectorHandler(Handler):
 
 class AlignakTest(unittest.TestCase):
 
-    time_hacker = TimeHacker()
     maxDiff = None
 
     if sys.version_info < (2, 7):
@@ -240,13 +193,8 @@ class AlignakTest(unittest.TestCase):
             self.configuration_errors = self.arbiter.conf.configuration_errors
         except SystemExit:
             self.configuration_warnings = self.arbiter.conf.configuration_warnings
-            print("Configuration warnings:")
-            for msg in self.configuration_warnings:
-                print(" - %s" % msg)
             self.configuration_errors = self.arbiter.conf.configuration_errors
-            print("Configuration errors:")
-            for msg in self.configuration_errors:
-                print(" - %s" % msg)
+            self.show_configuration_logs()
             raise
 
         for arb in self.arbiter.conf.arbiters:
@@ -270,6 +218,7 @@ class AlignakTest(unittest.TestCase):
 
         # Build receivers dictionary with the receivers involved in the configuration
         for receiver in self.arbiter.dispatcher.receivers:
+            print("Receiver: %s" % receiver)
             self.receivers[receiver.receiver_name] = receiver
 
         # Build reactionners dictionary with the reactionners involved in the configuration
@@ -282,6 +231,18 @@ class AlignakTest(unittest.TestCase):
 
         # Initialize the Receiver with no daemon configuration file
         self.receiver = Receiver(None, False, False, False, False)
+        # if self.arbiter.dispatcher.satellites:
+        #     some_receivers = False
+        #     for satellite in self.arbiter.dispatcher.satellites:
+        #         if satellite.get_my_type() == 'receiver':
+        #             # self.receiver.load_modules_manager(satellite.name)
+        #             self.receiver.modules_manager = \
+        #                 ModulesManager('receiver', self.receiver.sync_manager,
+        #                                max_queue_size=getattr(self, 'max_queue_size', 0))
+        #
+        #             self.receiver.new_conf = satellite.cfg
+        #             if self.receiver.new_conf:
+        #                 self.receiver.setup_new_conf()
 
         # Initialize the Receiver with no daemon configuration file
         self.broker = Broker(None, False, False, False, False)
@@ -302,8 +263,9 @@ class AlignakTest(unittest.TestCase):
             self.eca = self.schedulers['scheduler-master'].sched.external_commands_manager
 
         # Now we create an external commands manager in receiver mode
-        self.ecr = ExternalCommandManager(self.receiver.cur_conf, 'receiver', self.receiver,
+        self.ecr = ExternalCommandManager(None, 'receiver', self.receiver,
                                           accept_unknown=True)
+        self.receiver.external_commands_manager = self.ecr
 
         # and an external commands manager in dispatcher mode
         self.ecd = ExternalCommandManager(self.arbiter.conf, 'dispatcher', self.arbiter,
@@ -500,21 +462,30 @@ class AlignakTest(unittest.TestCase):
         print "--- logs >>>----------------------------------"
 
     def show_actions(self):
+        """"Show the inner actions"""
+        self._scheduler = self.schedulers['scheduler-master'].sched
+
+        macroresolver = MacroResolver()
+        macroresolver.init(self._scheduler.conf)
+
         print "--- actions <<<----------------------------------"
-        actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(), key=lambda x: x.creation_time)
-        for a in actions:
-            if a.is_a == 'notification':
-                item = self.schedulers['scheduler-master'].sched.find_item_by_id(a.ref)
+        actions = sorted(self._scheduler.actions.values(), key=lambda x: (x.t_to_go, x.creation_time))
+        for action in actions:
+            print("Time to launch action: %s, creation: %s" % (action.t_to_go, action.creation_time))
+            if action.is_a == 'notification':
+                item = self._scheduler.find_item_by_id(action.ref)
                 if item.my_type == "host":
                     ref = "host: %s" % item.get_name()
                 else:
-                    hst = self.schedulers['scheduler-master'].sched.find_item_by_id(item.host)
-                    ref = "host: %s svc: %s" % (hst.get_name(), item.get_name())
-                print "NOTIFICATION %s %s %s %s %s %s" % (a.uuid, ref, a.type,
-                                                       time.asctime(time.localtime(a.t_to_go)),
-                                                       a.status, a.contact_name)
-            elif a.is_a == 'eventhandler':
-                print "EVENTHANDLER:", a
+                    hst = self._scheduler.find_item_by_id(item.host)
+                    ref = "svc: %s/%s" % (hst.get_name(), item.get_name())
+                print "NOTIFICATION %s (%s - %s) [%s], created: %s for '%s': %s" \
+                      % (action.type, action.uuid, action.status, ref,
+                         time.asctime(time.localtime(action.t_to_go)), action.contact_name, action.command)
+            elif action.is_a == 'eventhandler':
+                print "EVENTHANDLER:", action
+            else:
+                print "ACTION:", action
         print "--- actions >>>----------------------------------"
 
     def show_checks(self):
@@ -593,8 +564,11 @@ class AlignakTest(unittest.TestCase):
         :type number: int
         :return: None
         """
-        actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(),
-                         key=lambda x: x.creation_time)
+        actions = []
+        # I do this because sort take too times
+        if number != len(self.schedulers['scheduler-master'].sched.actions):
+            actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(),
+                             key=lambda x: x.creation_time)
         self.assertEqual(number, len(self.schedulers['scheduler-master'].sched.actions),
                          "Not found expected number of actions:\nactions_logs=[[[\n%s\n]]]" %
                          ('\n'.join('\t%s = creation: %s, is_a: %s, type: %s, status: %s, '
@@ -620,7 +594,7 @@ class AlignakTest(unittest.TestCase):
         """
         regex = re.compile(pattern)
         actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(),
-                         key=lambda x: x.creation_time)
+                         key=lambda x: (x.t_to_go, x.creation_time))
         if index != -1:
             myaction = actions[index]
             self.assertTrue(regex.search(getattr(myaction, field)),
@@ -890,10 +864,6 @@ class AlignakTest(unittest.TestCase):
         print "#" + string.center(self.id(), 78) + "#"
         print "#" + " " * 78 + "#\n" + "#" * 80 + "\n"
 
-    def xtest_conf_is_correct(self):
-        self.print_header()
-        self.assertTrue(self.conf.conf_is_correct)
-
     def show_configuration_logs(self):
         """
         Prints the configuration logs
@@ -950,11 +920,6 @@ class AlignakTest(unittest.TestCase):
         """
         self._any_cfg_log_match(pattern, assert_not=True)
 
-
-ShinkenTest = AlignakTest
-
-# Time hacking for every test!
-time_hacker = AlignakTest.time_hacker
 
 if __name__ == '__main__':
     unittest.main()

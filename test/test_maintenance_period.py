@@ -40,7 +40,7 @@ from alignak.misc.serialization import unserialize
 from alignak.downtime import Downtime
 from alignak.objects.timeperiod import Timeperiod
 
-from alignak_test import AlignakTest, unittest
+from alignak_test import AlignakTest
 
 class TestMaintenancePeriod(AlignakTest):
     """
@@ -123,4 +123,4 @@ class TestMaintenancePeriod(AlignakTest):
                                    'of a maintenance period.'
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

@@ -51,7 +51,7 @@
 #
 import time
 
-from alignak_test import AlignakTest, unittest
+from alignak_test import AlignakTest
 
 from alignak.action import Action
 from alignak.notification import Notification
@@ -150,4 +150,4 @@ class TestWorkerTimeout(AlignakTest):
                                   "'libexec/sleep_command.sh 7 ' timed out after 2 seconds")
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

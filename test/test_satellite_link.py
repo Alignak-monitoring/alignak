@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 
-import unittest2 as unittest
+from alignak_test import AlignakTest
 from alignak.objects.arbiterlink import ArbiterLink
 from alignak.objects.schedulerlink import SchedulerLink
 from alignak.objects.brokerlink import BrokerLink
@@ -46,35 +46,35 @@ class template_DaemonLink_get_name():
             self.assertTrue(False, "get_name should not raise AttributeError")
 
 
-class Test_ArbiterLink_get_name(template_DaemonLink_get_name, unittest.TestCase):
+class Test_ArbiterLink_get_name(template_DaemonLink_get_name, AlignakTest):
     """Test satellite link arbiter"""
     daemon_link = ArbiterLink
 
 
-class Test_SchedulerLink_get_name(template_DaemonLink_get_name, unittest.TestCase):
+class Test_SchedulerLink_get_name(template_DaemonLink_get_name, AlignakTest):
     """Test satellite link scheduler"""
     daemon_link = SchedulerLink
 
 
-class Test_BrokerLink_get_name(template_DaemonLink_get_name, unittest.TestCase):
+class Test_BrokerLink_get_name(template_DaemonLink_get_name, AlignakTest):
     """Test satellite link broker"""
     daemon_link = BrokerLink
 
 
-class Test_ReactionnerLink_get_name(template_DaemonLink_get_name, unittest.TestCase):
+class Test_ReactionnerLink_get_name(template_DaemonLink_get_name, AlignakTest):
     """Test satellite link reactionner"""
     daemon_link = ReactionnerLink
 
 
-class Test_ReceiverLink_get_name(template_DaemonLink_get_name, unittest.TestCase):
+class Test_ReceiverLink_get_name(template_DaemonLink_get_name, AlignakTest):
     """Test satellite link receiver"""
     daemon_link = ReceiverLink
 
 
-class Test_PollerLink_get_name(template_DaemonLink_get_name, unittest.TestCase):
+class Test_PollerLink_get_name(template_DaemonLink_get_name, AlignakTest):
     """Test satellite link poller"""
     daemon_link = PollerLink
 
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

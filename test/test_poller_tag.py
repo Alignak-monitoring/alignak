@@ -20,7 +20,7 @@
 """
  This file is used to test poller tags
 """
-from alignak_test import AlignakTest, unittest
+from alignak_test import AlignakTest
 
 
 class TestPollerTag(AlignakTest):
@@ -181,4 +181,4 @@ class TestPollerTag(AlignakTest):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

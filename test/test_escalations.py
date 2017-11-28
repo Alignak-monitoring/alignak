@@ -53,7 +53,7 @@ from alignak.misc.serialization import unserialize
 from alignak.objects.escalation import Escalation
 from alignak.objects.serviceescalation import Serviceescalation
 
-from alignak_test import AlignakTest, unittest, time_hacker
+from alignak_test import AlignakTest
 
 class TestEscalations(AlignakTest):
     """
@@ -78,8 +78,6 @@ class TestEscalations(AlignakTest):
         assert len(self.configuration_errors) == 0
         # No warning messages
         assert len(self.configuration_warnings) == 0
-
-        time_hacker.set_real_time()
 
     def check_monitoring_logs(self, expected_logs, dump=False):
         """
@@ -572,4 +570,4 @@ class TestEscalations(AlignakTest):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

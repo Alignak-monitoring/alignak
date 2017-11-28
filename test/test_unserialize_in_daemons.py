@@ -23,13 +23,11 @@
 This file test unserialisation of data
 """
 
-import unittest
-
-from alignak import bin
+from alignak_test import AlignakTest
 from alignak.misc.serialization import unserialize
 
 
-class TestUnserialize(unittest.TestCase):
+class TestUnserialize(AlignakTest):
     """
     This class test the unserialize process
     """

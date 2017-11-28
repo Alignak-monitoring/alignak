@@ -46,7 +46,7 @@
 """
 This file is used to test the host/service extended information
 """
-from alignak_test import AlignakTest, unittest
+from alignak_test import AlignakTest
 
 
 class TestHostExtended(AlignakTest):
@@ -109,4 +109,4 @@ class TestHostExtended(AlignakTest):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

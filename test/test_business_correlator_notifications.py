@@ -48,7 +48,7 @@
 #
 
 import time
-from alignak_test import unittest, AlignakTest, time_hacker
+from alignak_test import AlignakTest
 
 
 class TestBusinesscorrelNotifications(AlignakTest):
@@ -267,4 +267,4 @@ class TestBusinesscorrelNotifications(AlignakTest):
         assert ['d', 'x', 'r', 's'] == hst2.notification_options
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

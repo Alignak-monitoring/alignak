@@ -52,10 +52,7 @@
 
 import time
 
-from alignak_test import (
-    unittest,
-    AlignakTest,
-)
+from alignak_test import AlignakTest
 
 # Set this variable False to disable profiling test
 PROFILE_BP_RULE_RE_PROCESSING = False
@@ -488,4 +485,4 @@ class TestBusinessCorrelatorExpand(AlignakTest):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

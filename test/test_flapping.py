@@ -49,7 +49,7 @@
 """
 
 from alignak.misc.serialization import unserialize
-from alignak_test import AlignakTest, unittest
+from alignak_test import AlignakTest
 
 
 class TestFlapping(AlignakTest):
@@ -356,4 +356,4 @@ class TestFlapping(AlignakTest):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

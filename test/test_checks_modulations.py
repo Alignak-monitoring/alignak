@@ -47,7 +47,7 @@
 """
 
 import time
-from alignak_test import AlignakTest, unittest
+from alignak_test import AlignakTest
 
 
 class TestCheckModulations(AlignakTest):
@@ -92,4 +92,4 @@ class TestCheckModulations(AlignakTest):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

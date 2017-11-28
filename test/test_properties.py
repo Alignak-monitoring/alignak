@@ -52,7 +52,7 @@ Test alignak.property
 import alignak
 from alignak.property import NONE_OBJECT
 
-from alignak_test import AlignakTest, unittest
+from alignak_test import AlignakTest
 import pytest
 
 
@@ -285,4 +285,4 @@ class TestAddrProp(PropertyTests, AlignakTest):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

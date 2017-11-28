@@ -50,6 +50,7 @@
 # This file is used to test timeperiods
 #
 
+import datetime
 from alignak_test import *
 from alignak.objects.timeperiod import Timeperiod
 
@@ -658,4 +659,4 @@ class TestTimeperiods(AlignakTest):
         self.assertItemsEqual(ref, mydateranges)
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()
