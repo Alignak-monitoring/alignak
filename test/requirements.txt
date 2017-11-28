@@ -16,8 +16,9 @@ coveralls
 
 # Static code analysis libraries
 pylint
-pep8
+pycodestyle
 pep257
+
 # Tests time freeze
 freezegun
 
