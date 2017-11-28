@@ -121,6 +121,10 @@ class BaseModule(object):
         # We want to know where we are load from? (broker, scheduler, etc)
         self.loaded_into = 'unknown'
 
+        # External module force kill delay - default is to wait for
+        # 60 seconds before killing a module abruptly
+        self.kill_delay = int(getattr(mod_conf, 'kill_delay', '60'))
+
     def init(self):  # pylint: disable=R0201
         """Handle this module "post" init ; just before it'll be started.
 
@@ -261,11 +265,11 @@ class BaseModule(object):
             logger.info("I'm stopping module %r (pid=%d)",
                         self.get_name(), self.process.pid)
             self.process.terminate()
-            # Wait for 10 seconds before killing the process abruptly
-            self.process.join(timeout=10)
+            # Wait for a delay before killing the process abruptly
+            self.process.join(timeout=self.kill_delay)
             if self.process.is_alive():
-                logger.warning("%r is still alive after normal kill, I help it to die",
-                               self.get_name())
+                logger.warning("%r is still alive after normal kill and %s seconds waiting"
+                               ", I help it to die", self.kill_delay, self.get_name())
                 self.kill()
                 self.process.join(1)
                 if self.process.is_alive():
