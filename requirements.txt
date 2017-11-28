@@ -1,18 +1,35 @@
 # CherryPy >= 5.1.0 and PyOpenssl == 0.14 (16 seems broken) are required for proper HTTPS setup
 # They are not added as hard dependencie here so that packaging works fine
 # CherryPy is not packaged anymore since v3.5XX so we let it as is.
-CherryPy<9.0.0
+# CherryPy<9.0.0
+CherryPy
 
 # Version <=2.14.2 else some tests using requests-mock are broken with the 2.16.0 version
-requests>=2.7.0,<=2.14.2
+# requests>=2.7.0,<=2.14.2
+requests
 
+# importlib is used to import daemons' modules
 importlib
-termcolor==1.1.0
+
+# colored console log
+termcolor
+
+# Set process titles
 setproctitle
+
+# ujson is used for the internal objects serialization
 ujson
-numpy>=1.9.0,<1.12.0; python_version < '2.7'
-numpy>=1.9.0; python_version >= '2.7'
-pyopenssl>=0.15
+
+# numpy for date and percentile computation
+# numpy>=1.9.0,<1.12.0; python_version < '2.7'
+# numpy>=1.9.0; python_version >= '2.7'
+numpy
+
+# SSL between the daemons
+# pyopenssl>=0.15
+pyopenssl
+
+# docopt is used by the alignak_environment script
 docopt
 
 # Use psutil for daemons memory monitoring (env ALIGNAK_DAEMONS_MONITORING)
