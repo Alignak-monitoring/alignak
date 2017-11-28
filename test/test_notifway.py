@@ -51,7 +51,7 @@
 import time
 import copy
 from alignak.objects.notificationway import NotificationWay
-from alignak_test import unittest, AlignakTest
+from alignak_test import AlignakTest
 
 
 class TestNotificationWay(AlignakTest):
@@ -286,4 +286,4 @@ class TestNotificationWay(AlignakTest):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

@@ -341,4 +341,4 @@ self.perf_data = "New check performance data"
 
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

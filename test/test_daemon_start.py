@@ -53,13 +53,13 @@ from __future__ import print_function
 
 import os
 import time
+import socket
 import tempfile
 import shutil
 
 import logging
 
 from alignak_test import AlignakTest
-from alignak_tst_utils import get_free_port
 
 from alignak.version import VERSION
 from alignak.daemon import InvalidPidFile, InvalidWorkDir
@@ -105,6 +105,16 @@ daemons_config = {
 alignak_config = "cfg/daemons/alignak.cfg"
 
 #############################################################################
+
+def get_free_port(on_ip='127.0.0.1'):
+    """Get a free port for an IP address"""
+    sock = socket.socket()
+    try:
+        sock.bind((on_ip, 0))
+        return sock.getsockname()[1]
+    finally:
+        sock.close()
+
 
 class template_Daemon_Start():
 

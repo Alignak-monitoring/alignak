@@ -53,7 +53,7 @@ import time
 from alignak.misc.serialization import unserialize
 from alignak.downtime import Downtime
 
-from alignak_test import AlignakTest, unittest
+from alignak_test import AlignakTest
 
 class TestDowntime(AlignakTest):
     """
@@ -938,4 +938,4 @@ class TestDowntime(AlignakTest):
             assert (log_level, log_message) in monitoring_logs
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

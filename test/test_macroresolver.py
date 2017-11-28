@@ -799,7 +799,6 @@ class TestMacroResolverWithEnv(MacroResolverTester, AlignakTest):
     """Test without enabled environment macros"""
 
     def setUp(self):
-        self.maxDiff = None
         self.setup_with_file('cfg/cfg_macroresolver.cfg')
         assert self.conf_is_correct
 
@@ -810,7 +809,6 @@ class TestMacroResolverWithoutEnv(MacroResolverTester, AlignakTest):
     """Test without enabled environment macros"""
 
     def setUp(self):
-        self.maxDiff = None
         self.setup_with_file('cfg/cfg_macroresolver_environment.cfg')
         assert self.conf_is_correct
 

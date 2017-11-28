@@ -24,7 +24,7 @@
 #
 import time
 import ujson
-from alignak_test import AlignakTest, time_hacker
+from alignak_test import AlignakTest
 from alignak.external_command import ExternalCommand, ExternalCommandManager
 from alignak.daemons.receiverdaemon import Receiver
 
@@ -46,8 +46,6 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         # No warning messages
         self.show_configuration_logs()
         assert len(self.configuration_warnings) == 0
-
-        time_hacker.set_real_time()
 
     def test_passive_checks_active_passive(self):
         """ Test passive host/service checks as external commands

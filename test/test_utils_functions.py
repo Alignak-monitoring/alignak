@@ -19,12 +19,12 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+from alignak_test import AlignakTest
 from collections import namedtuple
 from alignak.util import alive_then_spare_then_deads, average_percentile
-import unittest
 
 
-class TestUnknownEventHandler(unittest.TestCase):
+class TestUnknownEventHandler(AlignakTest):
 
     def test_sort_alive_then_spare_then_deads(self):
         SmallSat = namedtuple("SmallSat", ["alive", "spare"])
@@ -59,5 +59,5 @@ class TestUnknownEventHandler(unittest.TestCase):
         assert 12.1 == lat_max, 'Maximum'
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()
 

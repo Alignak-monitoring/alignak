@@ -53,7 +53,7 @@ import time
 from alignak.commandcall import CommandCall
 from alignak.objects import SchedulingItem
 
-from alignak_test import AlignakTest, unittest
+from alignak_test import AlignakTest
 
 
 class TestPerfdataCommands(AlignakTest):
@@ -216,4 +216,4 @@ class TestPerfdataCommands(AlignakTest):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

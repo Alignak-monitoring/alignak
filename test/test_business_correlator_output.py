@@ -49,7 +49,7 @@
 #
 
 import time
-from alignak_test import unittest, AlignakTest, time_hacker
+from alignak_test import AlignakTest
 from alignak.macroresolver import MacroResolver
 
 
@@ -299,4 +299,4 @@ class TestBusinesscorrelOutput(AlignakTest):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

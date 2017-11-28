@@ -48,7 +48,7 @@
 #
 
 import re
-from alignak_test import unittest, AlignakTest
+from alignak_test import AlignakTest
 import pytest
 
 
@@ -142,4 +142,4 @@ class TestPropertyOverrideConfigBroken(AlignakTest):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

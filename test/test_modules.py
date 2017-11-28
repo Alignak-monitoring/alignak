@@ -53,7 +53,7 @@ Test Alignak modules manager
 
 import re
 import time
-from alignak_test import AlignakTest, time_hacker
+from alignak_test import AlignakTest
 from alignak.modulesmanager import ModulesManager
 from alignak.objects.module import Module
 import pytest
@@ -232,8 +232,6 @@ class TestModules(AlignakTest):
         self.print_header()
         self.setup_with_file('cfg/cfg_default_with_modules.cfg')
         assert self.conf_is_correct
-
-        time_hacker.set_real_time()
 
         # Create an Alignak module
         mod = Module({

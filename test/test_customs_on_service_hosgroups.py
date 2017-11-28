@@ -47,7 +47,6 @@
 # This file is used to test reading and processing of config files
 #
 
-import unittest
 from alignak_test import AlignakTest
 
 
@@ -91,4 +90,4 @@ class TestCustomsonservicehosgroups(AlignakTest):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest2.main()

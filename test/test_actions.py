@@ -54,7 +54,7 @@ import os
 import sys
 import time
 
-from alignak_test import AlignakTest, unittest, time_hacker
+from alignak_test import AlignakTest
 
 from alignak.misc.serialization import serialize, unserialize
 from alignak.action import Action
@@ -69,8 +69,6 @@ class TestAction(AlignakTest):
         assert a.env == {}
         assert a.timeout == 10
         assert a.exit_status == 3
-
-        time_hacker.set_real_time()
 
     def wait_finished(self, a, size=8012):
         start = time.time()
@@ -538,4 +536,4 @@ class TestAction(AlignakTest):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

@@ -56,7 +56,7 @@ import datetime
 import pytest
 from freezegun import freeze_time
 
-from alignak_test import AlignakTest, time_hacker
+from alignak_test import AlignakTest
 from alignak_test import ExternalCommandManager
 from alignak.misc.common import DICT_MODATTR
 from alignak.misc.serialization import unserialize
@@ -81,8 +81,6 @@ class TestExternalCommands(AlignakTest):
         assert len(self.configuration_errors) == 0
         # No warning messages
         assert len(self.configuration_warnings) == 0
-
-        time_hacker.set_real_time()
 
         # Set / reset as default applyer for external commands
         self.ecm_mode = 'applyer'

@@ -45,7 +45,7 @@
 
 from functools import partial
 
-from alignak_test import unittest, AlignakTest
+from alignak_test import AlignakTest
 
 
 class TestExcludeServices(AlignakTest):
@@ -104,4 +104,4 @@ class TestExcludeServices(AlignakTest):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

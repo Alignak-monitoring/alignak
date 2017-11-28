@@ -47,7 +47,6 @@ Test alignak.logging
 
 import time
 import logging
-import unittest
 import os.path
 from datetime import datetime
 
@@ -206,4 +205,4 @@ class TestLogging(AlignakTest):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

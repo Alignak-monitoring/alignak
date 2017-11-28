@@ -48,7 +48,6 @@
 #
 
 import time
-import unittest
 from alignak_test import AlignakTest
 
 
@@ -209,4 +208,4 @@ class TestContactDowntime(AlignakTest):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()

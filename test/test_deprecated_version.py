@@ -3,13 +3,9 @@
 import sys
 import warnings
 
-if sys.version_info[:2] >= (2, 7):
-    import unittest
-else:
-    import unittest2 as unittest
+from alignak_test import AlignakTest
 
-
-class Test_Deprecated_alignak_bin_VERSION(unittest.TestCase):
+class Test_Deprecated_alignak_bin_VERSION(AlignakTest):
 
     def test_deprecated_version(self):
         """ Test the deprecated Alignak version warning """

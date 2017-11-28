@@ -48,7 +48,7 @@
 # This file is used to test commands
 #
 
-from alignak_test import unittest, AlignakTest
+from alignak_test import AlignakTest
 
 from alignak.commandcall import CommandCall
 from alignak.objects import Command, Commands
@@ -290,4 +290,4 @@ class TestCommand(AlignakTest):
         assert 'REAC' == cc.reactionner_tag
 
 if __name__ == '__main__':
-    unittest.main()
+    AlignakTest.main()
