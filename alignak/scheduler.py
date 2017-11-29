@@ -2550,6 +2550,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 logger.warning("We dropped %d checks, %d broks and %d actions",
                                self.nb_checks_dropped, self.nb_broks_dropped,
                                self.nb_actions_dropped)
+                self.nb_checks_dropped = self.nb_broks_dropped = self.nb_actions_dropped = 0
 
             if self.system_health and (loop_count % self.system_health_period == 1):
                 perfdatas = []
