@@ -2081,8 +2081,10 @@ class Scheduler(object):  # pylint: disable=R0902
         # No more need to send them
         for brok in broks.values():
             for broker in self.brokers.values():
-                if brok.uuid in broker['broks']:
+                try:
                     broker['broks'][brok.uuid].sent_to_sched_externals = True
+                except KeyError:
+                    logger.debug("Issue #959 - should not have happened")
         logger.debug("Time to send %s broks (after %d secs)", nb_sent, time.time() - t00)
 
     def get_objects_from_from_queues(self):
