@@ -137,6 +137,10 @@ from alignak.property import StringProp, BoolProp, PathProp, ConfigPathProp, Int
 from alignak.misc.common import setproctitle
 from alignak.version import VERSION
 
+if 'ALIGNAK_DAEMONS_MONITORING' in os.environ:
+    import psutil
+
+
 # Friendly names for the system signals
 SIGNALS_TO_NAMES_DICT = dict((k, v) for v, k in reversed(sorted(signal.__dict__.items()))
                              if v.startswith('SIG') and not v.startswith('SIG_'))
@@ -254,6 +258,20 @@ class Daemon(object):
         self.debug_file = debug_file
         self.interrupted = False
         self.pidfile = "%s.pid" % self.name
+
+        # Self daemon monitoring (cpu, memory)
+        self.daemon_monitoring = False
+        self.daemon_monitoring_period = 10
+        if 'ALIGNAK_DAEMONS_MONITORING' in os.environ:
+            self.daemon_monitoring = True
+            if os.environ['ALIGNAK_DAEMONS_MONITORING']:
+                try:
+                    self.daemon_monitoring_period = int(os.environ['ALIGNAK_DAEMONS_MONITORING'])
+                except ValueError:
+                    pass
+        if self.daemon_monitoring:
+            logger.info("Daemon '%s' self monitoring is enabled, reporting every %d loop count.",
+                        self.name, self.daemon_monitoring_period)
 
         if port:
             self.port = int(port)
@@ -417,6 +435,38 @@ class Daemon(object):
             if self.need_config_reload:
                 logger.debug('Ask for configuration reloading')
                 return
+
+            if self.daemon_monitoring and (self.loop_count % self.daemon_monitoring_period == 1):
+                perfdatas = []
+                my_process = psutil.Process()
+                with my_process.oneshot():
+                    perfdatas.append("num_threads=%d" % my_process.num_threads())
+                    statsmgr.counter("num_threads", my_process.num_threads())
+                    # perfdatas.append("num_ctx_switches=%d" % my_process.num_ctx_switches())
+                    perfdatas.append("num_fds=%d" % my_process.num_fds())
+                    # perfdatas.append("num_handles=%d" % my_process.num_handles())
+                    perfdatas.append("create_time=%d" % my_process.create_time())
+                    perfdatas.append("cpu_num=%d" % my_process.cpu_num())
+                    statsmgr.counter("cpu_num", my_process.cpu_num())
+                    perfdatas.append("cpu_usable=%d" % len(my_process.cpu_affinity()))
+                    statsmgr.counter("cpu_usable", len(my_process.cpu_affinity()))
+                    perfdatas.append("cpu_percent=%.2f%%" % my_process.cpu_percent())
+                    statsmgr.counter("cpu_percent", my_process.cpu_percent())
+
+                    cpu_times_percent = my_process.cpu_times()
+                    for key in cpu_times_percent._fields:
+                        perfdatas.append("cpu_%s_time=%.2fs" % (key,
+                                                                getattr(cpu_times_percent, key)))
+                        statsmgr.counter("cpu_%s_time" % key, getattr(cpu_times_percent, key))
+
+                    memory = my_process.memory_full_info()
+                    for key in memory._fields:
+                        perfdatas.append("mem_%s=%db" % (key, getattr(memory, key)))
+                        statsmgr.counter("mem_%s" % key, getattr(memory, key))
+
+                    logger.debug("Daemon %s (%s), pid=%s, ppid=%s, status=%s, cpu/memory|%s",
+                                 self.name, my_process.name(), my_process.pid, my_process.ppid(),
+                                 my_process.status(), " ".join(perfdatas))
 
             if self.log_loop:
                 logger.debug("[%s] +++ %d", self.name, self.loop_count)
