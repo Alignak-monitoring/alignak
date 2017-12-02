@@ -75,6 +75,8 @@ from alignak.log import make_monitoring_log
 from alignak.eventhandler import EventHandler
 from alignak.brok import Brok
 from alignak.misc.common import DICT_MODATTR
+from alignak.stats import statsmgr
+
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
@@ -85,8 +87,9 @@ class ExternalCommand:  # pylint: disable=R0903
     """
     my_type = 'externalcommand'
 
-    def __init__(self, cmd_line):
+    def __init__(self, cmd_line, timestamp=None):
         self.cmd_line = cmd_line
+        self.creation_timestamp = timestamp or time.time()
 
 
 class ExternalCommandManager:
@@ -557,7 +560,10 @@ class ExternalCommandManager:
             # Execute the command
             c_name = cmd['c_name']
             args = cmd['args']
-            logger.debug("Execute command; %s %s", c_name, str(args))
+            logger.debug("Execute command: %s %s", c_name, str(args))
+            logger.debug("Command time measurement: %s (%d s)",
+                         excmd.creation_timestamp, time.time() - excmd.creation_timestamp)
+            statsmgr.timer('external-commands.latency', time.time() - excmd.creation_timestamp)
             getattr(self, c_name)(*args)
         else:
             # Send command to all our schedulers
