@@ -435,6 +435,7 @@ class TestLaunchDaemonsModules(AlignakTest):
         """
         assert count >= 2
 
+    @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
     def test_daemons_modules_ws(self):
         """Running the Alignak daemons with the Web services module
 
