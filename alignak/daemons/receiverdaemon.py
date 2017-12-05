@@ -130,12 +130,12 @@ class Receiver(Satellite):
             # For brok, we TAG brok with our instance_id
             elt.instance_id = 0
             self.broks[elt.uuid] = elt
-            statsmgr.gauge('broks.added', len(self.broks))
+            statsmgr.counter('broks.added', 1)
             return
         elif cls_type == 'externalcommand':
             logger.debug("Queuing an external command: %s", str(ExternalCommand.__dict__))
             self.unprocessed_external_commands.append(elt)
-            statsmgr.gauge('external-commands.added', len(self.unprocessed_external_commands))
+            statsmgr.counter('external-commands.added', 1)
 
     def push_host_names(self, sched_id, hnames):
         """Link hostnames to scheduler id.
