@@ -269,7 +269,7 @@ class BaseModule(object):
             self.process.join(timeout=self.kill_delay)
             if self.process.is_alive():
                 logger.warning("%r is still alive after normal kill and %s seconds waiting"
-                               ", I help it to die", self.kill_delay, self.get_name())
+                               ", I help it to die", self.get_name(), self.kill_delay)
                 self.kill()
                 self.process.join(1)
                 if self.process.is_alive():
