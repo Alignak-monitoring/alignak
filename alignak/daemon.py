@@ -1961,6 +1961,7 @@ class Daemon(object):
             if not queue:
                 continue
             while True:
+                start = time.time()
                 queue_size = queue.qsize()
                 if queue_size:
                     statsmgr.gauge('queue.from.%s.size' % module.get_name(), queue_size)
@@ -1977,6 +1978,8 @@ class Daemon(object):
                     logger.error("An external module queue got a problem '%s'", str(exp))
                 else:
                     had_some_objects = True
+                    statsmgr.timer('queues.external.%s.from.get' % module.get_name(),
+                                   time.time() - start)
                     self.add(obj)
 
         return had_some_objects
