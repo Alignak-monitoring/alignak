@@ -318,10 +318,8 @@ class Daemon(object):
         # Log loop turns if environment variable is set
         self.log_loop = 'TEST_LOG_LOOP' in os.environ
 
-        # Activity information log period (every activity_log_period loop, raise a lo)
-        self.activity_log_period = 600
-        if 'ALIGNAK_ACTIVITY_LOG' in os.environ and os.environ['ALIGNAK_ACTIVITY_LOG']:
-            self.activity_log_period = int(os.environ['ALIGNAK_ACTIVITY_LOG'])
+        # Activity information log period (every activity_log_period loop, raise a log)
+        self.activity_log_period = int(os.getenv('ALIGNAK_ACTIVITY_LOG', 600))
 
         # Put in queue some debug output we will raise
         # when we will be in daemon
@@ -472,6 +470,9 @@ class Daemon(object):
                     logger.debug("Daemon %s (%s), pid=%s, ppid=%s, status=%s, cpu/memory|%s",
                                  self.name, my_process.name(), my_process.pid, my_process.ppid(),
                                  my_process.status(), " ".join(perfdatas))
+
+            if self.activity_log_period and (self.loop_count % self.activity_log_period == 1):
+                logger.info("Daemon %s is alive", self.name)
 
             if self.log_loop:
                 logger.debug("[%s] +++ %d", self.name, self.loop_count)

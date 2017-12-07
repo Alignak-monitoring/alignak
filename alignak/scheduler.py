@@ -1345,10 +1345,20 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
+        if os.getenv('ALIGNAK_MANAGE_INTERNAL', '1') != '1':
+            return
         now = time.time()
         for chk in self.checks.values():
             # must be ok to launch, and not an internal one (business rules based)
             if chk.internal and chk.status == 'scheduled' and chk.is_launchable(now):
+                item = self.find_item_by_id(chk.ref)
+                # Only if active checks are enabled
+                if not item.active_checks_enabled:
+                    # Ask to remove the check
+                    chk.status = 'zombie'
+                    continue
+
+                # Count and execute only if active checks is enabled
                 self.nb_internal_checks += 1
                 self.counters["check"]["total"]["results"]["total"] += 1
                 if "internal" not in self.counters["check"]["total"]["results"]:
@@ -1360,14 +1370,10 @@ class Scheduler(object):  # pylint: disable=R0902
                     self.counters["check"]["loop"]["results"]["internal"] = 0
                 self.counters["check"]["loop"]["results"]["internal"] += 1
 
-                item = self.find_item_by_id(chk.ref)
-                # Only if active checks are enabled
-                if item.active_checks_enabled:
-                    item.manage_internal_check(self.hosts, self.services, chk, self.hostgroups,
-                                               self.servicegroups, self.macromodulations,
-                                               self.timeperiods)
-                # it manage it, now just ask to consume it
-                # like for all checks
+                item.manage_internal_check(self.hosts, self.services, chk, self.hostgroups,
+                                           self.servicegroups, self.macromodulations,
+                                           self.timeperiods)
+                # Ask to consume the check result
                 chk.status = 'waitconsume'
 
     def get_broks(self, bname):
