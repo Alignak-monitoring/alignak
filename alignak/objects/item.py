@@ -164,8 +164,12 @@ class Item(AlignakObject):
                         val = macro[0]
                     # not a list of void? just put void string so
                     else:
-                        warning = "Set the macro property '%s' as empty string" % key
-                        self.configuration_warnings.append(warning)
+                        # For #972, a debug log is enough for such an information,
+                        # a configuration warning is too much
+                        logger.debug("%s, set the macro property '%s' as empty string",
+                                     self.get_full_name(), key)
+                        # warning = "Set the macro property '%s' as empty string" % key
+                        # self.configuration_warnings.append(warning)
                         val = ''
                     # After this a macro is always containing a string value!
                 else:
