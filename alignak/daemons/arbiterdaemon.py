@@ -148,9 +148,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """
         if isinstance(elt, Brok):
             self.broks[elt.uuid] = elt
+            statsmgr.counter('broks.added', 1)
         elif isinstance(elt, ExternalCommand):  # pragma: no cover, useful?
             # todo: does the arbiter will still manage external commands? It is the receiver job!
             self.external_commands.append(elt)
+            statsmgr.counter('external-commands.added', 1)
         else:
             logger.warning('Cannot manage object type %s (%s)', type(elt), elt)
 

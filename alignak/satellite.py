@@ -641,11 +641,13 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # For brok, we TAG brok with our instance_id
             elt.instance_id = self.instance_id
             self.broks[elt.uuid] = elt
+            statsmgr.counter('broks.added', 1)
             return
         elif cls_type == 'externalcommand':
             logger.debug("Queuing an external command '%s'", str(elt.__dict__))
             with self.external_commands_lock:
                 self.external_commands.append(elt)
+                statsmgr.counter('external-commands.added', 1)
 
     def get_broks(self):
         """Get brok list from satellite

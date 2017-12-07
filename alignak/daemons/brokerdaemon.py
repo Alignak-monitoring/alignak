@@ -155,9 +155,11 @@ class Broker(BaseSatellite):
             # We tag the broks with our instance_id
             elt.instance_id = self.instance_id
             self.broks_internal_raised.append(elt)
+            statsmgr.counter('broks.added', 1)
             return
         elif cls_type == 'externalcommand':
             self.external_commands.append(elt)
+            statsmgr.counter('external-commands.added', 1)
         # Maybe we got a Message from the modules, it's way to ask something
         # like from now a full data from a scheduler for example.
         elif cls_type == 'message':
@@ -199,16 +201,19 @@ class Broker(BaseSatellite):
         :return: None
         """
         # Call all modules if they catch the call
-        for mod in self.modules_manager.get_internal_instances():
-            try:
-                _t0 = time.time()
-                mod.manage_brok(brok)
-                statsmgr.timer('core.manage-broks.%s' % mod.get_name(), time.time() - _t0)
-            except Exception as exp:  # pylint: disable=broad-except
-                logger.warning("The mod %s raise an exception: %s, I'm tagging it to restart later",
-                               mod.get_name(), str(exp))
-                logger.exception(exp)
-                self.modules_manager.set_to_restart(mod)
+        if self.modules_manager.get_internal_instances():
+            start = time.time()
+            for mod in self.modules_manager.get_internal_instances():
+                try:
+                    _t0 = time.time()
+                    mod.manage_brok(brok)
+                    statsmgr.timer('core.manage-broks.%s' % mod.get_name(), time.time() - _t0)
+                except Exception as exp:  # pylint: disable=broad-except
+                    logger.warning("The mod %s raise an exception: %s, "
+                                   "I'm tagging it to restart later", mod.get_name(), str(exp))
+                    logger.exception(exp)
+                    self.modules_manager.set_to_restart(mod)
+            statsmgr.timer('core.manage-broks.internal-modules', time.time() - start)
 
     def add_broks_to_queue(self, broks):
         """ Add broks to global queue

@@ -1396,17 +1396,21 @@ class Daemon(object):
         """
         had_some_objects = False
         for queue in self.modules_manager.get_external_from_queues():
-            if queue is not None:
-                while True:
-                    try:
-                        obj = queue.get(block=False)
-                    except Empty:
-                        break
-                    except Exception as exp:  # pylint: disable=W0703
-                        logger.error("An external module queue got a problem '%s'", str(exp))
-                    else:
-                        had_some_objects = True
-                        self.add(obj)
+            if not queue:
+                continue
+            while True:
+                queue_size = queue.qsize()
+                if queue_size:
+                    statsmgr.gauge('queue-size', queue_size)
+                try:
+                    obj = queue.get(block=False)
+                except Empty:
+                    break
+                except Exception as exp:  # pylint: disable=W0703
+                    logger.error("An external module queue got a problem '%s'", str(exp))
+                else:
+                    had_some_objects = True
+                    self.add(obj)
         return had_some_objects
 
     def setup_alignak_logger(self, reload_configuration=True):
