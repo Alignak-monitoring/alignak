@@ -1396,13 +1396,15 @@ class Daemon(object):
         :rtype: bool
         """
         had_some_objects = False
-        for queue in self.modules_manager.get_external_from_queues():
+        for module in self.modules_manager.get_external_instances():
+            queue = module.from_q
             if not queue:
                 continue
             while True:
+                start = time.time()
                 queue_size = queue.qsize()
                 if queue_size:
-                    statsmgr.gauge('queue-size', queue_size)
+                    statsmgr.gauge('queues.external.%s.from.size' % module.get_name(), queue_size)
                 try:
                     obj = queue.get(block=False)
                 except Empty:
@@ -1411,7 +1413,10 @@ class Daemon(object):
                     logger.error("An external module queue got a problem '%s'", str(exp))
                 else:
                     had_some_objects = True
+                    statsmgr.timer('queues.external.%s.from.get' % module.get_name(),
+                                   time.time() - start)
                     self.add(obj)
+
         return had_some_objects
 
     def setup_alignak_logger(self, reload_configuration=True):

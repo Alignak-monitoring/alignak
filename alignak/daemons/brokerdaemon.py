@@ -190,6 +190,7 @@ class Broker(BaseSatellite):
                              data['name'])
                 logger.error(data['trace'])
 
+            statsmgr.counter('message.added', 1)
                 # The module death will be looked for elsewhere and restarted.
 
     def manage_brok(self, brok):
@@ -200,41 +201,32 @@ class Broker(BaseSatellite):
         :type brok: object
         :return: None
         """
-        # Call all modules if they catch the call
-        if self.modules_manager.get_internal_instances():
-            start = time.time()
-            for mod in self.modules_manager.get_internal_instances():
-                try:
-                    _t0 = time.time()
-                    mod.manage_brok(brok)
-                    statsmgr.timer('core.manage-broks.%s' % mod.get_name(), time.time() - _t0)
-                except Exception as exp:  # pylint: disable=broad-except
-                    logger.warning("The mod %s raise an exception: %s, "
-                                   "I'm tagging it to restart later", mod.get_name(), str(exp))
-                    logger.exception(exp)
-                    self.modules_manager.set_to_restart(mod)
-            statsmgr.timer('core.manage-broks.internal-modules', time.time() - start)
+        # Unserialize the brok before consuming it
+        brok.prepare()
 
-    def add_broks_to_queue(self, broks):
-        """ Add broks to global queue
+        for module in self.modules_manager.get_internal_instances():
+            try:
+                _t0 = time.time()
+                module.manage_brok(brok)
+                statsmgr.timer('manage-broks.internal.%s' % module.get_name(), time.time() - _t0)
+            except Exception as exp:  # pylint: disable=broad-except
+                logger.warning("The mod %s raise an exception: %s, "
+                               "I'm tagging it to restart later", module.get_name(), str(exp))
+                logger.exception(exp)
+                self.modules_manager.set_to_restart(module)
 
-        :param broks: some items
-        :type broks: object
-        :return: None
-        """
-        # Ok now put in queue broks to be managed by
-        # internal modules
-        self.broks.extend(broks)
+    def get_internal_broks(self):
+        """Get all broks from self.broks_internal_raised and append them to self.broks
 
-    def interger_internal_broks(self):
-        """Get all broks from self.broks_internal_raised and we put them in self.broks
 
         :return: None
         """
-        self.add_broks_to_queue(self.broks_internal_raised)
+        statsmgr.gauge('get-new-broks-count.broker', len(self.broks_internal_raised))
+        # Add the broks to our global list
+        self.broks.extend(self.broks_internal_raised)
         self.broks_internal_raised = []
 
-    def interger_arbiter_broks(self):
+    def get_arbiter_broks(self):
         """We will get in the broks list the broks from the arbiters,
         but as the arbiter_broks list can be push by arbiter without Global lock,
         we must protect this with he list lock
@@ -242,7 +234,9 @@ class Broker(BaseSatellite):
         :return: None
         """
         with self.arbiter_broks_lock:
-            self.add_broks_to_queue(self.arbiter_broks)
+            statsmgr.gauge('get-new-broks-count.arbiter', len(self.arbiter_broks))
+            # Add the broks to our global list
+            self.broks.extend(self.arbiter_broks)
             self.arbiter_broks = []
 
     def get_new_broks(self, s_type='scheduler'):
@@ -294,14 +288,13 @@ class Broker(BaseSatellite):
                 if tmp_broks:
                     logger.debug("Got %d Broks from %s in %s",
                                  len(tmp_broks), link['name'], time.time() - _t0)
-                statsmgr.timer('con-broks-get.%s' % (link['name']), time.time() - _t0)
-                statsmgr.gauge('con-broks-count.%s' % (link['name']), len(tmp_broks.values()))
+                statsmgr.gauge('get-new-broks-count.%s' % (link['name']), len(tmp_broks.values()))
+                statsmgr.timer('get-new-broks-time.%s' % (link['name']), time.time() - _t0)
                 for brok in tmp_broks.values():
                     brok.instance_id = link['instance_id']
-                # Ok, we can add theses broks to our queues
-                _t0 = time.time()
-                self.add_broks_to_queue(tmp_broks.values())
-                statsmgr.timer('con-broks-add.%s' % s_type, time.time() - _t0)
+
+                # Add the broks to our global list
+                self.broks.extend(tmp_broks.values())
             except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
                 logger.warning("[%s] %s", link['name'], str(exp))
                 link['con'] = None
@@ -680,15 +673,9 @@ class Broker(BaseSatellite):
 
          :return: None
         """
-        logger.debug("Begin Loop: managing old broks (%d)", len(self.broks))
-
-        # Dump modules Queues size
-        insts = [inst for inst in self.modules_manager.instances if inst.is_external]
-        for inst in insts:
-            try:
-                logger.debug("External Queue len (%s): %s", inst.get_name(), inst.to_q.qsize())
-            except Exception, exp:  # pylint: disable=W0703
-                logger.debug("External Queue len (%s): Exception! %s", inst.get_name(), exp)
+        logger.debug("Begin Loop: still some old unmanaged broks (%d)", len(self.broks))
+        if self.broks:
+            statsmgr.gauge('unmanaged.broks', len(self.broks))
 
         # Begin to clean modules
         self.check_and_del_zombie_modules()
@@ -699,94 +686,71 @@ class Broker(BaseSatellite):
             self.setup_new_conf()
 
         # Maybe the last loop we did raised some broks internally
-        _t0 = time.time()
-        # we should integrate them in broks
-        self.interger_internal_broks()
-        statsmgr.timer('get-new-broks.broker', time.time() - _t0)
+        self.get_internal_broks()
 
-        _t0 = time.time()
         # Also reap broks sent from the arbiters
-        self.interger_arbiter_broks()
-        statsmgr.timer('get-new-broks.arbiter', time.time() - _t0)
+        self.get_arbiter_broks()
 
-        # Main job, go get broks in our distant daemons
-        types = ['scheduler', 'poller', 'reactionner', 'receiver']
-        for _type in types:
-            _t0 = time.time()
-            # And from schedulers
+        # Now get broks from our distant daemons
+        for _type in ['scheduler', 'poller', 'reactionner', 'receiver']:
             self.get_new_broks(s_type=_type)
-            statsmgr.timer('get-new-broks.%s' % _type, time.time() - _t0)
 
         # Sort the brok list by id
         self.broks.sort(sort_by_ids)
 
-        # and for external queues
-        # REF: doc/broker-modules.png (3)
-        # We put to external queues broks that was not already send
-        t00 = time.time()
-        # We are sending broks as a big list, more efficient than one by one
-        ext_modules = self.modules_manager.get_external_instances()
-        to_send = [brok for brok in self.broks if getattr(brok, 'need_send_to_ext', True)]
+        # Get the list of broks not yet sent to our external modules
+        t0 = time.time()
+        broks_to_send = [brok for brok in self.broks if getattr(brok, 'to_be_sent', True)]
 
-        # Send our pack to all external modules to_q queue so they can get the whole packet
+        # Send the broks to all external modules to_q queue so they can get the whole packet
         # beware, the sub-process/queue can be die/close, so we put to restart the whole module
         # instead of killing ourselves :)
-        for mod in ext_modules:
+        for module in self.modules_manager.get_external_instances():
             try:
-                t000 = time.time()
-                mod.to_q.put(to_send)
-                statsmgr.timer('core.put-to-external-queue.%s' % mod.get_name(), time.time() - t000)
+                t00 = time.time()
+                queue_size = module.to_q.qsize()
+                statsmgr.gauge('queues.external.%s.to.size' % module.get_name(), queue_size)
+                module.to_q.put(broks_to_send)
+                statsmgr.timer('queues.external.%s.to.put' % module.get_name(), time.time() - t00)
             except Exception as exp:  # pylint: disable=broad-except
                 # first we must find the modules
-                logger.warning("The mod %s queue raise an exception: %s, "
-                               "I'm tagging it to restart later",
-                               mod.get_name(), str(exp))
+                logger.warning("Module %s queue exception: %s, I'm tagging it to restart later",
+                               module.get_name(), str(exp))
                 logger.exception(exp)
-                self.modules_manager.set_to_restart(mod)
+                self.modules_manager.set_to_restart(module)
 
         # No more need to send them
-        for brok in to_send:
-            brok.need_send_to_ext = False
-        statsmgr.timer('core.put-to-external-queue', time.time() - t00)
-        logger.debug("Time to send %s broks (%d secs)", len(to_send), time.time() - t00)
+        for brok in broks_to_send:
+            brok.to_be_sent = False
+        logger.debug("Time to send %s broks (%d secs)", len(broks_to_send), time.time() - t0)
 
         # We must add new broks at the end of the list, so we reverse the list
         self.broks.reverse()
 
+        # Make the internal modules manage the broks
         start = time.time()
         while self.broks:
             now = time.time()
             # Do not 'manage' more than 1s, we must get new broks
             # every 1s
             if now - start > 1:
+                logger.warning("Did not managed all my broks, remaining %d broks...",
+                               len(self.broks))
                 break
 
             brok = self.broks.pop()
-            # Ok, we can get the brok, and doing something with it
-            # REF: doc/broker-modules.png (4-5)
-            # We un serialize the brok before consume it
-            brok.prepare()
-            _t0 = time.time()
-            self.manage_brok(brok)
-            statsmgr.timer('core.manage-broks', time.time() - _t0)
+            if self.modules_manager.get_internal_instances():
+                self.manage_brok(brok)
+                # Make a very short pause to avoid overloading
+                self.make_a_pause(0.01, check_time_change=False)
+            else:
+                if getattr(brok, 'to_be_sent', False):
+                    self.broks.append(brok)
 
-            nb_broks = len(self.broks)
-
-            # Ok we manage brok, but we still want to listen to arbiter even for a very short time
-            self.make_a_pause(0.01, check_time_change=False)
-
-            # if we got new broks here from arbiter, we should break the loop
-            # because such broks will not be managed by the
-            # external modules before this loop (we pop them!)
-            if len(self.broks) != nb_broks:
-                break
-
-        # Maybe external modules raised 'objects'
-        # we should get them
-        self.get_objects_from_from_queues()
-        statsmgr.timer('core.get-objects-from-queues', time.time() - _t0)
-        statsmgr.gauge('got.external-commands', len(self.external_commands))
-        statsmgr.gauge('got.broks', len(self.broks))
+        # Maybe our external modules raised 'objects', so get them
+        if self.get_objects_from_from_queues():
+            statsmgr.gauge('got.external-commands', len(self.external_commands))
+            statsmgr.gauge('got.broks', len(self.broks))
 
         # Maybe we do not have something to do, so we wait a little
         # TODO: redone the diff management....
