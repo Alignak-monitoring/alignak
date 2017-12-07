@@ -581,16 +581,16 @@ class Scheduler(object):  # pylint: disable=R0902
             logger.debug("Already existing check: %s", check)
             return
 
+        # Add a new check to the scheduler checks list
         self.checks[check.uuid] = check
-
         self.nb_checks += 1
 
-        # A new check means the host/service changes its next_check
-        # need to be refreshed
-        # TODO swich to uuid. Not working for simple id are we 1,2,3.. in host and services
-        # Commented to fix #789
-        brok = self.find_item_by_id(check.ref).get_next_schedule_brok()
-        self.add(brok)
+        # Raise a brok to inform about a next check is to come ...
+        # but only for items that are actively checked
+        item = self.find_item_by_id(check.ref)
+        if item.active_checks_enabled:
+            brok = item.get_next_schedule_brok()
+            self.add(brok)
 
     def add_eventhandler(self, action):
         """Add a event handler into actions list
