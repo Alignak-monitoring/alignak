@@ -137,7 +137,7 @@ class Broker(BaseSatellite):
         self.http_interface = BrokerInterface(self)
 
     def add(self, elt):  # pragma: no cover, seems not to be used
-        """Add elt to this broker
+        """Add an element to the broker lists
 
         Original comment : Schedulers have some queues. We can simplify the call by adding
           elements into the proper queue just by looking at their type  Brok -> self.broks
@@ -183,7 +183,7 @@ class Broker(BaseSatellite):
                     except KeyError:  # maybe this instance was not known, forget it
                         logger.warning("the module %s ask me a full_instance_id "
                                        "for an unknown ID (%d)!", source, c_id)
-            # Maybe a module tells me that it's dead, I must log it's last words...
+            # Maybe a module tells me that it's dead, I must log its last words...
             if elt.get_type() == 'ICrash':
                 data = elt.get_data()
                 logger.error('the module %s just crash! Please look at the traceback:',
@@ -191,7 +191,7 @@ class Broker(BaseSatellite):
                 logger.error(data['trace'])
 
             statsmgr.counter('message.added', 1)
-                # The module death will be looked for elsewhere and restarted.
+            # The module death will be looked for elsewhere and restarted.
 
     def manage_brok(self, brok):
         """Get a brok.
@@ -701,6 +701,7 @@ class Broker(BaseSatellite):
         # Get the list of broks not yet sent to our external modules
         t0 = time.time()
         broks_to_send = [brok for brok in self.broks if getattr(brok, 'to_be_sent', True)]
+        statsmgr.gauge('get-new-broks-count.to_send', len(broks_to_send))
 
         # Send the broks to all external modules to_q queue so they can get the whole packet
         # beware, the sub-process/queue can be die/close, so we put to restart the whole module

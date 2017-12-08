@@ -1008,14 +1008,15 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                          self.name, self.returns_queue.qsize())
             while self.returns_queue.qsize():
                 msg = self.returns_queue.get_nowait()
-                if msg is not None:
-                    logger.debug("Got a message: %s", msg)
-                    if msg.get_type() == 'Done':
-                        logger.debug("Got an action result: %s", msg.get_data())
-                        self.manage_action_return(msg.get_data())
-                        logger.debug("Managed action result")
-                    else:
-                        logger.warning("Ignoring message of type: %s", msg.get_type())
+                if msg is None:
+                    continue
+                logger.debug("Got a message: %s", msg)
+                if msg.get_type() == 'Done':
+                    logger.debug("Got an action result: %s", msg.get_data())
+                    self.manage_action_return(msg.get_data())
+                    logger.debug("Managed action result")
+                else:
+                    logger.warning("Ignoring message of type: %s", msg.get_type())
         except Full:
             logger.warning("Returns queue is full")
         except Empty:

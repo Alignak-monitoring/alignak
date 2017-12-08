@@ -71,7 +71,7 @@ import ConfigParser
 import threading
 import logging
 import warnings
-from Queue import Empty
+from Queue import Empty, Full
 from multiprocessing.managers import SyncManager
 
 try:
@@ -1406,9 +1406,15 @@ class Daemon(object):
                 if queue_size:
                     statsmgr.gauge('queues.external.%s.from.size' % module.get_name(), queue_size)
                 try:
-                    obj = queue.get(block=False)
+                    obj = queue.get_nowait()
+                except Full:
+                    logger.warning("Module %s from queue is full", module.get_name())
                 except Empty:
+                    logger.debug("Module %s from queue is full", module.get_name())
                     break
+                except (IOError, EOFError) as exp:
+                    logger.warning("Module %s from queue is no more available: %s",
+                                   module.get_name(), str(exp))
                 except Exception as exp:  # pylint: disable=W0703
                     logger.error("An external module queue got a problem '%s'", str(exp))
                 else:
