@@ -513,6 +513,7 @@ class TestNotifications(AlignakTest):
             assert "UP" == host.state
             assert "HARD" == host.state_type
             assert host.attempt == 0
+            assert host.max_check_attempts == 1
             assert host.current_notification_number == 0, 'All OK no notifications'
             self.assert_actions_count(0)
             print("Host: %s - state: %s/%s, last state update: %s" % (
@@ -521,16 +522,24 @@ class TestNotifications(AlignakTest):
             # Time warp 1 hour
             frozen_datetime.tick(delta=datetime.timedelta(hours=1))
 
-            self.external_command_loop()
+            self.manage_freshness_check(1)
+            self.show_logs()
+
+            # Time warp 10 seconds
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=10))
+
+            self.manage_freshness_check(1)
             self.show_logs()
             time.sleep(0.1)
             # Freshness expired !
             assert host.freshness_expired
             assert "DOWN" == host.state
-            assert "SOFT" == host.state_type
+            assert "HARD" == host.state_type
             assert host.attempt == 1
-            assert host.current_notification_number == 0, 'All OK no notifications'
-            self.assert_actions_count(0)
+            assert host.max_check_attempts == 1
+            assert host.is_max_attempts()
+            assert host.current_notification_number == 1, 'Raised a notification'
+            self.assert_actions_count(2)
             print("Host: %s - state: %s/%s, last state update: %s" % (
                 host, host.state_type, host.state, host.last_state_update))
 
@@ -544,15 +553,18 @@ class TestNotifications(AlignakTest):
             assert "HARD" == host.state_type
             # Perharps that attempt should have been incremented?
             assert host.attempt == 1
+            assert host.max_check_attempts == 1
             assert host.is_max_attempts()
-            assert host.current_notification_number == 1, 'We should have 1 notification'
+            # Notification for the host and the service
+            assert host.current_notification_number == 2, 'We should have 2 notifications'
             self.show_actions()
             self.show_logs()
 
             # 2 actions
             # * 1 - VOID = notification master
             # * 2 - notifier.pl to test_contact
-            self.assert_actions_count(2)
+            # * 3 - notifier.pl to test_contact
+            self.assert_actions_count(3)
 
     def test_notifications_with_delay(self):
         """ Test notifications with use property first_notification_delay
