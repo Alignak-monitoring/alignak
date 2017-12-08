@@ -183,7 +183,8 @@ class Broker(BaseSatellite):
                              data['name'])
                 logger.error(data['trace'])
 
-            statsmgr.counter('message.added', 1)    # The module death will be looked for elsewhere and restarted.
+            statsmgr.counter('message.added', 1)
+                # The module death will be looked for elsewhere and restarted.
 
     def manage_brok(self, brok):
         """Get a brok.

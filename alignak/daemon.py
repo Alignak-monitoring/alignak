@@ -1970,6 +1970,7 @@ class Daemon(object):
                 except Full:
                     logger.warning("Module %s from queue is full", module.get_name())
                 except Empty:
+                    logger.debug("Module %s from queue is full", module.get_name())
                     break
                 except (IOError, EOFError) as exp:
                     logger.warning("Module %s from queue is no more available: %s",
