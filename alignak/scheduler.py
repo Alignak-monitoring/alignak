@@ -2003,6 +2003,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
+        _t0 = time.time()
         items = []
         if self.conf.check_host_freshness:
             # Freshness check configured for hosts
@@ -2010,15 +2011,20 @@ class Scheduler(object):  # pylint: disable=R0902
         if self.conf.check_service_freshness:
             # Freshness check configured for services
             items.extend(self.services)
+        statsmgr.timer('freshness.items-list', time.time() - _t0)
 
         for elt in items:
             if elt.check_freshness and elt.passive_checks_enabled:
+                _t0 = time.time()
                 chk = elt.do_check_freshness(self.hosts, self.services, self.timeperiods,
                                              self.macromodulations, self.checkmodulations,
                                              self.checks)
+                statsmgr.timer('freshness.do-check', time.time() - _t0)
                 if chk is not None:
+                    _t0 = time.time()
                     self.add(chk)
                     self.waiting_results.put(chk)
+                    statsmgr.timer('freshness.put-check', time.time() - _t0)
 
     def check_orphaned(self):
         """Check for orphaned checks/actions::
