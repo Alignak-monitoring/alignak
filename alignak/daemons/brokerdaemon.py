@@ -699,7 +699,7 @@ class Broker(BaseSatellite):
         self.broks.sort(sort_by_ids)
 
         # Get the list of broks not yet sent to our external modules
-        t0 = time.time()
+        _t0 = time.time()
         broks_to_send = [brok for brok in self.broks if getattr(brok, 'to_be_sent', True)]
         statsmgr.gauge('get-new-broks-count.to_send', len(broks_to_send))
 
@@ -708,11 +708,11 @@ class Broker(BaseSatellite):
         # instead of killing ourselves :)
         for module in self.modules_manager.get_external_instances():
             try:
-                t00 = time.time()
+                _t00 = time.time()
                 queue_size = module.to_q.qsize()
                 statsmgr.gauge('queues.external.%s.to.size' % module.get_name(), queue_size)
                 module.to_q.put(broks_to_send)
-                statsmgr.timer('queues.external.%s.to.put' % module.get_name(), time.time() - t00)
+                statsmgr.timer('queues.external.%s.to.put' % module.get_name(), time.time() - _t00)
             except Exception as exp:  # pylint: disable=broad-except
                 # first we must find the modules
                 logger.warning("Module %s queue exception: %s, I'm tagging it to restart later",
@@ -723,7 +723,7 @@ class Broker(BaseSatellite):
         # No more need to send them
         for brok in broks_to_send:
             brok.to_be_sent = False
-        logger.debug("Time to send %s broks (%d secs)", len(broks_to_send), time.time() - t0)
+        logger.debug("Time to send %s broks (%d secs)", len(broks_to_send), time.time() - _t0)
 
         # We must add new broks at the end of the list, so we reverse the list
         self.broks.reverse()
