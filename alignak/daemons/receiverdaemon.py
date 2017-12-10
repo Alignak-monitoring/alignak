@@ -178,7 +178,7 @@ class Receiver(Satellite):
         for mod in self.modules_manager.get_internal_instances():
             try:
                 mod.manage_brok(brok)
-            except Exception, exp:  # pylint: disable=W0703
+            except Exception as exp:  # pylint: disable=W0703
                 logger.warning("The mod %s raise an exception: %s, I kill it",
                                mod.get_name(), str(exp))
                 logger.warning("Exception type: %s", type(exp))

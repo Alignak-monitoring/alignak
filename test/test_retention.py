@@ -21,7 +21,8 @@
 """
 This file test retention
 """
-
+from future.utils import iteritems
+from six import itervalues
 import time
 import json
 from alignak_test import AlignakTest
@@ -78,11 +79,11 @@ class Testretention(AlignakTest):
 
         commentsh = []
         ack_comment_uuid = ''
-        for comm_uuid, comment in host.comments.iteritems():
+        for comm_uuid, comment in iteritems(host.comments):
             commentsh.append(comment.comment)
 
         commentss = []
-        for comm_uuid, comment in svc.comments.iteritems():
+        for comm_uuid, comment in iteritems(svc.comments):
             commentss.append(comment.comment)
             if comment.entry_type == 4:
                 ack_comment_uuid = comment.uuid
@@ -158,11 +159,11 @@ class Testretention(AlignakTest):
 
         # check downtimes (only for host and not for service)
         assert list(host.downtimes) == list(hostn.downtimes)
-        for down_uuid, downtime in hostn.downtimes.iteritems():
+        for down_uuid, downtime in iteritems(hostn.downtimes):
             assert 'My downtime' == downtime.comment
 
         # check notifications
-        for notif_uuid, notification in hostn.notifications_in_progress.iteritems():
+        for notif_uuid, notification in iteritems(hostn.notifications_in_progress):
             assert host.notifications_in_progress[notif_uuid].command == \
                              notification.command
             assert host.notifications_in_progress[notif_uuid].t_to_go == \
@@ -173,7 +174,7 @@ class Testretention(AlignakTest):
         # check comments for host
         assert len(host.comments) == len(hostn.comments)
         commentshn = []
-        for comm_uuid, comment in hostn.comments.iteritems():
+        for comm_uuid, comment in iteritems(hostn.comments):
             commentshn.append(comment.comment)
         # Compare sorted comments because dictionairies are not ordered
         assert sorted(commentsh) == sorted(commentshn)
@@ -181,7 +182,7 @@ class Testretention(AlignakTest):
         # check comments for service
         assert len(svc.comments) == len(svcn.comments)
         commentssn = []
-        for comm_uuid, comment in svcn.comments.iteritems():
+        for comm_uuid, comment in iteritems(svcn.comments):
             commentssn.append(comment.comment)
         assert commentss == commentssn
 
@@ -196,7 +197,7 @@ class Testretention(AlignakTest):
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
         self._sched = self.schedulers['scheduler-master'].sched
-        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+        for brok in itervalues(self._sched.brokers['broker-master']['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))

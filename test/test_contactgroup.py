@@ -23,7 +23,7 @@
 """
 This file test all cases of eventhandler
 """
-
+from __future__ import print_function
 import time
 
 from alignak.objects import Contact
@@ -194,16 +194,16 @@ class TestContactGroup(AlignakTest):
             []
 
     def _dump_host(self, h):
-        print "Dumping host", h.get_name()
-        print h.contact_groups
+        print("Dumping host", h.get_name())
+        print(h.contact_groups)
         for c in h.contacts:
-            print "->", self.schedulers['scheduler-master'].sched.contacts[c].get_name()
+            print("->", self.schedulers['scheduler-master'].sched.contacts[c].get_name())
 
     def _dump_svc(self, s):
-        print "Dumping Service", s.get_name()
-        print "  contact_groups : %s " % s.contact_groups
+        print("Dumping Service", s.get_name())
+        print("  contact_groups : %s " % s.contact_groups)
         for c in s.contacts:
-            print "->", self.schedulers['scheduler-master'].sched.contacts[c].get_name()
+            print("->", self.schedulers['scheduler-master'].sched.contacts[c].get_name())
 
     def test_contactgroups_plus_inheritance(self):
         """ Test that contactgroups correclty manage inheritance

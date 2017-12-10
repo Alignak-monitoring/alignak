@@ -52,6 +52,7 @@
 implements contact for notification. Basically used for parsing.
 """
 import logging
+from builtins import int
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
 
@@ -129,11 +130,11 @@ class Contact(Item):
     running_properties = Item.running_properties.copy()
     running_properties.update({
         'modified_attributes':
-            IntegerProp(default=0L, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=int(0), fill_brok=['full_status'], retention=True),
         'modified_host_attributes':
-            IntegerProp(default=0L, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=int(0), fill_brok=['full_status'], retention=True),
         'modified_service_attributes':
-            IntegerProp(default=0L, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=int(0), fill_brok=['full_status'], retention=True),
         'in_scheduled_downtime':
             BoolProp(default=False, fill_brok=['full_status', 'check_result'], retention=True),
         'broks':

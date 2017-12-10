@@ -25,8 +25,10 @@ We make timestamp with time.mktime because timestamp not same is you are in time
 """
 # pylint: disable=R0904
 
+from __future__ import print_function
 import time
 import pytest
+from past.builtins import xrange
 from freezegun import freeze_time
 from alignak_test import AlignakTest
 from alignak.objects.timeperiod import Timeperiod
@@ -139,7 +141,7 @@ class TestDateRanges(AlignakTest):
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
                 ret = caldate.get_start_and_end_time()
-                print "* %s" % date_now
+                print("* %s" % date_now)
                 assert data[date_now]['start'] == ret[0]
                 assert data[date_now]['end'] == ret[1]
 
@@ -176,7 +178,7 @@ class TestDateRanges(AlignakTest):
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
                 ret = caldate.get_start_and_end_time()
-                print "* %s" % date_now
+                print("* %s" % date_now)
                 assert data[date_now]['start'] == ret[0]
                 assert data[date_now]['end'] == ret[1]
 
@@ -220,7 +222,7 @@ class TestDateRanges(AlignakTest):
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
                 ret = caldate.get_start_and_end_time()
-                print "* %s" % date_now
+                print("* %s" % date_now)
                 assert data[date_now]['start'] == ret[0]
                 assert data[date_now]['end'] == ret[1]
 
@@ -260,7 +262,7 @@ class TestDateRanges(AlignakTest):
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
                 ret = caldate.get_start_and_end_time()
-                print "* %s" % date_now
+                print("* %s" % date_now)
                 assert data[date_now]['start'] == ret[0]
                 assert data[date_now]['end'] == ret[1]
 
@@ -301,7 +303,7 @@ class TestDateRanges(AlignakTest):
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
                 ret = caldate.get_start_and_end_time()
-                print "* %s" % date_now
+                print("* %s" % date_now)
                 assert data[date_now]['start'] == ret[0]
                 assert data[date_now]['end'] == ret[1]
 
@@ -343,7 +345,7 @@ class TestDateRanges(AlignakTest):
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
                 ret = caldate.get_start_and_end_time()
-                print "* %s" % date_now
+                print("* %s" % date_now)
                 assert data[date_now]['start'] == ret[0]
                 assert data[date_now]['end'] == ret[1]
 
@@ -390,7 +392,7 @@ class TestDateRanges(AlignakTest):
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
                 ret = caldate.get_start_and_end_time()
-                print "* %s" % date_now
+                print("* %s" % date_now)
                 assert data[date_now]['start'] == ret[0]
                 assert data[date_now]['end'] == ret[1]
 

@@ -49,6 +49,7 @@
  This file is used to test hosts and services downtimes.
 """
 
+from six import itervalues
 import time
 from alignak.misc.serialization import unserialize
 from alignak.downtime import Downtime
@@ -162,7 +163,7 @@ class TestDowntime(AlignakTest):
         self.external_command_loop()
         # A downtime exist for the service
         assert len(svc.downtimes) == 1
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
         assert downtime.comment == "downtime comment"
         assert downtime.author == "downtime author"
         assert downtime.start_time == now
@@ -204,7 +205,7 @@ class TestDowntime(AlignakTest):
         assert 1 == len(svc.downtimes)
         # The service is currently in a downtime period
         assert svc.in_scheduled_downtime
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
 
         assert downtime.fixed
         assert downtime.is_in_effect
@@ -223,7 +224,7 @@ class TestDowntime(AlignakTest):
         assert 1 == len(svc.downtimes)
         # The service is still in a downtime period
         assert svc.in_scheduled_downtime
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
         assert downtime.fixed
         assert downtime.is_in_effect
         assert not downtime.can_be_deleted
@@ -250,7 +251,7 @@ class TestDowntime(AlignakTest):
         assert 1 == len(svc.downtimes)
         # The service is still in a downtime period
         assert svc.in_scheduled_downtime
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
         assert downtime.fixed
         assert downtime.is_in_effect
         assert not downtime.can_be_deleted
@@ -314,7 +315,7 @@ class TestDowntime(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(itervalues(self._broker['broks']), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -381,7 +382,7 @@ class TestDowntime(AlignakTest):
         self.external_command_loop()
         # A downtime exist for the service
         assert len(svc.downtimes) == 1
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
         assert downtime.comment == "downtime comment"
         assert downtime.author == "downtime author"
         assert downtime.start_time == now
@@ -414,7 +415,7 @@ class TestDowntime(AlignakTest):
         assert "OK" == svc.state
         assert 1 == len(svc.downtimes)
         assert not svc.in_scheduled_downtime
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
         assert not downtime.fixed
         assert not downtime.is_in_effect
         assert not downtime.can_be_deleted
@@ -432,7 +433,7 @@ class TestDowntime(AlignakTest):
         assert "SOFT" == svc.state_type
         assert "CRITICAL" == svc.state
         assert 1 == len(svc.downtimes)
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
         assert not svc.in_scheduled_downtime
         assert not downtime.fixed
         assert not downtime.is_in_effect
@@ -452,7 +453,7 @@ class TestDowntime(AlignakTest):
         assert "CRITICAL" == svc.state
         time.sleep(1)
         assert 1 == len(svc.downtimes)
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
         assert svc.in_scheduled_downtime
         assert not downtime.fixed
         assert downtime.is_in_effect
@@ -517,7 +518,7 @@ class TestDowntime(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(itervalues(self._broker['broks']), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -580,7 +581,7 @@ class TestDowntime(AlignakTest):
         self.external_command_loop()
         # A downtime exist for the host
         assert len(host.downtimes) == 1
-        downtime = host.downtimes.values()[0]
+        downtime = list(host.downtimes.values())[0]
         assert downtime.comment == "downtime comment"
         assert downtime.author == "downtime author"
         assert downtime.start_time == now
@@ -620,7 +621,7 @@ class TestDowntime(AlignakTest):
 
         # The downtime still exist in our host
         assert 1 == len(host.downtimes)
-        downtime = host.downtimes.values()[0]
+        downtime = list(host.downtimes.values())[0]
         # The host is currently in a downtime period
         assert host.in_scheduled_downtime
         assert downtime.fixed
@@ -638,7 +639,7 @@ class TestDowntime(AlignakTest):
         self.assert_actions_count(1)
 
         assert 1 == len(host.downtimes)
-        downtime = host.downtimes.values()[0]
+        downtime = list(host.downtimes.values())[0]
         # The host is still in a downtime period
         assert host.in_scheduled_downtime
         assert downtime.fixed
@@ -664,7 +665,7 @@ class TestDowntime(AlignakTest):
         self.assert_actions_match(1, 'scheduled', 'status')
 
         assert 1 == len(host.downtimes)
-        downtime = host.downtimes.values()[0]
+        downtime = list(host.downtimes.values())[0]
         # The service is still in a downtime period
         assert host.in_scheduled_downtime
         assert downtime.fixed
@@ -729,7 +730,7 @@ class TestDowntime(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(itervalues(self._broker['broks']), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -806,7 +807,7 @@ class TestDowntime(AlignakTest):
         self.external_command_loop()
         # A downtime exist for the host
         assert len(host.downtimes) == 1
-        downtime = host.downtimes.values()[0]
+        downtime = list(host.downtimes.values())[0]
         assert downtime.comment == "downtime comment"
         assert downtime.author == "downtime author"
         assert downtime.start_time == now
@@ -913,7 +914,7 @@ class TestDowntime(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(itervalues(self._broker['broks']), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))

@@ -24,6 +24,7 @@
 This file contains the test for the hostgroups objects
 """
 
+from __future__ import print_function
 import time
 
 from alignak.objects import Host
@@ -56,7 +57,7 @@ class TestHostGroup(AlignakTest):
         self.setup_with_file('cfg/hostgroup/multiple_hostgroup.cfg')
         assert self.schedulers['scheduler-master'].conf.conf_is_correct
 
-        print "Get the hosts and services"
+        print("Get the hosts and services")
         host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("will crash")
         assert host is not None
         svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(

@@ -38,20 +38,20 @@ class ServiceDescriptionDuplicateForEach(AlignakTest):
         generator = generate_key_value_sequences('', '')
         with pytest.raises(KeyValueSyntaxError) as ctx:
             list(generator)
-        assert ctx.value.message == "At least one key must be present"
+        assert ctx.value.args[0] == "At least one key must be present"
 
     def test_sytnax_error_bad_empty_value_with_comma(self):
         generator = generate_key_value_sequences(',', '')
         with pytest.raises(KeyValueSyntaxError) as ctx:
             list(generator)
-        assert ctx.value.message == "At least one key must be present"
+        assert ctx.value.args[0] == "At least one key must be present"
 
     def test_syntax_error_bad_value(self):
         generator = generate_key_value_sequences("key $(but bad value: no terminating dollar sign)", '')
         with pytest.raises(KeyValueSyntaxError) as ctx:
             list(generator)
-        assert ctx.value.message == "\'key $(but bad value: no terminating dollar sign)\' " \
-                                        "is an invalid key(-values) pattern"
+        assert ctx.value.args[0] == "\'key $(but bad value: no terminating dollar sign)\' " \
+                                    "is an invalid key(-values) pattern"
 
 
 

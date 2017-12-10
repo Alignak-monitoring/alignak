@@ -149,7 +149,7 @@ class Hostdependencies(Items):
 
         # Then for every host create a copy of the dependency with just the host
         # because we are adding services, we can't just loop in it
-        hostdeps = self.items.keys()
+        hostdeps = list(self.items)
         for h_id in hostdeps:
             hostdep = self.items[h_id]
             # We explode first the dependent (son) part
@@ -237,7 +237,7 @@ class Hostdependencies(Items):
                     hostdep.host_name = host.uuid
                 if dephost:
                     hostdep.dependent_host_name = dephost.uuid
-            except AttributeError, exp:
+            except AttributeError as exp:
                 err = "Error: the host dependency miss a property '%s'" % exp
                 hostdep.configuration_errors.append(err)
 

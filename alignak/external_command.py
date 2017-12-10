@@ -60,6 +60,8 @@ Used to process command sent by users
 # pylint: disable=unused-argument
 # pylint: disable=C0302
 # pylint: disable=R0904
+from builtins import str
+from past.builtins import long
 import logging
 import time
 import re
@@ -991,7 +993,7 @@ class ExternalCommandManager:
             brok = make_monitoring_log('info', "SERVICE COMMENT: %s;%s;%s;%s"
                                        % (self.hosts[service.host].get_name(),
                                           service.get_name(),
-                                          unicode(author, 'utf-8'), unicode(comment, 'utf-8')))
+                                          str(author, 'utf-8'), str(comment, 'utf-8')))
         except TypeError:
             brok = make_monitoring_log('info', "SERVICE COMMENT: %s;%s;%s;%s"
                                        % (self.hosts[service.host].get_name(),
@@ -1023,7 +1025,7 @@ class ExternalCommandManager:
         try:
             brok = make_monitoring_log('info', u"HOST COMMENT: %s;%s;%s"
                                        % (host.get_name(),
-                                          unicode(author, 'utf-8'), unicode(comment, 'utf-8')))
+                                          str(author, 'utf-8'), str(comment, 'utf-8')))
         except TypeError:
             brok = make_monitoring_log('info', u"HOST COMMENT: %s;%s;%s"
                                        % (host.get_name(), author, comment))
@@ -1684,8 +1686,11 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        comments = host.comments.keys()
+        comments = list(host.comments)
+        to_delete = []
         for uuid in comments:
+            to_delete.append(uuid)
+        for uuid in to_delete:
             host.del_comment(uuid)
 
     def del_all_host_downtimes(self, host):
@@ -1712,7 +1717,7 @@ class ExternalCommandManager:
         :type service: alignak.objects.service.Service
         :return: None
         """
-        comments = service.comments.keys()
+        comments = list(service.comments)
         for uuid in comments:
             service.del_comment(uuid)
 
@@ -2987,7 +2992,6 @@ class ExternalCommandManager:
             return
 
         try:
-            plugin_output = plugin_output.decode('utf8', 'ignore')
             logger.debug('%s > Passive host check plugin output: %s',
                          host.get_full_name(), plugin_output)
         except UnicodeError:
@@ -3030,7 +3034,7 @@ class ExternalCommandManager:
                 log_level = 'warning'
             brok = make_monitoring_log(
                 log_level, 'PASSIVE HOST CHECK: %s;%d;%s;%s;%s'
-                % (host.get_name().decode('utf8', 'ignore'),
+                % (host.get_name(),
                    status_code, chk.output, chk.long_output, chk.perf_data)
             )
             # Send a brok to our arbiter else to our scheduler
@@ -3072,7 +3076,6 @@ class ExternalCommandManager:
             return
 
         try:
-            plugin_output = plugin_output.decode('utf8', 'ignore')
             logger.debug('%s > Passive service check plugin output: %s',
                          service.get_full_name(), plugin_output)
         except UnicodeError:
@@ -3121,8 +3124,8 @@ class ExternalCommandManager:
                 log_level = 'error'
             brok = make_monitoring_log(
                 log_level, 'PASSIVE SERVICE CHECK: %s;%s;%d;%s;%s;%s' % (
-                    self.hosts[service.host].get_name().decode('utf8', 'ignore'),
-                    service.get_name().decode('utf8', 'ignore'),
+                    self.hosts[service.host].get_name(),
+                    service.get_name(),
                     return_code, chk.output, chk.long_output, chk.perf_data
                 )
             )

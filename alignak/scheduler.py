@@ -67,14 +67,18 @@ The major part of monitoring "intelligence" is in this module.
 """
 # pylint: disable=C0302
 # pylint: disable=R0904
+from future.utils import iteritems
+from past.builtins import basestring
+from six import itervalues
 import time
 import os
-import cStringIO
+from io import StringIO
 import logging
 import tempfile
 import traceback
-from Queue import Queue
+from queue import Queue
 from collections import defaultdict
+from past.builtins import xrange
 
 from alignak.external_command import ExternalCommand
 from alignak.check import Check
@@ -667,7 +671,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     logger.error("The instance %s raise an exception %s."
                                  "I disable it and set it to restart it later",
                                  inst.get_name(), str(exp))
-                    output = cStringIO.StringIO()
+                    output = StringIO()
                     traceback.print_exc(file=output)
                     logger.error("Exception trace follows: %s", output.getvalue())
                     output.close()
@@ -823,6 +827,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         now = time.time()
+        add_notif = []
         for act in self.actions.values():
             # We only want notifications
             if act.is_a != 'notification':
@@ -852,7 +857,7 @@ class Scheduler(object):  # pylint: disable=R0902
                         for notif in childnotifs:
                             logger.debug(" - child notification: %s", notif)
                             notif.status = 'scheduled'
-                            self.add(notif)  # this will send a brok
+                            add_notif.append(notif)
 
                     # If we have notification_interval then schedule
                     # the next notification (problems only)
@@ -891,6 +896,9 @@ class Scheduler(object):  # pylint: disable=R0902
                         # We don't repeat recover/downtime/flap/etc...
                         item.remove_in_progress_notification(act)
                         act.status = 'zombie'
+
+        for notif in add_notif:
+            self.add(notif)  # this will send a brok
 
     def get_to_run_checks(self, do_checks=False, do_actions=False,
                           poller_tags=None, reactionner_tags=None,
@@ -1037,7 +1045,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
                 # Add protection for strange charset
                 if isinstance(action.output, str):
-                    action.output = action.output.decode('utf8', 'ignore')
+                    action.output = action.output
 
                 self.actions[action.uuid].get_return_from(action)
                 item = self.find_item_by_id(self.actions[action.uuid].ref)
@@ -1465,7 +1473,7 @@ class Scheduler(object):  # pylint: disable=R0902
             # manage special properties: the Notifications
             if 'notifications_in_progress' in h_dict and h_dict['notifications_in_progress'] != {}:
                 notifs = {}
-                for notif_uuid, notification in h_dict['notifications_in_progress'].iteritems():
+                for notif_uuid, notification in iteritems(h_dict['notifications_in_progress']):
                     notifs[notif_uuid] = notification.serialize()
                 h_dict['notifications_in_progress'] = notifs
             # manage special properties: the downtimes
@@ -1528,7 +1536,7 @@ class Scheduler(object):  # pylint: disable=R0902
             # manage special properties: the notifications
             if 'notifications_in_progress' in s_dict and s_dict['notifications_in_progress'] != {}:
                 notifs = {}
-                for notif_uuid, notification in s_dict['notifications_in_progress'].iteritems():
+                for notif_uuid, notification in iteritems(s_dict['notifications_in_progress']):
                     notifs[notif_uuid] = notification.serialize()
                 s_dict['notifications_in_progress'] = notifs
             # manage special properties: the downtimes
@@ -1620,7 +1628,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 if prop in data:
                     setattr(item, prop, data[prop])
         # Now manage all linked objects load from/ previous run
-        for notif_uuid, notif in item.notifications_in_progress.iteritems():
+        for notif_uuid, notif in iteritems(item.notifications_in_progress):
             notif['ref'] = item.uuid
             mynotif = Notification(params=notif)
             self.add(mynotif)
@@ -1916,20 +1924,26 @@ class Scheduler(object):  # pylint: disable=R0902
         # A loop where those downtimes are removed
         # which were marked for deletion (mostly by dt.exit())
         for elt in self.iter_hosts_and_services():
+            to_delete = []
             for downtime in elt.downtimes.values():
                 if downtime.can_be_deleted is True:
-                    logger.info("Downtime to delete: %s", downtime.__dict__)
-                    ref = self.find_item_by_id(downtime.ref)
-                    elt.del_downtime(downtime.uuid)
-                    broks.append(ref.get_update_status_brok())
+                    to_delete.append(downtime)
+            for downtime in to_delete:
+                logger.info("Downtime to delete: %s", downtime.__dict__)
+                ref = self.find_item_by_id(downtime.ref)
+                elt.del_downtime(downtime.uuid)
+                broks.append(ref.get_update_status_brok())
 
         # Same for contact downtimes:
         for elt in self.contacts:
+            to_delete = []
             for downtime in elt.downtimes.values():
                 if downtime.can_be_deleted is True:
-                    ref = self.find_item_by_id(downtime.ref)
-                    elt.del_downtime(downtime.uuid)
-                    broks.append(ref.get_update_status_brok())
+                    to_delete.append(downtime)
+            for downtime in to_delete:
+                ref = self.find_item_by_id(downtime.ref)
+                elt.del_downtime(downtime.uuid)
+                broks.append(ref.get_update_status_brok())
 
         # Check start and stop times
         for elt in self.iter_hosts_and_services():
@@ -2135,7 +2149,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         res = defaultdict(int)
         res["total"] = len(checks)
-        for chk in checks.itervalues():
+        for chk in itervalues(checks):
             res[chk.status] += 1
         return res
 
@@ -2240,7 +2254,7 @@ class Scheduler(object):  # pylint: disable=R0902
             all_commands[cmd] = (old_u_time, old_s_time)
         # now sort it
         stats = []
-        for (cmd, elem) in all_commands.iteritems():
+        for (cmd, elem) in iteritems(all_commands):
             u_time, s_time = elem
             stats.append({'cmd': cmd, 'u_time': u_time, 's_time': s_time})
 
@@ -2485,10 +2499,10 @@ class Scheduler(object):  # pylint: disable=R0902
             # already pushed to the stats with the previous treatment?
             # checks_status = defaultdict(int)
             # checks_status["total"] = len(self.checks)
-            # for chk in self.checks.itervalues():
+            # for chk in itervalues(self.checks):
             #     checks_status[chk.status] += 1
             # dump_result = "Checks count (loop): "
-            # for status, count in checks_status.iteritems():
+            # for status, count in iteritems(checks_status):
             #     dump_result += "%s: %d, " % (status, count)
             #     statsmgr.gauge('checks.%s' % status, count)
             # if self.log_loop:

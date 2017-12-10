@@ -212,7 +212,7 @@ class Hostgroups(Itemgroups):
                 if mbr == '':  # void entry, skip this
                     continue
                 elif mbr == '*':
-                    new_mbrs.extend(hosts.items.keys())
+                    new_mbrs.extend(list(hosts.items))
                 else:
                     host = hosts.find_by_name(mbr)
                     if host is not None:

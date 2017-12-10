@@ -44,6 +44,8 @@
 This module provides ComplexExpressionNode and ComplexExpressionFactory used for parsing
 expression (business rules)
 """
+from __future__ import print_function
+
 from alignak.util import strip_and_uniq
 from alignak.dependencynode import DependencyNode
 
@@ -221,7 +223,7 @@ class ComplexExpressionFactory(object):
                 # that should not be good in fact !
                 if stacked_par == 1 and tmp != '':
                     # TODO : real error
-                    print "ERROR : bad expression near", tmp
+                    print("ERROR : bad expression near", tmp)
                     continue
 
                 # If we are already in a par, add this (
@@ -234,7 +236,7 @@ class ComplexExpressionFactory(object):
 
                 if stacked_par < 0:
                     # TODO : real error
-                    print "Error : bad expression near", tmp, "too much ')'"
+                    print("Error : bad expression near", tmp, "too much ')'")
                     continue
 
                 if stacked_par == 0:

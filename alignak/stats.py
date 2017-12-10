@@ -344,7 +344,7 @@ class Stats(object):
             # for it may be restored easily if more tests are necessary... ;)
             # logger.info("Sending data: %s", packet)
             try:
-                self.statsd_sock.sendto(packet, self.statsd_addr)
+                self.statsd_sock.sendto(packet.encode(), self.statsd_addr)
             except (socket.error, socket.gaierror):
                 pass
                 # cannot send? ok not a huge problem here and we cannot
@@ -409,7 +409,7 @@ class Stats(object):
             # for it may be restored easily if more tests are necessary... ;)
             # logger.info("Sending data: %s", packet)
             try:
-                self.statsd_sock.sendto(packet, self.statsd_addr)
+                self.statsd_sock.sendto(packet.encode(), self.statsd_addr)
             except (socket.error, socket.gaierror):
                 pass
                 # cannot send? ok not a huge problem here and we cannot
@@ -473,7 +473,7 @@ class Stats(object):
             # for it may be restored easily if more tests are necessary... ;)
             # logger.info("Sending data: %s", packet)
             try:
-                self.statsd_sock.sendto(packet, self.statsd_addr)
+                self.statsd_sock.sendto(packet.encode(), self.statsd_addr)
             except (socket.error, socket.gaierror):
                 pass
                 # cannot send? ok not a huge problem here and we cannot

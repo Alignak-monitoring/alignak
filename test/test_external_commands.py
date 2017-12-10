@@ -50,6 +50,8 @@
 #
 # This file is used to test reading and processing of config files
 #
+from __future__ import print_function
+from six import itervalues
 import re
 import time
 import datetime
@@ -865,7 +867,7 @@ class TestExternalCommands(AlignakTest):
         self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         assert len(host.comments) == 1
-        comment = host.comments.values()[0]
+        comment = list(host.comments.values())[0]
         assert comment.comment == "My comment"
         assert comment.author == "test_contact"
 
@@ -909,7 +911,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in itervalues(self._broker['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -963,7 +965,7 @@ class TestExternalCommands(AlignakTest):
         self._scheduler.run_external_command(excmd)
         self.external_command_loop()
         assert len(svc.comments) == 1
-        comment = svc.comments.values()[0]
+        comment = list(svc.comments.values())[0]
         assert comment.comment == "My comment"
         assert comment.author == "test_contact"
 
@@ -1008,7 +1010,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in itervalues(self._broker['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -1087,7 +1089,7 @@ class TestExternalCommands(AlignakTest):
         excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % now
         self._scheduler.run_external_command(excmd)
         self.external_command_loop()
-        print "Host state", router.state, router.problem_has_been_acknowledged
+        print("Host state", router.state, router.problem_has_been_acknowledged)
         assert 'DOWN' == router.state
         assert True == router.problem_has_been_acknowledged
 
@@ -1095,13 +1097,13 @@ class TestExternalCommands(AlignakTest):
         excmd = '[%d] REMOVE_HOST_ACKNOWLEDGEMENT;test_router_0' % now
         self._scheduler.run_external_command(excmd)
         self.external_command_loop()
-        print "Host state", router.state, router.problem_has_been_acknowledged
+        print("Host state", router.state, router.problem_has_been_acknowledged)
         assert 'DOWN' == router.state
         assert False == router.problem_has_been_acknowledged
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in itervalues(self._broker['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -1193,7 +1195,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in itervalues(self._broker['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -1278,7 +1280,7 @@ class TestExternalCommands(AlignakTest):
             assert False == svc.is_problem
             assert False == svc.problem_has_been_acknowledged
             assert len(host.downtimes) == 1
-            downtime = host.downtimes.values()[0]
+            downtime = list(host.downtimes.values())[0]
             assert downtime.comment == "My first downtime"
             assert downtime.author == "test_contact"
             assert downtime.start_time == now
@@ -1322,7 +1324,7 @@ class TestExternalCommands(AlignakTest):
 
             # We got 'monitoring_log' broks for logging to the monitoring logs...
             monitoring_logs = []
-            for brok in self._broker['broks'].itervalues():
+            for brok in itervalues(self._broker['broks']):
                 if brok.type == 'monitoring_log':
                     data = unserialize(brok.data)
                     monitoring_logs.append((data['level'], data['message']))
@@ -1438,7 +1440,7 @@ class TestExternalCommands(AlignakTest):
             self.external_command_loop()
 
             assert len(host.downtimes) == 1
-            downtime = host.downtimes.values()[0]
+            downtime = list(host.downtimes.values())[0]
             assert downtime.comment == "My first downtime"
             assert downtime.author == "test_contact"
             assert downtime.start_time == now + 2
@@ -1494,7 +1496,7 @@ class TestExternalCommands(AlignakTest):
 
             # We got 'monitoring_log' broks for logging to the monitoring logs...
             monitoring_logs = []
-            for brok in self._broker['broks'].itervalues():
+            for brok in itervalues(self._broker['broks']):
                 if brok.type == 'monitoring_log':
                     data = unserialize(brok.data)
                     monitoring_logs.append((data['level'], data['message']))
@@ -1612,7 +1614,7 @@ class TestExternalCommands(AlignakTest):
         assert True == svc.is_problem
         assert False == svc.problem_has_been_acknowledged
         assert len(host.downtimes) == 1
-        downtime = host.downtimes.values()[0]
+        downtime = list(host.downtimes.values())[0]
         assert downtime.comment == "My first downtime"
         assert downtime.author == "test_contact"
         assert downtime.start_time == now + 2
@@ -1642,7 +1644,7 @@ class TestExternalCommands(AlignakTest):
 
         #  ---
         # External command: delete an host downtime
-        downtime = host.downtimes.values()[0]
+        downtime = list(host.downtimes.values())[0]
         excmd = '[%d] DEL_HOST_DOWNTIME;%s' % (now, downtime.uuid)
         self._scheduler.run_external_command(excmd)
         self.external_command_loop()
@@ -1658,7 +1660,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in itervalues(self._broker['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -1705,7 +1707,7 @@ class TestExternalCommands(AlignakTest):
         ]
 
         for log_level, log_message in expected_logs:
-            print log_message
+            print(log_message)
             assert (log_level, log_message) in monitoring_logs
 
     def test_service_downtimes(self):
@@ -1736,7 +1738,7 @@ class TestExternalCommands(AlignakTest):
         self.external_command_loop()
         assert len(svc.downtimes) == 1
         downtime_id = list(svc.downtimes)[0]
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
         assert downtime.comment == "My downtime"
         assert downtime.author == "test_contact"
         assert downtime.start_time == now + 120
@@ -1786,7 +1788,7 @@ class TestExternalCommands(AlignakTest):
     
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in itervalues(self._broker['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -1883,7 +1885,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in itervalues(self._broker['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -2075,7 +2077,7 @@ class TestExternalCommands(AlignakTest):
         for host_id in hostgroup.get_hosts():
             host = self._scheduler.hosts[host_id]
             downtime_id = list(host.downtimes)[0]
-            downtime = host.downtimes.values()[0]
+            downtime = list(host.downtimes.values())[0]
             assert downtime.comment == "My downtime"
             assert downtime.author == "test_contact"
             assert downtime.start_time == now + 120
@@ -2097,7 +2099,7 @@ class TestExternalCommands(AlignakTest):
             for service_id in host.services:
                 service = self._scheduler.services[service_id]
                 downtime_id = list(host.downtimes)[0]
-                downtime = host.downtimes.values()[0]
+                downtime = list(host.downtimes.values())[0]
                 assert downtime.comment == "My downtime"
                 assert downtime.author == "test_contact"
                 assert downtime.start_time == now + 120
@@ -2621,7 +2623,7 @@ class TestExternalCommands(AlignakTest):
         # self.assert_any_log_match('I awoke after sleeping 3 seconds')
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in itervalues(self._broker['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -2646,7 +2648,7 @@ class TestExternalCommands(AlignakTest):
         # self.assert_any_log_match('I awoke after sleeping 2 seconds')
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in itervalues(self._broker['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -2685,7 +2687,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker['broks'].itervalues():
+        for brok in itervalues(self._broker['broks']):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))

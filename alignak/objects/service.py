@@ -1778,7 +1778,7 @@ class Services(SchedulingItems):
         """
         # Then for every service create a copy of the service with just the host
         # because we are adding services, we can't just loop in it
-        itemkeys = self.items.keys()
+        itemkeys = list(self.items)
         for s_id in itemkeys:
             serv = self.items[s_id]
             # items::explode_host_groups_into_hosts

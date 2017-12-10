@@ -66,6 +66,7 @@
  them into independent parts. The main user of this is Arbiter, but schedulers
  use it too (but far less)"""
 # pylint: disable=C0302
+from future.utils import iteritems
 import re
 import sys
 import string
@@ -77,9 +78,12 @@ import random
 import tempfile
 import uuid
 import logging
-from StringIO import StringIO
+from io import StringIO, open
 from multiprocessing import Process, Manager
 import json
+from builtins import int
+from past.builtins import xrange
+from six import next
 
 from alignak.misc.serialization import serialize
 
@@ -110,7 +114,7 @@ from alignak.objects.hostextinfo import HostExtInfo, HostsExtInfo
 from alignak.objects.serviceextinfo import ServiceExtInfo, ServicesExtInfo
 from alignak.objects.trigger import Triggers
 from alignak.objects.pack import Packs
-from alignak.util import split_semicolon, sort_by_number_values
+from alignak.util import split_semicolon
 from alignak.objects.arbiterlink import ArbiterLink, ArbiterLinks
 from alignak.objects.schedulerlink import SchedulerLink, SchedulerLinks
 from alignak.objects.reactionnerlink import ReactionnerLink, ReactionnerLinks
@@ -628,7 +632,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             UnusedProp(text=None),
 
         'modified_attributes':
-            IntegerProp(default=0L),
+            IntegerProp(default=int(0)),
 
         'daemon_thread_pool_size':
             IntegerProp(default=8),
@@ -980,19 +984,18 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 logger.info("[config] opening '%s' configuration file", c_file)
             try:
                 # Open in Universal way for Windows, Mac, Linux-based systems
-                file_d = open(c_file, 'rU')
+                file_d = open(c_file, encoding='utf-8')
                 buf = file_d.readlines()
                 file_d.close()
                 self.config_base_dir = os.path.dirname(c_file)
                 # Update macro used properties
                 self.main_config_file = os.path.abspath(c_file)
-            except IOError, exp:
+            except IOError as exp:
                 msg = "[config] cannot open main config file '%s' for reading: %s" % (c_file, exp)
                 self.add_error(msg)
                 continue
 
             for line in buf:
-                line = line.decode('utf8', 'replace')
                 res.write(line)
                 if line.endswith('\n'):
                     line = line[:-1]
@@ -1009,11 +1012,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         if not self.read_config_silent:
                             logger.info("Processing object config file '%s'", cfg_file_name)
                         res.write(os.linesep + '# IMPORTEDFROM=%s' % (cfg_file_name) + os.linesep)
-                        res.write(file_d.read().decode('utf8', 'replace'))
+                        res.write(file_d.read())
                         # Be sure to add a line return so we won't mix files
                         res.write(os.linesep)
                         file_d.close()
-                    except IOError, exp:
+                    except IOError as exp:
                         msg = "[config] cannot open config file '%s' for reading: %s" % (
                             cfg_file_name, exp
                         )
@@ -1045,7 +1048,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                                 res.write(os.linesep + '# IMPORTEDFROM=%s' %
                                           (os.path.join(root, pack_file)) + os.linesep)
                                 file_d = open(os.path.join(root, pack_file), 'rU')
-                                res.write(file_d.read().decode('utf8', 'replace'))
+                                res.write(file_d.read())
                                 # Be sure to separate files data
                                 res.write(os.linesep)
                                 file_d.close()
@@ -1455,7 +1458,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         if os.name == 'nt' or not self.use_multiprocesses_serializer:
             logger.info('Using the default serialization pass')
             for realm in self.realms:
-                for (i, conf) in realm.confs.iteritems():
+                for (i, conf) in iteritems(realm.confs):
                     # Remember to protect the local conf hostgroups too!
                     conf.hostgroups.prepare_for_sending()
                     logger.debug('[%s] Serializing the configuration %d', realm.get_name(), i)
@@ -1484,7 +1487,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             child_q = manager.list()
             for realm in self.realms:
                 processes = []
-                for (i, conf) in realm.confs.iteritems():
+                for (i, conf) in iteritems(realm.confs):
                     def serialize_config(comm_q, rname, cid, conf):
                         """Serialized config. Used in subprocesses to serialize all config faster
 
@@ -2441,7 +2444,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         """
         # We create a graph with host in nodes
         graph = Graph()
-        graph.add_nodes(self.hosts.items.keys())
+        graph.add_nodes(list(self.hosts.items))
 
         # links will be used for relations between hosts
         links = set()
@@ -2600,7 +2603,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # Now we explode the numerous packs into nb_packs reals packs:
             # we 'load balance' them in a round-robin way but with count number of hosts in
             # case have some packs with too many hosts and other with few
-            realm.packs.sort(sort_by_number_values)
+            realm.packs.sort(key=lambda x: len(x), reverse=True)
             pack_higher_hosts = 0
             for pack in realm.packs:
                 valid_value = False
@@ -2625,10 +2628,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     i = old_pack
                 else:
                     if isinstance(i, int):
-                        i = round_robin.next()
+                        i = next(round_robin)
                     elif (len(packs[packindices[i]]) + len(pack)) >= pack_higher_hosts:
                         pack_higher_hosts = (len(packs[packindices[i]]) + len(pack))
-                        i = round_robin.next()
+                        i = next(round_robin)
 
                 for elt_id in pack:
                     elt = self.hosts[elt_id]

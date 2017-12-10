@@ -50,6 +50,7 @@ Triggers are python files executed after the Scheduler has received a check resu
 Typical use is for passive results. This allows passive check data to be modified if necessary
 
 """
+from future.utils import iteritems
 import os
 import re
 import traceback
@@ -118,7 +119,7 @@ class Trigger(Item):
         :return: None
         """
         # Ok we can declare for this trigger call our functions
-        for (name, fun) in TRIGGER_FUNCTIONS.iteritems():
+        for (name, fun) in iteritems(TRIGGER_FUNCTIONS):
             locals()[name] = fun
 
         code = self.code_bin
@@ -126,7 +127,7 @@ class Trigger(Item):
         env["self"] = ctx
         del env["ctx"]
         try:
-            exec code in env  # pylint: disable=W0122
+            exec(code, env)  # pylint: disable=W0122
         except Exception as err:  # pylint: disable=W0703
             set_value(ctx, "UNKNOWN: Trigger error: %s" % err, "", 3)
             logger.error('%s Trigger %s failed: %s ; '
@@ -157,7 +158,7 @@ class Triggers(Items):
                         file_d = open(path, 'rU')
                         buf = file_d.read()
                         file_d.close()
-                    except IOError, exp:
+                    except IOError as exp:
                         logger.error("Cannot open trigger file '%s' for reading: %s", path, exp)
                         # ok, skip this one
                         continue

@@ -206,7 +206,7 @@ class Servicedependencies(Items):
 
         # Then for every host create a copy of the service with just the host
         # because we are adding services, we can't just loop in it
-        servicedeps = self.items.keys()
+        servicedeps = list(self.items)
         for s_id in servicedeps:
             servicedep = self.items[s_id]
 
@@ -380,7 +380,7 @@ class Servicedependencies(Items):
                     servicedep.dependency_period = timeperiod.uuid
                 else:
                     servicedep.dependency_period = ''
-            except AttributeError, exp:
+            except AttributeError as exp:
                 logger.error("[servicedependency] fail to linkify by timeperiods: %s", exp)
 
     def linkify_s_by_sd(self, services):

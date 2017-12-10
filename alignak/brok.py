@@ -48,6 +48,7 @@
 Brok are filled depending on their type (check_result, initial_state ...)
 
 """
+from future.utils import iteritems
 import time
 import uuid
 import warnings
@@ -89,7 +90,7 @@ class Brok(object):
         if not parsing:
             if params is None:
                 return
-            for key, value in params.iteritems():
+            for key, value in iteritems(params):
                 setattr(self, key, value)
 
             if not hasattr(self, 'uuid'):

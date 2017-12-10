@@ -105,7 +105,7 @@ import re
 
 from pipes import quote as cmd_quote
 
-import ConfigParser
+import configparser
 
 from docopt import docopt, DocoptExit
 
@@ -159,7 +159,7 @@ class AlignakConfigParser(object):
 
         :return: None
         """
-        config = ConfigParser.ConfigParser()
+        config = configparser.ConfigParser()
         config.read(self.configuration_file)
         if config._sections == {}:
             print("Bad formatted configuration file: %s " % self.configuration_file)
@@ -186,7 +186,7 @@ class AlignakConfigParser(object):
                         inner_property = re.sub('[^0-9a-zA-Z]+', '_', inner_property)
                         inner_property = inner_property.upper()
                         print("export %s=%s" % (inner_property, cmd_quote(value)))
-        except ConfigParser.InterpolationMissingOptionError as err:
+        except configparser.InterpolationMissingOptionError as err:
             err = str(err)
             wrong_variable = err.split('\n')[3].split(':')[1].strip()
             print("Incorrect or missing variable '%s' in config file : %s" %

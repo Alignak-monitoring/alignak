@@ -48,14 +48,15 @@
 """
 This module provide Worker class. It is used to spawn new processes in Poller and Reactionner
 """
-from Queue import Empty, Full
+from builtins import str
+from queue import Empty, Full
 from multiprocessing import Process
 
 import os
 import time
 import signal
 import traceback
-import cStringIO
+from io import StringIO
 import logging
 
 from alignak.message import Message
@@ -291,7 +292,7 @@ class Worker(object):
                     logger.error("I am dying because of too many open files: %s", chk)
                     self.i_am_dying = True
                 else:
-                    if not isinstance(process, basestring):
+                    if not isinstance(process, str):
                         logger.debug("Launched check: %s, pid=%d", chk.uuid, process.pid)
 
     def manage_finished_checks(self, queue):
@@ -373,7 +374,7 @@ class Worker(object):
             logger.info("[%s] (pid=%d) stopped", self.get_id(), os.getpid())
         # Catch any exception, try to print it and exit anyway
         except Exception:
-            output = cStringIO.StringIO()
+            output = StringIO()
             traceback.print_exc(file=output)
             logger.error("[%s] exit with an unmanaged exception : %s",
                          self._id, output.getvalue())

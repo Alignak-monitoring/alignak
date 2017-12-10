@@ -46,7 +46,9 @@
 """ 
 This file is used to test the triggers
 """
+from __future__ import print_function
 
+from past.builtins import xrange
 from alignak_test import *
 from alignak.objects.trigger import Trigger
 
@@ -183,8 +185,8 @@ class TestTriggers(AlignakTest):
         svc.eval_triggers(self._sched.triggers)
 
         self.scheduler_loop(4, [[host, 0, 'Fake host output']])
-        print "Output", svc.output
-        print "Perf_Data", svc.perf_data
+        print("Output", svc.output)
+        print("Perf_Data", svc.perf_data)
 
         # Service output/perfdata are modified by the trigger
         # Note the avg_time metric that is an average of the 4 other services time metric
@@ -213,8 +215,8 @@ class TestTriggers(AlignakTest):
         svc.eval_triggers(self._sched.triggers)
 
         self.scheduler_loop(4, [[host, 0, 'Fake host output']])
-        print "Output", svc.output
-        print "Perf_Data", svc.perf_data
+        print("Output", svc.output)
+        print("Perf_Data", svc.perf_data)
         self.assertEqual("OK all is green, my host is gnulinux", svc.output)
         self.assertEqual("users=12", svc.perf_data)
 

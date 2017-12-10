@@ -46,6 +46,7 @@
 """This module provides HTTPClient class. Used by daemon to connect to HTTP servers (other daemons)
 
 """
+from future.utils import iteritems
 import logging
 import warnings
 import requests
@@ -199,7 +200,7 @@ class HTTPClient(object):
         except (requests.Timeout, requests.ConnectTimeout):
             raise HTTPClientTimeoutException(timeout, uri)
         except requests.ConnectionError as exp:
-            raise HTTPClientConnectionException(uri, exp.message)
+            raise HTTPClientConnectionException(uri, exp)
         except Exception as err:
             raise HTTPClientException('Request error to %s: %s' % (uri, err))
 
@@ -217,7 +218,7 @@ class HTTPClient(object):
         """
         uri = self.make_uri(path)
         timeout = self.make_timeout(wait)
-        for (key, value) in args.iteritems():
+        for (key, value) in iteritems(args):
             args[key] = serialize(value, True)
         try:
             rsp = self._requests_con.post(uri, json=args, timeout=timeout, verify=self.strong_ssl)

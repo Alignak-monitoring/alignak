@@ -22,6 +22,7 @@
 This file test the acknowledge and downtime broks
 """
 
+from six import itervalues
 import time
 from alignak_test import AlignakTest
 from alignak.misc.serialization import unserialize
@@ -62,7 +63,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_ack_raise = []
         brok_ack_expire = []
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks'].itervalues():
+        for brok in itervalues(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']):
             if brok.type == 'acknowledge_raise':
                 brok_ack_raise.append(brok)
             elif brok.type == 'acknowledge_expire':
@@ -81,7 +82,7 @@ class TestBrokAckDowntime(AlignakTest):
         self.scheduler_loop(2, [[host, 0, 'UP'], [svc, 0, 'OK']])
         brok_ack_raise = []
         brok_ack_expire = []
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks'].itervalues():
+        for brok in itervalues(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']):
             if brok.type == 'acknowledge_raise':
                 brok_ack_raise.append(brok)
             elif brok.type == 'acknowledge_expire':
@@ -112,7 +113,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_ack_raise = []
         brok_ack_expire = []
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks'].itervalues():
+        for brok in itervalues(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']):
             if brok.type == 'acknowledge_raise':
                 brok_ack_raise.append(brok)
             elif brok.type == 'acknowledge_expire':
@@ -156,8 +157,7 @@ class TestBrokAckDowntime(AlignakTest):
         self.scheduler_loop(3, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
 
         brok_ack = []
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master'][
-            'broks'].itervalues():
+        for brok in itervalues(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']):
             if brok.type == 'acknowledge_raise':
                 print("Brok: %s" % brok)
                 brok_ack.append(brok)
@@ -190,7 +190,7 @@ class TestBrokAckDowntime(AlignakTest):
         self.scheduler_loop(2, [[host, 0, 'UP'], [svc, 0, 'OK']])
         brok_ack_raise = []
         brok_ack_expire = []
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks'].itervalues():
+        for brok in itervalues(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']):
             if brok.type == 'acknowledge_raise':
                 brok_ack_raise.append(brok)
             elif brok.type == 'acknowledge_expire':
@@ -238,7 +238,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_ack_raise = []
         brok_ack_expire = []
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks'].itervalues():
+        for brok in itervalues(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']):
             if brok.type == 'acknowledge_raise':
                 brok_ack_raise.append(brok)
             elif brok.type == 'acknowledge_expire':
@@ -286,8 +286,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master'][
-            'broks'].itervalues():
+        for brok in itervalues(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -308,8 +307,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master'][
-            'broks'].itervalues():
+        for brok in itervalues(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -358,8 +356,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master'][
-            'broks'].itervalues():
+        for brok in itervalues(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -379,8 +376,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master'][
-            'broks'].itervalues():
+        for brok in itervalues(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -427,8 +423,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master'][
-            'broks'].itervalues():
+        for brok in itervalues(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -440,8 +435,7 @@ class TestBrokAckDowntime(AlignakTest):
         time.sleep(1)
         self.scheduler_loop(3, [[host, 0, 'UP'], [svc, 2, 'CRITICAL']])
 
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master'][
-            'broks'].itervalues():
+        for brok in itervalues(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -478,8 +472,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master'][
-            'broks'].itervalues():
+        for brok in itervalues(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -497,8 +490,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master'][
-            'broks'].itervalues():
+        for brok in itervalues(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -535,8 +527,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master'][
-            'broks'].itervalues():
+        for brok in itervalues(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -554,8 +545,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master'][
-            'broks'].itervalues():
+        for brok in itervalues(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':

@@ -51,7 +51,7 @@
 import logging
 import time
 import traceback
-import cStringIO
+from io import StringIO
 
 import importlib
 
@@ -207,7 +207,7 @@ class ModulesManager(object):
             )
             logger.error("The instance %s raised an exception on initialization: %s, I remove it!",
                          instance.get_name(), str(exp))
-            output = cStringIO.StringIO()
+            output = StringIO()
             traceback.print_exc(file=output)
             logger.error("Traceback of the exception: %s", output.getvalue())
             output.close()

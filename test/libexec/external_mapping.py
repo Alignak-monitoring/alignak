@@ -39,7 +39,7 @@ For example, you can use a script like this in your crontab::
 
 """
 
-
+from __future__ import print_function
 import os
 import sys
 import optparse
@@ -62,7 +62,7 @@ def main(input_file, output_file, type):
     # Check if input_file is newer than output_file
     if os.path.exists(output_file):
         if os.path.getmtime(output_file) >= os.path.getmtime(input_file):
-            print "Nothing to do"
+            print("Nothing to do")
             return True
     r = []
     flatmappingfile = open(input_file)

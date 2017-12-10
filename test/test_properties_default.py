@@ -45,7 +45,9 @@
 Test default values for item types.
 """
 
-
+from __future__ import print_function
+from future.utils import iteritems
+from builtins import int
 from alignak.property import UnusedProp, NONE_OBJECT
 import alignak.daemon
 
@@ -80,12 +82,12 @@ class PropertiesTester(object):
         self.print_header()
 
         item = self.item # shortcut
-        for name, value in self.properties.iteritems():
+        for name, value in iteritems(self.properties):
             assert name in item.properties, \
                           'property %r not found in %s' % (name, self.item.my_type)
             if hasattr(item.properties[name], 'default'):
                 if item.properties[name].default != value:
-                    print "%s, %s: %s, %s" % (name, value, item.properties[name].default, value)
+                    print("%s, %s: %s, %s" % (name, value, item.properties[name].default, value))
                 if not item.properties[name].unused:
                     assert item.properties[name].default == value
 
@@ -93,7 +95,7 @@ class PropertiesTester(object):
         self.print_header()
 
         item = self.item # shortcut
-        prop_names = set(list(self.properties.keys()) + self.unused_props + self.without_default)
+        prop_names = set(list(self.properties) + self.unused_props + self.without_default)
 
         for name in item.properties:
             if name.startswith('$') and name.endswith('$'):
@@ -234,7 +236,7 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('use_regexp_matching', False),
         ('use_true_regexp_matching', None),
         ('broker_module', ''),
-        ('modified_attributes', 0L),
+        ('modified_attributes', int(0)),
 
         # Alignak specific
         ('flap_history', 20),
@@ -293,7 +295,7 @@ class TestCommand(PropertiesTester, AlignakTest):
         from alignak.objects.command import Command
         self.item = None
         self.item = Command(parsing=True)
-        print self.item.properties
+        print(self.item.properties)
 
 
 class TestContactgroup(PropertiesTester, AlignakTest):

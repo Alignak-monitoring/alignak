@@ -114,7 +114,7 @@ class TestMaintenancePeriod(AlignakTest):
         assert 1 == len(host.downtimes)
         # The host is still in a downtime period
         assert host.in_scheduled_downtime
-        downtime = host.downtimes.values()[0]
+        downtime = list(host.downtimes.values())[0]
         assert downtime.fixed
         assert downtime.is_in_effect
         assert not downtime.can_be_deleted

@@ -21,6 +21,7 @@ in order to parse specific HTTP content type
 See http://cherrypy.readthedocs.org/en/latest/pkg/cherrypy.html#module-cherrypy._cpreqbody
 for details about custom processors in Cherrypy
 """
+from future.utils import iteritems
 import json
 import zlib
 
@@ -52,8 +53,8 @@ def zlib_processor(entity):  # pragma: no cover, not used in the testing environ
 
     try:
         params = {}
-        for key, value in raw_params.iteritems():
-            params[key] = unserialize(value.encode("utf8"))
+        for key, value in iteritems(raw_params):
+            params[key] = unserialize(value)
     except TypeError:
         raise cherrypy.HTTPError(400, 'Invalid serialized data in JSON document')
     except AlignakClassLookupException as exp:

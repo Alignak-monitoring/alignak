@@ -2,8 +2,8 @@ language: python
 dist: trusty
 sudo: required
 python:
-  - "2.6"
   - "2.7"
+  - "3.6"
 
 env:
   - TEST_SUITE=unit
@@ -15,12 +15,8 @@ env:
 
 matrix:
   exclude:
-  - python: "2.6"
-    env: TEST_SUITE=load
-  - python: "2.6"
+  - python: "3.6"
     env: TEST_SUITE=codingstandard
-  - python: "2.6"
-    env: TEST_SUITE=virtualenv
 
 install:
   # Remove python warnings

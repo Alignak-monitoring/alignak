@@ -22,6 +22,7 @@
 #
 # This file is used to test reading and processing of config files
 #
+from __future__ import print_function
 import time
 import ujson
 from alignak_test import AlignakTest, time_hacker
@@ -254,7 +255,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        print "Host state", router.state, router.problem_has_been_acknowledged
+        print("Host state", router.state, router.problem_has_been_acknowledged)
         assert 'DOWN' == router.state
         assert True == router.problem_has_been_acknowledged
 
@@ -262,7 +263,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] REMOVE_HOST_ACKNOWLEDGEMENT;test_router_0' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        print "Host state", router.state, router.problem_has_been_acknowledged
+        print("Host state", router.state, router.problem_has_been_acknowledged)
         assert 'DOWN' == router.state
         assert False == router.problem_has_been_acknowledged
 
@@ -277,7 +278,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        print "Host state", router.state, router.problem_has_been_acknowledged
+        print("Host state", router.state, router.problem_has_been_acknowledged)
         assert 'DOWN' == router.state
         assert True == router.problem_has_been_acknowledged
 
@@ -483,7 +484,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        print "Host state", router.state, router.problem_has_been_acknowledged
+        print("Host state", router.state, router.problem_has_been_acknowledged)
         assert 'DOWN' == router.state
         assert True == router.problem_has_been_acknowledged
 
@@ -491,7 +492,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] REMOVE_HOST_ACKNOWLEDGEMENT;test_router_0' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        print "Host state", router.state, router.problem_has_been_acknowledged
+        print("Host state", router.state, router.problem_has_been_acknowledged)
         assert 'DOWN' == router.state
         assert False == router.problem_has_been_acknowledged
 
@@ -510,7 +511,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        print "Host state", router.state, router.problem_has_been_acknowledged
+        print("Host state", router.state, router.problem_has_been_acknowledged)
         assert 'DOWN' == router.state
         assert True == router.problem_has_been_acknowledged
 
@@ -1031,7 +1032,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        print "Host state", router.state, router.problem_has_been_acknowledged
+        print("Host state", router.state, router.problem_has_been_acknowledged)
         assert 'DOWN' == router.state
         assert True == router.problem_has_been_acknowledged
     
@@ -1039,7 +1040,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] REMOVE_HOST_ACKNOWLEDGEMENT;test_router_0' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        print "Host state", router.state, router.problem_has_been_acknowledged
+        print("Host state", router.state, router.problem_has_been_acknowledged)
         assert 'DOWN' == router.state
         assert False == router.problem_has_been_acknowledged
 
@@ -1055,7 +1056,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        print "Host state", router.state, router.problem_has_been_acknowledged
+        print("Host state", router.state, router.problem_has_been_acknowledged)
         assert 'DOWN' == router.state
         assert True == router.problem_has_been_acknowledged
 
@@ -1063,7 +1064,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] REMOVE_HOST_ACKNOWLEDGEMENT;test_router_0' % int(time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        print "Host state", router.state, router.problem_has_been_acknowledged
+        print("Host state", router.state, router.problem_has_been_acknowledged)
         assert 'DOWN' == router.state
         assert False == router.problem_has_been_acknowledged
 
@@ -1078,7 +1079,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % time.time()
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        print "Host state", router.state, router.problem_has_been_acknowledged
+        print("Host state", router.state, router.problem_has_been_acknowledged)
         assert 'DOWN' == router.state
         assert True == router.problem_has_been_acknowledged
 
@@ -1148,11 +1149,11 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
             time.time())
         self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         self.external_command_loop()
-        print "Host state", host.state, host.problem_has_been_acknowledged
+        print("Host state", host.state, host.problem_has_been_acknowledged)
         assert 'DOWN' == host.state
         assert True == host.problem_has_been_acknowledged
 
-        print "Service state", svc.state, svc.problem_has_been_acknowledged
+        print("Service state", svc.state, svc.problem_has_been_acknowledged)
         assert 'WARNING' == svc.state
         # The service has also been acknowledged!
         assert True == svc.problem_has_been_acknowledged

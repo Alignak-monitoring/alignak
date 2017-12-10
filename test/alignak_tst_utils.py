@@ -53,7 +53,7 @@ def safe_print(*args, **kw):
     if kw:
         raise ValueError('unhandled named/keyword argument(s): %r' % kw)
     #
-    make_in_data_gen = lambda: ( a if isinstance(a, unicode)
+    make_in_data_gen = lambda: ( a if isinstance(a, str)
                                 else
                             unicode(str(a), in_bytes_encoding, 'replace')
                         for a in args )

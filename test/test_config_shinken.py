@@ -22,6 +22,7 @@
 """
 This file contains the test for the Alignak configuration checks
 """
+from __future__ import print_function
 import os
 import re
 import time
@@ -45,10 +46,10 @@ class TestConfig(AlignakTest):
         assert self.conf_is_correct
 
         # No error messages
-        print self.configuration_errors
+        print(self.configuration_errors)
         assert len(self.configuration_errors) == 0
         # No warning messages
-        print self.configuration_warnings
+        print(self.configuration_warnings)
         assert len(self.configuration_warnings) == 16
         assert self.configuration_warnings == [
             u'Guessing the property ca_cert type because it is not in Config object properties',

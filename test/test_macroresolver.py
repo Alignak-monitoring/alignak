@@ -49,6 +49,7 @@
 # This file is used to test reading and processing of config files
 #
 
+from __future__ import print_function
 from alignak_test import *
 from alignak.macroresolver import MacroResolver
 from alignak.commandcall import CommandCall
@@ -414,7 +415,7 @@ class MacroResolverTester(object):
         data = [hst, svc]
         illegal_macro_output_chars = \
             self._sched.conf.illegal_macro_output_chars
-        print "Illegal macros caracters:", illegal_macro_output_chars
+        print("Illegal macros caracters:", illegal_macro_output_chars)
         hst.output = 'fake output'
         dummy_call = "special_macro!$HOSTOUTPUT$"
 
@@ -422,7 +423,7 @@ class MacroResolverTester(object):
             hst.output = 'fake output' + c
             cc = CommandCall({"commands": self.arbiter.conf.commands, "call": dummy_call})
             com = mr.resolve_command(cc, data, self._sched.macromodulations, self._sched.timeperiods)
-            print com
+            print(com)
             assert 'plugins/nothing fake output' == com
 
     def test_env_macros(self):

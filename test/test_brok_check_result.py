@@ -22,6 +22,7 @@
 This file test the check_result brok
 """
 
+from six import itervalues
 import time
 from alignak_test import AlignakTest
 from alignak.misc.serialization import unserialize
@@ -56,7 +57,7 @@ class TestBrokCheckResult(AlignakTest):
         time.sleep(0.1)
         host_check_results = []
         service_check_results = []
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks'].itervalues():
+        for brok in itervalues(self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks']):
             if brok.type == 'host_check_result':
                 host_check_results.append(brok)
             elif brok.type == 'service_check_result':

@@ -81,8 +81,8 @@ class TestMultibroker(AlignakTest):
         # new broks
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         assert len(mysched.sched.brokers['broker-master']['broks']) > 1
-        self.assertItemsEqual(mysched.sched.brokers['broker-master']['broks'].keys(),
-                              mysched.sched.brokers['broker-master2']['broks'].keys())
+        self.assertItemsEqual(list(mysched.sched.brokers['broker-master']['broks']),
+                              list(mysched.sched.brokers['broker-master2']['broks']))
 
     def test_multibroker_multisched(self):
         """ Test with 2 brokers and 2 schedulers
@@ -186,9 +186,9 @@ class TestMultibroker(AlignakTest):
         smaster_n = self.schedulers['scheduler-masterN']
         smaster_s = self.schedulers['scheduler-masterS']
 
-        assert smaster.sched.brokers.keys() == ['broker-master']
-        self.assertItemsEqual(smaster_n.sched.brokers.keys(), ['broker-master', 'broker-masterN'])
-        assert smaster_s.sched.brokers.keys() == ['broker-master']
+        assert list(smaster.sched.brokers) == ['broker-master']
+        self.assertItemsEqual(list(smaster_n.sched.brokers), ['broker-master', 'broker-masterN'])
+        assert list(smaster_s.sched.brokers) == ['broker-master']
 
         brokermaster = None
         for sat in self.arbiter.dispatcher.satellites:

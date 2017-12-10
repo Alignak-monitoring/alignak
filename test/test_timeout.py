@@ -50,6 +50,7 @@
 # This file is used to test reading and processing of config files
 #
 import time
+from past.builtins import xrange
 
 from alignak_test import AlignakTest, unittest
 

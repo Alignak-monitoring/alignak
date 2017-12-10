@@ -22,10 +22,11 @@
 This file test the dispatcher (distribute configuration to satellites)
 """
 
+from __future__ import print_function
+from six import itervalues
 import time
 import pytest
 import requests_mock
-from requests.packages.urllib3.response import HTTPResponse
 from alignak_test import AlignakTest
 from alignak.misc.serialization import unserialize
 
@@ -244,10 +245,10 @@ class TestDispatcher(AlignakTest):
         for name in ['scheduler-all-01', 'scheduler-all-02', 'scheduler-all1-01',
                      'scheduler-all1-02', 'scheduler-all1-03', 'scheduler-all1a-01',
                      'scheduler-all1a-02']:
-            assert self.schedulers[name].sched.pollers.keys() == pollers
-            assert self.schedulers[name].sched.reactionners.keys() == reactionners
-            assert self.schedulers[name].sched.brokers.keys() == ['broker-master']
-            all_schedulers_uuid.extend(self.schedulers[name].schedulers.keys())
+            assert list(self.schedulers[name].sched.pollers) == pollers
+            assert list(self.schedulers[name].sched.reactionners) == reactionners
+            assert list(self.schedulers[name].sched.brokers) == ['broker-master']
+            all_schedulers_uuid.extend(list(self.schedulers[name].schedulers))
 
         # schedulers of realm All
         gethosts = []
@@ -283,10 +284,10 @@ class TestDispatcher(AlignakTest):
         assert set(gethosts) == set(['srv_201', 'srv_202', 'srv_203', 'srv_204'])
 
         # test the poller
-        assert set(self.pollers['poller-master'].cfg['schedulers'].keys()) == set(all_schedulers_uuid)
+        assert set(list(self.pollers['poller-master'].cfg['schedulers'])) == set(all_schedulers_uuid)
 
         # test the receiver has all hosts of all realms (the 3 realms)
-        assert set(self.receivers['receiver-master'].cfg['schedulers'].keys()) == set(all_schedulers_uuid)
+        assert set(list(self.receivers['receiver-master'].cfg['schedulers'])) == set(all_schedulers_uuid)
         # test get all hosts
         hosts = []
         for sched in self.receivers['receiver-master'].cfg['schedulers'].values():
@@ -336,7 +337,7 @@ class TestDispatcher(AlignakTest):
 
         for satellite in self.arbiter.dispatcher.satellites:
             assert 1 == len(satellite.cfg['schedulers'])
-            scheduler = satellite.cfg['schedulers'].itervalues().next()
+            scheduler = itervalues(satellite.cfg['schedulers']).next()
             assert 'scheduler-master' == scheduler['name']
 
         # now simulate master sched down
@@ -413,17 +414,17 @@ class TestDispatcher(AlignakTest):
                                                         'because it is not alive'
             self.show_logs()
             assert 5 == len(conf_sent)
-            assert ['conf'] == conf_sent['scheduler-spare'].keys()
+            assert ['conf'] == list(conf_sent['scheduler-spare'])
 
             json_managed_spare = {}
             for satellite in self.arbiter.dispatcher.satellites:
                 assert 1 == len(satellite.cfg['schedulers'])
-                scheduler = satellite.cfg['schedulers'].itervalues().next()
+                scheduler = itervalues(satellite.cfg['schedulers']).next()
                 assert 'scheduler-spare' == scheduler['name']
                 json_managed_spare[scheduler['instance_id']] = scheduler['push_flavor']
 
         # return of the scheduler master
-        print "*********** Return of the king / master ***********"
+        print("*********** Return of the king / master ***********")
         with requests_mock.mock() as mockreq:
             for port in ['7768', '7772', '7771', '7769', '7773', '8002']:
                 mockreq.get('http://localhost:%s/ping' % port, json='pong')
@@ -463,11 +464,11 @@ class TestDispatcher(AlignakTest):
 
             assert set(['scheduler-master', 'broker', 'poller', 'reactionner',
                                   'receiver']) == \
-                             set(conf_sent.keys())
+                             set(list(conf_sent))
 
             for satellite in self.arbiter.dispatcher.satellites:
                 assert 1 == len(satellite.cfg['schedulers'])
-                scheduler = satellite.cfg['schedulers'].itervalues().next()
+                scheduler = itervalues(satellite.cfg['schedulers']).next()
                 assert 'scheduler-master' == scheduler['name']
 
     @pytest.mark.skip("To be reactivated when spare will be implemented and tested")
@@ -503,7 +504,7 @@ class TestDispatcher(AlignakTest):
                 if hist.url == 'http://localhost:8770/put_conf':
                     history_index = index
             conf_received = history[history_index].json()
-            assert ['conf'] == conf_received.keys()
+            assert ['conf'] == list(conf_received)
             spare_conf = unserialize(conf_received['conf'])
             # Test a property to be sure conf loaded correctly
             assert 5 == spare_conf.perfdata_timeout

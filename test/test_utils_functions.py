@@ -27,29 +27,34 @@ import unittest
 class TestUnknownEventHandler(unittest.TestCase):
 
     def test_sort_alive_then_spare_then_deads(self):
-        SmallSat = namedtuple("SmallSat", ["alive", "spare"])
+        SmallSat = namedtuple("SmallSat", ["alive", "spare", "name"])
 
-        sat_list = [SmallSat(alive=True, spare=False),
-                    SmallSat(alive=True, spare=True),
-                    SmallSat(alive=True, spare=True),
-                    SmallSat(alive=False, spare=True),
-                    SmallSat(alive=False, spare=False),
-                    SmallSat(alive=False, spare=False),
-                    SmallSat(alive=False, spare=True),
-                    SmallSat(alive=True, spare=False),
-                    SmallSat(alive=False, spare=False),
-                    SmallSat(alive=True, spare=True)]
+        sat_list = [SmallSat(alive=True, spare=False, name="001"),
+                    SmallSat(alive=True, spare=True, name="002"),
+                    SmallSat(alive=True, spare=True, name="003"),
+                    SmallSat(alive=False, spare=True, name="004"),
+                    SmallSat(alive=False, spare=False, name="005"),
+                    SmallSat(alive=False, spare=False, name="006"),
+                    SmallSat(alive=False, spare=True, name="007"),
+                    SmallSat(alive=True, spare=False, name="008"),
+                    SmallSat(alive=False, spare=False, name="009"),
+                    SmallSat(alive=True, spare=True, name="010")]
 
-        expected_sat_list = [SmallSat(alive=True, spare=False),
-                             SmallSat(alive=True, spare=False),
-                             SmallSat(alive=True, spare=True),
-                             SmallSat(alive=True, spare=True),
-                             SmallSat(alive=True, spare=True)]
+        expected_sat_list = [SmallSat(alive=True, spare=False, name="001"),
+                             SmallSat(alive=True, spare=False, name="008"),
+                             SmallSat(alive=True, spare=True, name="002"),
+                             SmallSat(alive=True, spare=True, name="003"),
+                             SmallSat(alive=True, spare=True, name="010"),
+                             SmallSat(alive=False, spare=True, name="004"),
+                             SmallSat(alive=False, spare=False, name="005"),
+                             SmallSat(alive=False, spare=False, name="006"),
+                             SmallSat(alive=False, spare=True, name="007"),
+                             SmallSat(alive=False, spare=False, name="009")]
 
-        sat_list.sort(alive_then_spare_then_deads)
+        sat_list_ordered = alive_then_spare_then_deads(sat_list)
 
-        assert sat_list[:5] == expected_sat_list, \
-               "Function alive_then_spare_then_deads does not sort as exepcted!"
+        assert expected_sat_list == sat_list_ordered, \
+            "Function alive_then_spare_then_deads does not sort as excepted!"
 
     def test_average_percentile(self):
         my_values = [10, 8, 9, 7, 3, 11, 7, 13, 9, 10]

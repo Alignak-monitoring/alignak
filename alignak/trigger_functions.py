@@ -51,6 +51,7 @@
 Basically used to handle perfdata, exit status and output
 
 """
+from builtins import str
 import time
 import re
 import logging
@@ -77,7 +78,7 @@ def declared(function):
     :type function: types.FunctionType
     :return : the function itself only update TRIGGER_FUNCTIONS variable
     """
-    name = function.func_name
+    name = function.__name__
     TRIGGER_FUNCTIONS[name] = function
     logger.debug("Added %s to trigger functions list ", name)
     return function
@@ -302,7 +303,7 @@ def get_object(ref):
     :rtype:
     """
     # Maybe it's already a real object, if so, return it :)
-    if not isinstance(ref, basestring):
+    if not isinstance(ref, str):
         return ref
 
     # If it is an object uuid, get the real object and return it :)
@@ -331,7 +332,7 @@ def get_objects(ref):
     :rtype: list
     """
     # Maybe it's already a real object, if so, return it :)
-    if not isinstance(ref, basestring):
+    if not isinstance(ref, str):
         return [ref]
 
     # If it is an object uuid, get the real object and return it :)

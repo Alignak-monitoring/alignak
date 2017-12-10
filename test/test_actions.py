@@ -49,7 +49,7 @@
 """
  This file is used to test actions
 """
-
+from __future__ import print_function
 import os
 import sys
 import time
@@ -83,7 +83,7 @@ class TestAction(AlignakTest):
                 return
             # 20s timeout
             if time.time() - start > 20:
-                print "Timeout: 20s!"
+                print("Timeout: 20s!")
                 return
 
     def test_action_creation(self):
@@ -96,7 +96,7 @@ class TestAction(AlignakTest):
         # Create an action without any parameters
         # Will fill only the default action properties
         action = Action()
-        for prop in action.__class__.properties.keys():
+        for prop in list(action.__class__.properties):
             # command has no default value
             if prop not in ['command']:
                 assert hasattr(action, prop)
@@ -110,7 +110,7 @@ class TestAction(AlignakTest):
         # Create a check without any parameters
         # Will fill only the default action properties
         check = Check()
-        for prop in check.__class__.properties.keys():
+        for prop in list(check.__class__.properties):
             # command has no default value
             if prop not in ['command']:
                 assert hasattr(check, prop)
@@ -123,7 +123,7 @@ class TestAction(AlignakTest):
         # Create an event_handler without any parameters
         # Will fill only the default action properties
         event_handler = EventHandler()
-        for prop in event_handler.__class__.properties.keys():
+        for prop in list(event_handler.__class__.properties):
             # command has no default value
             if prop not in ['command']:
                 assert hasattr(event_handler, prop)
@@ -445,8 +445,12 @@ class TestAction(AlignakTest):
             # Todo: As of now, it fails on Windows:(
             return
         else:
-            a.command = r"""python -u -c 'print "."*%d'""" % max_output_length
+            if sys.version_info >= (3, 0):
+                a.command = r"""python3 -u -c 'print(u"."*%d)'""" % max_output_length
+            else:
+                a.command = r"""python -u -c 'print "."*%d'""" % max_output_length
 
+        print(a.command)
         ###
         ### 1 - output is less than the max output
         ###

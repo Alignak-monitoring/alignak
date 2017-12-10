@@ -50,6 +50,7 @@
 """
 This module provide classes to handle performance data from monitoring plugin output
 """
+from six import itervalues
 import re
 from alignak.util import to_best_int_float
 
@@ -124,7 +125,7 @@ class PerfDatas:  # pylint: disable=R0903
                 self.metrics[metric.name] = metric
 
     def __iter__(self):
-        return self.metrics.itervalues()
+        return itervalues(self.metrics)
 
     def __len__(self):
         return len(self.metrics)

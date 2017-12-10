@@ -49,7 +49,7 @@
 # This file is used to test hostgroups and regex expressions expansion in
 # business rules.
 #
-
+from __future__ import print_function
 import time
 
 from alignak_test import (
@@ -453,7 +453,7 @@ class TestBusinessCorrelatorExpand(AlignakTest):
         assert 'CRITICAL' == svc1.state
         assert 'HARD' == svc1.state_type
 
-        print "Profiling without macro"
+        print("Profiling without macro")
 
         def profile_bp_rule_without_macro():
             svc_cor = self._sched.services.find_srv_by_name_and_hostname("dummy", "bprule_no_macro")
@@ -464,7 +464,7 @@ class TestBusinessCorrelatorExpand(AlignakTest):
 
         profile.runctx('profile_bp_rule_without_macro()', globals(), locals())
 
-        print "Profiling with macro"
+        print("Profiling with macro")
 
         def profile_bp_rule_macro_expand():
             svc_cor = self._sched.services.find_srv_by_name_and_hostname("dummy", "bprule_macro_expand")
@@ -475,7 +475,7 @@ class TestBusinessCorrelatorExpand(AlignakTest):
 
         profile.runctx('profile_bp_rule_macro_expand()', globals(), locals())
 
-        print "Profiling with macro modulation"
+        print("Profiling with macro modulation")
 
         def profile_bp_rule_macro_modulated():
             svc_cor = self._sched.services.find_srv_by_name_and_hostname("dummy_modulated", "bprule_macro_modulated")
