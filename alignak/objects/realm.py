@@ -216,6 +216,7 @@ class Realm(Itemgroup):
         :type member: list
         :return: None
         """
+        print("Realm, add sub member: %s" % member)
         self.all_sub_members.extend(member)
 
     def get_realm_members(self):
@@ -452,6 +453,7 @@ class Realm(Itemgroup):
 
         # If the broker manages sub realms, fill the satellite links...
         if manage_sub_realms:
+            print("Manage sub realms... broker.")
             # Now pollers
             for poller_id in self.get_all_subs_satellites_by_type('pollers', realms):
                 poller = pollers[poller_id]
