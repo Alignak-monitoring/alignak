@@ -198,7 +198,7 @@ class TestPassiveChecks(AlignakTest):
         for item in items:
             assert "Freshness period expired: %s" % expiry_date == item.output
 
-        self.assert_actions_count(0)
+        self.assert_actions_count(0)    # No raised notifications
         self.assert_checks_count(2)  # test_host_0 and test_router_0
         self.assert_checks_match(0, 'hostname test_router_0', 'command')
         self.assert_checks_match(1, 'hostname test_host_0', 'command')
@@ -307,8 +307,8 @@ class TestPassiveChecks(AlignakTest):
         assert 3600 == svc6.freshness_threshold
 
     def test_freshness_expiration_repeat(self):
-        """ We test the running property freshness_expired to know if we are in expiration freshness
-        or not
+        """ We test the running property freshness_expired to know if we are in
+        expiration freshness or not
 
         :return: None
         """
@@ -318,13 +318,13 @@ class TestPassiveChecks(AlignakTest):
         assert self.conf_is_correct
         self.sched_ = self.schedulers['scheduler-master'].sched
 
-        # Check freshness on each scheduler tick
-        self.sched_.update_recurrent_works_tick('check_freshness', 1)
-
         host_b = self.sched_.hosts.find_by_name("test_host_B")
-
         assert "x" == host_b.freshness_state
+        # Check attempts
+        assert 0 == host_b.attempt
+        assert 5 == host_b.max_check_attempts
 
+        # Force freshness threshold and latency
         host_b.freshness_threshold = 1
         host_b.__class__.additional_freshness_latency = 1
 
@@ -332,25 +332,84 @@ class TestPassiveChecks(AlignakTest):
         host.checks_in_progress = []
         host.event_handler_enabled = False
 
-        # Set the host UP - this will run the scheduler loop to check for freshness
-        expiry_date = time.strftime("%Y-%m-%d %H:%M:%S %Z")
-        self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(1)
-        self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(1)
-        self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(1)
-        self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(1)
-        self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(0.1)
+        print("Host: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update))
 
+        assert 0 == self.manage_freshness_check(1)
+        print("Host: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update))
+        # We are still ok...
+        assert "UP" == host_b.state
+        assert "HARD" == host_b.state_type
+        assert False == host_b.freshness_expired
+        # Wait for more than freshness threshold + latency...
+        time.sleep(3)
+
+        assert 1 == self.manage_freshness_check(1)
+        print("Host: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update))
+        assert "UNREACHABLE" == host_b.state
+        assert "SOFT" == host_b.state_type
+        assert False == host_b.freshness_expired
+        assert 1 == host_b.attempt
+
+        time.sleep(1)
+        assert 1 == self.manage_freshness_check(1)
+        print("Host: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update))
+        assert "UNREACHABLE" == host_b.state
+        assert "SOFT" == host_b.state_type
+        assert False == host_b.freshness_expired
+        assert 2 == host_b.attempt
+
+        time.sleep(1)
+        assert 1 == self.manage_freshness_check(1)
+        print("Host: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update))
+        assert "UNREACHABLE" == host_b.state
+        assert "SOFT" == host_b.state_type
+        assert False == host_b.freshness_expired
+        assert 3 == host_b.attempt
+
+        time.sleep(1)
+        assert 1 == self.manage_freshness_check(1)
+        print("Host: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update))
+        assert "UNREACHABLE" == host_b.state
+        assert "SOFT" == host_b.state_type
+        assert False == host_b.freshness_expired
+        assert 4 == host_b.attempt
+
+        time.sleep(1)
+        assert 1 == self.manage_freshness_check(1)
         assert "UNREACHABLE" == host_b.state
         assert "HARD" == host_b.state_type
+        assert True == host_b.is_max_attempts()
         assert True == host_b.freshness_expired
+        assert 5 == host_b.attempt
+
+        # Then no more change for this host !
+        time.sleep(1)
+        assert 0 == self.manage_freshness_check(1)
+        assert "UNREACHABLE" == host_b.state
+        assert "HARD" == host_b.state_type
+        assert True == host_b.is_max_attempts()
+        assert True == host_b.freshness_expired
+        assert 5 == host_b.attempt
+        self.show_checks()
+
+        time.sleep(1)
+        assert 0 == self.manage_freshness_check(1)
+        assert "UNREACHABLE" == host_b.state
+        assert "HARD" == host_b.state_type
+        assert True == host_b.is_max_attempts()
+        assert True == host_b.freshness_expired
+        assert 5 == host_b.attempt
+
         self.show_logs()
-        # The freshness log is never raised more than the maximum check attempts
-        assert len(self.get_log_match("alignak.objects.host] The freshness period of host 'test_host_B'")) == 5
+
+        # The freshness log is raised for each check attempt
+        assert len(self.get_log_match("alignak.objects.schedulingitem] The freshness period of host 'test_host_B'")) == 5
+        # [1512800594] WARNING: [alignak.objects.schedulingitem] The freshness period of host 'test_host_B' is expired by 0d 0h 0m 1s (threshold=0d 0h 0m 1s + 1s). Attempt: 1 / 5. I'm forcing the state to freshness state (x / SOFT).
+        # [1512800595] WARNING: [alignak.objects.schedulingitem] The freshness period of host 'test_host_B' is expired by 0d 0h 0m 2s (threshold=0d 0h 0m 1s + 1s). Attempt: 2 / 5. I'm forcing the state to freshness state (x / SOFT).
+        # [1512800596] WARNING: [alignak.objects.schedulingitem] The freshness period of host 'test_host_B' is expired by 0d 0h 0m 3s (threshold=0d 0h 0m 1s + 1s). Attempt: 3 / 5. I'm forcing the state to freshness state (x / SOFT).
+        # [1512800597] WARNING: [alignak.objects.schedulingitem] The freshness period of host 'test_host_B' is expired by 0d 0h 0m 4s (threshold=0d 0h 0m 1s + 1s). Attempt: 4 / 5. I'm forcing the state to freshness state (x / SOFT).
+        # [1512800598] WARNING: [alignak.objects.schedulingitem] The freshness period of host 'test_host_B' is expired by 0d 0h 0m 5s (threshold=0d 0h 0m 1s + 1s). Attempt: 5 / 5. I'm forcing the state to freshness state (x / HARD).
+
         assert len(self.get_log_match("Attempt: 1 / 5. ")) == 1
         assert len(self.get_log_match("Attempt: 2 / 5. ")) == 1
         assert len(self.get_log_match("Attempt: 3 / 5. ")) == 1

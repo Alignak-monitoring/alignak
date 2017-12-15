@@ -77,7 +77,6 @@ from alignak.objects.schedulingitem import SchedulingItem, SchedulingItems
 from alignak.autoslots import AutoSlots
 from alignak.util import (
     strip_and_uniq,
-    format_t_into_dhms_format,
     generate_key_value_sequences,
     is_complex_expr,
     KeyValueSyntaxError)
@@ -672,30 +671,6 @@ class Service(SchedulingItem):
                 )
             )
             self.broks.append(brok)
-
-    def raise_freshness_log_entry(self, t_stale_by):
-        """Raise freshness alert entry (warning level)
-
-        Example : "The freshness period of service 'host_name/service_description' is expired
-                   by 0d 0h 17m 6s (threshold=0d 1h 0m 0s).
-                   Attempt: 1 / 1.
-                   I'm forcing the state to freshness state (x / HARD)"
-
-        :param t_stale_by: time in seconds the service has been in a stale state
-        :type t_stale_by: int
-        :return: None
-        """
-        logger.warning("The freshness period of service '%s' is expired by %s "
-                       "(threshold=%s + %ss). Attempt: %s / %s. "
-                       "I'm forcing the state to freshness state (%s / %s).",
-                       self.get_full_name(),
-                       format_t_into_dhms_format(t_stale_by),
-                       format_t_into_dhms_format(self.freshness_threshold),
-                       self.additional_freshness_latency,
-                       self.attempt, self.max_check_attempts,
-                       self.freshness_state, self.state_type)
-        if self.is_max_attempts() or self.state_type == 'HARD':
-            self.freshness_log_raised = True
 
     def raise_notification_log_entry(self, notif, contact, host_ref):
         """Raise SERVICE NOTIFICATION entry (critical level)

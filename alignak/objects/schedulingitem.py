@@ -77,7 +77,8 @@ from alignak.dependencynode import DependencyNode
 from alignak.check import Check
 from alignak.property import (BoolProp, IntegerProp, FloatProp, SetProp,
                               CharProp, StringProp, ListProp, DictProp)
-from alignak.util import from_set_to_list, get_obj_name
+from alignak.util import from_set_to_list, get_obj_name, \
+    format_t_into_dhms_format
 from alignak.notification import Notification
 from alignak.macroresolver import MacroResolver
 from alignak.eventhandler import EventHandler
@@ -665,6 +666,18 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # pylint: disable=too-many-nested-blocks
         """Check freshness and schedule a check now if necessary.
 
+        This function is called by the scheduler if Alignak is configured to check the freshness.
+
+        It is called for hosts that have the freshness check enabled if they are only
+        passively checked.
+
+        It is called for services that have the freshness check enabled if they are only
+        passively checked and if their depending host is not in a freshness expired state
+        (freshness_expiry = True).
+
+        A log is raised when the freshess expiry is detected and the item is set as
+        freshness_expiry.
+
         :param hosts: hosts objects, used to launch checks
         :type hosts: alignak.objects.host.Hosts
         :param services: services objects, used launch checks
@@ -684,54 +697,48 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Before, check if class (host or service) have check_freshness OK
         # Then check if item want freshness, then check freshness
         cls = self.__class__
-        if not self.in_checking and cls.global_check_freshness:
-            if self.freshness_threshold != 0:
-                logger.debug("Checking freshness for %s, last state update: %s, now: %s.",
-                             self.get_full_name(), self.last_state_update, now)
-                # If we just started alignak, we begin the freshness period
-                if self.last_state_update == 0.0:
-                    self.last_state_update = now
-                if self.last_state_update < now - \
-                        (self.freshness_threshold + cls.additional_freshness_latency):
-                    # Do not raise a check for passive only checked hosts
-                    # when not in check period ...
-                    if not self.active_checks_enabled:
-                        timeperiod = timeperiods[self.check_period]
-                        if timeperiod is None or timeperiod.is_time_valid(now):
-                            self.freshness_expired = True
-                            # Add a new check for the scheduler
-                            chk = self.launch_check(now, hosts, services, timeperiods,
-                                                    macromodulations, checkmodulations, checks)
-                            expiry_date = time.strftime("%Y-%m-%d %H:%M:%S %Z")
-                            chk.output = "Freshness period expired: %s" % expiry_date
-                            chk.set_type_passive()
-                            chk.freshness_expired = True
-                            if self.my_type == 'host':
-                                if self.freshness_state == 'o':
-                                    chk.exit_status = 0
-                                elif self.freshness_state == 'd':
-                                    chk.exit_status = 2
-                                elif self.freshness_state in ['u', 'x']:
-                                    chk.exit_status = 4
-                            else:
-                                if self.freshness_state == 'o':
-                                    chk.exit_status = 0
-                                elif self.freshness_state == 'w':
-                                    chk.exit_status = 1
-                                elif self.freshness_state == 'c':
-                                    chk.exit_status = 2
-                                elif self.freshness_state == 'u':
-                                    chk.exit_status = 3
-                                elif self.freshness_state == 'x':
-                                    chk.exit_status = 4
-
-                            return chk
+        if not self.in_checking and self.freshness_threshold != 0:
+            logger.debug("Checking freshness for %s, last state update: %s, now: %s.",
+                         self.get_full_name(), self.last_state_update, now)
+            # If we never check this item, we begin the freshness period
+            if self.last_state_update == 0.0:
+                self.last_state_update = now
+            if self.last_state_update < now - \
+                    (self.freshness_threshold + cls.additional_freshness_latency):
+                # Do not create a check if the item is already freshness_expired...
+                if not self.freshness_expired:
+                    timeperiod = timeperiods[self.check_period]
+                    if timeperiod is None or timeperiod.is_time_valid(now):
+                        # Create a new check for the scheduler
+                        chk = self.launch_check(now, hosts, services, timeperiods,
+                                                macromodulations, checkmodulations, checks)
+                        expiry_date = time.strftime("%Y-%m-%d %H:%M:%S %Z")
+                        chk.output = "Freshness period expired: %s" % expiry_date
+                        chk.set_type_passive()
+                        chk.freshness_expired = True
+                        if self.my_type == 'host':
+                            if self.freshness_state == 'o':
+                                chk.exit_status = 0
+                            elif self.freshness_state == 'd':
+                                chk.exit_status = 2
+                            elif self.freshness_state in ['u', 'x']:
+                                chk.exit_status = 4
                         else:
-                            logger.debug(
-                                "Should have checked freshness for passive only"
-                                " checked host:%s, but host is not in check period.",
-                                self.host_name
-                            )
+                            if self.freshness_state == 'o':
+                                chk.exit_status = 0
+                            elif self.freshness_state == 'w':
+                                chk.exit_status = 1
+                            elif self.freshness_state == 'c':
+                                chk.exit_status = 2
+                            elif self.freshness_state == 'u':
+                                chk.exit_status = 3
+                            elif self.freshness_state == 'x':
+                                chk.exit_status = 4
+
+                        return chk
+                    else:
+                        logger.debug("Ignored freshness check for %s, because "
+                                     "we are not in the check period.", self.get_full_name())
         return None
 
     def set_myself_as_problem(self, hosts, services, timeperiods, bi_modulations):
@@ -1658,8 +1665,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if resultmod is not None:
                 chk.exit_status = resultmod.module_return(chk.exit_status, timeperiods)
 
-        if not self.freshness_expired:
-            # Only update the last state date if not in freshness expriy
+        if not chk.freshness_expired:
+            # Only update the last state date if not in freshness expiry
             self.last_state_update = time.time()
             if chk.exit_status == 1 and self.__class__.my_type == 'host':
                 chk.exit_status = 2
@@ -1694,6 +1701,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 # the check go in zombie state to be removed later
                 chk.status = 'zombie'
 
+        # print("Check: %s / %s / %s" % (chk.exit_status, self.last_state, self.get_full_name()))
         # from UP/OK/PENDING
         # to UP/OK
         if chk.exit_status == 0 and self.last_state in (ok_up, 'PENDING'):
@@ -1876,16 +1884,24 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 (self.last_state_type == 'SOFT' or self.last_state != self.state):
             self.last_hard_state_change = int(time.time())
 
+            # If the check is a freshness one, set freshness as expired
+            if chk.freshness_expired:
+                self.freshness_expired = True
+
         # update event/problem-counters
         self.update_event_and_problem_id()
 
         # Raise a log if freshness check expired
-        if self.freshness_expired and not self.freshness_log_raised:
+        if chk.freshness_expired:
             self.raise_freshness_log_entry(int(now - self.last_state_update -
                                                self.freshness_threshold))
 
-        # Now launch trigger if need. If it's from a trigger raised check,
-        # do not raise a new one
+        # if self.freshness_expired and not self.freshness_log_raised:
+        #     self.raise_freshness_log_entry(int(now - self.last_state_update -
+        #                                        self.freshness_threshold))
+
+        # Now launch trigger if needed.
+        # If it's from a trigger raised check, do not raise a new one
         if not chk.from_trigger:
             self.eval_triggers(triggers)
         if chk.from_trigger or not chk.from_trigger and \
@@ -2913,14 +2929,27 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def raise_freshness_log_entry(self, t_stale_by):  # pragma: no cover, base function
-        """Raise freshness alert entry - base function overriden by inherited objects
+    def raise_freshness_log_entry(self, t_stale_by):
+        """Raise freshness alert entry (warning level)
 
-        :param t_stale_by: time in seconds the item has been in a stale state
+        Example : "The freshness period of host 'host_name' is expired
+                   by 0d 0h 17m 6s (threshold=0d 1h 0m 0s).
+                   Attempt: 1 / 1.
+                   I'm forcing the state to freshness state (d / HARD)"
+
+        :param t_stale_by: time in seconds the host has been in a stale state
         :type t_stale_by: int
         :return: None
         """
-        pass
+        logger.warning("The freshness period of %s '%s' is expired by %s "
+                       "(threshold=%s + %ss). Attempt: %s / %s. "
+                       "I'm forcing the state to freshness state (%s / %s).",
+                       self.my_type, self.get_name(),
+                       format_t_into_dhms_format(t_stale_by),
+                       format_t_into_dhms_format(self.freshness_threshold),
+                       self.additional_freshness_latency,
+                       self.attempt, self.max_check_attempts,
+                       self.freshness_state, self.state_type)
 
     def raise_snapshot_log_entry(self, command):  # pragma: no cover, base function
         """Raise item SNAPSHOT entry (critical level)

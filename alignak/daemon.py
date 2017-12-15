@@ -71,7 +71,7 @@ import ConfigParser
 import threading
 import logging
 import warnings
-from Queue import Empty
+from Queue import Empty, Full
 from multiprocessing.managers import SyncManager
 
 try:
@@ -1396,22 +1396,33 @@ class Daemon(object):
         :rtype: bool
         """
         had_some_objects = False
-        for queue in self.modules_manager.get_external_from_queues():
+        for module in self.modules_manager.get_external_instances():
+            queue = module.from_q
             if not queue:
                 continue
             while True:
+                start = time.time()
                 queue_size = queue.qsize()
                 if queue_size:
-                    statsmgr.gauge('queue-size', queue_size)
+                    statsmgr.gauge('queues.external.%s.from.size' % module.get_name(), queue_size)
                 try:
-                    obj = queue.get(block=False)
+                    obj = queue.get_nowait()
+                except Full:
+                    logger.warning("Module %s from queue is full", module.get_name())
                 except Empty:
+                    logger.debug("Module %s from queue is full", module.get_name())
                     break
+                except (IOError, EOFError) as exp:
+                    logger.warning("Module %s from queue is no more available: %s",
+                                   module.get_name(), str(exp))
                 except Exception as exp:  # pylint: disable=W0703
                     logger.error("An external module queue got a problem '%s'", str(exp))
                 else:
                     had_some_objects = True
+                    statsmgr.timer('queues.external.%s.from.get' % module.get_name(),
+                                   time.time() - start)
                     self.add(obj)
+
         return had_some_objects
 
     def setup_alignak_logger(self, reload_configuration=True):

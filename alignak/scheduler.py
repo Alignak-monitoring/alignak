@@ -2003,22 +2003,35 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
+        _t0 = time.time()
         items = []
         if self.conf.check_host_freshness:
-            # Freshness check configured for hosts
-            items.extend(self.hosts)
+            # Freshness check is configured for hosts - get the list of concerned hosts:
+            # host check freshness is enabled and the host is only passively checked
+            hosts = [h for h in self.hosts if h.check_freshness and
+                     h.passive_checks_enabled and not h.active_checks_enabled]
+            statsmgr.gauge('freshness.hosts-count', len(hosts))
+            items.extend(hosts)
         if self.conf.check_service_freshness:
-            # Freshness check configured for services
-            items.extend(self.services)
+            # Freshness check is configured for services - get the list of concerned services:
+            # service check freshness is enabled and the service is only passively checked and
+            # the depending host is not freshness expired
+            services = [s for s in self.services if not self.hosts[s.host].freshness_expired and
+                        s.check_freshness and
+                        s.passive_checks_enabled and not s.active_checks_enabled]
+            statsmgr.gauge('freshness.services-count', len(services))
+            items.extend(services)
+        statsmgr.timer('freshness.items-list', time.time() - _t0)
 
+        _t0 = time.time()
         for elt in items:
-            if elt.check_freshness and elt.passive_checks_enabled:
-                chk = elt.do_check_freshness(self.hosts, self.services, self.timeperiods,
-                                             self.macromodulations, self.checkmodulations,
-                                             self.checks)
-                if chk is not None:
-                    self.add(chk)
-                    self.waiting_results.put(chk)
+            chk = elt.do_check_freshness(self.hosts, self.services, self.timeperiods,
+                                         self.macromodulations, self.checkmodulations,
+                                         self.checks)
+            if chk is not None:
+                self.add(chk)
+                self.waiting_results.put(chk)
+        statsmgr.timer('freshness.do-check', time.time() - _t0)
 
     def check_orphaned(self):
         """Check for orphaned checks/actions::
