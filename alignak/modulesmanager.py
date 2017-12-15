@@ -96,24 +96,24 @@ class ModulesManager(object):
         for instance in self.instances:
             instance.set_loaded_into(daemon_name)
 
-    def set_modules(self, modules):
-        """Setter for modules and allowed_type attributes
-        Allowed type attribute is set based on module type in modules arg
-
-        :param modules: value to set to module
-        :type modules:
-        :return: None
-        """
-        self.modules = modules
-
-    def set_max_queue_size(self, max_queue_size):
-        """Setter for max_queue_size attribute
-
-        :param max_queue_size: value to set
-        :type max_queue_size: int
-        :return: None
-        """
-        self.max_queue_size = max_queue_size
+    # def set_modules(self, modules):
+    #     """Setter for modules and allowed_type attributes
+    #     Allowed type attribute is set based on module type in modules arg
+    #
+    #     :param modules: value to set to module
+    #     :type modules:
+    #     :return: None
+    #     """
+    #     self.modules = modules
+    #
+    # def set_max_queue_size(self, max_queue_size):
+    #     """Setter for max_queue_size attribute
+    #
+    #     :param max_queue_size: value to set
+    #     :type max_queue_size: int
+    #     :return: None
+    #     """
+    #     self.max_queue_size = max_queue_size
 
     def load_and_init(self, modules):
         """Import, instantiate & "init" the modules we manage
@@ -142,32 +142,29 @@ class ModulesManager(object):
                 # Check existing module properties
                 # Todo: check all mandatory properties
                 if not hasattr(python_module, 'properties'):  # pragma: no cover
-                    self.configuration_errors.append(
-                        "Module %s is missing a 'properties' dictionary" % module.python_name
-                    )
+                    self.configuration_errors.append("Module %s is missing a 'properties' "
+                                                     "dictionary" % module.python_name)
                     raise AttributeError
                 logger.info("Module properties: %s", getattr(python_module, 'properties'))
 
                 # Check existing module get_instance method
                 if not hasattr(python_module, 'get_instance') or \
                         not callable(getattr(python_module, 'get_instance')):  # pragma: no cover
-                    self.configuration_errors.append(
-                        "Module %s is missing a 'get_instance' function" % module.python_name
-                    )
+                    self.configuration_errors.append("Module %s is missing a 'get_instance' "
+                                                     "function" % module.python_name)
                     raise AttributeError
 
                 self.modules_assoc.append((module, python_module))
                 logger.info("Imported '%s' for %s", module.python_name, module.module_alias)
             except ImportError as exp:  # pragma: no cover, simple protection
-                self.configuration_errors.append(
-                    "Module %s (%s) can't be loaded, Python importation error: %s" %
-                    (module.python_name, module.module_alias, str(exp))
-                )
+                self.configuration_errors.append("Module %s (%s) can't be loaded, Python "
+                                                 "importation error: %s" % (module.python_name,
+                                                                            module.module_alias,
+                                                                            str(exp)))
             except AttributeError:  # pragma: no cover, simple protection
-                self.configuration_errors.append(
-                    "Module %s (%s) can't be loaded, module configuration" %
-                    (module.python_name, module.module_alias)
-                )
+                self.configuration_errors.append("Module %s (%s) can't be loaded, "
+                                                 "module configuration" % (module.python_name,
+                                                                           module.module_alias))
             else:
                 logger.info("Loaded Python module '%s' (%s)",
                             module.python_name, module.module_alias)
@@ -248,31 +245,32 @@ class ModulesManager(object):
         """
         self.clear_instances()
 
-        for (mod_conf, module) in self.modules_assoc:
-            mod_conf.properties = module.properties.copy()
+        for (alignak_module, python_module) in self.modules_assoc:
+            alignak_module.properties = python_module.properties.copy()
+            logger.info("Alignak starting module '%s', parameters: %s",
+                        alignak_module.get_name(), alignak_module.__dict__)
             try:
-                instance = module.get_instance(mod_conf)
+                instance = python_module.get_instance(alignak_module)
                 if not isinstance(instance, BaseModule):  # pragma: no cover, simple protection
-                    self.configuration_errors.append(
-                        "Module %s instance is not a BaseModule instance: %s" %
-                        (module.module_alias, type(instance))
-                    )
+                    self.configuration_errors.append("Module %s instance is not a "
+                                                     "BaseModule instance: %s"
+                                                     % (alignak_module.get_name(),
+                                                        type(instance)))
 
                 if instance.modules and instance.modules:
-                    self.configuration_warnings.append(
-                        "Module %s instance defines some sub-modules. "
-                        "This feature is not currently supported" % (module.module_alias)
-                    )
+                    self.configuration_warnings.append("Module %s instance defines some "
+                                                       "sub-modules. This feature is not "
+                                                       "currently supported"
+                                                       % (alignak_module.get_name()))
                     raise AttributeError
             except Exception as exp:  # pylint: disable=W0703
                 # pragma: no cover, simple protection
                 logger.error("The module %s raised an exception on loading, I remove it!",
-                             mod_conf.get_name())
+                             alignak_module.get_name())
                 logger.exception("Exception: %s", exp)
-                self.configuration_errors.append(
-                    "The module %s raised an exception on loading: %s, I remove it!" %
-                    (mod_conf.get_name(), str(exp))
-                )
+                self.configuration_errors.append("The module %s raised an exception on "
+                                                 "loading: %s, I remove it!"
+                                                 % (alignak_module.get_name(), str(exp)))
             else:
                 # Give the module the data to which daemon/module it is loaded into
                 instance.set_loaded_into(self.daemon_name)

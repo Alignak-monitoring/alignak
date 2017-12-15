@@ -360,3 +360,167 @@ class TestModules(AlignakTest):
         self.assert_any_log_match(re.escape(
             "I'm stopping module "
         ))
+
+    def test_modulemanager_several_modules(self):
+        """ Module manager manages its modules
+
+        Test if the module manager manages correctly all the modules
+
+        Configured with several modules
+        :return:
+        """
+        self.print_header()
+        self.setup_with_file('cfg/cfg_default_with_modules.cfg')
+        assert self.conf_is_correct
+
+        for mod in self.arbiter.conf.modules:
+            print (mod.__dict__)
+
+        time_hacker.set_real_time()
+
+        # Create an Alignak module
+        mod = Module({
+            'module_alias': 'mod-example',
+            'module_types': 'example',
+            'python_name': 'alignak_module_example',
+            'option1': 'foo',
+            'option2': 'bar',
+            'option3': 1
+        })
+        mod2 = Module({
+            'module_alias': 'mod-example-2',
+            'module_types': 'example',
+            'python_name': 'alignak_module_example',
+            'option1': 'faa',
+            'option2': 'bor',
+            'option3': 1
+        })
+        # Create the modules manager for a daemon type
+        self.modulemanager = ModulesManager('receiver', None)
+
+        # Load an initialize the modules:
+        #  - load python module
+        #  - get module properties and instances
+        self.modulemanager.load_and_init([mod, mod2])
+        self.show_logs()
+
+        # Loading module logs
+        self.assert_any_log_match(re.escape(
+            "Importing Python module 'alignak_module_example' for mod-example..."
+        ))
+        self.assert_any_log_match(re.escape(
+            "Importing Python module 'alignak_module_example' for mod-example-2..."
+        ))
+        self.assert_any_log_match(re.escape(
+            "Module properties: {'daemons': ['arbiter', 'broker', 'scheduler', 'poller', "
+            "'receiver', 'reactionner'], 'phases': ['configuration', 'late_configuration', "
+            "'running', 'retention'], 'type': 'example', 'external': True}"
+        ))
+        self.assert_any_log_match(re.escape(
+            "Imported 'alignak_module_example' for mod-example"
+        ))
+        self.assert_any_log_match(re.escape(
+            "Imported 'alignak_module_example' for mod-example-2"
+        ))
+        self.assert_any_log_match(re.escape(
+            "[alignak.module.mod-example] configuration, foo, bar, 1"
+        ))
+        self.assert_any_log_match(re.escape(
+            "[alignak.module.mod-example-2] configuration, faa, bor, 1"
+        ))
+
+        my_module = self.modulemanager.instances[0]
+        my_module2 = self.modulemanager.instances[1]
+        assert my_module.is_external
+        assert my_module2.is_external
+
+        # Get list of not external modules
+        assert [] == self.modulemanager.get_internal_instances()
+        for phase in ['configuration', 'late_configuration', 'running', 'retention']:
+            assert [] == self.modulemanager.get_internal_instances(phase)
+
+        # Get list of external modules
+        assert [my_module, my_module2] == self.modulemanager.get_external_instances()
+        for phase in ['configuration', 'late_configuration', 'running', 'retention']:
+            assert [my_module, my_module2] == self.modulemanager.get_external_instances(phase)
+
+        # Start external modules
+        self.modulemanager.start_external_instances()
+
+        # Starting external module logs
+        self.assert_any_log_match(re.escape(
+            "Starting external module mod-example"
+        ))
+        self.assert_any_log_match(re.escape(
+            "Starting external process for module mod-example"
+        ))
+        self.assert_any_log_match(re.escape(
+            "mod-example is now started (pid="
+        ))
+
+        # Check alive
+        assert my_module.process is not None
+        assert my_module.process.is_alive()
+
+        # Kill the external module (normal stop is .stop_process)
+        my_module.kill()
+        time.sleep(0.1)
+        # Should be dead (not normally stopped...) but we still know a process for this module!
+        assert my_module.process is not None
+
+        # Stopping module logs
+        self.assert_any_log_match(re.escape(
+            "Killing external module "
+        ))
+        self.assert_any_log_match(re.escape(
+            "External module killed"
+        ))
+
+        # Nothing special ...
+        self.modulemanager.check_alive_instances()
+
+        # Try to restart the dead modules
+        self.modulemanager.try_to_restart_deads()
+
+        # In fact it's too early, so it won't do it
+
+        # Here the inst should still be dead
+        assert not my_module.process.is_alive()
+
+        # So we lie
+        my_module.last_init_try = -5
+        self.modulemanager.check_alive_instances()
+        self.modulemanager.try_to_restart_deads()
+
+        # In fact it's too early, so it won't do it
+
+        # Here the inst should be alive again
+        assert my_module.process.is_alive()
+
+        # should be nothing more in to_restart of
+        # the module manager
+        assert [] == self.modulemanager.to_restart
+
+        # Now we look for time restart so we kill it again
+        my_module.kill()
+        time.sleep(0.2)
+        assert not my_module.process.is_alive()
+
+        # Should be too early
+        self.modulemanager.check_alive_instances()
+        self.modulemanager.try_to_restart_deads()
+        assert not my_module.process.is_alive()
+        # We lie for the test again
+        my_module.last_init_try = -5
+        self.modulemanager.check_alive_instances()
+        self.modulemanager.try_to_restart_deads()
+
+        # Here the inst should be alive again
+        assert my_module.process.is_alive()
+
+        # And we clear all now
+        self.modulemanager.stop_all()
+        # Stopping module logs
+        self.assert_any_log_match(re.escape(
+            "I'm stopping module "
+        ))

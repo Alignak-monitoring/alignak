@@ -77,6 +77,15 @@ class Module(Item):
 
     macros = {}
 
+    def __init__(self, params=None, parsing=True):
+        super(Module, self).__init__(params, parsing=parsing)
+
+        # Remove extra Item base class properties...
+        for prop in ['customs', 'plus', 'downtimes', 'old_properties',
+                     'configuration_errors', 'configuration_warnings']:
+            if getattr(self, prop, None):
+                delattr(self, prop)
+
     # For debugging purpose only (nice name)
     def get_name(self):
         """
