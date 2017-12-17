@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # -*- mode: python ; coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #

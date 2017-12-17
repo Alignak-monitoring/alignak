@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -70,14 +70,14 @@ class ReceiverLink(SatelliteLink):
         'accept_passive_unknown_check_results':
             BoolProp(default=False, fill_brok=['full_status'], to_send=True),
     })
-
-    def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
-        """
-        Add this reactionner to the realm
-
-        :return: None
-        """
-        self.realm.receivers.append(self)
+    #
+    # def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
+    #     """
+    #     Add this reactionner to the realm
+    #
+    #     :return: None
+    #     """
+    #     self.realm.receivers.append(self)
 
 
 class ReceiverLinks(SatelliteLinks):

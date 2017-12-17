@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -519,22 +519,6 @@ class Timeperiod(Item):
                     return periods_exclude[0][0]
             return periods[0][1]
         return original_t
-
-    def has(self, prop):
-        """
-        Check if self have prop attribute
-
-        :param prop: property name
-        :type prop: string
-        :return: true if self has this attribute
-        :rtype: bool
-        """
-        warnings.warn(
-            "{s.__class__.__name__} is deprecated, please use "
-            "`hasattr(your_object, attr)` instead. This has() method will "
-            "be removed in a later version.".format(s=self),
-            DeprecationWarning, stacklevel=2)
-        return hasattr(self, prop)
 
     def is_correct(self):
         """

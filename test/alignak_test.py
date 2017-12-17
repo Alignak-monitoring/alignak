@@ -279,7 +279,7 @@ class AlignakTest(unittest2.TestCase):
                 }
                 self._scheduler_daemon = Alignak(**args)
                 self._scheduler_daemon.setup_alignak_logger()
-                self._scheduler_daemon.load_modules_manager(scheduler.name)
+                self._scheduler_daemon.load_modules_manager()
 
                 # Simulate the scheduler daemon receiving the configuration from its arbiter
                 pushed_configuration = scheduler.unit_test_pushed_configuration
@@ -314,7 +314,7 @@ class AlignakTest(unittest2.TestCase):
                         #     'local_log': "/tmp/%s.log" % broker.get_name(), 'port': None
                         # }
                         # broker_daemon = Broker(**args)
-                        # broker_daemon.load_modules_manager(broker.get_name())
+                        # broker_daemon.load_modules_manager()
                         # broker_daemon.new_conf = broker.cfg
                         # if broker_daemon.new_conf:
                         #     broker_daemon.setup_new_conf()
@@ -335,7 +335,7 @@ class AlignakTest(unittest2.TestCase):
                     'local_log': "/tmp/%s.log" % receiver.get_name(), 'port': None
                 }
                 self._receiver_daemon = Receiver(**args)
-                self._receiver_daemon.load_modules_manager(receiver.get_name())
+                self._receiver_daemon.load_modules_manager()
 
                 # Simulate the scheduler daemon receiving the configuration from its arbiter
                 pushed_configuration = receiver.unit_test_pushed_configuration

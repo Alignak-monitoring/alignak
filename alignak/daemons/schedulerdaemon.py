@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -65,10 +65,9 @@ from alignak.brok import Brok
 from alignak.external_command import ExternalCommandManager
 from alignak.daemon import Daemon
 from alignak.http.scheduler_interface import SchedulerInterface
-from alignak.property import PathProp, IntegerProp, StringProp
+from alignak.property import IntegerProp, StringProp
 from alignak.satellite import BaseSatellite
 from alignak.objects.satellitelink import SatelliteLink
-from alignak.stats import statsmgr
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -91,7 +90,8 @@ class Alignak(BaseSatellite):
 
         :param kwargs: command line arguments
         """
-        super(BaseSatellite, self).__init__(kwargs.get('daemon_name', 'Default-scheduler'), **kwargs)
+        super(BaseSatellite, self).__init__(kwargs.get('daemon_name',
+                                                       'Default-scheduler'), **kwargs)
 
         self.http_interface = SchedulerInterface(self)
         self.sched = Scheduler(self)
@@ -116,12 +116,13 @@ class Alignak(BaseSatellite):
         # ---
 
         # And possible links for satellites
+        self.arbiters = {}
         self.brokers = {}
         self.pollers = {}
         self.reactionners = {}
         self.receivers = {}
 
-        # Modules are load one time
+        # Modules are only loaded one time
         self.have_modules = False
 
     def compensate_system_time_change(self, difference, timeperiods):  # pragma: no cover,
@@ -288,21 +289,31 @@ class Alignak(BaseSatellite):
                     logger.debug("[%s] - my current %s: %s", self.name, link_type, my_satellites)
                     # Must look if we already had a configuration and save our broks
                     already_got = received_satellites.get('_id') in my_satellites
+                    broks = {}
+                    actions = {}
+                    wait_homerun = {}
+                    external_commands = {}
+                    running_id = 0
                     if already_got:
                         print("Already got!")
-                        broks = my_satellites[link_uuid]['broks']
-                        running_id = my_satellites[link_uuid]['running_id']
-                    else:
-                        broks = {}
-                        running_id = 0
+                        # Save some information
+                        running_id = my_satellites[link_uuid].running_id
+                        (broks, actions,
+                         wait_homerun, external_commands) = link.get_and_clear_context()
+                        # Delete the former link
+                        del my_satellites[link_uuid]
 
                     # My new satellite link...
                     new_link = SatelliteLink.get_a_satellite_link(
                         link_type[:-1], received_satellites[link_uuid])
-                    print("My new %s satellite: %s" % (link_type, new_link))
                     my_satellites[link_uuid] = new_link
+                    print("My new %s satellite: %s" % (link_type, new_link))
+
                     new_link.running_id = running_id
+                    new_link.external_commands = external_commands
                     new_link.broks = broks
+                    new_link.wait_homerun = wait_homerun
+                    new_link.actions = actions
 
                     # Replacing the satellite address and port by those defined in satellitemap
                     if new_link.name in self.cur_conf['override_conf'].get('satellitemap', {}):
@@ -312,7 +323,8 @@ class Alignak(BaseSatellite):
                                        "Please check whether this is necessary!",
                                        new_link.name, overriding)
                         # satellite = dict(satellite)  # make a copy
-                        # satellite_object.update(self.cur_conf['override_conf'].get('satellitemap', {})[satellite_object.name])
+                        # satellite_object.update(self.cur_conf['override_conf'].
+                        # get('satellitemap', {})[satellite_object.name])
 
                 logger.debug("We have our %s: %s", link_type, my_satellites)
                 logger.info("We have our %s:", link_type)
@@ -329,6 +341,8 @@ class Alignak(BaseSatellite):
             # Scheduler modules
             if not self.have_modules:
                 self.modules = self_conf['modules']
+                print("I received some modules configuration: %s" % self_conf)
+                print("I received some modules configuration: %s" % self.modules)
                 self.have_modules = True
 
                 self.do_load_modules(self.modules)
@@ -362,7 +376,8 @@ class Alignak(BaseSatellite):
             # Now create the external commands manager
             # We are an applyer: our role is not to dispatch commands, but to apply them
             ecm = ExternalCommandManager(self.conf, 'applyer', self,
-                                         self_conf.get('accept_passive_unknown_check_results', False))
+                                         self_conf.get('accept_passive_unknown_check_results',
+                                                       False))
 
             # Scheduler needs to know about this external command manager to use it if necessary
             self.sched.set_external_commands_manager(ecm)
@@ -429,7 +444,7 @@ class Alignak(BaseSatellite):
             if not self.do_daemon_init_and_start():
                 return
 
-            self.load_modules_manager(self.name)
+            self.load_modules_manager()
 
             # self.uri = self.http_daemon.uri
             # logger.info("[Scheduler] General interface is at: %s", self.uri)

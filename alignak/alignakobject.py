@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -28,7 +28,8 @@ from alignak.property import NONE_OBJECT, SetProp, StringProp
 
 class AlignakObject(object):
     """This class provides a generic way to instantiate alignak objects.
-    Attribute are serialized dynamically, whether we un-serialize them create them at run / parsing time
+    Attribute are serialized dynamically, whether we un-serialize
+    them create them at run / parsing time
 
     """
 

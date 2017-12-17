@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -118,7 +118,9 @@ class Dispatcher:
             logger.debug("- %s", realm)
             for cfg_id in realm.parts:
                 realm_config = realm.parts[cfg_id]
-                print("  . %s, flavor:%s, %s" % (realm_config.uuid, getattr(realm_config, 'push_flavor', 'None'), realm_config))
+                print("  . %s, flavor:%s, %s"
+                      % (realm_config.uuid, getattr(realm_config, 'push_flavor', 'None'),
+                         realm_config))
 
         logger.debug("Dispatcher satellites configuration:")
         for sat_type in ('arbiters', 'schedulers', 'reactionners',
@@ -135,7 +137,8 @@ class Dispatcher:
                 continue
 
             for satellite in getattr(self, sat_type):
-                satellite.set_arbiter_satellitemap(arbiter_link.satellitemap.get(satellite.name, {}))
+                satellite.set_arbiter_satellitemap(
+                    arbiter_link.satellitemap.get(satellite.name, {}))
 
         self.dispatch_queue = {'schedulers': [], 'reactionners': [], 'brokers': [],
                                'pollers': [], 'receivers': []}
@@ -192,7 +195,9 @@ class Dispatcher:
         print("Dispatcher, check alive...")
         for daemon_link in self.all_daemons_links:
             daemon_link.update_infos(now, test=test)
-            print(" - %s manages: %s / %s" % (daemon_link.name, daemon_link.managed_confs, getattr(daemon_link, 'conf', None)))
+            print(" - %s manages: %s / %s"
+                  % (daemon_link.name, daemon_link.managed_confs,
+                     getattr(daemon_link, 'conf', None)))
 
             # Not alive needs new need_conf
             # and spare too if they do not have already a conf
@@ -205,7 +210,8 @@ class Dispatcher:
             if arbiter_link != self.arbiter_link and arbiter_link.spare:
                 print("Updating informations for: %s" % arbiter_link)
                 arbiter_link.update_infos(now, test=test)
-                print(" - manages: %s / %s" % (arbiter_link.managed_confs, getattr(arbiter_link, 'conf', None)))
+                print(" - manages: %s / %s"
+                      % (arbiter_link.managed_confs, getattr(arbiter_link, 'conf', None)))
 
     def check_dispatch(self, test=False):
         """Check if all active items are still alive
@@ -224,7 +230,8 @@ class Dispatcher:
         #                 logger.critical('The arbiter tries to send a configuration but '
         #                              'it is not a MASTER one? Check your configuration!')
         #                 continue
-        #             logger.info('Sending configuration to the arbiter: %s', arbiter_link.get_name())
+        #             logger.info('Sending configuration to the arbiter: %s',
+        # arbiter_link.get_name())
         #             arbiter_link.put_conf(self.conf.spare_arbiter_conf)
         #
         #         # Ok, it already has the conf. I remember that
@@ -532,9 +539,8 @@ class Dispatcher:
                         'override_conf': scheduler_link.get_override_configuration(),
                         # 'modules': scheduler_link.modules
                     })
-                    # scheduler_link.conf_package = conf_package
 
-                    # The configuration part is assigned to a scheduler
+                    # The configuration part is assigned to a scheduler
                     part.is_assigned = True
                     part.assigned_to = scheduler_link
 
@@ -542,7 +548,8 @@ class Dispatcher:
                     pickled_conf = cPickle.dumps(scheduler_link.cfg)
                     logger.info('[%s] scheduler configuration %s size: %d bytes',
                                 realm.name, scheduler_link.name, sys.getsizeof(pickled_conf))
-                    print('- [%s] scheduler configuration %s size: %d bytes' % (realm.name, scheduler_link.name, sys.getsizeof(pickled_conf)))
+                    print('- [%s] scheduler configuration %s size: %d bytes'
+                          % (realm.name, scheduler_link.name, sys.getsizeof(pickled_conf)))
 
                     logger.info('[%s] configuration %s (%s) assigned to %s',
                                 realm.name, part.uuid, part.push_flavor, scheduler_link.name)
@@ -617,22 +624,22 @@ class Dispatcher:
                 'conf_uuid': part.uuid,
                 'push_flavor': part.push_flavor,
 
-                'schedulers': { part.uuid: realm.to_satellites[sat_type][part.uuid] },
+                'schedulers': {part.uuid: realm.to_satellites[sat_type][part.uuid]},
                 'arbiters': arbiters_cfg if sat_link.manage_arbiters else {}
             })
 
             # Brokers should have poller/reactionners links too
             if sat_type == "broker":
-                sat_link.cfg.update(realm.get_links_for_a_broker(self.pollers, self.reactionners,
-                                                                 self.receivers, self.conf.realms,
-                                                                 sat_link.manage_sub_realms))
+                sat_link.cfg.update({'satellites': realm.get_links_for_a_broker(
+                    self.pollers, self.reactionners, self.receivers, self.conf.realms,
+                    sat_link.manage_sub_realms)})
 
             # Dump the configuration part size
             pickled_conf = cPickle.dumps(sat_link.cfg)
             logger.info('[%s] %s %s configuration size: %d bytes',
                         realm.name, sat_type, sat_link.name, sys.getsizeof(pickled_conf))
-            print('- [%s] %s configuration %s size: %d bytes' % (
-            realm.name, sat_type, sat_link.name, sys.getsizeof(pickled_conf)))
+            print('- [%s] %s configuration %s size: %d bytes'
+                  % (realm.name, sat_type, sat_link.name, sys.getsizeof(pickled_conf)))
 
             sat_link.managed_confs = {part.uuid: part.push_flavor}
             sat_link.conf = part
@@ -693,8 +700,8 @@ class Dispatcher:
 
                 if not link.have_conf(self.conf.magic_hash):
                     if not hasattr(self.conf, 'spare_arbiter_conf'):
-                        logger.critical('The arbiter tries to send a configuration but '
-                                     'it is not a MASTER one? Check your configuration!')
+                        logger.critical("The arbiter tries to send a configuration but it "
+                                        "is not a MASTER one? Check your configuration!")
                         continue
                     logger.info('Sending configuration to the arbiter: %s', link.name)
                     link.is_sent = link.put_conf(link.spare_arbiter_conf)

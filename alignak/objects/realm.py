@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -420,7 +420,6 @@ class Realm(Itemgroup):
 
         # If the broker manages sub realms, fill the satellite links...
         if manage_sub_realms:
-            print("Manage sub realms... broker.")
             # Now pollers
             for poller_id in self.get_all_subs_satellites_by_type('pollers', realms):
                 poller = pollers[poller_id]

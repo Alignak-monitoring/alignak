@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -85,8 +85,6 @@ from alignak.downtime import Downtime
 from alignak.comment import Comment
 from alignak.util import average_percentile
 from alignak.load import Load
-from alignak.http.client import HTTPClientException, HTTPClientConnectionException, \
-    HTTPClientTimeoutException
 from alignak.stats import statsmgr
 from alignak.misc.common import DICT_MODATTR
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
@@ -396,7 +394,8 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # Update our hosts/services freshness threshold
         # todo: necessary?
-        # Global configuration should have been updated in the items during the configuration parsing
+        # Global configuration should have been updated in the items during the
+        # configuration parsing
         # if self.conf.check_host_freshness and self.conf.host_freshness_check_interval >= 0:
         #     for host in self.hosts:
         #         if host.freshness_threshold == -1:
@@ -558,10 +557,12 @@ class Scheduler(object):  # pylint: disable=R0902
         else:
             print("%s - adding a brok to all brokers: %s" % (self.name, brok.type))
             # add brok to all brokers
-            for broker_name in self.brokers:
-                print("%s - for: %s - %s" % (self.name, broker_name, brok))
+            for broker_link_uuid in self.brokers:
+                print("%s - for: %s - %s" % (self.name, broker_link_uuid, brok))
+                print("%s" % (self.brokers[broker_link_uuid]))
+                print("%s" % (self.brokers[broker_link_uuid].broks))
                 # self.brokers[broker_name]['broks'][brok.uuid] = brok
-                self.brokers[broker_name].broks[brok.uuid] = brok
+                self.brokers[broker_link_uuid].broks[brok.uuid] = brok
 
     def add_notification(self, notif):
         """Add a notification into actions list
@@ -1215,21 +1216,8 @@ class Scheduler(object):  # pylint: disable=R0902
             if satellites is self.reactionners:
                 s_type = 'reactionner'
 
-            for link in [p for p in satellites.values() if p['passive']]:
-                logger.debug("Try to send actions to the %s '%s'", s_type, link['name'])
-
-                if link['con'] is None:
-                    if not self.sched_daemon.daemon_connection_init(link['instance_id'],
-                                                                    s_type=s_type):
-                        if link['connection_attempt'] <= link['max_failed_connections']:
-                            logger.warning("The connection for the %s '%s' cannot be established, "
-                                           "it is not possible to get actions for this %s.",
-                                           s_type, link['name'], s_type)
-                        else:
-                            logger.error("The connection for the %s '%s' cannot be established, "
-                                         "it is not possible to get actions for this %s.",
-                                         s_type, link['name'], s_type)
-                        continue
+            for link in [s for s in satellites.values() if s.passive]:
+                logger.debug("Try to send actions to the %s '%s'", s_type, link.name)
 
                 # Get actions to execute
                 lst = []
@@ -1245,31 +1233,14 @@ class Scheduler(object):  # pylint: disable=R0902
                     logger.debug("Nothing to do...")
                     continue
 
-                try:
-                    logger.info("Sending %d actions to the %s '%s'", len(lst), s_type, link['name'])
-                    link['con'].post('push_actions', {'actions': lst, 'sched_id': self.instance_id})
-                    if s_type == 'poller':
-                        self.nb_checks_launched += len(lst)
-                        self.nb_checks_launched_passive += len(lst)
-                    if s_type == 'reactionner':
-                        self.nb_actions_launched += len(lst)
-                        self.nb_actions_launched_passive += len(lst)
-                except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-                    logger.warning("Connection error with the %s '%s' when pushing actions: %s",
-                                   s_type, link['name'], str(exp))
-                    link['con'] = None
-                except HTTPClientTimeoutException as exp:
-                    logger.warning("Connection timeout with the %s '%s' when pushing actions: %s",
-                                   s_type, link['name'], str(exp))
-                    link['con'] = None
-                except HTTPClientException as exp:  # pragma: no cover, simple protection
-                    logger.error("Connection error with the %s '%s' when pushing actions: %s",
-                                 s_type, link['name'], str(exp))
-                    link['con'] = None
-                except KeyError as exp:  # pragma: no cover, simple protection
-                    logger.warning("push_actions: The %s '%s' is not initialized: %s",
-                                   s_type, link['name'], str(exp))
-                    link['con'] = None
+                logger.info("Sending %d actions to the %s '%s'", len(lst), s_type, link.name)
+                link.push_actions(lst, self.instance_id)
+                if s_type == 'poller':
+                    self.nb_checks_launched += len(lst)
+                    self.nb_checks_launched_passive += len(lst)
+                if s_type == 'reactionner':
+                    self.nb_actions_launched += len(lst)
+                    self.nb_actions_launched_passive += len(lst)
 
     def get_actions_from_passives_satellites(self):
         #  pylint: disable=W0703
@@ -1283,77 +1254,38 @@ class Scheduler(object):  # pylint: disable=R0902
             if satellites is self.reactionners:
                 s_type = 'reactionner'
 
-            for link in [p for p in satellites.values() if p['passive']]:
-                logger.debug("Try to get results from the %s '%s'", s_type, link['name'])
+            for link in [s for s in satellites.values() if s.passive]:
+                logger.debug("Try to get results from the %s '%s'", s_type, link.name)
 
-                if link['con'] is None:
-                    if not self.sched_daemon.daemon_connection_init(link['instance_id'],
-                                                                    s_type=s_type):
-                        if link['connection_attempt'] <= link['max_failed_connections']:
-                            logger.warning("The connection for the %s '%s' cannot be established, "
-                                           "it is not possible to get results for this %s.",
-                                           s_type, link['name'], s_type)
-                        else:
-                            logger.error("The connection for the %s '%s' cannot be established, "
-                                         "it is not possible to get results for this %s.",
-                                         s_type, link['name'], s_type)
-                        continue
+                results = link.get_returns(self.instance_id)
+                if results:
+                    logger.debug("Got some results: %d results from %s", len(results), link.name)
+                else:
+                    logger.debug("-> no passive results from %s", link.name)
+                    continue
 
-                try:
-                    results = link['con'].get('get_returns', {'sched_id': self.instance_id},
-                                              wait='long')
-                    if results:
-                        who_sent = link['name']
-                        logger.debug("Got some results: %d results from %s", len(results), who_sent)
-                    else:
-                        logger.debug("-> no passive results from %s", link['name'])
-                        continue
+                results = unserialize(results, no_load=True)
+                if results:
+                    logger.info("Received %d passive results from %s",
+                                len(results), link['name'])
+                self.nb_checks_results += len(results)
 
-                    results = unserialize(results, no_load=True)
-                    if results:
-                        logger.info("Received %d passive results from %s",
-                                    len(results), link['name'])
-                    self.nb_checks_results += len(results)
+                for result in results:
+                    logger.debug("-> result: %s", result)
+                    result.set_type_passive()
 
-                    for result in results:
-                        logger.debug("-> result: %s", result)
-                        result.set_type_passive()
+                    # Update scheduler counters
+                    self.counters[result.is_a]["total"]["results"]["total"] += 1
+                    if result.status not in self.counters[result.is_a]["total"]["results"]:
+                        self.counters[result.is_a]["total"]["results"][result.status] = 0
+                    self.counters[result.is_a]["total"]["results"][result.status] += 1
+                    self.counters[result.is_a]["active"]["results"]["total"] += 1
+                    if result.status not in self.counters[result.is_a]["active"]["results"]:
+                        self.counters[result.is_a]["active"]["results"][result.status] = 0
+                    self.counters[result.is_a]["active"]["results"][result.status] += 1
 
-                        # Update scheduler counters
-                        self.counters[result.is_a]["total"]["results"]["total"] += 1
-                        if result.status not in self.counters[result.is_a]["total"]["results"]:
-                            self.counters[result.is_a]["total"]["results"][result.status] = 0
-                        self.counters[result.is_a]["total"]["results"][result.status] += 1
-                        self.counters[result.is_a]["active"]["results"]["total"] += 1
-                        if result.status not in self.counters[result.is_a]["active"]["results"]:
-                            self.counters[result.is_a]["active"]["results"][result.status] = 0
-                        self.counters[result.is_a]["active"]["results"][result.status] += 1
-
-                        # Append to the scheduler result queue
-                        self.waiting_results.put(result)
-                except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-                    logger.warning("Connection error with the %s '%s' when pushing results: %s",
-                                   s_type, link['name'], str(exp))
-                    link['con'] = None
-                except HTTPClientTimeoutException as exp:
-                    logger.warning("Connection timeout with the %s '%s' when pushing results: %s",
-                                   s_type, link['name'], str(exp))
-                    link['con'] = None
-                except HTTPClientException as exp:  # pragma: no cover, simple protection
-                    logger.error("Error with the %s '%s' when pushing results: %s",
-                                 s_type, link['name'], str(exp))
-                    link['con'] = None
-                except KeyError as exp:  # pragma: no cover, simple protection
-                    logger.warning("get_actions: The %s '%s' is not initialized: %s",
-                                   s_type, link['name'], str(exp))
-                    link['con'] = None
-                except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
-                    logger.error('Cannot un-serialize passive results from satellite %s : %s',
-                                 link['name'], exp)
-                except Exception as exp:  # pragma: no cover, simple protection
-                    logger.error('Cannot load passive results from satellite %s : %s',
-                                 link['name'], str(exp))
-                    logger.exception(exp)
+                    # Append to the scheduler result queue
+                    self.waiting_results.put(result)
 
     def manage_internal_checks(self):
         """Run internal checks

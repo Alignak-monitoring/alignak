@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -73,8 +73,6 @@ import time
 import traceback
 import threading
 
-from alignak.http.client import HTTPClient, HTTPClientException, HTTPClientConnectionException
-from alignak.http.client import HTTPClientTimeoutException
 from alignak.http.generic_interface import GenericInterface
 
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
@@ -174,7 +172,8 @@ class BaseSatellite(Daemon):
         :return: list of satellites
         :rtype: alignak.objects.SatelliteLinks
         """
-        print("Get '%s' satellites list for: %s / %s" % (s_type if s_type else 'All', self.type, self.name))
+        print("Get '%s' satellites list for: %s / %s" % (s_type if s_type else 'All',
+                                                         self.type, self.name))
         # print("Self: %s / %s" % (self, self.__dict__))
         satellites = {
             'arbiter': getattr(self, 'arbiters', []),
@@ -294,12 +293,7 @@ class BaseSatellite(Daemon):
             logger.info("[%s] The running id of the %s %s changed (%s), "
                         "we must clear its context.",
                         self.name, s_type, link.name, link.running_id)
-            if hasattr(link, 'external_commands'):
-                link.external_commands.clear()
-            if hasattr(link, 'wait_homerun'):
-                link.wait_homerun.clear()
-            if hasattr(link, 'broks'):
-                link.broks.clear()
+            (_, _, _, _) = link.get_and_clear_context()
 
         # If I am a broker and I reconnect to my scheduler
         # pylint: disable=E1101
@@ -426,7 +420,7 @@ class BaseSatellite(Daemon):
                 time.tzset()
 
             # Configure our Stats manager
-            statsmgr.register(self.name, self.type,
+            statsmgr.register(self.name,
                               statsd_host=self_conf.get('statsd_host', 'localhost'),
                               statsd_port=self_conf.get('statsd_port', 8125),
                               statsd_prefix=self_conf.get('statsd_prefix', 'alignak'),
@@ -454,26 +448,18 @@ class BaseSatellite(Daemon):
                 for link_uuid in received_satellites:
                     print("- %s / %s" % (link_uuid, received_satellites[link_uuid]))
                     # Must look if we already had a configuration and save our context
-                    # old_link_uuid = self.get_previous_link(self.cur_conf, link_uuid, link_type[:-11])
-
                     already_got = received_satellites.get('_id') in my_satellites
-                    external_commands = {}
-                    wait_homerun = {}
-                    actions = {}
                     broks = {}
+                    actions = {}
+                    wait_homerun = {}
+                    external_commands = {}
                     running_id = 0
                     if already_got:
                         print("Already got!")
                         # Save some information
-                        running_id = my_satellites[link_uuid]['running_id']
-                        if 'external_commands' in my_satellites[link_uuid]:
-                            external_commands = my_satellites[link_uuid]['external_commands']
-                        if 'broks' in my_satellites[link_uuid]:
-                            broks = my_satellites[link_uuid]['broks']
-                        if 'wait_homerun' in my_satellites[link_uuid]:
-                            wait_homerun = my_satellites[link_uuid]['wait_homerun']
-                        if 'actions' in my_satellites[link_uuid]:
-                            actions = my_satellites[link_uuid]['actions']
+                        running_id = my_satellites[link_uuid].running_id
+                        (broks, actions,
+                         wait_homerun, external_commands) = link.get_and_clear_context()
                         # Delete the former link
                         del my_satellites[link_uuid]
 
@@ -528,6 +514,9 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         self.returns_queue = None
         self.q_by_mod = {}
+
+        # Modules are only loaded one time
+        self.have_modules = False
 
         # round robin queue ic
         self.rr_qid = 0
@@ -593,11 +582,10 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         """
         # For all schedulers, we check for wait_homerun
         # and we send back results
-        for sched_id in self.schedulers:
-            sched = self.schedulers[sched_id]
-            # todo: perharps a warning log here?
-            if not sched['active']:
-                logger.debug("My scheduler '%s' is not active currently", sched['name'])
+        for scheduler_link_uuid in self.schedulers:
+            scheduler_link = self.schedulers[scheduler_link_uuid]
+            if not scheduler_link.active:
+                logger.warning("My scheduler '%s' is not active currently", scheduler_link.name)
                 continue
             # NB: it's **mostly** safe for us to not use some lock around
             # this 'results' / sched['wait_homerun'].
@@ -608,62 +596,32 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # cleared within/by :
             # ISchedulers.get_returns() -> Satelitte.get_return_for_passive()
             # This can so happen in an (http) client thread.
-            results = sched['wait_homerun']
+            results = scheduler_link.wait_homerun
             if not results:
                 continue
             # So, at worst, some results would be received twice on the
             # scheduler level, which shouldn't be a problem given they are
             # indexed by their "action_id".
 
-            if sched['con'] is None:
-                if not self.daemon_connection_init(sched_id, s_type='scheduler'):
-                    if sched['connection_attempt'] <= sched['max_failed_connections']:
-                        logger.warning("The connection for the scheduler '%s' cannot be "
-                                       "established, it is not possible to send results to "
-                                       "this scheduler.", sched['name'])
-                    else:
-                        logger.error("The connection for the scheduler '%s' cannot be "
-                                     "established, it is not possible to send results to "
-                                     "this scheduler.", sched['name'])
-                    continue
-            logger.debug("manage returns, scheduler: %s", sched['name'])
+            scheduler_link.put_results(results.values(), self.name)
+            results.clear()
 
-            try:
-                sched['con'].post('put_results', {'from': self.name, 'results': results.values()})
-                results.clear()
-            except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-                logger.warning("Connection error with the scheduler '%s' when managing returns",
-                               sched['name'])
-                sched['con'] = None
-            except HTTPClientTimeoutException as exp:
-                logger.warning("Connection timeout with the scheduler '%s' "
-                               "when putting results: %s", sched['name'], str(exp))
-                sched['con'] = None
-            except HTTPClientException as exp:  # pragma: no cover, simple protection
-                logger.error("Error with the scheduler '%s' when putting results: %s",
-                             sched['name'], str(exp))
-                sched['con'] = None
-            except Exception as err:  # pragma: no cover, simple protection
-                logger.exception("Unhandled exception trying to send results "
-                                 "to scheduler %s: %s", sched['name'], err)
-                sched['con'] = None
-                raise
-
-    def get_return_for_passive(self, sched_id):
+    def get_return_for_passive(self, scheduler_link_uuid):
         """Get returns of passive actions for a specific scheduler
 
-        :param sched_id: scheduler id
-        :type sched_id: int
+        :param scheduler_link_uuid: scheduler id
+        :type scheduler_link_uuid: int
         :return: Action list
         :rtype: list
         """
         # I do not know this scheduler?
-        sched = self.schedulers.get(sched_id)
-        if sched is None:
-            logger.warning("I do not know this scheduler: %s / %s", sched_id, self.schedulers)
+        scheduler_link = self.schedulers.get(scheduler_link_uuid)
+        if scheduler_link is None:
+            logger.warning("I do not know this scheduler: %s / %s",
+                           scheduler_link_uuid, self.schedulers)
             return []
 
-        ret, sched['wait_homerun'] = sched['wait_homerun'], {}
+        ret, scheduler_link.wait_homerun = scheduler_link.wait_homerun, {}
         logger.debug("Results: %s" % (ret.values()) if ret else "No results available")
 
         return ret.values()
@@ -950,63 +908,30 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         do_actions = self.__class__.do_actions
 
         # We check for new check in each schedulers and put the result in new_checks
-        for sched_id, sched in self.schedulers.iteritems():
-            if not sched['active']:
-                logger.debug("My scheduler '%s' is not active currently", sched['name'])
+        for scheduler_link_uuid in self.schedulers:
+            link = self.schedulers[scheduler_link_uuid]
+
+            if not link.active:
+                logger.warning("My scheduler '%s' is not active currently", link.name)
                 continue
 
-            if sched['con'] is None:
-                if not self.daemon_connection_init(sched_id, s_type='scheduler'):
-                    if sched['connection_attempt'] <= sched['max_failed_connections']:
-                        logger.warning("The connection for the scheduler '%s' cannot be "
-                                       "established, it is not possible to get checks from "
-                                       "this scheduler.", sched['name'])
-                    else:
-                        logger.error("The connection for the scheduler '%s' cannot be "
-                                     "established, it is not possible to get checks from "
-                                     "this scheduler.", sched['name'])
-                    continue
-            logger.debug("get new actions, scheduler: %s", sched['name'])
+            logger.debug("get new actions, scheduler: %s", link.name)
 
-            try:
-                # OK, go for it :)
-                tmp = sched['con'].get('get_checks', {
-                    'do_checks': do_checks, 'do_actions': do_actions,
-                    'poller_tags': self.poller_tags,
-                    'reactionner_tags': self.reactionner_tags,
-                    'worker_name': self.name,
-                    'module_types': self.q_by_mod.keys()
-                }, wait='long')
-                # Explicit serialization
-                tmp = unserialize(tmp, True)
-                if tmp:
-                    logger.debug("Got %d actions from %s", len(tmp), sched['name'])
-                    # We 'tag' them with sched_id and put into queue for workers
-                    self.add_actions(tmp, sched_id)
-            except HTTPClientConnectionException as exp:
-                logger.warning("Connection error with the scheduler '%s' when getting checks",
-                               sched['name'])
-                sched['con'] = None
-            except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
-                logger.warning("Connection timeout with the scheduler '%s' "
-                               "when getting checks: %s", sched['name'], str(exp))
-                sched['con'] = None
-            except HTTPClientException as exp:  # pragma: no cover, simple protection
-                logger.error("Error with the scheduler '%s' when getting checks: %s",
-                             sched['name'], str(exp))
-                sched['con'] = None
-            # scheduler must not be initialized
-            # or scheduler must not have checks
-            except AttributeError as exp:  # pragma: no cover, simple protection
-                logger.exception('get_new_actions attribute exception:: %s', exp)
-            # Bad data received
-            except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
-                logger.error('Cannot un-serialize actions received: %s', exp)
-            # What the F**k? We do not know what happened,
-            # log the error message if possible.
-            except Exception as exp:  # pragma: no cover, simple protection
-                logger.exception("A satellite raised an unknown exception (%s): %s", type(exp), exp)
-                raise
+            # OK, go for it :)
+            _t0 = time.time()
+            actions = link.get_actions({'do_checks': do_checks, 'do_actions': do_actions,
+                                        'poller_tags': self.poller_tags,
+                                        'reactionner_tags': self.reactionner_tags,
+                                        'worker_name': self.name,
+                                        'module_types': self.q_by_mod.keys()})
+            if actions:
+                logger.debug("Got %d actions from %s", len(actions), link.name)
+                # We 'tag' them with sched_id and put into queue for workers
+                self.add_actions(actions, scheduler_link_uuid)
+                logger.debug("Got %d actions from %s in %s",
+                             len(actions), link.name, time.time() - _t0)
+            statsmgr.gauge('get-new-actions-count.%s' % (link.name), len(actions))
+            statsmgr.timer('get-new-actions-time.%s' % (link.name), time.time() - _t0)
 
     def clean_previous_run(self):
         """Clean variables from previous configuration,
@@ -1240,16 +1165,19 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # ------------------
 
             # Now manage modules
-            # TODO: check how to better handle this with modules_manager..
-            mods = unserialize(self_conf['modules'], True)
-            self.new_modules_conf = []
-            for module in mods:
-                # If we already got it, bypass
-                if module.get_name() not in self.q_by_mod:
-                    logger.info("Add module object: %s", module)
-                    self.new_modules_conf.append(module)
-                    logger.info("Got module: %s ", module.get_name())
-                    self.q_by_mod[module.get_name()] = {}
+            if not self.have_modules:
+                self.modules = self_conf['modules']
+                print("I received some modules configuration: %s" % self_conf)
+                print("I received some modules configuration: %s" % self.modules)
+                self.have_modules = True
+
+                for module in self.modules:
+                    if module.name not in self.q_by_mod:
+                        self.q_by_mod[module.name] = {}
+
+                self.do_load_modules(self.modules)
+                # and start external modules too
+                self.modules_manager.start_external_instances()
 
             # Initialize connection with all our satellites
             print("***Get my satellites")
@@ -1314,18 +1242,13 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
             self.do_post_daemon_init()
 
-            self.load_modules_manager(self.name)
+            self.load_modules_manager()
 
             # We wait for initial conf
             self.wait_for_initial_conf()
             if not self.new_conf:  # we must have either big problem or was requested to shutdown
                 return
             self.setup_new_conf()
-
-            # We can load our modules now
-            self.do_load_modules(self.new_modules_conf)
-            # And even start external ones
-            self.modules_manager.start_external_instances()
 
             # Allocate Mortal Threads
             self.adjust_worker_number_by_load()

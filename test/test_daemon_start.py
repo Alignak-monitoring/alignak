@@ -169,7 +169,7 @@ class template_Daemon_Start():
         :return:
         """
         print("Starting daemon: %s" % daemon.name)
-        daemon.load_modules_manager(daemon.name)
+        daemon.load_modules_manager()
         daemon.do_load_modules([])
         daemon.do_daemon_init_and_start()
 

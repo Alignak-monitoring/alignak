@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -62,13 +62,13 @@ class BrokerLink(SatelliteLink):
             IntegerProp(default=7772, fill_brok=['full_status']),
     })
 
-    def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
-        """
-        Add this broker to the realm
-
-        :return: None
-        """
-        self.realm.brokers.append(self)
+    # def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
+    #     """
+    #     Add this broker to the realm
+    #
+    #     :return: None
+    #     """
+    #     self.realm.brokers.append(self)
 
     def give_satellite_cfg(self):
         """

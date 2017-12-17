@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -53,10 +53,10 @@ This module provide Module and Modules classes used to manage internal and exter
 for each daemon
 """
 import logging
+import warnings
 from alignak.objects.item import Item, Items
 
 from alignak.property import StringProp, ListProp
-from alignak.util import strip_and_uniq
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -69,14 +69,23 @@ class Module(Item):
 
     properties = Item.properties.copy()
     properties.update({
+        'name':
+            StringProp(default='unset'),
+        'type':
+            ListProp(default=['unset'], split_on_coma=True),
+        'daemon':
+            StringProp(default='unset'),
         'python_name':
             StringProp(),
-        'module_alias':
-            StringProp(),
-        'module_types':
-            ListProp(default=[''], split_on_coma=True),
-        'modules':
-            ListProp(default=[''], split_on_coma=True)
+        # Old "deprecated" property - replaced with name
+        # 'module_alias':
+        #     StringProp(),
+        # Old "deprecated" property - replaced with type
+        # 'module_types':
+        #     ListProp(default=[''], split_on_coma=True),
+        # Do not manage modules having modules
+        # 'modules':
+        #     ListProp(default=[''], split_on_coma=True)
     })
 
     macros = {}
@@ -84,41 +93,32 @@ class Module(Item):
     def __init__(self, params=None, parsing=True):
         super(Module, self).__init__(params, parsing=parsing)
 
+        self.fill_default()
+
         # Remove extra Item base class properties...
         for prop in ['customs', 'plus', 'downtimes', 'old_properties',
                      'configuration_errors', 'configuration_warnings']:
             if getattr(self, prop, None):
                 delattr(self, prop)
 
-    # For debugging purpose only (nice name)
-    def get_name(self):
-        """
-        Get name of module
-
-        self.fill_default()
-
-        if 'name' not in params:
-            self.name = self.get_name()
-
     def __repr__(self):
-        return '<%r %r, module: %r, alias: %r />' % \
-               (self.__class__.__name__, self.name, self.python_name, self.module_alias)
+        return '<%r %r, module: %r, type(s): %r />' % \
+               (self.__class__.__name__, self.name, self.python_name, self.type)
     __str__ = __repr__
 
-    # def get_name(self):
-    #     """
-    #     Get name of module
-    #
-    #     :return: Name of module
-    #     :rtype: str
-    #     """
-    #     return getattr(self, 'module_alias', 'Unnamed module')
+    @property
+    def module_alias(self):
+        """Getter for module_alias, maintain compatibility with older modules
+
+        :return: self.name
+        """
+        return self.name
 
     def get_types(self):
         """
-        Get name of module
+        Get types of the module
 
-        :return: Name of module
+        :return: Types of the module
         :rtype: str
         """
         return getattr(self, 'module_types', 'Untyped module')
@@ -139,7 +139,7 @@ class Modules(Items):
     Class to manage list of modules
     Modules is used to group all Module
     """
-    name_property = "module_alias"
+    name_property = "name"
     inner_class = Module
 
     def linkify(self):
@@ -147,38 +147,6 @@ class Modules(Items):
 
         :return: None
         """
+        warnings.warn("Linking modules to modules (%s) is not managed by Alignak.".format(s=self),
+                      DeprecationWarning, stacklevel=2)
         pass
-        # self.linkify_s_by_plug()
-
-    # def linkify_s_by_plug(self, modules=None):
-    #     """
-    #     Link modules
-    #
-    #     :return: None
-    #     """
-    #     for module in self:
-    #         new_modules = []
-    #         mods = strip_and_uniq(module.modules)
-    #         for plug_name in mods:
-    #             plug_name = plug_name.strip()
-    #
-    #             # don't read void names
-    #             if plug_name == '':
-    #                 continue
-    #
-    #             # We are the modules, we search them :)
-    #             plug = self.find_by_name(plug_name)
-    #             if plug is not None:
-    #                 new_modules.append(plug)
-    #             else:
-    #                 err = "[module] unknown %s module from %s" % (plug_name, module.get_name())
-    #                 module.add_error(err)
-    #         module.modules = new_modules
-
-    # def explode(self):
-    #     """
-    #     Explode but not explode because this function is empty
-    #
-    #     :return: None
-    #     """
-    #     pass

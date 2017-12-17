@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -84,4 +84,5 @@ class Reactionner(Satellite):
 
         :param kwargs: command line arguments
         """
-        super(Reactionner, self).__init__(kwargs.get('daemon_name', 'Default-reactionner'), **kwargs)
+        super(Reactionner, self).__init__(kwargs.get('daemon_name',
+                                                     'Default-reactionner'), **kwargs)

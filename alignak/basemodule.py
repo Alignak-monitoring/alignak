@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -173,16 +173,14 @@ class BaseModule(object):
         :type manager: SyncManager
         :return: None
         """
-        self.clear_queues(manager)
+        self.clear_queues()
 
         self.from_q = manager.Queue()
         self.to_q = manager.Queue()
 
-    def clear_queues(self, manager):
+    def clear_queues(self):
         """Release the resources associated to the queues of this instance
 
-        :param manager: SyncManager() object
-        :type manager: SyncManager
         :return: None
         """
         self.to_q = self.from_q = None

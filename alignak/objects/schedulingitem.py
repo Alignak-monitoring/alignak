@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -550,10 +550,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 setattr(trigger, 'trigger_broker_raise_enabled', self.trigger_broker_raise_enabled)
                 new_triggers.append(trigger.uuid)
             else:
-                self.add_error('the %s %s has an unknown trigger_name '
-                                                 '"%s"' % (self.__class__.my_type,
-                                                           self.get_full_name(),
-                                                           tname))
+                self.add_error("the %s %s has an unknown trigger_name '%s'"
+                               % (self.__class__.my_type, self.get_full_name(), tname))
         self.triggers = new_triggers
 
     def add_flapping_change(self, sample):
