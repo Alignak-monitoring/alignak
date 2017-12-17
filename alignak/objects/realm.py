@@ -216,7 +216,6 @@ class Realm(Itemgroup):
         :type member: list
         :return: None
         """
-        print("Realm, add sub member: %s" % member)
         self.all_sub_members.extend(member)
 
     def get_realm_members(self):
