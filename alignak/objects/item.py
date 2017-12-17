@@ -1139,10 +1139,8 @@ class Items(object):
             # Ok, look at no twins (it's bad!)
             for t_id in twins:
                 i = self.items[t_id]
-                msg = "[items] %s.%s is duplicated from %s" % (
-                    i.__class__.my_type, i.get_name(),
-                    i.imported_from
-                )
+                msg = "[items] %s.%s is duplicated from %s" % (i.__class__.my_type, i.get_name(),
+                                                               i.imported_from)
                 self.add_warning(msg)
 
         # Better check individual items before displaying the global items list errors and warnings
@@ -1157,9 +1155,8 @@ class Items(object):
             # Now other checks
             if not i.is_correct():
                 valid = False
-                msg = "Configuration in %s::%s is incorrect; from: %s" \
-                      % (i.my_type, i.get_name(), i.imported_from)
-                i.add_error(msg)
+                i.add_error("Configuration in %s::%s is incorrect; from: %s"
+                            % (i.my_type, i.get_name(), i.imported_from))
 
             if i.configuration_errors:
                 self.configuration_errors += i.configuration_errors
@@ -1483,14 +1480,12 @@ class Items(object):
         """
         for item in self:
             logger.debug("Linkify %s with %s", self, modules)
-            print("Linkify %s with %s", self, modules)
             new_modules = []
             for module_name in item.modules:
                 # The modules list may contain empty strings...
                 if not module_name:
                     continue
                 logger.debug("Linkify %s with %s", self, module_name)
-                print("Linkify %s with %s", self, module_name)
                 module = modules.find_by_name(module_name)
                 if not module:
                     item.add_error("Error: the module %s is unknown for %s"

@@ -182,7 +182,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """
         for broker in self.conf.brokers:
             # Send only if alive of course
-            if broker.manage_arbiters and broker.alive:
+            if broker.manage_arbiters and broker.reachable:
                 is_sent = broker.push_broks(self.broks)
                 if is_sent:
                     # They are gone, we keep none!
@@ -199,7 +199,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                            self.conf.pollers, self.conf.reactionners]:
             for satellite in satellites:
                 # Get only if alive of course
-                if satellite.alive:
+                if satellite.reachable:
                     external_commands = satellite.get_external_commands()
                     for external_command in external_commands:
                         self.external_commands.append(external_command)
@@ -214,9 +214,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             for satellite in satellites:
                 logger.debug("Getting broks from: %s", satellite)
                 new_broks = satellite.get_and_clear_broks()
-                for brok in new_broks:
+                for brok in new_broks.values():
                     self.add(brok)
-                logger.debug("Got %d broks from: %s", len(new_broks), satellite)
+                if len(new_broks):
+                    logger.debug("Got %d broks from: %s / %s",
+                                 len(new_broks), satellite.name, new_broks)
 
     def get_initial_broks_from_satellitelinks(self):
         """Get initial broks from my internal satellitelinks (satellite status)
@@ -311,7 +313,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             for daemon_type in ['arbiter', 'scheduler', 'broker',
                                 'poller', 'reactionner', 'receiver']:
                 for cfg_daemon in raw_objects[daemon_type]:
-                    logger.debug(" - %s / %s", daemon_type, cfg_daemon)
+                    logger.debug("- %s / %s", daemon_type, cfg_daemon)
 
             # and then get all modules from the configuration
             logger.info("Getting modules configuration...")
@@ -330,6 +332,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     if 'module_types' in module_cfg and 'type' not in module_cfg:
                         module_cfg['type'] = module_cfg['module_types']
                         module_cfg.pop('module_types')
+                else:
+                    logger.info("- No modules.")
+            else:
+                logger.info("- No modules.")
 
             #     logger.warning("Erasing modules configuration found in cfg files")
             # raw_objects['module'] = []
@@ -991,7 +997,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         #
         logger.info("I am the arbiter: %s", self.link_to_myself.name)
 
-        logger.info("Begin to dispatch configuration to the satellites")
+        logger.info("Dispatching the configuration to the satellites...")
 
         self.dispatcher = Dispatcher(self.conf, self.link_to_myself)
         self.dispatcher.check_alive()
@@ -999,7 +1005,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # REF: doc/alignak-conf-dispatching.png (3)
         self.dispatcher.prepare_dispatch()
         self.dispatcher.dispatch()
-        logger.info("Configuration has been dispatched to the satellites")
+        logger.info("First configuration dispatch done")
 
         # Now we can get all initial broks for our satellites
         self.get_initial_broks_from_satellitelinks()
@@ -1012,12 +1018,30 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             self.accept_passive_unknown_check_results
 
         logger.debug("Run baby, run...")
-        timeout = 1.0
 
+        # Scheduler start timestamp
+        start_ts = time.time()
+        elapsed_time = 0
+
+        # Increased on each loop turn
+        loop_count = 0
+
+        # For the pause duration
+        pause_duration = 0.5
+        logger.info("Arbiter pause duration: %.2f", pause_duration)
+
+        # For the maximum expected loop duration
+        maximum_loop_duration = 1.0
+        logger.info("Arbiter maximum expected loop duration: %.2f", maximum_loop_duration)
+
+        logger.info("[%s] starting arbiter loop: %.2f", self.name, start_ts)
         while self.must_run and not self.interrupted and not self.need_config_reload:
-            # Make a pause and check if the system time changed
-            # todo: this will make a time.sleep(1) !
-            self.make_a_pause(timeout)
+            loop_start_ts = time.time()
+
+            # Increment loop count
+            loop_count += 1
+            if self.log_loop:
+                logger.debug("--- %d", loop_count)
 
             # Try to see if one of my module is dead, and
             # try to restart previously dead modules :)
@@ -1038,7 +1062,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             self.dispatcher.check_dispatch()
             statsmgr.timer('core.check-dispatch', time.time() - _t0)
 
-            # REF: doc/alignak-conf-dispatching.png (3)
             _t0 = time.time()
             self.dispatcher.prepare_dispatch()
             self.dispatcher.dispatch()
@@ -1078,6 +1101,41 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             if self.need_dump_memory:
                 self.dump_memory()
                 self.need_dump_memory = False
+
+            # Loop end
+            loop_end_ts = time.time()
+            loop_duration = loop_end_ts - loop_start_ts
+
+            pause = maximum_loop_duration - loop_duration
+            if loop_duration > maximum_loop_duration:
+                logger.warning("The arbiter loop exceeded the maximum expected loop "
+                               "duration: %.2f. The last loop needed %.2f seconds to execute. "
+                               "You should update your configuration to reduce the load on "
+                               "this scheduler.", maximum_loop_duration, loop_duration)
+                # Make a very very short pause ...
+                pause = 0.1
+
+            # Pause the scheduler execution to avoid too much load on the system
+            logger.debug("Before pause: sleep time: %s", pause)
+            work, time_changed = self.make_a_pause(pause)
+            logger.debug("After pause: %.2f / %.2f, sleep time: %.2f",
+                         work, time_changed, self.sleep_time)
+            if work > pause_duration:
+                logger.warning("Too much work during the pause (%.2f out of %.2f)! "
+                               "The scheduler should rest for a while... but one need to change "
+                               "its code for this. Please log an issue in the project repository;",
+                               work, pause_duration)
+                pause_duration += 0.1
+            self.sleep_time = 0.0
+
+            # And now, the whole average time spent
+            elapsed_time = loop_end_ts - start_ts
+            if self.log_loop:
+                logger.debug("Elapsed time, current loop: %.2f, from start: %.2f (%d loops)",
+                             loop_duration, elapsed_time, loop_count)
+            statsmgr.gauge('loop.count', loop_count)
+            statsmgr.timer('loop.duration', loop_duration)
+            statsmgr.timer('run.duration', elapsed_time)
 
     def get_daemon_links(self, daemon_type):
         """Returns the daemon links list as defined in our configuration for the given type

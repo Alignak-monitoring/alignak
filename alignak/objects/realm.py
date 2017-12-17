@@ -182,7 +182,6 @@ class Realm(Itemgroup):
         :type member: list
         :return: None
         """
-        print("Realm, add sub member: %s" % member)
         self.all_sub_members.extend(member)
 
     def get_realm_members(self):
@@ -360,7 +359,7 @@ class Realm(Itemgroup):
                     matching_satellites.append(sat_link)
                 break
 
-        print("- potential %ss: %s" % (s_type, matching_satellites))
+        logger.debug("- potential %ss: %s", s_type, matching_satellites)
         return matching_satellites
 
     def get_nb_of_must_have_satellites(self, s_type):

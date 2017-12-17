@@ -193,7 +193,7 @@ class template_Daemon_Start():
         """
         # Start normally with debug file
         daemon = self.get_daemon(is_daemon=False, do_replace=False, free_port=False,
-                            debug_file='/tmp/debug-daemon.log')
+                                 debug_file='/tmp/debug-daemon.log')
         assert daemon.debug is True
         assert daemon.debug_file == '/tmp/debug-daemon.log'
         assert daemon.pid_filename == os.path.abspath('%s.pid' % daemon.name)

@@ -118,29 +118,12 @@ class Brok(object):
         return {"type": self.type, "instance_id": self.instance_id, "data": self.data,
                 "prepared": self.prepared, "creation_time": self.creation_time, "uuid": self.uuid}
 
+    def __repr__(self):
+        return "Brok %s: %s" % (self.type, self.data)
+    __str__ = __repr__
+
     def __str__(self):
         return str(self.__dict__) + '\n'
-
-    @property
-    def id(self):  # pragma: no cover, should never happen...
-        # pylint: disable=C0103
-        """Getter for id, raise deprecation warning
-        :return: self.uuid
-        """
-        warnings.warn("Access to deprecated attribute id %s class" % self.__class__,
-                      DeprecationWarning, stacklevel=2)
-        return self.uuid
-
-    @id.setter
-    def id(self, value):  # pragma: no cover, should never happen...
-        # pylint: disable=C0103
-        """Setter for id, raise deprecation warning
-        :param value: value to set
-        :return: None
-        """
-        warnings.warn("Access to deprecated attribute id of %s class" % self.__class__,
-                      DeprecationWarning, stacklevel=2)
-        self.uuid = value
 
     def prepare(self):
         """Un-serialize data from data attribute and add instance_id key if necessary

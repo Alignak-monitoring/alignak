@@ -139,6 +139,10 @@ class SatelliteLink(Item):
         'attempt':
             IntegerProp(default=0, fill_brok=['full_status']),
 
+        # the delay between two ping retry
+        'ping_retry_delay':
+            IntegerProp(default=5),
+
         # the last connection attempt timestamp
         'last_connection':
             IntegerProp(default=0, fill_brok=['full_status']),
@@ -356,18 +360,20 @@ class SatelliteLink(Item):
         :return: None
         """
         self.reachable = False
-        self.attempt = min(self.attempt + 1, self.max_check_attempts)
+        self.attempt = self.attempt + 1
 
-        logger.debug("Failed attempt to %s (%d/%d), reason: %s",
+        logger.debug("Failed attempt for %s (%d/%d), reason: %s",
                      self.name, self.attempt, self.max_check_attempts, reason)
         # Don't need to warn again and again if the satellite is already dead
         # Only warn when it is alive
         if self.alive:
-            logger.warning("Add failed attempt to %s (%d/%d), reason: %s",
-                           self.name, self.attempt, self.max_check_attempts, reason)
+            logger.warning("Add failed attempt for %s (%d/%d)",
+                           self.name, self.attempt, self.max_check_attempts)
 
         # check when we just go HARD (dead)
-        if self.attempt >= self.max_check_attempts:
+        if self.attempt > self.max_check_attempts:
+            logger.warning("Set %s as dead, too much failed attempts (%d), last problem is: %s",
+                           self.name, self.max_check_attempts, reason)
             self.set_dead()
 
     def put_conf(self, configuration):
@@ -378,7 +384,7 @@ class SatelliteLink(Item):
         :type configuration:
         :return: None
         """
-        if not self.reachable:
+        if not self.reachable or not self.ping():
             logger.warning("Not reachable for put_conf: %s", self.name)
             return False
 
@@ -389,7 +395,7 @@ class SatelliteLink(Item):
             logger.warning("[%s] Connection error when sending configuration: %s",
                            self.name, str(exp))
             self.add_failed_check_attempt(reason=str(exp))
-            self.set_dead()
+            # self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             logger.warning("[%s] Connection timeout when sending configuration: %s",
                            self.name, str(exp))
@@ -413,8 +419,8 @@ class SatelliteLink(Item):
         :return: None
         """
         # First look if it's not too early to ping
-        if (now - self.last_check) < self.check_interval:
-            print("%s - too early to ping!" % self)
+        if (now - self.last_check) < self.ping_retry_delay:
+            logger.debug("Too early to ping %s, delay is %ds!", self.name, self.ping_retry_delay)
             return False
 
         self.last_check = now
@@ -429,8 +435,8 @@ class SatelliteLink(Item):
             return False
 
         if self.attempt > 0:
-            logger.info("Not responding to ping: %s (%d / %d)",
-                        self.name, self.attempt, self.max_check_attempts)
+            logger.debug("Not responding to ping: %s (%d / %d)",
+                         self.name, self.attempt, self.max_check_attempts)
             return False
 
         if test:
@@ -480,7 +486,7 @@ class SatelliteLink(Item):
             return True
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection error when pinging: %s" % str(exp))
-            self.set_dead()
+            # self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection timeout when pinging: %s" % str(exp))
         except HTTPClientException as exp:
@@ -505,7 +511,7 @@ class SatelliteLink(Item):
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection error when getting "
                                           "the running id: %s" % str(exp))
-            self.set_dead()
+            # self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection timeout when getting "
                                           "the running id: %s" % str(exp))
@@ -542,7 +548,7 @@ class SatelliteLink(Item):
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection error when getting "
                                           "the initial broks: %s" % str(exp))
-            self.set_dead()
+            # self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection timeout when getting "
                                           "the initial broks: %s" % str(exp))
@@ -572,7 +578,7 @@ class SatelliteLink(Item):
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection error when waiting new configuration: %s"
                                           % str(exp))
-            self.set_dead()
+            # self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection timeout when waiting new configuration: %s"
                                           % str(exp))
@@ -600,7 +606,7 @@ class SatelliteLink(Item):
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection error when testing "
                                           "if have a configuration: %s" % str(exp))
-            self.set_dead()
+            # self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection timeout when testing "
                                           "if have a configuration: %s" % str(exp))
@@ -635,7 +641,7 @@ class SatelliteLink(Item):
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection error when "
                                           "removing from configuration: %s" % str(exp))
-            self.set_dead()
+            # self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection timeout when "
                                           "removing from configuration: %s" % str(exp))
@@ -667,7 +673,7 @@ class SatelliteLink(Item):
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection error when "
                                           "getting what I manage: %s" % str(exp))
-            self.set_dead()
+            # self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection timeout when "
                                           "getting what I manage: %s" % str(exp))
@@ -724,7 +730,7 @@ class SatelliteLink(Item):
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection error when "
                                           "pushing broks: %s" % str(exp))
-            self.set_dead()
+            # self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection timeout when "
                                           "pushing broks: %s" % str(exp))
@@ -759,7 +765,7 @@ class SatelliteLink(Item):
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection error when "
                                           "pushing actions: %s" % str(exp))
-            self.set_dead()
+            # self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection timeout when "
                                           "pushing actions: %s" % str(exp))
@@ -794,7 +800,7 @@ class SatelliteLink(Item):
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection error when "
                                           "pushing actions: %s" % str(exp))
-            self.set_dead()
+            # self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection timeout when "
                                           "pushing actions: %s" % str(exp))
@@ -826,7 +832,7 @@ class SatelliteLink(Item):
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection error when "
                                           "pushing external commands: %s" % str(exp))
-            self.set_dead()
+            # self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection timeout when "
                                           "pushing external commands: %s" % str(exp))
@@ -855,7 +861,7 @@ class SatelliteLink(Item):
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection error when "
                                           "getting external commands: %s" % str(exp))
-            self.set_dead()
+            # self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection timeout when "
                                           "getting external commands: %s" % str(exp))
@@ -888,7 +894,7 @@ class SatelliteLink(Item):
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection error when "
                                           "getting broks: %s" % str(exp))
-            self.set_dead()
+            # self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection timeout when "
                                           "getting broks: %s" % str(exp))
@@ -921,7 +927,7 @@ class SatelliteLink(Item):
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection error when "
                                           "getting results: %s" % str(exp))
-            self.set_dead()
+            # self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection timeout when "
                                           "getting results: %s" % str(exp))
@@ -954,7 +960,7 @@ class SatelliteLink(Item):
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection error when "
                                           "getting actions: %s" % str(exp))
-            self.set_dead()
+            # self.set_dead()
         except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection timeout when "
                                           "getting actions: %s" % str(exp))
@@ -972,24 +978,13 @@ class SatelliteLink(Item):
 
         :return: None
         """
-        print("- preparing: %s" % self)
+        logger.debug("- preparing: %s", self)
         self.cfg = {
             'self_conf': self.give_satellite_cfg(),
             'schedulers': {},
             'arbiters': {}
         }
-
-        # # All the satellite link class properties that are 'to_send' are stored in the 'global'
-        # # configuration to be pushed to the satellite when the configuration is dispatched
-        # properties = self.__class__.properties
-        # for prop, entry in properties.items():
-        #     # Do not care of the to_send attribute... send all properties as such each
-        #     # satellite link will get all its properties in the received configuration.
-        #     # if entry.to_send:
-        #     #     self.cfg['global'][prop] = getattr(self, prop)
-        #     if hasattr(self, prop):
-        #         self.cfg['self_conf'][prop] = getattr(self, prop)
-        print("- prepared: %s" % self.cfg)
+        logger.debug("- prepared: %s", self.cfg)
 
     def give_satellite_cfg(self):
         """Get the default information for a satellite.
@@ -1053,12 +1048,10 @@ class SatelliteLinks(Items):
             link.realm = realm.uuid
             link.realm_name = realm.get_name()
             logger.debug("Linkify %s with %s", link, realm)
-            print("Linkify %s with %s" % (link, realm))
             getattr(realm, '%ss' % link.my_type).append(link.uuid)
 
             # case SatelliteLink has manage_sub_realms
             if getattr(link, 'manage_sub_realms', False):
                 for r_uuid in realm.all_sub_members:
                     logger.debug("Linkify %s with %s", link, realms[r_uuid])
-                    print("Linkify %s with %s", link, realms[r_uuid])
                     getattr(realms[r_uuid], '%ss' % link.my_type).append(link.uuid)
