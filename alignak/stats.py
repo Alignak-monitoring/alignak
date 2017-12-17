@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -207,7 +207,6 @@ class Stats(object):
     def __init__(self):
         # Our daemon type and name
         self.name = ''
-        self.type = ''
 
         # Our known statistics
         self.stats = {}
@@ -242,9 +241,8 @@ class Stats(object):
                % (self.host, self.port, self.statsd_enabled)
     __str__ = __repr__
 
-    def register(self, name, _type,
-                 statsd_host='localhost', statsd_port=8125, statsd_prefix='alignak',
-                 statsd_enabled=False, broks_enabled=False):
+    def register(self, name, statsd_host='localhost', statsd_port=8125,
+                 statsd_prefix='alignak', statsd_enabled=False, broks_enabled=False):
         """Init statsd instance with real values
 
         :param name: daemon name
@@ -264,27 +262,25 @@ class Stats(object):
         :return: None
         """
         self.name = name
-        self.type = _type
 
         # local statsd part
         self.statsd_host = statsd_host
         self.statsd_port = int(statsd_port)
-        # try:
-        #     self.statsd_port = int(statsd_port)
-        # except ValueError:
-        #     self.statsd_port = 8125
-        #     logger.warning("Setting StatsD port as : 8125, "
-        #                    "provided value is not a valid port number!")
         self.statsd_prefix = statsd_prefix
         self.statsd_enabled = statsd_enabled
 
         # local broks part
         self.broks_enabled = broks_enabled
 
+        logger.debug("StatsD configuration for %s - %s:%s, prefix: %s, "
+                     "enabled: %s, broks: %s, file: %s",
+                     self.name, self.statsd_host, self.statsd_port,
+                     self.statsd_prefix, self.statsd_enabled, self.broks_enabled,
+                     self.stats_file)
+
         if self.statsd_enabled and self.statsd_host is not None and self.statsd_host != 'None':
-            logger.info('Sending %s/%s daemon statistics to: %s:%s, prefix: %s',
-                        self.type, self.name,
-                        self.statsd_host, self.statsd_port, self.statsd_prefix)
+            logger.info("Sending %s daemon statistics to: %s:%s, prefix: %s",
+                        self.name, self.statsd_host, self.statsd_port, self.statsd_prefix)
             if self.load_statsd():
                 logger.info('Alignak internal statistics are sent to StatsD.')
             else:

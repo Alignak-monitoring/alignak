@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -67,15 +67,11 @@ logger = logging.getLogger(__name__)  # pylint: disable=C0103
 class ModulesManager(object):
     """This class is used to manage modules and call callback"""
 
-    def __init__(self, daemon, sync_manager, max_queue_size=0):
+    def __init__(self, daemon):
         """
 
         :param daemon: the daemon for which modules manager is created
         :type daemon: alignak.Daemon
-        :param sync_manager: the daemon sync manager
-        :type sync_manager:
-        :param max_queue_size: maximum message queue size of the daemon
-        :type max_queue_size: int
         """
         self.daemon = daemon
         self.daemon_type = daemon.type
@@ -83,8 +79,6 @@ class ModulesManager(object):
         self.modules_assoc = []
         self.instances = []
         self.to_restart = []
-        self.max_queue_size = max_queue_size
-        self.sync_manager = sync_manager
 
         # By default the modules configuration is correct and the
         # warnings and errors lists are empty
@@ -124,8 +118,7 @@ class ModulesManager(object):
         """
         self.modules_assoc = []
         for module in modules:
-            logger.info("Importing Python module '%s' for %s...",
-                        module.python_name, module.module_alias)
+            logger.info("Importing Python module '%s' for %s...", module.python_name, module.name)
             try:
                 python_module = importlib.import_module(module.python_name)
 
@@ -145,19 +138,19 @@ class ModulesManager(object):
                     raise AttributeError
 
                 self.modules_assoc.append((module, python_module))
-                logger.info("Imported '%s' for %s", module.python_name, module.module_alias)
+                logger.info("Imported '%s' for %s", module.python_name, module.name)
             except ImportError as exp:  # pragma: no cover, simple protection
                 self.configuration_errors.append("Module %s (%s) can't be loaded, Python "
                                                  "importation error: %s" % (module.python_name,
-                                                                            module.module_alias,
+                                                                            module.name,
                                                                             str(exp)))
             except AttributeError:  # pragma: no cover, simple protection
                 self.configuration_errors.append("Module %s (%s) can't be loaded, "
                                                  "module configuration" % (module.python_name,
-                                                                           module.module_alias))
+                                                                           module.name))
             else:
                 logger.info("Loaded Python module '%s' (%s)",
-                            module.python_name, module.module_alias)
+                            module.python_name, module.name)
 
     def try_instance_init(self, instance, late_start=False):
         """Try to "initialize" the given module instance.
@@ -182,7 +175,12 @@ class ModulesManager(object):
 
             # If it's an external module, create/update Queues()
             if instance.is_external:
-                instance.create_queues(self.sync_manager)
+                if self.daemon.sync_manager:
+                    instance.create_queues(self.daemon.sync_manager)
+                else:
+                    instance.clear_queues()
+                    logger.warning("Module %s, synchronization manager is not yet initialized!",
+                                   instance.name)
 
             # The module instance init function says if initialization is ok
             result = instance.init()
@@ -310,7 +308,7 @@ class ModulesManager(object):
             instance.stop_process()
             logger.info("External process stopped.")
 
-        instance.clear_queues(self.sync_manager)
+        instance.clear_queues()
 
         # Then do not listen anymore about it
         self.instances.remove(instance)
@@ -330,7 +328,7 @@ class ModulesManager(object):
                 logger.error("The external module %s died unexpectedly!", instance.name)
                 logger.info("Setting the module %s to restart", instance.name)
                 # We clean its queues, they are no more useful
-                instance.clear_queues(self.sync_manager)
+                instance.clear_queues()
                 self.to_restart.append(instance)
                 # Ok, no need to look at queue size now
                 continue
@@ -338,7 +336,7 @@ class ModulesManager(object):
             # Now look for maximum queue size. If above the defined value, the module may have
             # a huge problem and so bailout. It's not a perfect solution, more a watchdog
             # If max_queue_size is 0, don't check this
-            if self.max_queue_size == 0:
+            if self.daemon.max_queue_size == 0:
                 continue
             # Ok, go launch the dog!
             queue_size = 0
@@ -346,12 +344,12 @@ class ModulesManager(object):
                 queue_size = instance.to_q.qsize()
             except Exception:  # pylint: disable=W0703
                 pass
-            if queue_size > self.max_queue_size:
+            if queue_size > self.daemon.max_queue_size:
                 logger.error("The external module %s got a too high brok queue size (%s > %s)!",
-                             instance.name, queue_size, self.max_queue_size)
+                             instance.name, queue_size, self.daemon.max_queue_size)
                 logger.info("Setting the module %s to restart", instance.name)
                 # We clean its queues, they are no more useful
-                instance.clear_queues(self.sync_manager)
+                instance.clear_queues()
                 self.to_restart.append(instance)
 
     def try_to_restart_deads(self):

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -259,6 +259,7 @@ from alignak.version import VERSION as __version__
 
 SECTION_CONFIGURATION = "alignak-configuration"
 
+
 class AlignakConfigParser(object):
     """
     Class to parse the Alignak main configuration file
@@ -452,6 +453,7 @@ class AlignakConfigParser(object):
             return []
 
         return self._search_sections('module.')
+
 
 def main():
     """

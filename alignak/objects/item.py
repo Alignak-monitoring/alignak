@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -133,7 +133,7 @@ class Item(AlignakObject):
             super(Item, self).__init__(params, parsing)
             return
 
-        # Creating a new Alignak object instance
+        # Creating a new Alignak object instance
         self.uuid = uuid.uuid4().hex
 
         # For custom variables
@@ -1205,10 +1205,10 @@ class Items(object):
         for i in self:
             i.fill_default()
 
-    def __str__(self):
-        return '<%s nbr_elements=%s nbr_templates=%s />' % (
-            self.__class__.__name__, len(self), len(self.name_to_template))
-    __repr__ = __str__
+    def __repr__(self):
+        return '<%r, %d elements: %r/>' \
+               % (self.__class__.__name__, len(self), ', '.join([str(s) for s in self]))
+    __str__ = __repr__
 
     def serialize(self):
         """This function serialize items into a simple dict object.
@@ -1292,18 +1292,19 @@ class Items(object):
         :return: None
         """
         for i in self:
-            if hasattr(i, 'escalations'):
-                escalations_tab = strip_and_uniq(i.escalations)
-                new_escalations = []
-                for es_name in [e for e in escalations_tab if e != '']:
-                    escal = escalations.find_by_name(es_name)
-                    if escal is not None:
-                        new_escalations.append(escal.uuid)
-                    else:  # Escalation not find, not good!
-                        err = "the escalation '%s' defined for '%s' is unknown" % (es_name,
-                                                                                   i.get_name())
-                        i.add_error(err)
-                i.escalations = new_escalations
+            if not hasattr(i, 'escalations'):
+                continue
+
+            escalations_tab = strip_and_uniq(i.escalations)
+            new_escalations = []
+            for es_name in [e for e in escalations_tab if e != '']:
+                escal = escalations.find_by_name(es_name)
+                if escal is not None:
+                    new_escalations.append(escal.uuid)
+                else:  # Escalation not found, not good!
+                    i.add_error("the escalation '%s' defined "
+                                "for '%s' is unknown" % (es_name, i.get_name()))
+            i.escalations = new_escalations
 
     def linkify_with_resultmodulations(self, resultmodulations):
         """
@@ -1472,28 +1473,32 @@ class Items(object):
             # Get the list, but first make elements uniq
             i.macromodulations = new_macromodulations
 
-    def linkify_s_by_plug(self, modules):
+    def linkify_s_by_module(self, modules):
         """
-        Link modules
+        Link modules to items
 
-        :param modules: modules object (all modules)
-        :type modules: object
+        :param modules: Modules object (list of all the modules found in the configuration)
+        :type modules: Modules
         :return: None
         """
         for item in self:
+            logger.debug("Linkify %s with %s", self, modules)
+            print("Linkify %s with %s", self, modules)
             new_modules = []
-            for plug_name in item.modules:
-                plug_name = plug_name.strip()
-                # don't tread void names
-                if plug_name == '':
+            for module_name in item.modules:
+                # The modules list may contain empty strings...
+                if not module_name:
                     continue
+                logger.debug("Linkify %s with %s", self, module_name)
+                print("Linkify %s with %s", self, module_name)
+                module = modules.find_by_name(module_name)
+                if not module:
+                    item.add_error("Error: the module %s is unknown for %s"
+                                   % (module_name, item.get_name()))
+                    continue
+                # Found the module
+                new_modules.append(module)
 
-                plug = modules.find_by_name(plug_name)
-                if plug is not None:
-                    new_modules.append(plug)
-                else:
-                    err = "Error: the module %s is unknown for %s" % (plug_name, item.get_name())
-                    item.add_error(err)
             item.modules = new_modules
 
     @staticmethod

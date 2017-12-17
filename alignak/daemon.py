@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-lines
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -185,6 +185,7 @@ class InvalidPidFile(Exception):
             msg = "Invalid PID file"
         Exception.__init__(self, msg)
 
+
 # This default value is used to declare the properties that are Path properties
 # During the daemon initialization, this value is replaced with the real daemon working directory
 # and it will be overloaded with the value defined in the daemon configuration or launch parameters
@@ -220,7 +221,7 @@ class Daemon(object):
             PathProp(default=DEFAULT_WORK_DIR),
         'vardir':   # /usr/local/var/lib/alignak
             PathProp(default=DEFAULT_WORK_DIR),
-        'logdir':# /usr/local/var/log/alignak
+        'logdir':   # /usr/local/var/log/alignak
             PathProp(default=DEFAULT_WORK_DIR),
         'host':
             StringProp(default='0.0.0.0'),
@@ -275,6 +276,10 @@ class Daemon(object):
         'debug_output':
             ListProp(default=[]),
         'monitoring_config_files':
+            ListProp(default=[]),
+
+        # Daemon modules
+        'modules':
             ListProp(default=[]),
 
         # Local statsd daemon for collecting daemon metrics
@@ -373,11 +378,9 @@ class Daemon(object):
             self.alignak_env.parse()
 
             for prop, value in self.alignak_env.get_monitored_configuration().items():
-                print(" found Alignak monitoring configuration parameter, %s = %s" % (prop, value))
                 self.pre_log.append(("DEBUG",
                                      " found Alignak monitoring "
                                      "configuration parameter, %s = %s" % (prop, value)))
-                print(prop, value)
                 # Ignore empty value
                 if not value:
                     continue
@@ -464,7 +467,8 @@ class Daemon(object):
             # Make it an absolute path file in the log directory
             if self.log_filename != os.path.abspath(self.log_filename):
                 if self.log_filename:
-                    self.log_filename = os.path.abspath(os.path.join(self.logdir, self.log_filename))
+                    self.log_filename = os.path.abspath(os.path.join(self.logdir,
+                                                                     self.log_filename))
                     print("Daemon '%s' is started with an overidden log file: %s"
                           % (self.name, self.log_filename))
                 else:
@@ -485,8 +489,8 @@ class Daemon(object):
             else:
                 self.pre_log.append(("ERROR",
                                      "Daemon '%s' log directory did not exist, "
-                                      "and I could not create: %s. Exception: %s" 
-                                      % (self.name, dirname, exp)))
+                                     "and I could not create: %s. Exception: %s"
+                                     % (self.name, dirname, exp)))
                 raise EnvironmentFile("Daemon '%s' log directory did not exist, "
                                       "and I could not create: '%s'. Exception: %s"
                                       % (self.name, dirname, exp))
@@ -500,7 +504,7 @@ class Daemon(object):
             # Make it an absolute path file in the pid directory
             if self.pid_filename != os.path.abspath(self.pid_filename):
                 self.pid_filename = os.path.abspath(os.path.join(self.workdir, self.pid_filename))
-            print("Daemon '%s' is started with an overidden pid file: %s" 
+            print("Daemon '%s' is started with an overidden pid file: %s"
                   % (self.name, self.pid_filename))
 
         dirname = os.path.dirname(self.pid_filename)
@@ -517,10 +521,10 @@ class Daemon(object):
             else:
                 self.pre_pid.append(("ERROR",
                                      "Daemon '%s' pid directory did not exist, "
-                                      "and I could not create: %s. Exception: %s" 
-                                      % (self.name, dirname, exp)))
+                                     "and I could not create: %s. Exception: %s"
+                                     % (self.name, dirname, exp)))
                 raise EnvironmentFile("Daemon '%s' pid directory did not exist, "
-                                      "and I could not create: %s. Exception: %s" 
+                                      "and I could not create: %s. Exception: %s"
                                       % (self.name, dirname, exp))
 
         # Track time
@@ -792,15 +796,14 @@ class Daemon(object):
                        "If you really need this feature, please log "
                        "an issue in the project repository;)")
 
-    def load_modules_manager(self, daemon_name):
-        """Instantiate Modulesmanager and load the SyncManager (multiprocessing)
+    def load_modules_manager(self):
+        """Instantiate the dameon ModulesManager and load the SyncManager (multiprocessing)
 
         :param daemon_name: daemon name
         :type elt: str
         :return: None
         """
-        self.modules_manager = ModulesManager(self, self.sync_manager,
-                                              max_queue_size=getattr(self, 'max_queue_size', 0))
+        self.modules_manager = ModulesManager(self)
 
     def change_to_workdir(self):
         """Change working directory to working attribute
@@ -1516,12 +1519,14 @@ class Daemon(object):
 
         # first get data for all internal modules
         for instance in self.modules_manager.get_internal_instances():
-            state = {True: 'ok', False: 'stopped'}[(instance not in self.modules_manager.to_restart)]
+            state = {True: 'ok', False: 'stopped'}[(instance
+                                                    not in self.modules_manager.to_restart)]
             env = {'name': instance.name, 'state': state}
             modules['internal'][instance.name] = env
         # Same but for external ones
         for instance in self.modules_manager.get_external_instances():
-            state = {True: 'ok', False: 'stopped'}[(instance not in self.modules_manager.to_restart)]
+            state = {True: 'ok', False: 'stopped'}[(instance
+                                                    not in self.modules_manager.to_restart)]
             env = {'name': instance.name, 'state': state}
             modules['external'][instance.name] = env
 

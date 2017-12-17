@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -71,12 +71,11 @@ from multiprocessing import active_children
 from alignak.objects import *
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.satellite import BaseSatellite
-from alignak.property import PathProp, IntegerProp, StringProp
+from alignak.property import IntegerProp, StringProp
 from alignak.util import sort_by_ids
 from alignak.stats import statsmgr
-from alignak.http.client import HTTPClientException, HTTPClientConnectionException, \
-    HTTPClientTimeoutException
 from alignak.http.broker_interface import BrokerInterface
+from alignak.objects.satellitelink import SatelliteLink
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -249,66 +248,21 @@ class Broker(BaseSatellite):
         # We check for new check in each schedulers and put
         # the result in new_checks
         for s_id in links:
-            logger.debug("Getting broks from %s", links[s_id]['name'])
             link = links[s_id]
-            logger.debug("Link: %s", link)
-            if not link['active']:
-                logger.debug("The %s '%s' is not active, "
-                             "do not get broks from its connection!", s_type, link['name'])
-                continue
+            logger.debug("Getting broks from %s", link.name)
 
-            if link['con'] is None:
-                if not self.daemon_connection_init(s_id, s_type=s_type):
-                    if link['connection_attempt'] <= link['max_failed_connections']:
-                        logger.warning("The connection for the %s '%s' cannot be established, "
-                                       "it is not possible to get broks from this daemon.",
-                                       s_type, link['name'])
-                    else:
-                        logger.error("The connection for the %s '%s' cannot be established, "
-                                     "it is not possible to get broks from this daemon.",
-                                     s_type, link['name'])
-                    continue
+            _t0 = time.time()
+            tmp_broks = link.get_broks(self.name)
+            if tmp_broks:
+                logger.debug("Got %d Broks from %s in %s",
+                             len(tmp_broks), link.name, time.time() - _t0)
+            statsmgr.gauge('get-new-broks-count.%s' % (link.name), len(tmp_broks))
+            statsmgr.timer('get-new-broks-time.%s' % (link.name), time.time() - _t0)
+            for brok in tmp_broks.values():
+                brok.instance_id = link.instance_id
 
-            try:
-                _t0 = time.time()
-                tmp_broks = link['con'].get('get_broks', {'bname': self.name}, wait='long')
-                try:
-                    tmp_broks = unserialize(tmp_broks, True)
-                except AlignakClassLookupException as exp:  # pragma: no cover,
-                    # simple protection
-                    logger.error('Cannot un-serialize data received from "get_broks" call: %s',
-                                 exp)
-                    continue
-                if tmp_broks:
-                    logger.debug("Got %d Broks from %s in %s",
-                                 len(tmp_broks), link['name'], time.time() - _t0)
-                statsmgr.gauge('get-new-broks-count.%s' % (link['name']), len(tmp_broks.values()))
-                statsmgr.timer('get-new-broks-time.%s' % (link['name']), time.time() - _t0)
-                for brok in tmp_broks.values():
-                    brok.instance_id = link['instance_id']
-
-                # Add the broks to our global list
-                self.broks.extend(tmp_broks.values())
-            except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-                logger.warning("[%s] %s", link['name'], str(exp))
-                link['con'] = None
-                return
-            except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
-                logger.warning("Connection timeout with the %s '%s' when getting broks: %s",
-                               s_type, link['name'], str(exp))
-                link['con'] = None
-                return
-            except HTTPClientException as exp:  # pragma: no cover, simple protection
-                logger.error("Error with the %s '%s' when getting broks: %s",
-                             s_type, link['name'], str(exp))
-                link['con'] = None
-                return
-            # scheduler must not have checks
-            #  What the F**k? We do not know what happened,
-            # so.. bye bye :)
-            except Exception as exp:  # pylint: disable=broad-except
-                logger.exception(exp)
-                sys.exit(1)
+            # Add the broks to our global list
+            self.broks.extend(tmp_broks.values())
 
     def get_retention_data(self):  # pragma: no cover, useful?
         """Get all broks
@@ -365,48 +319,61 @@ class Broker(BaseSatellite):
             # self_conf is our own configuration from the alignak environment
             self_conf = self.cur_conf['self_conf']
 
-            # Get our satellites links
-            for link_type in ['pollers', 'reactionners', 'receivers']:
-                if link_type in self.cur_conf:
+            # Now we create our pollers, reactionners and brokers
+            for link_type in ['pollers', 'reactionners', 'brokers']:
+                if link_type not in self.cur_conf['satellites']:
                     logger.error("[%s] Missing %s in the configuration!", self.name, link_type)
+                    print("***[%s] Missing %s in the configuration!!!" % (self.name, link_type))
                     continue
-                for sat_uuid in self.cur_conf['satellites'][link_type]:
-                    my_satellites = getattr(self, link_type)
+
+                received_satellites = self.cur_conf['satellites'][link_type]
+                logger.debug("[%s] - received %s: %s", self.name, link_type, received_satellites)
+                my_satellites = getattr(self, link_type)
+                print("My %s satellites: %s" % (link_type, my_satellites))
+                print("My %s received satellites:" % (link_type))
+                for link_uuid in received_satellites:
+                    print("- %s / %s" % (link_uuid, received_satellites[link_uuid]))
+                    logger.debug("[%s] - my current %s: %s", self.name, link_type, my_satellites)
+
                     # Must look if we already had a configuration and save our broks
-                    already_got = sat_uuid in my_satellites
+                    already_got = received_satellites.get('_id') in my_satellites
+                    broks = {}
+                    actions = {}
+                    wait_homerun = {}
+                    external_commands = {}
+                    running_id = 0
                     if already_got:
-                        broks = my_satellites[sat_uuid]['broks']
-                        running_id = my_satellites[sat_uuid]['running_id']
-                    else:
-                        broks = {}
-                        running_id = 0
-                    new_link = self.cur_conf[link_type][sat_uuid]
-                    my_satellites[sat_uuid] = new_link
+                        print("Already got!")
+                        # Save some information
+                        running_id = my_satellites[link_uuid].running_id
+                        (broks, actions,
+                         wait_homerun, external_commands) = link.get_and_clear_context()
+                        # Delete the former link
+                        del my_satellites[link_uuid]
+
+                    # My new satellite link...
+                    new_link = SatelliteLink.get_a_satellite_link(
+                        link_type[:-1], received_satellites[link_uuid])
+                    my_satellites[link_uuid] = new_link
+                    print("My new %s satellite: %s" % (link_type, new_link))
+
+                    new_link.running_id = running_id
+                    new_link.external_commands = external_commands
+                    new_link.broks = broks
+                    new_link.wait_homerun = wait_homerun
+                    new_link.actions = actions
 
                     # replacing sattelite address and port by those defined in satellitemap
-                    if new_link['name'] in self_conf.get('satellitemap', {}):
+                    if new_link.name in self_conf.get('satellitemap', {}):
                         new_link = dict(new_link)  # make a copy
-                        new_link.update(self_conf.get('satellitemap', {})[new_link['name']])
-
-                    # todo: why not using a SatteliteLink object?
-                    proto = 'http'
-                    if new_link['use_ssl']:
-                        proto = 'https'
-                    uri = '%s://%s:%s/' % (proto, new_link['address'], new_link['port'])
-                    my_satellites[sat_uuid]['uri'] = uri
-
-                    my_satellites[sat_uuid]['broks'] = broks
-                    my_satellites[sat_uuid]['instance_id'] = 0
-                    my_satellites[sat_uuid]['running_id'] = running_id
-                    my_satellites[sat_uuid]['con'] = None
-                    my_satellites[sat_uuid]['last_connection'] = 0
-                    my_satellites[sat_uuid]['connection_attempt'] = 0
-                    my_satellites[sat_uuid]['max_failed_connections'] = 3
+                        new_link.update(self_conf.get('satellitemap', {})[new_link.name])
 
                 logger.debug("We have our %s: %s", link_type, my_satellites)
                 logger.info("We have our %s:", link_type)
-                for link in my_satellites.values():
-                    logger.info(" - %s ", link['name'])
+                print("We have our %s" % link_type)
+                for sat_link in my_satellites.values():
+                    logger.info(" - %s, %s", sat_link.name, sat_link.address)
+                    print(" - %s, %s" % (sat_link.name, sat_link))
 
             if not self.have_modules:
                 self.modules = self_conf['modules']
@@ -419,9 +386,11 @@ class Broker(BaseSatellite):
                 self.modules_manager.start_external_instances()
 
             # Initialize connection with all our satellites
-            for sat_link in self.get_all_links():
-                print("Initialize connection with: %s" % sat_link)
-                self.daemon_connection_init(sat_link.uuid, s_type=sat_link.type)
+            my_satellites = self.get_links_of_type(s_type=None)
+            for sat_link in my_satellites:
+                satellite = my_satellites[sat_link]
+                print("Initialize connection with: %s" % satellite)
+                self.daemon_connection_init(satellite.uuid, s_type=satellite.type)
 
     def clean_previous_run(self):
         """Clean all (when we received new conf)
@@ -584,7 +553,7 @@ class Broker(BaseSatellite):
             if not self.do_daemon_init_and_start():
                 return
 
-            self.load_modules_manager(self.name)
+            self.load_modules_manager()
 
             #  We wait for initial conf
             self.wait_for_initial_conf()

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -56,12 +56,12 @@ class BrokerInterface(GenericInterface):
         insts = [inst for inst in app.modules_manager.instances if inst.is_external]
         for inst in insts:
             try:
-                res[inst.uuid] = {'module_alias': inst.get_name(),
-                                  'module_types': inst.get_types(),
+                res[inst.uuid] = {'name': inst.get_name(),
+                                  'type': inst.get_types(),
                                   'queue_size': inst.to_q.qsize()}
             except Exception:  # pylint: disable=W0703
-                res[inst.uuid] = {'module_alias': inst.get_name(),
-                                  'module_types': inst.get_types(),
+                res[inst.uuid] = {'name': inst.get_name(),
+                                  'type': inst.get_types(),
                                   'queue_size': 0}
 
         return res

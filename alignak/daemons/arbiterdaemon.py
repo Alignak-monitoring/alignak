@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -205,18 +205,18 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                         self.external_commands.append(external_command)
 
     def get_broks_from_satellitelinks(self):
-        """Get broks from my internal satellitelinks (satellite status)
+        """Get broks from my internal satellite links
 
         :return: None
-        TODO: Why satellitelink obj have broks and not the app itself?
         """
         for satellites in [self.conf.brokers, self.conf.schedulers,
                            self.conf.pollers, self.conf.reactionners, self.conf.receivers]:
             for satellite in satellites:
-                new_broks = satellite.get_all_broks()
+                logger.debug("Getting broks from: %s", satellite)
+                new_broks = satellite.get_and_clear_broks()
                 for brok in new_broks:
-                    logger.debug("Satellite '%s' brok: %s", satellite, brok)
                     self.add(brok)
+                logger.debug("Got %d broks from: %s", len(new_broks), satellite)
 
     def get_initial_broks_from_satellitelinks(self):
         """Get initial broks from my internal satellitelinks (satellite status)
@@ -299,30 +299,50 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 new_cfg_daemons = []
                 for cfg_daemon in raw_objects[daemon_cfg['type']]:
                     if cfg_daemon.get('name', 'unset') == daemon_cfg['name'] \
-                            or cfg_daemon.get("%s_name" % daemon_cfg['type'], 'unset') \
-                                    == [daemon_cfg['name']]:
+                            or cfg_daemon.get("%s_name" % daemon_cfg['type'],
+                                              'unset') == [daemon_cfg['name']]:
                         logger.info("  updating daemon Cfg file configuration")
                     else:
                         new_cfg_daemons.append(cfg_daemon)
-                # # My new satellite link...
-                # from alignak.objects.satellitelink import SatelliteLink
-                # new_link = SatelliteLink.get_a_satellite_link(daemon_cfg['type'], {})
-                # print("Properties: %s / %s" % (daemon_cfg['type'], ','.join([prop for prop in new_link.properties])))
                 new_cfg_daemons.append(daemon_cfg)
                 raw_objects[daemon_cfg['type']] = new_cfg_daemons
 
-            logger.info("Daemons configuration:")
+            logger.debug("Daemons configuration:")
             for daemon_type in ['arbiter', 'scheduler', 'broker',
                                 'poller', 'reactionner', 'receiver']:
                 for cfg_daemon in raw_objects[daemon_type]:
-                    logger.info(" - %s / %s", daemon_type, cfg_daemon)
+                    logger.debug(" - %s / %s", daemon_type, cfg_daemon)
 
             # and then get all modules from the configuration
             logger.info("Getting modules configuration...")
             if raw_objects['module']:
-                logger.warning("Erasing modules configuration found in cfg files")
-            raw_objects['module'] = []
+                # Manage the former parameters module_alias and module_types
+                # - replace with name and type
+                for module_cfg in raw_objects['module']:
+                    if 'module_alias' not in module_cfg and 'name' not in module_cfg:
+                        self.conf.add_error("Module declared without any 'name' or 'module_alias'")
+                        continue
+                    else:
+                        if 'name' not in module_cfg:
+                            module_cfg['name'] = module_cfg['module_alias']
+                            module_cfg.pop('module_alias')
+
+                    if 'module_types' in module_cfg and 'type' not in module_cfg:
+                        module_cfg['type'] = module_cfg['module_types']
+                        module_cfg.pop('module_types')
+
+            #     logger.warning("Erasing modules configuration found in cfg files")
+            # raw_objects['module'] = []
             for module_name, module_cfg in self.alignak_env.get_modules().items():
+                logger.info("- got a module %s", module_cfg)
+                # If this module is found in the former Cfg files, replace the former configuration
+                new_cfg_daemons = []
+                for cfg_module in raw_objects['module']:
+                    if cfg_module.get('name', 'unset') == [module_cfg['name']]:
+                        logger.info("  updating module Cfg file configuration")
+                    else:
+                        new_cfg_daemons.append(cfg_module)
+                new_cfg_daemons.append(module_cfg)
                 raw_objects['module'].append(module_cfg)
 
             # and then the global configuration.
@@ -356,7 +376,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 continue
 
             logger.info("I found myself in the configuration: %s", lnk_arbiter.name)
-            print("I found myself in the configuration: %s" % lnk_arbiter.name)
             self.link_to_myself = lnk_arbiter
             # Set myself as alive ;)
             self.link_to_myself.alive = True
@@ -371,15 +390,15 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             # ... and that this arbiter do not need to receive a configuration
             lnk_arbiter.need_conf = False
 
-            # todo: is it really the right place to configure this ? Not sure at all!
-            # We export this data to our statsmgr object :)
-            statsd_host = getattr(self.conf, 'statsd_host', 'localhost')
-            statsd_port = getattr(self.conf, 'statsd_port', 8125)
-            statsd_prefix = getattr(self.conf, 'statsd_prefix', 'alignak')
-            statsd_enabled = getattr(self.conf, 'statsd_enabled', False)
-            statsmgr.register(lnk_arbiter.get_name(), 'arbiter',
-                              statsd_host=statsd_host, statsd_port=statsd_port,
-                              statsd_prefix=statsd_prefix, statsd_enabled=statsd_enabled)
+            # # todo: is it really the right place to configure this ? Not sure at all!
+            # # We export this data to our statsmgr object :)
+            # statsd_host = getattr(self.conf, 'statsd_host', 'localhost')
+            # statsd_port = getattr(self.conf, 'statsd_port', 8125)
+            # statsd_prefix = getattr(self.conf, 'statsd_prefix', 'alignak')
+            # statsd_enabled = getattr(self.conf, 'statsd_enabled', False)
+            # statsmgr.register(lnk_arbiter.get_name(), 'arbiter',
+            #                   statsd_host=statsd_host, statsd_port=statsd_port,
+            #                   statsd_prefix=statsd_prefix, statsd_enabled=statsd_enabled)
 
         if not self.link_to_myself:
             sys.exit("Error: I cannot find my own Arbiter object (%s), I bail out. "
@@ -402,7 +421,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             return
 
         # Ok it's time to load the module manager now!
-        self.load_modules_manager(self.link_to_myself.name)
+        self.load_modules_manager()
         # we request the instances without them being *started*
         # (for those that are concerned ("external" modules):
         # we will *start* these instances after we have been daemonized (if requested)
@@ -414,17 +433,20 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Call modules get_alignak_configuration() to load Alignak configuration parameters
         # (example modules: alignak_backend)
+        _t0 = time.time()
         self.load_modules_alignak_configuration()
+        statsmgr.timer('core.hook.get_alignak_configuration', time.time() - _t0)
 
         # Call modules get_objects() to load new objects from arbiter modules
         # (example modules: alignak_backend)
+        _t0 = time.time()
         self.load_modules_configuration_objects(raw_objects)
+        statsmgr.timer('core.hook.get_objects', time.time() - _t0)
 
         # Create objects for all the configuration
         # for daemon_type in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
         #     self.conf.create_objects_for_type(raw_objects, daemon_type)
         self.conf.create_objects(raw_objects)
-        print("Triggers: %s" % (getattr(self.conf, 'triggers')))
 
         # Maybe conf is already invalid
         if not self.conf.conf_is_correct:
@@ -623,9 +645,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 args = ["alignak-%s" % daemon_type, "--name", daemon_name,
                         "--environment", self.env_filename,
                         "--host", str(daemon.host), "--port", str(daemon.port)]
-                        # # "--debug", "1",
-                        # "--local_log", "%s/%s.log" % (daemon_log_folder, daemon_name),
-                        # "--pid_file", "%s/%s.pid" % (daemon_log_folder, daemon_name)]
                 if daemon_arguments:
                     args.append(daemon_arguments)
                 logger.info("Trying to launch daemon: %s...", daemon_name)
@@ -665,40 +684,39 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Now we ask for configuration modules if they
         # got items for us
         for instance in self.modules_manager.instances:
-            # TODO : clean
+            logger.debug("Getting objects from the module: %s" % instance.name)
             if not hasattr(instance, 'get_objects'):
+                logger.debug("The module '%s' do not provide any objects." % instance.name)
                 return
 
-            _t0 = time.time()
             try:
-                objs = instance.get_objects()
-            except Exception, exp:  # pylint: disable=W0703
-                logger.error("Module %s get_objects raised an exception %s. "
-                             "Log and continue to run", instance.name, str(exp))
-                output = cStringIO.StringIO()
-                traceback.print_exc(file=output)
-                logger.error("Back trace of this remove: %s", output.getvalue())
-                output.close()
+                got_objects = instance.get_objects()
+            except Exception as exp:  # pylint: disable=W0703
+                logger.exception("Module %s get_objects raised an exception %s. "
+                                 "Log and continue to run.", instance.name, exp)
                 continue
-            statsmgr.timer('core.hook.get_objects', time.time() - _t0)
+
+            if not got_objects:
+                logger.warning("The module '%s' did not provided any objects." % instance.name)
+                return
+
             types_creations = self.conf.types_creations
-            for type_c in types_creations:
-                (_, _, prop, dummy) = types_creations[type_c]
-                if prop not in objs:
-                    logger.warning("Did not get '%s' objects from module %s", prop, instance.name)
+            for o_type in types_creations:
+                (_, _, property, _, _) = types_creations[o_type]
+                if property not in got_objects:
+                    logger.warning("Did not get any '%s' objects from %s", property, instance.name)
                     continue
-                for obj in objs[prop]:
+                for obj in got_objects[property]:
                     # test if raw_objects[k] are already set - if not, add empty array
-                    if type_c not in raw_objects:
-                        raw_objects[type_c] = []
-                    # put the imported_from property if the module is not already setting
-                    # it so we know where does this object came from
+                    if o_type not in raw_objects:
+                        raw_objects[o_type] = []
+                    # Update the imported_from property if the module did not set
                     if 'imported_from' not in obj:
                         obj['imported_from'] = 'module:%s' % instance.name
-                    # now append the object
-                    raw_objects[type_c].append(obj)
-                logger.debug("Added %i objects to %s from module %s",
-                             len(objs[prop]), type_c, instance.name)
+                    # Append to the raw objects
+                    raw_objects[o_type].append(obj)
+                logger.debug("Added %i %s objects from %s",
+                             len(got_objects[property]), o_type, instance.name)
 
     def load_modules_alignak_configuration(self):  # pragma: no cover, not yet with unit tests.
         """Load Alignak configuration from the arbiter modules
@@ -1124,9 +1142,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         now = int(time.time())
         # call the daemon one
         res = super(Arbiter, self).get_stats_struct()
-        res.update({
-            'name': self.link_to_myself.get_name() if self.link_to_myself else self.name, 'type': 'arbiter'
-        })
+        res.update({'name': self.link_to_myself.get_name() if self.link_to_myself else self.name,
+                    'type': 'arbiter'})
         res['hosts'] = 0
         res['services'] = 0
         if self.conf:
