@@ -118,7 +118,7 @@ class Dispatcher:
             logger.debug("- %s", realm)
             for cfg_id in realm.parts:
                 realm_config = realm.parts[cfg_id]
-                print("  . %s, flavor:%s, %s"
+                print("Realm config: %s, flavor:%s, %s"
                       % (realm_config.uuid, getattr(realm_config, 'push_flavor', 'None'),
                          realm_config))
 
@@ -164,7 +164,6 @@ class Dispatcher:
         self.first_dispatch_done = False
 
         # Prepare the satellites confs
-        print("Prepare satellites configuration:")
         for satellite in self.all_daemons_links:
             satellite.prepare_for_conf()
 
@@ -194,24 +193,19 @@ class Dispatcher:
         now = time.time()
         print("Dispatcher, check alive...")
         for daemon_link in self.all_daemons_links:
-            daemon_link.update_infos(now, test=test)
-            print(" - %s manages: %s / %s"
-                  % (daemon_link.name, daemon_link.managed_confs,
-                     getattr(daemon_link, 'conf', None)))
-
             # Not alive needs new need_conf
             # and spare too if they do not have already a conf
-            # REF: doc/alignak-scheduler-lost.png (1)
-            if not daemon_link.alive or getattr(daemon_link, 'conf', None) is None:
+            if not daemon_link.update_infos(now, test=test):
                 daemon_link.need_conf = True
+            # print(" - %s manages: %s / %s"
+            #       % (daemon_link.name, daemon_link.managed_confs,
+            #          getattr(daemon_link, 'conf', None)))
 
         # Also check the spare arbiters
         for arbiter_link in self.arbiters:
             if arbiter_link != self.arbiter_link and arbiter_link.spare:
-                print("Updating informations for: %s" % arbiter_link)
-                arbiter_link.update_infos(now, test=test)
-                print(" - manages: %s / %s"
-                      % (arbiter_link.managed_confs, getattr(arbiter_link, 'conf', None)))
+                if not arbiter_link.update_infos(now, test=test):
+                    arbiter_link.need_conf = True
 
     def check_dispatch(self, test=False):
         """Check if all active items are still alive
@@ -256,8 +250,8 @@ class Dispatcher:
                                  realm.name, scheduler_link.name, conf_uuid)
                     if not scheduler_link.alive:
                         self.dispatch_ok = False  # so we ask a new dispatching
-                        logger.warning("Scheduler %s has the configuration '%s' but it is dead, "
-                                       "I am not happy.", scheduler_link.name, conf_uuid)
+                        logger.warning("Scheduler %s is expected to have the configuration "
+                                       "'%s' but it is dead!", scheduler_link.name, conf_uuid)
                         if scheduler_link.conf:
                             scheduler_link.conf.assigned_to = None
                             scheduler_link.conf.is_assigned = False
@@ -288,6 +282,7 @@ class Dispatcher:
 
         :return: None
         """
+        some_satellites_are_missing = False
         # Maybe satellites are alive, but do not have a cfg yet.
         # I think so. It is not good. I ask a global redispatch for
         # the cfg_id I think is not correctly dispatched.
@@ -301,8 +296,7 @@ class Dispatcher:
                         # So we are sure to raise a dispatch every loop a satellite is missing
                         if (len(realm.to_satellites_managed_by[sat_type][conf_uuid]) <
                                 realm.get_nb_of_must_have_satellites(sat_type)):
-                            logger.warning("Missing satellite %s for configuration %s:",
-                                           sat_type, conf_uuid)
+                            some_satellites_are_missing = True
 
                             # TODO: less violent! Must only resent to who need?
                             # must be caught by satellite who sees that
@@ -310,11 +304,12 @@ class Dispatcher:
                             self.dispatch_ok = False  # so we will redispatch all
                             realm.to_satellites_need_dispatch[sat_type][conf_uuid] = True
                             realm.to_satellites_managed_by[sat_type][conf_uuid] = []
+
                         for satellite in realm.to_satellites_managed_by[sat_type][conf_uuid]:
                             # Maybe the sat was marked as not alive, but still in
                             # to_satellites_managed_by. That means that a new dispatch
                             # is needed
-                            # Or maybe it is alive but I thought that this reactionner
+                            # Or maybe it is alive but I thought that this satellite
                             # managed the conf and it doesn't.
                             # I ask a full redispatch of these cfg for both cases
 
@@ -324,6 +319,9 @@ class Dispatcher:
                                 continue
                             if satellite.alive and (not satellite.reachable or
                                                     satellite.do_i_manage(conf_uuid, push_flavor)):
+                                logger.warning('[%s] The %s %s is not reachable or it does '
+                                               'not manage the correct configuration',
+                                               realm.name, sat_type, satellite.name)
                                 continue
 
                             logger.warning('[%s] The %s %s seems to be down, '
@@ -335,6 +333,8 @@ class Dispatcher:
                 # At the first pass, there is no conf_id in to_satellites_managed_by
                 except KeyError:
                     pass
+        if some_satellites_are_missing:
+            logger.warning("Some satellites are not available for the current configuration")
 
     def check_bad_dispatch(self, test=False):
         """Check if we have a bad dispatch
@@ -343,7 +343,7 @@ class Dispatcher:
 
         :return: None
         """
-        for daemon_link in self.satellites + self.schedulers:
+        for daemon_link in self.satellites + list(self.schedulers):
             if hasattr(daemon_link, 'conf'):
                 # If element has a conf, I do not care, it's a good dispatch
                 # If dead: I do not ask it something, it won't respond..
@@ -423,28 +423,32 @@ class Dispatcher:
 
         :return: None
         """
-        # Ok, we pass at least one time in dispatch, so now errors are True errors
+        if self.first_dispatch_done:
+            logger.debug("Dispatching is already prepared...")
+            return
+
+    # Ok, we pass at least one time in dispatch, so now errors are True errors
         self.first_dispatch_done = True
 
         if self.dispatch_ok:
-            print("Dispatching is already done...")
+            logger.debug("Dispatching is already done...")
             return
 
-        print("Preparing dispatch...")
+        logger.debug("Preparing dispatch...")
         arbiters_cfg = {}
         for arbiter_link in self.arbiters:
             # If not me and I'm a master
             if arbiter_link != self.arbiter_link and not self.arbiter_link.spare:
-                print("- arbiter to dispatch: %s" % arbiter_link)
+                logger.debug("- arbiter to dispatch: %s", arbiter_link)
                 arbiters_cfg[arbiter_link.uuid] = arbiter_link.give_satellite_cfg()
-                print("  : %s" % arbiters_cfg[arbiter_link.uuid])
+                logger.debug("  : %s", arbiters_cfg[arbiter_link.uuid])
 
         self.prepare_dispatch_schedulers(arbiters_cfg)
 
         for realm in self.conf.realms:
-            print("A realm to dispatch: %s" % realm)
+            logger.debug("A realm to dispatch: %s" % realm)
             for cfg in realm.parts.values():
-                print("- cfg: %s" % cfg)
+                logger.debug("- cfg: %s", cfg)
                 for sat_type in ('reactionner', 'poller', 'broker', 'receiver'):
                     self.prepare_dispatch_other_satellites(sat_type, realm, cfg, arbiters_cfg)
 
@@ -456,7 +460,6 @@ class Dispatcher:
         """
         for realm in self.conf.realms:
             logger.info('[%s] Prepare schedulers dispatching', realm.name)
-            print('- [%s] Prepare schedulers dispatching' % realm.name)
             # conf_to_dispatch is a list of configuration parts built when
             # the configuration is splitted into parts for the schedulers
             parts_to_dispatch = [cfg for cfg in realm.parts.values() if not cfg.is_assigned]
@@ -480,7 +483,6 @@ class Dispatcher:
 
             for part in parts_to_dispatch:
                 logger.info('[%s] Dispatching configuration %s', realm.name, part.uuid)
-                print('- [%s] Dispatching configuration: %s' % (realm.name, part.uuid))
 
                 # we need to loop until the configuration part is assigned
                 # or no more scheduler is available
@@ -502,11 +504,9 @@ class Dispatcher:
                         continue
 
                     logger.info("[%s] Preparing configuration part '%s' for the scheduler '%s'",
-                                realm.name, part.name, scheduler_link.get_name())
-                    print("- [%s] Preparing configuration part '%s' for the scheduler '%s'"
-                          % (realm.name, part.name, scheduler_link.name))
-                    print("- [%s] hosts/services: %s / %s"
-                          % (realm.name, part.hosts, part.services))
+                                realm.name, part.name, scheduler_link.name)
+                    logger.debug("- [%s] hosts/services: %s / %s"
+                                 % (realm.name, part.hosts, part.services))
 
                     # We give this configuration part a new 'flavor'
                     # todo: why a random? Using a hash would be better...
@@ -548,8 +548,6 @@ class Dispatcher:
                     pickled_conf = cPickle.dumps(scheduler_link.cfg)
                     logger.info('[%s] scheduler configuration %s size: %d bytes',
                                 realm.name, scheduler_link.name, sys.getsizeof(pickled_conf))
-                    print('- [%s] scheduler configuration %s size: %d bytes'
-                          % (realm.name, scheduler_link.name, sys.getsizeof(pickled_conf)))
 
                     logger.info('[%s] configuration %s (%s) assigned to %s',
                                 realm.name, part.uuid, part.push_flavor, scheduler_link.name)
@@ -600,8 +598,6 @@ class Dispatcher:
         if satellites:
             logger.info("[%s] Dispatching %s satellites ordered as: %s",
                         realm.name, sat_type, [s.name for s in satellites])
-            print("- dispatching %s satellites ordered as: %s"
-                  % (sat_type, [s.name for s in satellites]))
         else:
             logger.info("[%s] No %s satellites", realm.name, sat_type)
 
@@ -614,10 +610,6 @@ class Dispatcher:
 
             logger.info("[%s] Preparing configuration part '%s' for the %s: %s",
                         realm.name, part.name, sat_type, sat_link.name)
-            print("- Preparing configuration part '%s' for the %s '%s'"
-                  % (part.name, sat_type, sat_link.name))
-            # from pprint import pprint
-            # pprint(sat_link.__dict__)
             sat_link.cfg.update({
                 # Global instance configuration
                 'alignak_name': part.alignak_name,
@@ -638,8 +630,6 @@ class Dispatcher:
             pickled_conf = cPickle.dumps(sat_link.cfg)
             logger.info('[%s] %s %s configuration size: %d bytes',
                         realm.name, sat_type, sat_link.name, sys.getsizeof(pickled_conf))
-            print('- [%s] %s configuration %s size: %d bytes'
-                  % (realm.name, sat_type, sat_link.name, sys.getsizeof(pickled_conf)))
 
             sat_link.managed_confs = {part.uuid: part.push_flavor}
             sat_link.conf = part
@@ -650,10 +640,10 @@ class Dispatcher:
             nb_cfg_prepared += 1
             realm.to_satellites_managed_by[sat_type][part.uuid].append(sat_link)
 
-        # I've got enough satellite, the next ones are considered unuseful!
-        if nb_cfg_prepared == realm.get_nb_of_must_have_satellites(sat_type):
-            logger.info("[%s] Ok, no more %s needed", realm.name, sat_type)
-            realm.to_satellites_need_dispatch[sat_type][part.uuid] = False
+            # I've got enough satellite, the next ones are considered unuseful!
+            if nb_cfg_prepared == realm.get_nb_of_must_have_satellites(sat_type):
+                logger.info("[%s] Ok, no more %s needed", realm.name, sat_type)
+                realm.to_satellites_need_dispatch[sat_type][part.uuid] = False
 
     def dispatch(self, test=False):
         """
@@ -662,8 +652,10 @@ class Dispatcher:
         :return: None
         """
         if self.dispatch_ok:
-            print("Dispatching is already done and ok...")
+            logger.debug("Dispatching is already done and ok...")
             return
+
+        logger.info("Trying to send configuration to the satellites...")
 
         self.dispatch_ok = True
 
@@ -675,11 +667,14 @@ class Dispatcher:
                                           "received a configuration!" % link.name)
 
                 if link.is_sent:
-                    print("Arbiter %s already sent!" % link)
+                    logger.debug("Arbiter %s already sent!", link.name)
                     continue
 
-                logger.info("Sending configuration to the arbiter %s", link.name)
-                print("Sending configuration to the arbiter '%s'" % link.name)
+                if not link.reachable:
+                    logger.debug("Arbiter %s is not alive!", link.name)
+                    continue
+
+                logger.debug("Sending configuration to the arbiter %s", link.name)
 
                 # ----------
                 # Unit tests
@@ -703,13 +698,13 @@ class Dispatcher:
                         logger.critical("The arbiter tries to send a configuration but it "
                                         "is not a MASTER one? Check your configuration!")
                         continue
-                    logger.info('Sending configuration to the arbiter: %s', link.name)
+                    logger.debug('Sending configuration to the arbiter: %s', link.name)
                     link.is_sent = link.put_conf(link.spare_arbiter_conf)
                     if not link.is_sent:
-                        logger.warning("Configuration sending error for arbiter %s", link.name)
+                        # logger.warning("Configuration sending error for arbiter %s", link.name)
                         self.dispatch_ok = False
                     else:
-                        logger.info("Configuration sent to the scheduler %s", link.name)
+                        logger.info("Configuration sent to the arbiter %s", link.name)
 
                 # Ok, it already has the conf. I remember that
                 # it does not have to run, I'm still alive!
@@ -717,11 +712,14 @@ class Dispatcher:
 
         for link in self.schedulers:
             if link.is_sent:
-                print("Scheduler %s already sent!" % link)
+                logger.debug("Scheduler %s already sent!", link.name)
                 continue
 
-            logger.info("Sending configuration to the scheduler %s", link.name)
-            print("Sending configuration to the scheduler '%s'" % link.name)
+            if not link.reachable:
+                logger.debug("Scheduler %s is not alive!", link.name)
+                continue
+
+            logger.debug("Sending configuration to the scheduler %s", link.name)
 
             # ----------
             # Unit tests
@@ -734,37 +732,37 @@ class Dispatcher:
 
             link.is_sent = link.put_conf(link.cfg)
             if not link.is_sent:
-                logger.warning("Configuration sending error for scheduler %s", link.name)
+                # logger.warning("Configuration sending error for scheduler %s", link.name)
                 self.dispatch_ok = False
             else:
                 logger.info("Configuration sent to the scheduler %s", link.name)
 
         for sat_type in ('reactionner', 'poller', 'broker', 'receiver'):
-            for satellite_link in self.satellites:
-                if satellite_link.type != sat_type:
-                    continue
-                if satellite_link.is_sent:
-                    print("Satellite %s already sent!" % satellite_link)
+            for link in self.satellites:
+                if link.is_sent:
+                    logger.debug("%s %s already sent!", link.type, link.name)
                     continue
 
-                logger.info("Sending configuration to %s '%s''", sat_type, satellite_link.name)
-                print("Sending configuration to the %s '%s'" % (sat_type, satellite_link.name))
+                if not link.reachable:
+                    logger.debug("%s %s is not alive!", link.type, link.name)
+                    continue
+
+                logger.info("Sending configuration to %s '%s''", link.type, link.name)
 
                 # ----------
                 # Unit tests
                 if test:
-                    setattr(satellite_link, 'unit_test_pushed_configuration', satellite_link.cfg)
-                    print("- sent: %s" % (satellite_link.cfg))
-                    satellite_link.is_sent = True
+                    setattr(link, 'unit_test_pushed_configuration', link.cfg)
+                    print("- sent: %s" % (link.cfg))
+                    link.is_sent = True
                     continue
                 # ----------
 
-                satellite_link.is_sent = satellite_link.put_conf(satellite_link.cfg)
-                if not satellite_link.is_sent:
-                    logger.warning("Configuration sending error for %s '%s'",
-                                   sat_type, satellite_link.get_name())
+                link.is_sent = link.put_conf(link.cfg)
+                if not link.is_sent:
+                    # logger.warning("Configuration sending error for %s '%s'", sat_type, link.name)
                     self.dispatch_ok = False
                     continue
                 # satellite_link.active = True
 
-                logger.info('Configuration sent to %s %s', sat_type, satellite_link.get_name())
+                logger.info('Configuration sent to %s %s', sat_type, link.get_name())

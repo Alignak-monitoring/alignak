@@ -1663,9 +1663,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         if not self.schedulers:
             logger.warning("No scheduler defined, I am adding one at localhost:7768")
-            daemon = SchedulerLink({'name': 'Default-Scheduler',
+            satellite = SchedulerLink({'name': 'Default-Scheduler',
                                     'address': 'localhost', 'port': '7768'})
-            self.schedulers = SchedulerLinks([daemon])
+            self.schedulers = SchedulerLinks([satellite])
         if not self.pollers:
             logger.warning("No poller defined, I am adding one at localhost:7771")
             poller = PollerLink({'name': 'Default-Poller',
@@ -1693,12 +1693,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
                       self.receivers, self.schedulers]
         for satellites_list in satellites:
             for satellite in satellites_list:
-                print("Satellite: %s" % satellite)
                 if not satellite.realm:
-                    satellite.realm = default_realm.uuid
+                    # Beware: realm is not yet a real realm object uuid ... but still a realm name !
+                    satellite.realm = default_realm.get_name()
                     satellite.realm_name = default_realm.get_name()
                     logger.info("Tagging %s with realm %s", satellite.name, satellite.realm_name)
-                    print("Tagging %s with realm %s" % (satellite.name, satellite.realm_name))
 
         # Parse hosts for realms and set host in the default realm is no realm is set
         hosts_realms_names = set()
@@ -1713,53 +1712,52 @@ class Config(Item):  # pylint: disable=R0904,R0902
         satellites = [self.schedulers, self.pollers, self.brokers]
         for satellites_list in satellites:
             # Check that all schedulers and realms are coherent
-            daemons_class = satellites_list.inner_class
-            daemons_realms_names = set()
-            for daemon in satellites_list:
-                daemon_type = getattr(daemon, 'my_type', None)
-                daemon_realm_name = getattr(daemon, 'realm', None)
-                if daemon_realm_name is None:
+            sat_class = satellites_list.inner_class
+            sat_realms_names = set()
+            for satellite in satellites_list:
+                # Beware: realm is not yet a real realm object uuid ... but still a realm name !
+                if not satellite.realm:
                     logger.warning("The %s %s do not have a defined realm",
-                                   daemon_type, daemon.get_name())
+                                   satellite.type, satellite.name)
                     continue
 
-                if daemon_realm_name not in realms_names:
+                if satellite.realm not in realms_names:
                     logger.warning("The %s %s is affected to an unknown realm: '%s' (%s)",
-                                   daemon_type, daemon.get_name(), daemon_realm_name, realms_names)
+                                   satellite.type, satellite.name,
+                                   satellite.realm, realms_names)
                     continue
-                daemons_realms_names.add(daemon_realm_name)
-                # If the daemon manges sub realms, include the sub realms
-                print("Daemon Manage sub realms: %s: %s"
-                      % (daemon.name, getattr(daemon, 'manage_sub_realms', False)))
-                if getattr(daemon, 'manage_sub_realms', False):
-                    for realm in self.realms[realms_names_ids[daemon_realm_name]].all_sub_members:
-                        daemons_realms_names.add(realm)
+                sat_realms_names.add(satellite.realm)
 
-            if not hosts_realms_names.issubset(daemons_realms_names):
-                for realm in hosts_realms_names.difference(daemons_realms_names):
+                # If the daemon manges sub realms, include the sub realms
+                if getattr(satellite, 'manage_sub_realms', False):
+                    for realm in self.realms[realms_names_ids[satellite.realm]].all_sub_members:
+                        sat_realms_names.add(realm)
+
+            if not hosts_realms_names.issubset(sat_realms_names):
+                for realm in hosts_realms_names.difference(sat_realms_names):
                     self.add_warning("Some hosts exist in the realm '%s' but no %s is "
-                                     "defined for this realm" % (realm, daemon_type))
+                                     "defined for this realm" % (realm, satellite.type))
 
                     # Add a self-generated daemon
-                    logger.warning("Trying to add a %s for the realm: %s", daemon_type, realm)
-                    new_daemon = daemons_class({
+                    logger.warning("Trying to add a %s for the realm: %s", satellite.type, realm)
+                    new_daemon = sat_class({
                         # 'daemon_name': '%s-%s' % (daemon_type.capitalize(), realm),
-                        '%s_name' % daemon_type: '%s-%s' % (daemon_type.capitalize(), realm),
+                        '%s_name' % satellite.type: '%s-%s' % (satellite.type, realm),
                         'realm': realm, 'spare': '0',
                         'address': 'localhost', 'port': self.daemons_initial_port,
                         'manage_sub_realms': '0', 'manage_arbiters': '0',
                     })
                     self.daemons_initial_port = self.daemons_initial_port + 1
                     self.missing_daemons.append(new_daemon)
-                    self.add_warning("Added a %s in the realm '%s'" % (daemon_type, realm))
+                    self.add_warning("Added a %s in the realm '%s'" % (satellite.type, realm))
         # Now we have a list of the missing daemons, parse this list and
         # add the daemons to their respective list
         satellites = [self.schedulers, self.pollers, self.brokers]
         for satellites_list in satellites:
-            daemons_class = satellites_list.inner_class
-            for daemon in self.missing_daemons:
-                if daemon.__class__ == daemons_class:
-                    satellites_list.add_item(daemon)
+            sat_class = satellites_list.inner_class
+            for satellite in self.missing_daemons:
+                if satellite.__class__ == sat_class:
+                    satellites_list.add_item(satellite)
 
         # Log all satellites list
         logger.info("Alignak definitive daemons list:")
@@ -2150,14 +2148,17 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
             if not self.read_config_silent:
                 try:
-                    dump_list = sorted(checked_list, key=lambda k: k.get_full_name())
+                    dump_list = sorted(checked_list, key=lambda k: k.get_name())
                 except AttributeError:  # pragma: no cover, simple protection
                     dump_list = checked_list
 
                 # Dump at DEBUG level because some tests break with INFO level, and it is not
                 # really necessary to have information about each object ;
                 for cur_obj in dump_list:
-                    logger.debug('\t%s', cur_obj.get_full_name())
+                    if strclss == 'services':
+                        logger.debug('\t%s', cur_obj.get_full_name())
+                    else:
+                        logger.debug('\t%s', cur_obj.get_name())
                 logger.info('\tChecked %d %s', len(checked_list), strclss)
 
         # Parse hosts and services for tags and realms

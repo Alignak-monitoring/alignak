@@ -2269,8 +2269,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # Increased on each loop turn
         loop_count = 0
-        # Last loop duration
-        loop_duration = 0
+
         # For the scheduler pause duration
         pause_duration = 0.5
         logger.info("Scheduler pause duration: %.2f", pause_duration)
@@ -2279,7 +2278,7 @@ class Scheduler(object):  # pylint: disable=R0902
         logger.info("Scheduler maximum expected loop duration: %.2f", maximum_loop_duration)
 
         # Scheduler start timestamp
-        sch_start_ts = time.time()
+        start_ts = time.time()
         elapsed_time = 0
 
         # We must reset it if we received a new conf from the Arbiter.
@@ -2316,7 +2315,7 @@ class Scheduler(object):  # pylint: disable=R0902
         self.nb_external_commands = 0
 
         self.load_one_min = Load(initial_value=1)
-        logger.info("[%s] starting scheduler loop: %.2f", self.name, sch_start_ts)
+        logger.info("[%s] starting scheduler loop: %.2f", self.name, start_ts)
         while self.must_schedule:
             # Scheduler load
             # fixme: measuring the scheduler load with this method is a non-sense ...
@@ -2494,7 +2493,7 @@ class Scheduler(object):  # pylint: disable=R0902
             self.sched_daemon.sleep_time = 0.0
 
             # And now, the whole average time spent
-            elapsed_time = loop_end_ts - sch_start_ts
+            elapsed_time = loop_end_ts - start_ts
             if self.log_loop:
                 logger.debug("Elapsed time, current loop: %.2f, from start: %.2f (%d loops)",
                              loop_duration, elapsed_time, loop_count)
@@ -2585,7 +2584,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 logger.debug("+++ %d", loop_count)
 
         logger.info("[%s] stopping scheduler loop: started: %.2f, elapsed time: %.2f seconds",
-                    self.name, sch_start_ts, elapsed_time)
+                    self.name, start_ts, elapsed_time)
 
         # We must save the retention at the quit BY OURSELVES
         # because our daemon will not be able to do it for us

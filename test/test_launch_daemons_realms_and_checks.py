@@ -62,7 +62,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         # Load and test the configuration
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cfg/run_realms')
 
-        self.setup_with_file(cfg_folder + '/alignak.cfg')
+        self.setup_with_file(cfg_folder + '/alignak.cfg', cfg_folder + '/alignak.ini')
         assert self.conf_is_correct
 
         self.procs = {}

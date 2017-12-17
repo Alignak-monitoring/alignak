@@ -122,7 +122,7 @@ class HTTPClient(object):
         self.set_proxy(proxy)
 
     def __repr__(self):
-        return "%r %r, SSL: %r" % (self.__class__.__name__, self.uri, self.use_ssl)
+        return "%s %s, SSL: %s" % (self.__class__.__name__, self.uri, self.use_ssl)
     __str__ = __repr__
 
     @property
