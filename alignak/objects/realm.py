@@ -453,7 +453,6 @@ class Realm(Itemgroup):
 
         # If the broker manages sub realms, fill the satellite links...
         if manage_sub_realms:
-            print("Manage sub realms... broker.")
             # Now pollers
             for poller_id in self.get_all_subs_satellites_by_type('pollers', realms):
                 poller = pollers[poller_id]
