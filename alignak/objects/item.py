@@ -212,6 +212,25 @@ class Item(AlignakObject):
 
         # Change Nagios2 names to Nagios3 ones (before using them)
         self.old_properties_names_to_new()
+        a = {
+            '_dist_run': '/usr/local//var/run', 'server_cert': '/usr/local//etc/certs/server.crt',
+            'workdir': '/usr/local//var/run', 'ca_cert': '/usr/local//etc/certs/ca.pem',
+            '_dist_log': '/usr/local//var/log', 'hard_ssl_name_check': '0',
+            'local_log': '/usr/local//var/log/Alignak configuration.log', 'spare': '0',
+            'user': 'alignak', 'server_dh': '/usr/local//etc/certs/server.pem', 'use_ssl': '0',
+            'realm': 'All', 'port': '10000', 'imported_from': '/home/alignak/alignak/test/cfg/config/alignak.ini',
+            'python_name': 'alignak_module_example', 'module_alias': 'Example', 'daemon': 'alignak-arbiter',
+            'server_key': '/usr/local//etc/certs/server.key', 'group': 'alignak', 'name': 'Alignak configuration',
+            '_dist': '/usr/local/', '_dist_bin': '/usr/local//bin', 'option_3': 'foobar',
+            '_dist_etc': '/usr/local//etc', 'max_queue_size': '0', 'logdir': '/usr/local//var/log',
+            'etcdir': '/usr/local//etc', 'option_2': 'bar', '_dist_var': '/usr/local//var/lib', 'option_1': 'foo',
+            'pidfile': '/usr/local//var/run/Alignak configuration.pid'}
+
+    # Simply moved all the __ functions near the initialization
+    def __str__(self):
+        cls_name = self.__class__.__name__
+        return '<%s name=%r />' % (cls_name, self.get_name())
+    __repr__ = __str__
 
     # Simply moved all the __ functions near the initialization
     def __str__(self):
