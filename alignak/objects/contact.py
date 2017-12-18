@@ -194,6 +194,11 @@ class Contact(Item):
                 del params[prop]
         super(Contact, self).__init__(params, parsing=parsing)
 
+    def __str__(self):
+        return '<Contact %s, uuid=%s, use: %s />' \
+               % (self.get_name(), self.uuid, getattr(self, 'use', None))
+    __repr__ = __str__
+
     def serialize(self):
         res = super(Contact, self).serialize()
 
@@ -211,10 +216,9 @@ class Contact(Item):
         :return: contact name
         :rtype: str
         """
-        try:
-            return self.contact_name
-        except AttributeError:
-            return 'UnnamedContact'
+        if self.is_tpl():
+            return "tpl-%s" % (getattr(self, 'name', 'unnamed'))
+        return getattr(self, 'contact_name', 'unnamed')
 
     def get_groupname(self):
         """

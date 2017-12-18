@@ -57,7 +57,6 @@ A Reactionner listens to a port for the configuration from the Arbiter
 The conf contains the schedulers where actionners will gather actions.
 
 The Reactionner keeps on listening to the Arbiter
-(one a timeout)
 
 If Arbiter wants it to have a new conf, the satellite forgets the previous
  Schedulers (and actions into) and takes the new ones.
@@ -99,14 +98,19 @@ class NotWorkerMod(Exception):
 
 class BaseSatellite(Daemon):
     """Base Satellite class.
-    Subclassed by Alignak (scheduler), Broker and Satellite
+    Sub-classed by Alignak (scheduler), Broker and Satellite
 
     """
 
     def __init__(self, name, **kwargs):
         super(BaseSatellite, self).__init__(name, **kwargs)
-        # Ours schedulers
+
+        # Our schedulers and arbiters
         self.schedulers = {}
+        self.arbiters = {}
+
+        # Hosts / schedulers mapping
+        self.hosts_schedulers = {}
 
         # Now we create the interfaces
         self.http_interface = GenericInterface(self)
@@ -116,40 +120,37 @@ class BaseSatellite(Daemon):
         self.external_commands = []
         self.external_commands_lock = threading.RLock()
 
-    def do_loop_turn(self):
-        """Abstract method for daemon loop turn.
-        Inherited from Daemon, must be overriden by the inheriting class.
+    def get_managed_configurations(self):
+        """Get the configurations managed by this satellite
 
-        :return: None
-        """
-        raise NotImplementedError()
+        The configurations managed by a satellite is a list of the configuration attached to
+        the schedulers related to the satellites. A broker linked to several schedulers
+        will return the list of the configuration parts of its scheduler links.
 
-    def watch_for_new_conf(self, timeout=0):
-        """Check if a new configuration was sent to the daemon
-
-        This function is called on each daemon loop turn. Basically it is a sleep...
-
-        If a new configuration was posted, this function returns True
-
-        :param timeout: timeout to wait. Default is no wait time.
-        :type timeout: float
-        :return: None
-        """
-        logger.debug("Watching for a new configuration, timeout: %s", timeout)
-        self.make_a_pause(timeout=timeout)
-        return self.new_conf is not None
-
-    def what_i_managed(self):
-        """Get the managed configuration by this satellite
-
-        :return: a dict of scheduler id as key and push_flavor as values
+        :return: a dict of scheduler links with instance_id as key and
+        hash, push_flavor and configuration identifier as values
         :rtype: dict
         """
         res = {}
-        for (key, val) in self.schedulers.iteritems():
-            res[key] = val['push_flavor']
+        for scheduler_link in self.schedulers.values():
+            res[scheduler_link.instance_id] = {
+                'hash': scheduler_link.hash,
+                'push_flavor': scheduler_link.push_flavor,
+                'managed_conf_id': scheduler_link.managed_conf_id
+            }
         logger.debug("Get managed configuration: %s", res)
         return res
+
+    def get_scheduler_from_hostname(self, host_name):
+        """Get scheduler linked to the given host_name
+
+        :param host_name: host_name we want the scheduler from
+        :type host_name: str
+        :return: scheduler with id corresponding to the mapping table
+        :rtype: dict
+        """
+        scheduler_uuid = self.hosts_schedulers.get(host_name, None)
+        return self.schedulers.get(scheduler_uuid, None)
 
     def get_external_commands(self):
         """Get the external commands
@@ -162,226 +163,54 @@ class BaseSatellite(Daemon):
         self.external_commands = []
         return res
 
-    def get_links_of_type(self, s_type=None):
-        """Return the `s_type` satellite list (eg. schedulers)
+    def get_return_for_passive(self, scheduler_instance_id):
+        """Get returns of passive actions for a specific scheduler
 
-        If s_type is None, return the list of all satellites
-
-        :param s_type: sattelite type
-        :type s_type: str
-        :return: list of satellites
-        :rtype: alignak.objects.SatelliteLinks
+        :param scheduler_instance_id: scheduler id
+        :type scheduler_instance_id: int
+        :return: Action list
+        :rtype: list
         """
-        print("Get '%s' satellites list for: %s / %s" % (s_type if s_type else 'All',
-                                                         self.type, self.name))
-        # print("Self: %s / %s" % (self, self.__dict__))
-        satellites = {
-            'arbiter': getattr(self, 'arbiters', []),
-            'scheduler': getattr(self, 'schedulers', []),
-            'broker': getattr(self, 'brokers', []),
-            'poller': getattr(self, 'pollers', []),
-            'reactionner': getattr(self, 'reactionners', []),
-            'receiver': getattr(self, 'receivers', [])
-        }
-        # print("Schedulers: %s" % (self.schedulers))
-        if not s_type:
-            print("Return all known satellites")
-            result = {}
-            for sat_type in satellites:
-                print("- %s / %s" % (sat_type, satellites[sat_type]))
-                if sat_type == self.type:
-                    continue
-                for sat_uuid in satellites[sat_type]:
-                    print(" . %s" % sat_uuid)
-                    result[sat_uuid] = satellites[sat_type][sat_uuid]
-            print("Result: %s" % result)
-            return result
-        if s_type in satellites:
-            print("Result: %s / %s" % (s_type, satellites[s_type]))
-            return satellites[s_type]
+        # I do not know this scheduler?
+        logger.info("My schedulers: %s %s", self.schedulers, type(self.schedulers))
+        if not self.schedulers:
+            logger.error("I do not have any scheduler: %s", self.schedulers)
+            return []
 
-        print("Get satellites list returns None")
-        return None
+        scheduler_link = None
+        for link in self.schedulers.values():
+            if scheduler_instance_id == link.instance_id:
+                scheduler_link = link
+                break
+        else:
+            logger.warning("I do not know this scheduler: %s", scheduler_instance_id)
+            return []
 
-    def daemon_connection_init(self, s_id, s_type='scheduler'):
-        """Wrapper function for the real function do_
-        Only for timing the connection
+        ret, scheduler_link.wait_homerun = scheduler_link.wait_homerun, {}
+        logger.debug("Results: %s" % (ret.values()) if ret else "No results available")
 
-        This function returns True if the connection is initialized,
-        else False if a problem occured
+        return ret.values()
 
-        :param s_id: id
-        :type s_id: int
-        :param s_type: type of item
-        :type s_type: str
-        :return: the same as do_daemon_connection_init returns
+    def clean_previous_run(self):
+        """Clean variables from previous configuration,
+        such as schedulers, broks and external commands
+
+        :return: None
         """
-        _t0 = time.time()
-        res = self.do_daemon_connection_init(s_id, s_type)
-        statsmgr.timer('con-init.%s' % s_type, time.time() - _t0)
-        return res
+        # Clean all lists
+        self.arbiters.clear()
+        self.schedulers.clear()
+        with self.external_commands_lock:
+            self.external_commands = self.external_commands[:]
 
-    def do_daemon_connection_init(self, s_id, s_type='scheduler'):
-        # pylint: disable=too-many-return-statements
-        """Initialize a connection with the `s_type` daemon identified with 's_id'.
-
-        Initialize the connection (HTTP client) to the daemon and get its running identifier.
-        Returns True if it succeeds else if any error occur or the daemon is inactive
-        it returns False.
-
-        NB: if the daemon is configured as passive, or if it is an scheduler that is
-        inactive then it returns False without trying a connection.
-
-        :param s_id: scheduler s_id to connect to
-        :type s_id: int
-        :param s_type: 'scheduler', else daemon type
-        :type s_type: str
-        :return: True if the connection is established
-        """
-        logger.debug("do_daemon_connection_init: %s %s", s_type, s_id)
-        print("do_daemon_connection_init: %s %s", s_type, s_id)
-
-        # Get the appropriate links list...
-        links = self.get_links_of_type(s_type)
-        if links is None:
-            logger.critical("Unknown type '%s' for the connection!", s_type)
-            return False
-        # ... and check if required link exist in this list.
-        if s_id not in links:
-            logger.error("Unknown identifier '%s' for the %s connection!", s_id, s_type)
-            return False
-
-        link = links[s_id]
-        print("Current link: %s" % type(link))
-
-        # We do not want to initiate the connections to the passive
-        # daemons (eg. pollers, reactionners)
-        if link.passive:
-            logger.error("Do not initialize connection with %s '%s' "
-                         "because it is configured as passive", link.type, link.name)
-            return False
-
-        # If the link is not not active, I do not try to init it is just useless
-        if not link.active:
-            logger.warning("%s '%s' is not active, "
-                           "do not initalize its connection!", link.type, link.name)
-            return False
-
-        # If we try to connect too much, we slow down our connection tries...
-        if link.is_connection_try_too_close(delay=5):
-            logger.info("Too close connection retry, postponed")
-            return False
-
-        logger.info("Initializing connection with %s (%s/%s), attempt: %d / %d",
-                    link.instance_id, link.type, link.name,
-                    link.connection_attempt, link.max_failed_connections)
-
-        # Ok, we now update our last connection attempt
-        link.last_connection = time.time()
-        # and we increment the number of connection attempts
-        link.connection_attempt += 1
-
-        # Get the connection running identifier - first client / server communication
-        logger.debug("[%s] Getting running identifier from '%s'", self.name, link.name)
-        _t0 = time.time()
-        changed = link.get_running_id()
-        statsmgr.timer('con-get-running-id.%s' % s_type, time.time() - _t0)
-
-        # If the daemon has been restarted: it has a new running_id.
-        # So we clear all verifications, they are obsolete now.
-        if changed:
-            logger.info("[%s] The running id of the %s %s changed (%s), "
-                        "we must clear its context.",
-                        self.name, s_type, link.name, link.running_id)
-            (_, _, _, _) = link.get_and_clear_context()
-
-        # If I am a broker and I reconnect to my scheduler
-        # pylint: disable=E1101
-        if self.type == 'broker' and s_type == 'scheduler':
-            logger.info("[%s] Asking my initial broks from '%s'", self.name, link.name)
-            _t0 = time.time()
-            if not link.get_initial_broks(self.name):
-                logger.warning("[%s] Initial broks were not raised :(", self.name)
-            statsmgr.timer('con-fill-initial-broks.%s' % s_type, time.time() - _t0)
-
-        # Here, everything is ok, the connection was established and
-        # we got the daemon running identifier!
-        link.connection_attempt = 0
-        logger.info("Connection OK with %s/%s", link.type, link.name)
-        return True
-
-    def get_previous_link(self, conf, link_uuid, link_type='scheduler'):
-        """Check if we received a conf for this link before.
-        Based on the link uuid and the name/host/port tuple
-
-        :param conf: configuration to check
-        :type conf: dict
-        :param link_uuid: link id used in the received configuration
-        :type link_uuid: str
-        :param link_type: 'scheduler', else daemon type
-        :type link_type: str
-        :return: previous link uuid if we already received a conf for this daemon link
-        :rtype: str
-        """
-        print("Searching former link: %s / %s" % (link_type, link_uuid))
-        former_uuid = ''
-        # name = conf['name']
-        # address = conf['address']
-        # port = conf['port']
-
-        links = self.get_links_of_type(link_type)
-        if links is None:
-            logger.critical("Unknown type '%s' for the connection!", link_type)
-            return False
-
-        # Link with the same uuid and address/port
-        if link_uuid in links and conf.address == links[link_uuid]['address'] and \
-                conf.port == links[link_uuid]['port']:
-            former_uuid = link_uuid
-
-        # Link with the same name and address/port
-        similar_ids = [k for k, s in links.iteritems()
-                       if (s['name'], s['address'], s['port']) ==
-                       (conf.name, conf.address, conf.port)]
-        if similar_ids:
-            former_uuid = similar_ids[0]  # Only one match actually
-
-        return former_uuid
-
-    def get_previous_sched_id(self, conf, sched_id):
-        """Check if we received a conf from this sched before.
-        Base on the scheduler id and the name/host/port tuple
-
-        :param conf: configuration to check
-        :type conf: dict
-        :param sched_id: scheduler id of the conf received
-        :type sched_id: str
-        :return: previous sched_id if we already received a conf from this scheduler
-        :rtype: str
-        """
-        old_sched_id = ''
-        name = conf['name']
-        address = conf['address']
-        port = conf['port']
-        # We can already got this conf id, but with another address
-
-        if sched_id in self.schedulers and address == self.schedulers[sched_id]['address'] and \
-                port == self.schedulers[sched_id]['port']:
-            old_sched_id = sched_id
-
-        # Check if it not a arbiter reload
-        similar_ids = [k for k, s in self.schedulers.iteritems()
-                       if (s['name'], s['address'], s['port']) == (name, address, port)]
-
-        if similar_ids:
-            old_sched_id = similar_ids[0]  # Only one match actually
-
-        return old_sched_id
+    def do_loop_turn(self):
+        """Satellite main loop - not implemented for a BaseSatellite"""
+        raise NotImplementedError()
 
     def setup_new_conf(self):
         """Setup the new configuration received from Arbiter
 
-        This function is the generic treatment needed for every Alignak adaemon when it receivss
+        This function is the generic treatment needed for every Alignak daemon when it receivss
         a new configuration from the Arbiter:
         - save the new configuration
         - dump the main configuration elements
@@ -391,24 +220,43 @@ class BaseSatellite(Daemon):
         - register its statistics manager
         - get and configure its arbiters and schedulers relation
 
+        Setting the self.new_conf as None is to indicate that the new configuration has been
+        managed.
+
+        Note: it is important to protect the configuration management thanks to a lock!
+
         :return: None
         """
         with self.conf_lock:
-            print("BaseSatellite - New configuration for: %s / %s" % (self.type, self.name))
-            logger.info("[%s] Received a new configuration", self.name)
+            logger.info("Received a new configuration (arbiters / schedulers)")
 
             # Clean our execution context
             self.clean_previous_run()
 
-            # Get and unserialize the new configuration
-            # todo: Not useful to unserialize?
-            self.cur_conf = unserialize(self.new_conf, True)
+            # Get the new configuration
+            self.cur_conf = self.new_conf
             # self_conf is our own configuration from the alignak environment
             self_conf = self.cur_conf['self_conf']
+
+            logger.debug("Received a new configuration, containing:")
+            for key in self.cur_conf:
+                logger.debug("- %s: %s", key, self.cur_conf[key])
+            logger.debug("satellite self configuration part: %s", self_conf)
+
+            if 'satellites' not in self.cur_conf:
+                self.cur_conf['satellites'] = []
+            if 'modules' not in self.cur_conf:
+                self.cur_conf['modules'] = []
+
+            # Update Alignak name
+            self.alignak_name = self.cur_conf['alignak_name']
+            logger.info("My Alignak instance: %s", self.alignak_name)
+
+            # This to indicate that the new configuration got managed...
             self.new_conf = None
 
             # Get our name from the received configuration
-            self.name = self_conf.get('name', 'Unnamed %s' % self.type)
+            # self.name = self_conf.get('name', 'Unnamed %s' % self.type)
             # Set my own process title
             self.set_proctitle(self.name)
 
@@ -420,53 +268,51 @@ class BaseSatellite(Daemon):
                 time.tzset()
 
             # Configure our Stats manager
-            statsmgr.register(self.name,
+            statsmgr.register(self.name, self.type,
                               statsd_host=self_conf.get('statsd_host', 'localhost'),
                               statsd_port=self_conf.get('statsd_port', 8125),
                               statsd_prefix=self_conf.get('statsd_prefix', 'alignak'),
                               statsd_enabled=self_conf.get('statsd_enabled', False))
 
-            logger.info("[%s] Received a new configuration, containing:", self.name)
-            print("[%s] Received a new configuration, containing:" % self.name)
-            for key in self.cur_conf:
-                logger.info("[%s] - %s", self.name, key)
-                print(" - %s = %s" % (key, self.cur_conf[key]))
-            logger.debug("[%s] satellite self configuration part: %s", self.name, self_conf)
-
             # Now we create our arbiters and schedulers links
             for link_type in ['arbiters', 'schedulers']:
                 if link_type not in self.cur_conf:
                     logger.error("[%s] Missing %s in the configuration!", self.name, link_type)
-                    print("***[%s] Missing %s in the configuration!!!" % (self.name, link_type))
                     continue
 
-                received_satellites = self.cur_conf[link_type]
-                logger.debug("[%s] - received %s: %s", self.name, link_type, received_satellites)
+                if link_type == 'schedulers' and self.type == 'scheduler':
+                    # Do not do anything with my own link!
+                    continue
+
                 my_satellites = getattr(self, link_type, {})
-                print("My %s satellites: %s" % (link_type, my_satellites))
-                print("My %s received satellites:" % (link_type))
+                received_satellites = self.cur_conf[link_type]
                 for link_uuid in received_satellites:
-                    print("- %s / %s" % (link_uuid, received_satellites[link_uuid]))
-                    # Must look if we already had a configuration and save our context
-                    already_got = received_satellites.get('_id') in my_satellites
+                    rs_conf = received_satellites[link_uuid]
+                    logger.info("- received %s - %s: %s", rs_conf['instance_id'],
+                                rs_conf['type'], rs_conf['name'])
+
+                    # Must look if we already had a configuration and save our broks
+                    already_got = rs_conf['instance_id'] in my_satellites
                     broks = {}
                     actions = {}
                     wait_homerun = {}
                     external_commands = {}
                     running_id = 0
                     if already_got:
-                        print("Already got!")
+                        logger.warning("I already got: %s", rs_conf['instance_id'])
                         # Save some information
                         running_id = my_satellites[link_uuid].running_id
                         (broks, actions,
-                         wait_homerun, external_commands) = link.get_and_clear_context()
+                         wait_homerun, external_commands) = \
+                            my_satellites[link_uuid].get_and_clear_context()
                         # Delete the former link
                         del my_satellites[link_uuid]
 
                     # My new satellite link...
-                    new_link = SatelliteLink.get_a_satellite_link(
-                        link_type[:-1], received_satellites[link_uuid])
-                    my_satellites[link_uuid] = new_link
+                    new_link = SatelliteLink.get_a_satellite_link(link_type[:-1],
+                                                                  rs_conf)
+                    my_satellites[new_link.uuid] = new_link
+                    logger.info("I got a new %s satellite: %s", link_type, new_link)
 
                     new_link.running_id = running_id
                     new_link.external_commands = external_commands
@@ -474,24 +320,48 @@ class BaseSatellite(Daemon):
                     new_link.wait_homerun = wait_homerun
                     new_link.actions = actions
 
-                    # replacing sattelite address and port by those defined in satellitemap
-                    if new_link.name in self_conf.get('satellitemap', {}):
-                        overriding = self_conf.get('satellitemap')[new_link.name]
+                    # replacing satellite address and port by those defined in satellite_map
+                    if new_link.name in self_conf.get('satellite_map', {}):
+                        overriding = self_conf.get('satellite_map')[new_link.name]
                         # satellite = dict(satellite)  # make a copy
-                        # new_link.update(self_conf.get('satellitemap', {})[new_link.name])
+                        # new_link.update(self_conf.get('satellite_map', {})[new_link.name])
                         logger.warning("Do not override the configuration for: %s, with: %s. "
                                        "Please check whether this is necessary!",
                                        new_link.name, overriding)
 
-                logger.debug("We have our %s: %s", link_type, my_satellites)
-                logger.info("We have our %s:", link_type)
-                for link in my_satellites.values():
-                    logger.info(" - %s ", link.name)
+            # For each scheduler, we received its managed hosts list
+            # Note that this may be included in the base class because
+            self.hosts_schedulers = {}
+            for link_uuid in self.schedulers:
+                # We received the hosts names for each scheduler
+                for host_name in self.schedulers[link_uuid].managed_hosts_names:
+                    self.hosts_schedulers[host_name] = link_uuid
+
+    def get_daemon_stats(self, details=False):
+        """Increase the stats provided by the Daemon base class
+
+        :return: stats dictionary
+        :rtype: dict
+        """
+        now = int(time.time())
+        # call the daemon one
+        res = super(BaseSatellite, self).get_daemon_stats(details=details)
+
+        counters = res['counters']
+        counters['external-commands'] = len(self.external_commands)
+        counters['arbiters'] = len(self.arbiters)
+        counters['schedulers'] = len(self.schedulers)
+
+        metrics = res['metrics']
+        metrics.append('%s.%s.external-commands.queue %d %d'
+                       % (self.type, self.name, len(self.external_commands), now))
+
+        return res
 
 
 class Satellite(BaseSatellite):  # pylint: disable=R0902
     """Satellite class.
-    Subclassed by Receiver, Reactionner and Poller
+    Sub-classed by Receiver, Reactionner and Poller
 
     """
     do_checks = False
@@ -551,29 +421,19 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         # And we remove it from the actions queue of the scheduler too
         try:
-            del self.schedulers[sched_id]['actions'][action.uuid]
+            del self.schedulers[sched_id].actions[action.uuid]
         except KeyError as exp:
             logger.error("KeyError del scheduler action: %s / %s - %s",
                          sched_id, action.uuid, str(exp))
 
         # We tag it as "return wanted", and move it in the wait return queue
         try:
-            self.schedulers[sched_id]['wait_homerun'][action.uuid] = action
+            self.schedulers[sched_id].wait_homerun[action.uuid] = action
         except KeyError:  # pragma: no cover, simple protection
             logger.error("KeyError Add home run action: %s / %s - %s",
                          sched_id, action.uuid, str(exp))
 
     def manage_returns(self):
-        """ Wrapper function of do_manage_returns()
-
-        :return: None
-        TODO: Use a decorator for stat
-        """
-        _t0 = time.time()
-        self.do_manage_returns()
-        statsmgr.timer('core.manage-returns', time.time() - _t0)
-
-    def do_manage_returns(self):
         """Manage the checks and then
         send a HTTP request to schedulers (POST /put_results)
         REF: doc/alignak-action-queues.png (6)
@@ -603,28 +463,8 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # scheduler level, which shouldn't be a problem given they are
             # indexed by their "action_id".
 
-            scheduler_link.put_results(results.values(), self.name)
+            scheduler_link.push_results(results.values(), self.name)
             results.clear()
-
-    def get_return_for_passive(self, scheduler_link_uuid):
-        """Get returns of passive actions for a specific scheduler
-
-        :param scheduler_link_uuid: scheduler id
-        :type scheduler_link_uuid: int
-        :return: Action list
-        :rtype: list
-        """
-        # I do not know this scheduler?
-        scheduler_link = self.schedulers.get(scheduler_link_uuid)
-        if scheduler_link is None:
-            logger.warning("I do not know this scheduler: %s / %s",
-                           scheduler_link_uuid, self.schedulers)
-            return []
-
-        ret, scheduler_link.wait_homerun = scheduler_link.wait_homerun, {}
-        logger.debug("Results: %s" % (ret.values()) if ret else "No results available")
-
-        return ret.values()
 
     def create_and_launch_worker(self, module_name='fork'):
         """Create and launch a new worker, and put it into self.workers
@@ -677,7 +517,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         logger.info("[%s] Started '%s' worker: %s (pid=%d)",
                     self.name, module_name, worker.get_id(), worker.get_pid())
 
-    def do_stop(self):
+    def do_stop_workers(self):
         """Stop all workers
 
         :return: None
@@ -694,6 +534,13 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 pass
             except Exception as exp:  # pylint: disable=broad-except
                 logger.error("[%s] exception: %s", self.name, str(exp))
+
+    def do_stop(self):
+        """Stop my workers and stop
+
+        :return: None
+        """
+        self.do_stop_workers()
 
         super(Satellite, self).do_stop()
 
@@ -758,21 +605,21 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         # OK, now really del workers from queues
         # And requeue the actions it was managed
-        for w_id in w_to_del:
-            worker = self.workers[w_id]
+        for worker_id in w_to_del:
+            worker = self.workers[worker_id]
 
             # Del the queue of the module queue
             del self.q_by_mod[worker.module_name][worker.get_id()]
 
             for sched_id in self.schedulers:
                 sched = self.schedulers[sched_id]
-                for act in sched['actions'].values():
-                    if act.status == 'queue' and act.worker_id == w_id:
+                for act in sched.actions.values():
+                    if act.status == 'queue' and act.worker_id == worker_id:
                         # Got a check that will NEVER return if we do not restart it
                         self.assign_to_a_queue(act)
 
             # So now we can really forgot it
-            del self.workers[w_id]
+            del self.workers[worker_id]
 
     def adjust_worker_number_by_load(self):
         """Try to create the minimum workers specified in the configuration
@@ -780,14 +627,13 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         :return: None
         """
         if self.interrupted:
-            logger.debug("[%s] Trying to adjust worker number. Ignoring because we are stopping.",
-                         self.name)
+            logger.debug("Trying to adjust worker number. Ignoring because we are stopping.")
             return
 
         to_del = []
-        logger.debug("[%s] checking worker count."
+        logger.debug("checking worker count."
                      " Currently: %d workers, min per module : %d, max per module : %d",
-                     self.name, len(self.workers), self.min_workers, self.max_workers)
+                     len(self.workers), self.min_workers, self.max_workers)
 
         # I want at least min_workers by module then if I can, I add worker for load balancing
         for mod in self.q_by_mod:
@@ -803,8 +649,8 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                     break
 
         for mod in to_del:
-            logger.warning("[%s] The module %s is not a worker one, "
-                           "I remove it from the worker list.", self.name, mod)
+            logger.warning("The module %s is not a worker one, I remove it from the worker list.",
+                           mod)
             del self.q_by_mod[mod]
         # TODO: if len(workers) > 2*wish, maybe we can kill a worker?
 
@@ -833,13 +679,13 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         # return the id of the worker (i), and its queue
         return (worker_id, queue)
 
-    def add_actions(self, actions_list, sched_id):
+    def add_actions(self, actions_list, scheduler_link):
         """Add a list of actions to the satellite queues
 
         :param actions_list: Actions list to add
         :type actions_list: list
-        :param sched_id: sheduler id to assign to
-        :type sched_id: int
+        :param scheduler_link: sheduler link to assign the actions to
+        :type scheduler_link: SchedulerLink
         :return: None
         """
         for action in actions_list:
@@ -854,13 +700,12 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                     continue
 
             # If we already have this action, we are already working for it!
-            if uuid in self.schedulers[sched_id]['actions']:
+            if uuid in scheduler_link.actions:
                 continue
             # Action is attached to a scheduler
-            action.sched_id = sched_id
-            self.schedulers[sched_id]['actions'][action.uuid] = action
+            action.sched_id = scheduler_link.uuid
+            scheduler_link.actions[action.uuid] = action
             self.assign_to_a_queue(action)
-            logger.debug("Added action %s to a worker queue", action.uuid)
 
     def assign_to_a_queue(self, action):
         """Take an action and put it to a worker actions queue
@@ -909,29 +754,29 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         # We check for new check in each schedulers and put the result in new_checks
         for scheduler_link_uuid in self.schedulers:
-            link = self.schedulers[scheduler_link_uuid]
+            scheduler_link = self.schedulers[scheduler_link_uuid]
 
-            if not link.active:
-                logger.warning("My scheduler '%s' is not active currently", link.name)
+            if not scheduler_link.active:
+                logger.warning("My scheduler '%s' is not active currently", scheduler_link.name)
                 continue
 
-            logger.debug("get new actions, scheduler: %s", link.name)
+            logger.debug("get new actions, scheduler: %s", scheduler_link.name)
 
             # OK, go for it :)
             _t0 = time.time()
-            actions = link.get_actions({'do_checks': do_checks, 'do_actions': do_actions,
-                                        'poller_tags': self.poller_tags,
-                                        'reactionner_tags': self.reactionner_tags,
-                                        'worker_name': self.name,
-                                        'module_types': self.q_by_mod.keys()})
+            actions = scheduler_link.get_actions({'do_checks': do_checks, 'do_actions': do_actions,
+                                                  'poller_tags': self.poller_tags,
+                                                  'reactionner_tags': self.reactionner_tags,
+                                                  'worker_name': self.name,
+                                                  'module_types': self.q_by_mod.keys()})
             if actions:
-                logger.debug("Got %d actions from %s", len(actions), link.name)
+                logger.debug("Got %d actions from %s", len(actions), scheduler_link.name)
                 # We 'tag' them with sched_id and put into queue for workers
-                self.add_actions(actions, scheduler_link_uuid)
+                self.add_actions(actions, scheduler_link)
                 logger.debug("Got %d actions from %s in %s",
-                             len(actions), link.name, time.time() - _t0)
-            statsmgr.gauge('get-new-actions-count.%s' % (link.name), len(actions))
-            statsmgr.timer('get-new-actions-time.%s' % (link.name), time.time() - _t0)
+                             len(actions), scheduler_link.name, time.time() - _t0)
+            statsmgr.gauge('get-new-actions-count.%s' % (scheduler_link.name), len(actions))
+            statsmgr.timer('get-new-actions-time.%s' % (scheduler_link.name), time.time() - _t0)
 
     def clean_previous_run(self):
         """Clean variables from previous configuration,
@@ -939,17 +784,15 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         :return: None
         """
-        # Clean all lists
-        self.schedulers.clear()
+        # Execute the base class treatment...
+        super(Satellite, self).clean_previous_run()
+
+        # Clean my lists
         self.broks.clear()
-        with self.external_commands_lock:
-            self.external_commands = self.external_commands[:]
 
     def do_loop_turn(self):
         """Satellite main loop::
 
-        * Setup new conf if necessary
-        * Watch for new conf
         * Check and delete zombies actions / modules
         * Get returns from queues
         * Adjust worker number
@@ -957,34 +800,16 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         :return: None
         """
-        # Maybe the arbiter ask us to wait for a new conf
-        # If true, we must restart all...
-        if self.cur_conf is None:
-            # Clean previous run from useless objects and close modules
-            self.clean_previous_run()
-
-            self.wait_for_initial_conf()
-            # we may have been interrupted or so; then
-            # just return from this loop turn
-            if not self.new_conf:
-                return
-            self.setup_new_conf()
-
-        # Now we check if we received a new configuration
         logger.debug("loop pause: %s", self.timeout)
 
-        _t0 = time.time()
-        self.watch_for_new_conf(self.timeout)
-        statsmgr.timer('core.paused-loop', time.time() - _t0)
-        if self.new_conf:
-            self.setup_new_conf()
+        # Try to see if one of my module is dead, and restart previously dead modules
+        self.check_and_del_zombie_modules()
 
-        # Check if zombies workers are among us :)
-        # If so: KILL THEM ALL!!!
+        # Also if some zombie workers exist...
         self.check_and_del_zombie_workers()
 
-        # And also modules
-        self.check_and_del_zombie_modules()
+        # Call modules that manage a starting tick pass
+        self.hook_point('tick')
 
         # Print stats for debug
         for _, sched in self.schedulers.iteritems():
@@ -995,7 +820,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                         actions_count = queue.qsize()
                         results_count = self.returns_queue.qsize()
                         logger.debug("[%s][%s][%s] actions queued: %d, results queued: %d",
-                                     sched['name'], mod, worker_id, actions_count, results_count)
+                                     sched.name, mod, worker_id, actions_count, results_count)
                         # Update the statistics
                         statsmgr.gauge('core.worker-%s.actions-queue-size' % worker_id,
                                        actions_count)
@@ -1004,35 +829,36 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                     except (IOError, EOFError):
                         pass
 
+        # todo temporaray deactivate all this stuff!
         # # Before return or get new actions, see how we managed
         # # the former ones: are they still in queue(s)? If so, we
         # # must wait more or at least have more workers
-        # wait_ratio = self.wait_ratio.get_load()
-        # total_q = 0
-        # try:
-        #     for mod in self.q_by_mod:
-        #         for queue in self.q_by_mod[mod].values():
-        #             total_q += queue.qsize()
-        # except (IOError, EOFError):
-        #     pass
-        # if total_q != 0 and wait_ratio < 2 * self.polling_interval:
-        #     logger.debug("I decide to increase the wait ratio")
-        #     self.wait_ratio.update_load(wait_ratio * 2)
-        #     # self.wait_ratio.update_load(self.polling_interval)
-        # else:
-        #     # Go to self.polling_interval on normal run, if wait_ratio
-        #     # was >2*self.polling_interval,
-        #     # it make it come near 2 because if < 2, go up :)
-        #     self.wait_ratio.update_load(self.polling_interval)
-        # wait_ratio = self.wait_ratio.get_load()
+        wait_ratio = self.wait_ratio.get_load()
+        total_q = 0
+        try:
+            for mod in self.q_by_mod:
+                for queue in self.q_by_mod[mod].values():
+                    total_q += queue.qsize()
+        except (IOError, EOFError):
+            pass
+        if total_q != 0 and wait_ratio < 2 * self.worker_polling_interval:
+            logger.debug("I decide to increase the wait ratio")
+            self.wait_ratio.update_load(wait_ratio * 2)
+            # self.wait_ratio.update_load(self.worker_polling_interval)
+        else:
+            # Go to self.worker_polling_interval on normal run, if wait_ratio
+            # was >2*self.worker_polling_interval,
+            # it make it come near 2 because if < 2, go up :)
+            self.wait_ratio.update_load(self.worker_polling_interval)
+        wait_ratio = self.wait_ratio.get_load()
         # statsmgr.timer('core.wait-ratio', wait_ratio)
         # if self.log_loop:
         #     logger.debug("[%s] wait ratio: %f", self.name, wait_ratio)
 
         # # We can wait more than 1s if needed, no more than 5s, but no less than 1s
         # timeout = self.timeout * wait_ratio
-        # timeout = max(self.polling_interval, timeout)
-        # self.timeout = min(5 * self.polling_interval, timeout)
+        # timeout = max(self.worker_polling_interval, timeout)
+        # self.timeout = min(5 * self.worker_polling_interval, timeout)
         # statsmgr.timer('core.pause-loop', self.timeout)
 
         # Maybe we do not have enough workers, we check for it
@@ -1063,21 +889,23 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             logger.warning("My returns queue is no more available: %s", str(exp))
         except Exception as exp:  # pylint: disable=W0703
             logger.error("Failed getting messages in returns queue: %s", str(exp))
+            logger.error(traceback.format_exc())
 
         for _, sched in self.schedulers.iteritems():
             logger.debug("[%s] scheduler home run: %d results",
-                         self.name, len(sched['wait_homerun']))
+                         self.name, len(sched.wait_homerun))
 
         # If we are passive, we do not initiate the check getting
         # and return
         if not self.passive:
-            # We send all finished checks
+            # We send to our schedulers the results of all finished checks
             self.manage_returns()
 
-            # Now we can get new actions from schedulers
+            # And we get the new actions from our schedulers
             self.get_new_actions()
 
         # Get objects from our modules that are not Worker based
+        _t0 = time.time()
         if self.log_loop:
             logger.debug("[%s] get objects from queues", self.name)
         self.get_objects_from_from_queues()
@@ -1085,25 +913,16 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         statsmgr.gauge('got.external-commands', len(self.external_commands))
         statsmgr.gauge('got.broks', len(self.broks))
 
-        # Say to modules it's a new tick :)
-        self.hook_point('tick')
-
     def do_post_daemon_init(self):
         """Do this satellite (poller or reactionner) post "daemonize" init
 
         :return: None
         """
-        # self.s = Queue() # Global Master -> Slave
         # We can open the Queue for fork AFTER
         self.q_by_mod['fork'] = {}
 
-        # self.returns_queue = self.sync_manager.Queue()
+        # todo: check if this is always useful?
         self.returns_queue = Queue()
-
-        # # For multiprocess things, we should not have
-        # # socket timeouts.
-        # import socket
-        # socket.setdefaulttimeout(None)
 
     def setup_new_conf(self):
         """Setup the new configuration received from Arbiter
@@ -1122,8 +941,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         # ...then our own specific treatment!
         with self.conf_lock:
-            print("Satellite - New configuration for: %s / %s" % (self.type, self.name))
-            logger.info("[%s] Received a new configuration", self.name)
+            logger.info("Received a new configuration")
 
             # self_conf is our own configuration from the alignak environment
             self_conf = self.cur_conf['self_conf']
@@ -1154,8 +972,8 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                         self.min_workers, self.max_workers)
 
             self.processes_by_worker = self_conf.get('processes_by_worker', 1)
-            self.polling_interval = self_conf.get('polling_interval', 1)
-            self.timeout = self.polling_interval
+            self.worker_polling_interval = self_conf.get('worker_polling_interval', 1)
+            self.timeout = self.worker_polling_interval
 
             # Now set tags
             # ['None'] is the default tags
@@ -1166,59 +984,45 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
             # Now manage modules
             if not self.have_modules:
-                self.modules = self_conf['modules']
-                print("I received some modules configuration: %s" % self_conf)
-                print("I received some modules configuration: %s" % self.modules)
-                self.have_modules = True
+                try:
+                    self.modules = unserialize(self.cur_conf['modules'], no_load=True)
+                except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
+                    logger.error('Cannot un-serialize modules configuration '
+                                 'received from arbiter: %s', exp)
+                if self.modules:
+                    logger.info("I received some modules configuration: %s", self.modules)
+                    self.have_modules = True
 
-                for module in self.modules:
-                    if module.name not in self.q_by_mod:
-                        self.q_by_mod[module.name] = {}
+                    for module in self.modules:
+                        if module.name not in self.q_by_mod:
+                            self.q_by_mod[module.name] = {}
 
-                self.do_load_modules(self.modules)
-                # and start external modules too
-                self.modules_manager.start_external_instances()
+                    self.do_load_modules(self.modules)
+                    # and start external modules too
+                    self.modules_manager.start_external_instances()
+                else:
+                    logger.info("I do not have modules")
 
             # Initialize connection with all our satellites
-            print("***Get my satellites")
+            logger.info("Initializing connection with my satellites:")
             my_satellites = self.get_links_of_type(s_type=None)
-            for sat_link in my_satellites:
-                satellite = my_satellites[sat_link]
-                print("***Initialize connection with: %s" % satellite)
-                self.daemon_connection_init(satellite.uuid, s_type=satellite.type)
+            for satellite in my_satellites.values():
+                logger.info("- : %s/%s", satellite.type, satellite.name)
+                if not self.daemon_connection_init(satellite):
+                    logger.error("Satellite connection failed: %s", satellite)
 
-    def get_stats_struct(self):
-        """Get state of modules and create a scheme for stats data of daemon
-        This may be overridden in subclasses
+    def get_daemon_stats(self, details=False):
+        """Increase the stats provided by the Daemon base class
 
-        :return: A dict with the following structure
-        ::
-
-           { 'metrics': ['%s.%s.external-commands.queue %d %d'],
-             'version': VERSION,
-             'name': self.name,
-             'type': _type,
-             'passive': self.passive,
-             'modules':
-                         {'internal': {'name': "MYMODULE1", 'state': 'ok'},
-                         {'external': {'name': "MYMODULE2", 'state': 'stopped'},
-                        ]
-           }
-
+        :return: stats dictionary
         :rtype: dict
         """
-        now = int(time.time())
         # call the daemon one
-        res = super(Satellite, self).get_stats_struct()
-        _type = self.__class__.my_type
-        res.update({'name': self.name, 'type': _type})
-        # The receiver do not have a passive prop
-        if hasattr(self, 'passive'):
-            res['passive'] = self.passive
-        metrics = res['metrics']
-        # metrics specific
-        metrics.append('%s.%s.external-commands.queue %d %d' % (
-            _type, self.name, len(self.external_commands), now))
+        res = super(Satellite, self).get_daemon_stats(details=details)
+
+        counters = res['counters']
+        counters['broks'] = len(self.broks)
+        counters['workers'] = len(self.workers)
 
         return res
 
@@ -1228,20 +1032,16 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         :return: None
         """
         try:
+            # Configure the logger
             self.setup_alignak_logger()
 
-            # Look if we are enabled or not. If ok, start the daemon mode
-            self.look_for_early_exit()
-
-            # todo:
-            # This function returns False if some problem is detected during initialization
-            # (eg. communication port not free)
-            # Perharps we should stop the initialization process and exit?
+            # Start the daemon mode
             if not self.do_daemon_init_and_start():
-                return
+                self.exit_on_error(message="Daemon initialization error", exit_code=3)
 
             self.do_post_daemon_init()
 
+            # Setup our modules manager
             self.load_modules_manager()
 
             # We wait for initial conf
@@ -1254,7 +1054,9 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             self.adjust_worker_number_by_load()
 
             # Now main loop
-            self.do_mainloop()
+            self.do_main_loop()
+
+            self.request_stop()
         except Exception:
-            self.print_unrecoverable(traceback.format_exc())
+            self.exit_on_exception(traceback.format_exc())
             raise

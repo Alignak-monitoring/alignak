@@ -121,7 +121,6 @@ action or not if we are in right period
 import logging
 import time
 import re
-import warnings
 
 from alignak.objects.item import Item, Items
 

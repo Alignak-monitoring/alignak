@@ -53,6 +53,7 @@ from alignak_test import AlignakTest
 class TestCheckModulations(AlignakTest):
 
     def setUp(self):
+        super(TestCheckModulations, self).setUp()
         self.setup_with_file('./cfg/cfg_checks_modulations.cfg')
         assert self.conf_is_correct
 
@@ -60,8 +61,6 @@ class TestCheckModulations(AlignakTest):
 
     def test_checks_modulated_host_and_service(self):
         """ Check modulation for an host and its service """
-        self.print_header()
-
         # Get the host
         host = self._sched.hosts.find_by_name("modulated_host")
         assert host is not None

@@ -17,9 +17,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 """This module provide a specific HTTP interface for a Broker."""
+import logging
 import cherrypy
+
 from alignak.http.generic_interface import GenericInterface
 from alignak.misc.serialization import unserialize
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class BrokerInterface(GenericInterface):
@@ -36,6 +40,7 @@ class BrokerInterface(GenericInterface):
         """
         broks = cherrypy.request.json
         with self.app.arbiter_broks_lock:
+            logger.debug("Pushing %d broks", len(broks['broks']))
             self.app.arbiter_broks.extend([unserialize(elem, True) for
                                            elem in broks['broks'].values()])
 

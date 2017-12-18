@@ -50,6 +50,9 @@ from alignak_test import *
 
 class TestInheritanceAndPlus(AlignakTest):
 
+    def setUp(self):
+        super(TestInheritanceAndPlus, self).setUp()
+
     def test_inheritance(self):
         """Test properties inheritance
         """

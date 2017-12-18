@@ -51,7 +51,7 @@ For example, if a scheduler dies, it sends the late scheduler's conf
 to another scheduler available.
 It also reads orders form users (nagios.cmd) and sends them to schedulers.
 """
-
+from __future__ import print_function
 from alignak.daemons.arbiterdaemon import Arbiter
 from alignak.util import parse_daemon_args
 
@@ -61,15 +61,19 @@ def main():
 
     :return: None
     """
-    args = parse_daemon_args(True)
+    try:
+        args = parse_daemon_args(True)
 
-    # Protect for windows multiprocessing that will RELAUNCH all
-    while True:
-        daemon = Arbiter(debug=args.debug_file is not None, **args.__dict__)
-        daemon.main()
-        if not daemon.need_config_reload:
-            break
-        daemon = None
+        # Protect for windows multiprocessing that will RELAUNCH all
+        while True:
+            daemon = Arbiter(debug=args.debug_file is not None, **args.__dict__)
+            daemon.main()
+            if not daemon.need_config_reload:
+                break
+            daemon = None
+    except Exception as exp:  # pylint: disable=broad-except
+        print("*** Exited because: %s" % str(exp))
+        exit(1)
 
 
 if __name__ == '__main__':

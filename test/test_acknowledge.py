@@ -31,6 +31,8 @@ class TestAcknowledges(AlignakTest):
     """
     This class test acknowledge
     """
+    def setUp(self):
+        super(TestAcknowledges, self).setUp()
 
     def test_ack_host_sticky_ds_dh(self):
         """
@@ -38,7 +40,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -64,7 +65,7 @@ class TestAcknowledges(AlignakTest):
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n".\
             format(int(now), host.host_name, 2, 0, 1, 'darth vader', 'normal process')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
@@ -91,7 +92,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -147,7 +147,7 @@ class TestAcknowledges(AlignakTest):
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n". \
             format(int(now), host.host_name, 2, 0, 1, 'darth vader', 'normal process')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
@@ -199,7 +199,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -225,7 +224,7 @@ class TestAcknowledges(AlignakTest):
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n". \
             format(int(now), host.host_name, 1, 0, 1, 'darth vader', 'normal process')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
@@ -252,7 +251,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -307,7 +305,7 @@ class TestAcknowledges(AlignakTest):
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n". \
             format(int(now), host.host_name, 1, 0, 1, 'darth vader', 'normal process')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
@@ -360,7 +358,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -388,7 +385,7 @@ class TestAcknowledges(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
             format(int(now), host.host_name, svc.service_description, 2, 0, 1, 'darth vader',
                    'normal process')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
@@ -420,7 +417,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -448,7 +444,7 @@ class TestAcknowledges(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
             format(int(now), host.host_name, svc.service_description, 2, 0, 1, 'darth vader',
                    'normal process')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
@@ -474,7 +470,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -503,7 +498,7 @@ class TestAcknowledges(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n".\
             format(int(now), host.host_name, svc.service_description, 1, 0, 1, 'darth vader',
                    'normal process')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
@@ -530,7 +525,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -559,7 +553,7 @@ class TestAcknowledges(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
             format(int(now), host.host_name, svc.service_description, 1, 0, 1, 'darth vader',
                    'normal process')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
         assert svc.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
@@ -586,7 +580,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -614,7 +607,7 @@ class TestAcknowledges(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
             format(int(now), host.host_name, svc.service_description, 2, 0, 1, 'darth vader',
                    'normal process')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
@@ -628,7 +621,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -657,7 +649,7 @@ class TestAcknowledges(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
             format(int(now), host.host_name, svc.service_description, 1, 0, 1, 'darth vader',
                    'normal process')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
@@ -671,7 +663,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -712,7 +703,7 @@ class TestAcknowledges(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM_EXPIRE;{1};{2};{3};{4};{5};{6};{7};{8}\n". \
             format(int(now), host.host_name, svc.service_description, 1, 0, 1, (now + 2), 'darth vader',
                    'normal process')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
@@ -739,7 +730,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -777,7 +767,7 @@ class TestAcknowledges(AlignakTest):
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM_EXPIRE;{1};{2};{3};{4};{5};{6};{7}\n". \
             format(int(now), host.host_name, 1, 0, 1, (now + 2), 'darth vader', 'normal process')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
@@ -798,7 +788,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -824,7 +813,7 @@ class TestAcknowledges(AlignakTest):
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n". \
             format(int(now), host.host_name, 1, 0, 1, 'darth vader', 'normal process')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
@@ -841,7 +830,7 @@ class TestAcknowledges(AlignakTest):
         now = time.time()
         cmd = "[{0}] REMOVE_HOST_ACKNOWLEDGEMENT;{1}\n". \
             format(int(now), host.host_name)
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         assert not host.problem_has_been_acknowledged
 
@@ -851,7 +840,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -886,7 +874,7 @@ class TestAcknowledges(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
             format(int(now), host.host_name, svc.service_description, 1, 0, 1, 'darth vader',
                    'normal process')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
@@ -897,6 +885,6 @@ class TestAcknowledges(AlignakTest):
         now = time.time()
         cmd = "[{0}] REMOVE_SVC_ACKNOWLEDGEMENT;{1};{2}\n". \
             format(int(now), host.host_name, svc.service_description)
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         assert not svc.problem_has_been_acknowledged

@@ -47,7 +47,7 @@
 This modules provides class for the Poller daemon
 """
 from alignak.satellite import Satellite
-from alignak.property import PathProp, IntegerProp, StringProp
+from alignak.property import IntegerProp, StringProp
 
 
 class Poller(Satellite):

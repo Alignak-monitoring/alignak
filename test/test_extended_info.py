@@ -52,14 +52,14 @@ from alignak_test import AlignakTest
 class TestHostExtended(AlignakTest):
 
     def setUp(self):
+        super(TestHostExtended, self).setUp()
+
         self.setup_with_file('cfg/extended/extended_info.cfg')
         assert self.conf_is_correct
         self._sched = self._scheduler
 
     def test_extended_host_information(self):
         """ Host extended information """
-        self.print_header()
-
         # Get hosts and services
         host = self._sched.hosts.find_by_name("host_A")
         host.checks_in_progress = []
@@ -85,8 +85,6 @@ class TestHostExtended(AlignakTest):
 
     def test_extended_service_information(self):
         """ Service extended information """
-        self.print_header()
-
         # Get hosts and services
         host = self._sched.hosts.find_by_name("host_A")
         host.checks_in_progress = []
@@ -106,7 +104,3 @@ class TestHostExtended(AlignakTest):
         assert 'Alt for service.png' == svc.icon_image_alt
         assert 'Notes for a service' == svc.notes
         assert 'http://Notes_url/service' == svc.notes_url
-
-
-if __name__ == '__main__':
-    AlignakTest.main()

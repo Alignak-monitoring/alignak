@@ -79,6 +79,9 @@ creates an internal brok.
 The `gauge` function sends a gauge value to the StatsD registered server and
 creates an internal brok.
 
+-----
+NOTE: this statistics dictionary is an old version that needs to be updated !
+-----
 Alignak daemons statistics dictionary:
 
 * scheduler: (some more exist but hereunder are the main metrics)
@@ -207,6 +210,8 @@ class Stats(object):
     def __init__(self):
         # Our daemon type and name
         self.name = ''
+        # This attribute is not used, but I keep ascending compatibility with former interface!
+        self._type = None
 
         # Our known statistics
         self.stats = {}
@@ -241,7 +246,7 @@ class Stats(object):
                % (self.host, self.port, self.statsd_enabled)
     __str__ = __repr__
 
-    def register(self, name, statsd_host='localhost', statsd_port=8125,
+    def register(self, name, _type, statsd_host='localhost', statsd_port=8125,
                  statsd_prefix='alignak', statsd_enabled=False, broks_enabled=False):
         """Init statsd instance with real values
 
@@ -262,6 +267,8 @@ class Stats(object):
         :return: None
         """
         self.name = name
+        # This attribute is not used, but I keep ascending compatibility with former interface!
+        self._type = _type
 
         # local statsd part
         self.statsd_host = statsd_host

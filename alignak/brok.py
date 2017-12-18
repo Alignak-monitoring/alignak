@@ -50,7 +50,6 @@ Brok are filled depending on their type (check_result, initial_state ...)
 """
 import time
 import uuid
-import warnings
 
 from alignak.misc.serialization import serialize, unserialize, AlignakClassLookupException
 
@@ -121,9 +120,6 @@ class Brok(object):
     def __repr__(self):
         return "Brok %s: %s" % (self.type, self.data)
     __str__ = __repr__
-
-    def __str__(self):
-        return str(self.__dict__) + '\n'
 
     def prepare(self):
         """Un-serialize data from data attribute and add instance_id key if necessary

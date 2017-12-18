@@ -56,12 +56,12 @@ from alignak_test import AlignakTest
 
 class TestPerfdataParsing(AlignakTest):
     """ Test performance data parsing """
+    def setUp(self):
+        super(TestPerfdataParsing, self).setUp()
 
     def test_perfdata_parsing(self):
         """ Test parsing performance data
         """
-        self.print_header()
-
         # Get a metric from a string
         perf_data_string = 'ramused=90%;85;95;;'
         metric = Metric(perf_data_string)
@@ -125,8 +125,6 @@ class TestPerfdataParsing(AlignakTest):
     def test_perfdata_space_characters(self):
         """ Create a perfdata with name containing space
         """
-        self.print_header()
-
         # Metrics name can contain space characters
         perf_data_string = "'Physical Memory Used'=12085620736Bytes; " \
                            "'Physical Memory Utilisation'=94%;80;90;"
@@ -156,8 +154,6 @@ class TestPerfdataParsing(AlignakTest):
     def test_perfdata_special_characters(self):
         """ Create a perfdata with name containing special characters
         """
-        self.print_header()
-
         # Metrics name can contain special characters
         perf_data_string = "'C: Space'=35.07GB; 'C: Utilisation'=87.7%;90;95;"
         perf_data = PerfDatas(perf_data_string)
@@ -212,8 +208,6 @@ class TestPerfdataParsing(AlignakTest):
     def test_perfdata_floating_value(self):
         """ Create a perfdata with complex floating value
         """
-        self.print_header()
-
         # Metrics value can contain complex floating value
         perf_data_string = "time_offset-192.168.0.1=-7.22636468709e-05s;1;2;0;;"
         perf_data = PerfDatas(perf_data_string)
@@ -233,8 +227,6 @@ class TestPerfdataParsing(AlignakTest):
     def test_perfdata_accented_characters(self):
         """ Create a perfdata with accented characters
         """
-        self.print_header()
-
         # Metrics name can contain accented and special characters
         perf_data_string = u"àéèï-192.168.0.1=-7.22636468709e-05s;1;2;0;;"
         perf_data = PerfDatas(perf_data_string)
@@ -254,8 +246,6 @@ class TestPerfdataParsing(AlignakTest):
     def test_perfdata_empty_string(self):
         """ Create a perfdata from an empty string
         """
-        self.print_header()
-
         perf_data_string = None
         perf_data = PerfDatas(perf_data_string)
         assert len(perf_data) == 0
@@ -263,7 +253,3 @@ class TestPerfdataParsing(AlignakTest):
         perf_data_string = ''
         perf_data = PerfDatas(perf_data_string)
         assert len(perf_data) == 0
-
-
-if __name__ == '__main__':
-    AlignakTest.main()

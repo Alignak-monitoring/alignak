@@ -52,7 +52,7 @@
  In case the arbiter has a new conf to send, the receiver forget its old
  schedulers (and their associated broks) and take the new ones instead.
 """
-
+from __future__ import print_function
 from alignak.daemons.receiverdaemon import Receiver
 from alignak.util import parse_daemon_args
 
@@ -62,9 +62,13 @@ def main():
 
     :return: None
     """
-    args = parse_daemon_args()
-    daemon = Receiver(debug=args.debug_file is not None, **args.__dict__)
-    daemon.main()
+    try:
+        args = parse_daemon_args()
+        daemon = Receiver(debug=args.debug_file is not None, **args.__dict__)
+        daemon.main()
+    except Exception as exp:  # pylint: disable=broad-except
+        print("*** Exited because: %s" % str(exp))
+        exit(1)
 
 
 if __name__ == '__main__':

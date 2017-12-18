@@ -33,13 +33,14 @@ class TestStats(AlignakTest):
     """
     This class test the stats
     """
+    def setUp(self):
+        super(TestStats, self).setUp()
 
     def test_average_latency(self):
         """ Test average latency
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_stats.cfg')
 
         svc0 = self._scheduler.services.find_srv_by_name_and_hostname(

@@ -45,7 +45,7 @@ This module provide SchedulerLink and SchedulerLinks classes used to manage sche
 """
 import logging
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
-from alignak.property import BoolProp, IntegerProp, StringProp, DictProp
+from alignak.property import BoolProp, IntegerProp, StringProp
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -61,53 +61,39 @@ class SchedulerLink(SatelliteLink):
     properties = SatelliteLink.properties.copy()
     properties.update({
         'type':
-            StringProp(default='scheduler', fill_brok=['full_status']),
+            StringProp(default='scheduler', fill_brok=['full_status'], to_send=True),
         'scheduler_name':
-            StringProp(default='', fill_brok=['full_status'], to_send=True),
+            StringProp(default='', fill_brok=['full_status']),
         'port':
-            IntegerProp(default=7768, fill_brok=['full_status']),
+            IntegerProp(default=7768, fill_brok=['full_status'], to_send=True),
         'weight':
             IntegerProp(default=1, fill_brok=['full_status']),
         'skip_initial_broks':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
         'accept_passive_unknown_check_results':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
     })
 
     running_properties = SatelliteLink.running_properties.copy()
     running_properties.update({
-        'conf':
-            StringProp(default=None),
-        'cfg':
-            DictProp(default={}),
+        # 'conf':
+        #     StringProp(default=None),
+        # 'cfg':
+        #     DictProp(default={}),
         'need_conf':
             StringProp(default=True),
         'external_commands':
             StringProp(default=[]),
-        'push_flavor':
-            IntegerProp(default=0),
     })
 
-    # def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
-    #     """
-    #     Add this reactionner to the realm
-    #
-    #     :return: None
-    #     """
-    #     self.realm.schedulers.append(self)
+    def __init__(self, params=None, parsing=True):
+        """Initialize a SchedulerLink
 
-    def give_satellite_cfg(self):
+        It always manage arbiters
         """
-        Get configuration of the scheduler satellite
+        super(SchedulerLink, self).__init__(params, parsing)
 
-        :return: dictionary of link information
-        :rtype: dict
-        """
-        res = super(SchedulerLink, self).give_satellite_cfg()
-        res.update({
-            'active': self.conf is not None, 'push_flavor': self.push_flavor
-        })
-        return res
+        self.manage_arbiters = True
 
     def get_override_configuration(self):
         """

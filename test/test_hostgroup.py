@@ -36,15 +36,15 @@ class TestHostGroup(AlignakTest):
     """
     This class tests the hostgroups
     """
+    def setUp(self):
+        super(TestHostGroup, self).setUp()
 
     def test_hostgroup(self):
         """
         Default configuration has no loading problems ... as of it hostgroups are parsed correctly
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
 
     def test_multiple_hostgroup_definition(self):
         """
@@ -52,9 +52,7 @@ class TestHostGroup(AlignakTest):
         when a host/service is defined twice in a group
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/hostgroup/multiple_hostgroup.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
 
         print "Get the hosts and services"
         host = self._scheduler.hosts.find_by_name("will crash")
@@ -76,9 +74,7 @@ class TestHostGroup(AlignakTest):
         No error when the same group is defined twice in an host/service
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/hostgroup/multiple_not_hostgroup.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
 
         svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "hst_in_BIG", "THE_SERVICE")
@@ -102,7 +98,6 @@ class TestHostGroup(AlignakTest):
         """ Test bad hostgroups in the configuration
         :return: None
         """
-        self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/cfg_bad_hostgroup.cfg')
 
@@ -119,14 +114,12 @@ class TestHostGroup(AlignakTest):
         )
         self.assert_any_cfg_log_match(
             "Configuration in hostgroup::allhosts_bad is incorrect; from: "
-            "cfg/hostgroup/hostgroups_bad_conf.cfg:1"
         )
         self.assert_any_cfg_log_match(
             "the hostgroup allhosts_bad_realm got an unknown realm \'Unknown\'"
         )
         self.assert_any_cfg_log_match(
             "Configuration in hostgroup::allhosts_bad_realm is incorrect; from: "
-            "cfg/hostgroup/hostgroups_bad_conf.cfg:7"
         )
         self.assert_any_cfg_log_match(
             "hostgroups configuration is incorrect!"
@@ -136,9 +129,7 @@ class TestHostGroup(AlignakTest):
         """ Hostgroups alias
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/hostgroup/alignak_groups_with_no_alias.cfg')
-        assert self.conf_is_correct
 
         #  Found a hostgroup named NOALIAS
         hg = self._scheduler.hostgroups.find_by_name("NOALIAS")
@@ -151,9 +142,7 @@ class TestHostGroup(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/hostgroup/alignak_hostgroup_members.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
 
         #  Found a hostgroup named allhosts_and_groups
         hg = self._scheduler.hostgroups.find_by_name("allhosts_and_groups")
@@ -172,9 +161,7 @@ class TestHostGroup(AlignakTest):
         """ Test if group is linked from the member
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/hostgroup/alignak_hostgroup_members.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
 
         #  Found a hostgroup named allhosts_and_groups
         hg = self._scheduler.hostgroups.find_by_name("allhosts_and_groups")
@@ -220,9 +207,7 @@ class TestHostGroup(AlignakTest):
         """ Allow hostgroups with no hosts
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/hostgroup/alignak_hostgroup_no_host.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
 
         # Found a hostgroup named void
         hg = self._scheduler.hostgroups.find_by_name("void")
@@ -239,13 +224,10 @@ class TestHostGroup(AlignakTest):
         """ Test that hostgroups can have a name with spaces
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
         self.nb_hostgroups = len(self._scheduler.hostgroups)
 
         self.setup_with_file('cfg/hostgroup/alignak_hostgroup_with_space.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
 
         # Two more groups than the default configuration
         assert len(self._scheduler.hostgroups) == self.nb_hostgroups + 2
@@ -269,9 +251,7 @@ class TestHostGroup(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/hostgroup/hostgroups_from_service.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
 
         #  Search a hostgroup named tcp_hosts
         hg = self._scheduler.hostgroups.find_by_name("tcp_hosts")

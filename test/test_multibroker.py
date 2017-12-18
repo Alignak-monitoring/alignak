@@ -23,8 +23,9 @@
 """
 This file test the multibroker in schedulers
 """
-
+import time
 import requests_mock
+from alignak.misc.serialization import unserialize, get_alignak_class
 from alignak.http.scheduler_interface import SchedulerInterface
 from alignak_test import AlignakTest
 
@@ -33,127 +34,240 @@ class TestMultibroker(AlignakTest):
     """
     This class test the multibroker in schedulers
     """
+    def setUp(self):
+        super(TestMultibroker, self).setUp()
+
     def test_multibroker_onesched(self):
         """ Test with 2 brokers and 1 scheduler
 
         :return: None
         """
-        self.print_header()
-        self.setup_with_file('cfg/cfg_multi_broker_one_scheduler.cfg')
+        self.setup_with_file('cfg/multibroker/cfg_multi_broker_one_scheduler.cfg')
 
-        mysched = self._scheduler_daemon
+        my_scheduler = self._scheduler
 
-        assert 2 == len(mysched.sched.brokers)
+        assert 2 == len(my_scheduler.my_daemon.brokers)
 
         # create broks
-        host = mysched.sched.hosts.find_by_name("test_host_0")
+        host = my_scheduler.pushed_conf.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
-        svc = mysched.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = my_scheduler.pushed_conf.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.checks_in_progress = []
-        svc.act_depend_of = []  # no hostchecks on critical checkresults
+        svc.act_depend_of = []  # no raised host check on critical service check result
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        assert 2 == len(mysched.sched.brokers)
-        bmaster = len(mysched.sched.brokers['broker-master']['broks'])
-        bmaster2 = len(mysched.sched.brokers['broker-master2']['broks'])
 
-        sched_interface = SchedulerInterface(mysched)
-        # Test broker-master connect to scheduler
-        res = sched_interface.get_broks('broker-master')
-        assert (bmaster + 2) > len(mysched.sched.brokers['broker-master']['broks'])
-        assert 0 == len(mysched.sched.brokers['broker-master']['broks'])
+        # Count broks in each broker
+        broker_broks_count = {}
+        broker1_link_uuid = None
+        broker2_link_uuid = None
+        for broker_link_uuid in my_scheduler.my_daemon.brokers:
+            if my_scheduler.my_daemon.brokers[broker_link_uuid].name == 'broker-master':
+                broker1_link_uuid = broker_link_uuid
+            else:
+                broker2_link_uuid = broker_link_uuid
+            broker_broks_count[my_scheduler.my_daemon.brokers[broker_link_uuid].name] = 0
+            print("Broker %s:" % (my_scheduler.my_daemon.brokers[broker_link_uuid]))
+            for brok in my_scheduler.my_daemon.brokers[broker_link_uuid].broks:
+                broker_broks_count[my_scheduler.my_daemon.brokers[broker_link_uuid].name] += 1
+                print("- %s: %s"
+                      % (brok, my_scheduler.my_daemon.brokers[broker_link_uuid].broks[brok]))
 
-        # Test broker-master2 connect to scheduler
-        res = sched_interface.get_broks('broker-master2')
-        assert (bmaster2 + 2) > len(mysched.sched.brokers['broker-master2']['broks'])
-        assert 0 == len(mysched.sched.brokers['broker-master2']['broks'])
+        # Same list of broks in the two brokers
+        self.assertItemsEqual(my_scheduler.my_daemon.brokers[broker1_link_uuid].broks,
+                              my_scheduler.my_daemon.brokers[broker2_link_uuid].broks)
 
-        # Test broker-master3 connect to scheduler (broker unknown)
-        res = sched_interface.get_broks('broker-master3')
-        assert {} == res
-        assert 2 == len(mysched.sched.brokers)
+
+        # Scheduler HTTP interface
+        sched_interface = SchedulerInterface(my_scheduler.my_daemon)
+
+        # Test broker-master that gets its broks from the scheduler
+        # Get the scheduler broks to be sent ...
+        self.logger.info("%s, Broker %s broks list: %s", id(my_scheduler.my_daemon), broker1_link_uuid, len(my_scheduler.my_daemon.brokers[broker1_link_uuid].broks))
+        to_send = [b for b in my_scheduler.my_daemon.brokers[broker1_link_uuid].broks.values()
+                   if getattr(b, 'sent_to_externals', False)]
+        for brok in to_send:
+            print("- %s" % (brok))
+        assert 6 == len(to_send)
+
+        broks_list = sched_interface.get_broks('broker-master')
+        broks_list = unserialize(broks_list, True)
+        assert 6 == len(broks_list)
+        assert broker_broks_count['broker-master'] == len(broks_list)
+        self.logger.info("%s, Broker %s broks list: %s", id(my_scheduler.my_daemon), broker1_link_uuid, len(my_scheduler.my_daemon.brokers[broker1_link_uuid].broks))
+
+        # No more broks to get
+        # Get the scheduler broks to be sent ...
+        to_send = [b for b in my_scheduler.my_daemon.brokers[broker1_link_uuid].broks.values()
+                   if getattr(b, 'sent_to_externals', False)]
+        for brok in to_send:
+            print("- %s" % (brok))
+        assert 0 == len(to_send), "Still some broks to be sent!"
+
+
+
+        # Test broker-master 2 that gets its broks from the scheduler
+        # Get the scheduler broks to be sent ...
+        to_send = [b for b in my_scheduler.my_daemon.brokers[broker2_link_uuid].broks.values()
+                   if getattr(b, 'sent_to_externals', False)]
+        for brok in to_send:
+            print("- %s" % (brok))
+        assert 6 == len(to_send)
+
+        broks_list = sched_interface.get_broks('broker-master2')
+        broks_list = unserialize(broks_list, True)
+        assert 6 == len(broks_list)
+        assert broker_broks_count['broker-master2'] == len(broks_list)
+
+        # No more broks to get
+        # Get the scheduler broks to be sent ...
+        to_send = [b for b in my_scheduler.my_daemon.brokers[broker2_link_uuid].broks.values()
+                   if getattr(b, 'sent_to_externals', False)]
+        for brok in to_send:
+            print("- %s" % (brok))
+        assert 0 == len(to_send), "Still some broks to be sent!"
+
+        # Test unknown broker that gets its broks from the scheduler
+        broks_list = sched_interface.get_broks('broker-unknown')
+        broks_list = unserialize(broks_list, True)
+        assert 0 == len(broks_list)
 
         # Re-get broks
-        res = sched_interface.get_broks('broker-master')
-        res = sched_interface.get_broks('broker-master2')
+        # Test broker-master that gets its broks from the scheduler
+        broks_list = sched_interface.get_broks('broker-master')
+        broks_list = unserialize(broks_list, True)
+        # No broks !
+        assert 0 == len(broks_list)
 
-        # new broks
+        # Test broker-master 2 that gets its broks from the scheduler
+        broks_list = sched_interface.get_broks('broker-master2')
+        broks_list = unserialize(broks_list, True)
+        # No broks !
+        assert 0 == len(broks_list)
+
+        # Some new broks
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        assert len(mysched.sched.brokers['broker-master']['broks']) > 1
-        self.assertItemsEqual(mysched.sched.brokers['broker-master']['broks'].keys(),
-                              mysched.sched.brokers['broker-master2']['broks'].keys())
+
+        # Same list of broks in the two brokers
+        self.assertItemsEqual(my_scheduler.my_daemon.brokers[broker1_link_uuid].broks,
+                              my_scheduler.my_daemon.brokers[broker2_link_uuid].broks)
+        assert len(my_scheduler.my_daemon.brokers[broker1_link_uuid].broks) > 1
+        assert len(my_scheduler.my_daemon.brokers[broker2_link_uuid].broks) > 1
 
     def test_multibroker_multisched(self):
         """ Test with 2 brokers and 2 schedulers
 
         :return: None
         """
-        self.print_header()
-        self.setup_with_file('cfg/cfg_multi_broker_multi_scheduler.cfg')
+        self.setup_with_file('cfg/multibroker/cfg_multi_broker_multi_scheduler.cfg')
+        self.clear_logs()
 
         assert 2 == len(self.schedulers)
-        mysched1 = self._scheduler_daemon
-        mysched2 = self.schedulers['scheduler-master2']
-        print(self.schedulers)
+        my_first_scheduler = self._schedulers['scheduler-master']
+        my_second_scheduler = self._schedulers['scheduler-master2']
+        print("Sched #1 %d hosts: %s" % (len(my_first_scheduler.hosts), my_first_scheduler.hosts))
+        print("Sched #2 %d hosts: %s" % (len(my_second_scheduler.hosts), my_second_scheduler.hosts))
+        #
+        if len(my_first_scheduler.hosts) == 1:
+            my_first_scheduler = self._schedulers['scheduler-master2']
+            my_second_scheduler = self._schedulers['scheduler-master']
 
-        if len(self._scheduler.hosts) == 2:
-            mysched1 = self._scheduler_daemon
-            mysched2 = self.schedulers['scheduler-master2']
+        # Two brokers in first scheduler
+        print("Sched #1 brokers: %s" % my_first_scheduler.my_daemon.brokers)
+        assert 2 == len(my_first_scheduler.my_daemon.brokers)
+        sched1_first_broker = None
+        for broker_uuid in my_first_scheduler.my_daemon.brokers:
+            broker = my_first_scheduler.my_daemon.brokers[broker_uuid]
+            if broker.name == 'broker-master':
+                sched1_first_broker = broker
+                break
         else:
-            mysched2 = self._scheduler_daemon
-            mysched1 = self.schedulers['scheduler-master2']
+            assert False, "Scheduler 1 - No broker master link!"
+        sched1_second_broker = None
+        for broker_uuid in my_second_scheduler.my_daemon.brokers:
+            broker = my_second_scheduler.my_daemon.brokers[broker_uuid]
+            if broker.name == 'broker-master2':
+                sched1_second_broker = broker
+                break
+        else:
+            assert False, "Scheduler 1 - No broker master 2 link!"
 
-        host1 = mysched1.sched.hosts.find_by_name("test_host_0")
+        # Two brokers in second scheduler
+        print("Sched #2 brokers: %s" % my_second_scheduler.my_daemon.brokers)
+        assert 2 == len(my_second_scheduler.my_daemon.brokers)
+        sched2_first_broker = None
+        for broker_uuid in my_second_scheduler.my_daemon.brokers:
+            broker = my_second_scheduler.my_daemon.brokers[broker_uuid]
+            if broker.name == 'broker-master':
+                sched2_first_broker = broker
+                break
+        else:
+            assert False, "Scheduler 2 - No broker master link!"
+        sched2_second_broker = None
+        for broker_uuid in my_second_scheduler.my_daemon.brokers:
+            broker = my_second_scheduler.my_daemon.brokers[broker_uuid]
+            if broker.name == 'broker-master2':
+                sched2_second_broker = broker
+                break
+        else:
+            assert False, "Scheduler 2 - No broker master 2 link!"
+
+        # ---
+        # Find hosts and services in my schedulers
+        host1 = my_first_scheduler.hosts.find_by_name("test_host_0")
         host1.checks_in_progress = []
         host1.act_depend_of = []  # ignore the router
 
-        svc1 = mysched1.sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc1 = my_first_scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc1.checks_in_progress = []
         svc1.act_depend_of = []  # no hostchecks on critical checkresults
 
-        host2 = mysched2.sched.hosts.find_by_name("test_host_1")
+        host2 = my_second_scheduler.hosts.find_by_name("test_host_1")
         host2.checks_in_progress = []
 
-        # create broks in each scheduler
-        self.scheduler_loop(1, [[host1, 0, 'UP'], [svc1, 0, 'OK']], mysched1.sched)
-        self.scheduler_loop(1, [[host2, 0, 'UP']], mysched2.sched)
+        # ---
+        # Create broks in the first scheduler
+        self.scheduler_loop(1, [[host1, 0, 'UP'], [svc1, 0, 'OK']], my_first_scheduler)
+        time.sleep(0.1)
 
-        assert 2 == len(mysched1.sched.brokers)
-        assert 2 == len(mysched2.sched.brokers)
+        # ---
+        # Check raised broks in the first scheduler brokers
+        # 6 broks: new_conf, host_next_schedule (router), host_next_schedule (host),
+        # service_next_schedule, host_check_result, service_check_result
+        ref_broks_count = 6
+        # Count broks in each broker
+        broker_broks_count = {}
+        for broker_link_uuid in my_first_scheduler.my_daemon.brokers:
+            broker_broks_count[broker_link_uuid] = 0
+            print("Broker %s:" % (my_first_scheduler.my_daemon.brokers[broker_link_uuid]))
+            for brok in my_first_scheduler.my_daemon.brokers[broker_link_uuid].broks:
+                broker_broks_count[broker_link_uuid] += 1
+                print("- %s: %s" % (brok, my_first_scheduler.my_daemon.brokers[broker_link_uuid].broks[brok]))
 
-        sched1bmaster = len(mysched1.sched.brokers['broker-master']['broks'])
-        sched1bmaster2 = len(mysched1.sched.brokers['broker-master2']['broks'])
+        for broker_link_uuid in my_first_scheduler.my_daemon.brokers:
+            assert broker_broks_count[broker_link_uuid] == ref_broks_count
 
-        sched2bmaster = len(mysched1.sched.brokers['broker-master']['broks'])
-        sched2bmaster2 = len(mysched1.sched.brokers['broker-master2']['broks'])
+        # ---
+        # Create broks in the second scheduler
+        self.scheduler_loop(1, [[host2, 0, 'UP']], my_second_scheduler)
+        time.sleep(0.1)
 
-        assert sched1bmaster > 2
-        assert sched2bmaster > 2
+        # ---
+        # Check raised broks in the second scheduler brokers
+        # 6 broks: new_conf, host_next_schedule (host), host_check_result
+        ref_broks_count = 3
+        # Count broks in each broker
+        broker_broks_count = {}
+        for broker_link_uuid in my_second_scheduler.my_daemon.brokers:
+            broker_broks_count[broker_link_uuid] = 0
+            print("Broker %s:" % (my_second_scheduler.my_daemon.brokers[broker_link_uuid]))
+            for brok in my_second_scheduler.my_daemon.brokers[broker_link_uuid].broks:
+                broker_broks_count[broker_link_uuid] += 1
+                print("- %s: %s" % (brok, my_second_scheduler.my_daemon.brokers[broker_link_uuid].broks[brok]))
 
-        assert sched1bmaster == sched1bmaster2
-        assert sched2bmaster == sched2bmaster2
-
-        # check dispatcher send right info to brokers
-        with requests_mock.mock() as mockreq:
-            for port in ['7772', '10772']:
-                mockreq.post('http://localhost:%s/put_conf' % port, json='true')
-
-            self.arbiter.dispatcher.dispatch()
-            self.assert_any_log_match('Configuration sent to broker broker-master')
-            self.assert_any_log_match('Configuration sent to broker broker-master2')
-
-            history = mockreq.request_history
-            print("History: %s" % history)
-            for index, hist in enumerate(history):
-                print("- : %s" % (hist.url))
-                if hist.url == 'http://127.0.0.1:7772/put_conf':
-                    broker_conf = hist.json()
-                elif hist.url == 'http://localhost:10772/put_conf':
-                    broker2_conf = hist.json()
-
-            assert 2 == len(broker_conf['conf']['schedulers'])
-            assert 2 == len(broker2_conf['conf']['schedulers'])
+        for broker_link_uuid in my_second_scheduler.my_daemon.brokers:
+            assert broker_broks_count[broker_link_uuid] == ref_broks_count
 
     def test_multibroker_multisched_realms(self):
         """ Test with realms / sub-realms
@@ -179,25 +293,28 @@ class TestMultibroker(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-        self.setup_with_file('cfg/cfg_multi_broker_multi_sched_realms.cfg')
+        self.setup_with_file('cfg/multibroker/cfg_multi_broker_multi_sched_realms.cfg')
 
         # test right brokers sent to right schedulers
-        smaster = self._scheduler_daemon
-        smaster_n = self.schedulers['scheduler-masterN']
-        smaster_s = self.schedulers['scheduler-masterS']
+        smaster = self._schedulers['scheduler-master']
+        smaster_n = self._schedulers['scheduler-masterN']
+        smaster_s = self._schedulers['scheduler-masterS']
 
-        assert smaster.sched.brokers.keys() == ['broker-master']
-        self.assertItemsEqual(smaster_n.sched.brokers.keys(), ['broker-master', 'broker-masterN'])
-        assert smaster_s.sched.brokers.keys() == ['broker-master']
+        # Brokers of each scheduler
+        for broker_link_uuid in smaster.my_daemon.brokers:
+            assert smaster.my_daemon.brokers[broker_link_uuid].name == 'broker-master'
+        assert 1 == len(smaster.my_daemon.brokers)
+
+        for broker_link_uuid in smaster_s.my_daemon.brokers:
+            assert smaster_s.my_daemon.brokers[broker_link_uuid].name =='broker-master'
+        assert 1 == len(smaster_s.my_daemon.brokers)
+
+        for broker_link_uuid in smaster_n.my_daemon.brokers:
+            assert smaster_n.my_daemon.brokers[broker_link_uuid].name in ['broker-master',
+                                                                          'broker-masterN']
+        assert 2 == len(smaster_n.my_daemon.brokers)
 
         brokermaster = None
-        for sat in self.arbiter.dispatcher.satellites:
+        for sat in self._arbiter.dispatcher.satellites:
             if getattr(sat, 'broker_name', '') == 'broker-master':
                 brokermaster = sat
-
-        assert brokermaster is not None
-        self.assertItemsEqual([smaster.sched.conf.uuid, smaster_n.sched.conf.uuid,
-                               smaster_s.sched.conf.uuid], brokermaster.cfg['schedulers'])
-
-        pass

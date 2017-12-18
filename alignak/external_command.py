@@ -89,6 +89,10 @@ class ExternalCommand:  # pylint: disable=R0903
 
     def __init__(self, cmd_line, timestamp=None):
         self.cmd_line = cmd_line
+        try:
+            self.cmd_line = self.cmd_line.decode('utf8', 'ignore')
+        except UnicodeEncodeError:
+            pass
         self.creation_timestamp = timestamp or time.time()
 
 
@@ -453,6 +457,9 @@ class ExternalCommandManager:
         - receiver, the user daemon only receives commands, analyses and then dispatches
         them to the schedulers
 
+        Note that the daemon parameter is really a Daemon object except for the scheduler where
+        it is a Scheduler object!
+
         If `accept_passive_unknown_check_results` is True, then aBrok will be created even if
         passive checks are received for unknown host/service else a Warning log will be emitted..
 
@@ -472,14 +479,14 @@ class ExternalCommandManager:
 
         # If we got a conf...
         if self.mode == 'receiver':
-            self.conf = {
+            self.my_conf = {
                 'log_external_commands': False,
                 'schedulers': daemon.schedulers
             }
         else:
-            self.conf = conf
+            self.my_conf = conf
             if conf:
-                self.conf = conf
+                self.my_conf = conf
                 self.hosts = conf.hosts
                 self.services = conf.services
                 self.contacts = conf.contacts
@@ -489,9 +496,9 @@ class ExternalCommandManager:
                 self.contactgroups = conf.contactgroups
                 self.timeperiods = conf.timeperiods
 
-        self.confs = None
+        self.cfg_parts = None
         if self.mode == 'dispatcher':
-            self.confs = conf.parts
+            self.cfg_parts = conf.parts
 
         self.accept_passive_unknown_check_results = accept_unknown
 
@@ -542,11 +549,11 @@ class ExternalCommandManager:
         if self.mode == 'receiver':
             return cmd
 
-        if self.mode == 'applyer' and self.conf.log_external_commands:
+        if self.mode == 'applyer' and self.my_conf.log_external_commands:
             make_a_log = True
             # #912: only log an external command if it is not a passive check
-            if self.conf.log_passive_checks and cmd['c_name'] in ['process_host_check_result',
-                                                                  'process_service_check_result']:
+            if self.my_conf.log_passive_checks and cmd['c_name'] \
+                    in ['process_host_check_result', 'process_service_check_result']:
                 # Do not log the command
                 make_a_log = False
 
@@ -567,15 +574,10 @@ class ExternalCommandManager:
             getattr(self, c_name)(*args)
         else:
             # Send command to all our schedulers
-            for scheduler in self.conf.schedulers:
-                if scheduler.alive:
-                    logger.debug("Sending an external command '%s' to the scheduler %s",
-                                 excmd, scheduler)
-                    scheduler.external_commands.append(excmd.cmd_line)
-                else:
-                    logger.warning("Could not send the external command '%s' "
-                                   "to the dead scheduler: %s",
-                                   excmd.cmd_line, scheduler)
+            for scheduler_link in self.my_conf.schedulers:
+                logger.debug("Preparing an external command '%s' for the scheduler %s",
+                             excmd, scheduler_link.name)
+                scheduler_link.external_commands.append(excmd.cmd_line)
 
         return cmd
 
@@ -598,24 +600,29 @@ class ExternalCommandManager:
         if self.mode == 'receiver':
             logger.debug("Receiver looking a scheduler for the external command %s %s",
                          host_name, command)
-            sched = self.daemon.get_sched_from_hname(host_name)
-            if sched:
+            scheduler_link = self.daemon.get_scheduler_from_hostname(host_name)
+            if scheduler_link:
                 host_found = True
-                logger.debug("Receiver pushing external command to scheduler %s", sched.name)
-                sched.external_commands.append(extcmd)
+                logger.debug("Receiver pushing external command to scheduler %s",
+                             scheduler_link.name)
+                scheduler_link.my_daemon.external_commands.append(extcmd)
+            else:
+                logger.warning("I did not found a scheduler for the host: %s", host_name)
         else:
-            for cfg in self.confs.values():
-                if cfg.hosts.find_by_name(host_name) is not None:
+            for cfg_part in self.cfg_parts.values():
+                if cfg_part.hosts.find_by_name(host_name) is not None:
                     logger.debug("Host %s found in a configuration", host_name)
-                    if cfg.is_assigned:
+                    if cfg_part.is_assigned:
                         host_found = True
-                        sched = cfg.assigned_to
-                        logger.debug("Sending command to the scheduler %s", sched.name)
-                        # sched.run_external_command(command)
-                        sched.external_commands.append(command)
+                        scheduler_link = cfg_part.scheduler_link
+                        logger.debug("Sending command to the scheduler %s", scheduler_link.name)
+                        scheduler_link.push_external_commands([command])
+                        # scheduler_link.my_daemon.external_commands.append(command)
                         break
                     else:
-                        logger.warning("Problem: a configuration is found, but is not assigned!")
+                        logger.warning("Problem: the host %s was found in a configuration, "
+                                       "but this configuration is not assigned to any scheduler!",
+                                       host_name)
         if not host_found:
             if self.accept_passive_unknown_check_results:
                 brok = self.get_unknown_check_result_brok(command)
@@ -666,8 +673,9 @@ class ExternalCommandManager:
 
         return Brok({'type': 'unknown_%s_check_result' % match.group(2).lower(), 'data': data})
 
-    def get_command_and_args(self, command, extcmd=None):  # pylint: disable=R0914,R0915,R0912
-        # pylint: disable=too-many-return-statements
+    def get_command_and_args(self, command, extcmd=None):
+        # pylint: disable=too-many-return-statements, too-many-nested-blocks
+        # pylint: disable=too-many-locals,too-many-branches,too-many-statements
         """Parse command and get args
 
         :param command: command line to parse
@@ -694,9 +702,9 @@ class ExternalCommandManager:
                 c_name = elts[0].split()[0]
             else:
                 logger.warning("Malformed command '%s'", command)
-                logger.exception("Malformed command exception: %s", exp)
+                # logger.exception("Malformed command exception: %s", exp)
 
-                if self.conf and getattr(self.conf, 'log_external_commands', False):
+                if self.my_conf and getattr(self.my_conf, 'log_external_commands', False):
                     # The command failed, make a monitoring log to inform
                     brok = make_monitoring_log('error',
                                                "Malformed command: '%s'" % command)
@@ -718,9 +726,9 @@ class ExternalCommandManager:
             self.current_timestamp = int(timestamp)
         except ValueError as exp:
             logger.warning("Malformed command '%s'", command)
-            logger.exception("Malformed command exception: %s", exp)
+            # logger.exception("Malformed command exception: %s", exp)
 
-            if self.conf and getattr(self.conf, 'log_external_commands', False):
+            if self.my_conf and getattr(self.my_conf, 'log_external_commands', False):
                 # The command failed, make a monitoring log to inform
                 brok = make_monitoring_log('error',
                                            "Malformed command: '%s'" % command)
@@ -731,7 +739,7 @@ class ExternalCommandManager:
         if c_name not in ExternalCommandManager.commands:
             logger.warning("External command '%s' is not recognized, sorry", c_name)
 
-            if self.conf and getattr(self.conf, 'log_external_commands', False):
+            if self.my_conf and getattr(self.my_conf, 'log_external_commands', False):
                 # The command failed, make a monitoring log to inform
                 brok = make_monitoring_log('error',
                                            "Command '%s' is not recognized, sorry" % command)
@@ -767,6 +775,10 @@ class ExternalCommandManager:
         obsolete_arg = 0
         try:
             for elt in elts[1:]:
+                try:
+                    elt = elt.decode('utf8', 'ignore')
+                except UnicodeEncodeError:
+                    pass
                 logger.debug("Searching for a new arg: %s (%d)", elt, i)
                 val = elt.strip()
                 if val.endswith('\n'):
@@ -878,7 +890,7 @@ class ExternalCommandManager:
             logger.warning("Sorry, the arguments for the command '%s' are not correct")
             logger.exception("Arguments parsing exception: %s", exp)
 
-            if self.conf and self.conf.log_external_commands:
+            if self.my_conf and self.my_conf.log_external_commands:
                 # The command failed, make a monitoring log to inform
                 brok = make_monitoring_log('error',
                                            "Arguments are not correct for the command: '%s'" %
@@ -892,7 +904,7 @@ class ExternalCommandManager:
             logger.warning("Sorry, the arguments for the command '%s' are not correct (%s)",
                            command, (args))
 
-            if self.conf and self.conf.log_external_commands:
+            if self.my_conf and self.my_conf.log_external_commands:
                 # The command failed, make a monitoring log to inform
                 brok = make_monitoring_log('error',
                                            "Arguments are not correct for the command: '%s'" %
@@ -1924,10 +1936,10 @@ class ExternalCommandManager:
         :return: None
         """
         # todo: #783 create a dedicated brok for global parameters
-        if self.conf.enable_event_handlers:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
-            self.conf.enable_event_handlers = False
-            self.conf.explode_global_conf()
+        if self.my_conf.enable_event_handlers:
+            self.my_conf.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
+            self.my_conf.enable_event_handlers = False
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def disable_flap_detection(self):
@@ -1939,18 +1951,18 @@ class ExternalCommandManager:
         :return: None
         """
         # todo: #783 create a dedicated brok for global parameters
-        if self.conf.enable_flap_detection:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_FLAP_DETECTION_ENABLED"].value
-            self.conf.enable_flap_detection = False
-            self.conf.explode_global_conf()
+        if self.my_conf.enable_flap_detection:
+            self.my_conf.modified_attributes |= DICT_MODATTR["MODATTR_FLAP_DETECTION_ENABLED"].value
+            self.my_conf.enable_flap_detection = False
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
             # Is need, disable flap state for hosts and services
-            for service in self.conf.services:
+            for service in self.my_conf.services:
                 if service.is_flapping:
                     service.is_flapping = False
                     service.flapping_changes = []
                     self.daemon.get_and_register_status_brok(service)
-            for host in self.conf.hosts:
+            for host in self.my_conf.hosts:
                 if host.is_flapping:
                     host.is_flapping = False
                     host.flapping_changes = []
@@ -2122,10 +2134,11 @@ class ExternalCommandManager:
 
         :return: None
         """
-        if self.conf.check_host_freshness:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
-            self.conf.check_host_freshness = False
-            self.conf.explode_global_conf()
+        if self.my_conf.check_host_freshness:
+            self.my_conf.modified_attributes |= \
+                DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
+            self.my_conf.check_host_freshness = False
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def disable_host_notifications(self, host):
@@ -2182,10 +2195,10 @@ class ExternalCommandManager:
         :return: None
         """
         # todo: #783 create a dedicated brok for global parameters
-        if self.conf.enable_notifications:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
-            self.conf.enable_notifications = False
-            self.conf.explode_global_conf()
+        if self.my_conf.enable_notifications:
+            self.my_conf.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
+            self.my_conf.enable_notifications = False
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def disable_passive_host_checks(self, host):
@@ -2227,10 +2240,11 @@ class ExternalCommandManager:
         :return: None
         """
         # todo: #783 create a dedicated brok for global parameters
-        if self.conf.process_performance_data:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_PERFORMANCE_DATA_ENABLED"].value
-            self.conf.process_performance_data = False
-            self.conf.explode_global_conf()
+        if self.my_conf.process_performance_data:
+            self.my_conf.modified_attributes |= \
+                DICT_MODATTR["MODATTR_PERFORMANCE_DATA_ENABLED"].value
+            self.my_conf.process_performance_data = False
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def disable_servicegroup_host_checks(self, servicegroup):
@@ -2344,10 +2358,11 @@ class ExternalCommandManager:
 
         :return: None
         """
-        if self.conf.check_service_freshness:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
-            self.conf.check_service_freshness = False
-            self.conf.explode_global_conf()
+        if self.my_conf.check_service_freshness:
+            self.my_conf.modified_attributes |= \
+                DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
+            self.my_conf.check_service_freshness = False
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def disable_svc_check(self, service):
@@ -2362,7 +2377,8 @@ class ExternalCommandManager:
         """
         if service.active_checks_enabled:
             service.disable_active_checks(self.daemon.checks)
-            service.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
+            service.modified_attributes |= \
+                DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             self.daemon.get_and_register_status_brok(service)
 
     def disable_svc_event_handler(self, service):
@@ -2376,7 +2392,8 @@ class ExternalCommandManager:
         :return: None
         """
         if service.event_handler_enabled:
-            service.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
+            service.modified_attributes |= \
+                DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
             service.event_handler_enabled = False
             self.daemon.get_and_register_status_brok(service)
 
@@ -2403,7 +2420,8 @@ class ExternalCommandManager:
         :return: None
         """
         if service.notifications_enabled:
-            service.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
+            service.modified_attributes |= \
+                DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             service.notifications_enabled = False
             self.daemon.get_and_register_status_brok(service)
 
@@ -2464,7 +2482,8 @@ class ExternalCommandManager:
         :return: None
         """
         if not contact.host_notifications_enabled:
-            contact.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
+            contact.modified_attributes |= \
+                DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             contact.host_notifications_enabled = True
             self.daemon.get_and_register_status_brok(contact)
 
@@ -2479,7 +2498,8 @@ class ExternalCommandManager:
         :return: None
         """
         if not contact.service_notifications_enabled:
-            contact.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
+            contact.modified_attributes |= \
+                DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             contact.service_notifications_enabled = True
             self.daemon.get_and_register_status_brok(contact)
 
@@ -2492,10 +2512,11 @@ class ExternalCommandManager:
         :return: None
         """
         # todo: #783 create a dedicated brok for global parameters
-        if not self.conf.enable_event_handlers:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
-            self.conf.enable_event_handlers = True
-            self.conf.explode_global_conf()
+        if not self.my_conf.enable_event_handlers:
+            self.my_conf.modified_attributes |= \
+                DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
+            self.my_conf.enable_event_handlers = True
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def enable_flap_detection(self):
@@ -2507,10 +2528,11 @@ class ExternalCommandManager:
         :return: None
         """
         # todo: #783 create a dedicated brok for global parameters
-        if not self.conf.enable_flap_detection:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_FLAP_DETECTION_ENABLED"].value
-            self.conf.enable_flap_detection = True
-            self.conf.explode_global_conf()
+        if not self.my_conf.enable_flap_detection:
+            self.my_conf.modified_attributes |= \
+                DICT_MODATTR["MODATTR_FLAP_DETECTION_ENABLED"].value
+            self.my_conf.enable_flap_detection = True
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def enable_hostgroup_host_checks(self, hostgroup):
@@ -2634,7 +2656,8 @@ class ExternalCommandManager:
         """
         if not host.active_checks_enabled:
             host.active_checks_enabled = True
-            host.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
+            host.modified_attributes |= \
+                DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             self.daemon.get_and_register_status_brok(host)
 
     def enable_host_event_handler(self, host):
@@ -2648,7 +2671,8 @@ class ExternalCommandManager:
         :return: None
         """
         if not host.event_handler_enabled:
-            host.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
+            host.modified_attributes |= \
+                DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
             host.event_handler_enabled = True
             self.daemon.get_and_register_status_brok(host)
 
@@ -2663,7 +2687,8 @@ class ExternalCommandManager:
         :return: None
         """
         if not host.flap_detection_enabled:
-            host.modified_attributes |= DICT_MODATTR["MODATTR_FLAP_DETECTION_ENABLED"].value
+            host.modified_attributes |= \
+                DICT_MODATTR["MODATTR_FLAP_DETECTION_ENABLED"].value
             host.flap_detection_enabled = True
             self.daemon.get_and_register_status_brok(host)
 
@@ -2675,10 +2700,11 @@ class ExternalCommandManager:
 
         :return: None
         """
-        if not self.conf.check_host_freshness:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
-            self.conf.check_host_freshness = True
-            self.conf.explode_global_conf()
+        if not self.my_conf.check_host_freshness:
+            self.my_conf.modified_attributes |= \
+                DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
+            self.my_conf.check_host_freshness = True
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def enable_host_notifications(self, host):
@@ -2692,7 +2718,8 @@ class ExternalCommandManager:
         :return: None
         """
         if not host.notifications_enabled:
-            host.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
+            host.modified_attributes |= \
+                DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             host.notifications_enabled = True
             self.daemon.get_and_register_status_brok(host)
 
@@ -2735,10 +2762,11 @@ class ExternalCommandManager:
         :return: None
         """
         # todo: #783 create a dedicated brok for global parameters
-        if not self.conf.enable_notifications:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
-            self.conf.enable_notifications = True
-            self.conf.explode_global_conf()
+        if not self.my_conf.enable_notifications:
+            self.my_conf.modified_attributes |= \
+                DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
+            self.my_conf.enable_notifications = True
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def enable_passive_host_checks(self, host):
@@ -2752,7 +2780,8 @@ class ExternalCommandManager:
         :return: None
         """
         if not host.passive_checks_enabled:
-            host.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
+            host.modified_attributes |= \
+                DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
             host.passive_checks_enabled = True
             self.daemon.get_and_register_status_brok(host)
 
@@ -2767,7 +2796,8 @@ class ExternalCommandManager:
         :return: None
         """
         if not service.passive_checks_enabled:
-            service.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
+            service.modified_attributes |= \
+                DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
             service.passive_checks_enabled = True
             self.daemon.get_and_register_status_brok(service)
 
@@ -2779,10 +2809,11 @@ class ExternalCommandManager:
 
         :return: None
         """
-        if not self.conf.process_performance_data:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_PERFORMANCE_DATA_ENABLED"].value
-            self.conf.process_performance_data = True
-            self.conf.explode_global_conf()
+        if not self.my_conf.process_performance_data:
+            self.my_conf.modified_attributes |= \
+                DICT_MODATTR["MODATTR_PERFORMANCE_DATA_ENABLED"].value
+            self.my_conf.process_performance_data = True
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def enable_servicegroup_host_checks(self, servicegroup):
@@ -2877,10 +2908,11 @@ class ExternalCommandManager:
 
         :return: None
         """
-        if not self.conf.check_service_freshness:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
-            self.conf.check_service_freshness = True
-            self.conf.explode_global_conf()
+        if not self.my_conf.check_service_freshness:
+            self.my_conf.modified_attributes |= \
+                DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
+            self.my_conf.check_service_freshness = True
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def enable_svc_check(self, service):
@@ -2894,7 +2926,8 @@ class ExternalCommandManager:
         :return: None
         """
         if not service.active_checks_enabled:
-            service.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
+            service.modified_attributes |= \
+                DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             service.active_checks_enabled = True
             self.daemon.get_and_register_status_brok(service)
 
@@ -2909,7 +2942,8 @@ class ExternalCommandManager:
         :return: None
         """
         if not service.event_handler_enabled:
-            service.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
+            service.modified_attributes |= \
+                DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
             service.event_handler_enabled = True
             self.daemon.get_and_register_status_brok(service)
 
@@ -2924,7 +2958,8 @@ class ExternalCommandManager:
         :return: None
         """
         if not service.flap_detection_enabled:
-            service.modified_attributes |= DICT_MODATTR["MODATTR_FLAP_DETECTION_ENABLED"].value
+            service.modified_attributes |= \
+                DICT_MODATTR["MODATTR_FLAP_DETECTION_ENABLED"].value
             service.flap_detection_enabled = True
             self.daemon.get_and_register_status_brok(service)
 
@@ -2939,7 +2974,8 @@ class ExternalCommandManager:
         :return: None
         """
         if not service.notifications_enabled:
-            service.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
+            service.modified_attributes |= \
+                DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             service.notifications_enabled = True
             self.daemon.get_and_register_status_brok(service)
 
@@ -3022,7 +3058,7 @@ class ExternalCommandManager:
         # Ok now this result will be read by the scheduler the next loop
 
         # raise a passive check log only if needed
-        if self.conf.log_passive_checks:
+        if self.my_conf.log_passive_checks:
             log_level = 'info'
             if status_code == 1:  # DOWN
                 log_level = 'error'
@@ -3113,7 +3149,7 @@ class ExternalCommandManager:
         # Ok now this result will be read by the scheduler the next loop
 
         # raise a passive check log only if needed
-        if self.conf.log_passive_checks:
+        if self.my_conf.log_passive_checks:
             log_level = 'info'
             if return_code == 1:  # WARNING
                 log_level = 'warning'
@@ -3792,10 +3828,10 @@ class ExternalCommandManager:
         :return: None
         """
         # todo: #783 create a dedicated brok for global parameters
-        if not self.conf.accept_passive_host_checks:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
-            self.conf.accept_passive_host_checks = True
-            self.conf.explode_global_conf()
+        if not self.my_conf.accept_passive_host_checks:
+            self.my_conf.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
+            self.my_conf.accept_passive_host_checks = True
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def start_accepting_passive_svc_checks(self):
@@ -3807,10 +3843,10 @@ class ExternalCommandManager:
         :return: None
         """
         # todo: #783 create a dedicated brok for global parameters
-        if not self.conf.accept_passive_service_checks:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
-            self.conf.accept_passive_service_checks = True
-            self.conf.explode_global_conf()
+        if not self.my_conf.accept_passive_service_checks:
+            self.my_conf.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
+            self.my_conf.accept_passive_service_checks = True
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def start_executing_host_checks(self):
@@ -3822,10 +3858,10 @@ class ExternalCommandManager:
         :return: None
         """
         # todo: #783 create a dedicated brok for global parameters
-        if not self.conf.execute_host_checks:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
-            self.conf.execute_host_checks = True
-            self.conf.explode_global_conf()
+        if not self.my_conf.execute_host_checks:
+            self.my_conf.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
+            self.my_conf.execute_host_checks = True
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def start_executing_svc_checks(self):
@@ -3837,10 +3873,10 @@ class ExternalCommandManager:
         :return: None
         """
         # todo: #783 create a dedicated brok for global parameters
-        if not self.conf.execute_service_checks:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
-            self.conf.execute_service_checks = True
-            self.conf.explode_global_conf()
+        if not self.my_conf.execute_service_checks:
+            self.my_conf.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
+            self.my_conf.execute_service_checks = True
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def stop_accepting_passive_host_checks(self):
@@ -3851,10 +3887,10 @@ class ExternalCommandManager:
 
         :return: None
         """
-        if self.conf.accept_passive_host_checks:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
-            self.conf.accept_passive_host_checks = False
-            self.conf.explode_global_conf()
+        if self.my_conf.accept_passive_host_checks:
+            self.my_conf.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
+            self.my_conf.accept_passive_host_checks = False
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def stop_accepting_passive_svc_checks(self):
@@ -3865,10 +3901,10 @@ class ExternalCommandManager:
 
         :return: None
         """
-        if self.conf.accept_passive_service_checks:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
-            self.conf.accept_passive_service_checks = False
-            self.conf.explode_global_conf()
+        if self.my_conf.accept_passive_service_checks:
+            self.my_conf.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
+            self.my_conf.accept_passive_service_checks = False
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def stop_executing_host_checks(self):
@@ -3879,10 +3915,10 @@ class ExternalCommandManager:
 
         :return: None
         """
-        if self.conf.execute_host_checks:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
-            self.conf.execute_host_checks = False
-            self.conf.explode_global_conf()
+        if self.my_conf.execute_host_checks:
+            self.my_conf.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
+            self.my_conf.execute_host_checks = False
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def stop_executing_svc_checks(self):
@@ -3893,10 +3929,10 @@ class ExternalCommandManager:
 
         :return: None
         """
-        if self.conf.execute_service_checks:
-            self.conf.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
-            self.conf.execute_service_checks = False
-            self.conf.explode_global_conf()
+        if self.my_conf.execute_service_checks:
+            self.my_conf.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
+            self.my_conf.execute_service_checks = False
+            self.my_conf.explode_global_conf()
             self.daemon.update_program_status()
 
     def launch_svc_event_handler(self, service):

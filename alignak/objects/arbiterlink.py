@@ -49,7 +49,7 @@ import logging
 import socket
 
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
-from alignak.property import IntegerProp, StringProp
+from alignak.property import IntegerProp, StringProp, FloatProp
 from alignak.http.client import HTTPClientException, HTTPClientConnectionException, \
     HTTPClientTimeoutException
 
@@ -59,20 +59,31 @@ logger = logging.getLogger(__name__)  # pylint: disable=C0103
 class ArbiterLink(SatelliteLink):
     """
     Class to manage the link to Arbiter daemon.
-    With it, arbiter can see if a Arbiter daemon is alive, and can send it new configuration
+    With it, a master arbiter can communicate with  a spare Arbiter daemon
     """
     my_type = 'arbiter'
     properties = SatelliteLink.properties.copy()
     properties.update({
         'type':
-            StringProp(default='arbiter', fill_brok=['full_status']),
+            StringProp(default='arbiter', fill_brok=['full_status'], to_send=True),
         'arbiter_name':
             StringProp(default='', fill_brok=['full_status']),
         'host_name':
-            StringProp(default=socket.gethostname()),
+            StringProp(default=socket.gethostname(), to_send=True),
         'port':
-            IntegerProp(default=7770),
+            IntegerProp(default=7770, to_send=True),
+        'last_master_speak':
+            FloatProp(default=0.0)
     })
+
+    def __init__(self, params=None, parsing=True):
+        """Initialize an ArbiterLink
+
+        It always manage other arbiters!
+        """
+        super(ArbiterLink, self).__init__(params, parsing)
+
+        self.manage_arbiters = True
 
     def is_me(self):  # pragma: no cover, seems not to be used anywhere
         """Check if parameter name if same than name of this object
@@ -85,15 +96,6 @@ class ArbiterLink(SatelliteLink):
         logger.info("And arbiter is launched with the hostname:%s "
                     "from an arbiter point of view of addr:%s", self.host_name, socket.getfqdn())
         return self.host_name == socket.getfqdn() or self.host_name == socket.gethostname()
-
-    def give_satellite_cfg(self):
-        """
-        Get configuration of the Arbiter satellite
-
-        :return: dictionary of link information
-        :rtype: dict
-        """
-        return super(ArbiterLink, self).give_satellite_cfg()
 
     def do_not_run(self):
         """Check if satellite running or not
@@ -124,7 +126,7 @@ class ArbiterLink(SatelliteLink):
 
         return False
 
-    def get_all_states(self):  # pragma: no cover, seems not to be used anywhere
+    def get_all_states(self):
         """Get states of all satellites
 
         TODO: is it useful?
@@ -150,42 +152,6 @@ class ArbiterLink(SatelliteLink):
         except HTTPClientException as exp:
             self.add_failed_check_attempt("Error when "
                                           "getting all states: %s" % str(exp))
-
-        return None
-
-    def get_objects_properties(self, table, properties=None):  # pragma: no cover,
-        # seems not to be used anywhere
-        """Get properties of objects
-
-        :param table: name of table
-        :type table: str
-        :param properties: list of properties
-        :type properties: list
-        :return: list of objects
-        :rtype: list | None
-        """
-        logger.debug("[%s] get_objects_properties", self.name)
-
-        if not self.reachable or not self.ping():
-            logger.warning("Not reachable for get_all_states: %s", self.name)
-            return []
-
-        if properties is None:
-            properties = []
-
-        try:
-            return self.con.get('get_objects_properties', {'table': table,
-                                                           'properties': properties})
-        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-            self.add_failed_check_attempt("Connection error when "
-                                          "getting object properties: %s" % str(exp))
-            self.set_dead()
-        except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
-            self.add_failed_check_attempt("Connection timeout when "
-                                          "getting object properties: %s" % str(exp))
-        except HTTPClientException as exp:
-            self.add_failed_check_attempt("Error when "
-                                          "getting object properties: %s" % str(exp))
 
         return None
 

@@ -50,50 +50,30 @@ from alignak.property import IntegerProp, StringProp, ListProp
 
 class PollerLink(SatelliteLink):
     """
-    Class to manage the link between Arbiter and Poller. With it, arbiter
-    can see if a poller is alive, and can send it new configuration
+    Class to manage the link between Arbiter and Poller. With this, an arbiter
+    can communicate with a poller
     """
     my_type = 'poller'
     # To_send: send or not to satellite conf
     properties = SatelliteLink.properties.copy()
     properties.update({
         'type':
-            StringProp(default='poller', fill_brok=['full_status']),
+            StringProp(default='poller', fill_brok=['full_status'], to_send=True),
         'poller_name':
-            StringProp(default='', fill_brok=['full_status'], to_send=True),
+            StringProp(default='', fill_brok=['full_status']),
         'port':
-            IntegerProp(default=7771, fill_brok=['full_status']),
+            IntegerProp(default=7771, fill_brok=['full_status'], to_send=True),
         'min_workers':
             IntegerProp(default=0, fill_brok=['full_status'], to_send=True),
         'max_workers':
             IntegerProp(default=30, fill_brok=['full_status'], to_send=True),
         'processes_by_worker':
             IntegerProp(default=256, fill_brok=['full_status'], to_send=True),
+        'worker_polling_interval':
+            IntegerProp(default=1, to_send=True),
         'poller_tags':
             ListProp(default=['None'], to_send=True),
     })
-
-    # def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
-    #     """
-    #     Add this relation to the realm
-    #
-    #     :return: None
-    #     """
-    #     self.realm.pollers.append(self)
-
-    def give_satellite_cfg(self):
-        """
-        Get configuration of the Poller satellite
-
-        :return: dictionary of link information
-        :rtype: dict
-        """
-        res = super(PollerLink, self).give_satellite_cfg()
-        res.update({
-            'active': True, 'passive': self.passive,
-            'poller_tags': getattr(self, 'poller_tags', [])
-        })
-        return res
 
 
 class PollerLinks(SatelliteLinks):

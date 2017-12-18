@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-lines
 #
 # Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
@@ -63,24 +64,27 @@ import os
 import logging
 import sys
 import time
+import signal
 import traceback
 import socket
 import cStringIO
-import json
+import threading
 
-import subprocess
+import psutil
 
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.config import Config
 from alignak.macroresolver import MacroResolver
 from alignak.external_command import ExternalCommandManager
 from alignak.dispatcher import Dispatcher
-from alignak.daemon import Daemon
+from alignak.daemon import Daemon, SIGNALS_TO_NAMES_DICT
 from alignak.stats import statsmgr
 from alignak.brok import Brok
 from alignak.external_command import ExternalCommand
-from alignak.property import BoolProp, PathProp, IntegerProp, StringProp
+from alignak.property import IntegerProp, StringProp
 from alignak.http.arbiter_interface import ArbiterInterface
+from alignak.objects.satellitelink import SatelliteLink
+
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -105,9 +109,15 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         :param kwargs: command line arguments
         """
+        # The monitored objects configuration files
         self.monitoring_config_files = []
+        # My daemons...
+        self.daemons_last_check = 0
+        self.my_daemons = {}
 
-        super(Arbiter, self).__init__(kwargs.get('daemon_name', 'Default-arbiter'), **kwargs)
+        super(Arbiter, self).__init__(kwargs.get('daemon_name', 'Default-Arbiter'), **kwargs)
+
+        # Our schedulers and arbiters are initialized in the base class
 
         # Specific arbiter command line parameters
         if 'monitoring_files' in kwargs and kwargs['monitoring_files']:
@@ -119,14 +129,22 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 "for the unit tests of the Alignak framework! If some monitoring files are "
                 "present in the command line parameters, they will supersede the ones "
                 "declared in the environment configuration file.")
-            # Monitoring files in the arguments overload the ones defined
+            # Monitoring files in the arguments extend the ones defined
             # in the environment configuration file
             self.monitoring_config_files.extend(kwargs['monitoring_files'])
             logger.warning("Got some configuration files: %s", self.monitoring_config_files)
-        if not self.monitoring_config_files:
-            sys.exit("The Alignak environment file is not existing "
-                     "or do not define any monitoring configuration files. "
-                     "The arbiter can not start correctly.")
+        # if not self.monitoring_config_files:
+        #     sys.exit("The Alignak environment file is not existing "
+        #              "or do not define any monitoring configuration files. "
+        #              "The arbiter can not start correctly.")
+
+        # Make sure the configuration files are not repeated...
+        my_cfg_files = []
+        for cfg_file in self.monitoring_config_files:
+            logger.debug("- configuration file: %s / %s", cfg_file, os.path.abspath(cfg_file))
+            if os.path.abspath(cfg_file) not in my_cfg_files:
+                my_cfg_files.append(os.path.abspath(cfg_file))
+        self.monitoring_config_files = my_cfg_files
 
         self.verify_only = False
         if 'verify_only' in kwargs and kwargs['verify_only']:
@@ -139,6 +157,16 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             self.alignak_name = kwargs['alignak_name']
         self.arbiter_name = self.alignak_name
 
+        # Dump system health, defaults to report every 5 loop count
+        self.system_health = False
+        self.system_health_period = 5
+        if 'ALIGNAK_SYSTEM_MONITORING' in os.environ:
+            self.system_health = True
+            try:
+                self.system_health_period = int(os.environ.get('ALIGNAK_SYSTEM_MONITORING', '5'))
+            except ValueError:  # pragma: no cover, simple protection
+                pass
+
         self.broks = {}
         self.is_master = False
         self.link_to_myself = None
@@ -148,9 +176,17 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Now an external commands manager and a list for the external_commands
         self.external_commands_manager = None
         self.external_commands = []
+        self.external_commands_lock = threading.RLock()
 
-        # Used to work out if we must still be alive or not
+        # Used to work out if we must still run or not - only for a spare arbiter
         self.must_run = True
+
+        # Did we received a kill signal
+        self.kill_request = False
+        self.kill_timestamp = 0
+
+        # All dameons connection are valid
+        self.all_connected = False
 
         self.http_interface = ArbiterInterface(self)
         self.conf = Config()
@@ -167,73 +203,156 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """
         if isinstance(elt, Brok):
             self.broks[elt.uuid] = elt
-            statsmgr.counter('broks.added', 1)
+            statsmgr.counter('broks.got', 1)
         elif isinstance(elt, ExternalCommand):  # pragma: no cover, useful?
             # todo: does the arbiter will still manage external commands? It is the receiver job!
             self.external_commands.append(elt)
-            statsmgr.counter('external-commands.added', 1)
-        else:
-            logger.warning('Cannot manage object type %s (%s)', type(elt), elt)
+            statsmgr.counter('external-commands.got', 1)
+        else:  # pragma: no cover, simple dev alerting
+            logger.error('Do not manage object type %s (%s)', type(elt), elt)
+
+    def get_managed_configurations(self):  # pylint: disable=no-self-use
+        """Get the configuration managed by this arbiter
+
+        This is used by the master arbiter to get information from its spare arbiter
+
+        :return: a dict of arbiter links (only one) with instance_id as key and
+        hash, push_flavor and configuration identifier as values
+        :rtype: dict
+        """
+        res = {}
+        # for arbiter_link in self.conf.arbiters:
+        #     if arbiter_link == self.link_to_myself:
+        #         # Not myself ;)
+        #         continue
+        #     res[arbiter_link.instance_id] = {
+        #         'hash': arbiter_link.hash,
+        #         'push_flavor': arbiter_link.push_flavor,
+        #         'managed_conf_id': arbiter_link.managed_conf_id
+        #     }
+        logger.debug("Get managed configuration: %s", res)
+        return res
 
     def push_broks_to_broker(self):
         """Send all broks from arbiter internal list to broker
 
-        :return: None
-        """
-        for broker in self.conf.brokers:
-            # Send only if alive of course
-            if broker.manage_arbiters and broker.reachable:
-                is_sent = broker.push_broks(self.broks)
-                if is_sent:
-                    # They are gone, we keep none!
-                    self.broks.clear()
-
-    def get_external_commands_from_satellites(self):  # pragma: no cover, useful?
-        """Get external commands from all other satellites
-
-        TODO: does the arbiter will still manage external commands? It is the receiver job!
+        The arbiter get some broks and then pushes them to all the brokers.
 
         :return: None
         """
-        for satellites in [self.conf.brokers, self.conf.receivers,
-                           self.conf.pollers, self.conf.reactionners]:
-            for satellite in satellites:
-                # Get only if alive of course
-                if satellite.reachable:
-                    external_commands = satellite.get_external_commands()
-                    for external_command in external_commands:
-                        self.external_commands.append(external_command)
+        someone_is_concerned = False
+        sent = False
+        for broker_link in self.conf.brokers:
+            # Send only if the broker is concerned...
+            if not broker_link.manage_arbiters:
+                continue
 
-    def get_broks_from_satellitelinks(self):
-        """Get broks from my internal satellite links
+            someone_is_concerned = True
+            if broker_link.reachable:
+                logger.debug("Sending %d broks to the broker %s",
+                             len(self.broks), broker_link.name)
+                if broker_link.push_broks(self.broks):
+                    statsmgr.counter('broks.pushed', len(self.broks))
+                    sent = True
+
+        if not someone_is_concerned or sent:
+            # No one is anymore interested with...
+            self.broks.clear()
+
+    def push_external_commands_to_schedulers(self):
+        """Send external commands to schedulers
+
+        :return: None
+        """
+        # Now get all external commands and push them to the schedulers
+        for external_command in self.external_commands:
+            self.external_commands_manager.resolve_command(external_command)
+
+        # Now for all reachable schedulers, send the commands
+        sent = False
+        for scheduler_link in self.conf.schedulers:
+            ext_cmds = scheduler_link.external_commands
+            if ext_cmds and scheduler_link.reachable:
+                logger.debug("Sending %d commands to the scheduler %s",
+                             len(ext_cmds), scheduler_link.name)
+                if scheduler_link.push_external_commands(ext_cmds):
+                    statsmgr.counter('external-commands.pushed', len(ext_cmds))
+                    sent = True
+            if sent:
+                # Clean the pushed commands
+                scheduler_link.external_commands.clear()
+
+    def get_external_commands(self):
+        """Get the external commands
+
+        :return: External commands list
+        :rtype: list
+        """
+        res = self.external_commands
+        logger.debug("Get and clear external commands list: %s", res)
+        self.external_commands = []
+        return res
+
+    def get_external_commands_from_satellites(self):
+        """Get external commands from all other satellites (only receivers)
+
+        As of now, only the receiver satellites may raise some broks that the arbiter will push
+        to all the known schedulers.
+
+        :return: None
+        """
+        # for satellites in [self.conf.brokers, self.conf.receivers,
+        #                    self.conf.pollers, self.conf.reactionners, self.conf.receivers]:
+        for satellite in self.conf.receivers:
+            # Get only if reachable...
+            if not satellite.reachable:
+                continue
+            logger.debug("Getting external commands from: %s", satellite.name)
+            external_commands = satellite.get_external_commands()
+            if external_commands:
+                logger.debug("Got %d commands from: %s", len(external_commands), satellite.name)
+            for external_command in external_commands:
+                self.external_commands.append(external_command)
+
+    def get_broks_from_satellites(self):
+        """Get broks from my all internal satellite links
+
+        The arbiter get the broks from ALL the known satellites
 
         :return: None
         """
         for satellites in [self.conf.brokers, self.conf.schedulers,
                            self.conf.pollers, self.conf.reactionners, self.conf.receivers]:
             for satellite in satellites:
-                logger.debug("Getting broks from: %s", satellite)
+                # Get only if reachable...
+                if not satellite.reachable:
+                    continue
+                logger.debug("Getting broks from: %s", satellite.name)
                 new_broks = satellite.get_and_clear_broks()
+                if new_broks:
+                    logger.debug("Got %d broks from: %s", len(new_broks), satellite.name)
                 for brok in new_broks.values():
+                    logger.debug("Got brok from %s: %s", satellite.name, brok.type)
                     self.add(brok)
-                if len(new_broks):
-                    logger.debug("Got %d broks from: %s / %s",
-                                 len(new_broks), satellite.name, new_broks)
 
-    def get_initial_broks_from_satellitelinks(self):
-        """Get initial broks from my internal satellitelinks (satellite status)
+    def get_initial_broks_from_satellites(self):
+        """Get initial broks from my internal satellite links
 
         :return: None
         """
         for satellites in [self.conf.brokers, self.conf.schedulers,
                            self.conf.pollers, self.conf.reactionners, self.conf.receivers]:
             for satellite in satellites:
+                # Get only if reachable...
+                if not satellite.reachable:
+                    continue
+                logger.debug("Getting initial brok from: %s", satellite.name)
                 brok = satellite.get_initial_status_brok()
-                logger.debug("Satellite '%s' initial brok: %s", satellite, brok)
+                logger.debug("Satellite '%s' initial brok: %s", satellite.name, brok)
                 self.add(brok)
 
-    # pylint: disable=too-many-branches
-    def load_monitoring_config_file(self):  # pylint: disable=R0915
+    def load_monitoring_config_file(self):
+        # pylint: disable=too-many-branches,too-many-statements
         """Load main configuration file (alignak.cfg)::
 
         * Read all files given in the -c parameters
@@ -252,18 +371,22 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         if self.verify_only:
             # Force the global logger at INFO level
             alignak_logger = logging.getLogger("alignak")
-            alignak_logger.setLevel(logging.INFO)
+            alignak_logger.setLevel(logging.INFO if not self.debug else logging.DEBUG)
             logger.info("-----")
             logger.info("Arbiter is in configuration check mode")
             logger.info("-----")
 
-        print("Arbiter daemon '%s' has some monitoring configuration files: %s"
-              % (self.name, self.monitoring_config_files))
+        # Maybe we do not have environment file
+        if not self.alignak_env:
+            self.exit_on_error("*** No Alignak environment file. Exiting...", exit_code=2)
+        else:
+            logger.info("Environment file: %s", self.env_filename)
 
         logger.info("Loading configuration from %s", self.monitoring_config_files)
         # REF: doc/alignak-conf-dispatching.png (1)
-        buffer = self.conf.read_config(self.monitoring_config_files)
-        raw_objects = self.conf.read_config_buf(buffer)
+        raw_objects = self.conf.read_config_buf(
+            self.conf.read_config(self.monitoring_config_files)
+        )
 
         # Update configuration with the environment file path
         self.conf.config_base_dir = os.path.dirname(self.env_filename)
@@ -271,12 +394,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Maybe conf is already invalid
         if not self.conf.conf_is_correct:
-            err = "*** One or more problems were encountered while processing " \
-                  "the config files (first check)..."
-            logger.error(err)
-            # Display found warnings and errors
             self.conf.show_errors()
-            sys.exit(err)
+            self.request_stop("*** One or more problems were encountered while "
+                              "processing the configuration (first check)...", exit_code=1)
 
         logger.info("I correctly loaded the configuration files")
 
@@ -288,14 +408,15 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # We can overload the Alignak global configuration (alignak.cfg) with the global
         # configuration defined in the Alignak environment file
         if self.alignak_env:
-            # Get all the Alignak dameons from the configuration
+            # Get all the Alignak daemons from the configuration
             logger.info("Getting daemons configuration...")
             for daemon_name, daemon_cfg in self.alignak_env.get_daemons().items():
                 logger.debug("Got a daemon configuration for %s", daemon_name)
                 if 'type' not in daemon_cfg:
                     self.conf.add_error("Ignoring daemon with an unknown type: %s" % daemon_name)
                     continue
-                logger.info("- got a %s named %s", daemon_cfg['type'], daemon_cfg['name'])
+                logger.info("- got a %s named %s, spare: %s",
+                            daemon_cfg['type'], daemon_cfg['name'], daemon_cfg.get('spare', False))
 
                 # If this daemon is found in the former Cfg files, replace the former configuration
                 new_cfg_daemons = []
@@ -309,11 +430,21 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 new_cfg_daemons.append(daemon_cfg)
                 raw_objects[daemon_cfg['type']] = new_cfg_daemons
 
-            logger.debug("Daemons configuration:")
+            logger.debug("Checking daemons configuration:")
+            some_daemons = False
             for daemon_type in ['arbiter', 'scheduler', 'broker',
                                 'poller', 'reactionner', 'receiver']:
                 for cfg_daemon in raw_objects[daemon_type]:
-                    logger.debug("- %s / %s", daemon_type, cfg_daemon)
+                    some_daemons = True
+                    if 'name' not in cfg_daemon:
+                        cfg_daemon['name'] = cfg_daemon['%s_name' % daemon_type]
+
+                    cfg_daemon['modules'] = \
+                        self.alignak_env.get_modules(daemon_name=cfg_daemon['name'])
+                    logger.debug("- %s / %s: ", daemon_type, cfg_daemon['name'])
+                    logger.debug("  %s", cfg_daemon)
+            if not some_daemons:
+                logger.warning("- No configured daemons.")
 
             # and then get all modules from the configuration
             logger.info("Getting modules configuration...")
@@ -332,30 +463,28 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     if 'module_types' in module_cfg and 'type' not in module_cfg:
                         module_cfg['type'] = module_cfg['module_types']
                         module_cfg.pop('module_types')
-                else:
-                    logger.info("- No modules.")
-            else:
-                logger.info("- No modules.")
 
-            #     logger.warning("Erasing modules configuration found in cfg files")
-            # raw_objects['module'] = []
-            for module_name, module_cfg in self.alignak_env.get_modules().items():
-                logger.info("- got a module %s", module_cfg)
+            for _, module_cfg in self.alignak_env.get_modules().items():
+                logger.info("- got a module %s, type: %s",
+                            module_cfg.get('name', 'unset'), module_cfg.get('type', 'untyped'))
                 # If this module is found in the former Cfg files, replace the former configuration
-                new_cfg_daemons = []
                 for cfg_module in raw_objects['module']:
                     if cfg_module.get('name', 'unset') == [module_cfg['name']]:
                         logger.info("  updating module Cfg file configuration")
-                    else:
-                        new_cfg_daemons.append(cfg_module)
-                new_cfg_daemons.append(module_cfg)
                 raw_objects['module'].append(module_cfg)
+            if not raw_objects['module']:
+                logger.info("- No configured modules.")
 
             # and then the global configuration.
             # The properties defined in the alignak.cfg file are not yet set! So we set the one
             # got from the environment
-            logger.info("Getting alignak configuration...")
-            for key, value in self.alignak_env.get_alignak_configuration().items():
+            logger.info("Getting Alignak configuration...")
+            alignak_configuration = self.alignak_env.get_alignak_configuration()
+            for key in sorted(alignak_configuration.keys()):
+                value = alignak_configuration[key]
+                if key.startswith('_'):
+                    # Ignore configuration variables prefixed with _
+                    continue
                 if key in self.conf.properties:
                     entry = self.conf.properties[key]
                     setattr(self.conf, key, entry.pythonize(value))
@@ -369,14 +498,18 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Create objects for our arbiters and modules
         self.conf.early_create_objects(raw_objects)
 
-        self.conf.early_arbiter_linking()
+        # Check that an arbiter link exists and create the appropriate relations
+        # If no arbiter exists, create one with the provided data
+        self.conf.early_arbiter_linking(self.name,
+                                        self.alignak_env.get_alignak_configuration())
 
         # Search which arbiter I am in the arbiter links list
         for lnk_arbiter in self.conf.arbiters:
             logger.debug("I have an arbiter in my configuration: %s", lnk_arbiter.name)
             if lnk_arbiter.name != self.name:
                 # Arbiter is not me!
-                logger.info("I found another arbiter in my configuration: %s", lnk_arbiter.name)
+                logger.info("I found another arbiter (%s) in my (%s) configuration",
+                            lnk_arbiter.name, self.name)
                 # And this arbiter needs to receive a configuration
                 lnk_arbiter.need_conf = True
                 continue
@@ -384,34 +517,25 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             logger.info("I found myself in the configuration: %s", lnk_arbiter.name)
             self.link_to_myself = lnk_arbiter
             # Set myself as alive ;)
-            self.link_to_myself.alive = True
+            self.link_to_myself.set_alive()
 
             # We consider that this arbiter is a master one...
             self.is_master = not self.link_to_myself.spare
             if self.is_master:
-                logger.info("I am the master Arbiter: %s", lnk_arbiter.name)
+                logger.info("I am the master Arbiter.")
             else:
-                logger.info("I am a spare Arbiter: %s", lnk_arbiter.name)
+                logger.info("I am a spare Arbiter.")
 
             # ... and that this arbiter do not need to receive a configuration
             lnk_arbiter.need_conf = False
 
-            # # todo: is it really the right place to configure this ? Not sure at all!
-            # # We export this data to our statsmgr object :)
-            # statsd_host = getattr(self.conf, 'statsd_host', 'localhost')
-            # statsd_port = getattr(self.conf, 'statsd_port', 8125)
-            # statsd_prefix = getattr(self.conf, 'statsd_prefix', 'alignak')
-            # statsd_enabled = getattr(self.conf, 'statsd_enabled', False)
-            # statsmgr.register(lnk_arbiter.get_name(), 'arbiter',
-            #                   statsd_host=statsd_host, statsd_port=statsd_port,
-            #                   statsd_prefix=statsd_prefix, statsd_enabled=statsd_enabled)
-
         if not self.link_to_myself:
-            sys.exit("Error: I cannot find my own Arbiter object (%s), I bail out. "
-                     "To solve this, please change the arbiter name parameter in "
-                     "the Alignak configuration file (certainly alignak.ini) "
-                     "with the value '%s'."
-                     " Thanks." % (self.name, socket.gethostname()))
+            self.conf.show_errors()
+            self.request_stop("Error: I cannot find my own Arbiter object (%s), I bail out. "
+                              "To solve this, please change the arbiter name parameter in "
+                              "the Alignak configuration file (certainly alignak.ini) "
+                              "with the value '%s'."
+                              " Thanks." % (self.name, socket.gethostname()), exit_code=1)
 
         # Whether I am a spare arbiter, I will parse the whole configuration. This may be useful
         # if the master fails before sending its configuration to me!
@@ -426,8 +550,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             logger.info("I am not the master arbiter, I stop parsing the configuration")
             return
 
-        # Ok it's time to load the module manager now!
-        self.load_modules_manager()
         # we request the instances without them being *started*
         # (for those that are concerned ("external" modules):
         # we will *start* these instances after we have been daemonized (if requested)
@@ -454,20 +576,14 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         #     self.conf.create_objects_for_type(raw_objects, daemon_type)
         self.conf.create_objects(raw_objects)
 
-        # Maybe conf is already invalid
+        # Maybe configuration is already invalid
         if not self.conf.conf_is_correct:
-            err = "*** One or more problems were encountered while processing " \
-                  "the config files (second check)..."
-            logger.error(err)
-            # Display found warnings and errors
             self.conf.show_errors()
-            sys.exit(err)
+            self.request_stop("*** One or more problems were encountered while processing "
+                              "the configuration (second check)...", exit_code=1)
 
         # Manage all post-conf modules
         self.hook_point('early_configuration')
-
-        # Load all file triggers
-        self.conf.load_triggers()
 
         # Create Template links
         self.conf.linkify_templates()
@@ -526,155 +642,276 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.conf.clean()
 
         # Dump Alignak macros
+        logger.info("Alignak global macros:")
         macro_resolver = MacroResolver()
         macro_resolver.init(self.conf)
-
-        logger.info("Alignak global macros:")
         for macro_name in sorted(self.conf.macros):
             macro_value = macro_resolver.resolve_simple_macros_in_string("$%s$" % macro_name, [],
                                                                          None, None)
             logger.info("- $%s$ = %s", macro_name, macro_value)
 
-        # If the conf is not correct, we must get out now (do not try to split the configuration)
-        if not self.conf.conf_is_correct:  # pragma: no cover, not with unit tests.
-            err = "Configuration is incorrect, sorry, I bail out"
-            logger.error(err)
-            # Display found warnings and errors
-            self.conf.show_errors()
-            sys.exit(err)
-
         # REF: doc/alignak-conf-dispatching.png (2)
-        logger.info("Splitting configuration into parts")
         self.conf.cut_into_parts()
         # Here, the self.conf.parts exist
         # And the realms have some 'packs'
 
-        # The conf can be incorrect here if the cut into parts see errors like
-        # a realm with hosts and no schedulers for it
-        if not self.conf.conf_is_correct:  # pragma: no cover, not with unit tests.
-            err = "Configuration is incorrect, sorry, I bail out"
-            logger.error(err)
-            # Display found warnings and errors
+        # Check if all the configuration daemons will be available
+        if not self.daemons_start(run_daemons=False):
             self.conf.show_errors()
-            sys.exit(err)
+            self.request_stop("*** Alignak will not be able to manage the configured daemons. "
+                              "Check and update your configuration!", exit_code=1)
+
+        # Some properties need to be prepared (somehow "flatten"...) before being sent,
+        # This to prepare the configuration that will be sent to our spare arbiter (if any)
+        self.conf.prepare_for_sending()
+        # Here, the self.conf.spare_arbiter_conf exist
+
+        # Still a last configuration check because some things may have changed when
+        # we cut the configuration into parts (eg. hosts and realms consistency) and
+        # when we prepared the configuration for sending
+        if not self.conf.conf_is_correct:  # pragma: no cover, not with unit tests.
+            self.conf.show_errors()
+            self.request_stop("Configuration is incorrect, sorry, I bail out", exit_code=1)
 
         logger.info("Things look okay - "
                     "No serious problems were detected during the pre-flight check")
 
         # Exit if we are just here for config checking
         if self.verify_only:
-            logger.info("Arbiter checked the configuration")
+            logger.info("Arbiter %s checked the configuration", self.name)
             if self.conf.missing_daemons:
-                logger.warning("Some missing daemons were detected in the parsed configuration.")
+                logger.warning("Some missing daemons were detected in the parsed configuration. "
+                               "Nothing to worry about, but you should define them, "
+                               "else Alignak will use its default configuration.")
 
             # Display found warnings and errors
             self.conf.show_errors()
-            sys.exit(0)
-
-        if self.analyse:  # pragma: no cover, not used currently (see #607)
-            self.launch_analyse()
-            sys.exit(0)
-
-        # Some errors like a realm with hosts and no schedulers for it may imply to run new daemons
-        if self.conf.missing_daemons:
-            logger.info("Trying to handle the missing daemons...")
-            if not self.manage_missing_daemons():
-                err = "Some detected as missing daemons did not started correctly. " \
-                      "Sorry, I bail out"
-                logger.error(err)
-                # Display found warnings and errors
-                self.conf.show_errors()
-                sys.exit(err)
-
-        # Some properties need to be "flatten" (put in strings)
-        # before being sent, like realms for hosts for example
-        # BEWARE: after the cutting part, because we stringified some properties
-        self.conf.prepare_for_sending()
-        # Here, the self.conf.spare_arbiter_conf exist and each realm has its configuration
-
-        # Ignore daemon configuration parameters (port, log, ...) in the monitoring configuration
-        # It's better to use daemon default parameters rather than those found in the monitoring
-        # configuration (if some are found because they should not be there)...
-
-        self.accept_passive_unknown_check_results = BoolProp.pythonize(
-            getattr(self.link_to_myself, 'accept_passive_unknown_check_results', '0')
-        )
-
-        #  We need to set self.host & self.port to be used by do_daemon_init_and_start
-        # todo: check those are the correct one! address is not host !!!
-        self.host = self.link_to_myself.address
-        self.port = self.link_to_myself.port
-
-        logger.info("Configuration Loaded")
-
-        # Still a last configuration check because some things may have changed when
-        # we prepared the configuration for sending
-        if not self.conf.conf_is_correct:
-            err = "Configuration is incorrect, sorry, I bail out"
-            logger.error(err)
-            # Display found warnings and errors
-            self.conf.show_errors()
-            sys.exit(err)
+            self.request_stop()
 
         # Display found warnings and errors
         self.conf.show_errors()
 
-    def manage_missing_daemons(self):
+    def request_stop(self, message='', exit_code=0):
+        """Stop the Arbiter daemon
+
+        :return: None
+        """
+        # Only a master arbiter can stop the daemons
+        if self.is_master:
+            # Stop the daemons
+            self.daemons_stop(timeout=self.conf.daemons_stop_timeout)
+
+        # Request the daemon stop
+        super(Arbiter, self).request_stop(message, exit_code)
+
+    def start_daemon(self, satellite):
         """Manage the list of detected missing daemons
 
-         If the daemon does not in exist `my_satellites`, then:
+         If the daemon does not in exist `my_daemons`, then:
           - prepare daemon start arguments (port, name and log file)
           - start the daemon
           - make sure it started correctly
 
-        :return: True if all daemons are running, else False
+        :param satellite: the satellite for which a daemon is to be started
+        :type satellite: SatelliteLink
+
+        :return: True if the daemon started correctly
+        """
+        logger.info("  launching a daemon for: %s/%s...", satellite.type, satellite.name)
+
+        # Some extra arguments may be defined in the Alignak configuration
+        daemon_arguments = getattr(self.conf, 'daemons_arguments', '')
+
+        args = ["alignak-%s" % satellite.type, "--name", satellite.name,
+                "--environment", self.env_filename,
+                "--host", str(satellite.host), "--port", str(satellite.port)]
+        if daemon_arguments:
+            args.append(daemon_arguments)
+        logger.info("  ... with some arguments: %s", args)
+        try:
+            process = psutil.Popen(args, stdin=None, stdout=None, stderr=None)
+            # A brief pause...
+            time.sleep(0.1)
+        except Exception as exp:  # pylint: disable=broad-except
+            logger.error("Error when launching %s: %s", satellite.name, exp)
+            return False
+
+        logger.info("  %s launched (pid=%d, gids=%s)",
+                    satellite.name, process.pid, process.gids())
+
+        # My satellites/daemons map
+        self.my_daemons[satellite.name] = {
+            'satellite': satellite,
+            'process': process
+        }
+        return True
+
+    def daemons_start(self, run_daemons=True):
+        """Manage the list of the daemons in the configuration
+
+        Check if the daemon needs to be started and it ist can be started by the Arbiter.
+
+        If so, starts the daemon
+
+        :param run_daemons: run the daemons or make a simple check
+        :type run_daemons: bool
+
+        :return: True if all daemons are running, else False. always True for a simple check
         """
         result = True
+
+        logger.info("Alignak configuration daemons start:")
+
         # Parse the list of the missing daemons and try to run the corresponding processes
-        satellites = [self.conf.schedulers, self.conf.pollers, self.conf.brokers]
-        self.my_satellites = {}
-        for satellites_list in satellites:
-            daemons_class = satellites_list.inner_class
-            for daemon in self.conf.missing_daemons:
-                if daemon.__class__ != daemons_class:
+        for satellites_list in [self.conf.arbiters, self.conf.receivers, self.conf.reactionners,
+                                self.conf.pollers, self.conf.brokers, self.conf.schedulers]:
+            for satellite in satellites_list:
+                logger.info("- found %s, detected as missing: %s, to be launched: %s, address: %s",
+                            satellite.name, satellite.missing_daemon,
+                            satellite.alignak_launched, satellite.uri)
+
+                if satellite == self.link_to_myself:
+                    # Ignore myself ;)
                     continue
 
-                daemon_type = getattr(daemon, 'my_type', None)
-                daemon_log_folder = getattr(self.conf, 'daemons_log_folder', '/tmp')
-                daemon_arguments = getattr(self.conf, 'daemons_arguments', '')
-                daemon_name = daemon.get_name()
-
-                if daemon_name in self.my_satellites:
-                    logger.info("Daemon '%s' is still running.", daemon_name)
-                    continue
-
-                args = ["alignak-%s" % daemon_type, "--name", daemon_name,
-                        "--environment", self.env_filename,
-                        "--host", str(daemon.host), "--port", str(daemon.port)]
-                if daemon_arguments:
-                    args.append(daemon_arguments)
-                logger.info("Trying to launch daemon: %s...", daemon_name)
-                logger.info("... with arguments: %s", args)
-                self.my_satellites[daemon_name] = subprocess.Popen(args)
-                logger.info("%s launched (pid=%d)",
-                            daemon_name, self.my_satellites[daemon_name].pid)
-
-                # Wait at least one second for a correct start...
-                time.sleep(1)
-
-                ret = self.my_satellites[daemon_name].poll()
-                if ret is not None:
-                    logger.error("*** %s exited on start!", daemon_name)
-                    if self.my_satellites[daemon_name].stdout:
-                        for line in iter(self.my_satellites[daemon_name].stdout.readline, b''):
-                            logger.error(">>> %s", line.rstrip())
-                    if self.my_satellites[daemon_name].stderr:
-                        for line in iter(self.my_satellites[daemon_name].stderr.readline, b''):
-                            logger.error(">>> %s", line.rstrip())
+                if satellite.address not in ['127.0.0.1', 'localhost']:
+                    logger.error("Alignak is required to launch a daemon for %s %s "
+                                 "but the satelitte is defined on %s", satellite.type,
+                                 satellite.name, satellite.address)
                     result = False
-                else:
-                    logger.info("%s running (pid=%d)",
-                                daemon_name, self.my_satellites[daemon_name].pid)
+                    continue
+
+                if not run_daemons:
+                    # When checking, ignore the daemon launch part...
+                    continue
+
+                if not satellite.alignak_launched:
+                    logger.debug("Alignak will not launch '%s'")
+                    continue
+
+                if not satellite.active:
+                    logger.warning("Daemon '%s' is declared but not set as active, "
+                                   "do not start...", satellite.name)
+                    continue
+
+                if satellite.name in self.my_daemons:
+                    logger.warning("Daemon '%s' said as missing is yet configured, "
+                                   "it looks strange...", satellite.name)
+                    continue
+
+                started = self.start_daemon(satellite)
+                result = result and started
+        return result
+
+    def daemons_check(self):
+        """Manage the list of Alignak launched daemons
+
+         Check if the daemon process is running
+
+        :return: True if all daemons are running, else False
+        """
+        # First look if it's not too early to ping
+        start = time.time()
+        if self.daemons_last_check \
+                and self.daemons_last_check + self.conf.daemons_check_period > start:
+            logger.debug("Too early to check daemons, check period is %.2f seconds",
+                         self.conf.daemons_check_period)
+            return True
+
+        logger.debug("Alignak configuration daemons check")
+        result = True
+
+        procs = [psutil.Process()]
+        for daemon in self.my_daemons.values():
+            # Get only the daemon (not useful for its children processes...)
+            # procs = daemon['process'].children()
+            procs.append(daemon['process'])
+            for proc in procs:
+                try:
+                    logger.debug("Process %s is %s, listening:", proc.name(), proc.status())
+                    for connection in proc.connections():
+                        l_addr, l_port = connection.laddr if connection.laddr else ('', 0)
+                        r_addr, r_port = connection.raddr if connection.raddr else ('', 0)
+                        logger.debug("- %s:%s <-> %s:%s, %s", l_addr, l_port, r_addr, r_port,
+                                     connection.status)
+                    # Reset the daemon connection if it got broked...
+                    if not daemon['satellite'].con:
+                        self.daemon_connection_init(daemon['satellite'])
+                    # Set my satellite as alive :)
+                    daemon['satellite'].set_alive()
+                except psutil.NoSuchProcess:
+                    pass
+                except psutil.AccessDenied:
+                    # Probably stopping...
+                    if not self.will_stop and proc == daemon['process']:
+                        logger.debug("Access denied - Process %s is %s", proc.name(), proc.status())
+                        if not self.start_daemon(daemon['satellite']):
+                            # Set my satellite as dead :(
+                            daemon['satellite'].set_dead()
+                            result = False
+                        else:
+                            logger.info("I restarted %s/%s",
+                                        daemon['satellite'].type, daemon['satellite'].name)
+                    else:
+                        logger.info("Child process %s is %s", proc.name(), proc.status())
+
+        # Set the last check as now
+        self.daemons_last_check = start
+
+        logger.debug("Checking daemons duration: %.2f seconds", time.time() - start)
+
+        return result
+
+    def daemons_stop(self, timeout=30):
+        """Stop the Alignak daemons
+
+         Iterate over the daemons and their children list to send a TERM
+         Wait for daemons to terminate and then send a KILL for those that are not yet stopped
+
+        :param timeout: delay to wait before killing a daemon
+        :type timeout: int
+
+        :return: True if all daemons stopped
+        """
+        def on_terminate(proc):
+            """Process termination callback function"""
+            logger.debug("process %s terminated with exit code %s", proc.pid, proc.returncode)
+
+        result = True
+
+        logger.info("Alignak configuration daemons stop:")
+
+        start = time.time()
+        for daemon in self.my_daemons.values():
+            # Terminate the daemon and its children process
+            procs = daemon['process'].children()
+            procs.append(daemon['process'])
+            for process in procs:
+                try:
+                    logger.info("Terminating process %s", process.name())
+                    process.terminate()
+                except psutil.AccessDenied:
+                    logger.warning("Process %s is %s", process.name(), process.status())
+
+        for daemon in self.my_daemons.values():
+            # Stop the daemon and its children process
+            procs = daemon['process'].children()
+            procs.append(daemon['process'])
+            _, alive = psutil.wait_procs(procs, timeout=timeout, callback=on_terminate)
+            if alive:
+                # Kill processes
+                for process in alive:
+                    logger.warning("Process %s did not stopped, trying to kill", process.name())
+                    process.kill()
+                _, alive = psutil.wait_procs(alive, timeout=timeout, callback=on_terminate)
+                if alive:
+                    # give up
+                    for process in alive:
+                        logger.warning("process %s survived SIGKILL; giving up", process.name())
+                        result = False
+
+        logger.debug("Stopping daemons duration: %.2f seconds", time.time() - start)
+
         return result
 
     def load_modules_configuration_objects(self, raw_objects):  # pragma: no cover,
@@ -690,12 +927,14 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Now we ask for configuration modules if they
         # got items for us
         for instance in self.modules_manager.instances:
-            logger.debug("Getting objects from the module: %s" % instance.name)
+            logger.debug("Getting objects from the module: %s", instance.name)
             if not hasattr(instance, 'get_objects'):
-                logger.debug("The module '%s' do not provide any objects." % instance.name)
+                logger.debug("The module '%s' do not provide any objects.", instance.name)
                 return
 
             try:
+                logger.info("Getting Alignak monitored configuration objects from module '%s'",
+                            instance.name)
                 got_objects = instance.get_objects()
             except Exception as exp:  # pylint: disable=W0703
                 logger.exception("Module %s get_objects raised an exception %s. "
@@ -703,16 +942,16 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 continue
 
             if not got_objects:
-                logger.warning("The module '%s' did not provided any objects." % instance.name)
+                logger.warning("The module '%s' did not provided any objects.", instance.name)
                 return
 
             types_creations = self.conf.types_creations
             for o_type in types_creations:
-                (_, _, property, _, _) = types_creations[o_type]
-                if property not in got_objects:
-                    logger.warning("Did not get any '%s' objects from %s", property, instance.name)
+                (_, _, prop, _, _) = types_creations[o_type]
+                if prop not in got_objects:
+                    logger.warning("Did not get any '%s' objects from %s", prop, instance.name)
                     continue
-                for obj in got_objects[property]:
+                for obj in got_objects[prop]:
                     # test if raw_objects[k] are already set - if not, add empty array
                     if o_type not in raw_objects:
                         raw_objects[o_type] = []
@@ -722,7 +961,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     # Append to the raw objects
                     raw_objects[o_type].append(obj)
                 logger.debug("Added %i %s objects from %s",
-                             len(got_objects[property]), o_type, instance.name)
+                             len(got_objects[prop]), o_type, instance.name)
 
     def load_modules_alignak_configuration(self):  # pragma: no cover, not yet with unit tests.
         """Load Alignak configuration from the arbiter modules
@@ -774,83 +1013,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 params.append("%s=%s" % (key, value))
             self.conf.load_params(params)
 
-    def launch_analyse(self):  # pragma: no cover, not used currently (see #607)
-        """ Dump the number of objects we have for each type to a JSON formatted file
-
-        :return: None
-        """
-        logger.info("We are doing an statistic analysis on the dump file %s", self.analyse)
-        stats = {}
-        types = ['hosts', 'services', 'contacts', 'timeperiods', 'commands', 'arbiters',
-                 'schedulers', 'pollers', 'reactionners', 'brokers', 'receivers', 'modules',
-                 'realms']
-        for o_type in types:
-            lst = getattr(self.conf, o_type)
-            number = len(lst)
-            stats['nb_' + o_type] = number
-            logger.info("Got %s for %s", number, o_type)
-
-        max_srv_by_host = max(len(h.services) for h in self.conf.hosts)
-        logger.info("Max srv by host %s", max_srv_by_host)
-        stats['max_srv_by_host'] = max_srv_by_host
-
-        file_d = open(self.analyse, 'w')
-        state = json.dumps(stats)
-        logger.info("Saving stats data to a file %s", state)
-        file_d.write(state)
-        file_d.close()
-
-    def main(self):
-        """Main arbiter function::
-
-        * Set logger
-        * Log Alignak headers
-        * Init daemon
-        * Launch modules
-        * Load retention
-        * Do mainloop
-
-        :return: None
-        """
-        try:
-            # Configure the logger
-            self.setup_alignak_logger()
-
-            # Load monitoring configuration files
-            self.load_monitoring_config_file()
-
-            # Look if we are enabled or not. If ok, start the daemon mode
-            self.look_for_early_exit()
-            if not self.do_daemon_init_and_start():
-                return
-
-            # Set my own process title
-            self.set_proctitle(self.name)
-
-            # ok we are now fully daemonized (if requested)
-            # now we can start our "external" modules (if any):
-            self.modules_manager.start_external_instances()
-
-            # Ok now we can load the retention data
-            self.hook_point('load_retention')
-
-            # And go for the main loop
-            self.do_mainloop()
-            if self.need_config_reload:
-                logger.info('Reloading configuration')
-                self.unlink()
-                self.do_stop()
-            else:
-                self.request_stop()
-
-        except SystemExit as exp:
-            # With a 2.4 interpreter the sys.exit() in load_config_file
-            # ends up here and must be handled.
-            sys.exit(exp.code)
-        except Exception as exp:
-            self.print_unrecoverable(traceback.format_exc())
-            raise
-
     def setup_new_conf(self):
         """ Setup a new configuration received from a Master arbiter.
 
@@ -859,55 +1021,110 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         :return: None
         """
         with self.conf_lock:
-            if not self.new_conf:
-                logger.warning("Should not be here - I already got a configuration")
-                return
             logger.info("I received a new configuration from my master")
-            try:
-                conf = unserialize(self.new_conf)
-            except AlignakClassLookupException as exp:
-                logger.exception('Cannot un-serialize received configuration: %s', exp)
-                return
 
-            logger.info("Got new configuration #%s", getattr(conf, 'magic_hash', '00000'))
+            # Get the new configuration
+            self.cur_conf = self.new_conf
+            # self_conf is our own configuration from the alignak environment
+            # Arbiters do not have this property in the received configuration because
+            # they already loaded a configuration on daemon load
+            self_conf = self.cur_conf.get('self_conf', None)
+            if not self_conf:
+                self_conf = self.conf
 
-            logger.info("I am: %s", self.name)
-            # This is my new configuration now ...
-            self.cur_conf = conf
-            self.conf = conf
-            # Ready to get a new one ...
+            # whole_conf contains the full configuration load by my master
+            whole_conf = self.cur_conf['whole_conf']
+
+            logger.debug("Received a new configuration, containing:")
+            for key in self.cur_conf:
+                logger.debug("- %s: %s", key, self.cur_conf[key])
+            logger.debug("satellite self configuration part: %s", self_conf)
+
+            # Update Alignak name
+            self.alignak_name = self.cur_conf['alignak_name']
+            logger.info("My Alignak instance: %s", self.alignak_name)
+
+            # This to indicate that the new configuration got managed...
             self.new_conf = None
-            for lnk_arbiter in self.conf.arbiters:
-                logger.info("I have arbiter links in my configuration: %s", lnk_arbiter.name)
-                print("Found arbiter link in the configuration: %s / %s"
-                      % (lnk_arbiter.name, lnk_arbiter))
-                print("I am: %s", self.name)
-                if lnk_arbiter.name != self.name:
-                    # Arbiter is not me!
-                    logger.info("I found another arbiter in my configuration: %s", lnk_arbiter.name)
-                    # todo: I am not concerned, sure?
-                    continue
 
-                logger.info("I found myself in the new configuration: %s", lnk_arbiter.name)
-                self.link_to_myself = lnk_arbiter
-                # Set myself as alive ;)
-                self.link_to_myself.alive = True
+            # Get the whole monitored objects configuration
+            t00 = time.time()
+            try:
+                received_conf_part = unserialize(whole_conf)
+            except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
+                # This to indicate that the new configuration is not managed...
+                self.new_conf = "Cannot un-serialize configuration received from arbiter"
+                logger.error(self.new_conf)
+                logger.error("Back trace of the error:\n%s", traceback.format_exc())
+                return
+            except Exception as exp:  # pylint: disable=broad-except
+                # This to indicate that the new configuration is not managed...
+                self.new_conf = "Cannot un-serialize configuration received from arbiter"
+                logger.error(self.new_conf)
+                self.exit_on_exception(exp, self.new_conf)
+            logger.info("Monitored configuration %s received at %d. Un-serialized in %d secs",
+                        received_conf_part, t00, time.time() - t00)
 
-    def do_loop_turn(self):
-        """Loop turn for Arbiter
-        If master, run, else wait for master death
+            # Now we create our arbiters and schedulers links
+            my_satellites = getattr(self, 'arbiters', {})
+            received_satellites = self.cur_conf['arbiters']
+            for link_uuid in received_satellites:
+                rs_conf = received_satellites[link_uuid]
+                logger.info("- received %s - %s: %s", rs_conf['instance_id'],
+                            rs_conf['type'], rs_conf['name'])
 
-        :return: None
-        """
-        # If I am a spare, I wait for the master arbiter to send me
-        # true conf.
-        if not self.is_master:
-            logger.info("Waiting for master...")
-            self.wait_for_master_death()
+                # Must look if we already had a configuration and save our broks
+                already_got = rs_conf['instance_id'] in my_satellites
+                broks = {}
+                actions = {}
+                wait_homerun = {}
+                external_commands = {}
+                running_id = 0
+                if already_got:
+                    logger.warning("I already got: %s", rs_conf['instance_id'])
+                    # Save some information
+                    running_id = my_satellites[link_uuid].running_id
+                    (broks, actions,
+                     wait_homerun, external_commands) = \
+                        my_satellites[link_uuid].get_and_clear_context()
+                    # Delete the former link
+                    del my_satellites[link_uuid]
 
-        if self.must_run and not self.interrupted:
-            # Main loop
-            self.run()
+                # My new satellite link...
+                new_link = SatelliteLink.get_a_satellite_link('arbiter', rs_conf)
+                my_satellites[new_link.uuid] = new_link
+                logger.info("I got a new arbiter satellite: %s", new_link)
+
+                new_link.running_id = running_id
+                new_link.external_commands = external_commands
+                new_link.broks = broks
+                new_link.wait_homerun = wait_homerun
+                new_link.actions = actions
+
+                # # replacing satellite address and port by those defined in satellite_map
+                # if new_link.name in self_conf.satellite_map:
+                #     overriding = self_conf.satellite_map[new_link.name]
+                #     # satellite = dict(satellite)  # make a copy
+                #     # new_link.update(self_conf.get('satellite_map', {})[new_link.name])
+                #     logger.warning("Do not override the configuration for: %s, with: %s. "
+                #                    "Please check whether this is necessary!",
+                #                    new_link.name, overriding)
+
+            # for arbiter_link in received_conf_part.arbiters:
+            #     logger.info("I have arbiter links in my configuration: %s", arbiter_link.name)
+            #     if arbiter_link.name != self.name and not arbiter_link.spare:
+            #         # Arbiter is not me!
+            #         logger.info("I found my master arbiter in the configuration: %s",
+            #                     arbiter_link.name)
+            #         continue
+            #
+            #     logger.info("I found myself in the received configuration: %s", arbiter_link.name)
+            #     self.link_to_myself = arbiter_link
+            #     # We received a configuration s we are not a master !
+            #     self.is_master = False
+            #     self.link_to_myself.spare = True
+            #     # Set myself as alive ;)
+            #     self.link_to_myself.set_alive()
 
     def wait_for_master_death(self):
         """Wait for a master timeout and take the lead if necessary
@@ -920,10 +1137,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Look for the master timeout
         master_timeout = 300
-        for arb in self.conf.arbiters:
-            if not arb.spare:
-                master_timeout = arb.check_interval * arb.max_check_attempts
-        logger.info("I'll wait master for %d seconds", master_timeout)
+        for arbiter_link in self.conf.arbiters:
+            if not arbiter_link.spare:
+                master_timeout = \
+                    arbiter_link.spare_check_interval * arbiter_link.spare_max_check_attempts
+        logger.info("I'll wait master death for %d seconds", master_timeout)
 
         while not self.interrupted:
             # Make a pause and check if the system time changed
@@ -949,25 +1167,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 self.must_run = True
                 break
 
-    def push_external_commands_to_schedulers(self):
-        """Send external commands to schedulers
-
-        :return: None
-        """
-        # Now get all external commands and put them into the
-        # good schedulers
-        for external_command in self.external_commands:
-            self.external_commands_manager.resolve_command(external_command)
-
-        # Now for all alive schedulers, send the commands
-        for scheduler in self.conf.schedulers:
-            cmds = scheduler.external_commands
-            if cmds and scheduler.alive:
-                logger.debug("Sending %d commands to scheduler %s", len(cmds), scheduler.get_name())
-                scheduler.run_external_commands(cmds)
-            # clean them
-            scheduler.external_commands = []
-
     def check_and_log_tp_activation_change(self):
         """Raise log for timeperiod change (useful for debug)
 
@@ -977,175 +1176,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             brok = timeperiod.check_and_log_activation_change()
             if brok:
                 self.add(brok)
-
-    def run(self):
-        """Run Arbiter daemon ::
-
-        * Dispatch conf
-        * Get initial brok from links
-        * Load external command manager
-        * Principal loop (send broks, external command, re dispatch etc.)
-
-        :return:None
-        """
-        # # Before running, I must be sure who am I
-        # # The arbiters change, so we must re-discover the new self.me
-        # for arbiter in self.conf.arbiters:
-        #     if arbiter.get_name() in ['Default-Arbiter', self.name]:
-        #         self.link_to_myself = arbiter
-        #         logger.info("I am the arbiter: %s", self.link_to_myself.name)
-        #
-        logger.info("I am the arbiter: %s", self.link_to_myself.name)
-
-        logger.info("Dispatching the configuration to the satellites...")
-
-        self.dispatcher = Dispatcher(self.conf, self.link_to_myself)
-        self.dispatcher.check_alive()
-        self.dispatcher.check_dispatch()
-        # REF: doc/alignak-conf-dispatching.png (3)
-        self.dispatcher.prepare_dispatch()
-        self.dispatcher.dispatch()
-        logger.info("First configuration dispatch done")
-
-        # Now we can get all initial broks for our satellites
-        self.get_initial_broks_from_satellitelinks()
-
-        # Now create the external commands manager
-        # We are a dispatcher: our role is to dispatch commands to the schedulers
-        self.external_commands_manager = ExternalCommandManager(self.conf, 'dispatcher', self)
-        # Update External Commands Manager
-        self.external_commands_manager.accept_passive_unknown_check_results = \
-            self.accept_passive_unknown_check_results
-
-        logger.debug("Run baby, run...")
-
-        # Scheduler start timestamp
-        start_ts = time.time()
-        elapsed_time = 0
-
-        # Increased on each loop turn
-        loop_count = 0
-
-        # For the pause duration
-        pause_duration = 0.5
-        logger.info("Arbiter pause duration: %.2f", pause_duration)
-
-        # For the maximum expected loop duration
-        maximum_loop_duration = 1.0
-        logger.info("Arbiter maximum expected loop duration: %.2f", maximum_loop_duration)
-
-        logger.info("[%s] starting arbiter loop: %.2f", self.name, start_ts)
-        while self.must_run and not self.interrupted and not self.need_config_reload:
-            loop_start_ts = time.time()
-
-            # Increment loop count
-            loop_count += 1
-            if self.log_loop:
-                logger.debug("--- %d", loop_count)
-
-            # Try to see if one of my module is dead, and
-            # try to restart previously dead modules :)
-            self.check_and_del_zombie_modules()
-
-            # Call modules that manage a starting tick pass
-            self.hook_point('tick')
-
-            # Look for logging timeperiods activation change (active/inactive)
-            self.check_and_log_tp_activation_change()
-
-            # Now the dispatcher job
-            _t0 = time.time()
-            self.dispatcher.check_alive()
-            statsmgr.timer('core.check-alive', time.time() - _t0)
-
-            _t0 = time.time()
-            self.dispatcher.check_dispatch()
-            statsmgr.timer('core.check-dispatch', time.time() - _t0)
-
-            _t0 = time.time()
-            self.dispatcher.prepare_dispatch()
-            self.dispatcher.dispatch()
-            statsmgr.timer('core.dispatch', time.time() - _t0)
-
-            _t0 = time.time()
-            self.dispatcher.check_bad_dispatch()
-            statsmgr.timer('core.check-bad-dispatch', time.time() - _t0)
-
-            # Now get things from our module instances
-            self.get_objects_from_from_queues()
-            statsmgr.timer('core.get-objects-from-queues', time.time() - _t0)
-            statsmgr.gauge('got.external-commands', len(self.external_commands))
-            statsmgr.gauge('got.broks', len(self.broks))
-
-            # Maybe our satellites links raise new broks. Must reap them
-            self.get_broks_from_satellitelinks()
-
-            # One broker is responsible for our broks,
-            # we must give him our broks
-            self.push_broks_to_broker()
-            self.get_external_commands_from_satellites()
-
-            if self.nb_broks_send != 0:
-                logger.debug("Nb Broks send: %d", self.nb_broks_send)
-            self.nb_broks_send = 0
-
-            _t0 = time.time()
-            self.push_external_commands_to_schedulers()
-            statsmgr.timer('core.push-external-commands', time.time() - _t0)
-
-            # It's sent, do not keep them
-            # TODO: check if really sent. Queue by scheduler?
-            self.external_commands = []
-
-            # If asked to dump my memory, I will do it
-            if self.need_dump_memory:
-                self.dump_memory()
-                self.need_dump_memory = False
-
-            # Loop end
-            loop_end_ts = time.time()
-            loop_duration = loop_end_ts - loop_start_ts
-
-            pause = maximum_loop_duration - loop_duration
-            if loop_duration > maximum_loop_duration:
-                logger.warning("The arbiter loop exceeded the maximum expected loop "
-                               "duration: %.2f. The last loop needed %.2f seconds to execute. "
-                               "You should update your configuration to reduce the load on "
-                               "this scheduler.", maximum_loop_duration, loop_duration)
-                # Make a very very short pause ...
-                pause = 0.1
-
-            # Pause the scheduler execution to avoid too much load on the system
-            logger.debug("Before pause: sleep time: %s", pause)
-            work, time_changed = self.make_a_pause(pause)
-            logger.debug("After pause: %.2f / %.2f, sleep time: %.2f",
-                         work, time_changed, self.sleep_time)
-            if work > pause_duration:
-                logger.warning("Too much work during the pause (%.2f out of %.2f)! "
-                               "The scheduler should rest for a while... but one need to change "
-                               "its code for this. Please log an issue in the project repository;",
-                               work, pause_duration)
-                pause_duration += 0.1
-            self.sleep_time = 0.0
-
-            # And now, the whole average time spent
-            elapsed_time = loop_end_ts - start_ts
-            if self.log_loop:
-                logger.debug("Elapsed time, current loop: %.2f, from start: %.2f (%d loops)",
-                             loop_duration, elapsed_time, loop_count)
-            statsmgr.gauge('loop.count', loop_count)
-            statsmgr.timer('loop.duration', loop_duration)
-            statsmgr.timer('run.duration', elapsed_time)
-
-    def get_daemon_links(self, daemon_type):
-        """Returns the daemon links list as defined in our configuration for the given type
-
-        :param daemon_type: deamon type needed
-        :type daemon_type: str
-        :return: attribute value if exist
-        :rtype: str | None
-        """
-        return getattr(self.conf, daemon_type + 's', None)
 
     def get_retention_data(self):  # pragma: no cover, useful?
         """Get data for retention
@@ -1177,40 +1207,487 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.broks.update(broks)
         self.external_commands.extend(external_commands)
 
-    def get_stats_struct(self):
-        """Get state of modules and create a scheme for stats data of daemon
+    def manage_signal(self, sig, frame):
+        """Manage signals caught by the process
+        Specific behavior for the arbiter when it receives a sigkill or sigterm
 
-        :return: A dict with the following structure
-        ::
+        :param sig: signal caught by the process
+        :type sig: str
+        :param frame: current stack frame
+        :type frame:
+        :return: None
+        TODO: Refactor with Daemon one
+        """
+        logger.info("received a signal: %s", SIGNALS_TO_NAMES_DICT[sig])
+        # Request the arbiter to stop
+        if sig in [signal.SIGKILL, signal.SIGTERM]:
+            self.kill_request = True
+            self.kill_timestamp = time.time()
+        else:
+            Daemon.manage_signal(self, sig, frame)
 
-           { 'metrics': ['arbiter.%s.external-commands.queue %d %d'],
-             'version': VERSION,
-             'name': self.name,
-             'type': 'arbiter',
-             'hosts': len(self.conf.hosts)
-             'services': len(self.conf.services)
-             'modules':
-                         {'internal': {'name': "MYMODULE1", 'state': 'ok'},
-                         {'external': {'name': "MYMODULE2", 'state': 'stopped'},
-                        ]
-           }
+    def do_before_loop(self):
+        """Called before the main daemon loop.
 
+        :return: None
+        """
+        logger.info("I am the arbiter: %s", self.link_to_myself.name)
+
+        # If I am a spare, I do not have anything to do here...
+        if not self.is_master:
+            logger.debug("Waiting for my master death...")
+            return
+
+        # Arbiter check if some daemons need to be started
+        logger.info("Start the configuration daemons...")
+        if not self.daemons_start(run_daemons=True):
+            self.request_stop(message="Some Alignak daemons did not started correctly.",
+                              exit_code=4)
+
+        if not self.daemons_check():
+            self.request_stop(message="Some Alignak daemons cannot be checked.",
+                              exit_code=4)
+
+        # Make a pause to let our started daemons get ready...
+        pause = max(self.conf.daemons_start_timeout, len(self.my_daemons) * 0.5)
+        logger.info("Pausing %d seconds...", pause)
+        time.sleep(pause)
+
+        self.dispatcher = Dispatcher(self.conf, self.link_to_myself)
+        # I set my own dispatched configuration as the provided one...
+        # because I will not push a configuration to myself :)
+        self.cur_conf = self.conf
+
+        # Loop for the first configuration dispatching, if the first dispatch fails, bail out!
+        # Without a correct configuration, Alignak daemons will not run correctly
+        first_connection_try_count = 0
+        logger.info("Connecting to my satellites...")
+        while True:
+            first_connection_try_count += 1
+
+            # Initialize connection with all our satellites
+            self.all_connected = True
+            for satellite in self.dispatcher.all_daemons_links:
+                if satellite == self.link_to_myself:
+                    continue
+                if not satellite.active:
+                    continue
+                connected = self.daemon_connection_init(satellite)
+                logger.info("- %s is %s", satellite, connected)
+                self.all_connected = self.all_connected and connected
+
+            if self.all_connected:
+                logger.info("- satellites connection #%s is ok", first_connection_try_count)
+                break
+            else:
+                logger.warning("- satellites connection #%s is not correct; "
+                               "let's give another chance...", first_connection_try_count)
+                time.sleep(1.0)
+                if first_connection_try_count >= 3:
+                    self.request_stop("All the daemons connections could not be established "
+                                      "despite %d tries! "
+                                      "Sorry, I bail out!" % first_connection_try_count,
+                                      exit_code=4)
+
+        # Now I have a connection with all the daemons I need to contact them,
+        # check they are alive and ready to run
+        _t0 = time.time()
+        self.all_connected = self.dispatcher.check_reachable()
+        statsmgr.timer('dispatcher.check-alive', time.time() - _t0)
+
+        _t0 = time.time()
+        # Preparing the configuration for dispatching
+        logger.info("Preparing the configuration for dispatching...")
+        self.dispatcher.prepare_dispatch()
+        statsmgr.timer('dispatcher.prepare-dispatch', time.time() - _t0)
+        logger.info("- configuration is ready to dispatch")
+
+        # Loop for the first configuration dispatching, if the first dispatch fails, bail out!
+        # Without a correct configuration, Alignak daemons will not run correctly
+        first_dispatch_try_count = 0
+        logger.info("Dispatching the configuration to my satellites...")
+        while True:
+            first_dispatch_try_count += 1
+
+            # Check reachable - if a configuration is prepared, this will force the
+            # daemons communication, and the dispatching will be launched
+            _t0 = time.time()
+            logger.info("- configuration dispatching #%s...", first_dispatch_try_count)
+            self.dispatcher.check_reachable(forced=True)
+            statsmgr.timer('dispatcher.dispatch', time.time() - _t0)
+
+            # Make a pause to let our satellites get ready...
+            pause = max(1.0, len(self.my_daemons) * 0.5)
+            # pause = len(self.my_daemons) * 0.2
+            logger.info("- pausing %d seconds...", pause)
+            time.sleep(pause)
+
+            _t0 = time.time()
+            logger.info("- checking configuration dispatch...")
+            # Checking the dispatch is accepted
+            self.dispatcher.check_dispatch()
+            statsmgr.timer('dispatcher.check-dispatch', time.time() - _t0)
+            if self.dispatcher.dispatch_ok:
+                logger.info("- configuration dispatching #%s is ok", first_dispatch_try_count)
+                break
+            else:
+                logger.warning("- configuration dispatching #%s is not correct; "
+                               "let's give another chance...", first_dispatch_try_count)
+                if first_dispatch_try_count >= 3:
+                    self.request_stop("The configuration could not be dispatched despite %d tries! "
+                                      "Sorry, I bail out!" % first_connection_try_count,
+                                      exit_code=4)
+
+        # _t0 = time.time()
+        # self.dispatcher.check_bad_dispatch()
+        # statsmgr.timer('dispatcher.check-dispatch', time.time() - _t0)
+
+        # Now we can get all initial broks for our satellites
+        _t0 = time.time()
+        self.get_initial_broks_from_satellites()
+        statsmgr.timer('broks-initial.got', time.time() - _t0)
+
+        # Now create the external commands manager
+        # We are a dispatcher: our role is to dispatch commands to the schedulers
+        self.external_commands_manager = ExternalCommandManager(
+            self.conf, 'dispatcher', self, self.conf.accept_passive_unknown_check_results)
+
+    def do_loop_turn(self):  # pylint: disable=too-many-branches, too-many-statements
+        """Loop turn for Arbiter
+
+        If not a master daemon, wait for my master death...
+        Else, run:
+        * Check satellites are alive
+        * Check and dispatch (if needed) the configuration
+        * Get broks and external commands from the satellites
+        * Push broks and external commands to the satellites
+
+        :return: None
+        """
+        # If I am a spare, I only wait for the master arbiter to die...
+        if not self.is_master:
+            logger.debug("Waiting for my master death...")
+            self.wait_for_master_death()
+            return
+
+        # Maybe an external process requested Alignak stop...
+        if self.kill_request:
+            logger.info("daemon stop mode ...")
+            if not self.dispatcher.stop_request_sent:
+                logger.info("entering daemon stop mode, time before exiting: %s",
+                            self.conf.daemons_stop_timeout)
+                self.dispatcher.stop_request()
+            if time.time() > self.kill_timestamp + self.conf.daemons_stop_timeout:
+                logger.info("daemon stop mode delay reached, immediate stop")
+                self.dispatcher.stop_request(stop_now=True)
+                time.sleep(1)
+                self.interrupted = True
+                logger.info("exiting...")
+
+        # todo: make it configurable?
+        # time.sleep(0.5)
+        _, _ = self.make_a_pause(0.5)
+
+        if not self.kill_request:
+            # Main loop treatment
+            # Try to see if one of my module is dead, and restart previously dead modules
+            self.check_and_del_zombie_modules()
+
+            # Call modules that manage a starting tick pass
+            self.hook_point('tick')
+
+            # Look for logging timeperiods activation change (active/inactive)
+            self.check_and_log_tp_activation_change()
+
+        # Check that my daemons are alive
+        if not self.daemons_check():
+            self.request_stop(message="Some Alignak daemons cannot be checked.",
+                              exit_code=4)
+
+        if not self.kill_request:
+            # Now the dispatcher job
+            _t0 = time.time()
+            self.dispatcher.check_reachable()
+            statsmgr.timer('dispatcher.check-alive', time.time() - _t0)
+
+            # _t0 = time.time()
+            # self.dispatcher.check_dispatch()
+            # statsmgr.timer('dispatcher.check-dispatch', time.time() - _t0)
+            #
+            # _t0 = time.time()
+            # self.dispatcher.check_bad_dispatch()
+            # statsmgr.timer('dispatcher.check-dispatch', time.time() - _t0)
+            #
+            # _t0 = time.time()
+            # self.dispatcher.prepare_dispatch()
+            # self.dispatcher.dispatch()
+            # statsmgr.timer('dispatcher.dispatch', time.time() - _t0)
+
+            # _t0 = time.time()
+            # self.dispatcher.check_bad_dispatch()
+            # statsmgr.timer('dispatcher.check-bad-dispatch', time.time() - _t0)
+
+            # Now get things from our module instances
+            _t0 = time.time()
+            self.get_objects_from_from_queues()
+            statsmgr.timer('get-objects-from-queues', time.time() - _t0)
+
+            # Maybe our satellites raised new broks. Reap them...
+            _t0 = time.time()
+            self.get_broks_from_satellites()
+            statsmgr.timer('broks.got', time.time() - _t0)
+
+            # Maybe our satellites raised new external commands. Reap them...
+            _t0 = time.time()
+            self.get_external_commands_from_satellites()
+            statsmgr.timer('external-commands.got', time.time() - _t0)
+
+            # One broker is responsible for our broks, we give him our broks
+            _t0 = time.time()
+            self.push_broks_to_broker()
+            statsmgr.timer('broks.pushed', time.time() - _t0)
+
+            # We push our external commands to our schedulers...
+            _t0 = time.time()
+            self.push_external_commands_to_schedulers()
+            statsmgr.timer('external-commands.pushed', time.time() - _t0)
+
+        if self.system_health and (self.loop_count % self.system_health_period == 1):
+            perfdatas = []
+            cpu_count = psutil.cpu_count()
+            perfdatas.append("'cpu_count'=%d" % cpu_count)
+            logger.debug("  . cpu count: %d", cpu_count)
+
+            cpu_percents = psutil.cpu_percent(percpu=True)
+            cpu = 1
+            for percent in cpu_percents:
+                perfdatas.append("'cpu_%d_percent'=%.2f%%" % (cpu, percent))
+                cpu += 1
+
+            cpu_times_percent = psutil.cpu_times_percent(percpu=True)
+            cpu = 1
+            for cpu_times_percent in cpu_times_percent:
+                logger.debug("  . cpu time percent: %s", cpu_times_percent)
+                for key in cpu_times_percent._fields:
+                    perfdatas.append(
+                        "'cpu_%d_%s_percent'=%.2f%%" % (cpu, key,
+                                                        getattr(cpu_times_percent, key)))
+                cpu += 1
+
+            logger.info("%s cpu|%s", self.name, " ".join(perfdatas))
+
+            perfdatas = []
+            disk_partitions = psutil.disk_partitions(all=False)
+            for disk_partition in disk_partitions:
+                logger.debug("  . disk partition: %s", disk_partition)
+
+                disk = getattr(disk_partition, 'mountpoint')
+                disk_usage = psutil.disk_usage(disk)
+                logger.debug("  . disk usage: %s", disk_usage)
+                for key in disk_usage._fields:
+                    if 'percent' in key:
+                        perfdatas.append("'disk_%s_percent_used'=%.2f%%"
+                                         % (disk, getattr(disk_usage, key)))
+                    else:
+                        perfdatas.append("'disk_%s_%s'=%dB"
+                                         % (disk, key, getattr(disk_usage, key)))
+
+            logger.info("%s disks|%s", self.name, " ".join(perfdatas))
+
+            perfdatas = []
+            virtual_memory = psutil.virtual_memory()
+            logger.debug("  . memory: %s", virtual_memory)
+            for key in virtual_memory._fields:
+                if 'percent' in key:
+                    perfdatas.append("'mem_percent_used_%s'=%.2f%%"
+                                     % (key, getattr(virtual_memory, key)))
+                else:
+                    perfdatas.append("'mem_%s'=%dB"
+                                     % (key, getattr(virtual_memory, key)))
+
+            swap_memory = psutil.swap_memory()
+            logger.debug("  . memory: %s", swap_memory)
+            for key in swap_memory._fields:
+                if 'percent' in key:
+                    perfdatas.append("'swap_used_%s'=%.2f%%"
+                                     % (key, getattr(swap_memory, key)))
+                else:
+                    perfdatas.append("'swap_%s'=%dB"
+                                     % (key, getattr(swap_memory, key)))
+
+            logger.info("%s memory|%s", self.name, " ".join(perfdatas))
+
+    def get_daemon_stats(self, details=False):  # pylint: disable=too-many-branches
+        """Increase the stats provided by the Daemon base class
+
+        :return: stats dictionary
         :rtype: dict
         """
         now = int(time.time())
-        # call the daemon one
-        res = super(Arbiter, self).get_stats_struct()
-        res.update({'name': self.link_to_myself.get_name() if self.link_to_myself else self.name,
-                    'type': 'arbiter'})
-        res['hosts'] = 0
-        res['services'] = 0
-        if self.conf:
-            res['hosts'] = len(getattr(self.conf, 'hosts', {}))
-            res['services'] = len(getattr(self.conf, 'services', {}))
+        # Call the base Daemon one
+        res = super(Arbiter, self).get_daemon_stats(details=details)
+
+        res.update({
+            'name': self.link_to_myself.get_name() if self.link_to_myself else self.name,
+            'type': self.type,
+            'monitoring_objects': {},
+            'daemons_states': {}
+        })
+
+        for _, _, strclss, _, _ in self.conf.types_creations.values():
+            if strclss in ['hostescalations', 'serviceescalations']:
+                logger.debug("Ignoring count for '%s'...", strclss)
+                continue
+
+            objects_list = getattr(self.conf, strclss, [])
+            res['monitoring_objects'][strclss] = {
+                'count': len(objects_list)
+            }
+            if details:
+                res['monitoring_objects'][strclss].update({'items': []})
+
+                try:
+                    dump_list = sorted(objects_list, key=lambda k: k.get_name())
+                except AttributeError:  # pragma: no cover, simple protection
+                    dump_list = objects_list
+
+                # Dump at DEBUG level because some tests break with INFO level, and it is not
+                # really necessary to have information about each object ;
+                for cur_obj in dump_list:
+                    if strclss == 'services':
+                        res['monitoring_objects'][strclss]['items'].append(cur_obj.get_full_name())
+                    else:
+                        res['monitoring_objects'][strclss]['items'].append(cur_obj.get_name())
+
+        # Arbiter counters, including the loaded configuration objects and the dispatcher data
+        counters = res['counters']
+        counters['external-commands'] = len(self.external_commands)
+        counters['broks'] = len(self.broks)
+        for _, _, strclss, _, _ in self.conf.types_creations.values():
+            if strclss in ['hostescalations', 'serviceescalations']:
+                logger.debug("Ignoring count for '%s'...", strclss)
+                continue
+
+            objects_list = getattr(self.conf, strclss, [])
+            counters[strclss] = len(objects_list)
+
+        # Configuration dispatch counters
+        if getattr(self, "dispatcher", None):
+            for sat_type in ('arbiters', 'schedulers', 'reactionners',
+                             'brokers', 'receivers', 'pollers'):
+                counters["dispatcher.%s" % sat_type] = len(getattr(self.dispatcher, sat_type))
+
         metrics = res['metrics']
-        # metrics specific
-        metrics.append('arbiter.%s.external-commands.queue %d %d' %
-                       (self.link_to_myself.get_name() if self.link_to_myself else self.name,
-                        len(self.external_commands), now))
+        metrics.append('%s.%s.external-commands.queue %d %d'
+                       % (self.type, self.name, len(self.external_commands), now))
+        metrics.append('%s.%s.broks.queue %d %d'
+                       % (self.type, self.name, len(self.broks), now))
+
+        # Report our daemons states, but only if a dispatcher exists
+        if getattr(self, 'dispatcher', None):
+            # Daemon properties that we are interested in
+            res['daemons_states'] = {}
+            state = 0
+            for satellite in self.dispatcher.all_daemons_links:
+                if satellite == self.link_to_myself:
+                    continue
+                # Get the information to be published for a satellite
+                res['daemons_states'][satellite.name] = satellite.give_satellite_json()
+
+            res['live_state'] = {
+                "timestamp": now,
+                "daemons": {}
+            }
+            state = 0
+            for satellite in self.dispatcher.all_daemons_links:
+                if satellite == self.link_to_myself:
+                    continue
+
+                live_state = 0
+                if satellite.active:
+                    if not satellite.reachable:
+                        live_state = 1
+                    elif not satellite.alive:
+                        live_state = 2
+                    state = max(state, live_state)
+                else:
+                    live_state = 3
+
+                res['live_state']['daemons'][satellite.name] = live_state
+            res['live_state'].update({
+                "state": state,
+                "output": [
+                    "all daemons are up and running.",
+                    "warning because some daemons are not reachable.",
+                    "critical because some daemons not responding."
+                ][state],
+                # "long_output": "Long output...",
+                # "perf_data": "'counter'=1"
+            })
 
         return res
+
+    def main(self):
+        """Main arbiter function::
+
+        * Set logger
+        * Log Alignak headers
+        * Init daemon
+        * Launch modules
+        * Load retention
+        * Do mainloop
+
+        :return: None
+        """
+        try:
+            # Configure the logger
+            self.setup_alignak_logger()
+
+            # Setup our modules manager
+            self.load_modules_manager()
+
+            # Start the daemon mode
+            if not self.do_daemon_init_and_start():
+                self.exit_on_error(message="Daemon initialization error", exit_code=3)
+
+            # Load monitoring configuration files
+            self.load_monitoring_config_file()
+
+            # Set my own process title
+            self.set_proctitle(self.name)
+
+            # Now we can start our "external" modules (if any):
+            self.modules_manager.start_external_instances()
+
+            # Now we can load the retention data
+            self.hook_point('load_retention')
+
+            # And go for the main loop
+            while True:
+                self.do_main_loop()
+
+                # Exiting the main loop because of a configuration reload
+                if not self.need_config_reload:
+                    self.request_stop()
+                else:
+                    self.need_config_reload = False
+                    logger.info('Reloading configuration')
+                    # Initialize connection with all our satellites
+                    for satellite in self.dispatcher.all_daemons_links:
+                        if satellite != self.link_to_myself:
+                            satellite.wait_new_conf()
+                            satellite.configuration_sent = False
+
+                    # Make a pause to let our satellites get ready...
+                    pause = len(self.my_daemons) * 0.5
+                    logger.info("Pausing %d seconds...", pause)
+                    time.sleep(pause)
+
+                    # Clear the former configuration
+                    self.conf = Config()
+                    # Load monitoring configuration files
+                    self.load_monitoring_config_file()
+
+        except Exception as exp:
+            self.exit_on_exception(raised_exception=exp)
+            raise

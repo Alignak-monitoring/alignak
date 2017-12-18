@@ -36,23 +36,24 @@ class TestContactGroup(AlignakTest):
     This class tests the contactgroups
     """
 
+    def setUp(self):
+        super(TestContactGroup, self).setUp()
+
     def test_contactgroup(self):
         """ Default configuration has no loading problems ... as of it contactgroups are parsed
         correctly
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
+        assert self.conf_is_correct
 
     def test_look_for_alias(self):
         """ Default configuration has no loading problems ... as of it contactgroups are parsed
         correctly
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/contactgroup/alignak_groups_with_no_alias.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
+        assert self.conf_is_correct
 
         #  Find a contactgroup named NOALIAS
         cg = self._scheduler.contactgroups.find_by_name("NOALIAS")
@@ -65,9 +66,8 @@ class TestContactGroup(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/contactgroup/alignak_contactgroup_members.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
+        assert self.conf_is_correct
 
         #  Found a contactgroup named allhosts_and_groups
         cg = self._scheduler.contactgroups.find_by_name(
@@ -101,9 +101,8 @@ class TestContactGroup(AlignakTest):
         """ Test if group is linked from the member
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/contactgroup/alignak_contactgroup_members.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
+        assert self.conf_is_correct
 
         #  Found a contactgroup named allhosts_and_groups
         cg = self._scheduler.contactgroups.find_by_name("allcontacts_and_groups")
@@ -143,9 +142,8 @@ class TestContactGroup(AlignakTest):
         """ Allow contactgroups with no hosts
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/contactgroup/alignak_contactgroup_no_contact.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
+        assert self.conf_is_correct
 
         assert len(self._scheduler.contactgroups) == \
             3
@@ -175,13 +173,12 @@ class TestContactGroup(AlignakTest):
         """ Test that contactgroups can have a name with spaces
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
+        assert self.conf_is_correct
         self.nb_contactgroups = len(self._scheduler.contactgroups)
 
         self.setup_with_file('cfg/contactgroup/alignak_contactgroup_with_space.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
+        assert self.conf_is_correct
 
         # Two more groups than the default configuration
         assert len(self._scheduler.contactgroups) == self.nb_contactgroups + 1
@@ -209,9 +206,8 @@ class TestContactGroup(AlignakTest):
         """ Test that contactgroups correclty manage inheritance
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/contactgroup/alignak_contactgroups_plus_inheritance.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
+        assert self.conf_is_correct
 
         host0 = self._scheduler.hosts.find_by_name("test_host_0")
         # HOST 1 should have 2 group of contacts

@@ -50,7 +50,7 @@ This module provide Reactionner class used to launch notifications or event hand
 """
 
 from alignak.satellite import Satellite
-from alignak.property import PathProp, IntegerProp, StringProp
+from alignak.property import IntegerProp, StringProp
 
 
 class Reactionner(Satellite):

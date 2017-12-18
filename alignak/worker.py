@@ -173,10 +173,8 @@ class Worker(object):
         self._process.start()
 
     def manage_signal(self, sig, frame):  # pylint: disable=W0613
-        """Manage signals caught by the daemon
-        signal.SIGUSR1 : dump_memory
-        signal.SIGUSR2 : dump_object (nothing)
-        signal.SIGTERM, signal.SIGINT : terminate process
+        """Manage signals caught by the process but I do not do anything...
+        our master daemon is managing our termination.
 
         :param sig: signal caught by daemon
         :type sig: str

@@ -183,7 +183,7 @@ def fix_alignak_cfg(config):
 
     """
     Update alignak configuration file
-     - get alignak-realm2.ini
+     - get alignak.ini
      - update the LOG=, ETC=,... variables with the real installation paths
     """
     pattern = "|".join(alignak_cfg.keys())

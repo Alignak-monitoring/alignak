@@ -57,6 +57,7 @@ class TestCustomsonservicehosgroups(AlignakTest):
 
 
     def setUp(self):
+        super(TestCustomsonservicehosgroups, self).setUp()
         self.setup_with_file('cfg/cfg_customs_on_service_hosgroups.cfg')
         self._sched = self._scheduler
 

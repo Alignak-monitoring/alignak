@@ -54,6 +54,7 @@ from alignak_test import AlignakTest
 class TestComplexHostgroups(AlignakTest):
 
     def setUp(self):
+        super(TestComplexHostgroups, self).setUp()
         self.setup_with_file('cfg/hostgroup/complex_hostgroups.cfg')
         assert self.conf_is_correct
 

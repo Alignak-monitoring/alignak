@@ -25,21 +25,30 @@
 import os
 import sys
 
+import signal
+
 import time
 import string
 import re
 import locale
 
+import shutil
+import psutil
+import subprocess
+
+from copy import deepcopy
+
 import unittest2
 
 import logging
-from logging import Handler
+from logging import Handler, Formatter
+from logging.handlers import TimedRotatingFileHandler
 
 import requests_mock
 
 import alignak
+from alignak.log import ALIGNAK_LOGGER_NAME, ColorStreamHandler
 from alignak.bin.alignak_environment import AlignakConfigParser
-from alignak.log import DEFAULT_FORMATTER_NAMED, ROOT_LOGGER_NAME
 from alignak.objects.config import Config
 from alignak.objects.command import Command
 from alignak.objects.module import Module
@@ -71,7 +80,7 @@ from alignak.daemons.receiverdaemon import Receiver
 
 class CollectorHandler(Handler):
     """
-    This log handler collecting all emitted log.
+    This log handler collects all emitted log.
 
     Used for tet purpose (assertion)
     """
@@ -99,12 +108,28 @@ class AlignakTest(unittest2.TestCase):
         Setup a log collector
         :return:
         """
-        self.logger = logging.getLogger("alignak")
+        self.logger = logging.getLogger(ALIGNAK_LOGGER_NAME)
 
-        # Add collector for test purpose.
-        collector_h = CollectorHandler()
-        collector_h.setFormatter(DEFAULT_FORMATTER_NAMED)
-        self.logger.addHandler(collector_h)
+        print("Setup Logger: %s" % self.logger)
+        for handler in self.logger.handlers:
+            if isinstance(handler, (CollectorHandler)):
+                print("Collector, logs: %d" % len(handler.collector))
+            if not isinstance(handler, (CollectorHandler, ColorStreamHandler)):
+                if os.path.exists(handler.baseFilename):
+                    statinfo = os.stat(handler.baseFilename)
+                    print("*** still exists: %s, %d bytes" % (handler.baseFilename, statinfo.st_size))
+                    if statinfo.st_size > 1024 * 1024:
+                        os.remove(handler.baseFilename)
+                        print(" => removed: %s" % handler.baseFilename)
+
+        for handler in self.logger.handlers:
+            if isinstance(handler, CollectorHandler):
+                break
+        else:
+            # Add collector for test purpose, but only add it once !
+            collector_h = CollectorHandler()
+            collector_h.setFormatter(Formatter('[%(created)i] %(levelname)s: [%(name)s] %(message)s'))
+            self.logger.addHandler(collector_h)
 
     def _files_update(self, files, replacements):
         """Update files content with the defined replacements
@@ -124,11 +149,202 @@ class AlignakTest(unittest2.TestCase):
                 for line in lines:
                     outfile.write(line)
 
-    def setup_with_file(self, configuration_file, env_file=None, verbose=False):
+    def _stop_alignak_daemons(self, arbiter_only=True):
+        """ Stop the Alignak daemons started formerly
+
+        If some alignak- daemons are still running after the kill, force kill them.
+
+        :return: None
+        """
+
+        print("Stopping the daemons...")
+        start = time.time()
+        if getattr(self, 'procs', None):
+            for name, proc in self.procs.items():
+                if arbiter_only and name not in ['arbiter-master']:
+                    continue
+                print("Asking %s (pid=%d) to end..." % (name, proc.pid))
+                try:
+                    daemon_process = psutil.Process(proc.pid)
+                except psutil.NoSuchProcess:
+                    print("not existing!")
+                    continue
+                # children = daemon_process.children(recursive=True)
+                daemon_process.terminate()
+                try:
+                    # The default arbiter / daemons stopping process is 30 seconds graceful ... so
+                    # not really compatible with this default delay. The test must update the
+                    # default delay or set a shorter delay than the default one
+                    daemon_process.wait(10)
+                except psutil.TimeoutExpired:
+                    print("***** timeout 10 seconds, force-killing the daemon...")
+                    daemon_process.kill()
+                except psutil.NoSuchProcess:
+                    print("not existing!")
+                    pass
+                print("%s terminated" % (name))
+            print("Stopping daemons duration: %d seconds" % (time.time() - start))
+
+        time.sleep(1.0)
+
+        print("Killing remaining processes...")
+        for daemon in ['broker', 'poller', 'reactionner', 'receiver', 'scheduler', 'arbiter']:
+            for proc in psutil.process_iter():
+                if daemon not in proc.name():
+                    continue
+                print("- killing %s" % (proc.name()))
+                try:
+                    daemon_process = psutil.Process(proc.pid)
+                except psutil.NoSuchProcess:
+                    print("not existing!")
+                    continue
+
+                daemon_process.terminate()
+                try:
+                    daemon_process.wait(10)
+                except psutil.TimeoutExpired:
+                    print("***** timeout 10 seconds, force-killing the daemon...")
+                    daemon_process.kill()
+
+
+    def _run_alignak_daemons(self, cfg_folder='/tmp', runtime=30,
+                             daemons_list=[], spare_daemons=[], piped=False, run_folder='',
+                             arbiter_only=True):
+        """ Run the Alignak daemons for a passive configuration
+
+        Let the daemons run for the number of seconds defined in the runtime parameter and
+        then kill the required daemons (list in the spare_daemons parameter)
+
+        Check that the run daemons did not raised any ERROR log
+
+        :return: None
+        """
+        # Load and test the configuration
+        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), cfg_folder)
+        if not run_folder:
+            run_folder = cfg_folder
+        print("Running Alignak daemons, cfg_folder: %s, run_folder: %s" % (cfg_folder, run_folder))
+
+        print("Cleaning pid and log files...")
+        for name in daemons_list + ['arbiter-master']:
+            # if arbiter_only and name not in ['arbiter-master']:
+            #     continue
+            if os.path.exists('%s/%s.pid' % (run_folder, name)):
+                os.remove('%s/%s.pid' % (run_folder, name))
+                print("- removed %s/%s.pid" % (run_folder, name))
+            if os.path.exists('%s/%s.log' % (run_folder, name)):
+                os.remove('%s/%s.log' % (run_folder, name))
+                print("- removed %s/%s.log" % (run_folder, name))
+
+        self._stop_alignak_daemons()
+
+        # Some script comands may exist in the test folder ...
+        if os.path.exists(cfg_folder + '/dummy_command.sh'):
+            shutil.copy(cfg_folder + '/dummy_command.sh', '/tmp/dummy_command.sh')
+        if os.path.exists(cfg_folder + '/check_command.sh'):
+            shutil.copy(cfg_folder + '/check_command.sh', '/tmp/check_command.sh')
+
+        print("Launching the daemons...")
+        self.procs = {}
+        for name in daemons_list + ['arbiter-master']:
+            if arbiter_only and name not in ['arbiter-master']:
+                continue
+            args = ["../alignak/bin/alignak_%s.py" % name.split('-')[0], "-n", name,
+                    "-e", "%s/alignak.ini" % cfg_folder]
+            if piped:
+                self.procs[name] = \
+                    subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            else:
+                self.procs[name] = subprocess.Popen(args)
+
+            time.sleep(0.1)
+            print("- %s launched (pid=%d)" % (name, self.procs[name].pid))
+
+        time.sleep(3)
+
+        print("Testing daemons start")
+        for name, proc in self.procs.items():
+            ret = proc.poll()
+            if ret is not None:
+                print("*** %s exited on start!" % (name))
+                if proc.stdout:
+                    for line in iter(proc.stdout.readline, b''):
+                        print(">>> " + line.rstrip())
+                if proc.stderr:
+                    for line in iter(proc.stderr.readline, b''):
+                        print(">>> " + line.rstrip())
+            assert ret is None, "Daemon %s not started!" % name
+            print("%s running (pid=%d)" % (name, self.procs[name].pid))
+
+        # Let the daemons start ...
+        time.sleep(3)
+
+        print("Testing pid files and log files...")
+        for name in daemons_list + ['arbiter-master']:
+            if arbiter_only and name not in ['arbiter-master']:
+                continue
+            print("- %s for %s" % ('%s/%s.pid' % (run_folder, name), name))
+            # Some times pid and log files may not exist ...
+            if not os.path.exists('%s/%s.pid' % (run_folder, name)):
+                print('%s/%s.pid does not exist!' % (run_folder, name))
+            print("- %s for %s" % ('%s/%s.log' % (run_folder, name), name))
+            if not os.path.exists('%s/%s.log' % (run_folder, name)):
+                print('%s/%s.log does not exist!' % (run_folder, name))
+
+        time.sleep(1)
+
+        # Let the arbiter build and dispatch its configuration
+        # Let the schedulers get their configuration and run the first checks
+        time.sleep(runtime)
+
+    def _check_daemons_log_for_errors(self, daemons_list, ignored_warnings=[], ignored_errors=[]):
+        """
+        Check that the daemons all started correctly and that they got their configuration
+        ignored_warnings and ignored_errors are lists of strings that make a WARNING or ERROR log
+        not to be considered as a warning or error
+
+        :return:
+        """
+        print("Get information from log files...")
+        nb_errors = 0
+        nb_warnings = 0
+        for daemon in ['arbiter-master'] + daemons_list:
+            print("- log /tmp/%s.log" % daemon)
+            assert os.path.exists("/tmp/%s.log" % daemon), '/tmp/%s.log does not exist!' % daemon
+            daemon_errors = False
+            print("-----\n%s log file\n-----\n" % daemon)
+            with open('/tmp/%s.log' % daemon) as f:
+                for line in f:
+                    if 'WARNING: ' in line or daemon_errors:
+                        print(line[:-1])
+                        if 'Cannot call the additional groups setting ' not in line \
+                                and 'loop exceeded the maximum expected' not in line \
+                                and 'ignoring repeated file' not in line:
+                            for ignore_line in ignored_warnings:
+                                if ignore_line in line:
+                                    break
+                            else:
+                                nb_warnings += 1
+                                print("---" + line[:-1])
+                            # nb_warnings += 1
+                    if 'ERROR: ' in line or 'CRITICAL: ' in line:
+                        if not daemon_errors:
+                            print(line[:-1])
+                        for ignore_line in ignored_errors:
+                            if ignore_line in line:
+                                break
+                        else:
+                            nb_errors += 1
+                        if nb_errors > 0:
+                            daemon_errors = True
+
+        return (nb_errors, nb_warnings)
+
+    def setup_with_file(self, configuration_file, env_file=None, verbose=False, unit_test=True):
         """
         Load alignak with the provided configuration and environment files
 
-        If verbos is True the envirnment loading is printed out on the console.
+        If verbose is True the envirnment loading is printed out on the console.
 
         If the configuration loading fails, a SystemExit exception is raised to the caller.
 
@@ -137,7 +353,9 @@ class AlignakTest(unittest2.TestCase):
         The configuration errors property contains a list of the error message that are normally
         logged as ERROR by the arbiter.
 
-        @verified
+        If unit_test is True it will simulate the dispatcher configuration sending
+        to the declared satellites in the configuration. Set to False if you intend to run
+        real daemons that will receive their configuration!
 
         :param configuration_file: path + file name of the main configuration file
         :type configuration_file: str
@@ -148,22 +366,40 @@ class AlignakTest(unittest2.TestCase):
         :return: None
         """
         self.broks = {}
+
+        # Our own satellites lists ...
+        self.arbiters = {}
         self.schedulers = {}
         self.brokers = {}
         self.pollers = {}
         self.receivers = {}
         self.reactionners = {}
-        # The main arbiter and scheduler
-        self.arbiter = None
+
+        # Our own schedulers lists ...
+        # Indexed on the scheduler name
+        self._schedulers = {}
+
+        # The main arbiter and scheduler daemons
+        self._arbiter = None
         self._scheduler_daemon = None
         self._scheduler = None
         self.conf_is_correct = False
         self.configuration_warnings = []
         self.configuration_errors = []
 
-        # Add collector for test purpose.
-        self.setup_logger()
-        self.clear_logs()
+        # This to allow using a reference configuration if needed,
+        # and to make some tests easier to set-up
+        print("Preparing default configuration...")
+        if os.path.exists('/tmp/etc/alignak'):
+            shutil.rmtree('/tmp/etc/alignak')
+
+        shutil.copytree('../etc', '/tmp/etc/alignak')
+        files = ['/tmp/etc/alignak/alignak.ini']
+        replacements = {
+            '_dist=/usr/local/': '_dist=/tmp'
+        }
+        self._files_update(files, replacements)
+        print("Prepared")
 
         # Initialize the Arbiter with no daemon configuration file
         configuration_dir = os.path.dirname(configuration_file)
@@ -199,79 +435,92 @@ class AlignakTest(unittest2.TestCase):
         if arbiter_cfg:
             arbiter_name = arbiter_cfg['name']
 
-        # Simulate the daemons HTTP interface (very simple simulation !)
-        with requests_mock.mock() as mockreq:
-            for port in ['7768', '7769', '7770', '7771', '7772', '7773']:
-                mockreq.get('http://localhost:%s/ping' % port, json='pong')
-                mockreq.get('http://localhost:%s/get_running_id' % port, json=123456)
-                mockreq.get('http://localhost:%s/what_i_managed' % port, json='{}')
+        # Using default values that are usually provided by the command line parameters
+        args = {
+            'env_file': self.env_filename,
+            'alignak_name': 'alignak-test', 'daemon_name': arbiter_name,
+            'monitoring_files': [configuration_file],
+        }
+        self._arbiter = Arbiter(**args)
 
-            # Using default values that are usually provided by the command line parameters
-            args = {
-                'env_file': self.env_filename,
-                'alignak_name': 'alignak-test', 'daemon_name': arbiter_name,
-                # 'daemon_enabled': False, 'do_replace': False, 'is_daemon': False,
-                # 'config_file': None, 'debug': False, 'debug_file': None,
-                'monitoring_files': [configuration_file],
-                # 'log_filename': '/tmp/arbiter.log', 'pid_filename': '/tmp/arbiter.pid',
-                # 'verify_only': False, 'host': None, 'port': None
-            }
-            self.arbiter = Arbiter(**args)
+        try:
+            # Configure the logger
+            # self._arbiter.debug = True
+            self._arbiter.setup_alignak_logger()
 
-            try:
-                # Configure the logger
-                # self.arbiter.debug = True
-                self.arbiter.setup_alignak_logger()
+            # Add our own logger handler for test purpose.
+            self.setup_logger()
 
-                # Load and initialize the arbiter configuration
-                self.arbiter.load_monitoring_config_file()
+            # Setup our modules manager
+            self._arbiter.load_modules_manager()
 
-                # If this assertion does not match, then there is a bug in the arbiter :)
-                self.assertTrue(self.arbiter.conf.conf_is_correct)
-                self.conf_is_correct = True
-                self.configuration_warnings = self.arbiter.conf.configuration_warnings
-                self.configuration_errors = self.arbiter.conf.configuration_errors
-            except SystemExit:
-                self.configuration_warnings = self.arbiter.conf.configuration_warnings
-                self.configuration_errors = self.arbiter.conf.configuration_errors
-                self.show_configuration_logs()
-                self.show_logs()
-                raise
+            # Load and initialize the arbiter configuration
+            self._arbiter.load_monitoring_config_file()
 
-            # Prepare the configuration dispatching
-            for arbiter_link in self.arbiter.conf.arbiters:
-                if arbiter_link.get_name() == self.arbiter.arbiter_name:
-                    self.arbiter.link_to_myself = arbiter_link
+            # If this assertion does not match, then there is a bug in the arbiter :)
+            self.assertTrue(self._arbiter.conf.conf_is_correct)
+            self.conf_is_correct = True
+            self.configuration_warnings = self._arbiter.conf.configuration_warnings
+            self.configuration_errors = self._arbiter.conf.configuration_errors
+        except SystemExit:
+            self.configuration_warnings = self._arbiter.conf.configuration_warnings
+            self.configuration_errors = self._arbiter.conf.configuration_errors
+            self.show_configuration_logs()
+            self.show_logs()
+            raise
+
+        # Prepare the configuration dispatching
+        for arbiter_link in self._arbiter.conf.arbiters:
+            if arbiter_link.get_name() == self._arbiter.arbiter_name:
+                self._arbiter.link_to_myself = arbiter_link
             assert arbiter_link is not None, "There is no arbiter link in the configuration!"
 
-            self.arbiter.dispatcher = Dispatcher(self.arbiter.conf, self.arbiter.link_to_myself)
-            self.arbiter.dispatcher.check_alive(test=True)
-            self.arbiter.dispatcher.check_dispatch(test=True)
-            self.arbiter.dispatcher.prepare_dispatch(test=True)
-            self.arbiter.dispatcher.dispatch(test=True)
-            # Create an Arbiter external commands manager in dispatcher mode
-            self.arbiter.external_commands_manager = ExternalCommandManager(self.arbiter.conf,
-                                                                            'dispatcher',
-                                                                            self.arbiter,
-                                                                            accept_unknown=True)
+        if not unit_test:
+            return
 
+        # Prepare the configuration dispatching
+        self._arbiter.dispatcher = Dispatcher(self._arbiter.conf, self._arbiter.link_to_myself)
+        self._arbiter.dispatcher.prepare_dispatch()
+
+        # Create an Arbiter external commands manager in dispatcher mode
+        self._arbiter.external_commands_manager = ExternalCommandManager(self._arbiter.conf,
+                                                                         'dispatcher',
+                                                                         self._arbiter,
+                                                                         accept_unknown=True)
+
+        print("All daemons WS: %s" % ["%s:%s" % (link.address, link.port) for link in self._arbiter.dispatcher.all_daemons_links])
+        # Simulate the daemons HTTP interface (very simple simulation !)
+        with requests_mock.mock() as mr:
+            for link in self._arbiter.dispatcher.all_daemons_links:
+                mr.get('http://%s:%s/ping' % (link.address, link.port), json='pong')
+                mr.get('http://%s:%s/get_running_id' % (link.address, link.port), json=123456.123456)
+                mr.get('http://%s:%s/fill_initial_broks' % (link.address, link.port), json=[])
+                mr.post('http://%s:%s/push_configuration' % (link.address, link.port), json=True)
+                mr.get('http://%s:%s/get_managed_configurations' % (link.address, link.port), json={})
+
+            self._arbiter.dispatcher.check_reachable(test=True)
+            self._arbiter.dispatcher.check_dispatch()
             print("-----\nConfiguration got dispatched.")
 
             # Check that all the daemons links got a configuration
             for sat_type in ('arbiters', 'schedulers', 'reactionners',
                              'brokers', 'receivers', 'pollers'):
                 print("- for %s:" % (sat_type))
-                for sat_link in getattr(self.arbiter.dispatcher, sat_type):
+                for sat_link in getattr(self._arbiter.dispatcher, sat_type):
                     print(" - %s" % (sat_link))
                     pushed_configuration = getattr(sat_link, 'unit_test_pushed_configuration', None)
                     if pushed_configuration:
                         # print("- %s / %s" % (sat_link.name, pushed_configuration))
-                        print(" - pushed configuration, contains:")
+                        print("   pushed configuration, contains:")
                         for key in pushed_configuration:
                             print("   . %s = %s" % (key, pushed_configuration[key]))
+                    # Update the test class satellites lists
+                    getattr(self, sat_type).update({sat_link.name: pushed_configuration})
+                print("- my %s: %s" % (sat_type, getattr(self, sat_type).keys()))
 
             self.eca = None
-            for scheduler in self.arbiter.dispatcher.schedulers:
+            # Initialize a Scheduler daemon
+            for scheduler in self._arbiter.dispatcher.schedulers:
                 print("-----\nGot a scheduler: %s (%s)" % (scheduler.name, scheduler))
                 # Simulate the scheduler daemon start
                 args = {
@@ -279,63 +528,53 @@ class AlignakTest(unittest2.TestCase):
                 }
                 self._scheduler_daemon = Alignak(**args)
                 self._scheduler_daemon.setup_alignak_logger()
-                self._scheduler_daemon.load_modules_manager(scheduler.name)
+                self._scheduler_daemon.load_modules_manager()
 
                 # Simulate the scheduler daemon receiving the configuration from its arbiter
                 pushed_configuration = scheduler.unit_test_pushed_configuration
                 self._scheduler_daemon.new_conf = pushed_configuration
                 self._scheduler_daemon.setup_new_conf()
-                # todo: what for?
-                self.schedulers[scheduler.name] = self._scheduler_daemon
-
-                # Now create the scheduler external commands manager
-                # We are an applyer: our role is not to dispatch commands, but to apply them
-                self.eca = ExternalCommandManager(self._scheduler_daemon.conf, 'applyer', self._scheduler_daemon.sched)
-                # Scheduler needs to know about this external command manager to use it if necessary
-                self._scheduler_daemon.sched.set_external_commands_manager(self.eca)
+                assert self._scheduler_daemon.new_conf is None
+                self._schedulers[scheduler.name] = self._scheduler_daemon.sched
 
                 # Store the last scheduler object to get used in some other functions!
-                # this is the real scheduler, not the scheduler daemon
+                # this is the real scheduler, not the scheduler daemon!
                 self._scheduler = self._scheduler_daemon.sched
+                self._scheduler.my_daemon = self._scheduler_daemon
                 print("Got a default scheduler: %s\n-----" % self._scheduler)
-                for broker_link in self._scheduler_daemon.brokers:
-                    broker_link = self._scheduler_daemon.brokers[broker_link]
-                    print("-----\n- with a broker: %s" % broker_link)
-                    for broker in self.arbiter.dispatcher.brokers:
-                        if broker.name != broker_link.name:
-                            continue
-                        print("- found in the arbiter configuration: %s" % broker.name)
 
-                        # # Do create a broker daemon
-                        # args = {
-                        #     'env_file': self.env_filename, 'daemon_name': broker.get_name(),
-                        #     'daemon_enabled': False, 'do_replace': False, 'is_daemon': False,
-                        #     'config_file': None, 'debug': False, 'debug_file': None,
-                        #     'local_log': "/tmp/%s.log" % broker.get_name(), 'port': None
-                        # }
-                        # broker_daemon = Broker(**args)
-                        # broker_daemon.load_modules_manager(broker.get_name())
-                        # broker_daemon.new_conf = broker.cfg
-                        # if broker_daemon.new_conf:
-                        #     broker_daemon.setup_new_conf()
-                        # self._broker = broker_daemon
-                        self._broker = broker_link
-                        self._broker.broks = {}
-                        print("Got a default broker: %s" % self._broker)
+            # Initialize a Broker daemon
+            for broker in self._arbiter.dispatcher.brokers:
+                print("-----\nGot a broker: %s (%s)" % (broker.name, broker))
+                # Simulate the broker daemon start
+                args = {
+                    'env_file': self.env_filename, 'daemon_name': broker.name,
+                }
+                self._broker_daemon = Broker(**args)
+                self._broker_daemon.setup_alignak_logger()
+                self._broker_daemon.load_modules_manager()
+
+                # Simulate the scheduler daemon receiving the configuration from its arbiter
+                pushed_configuration = broker.unit_test_pushed_configuration
+                self._broker_daemon.new_conf = pushed_configuration
+                self._broker_daemon.setup_new_conf()
+                print("Got a default broker daemon: %s\n-----" % self._broker_daemon)
+
+            # Get my first broker link
+            self._main_broker = None
+            if self._scheduler.my_daemon.brokers:
+                self._main_broker = [b for b in self._scheduler.my_daemon.brokers.values()][0]
 
             # Initialize a Receiver daemon
             self._receiver = None
-            for receiver in self.arbiter.dispatcher.receivers:
+            for receiver in self._arbiter.dispatcher.receivers:
                 print("-----\nGot a receiver: %s (%s)" % (receiver.name, receiver))
-                # Simulate the scheduler daemon start
+                # Simulate the receiver daemon start
                 args = {
                     'env_file': self.env_filename, 'daemon_name': receiver.name,
-                    'daemon_enabled': False, 'do_replace': False, 'is_daemon': False,
-                    'config_file': None, 'debug': False, 'debug_file': None,
-                    'local_log': "/tmp/%s.log" % receiver.get_name(), 'port': None
                 }
                 self._receiver_daemon = Receiver(**args)
-                self._receiver_daemon.load_modules_manager(receiver.get_name())
+                self._receiver_daemon.load_modules_manager()
 
                 # Simulate the scheduler daemon receiving the configuration from its arbiter
                 pushed_configuration = receiver.unit_test_pushed_configuration
@@ -344,6 +583,8 @@ class AlignakTest(unittest2.TestCase):
                 self._receiver = receiver
                 print("Got a default receiver: %s\n-----" % self._receiver)
 
+                for scheduler in self._receiver_daemon.schedulers.values():
+                    scheduler.my_daemon = self._receiver_daemon
 
             self.ecm_mode = 'applyer'
 
@@ -355,8 +596,13 @@ class AlignakTest(unittest2.TestCase):
                 self._receiver.external_commands_manager = self.ecr
 
             # and an external commands manager in dispatcher mode for the arbiter
-            self.ecd = ExternalCommandManager(self.arbiter.conf, 'dispatcher', self.arbiter,
+            self.ecd = ExternalCommandManager(self._arbiter.conf, 'dispatcher', self._arbiter,
                                               accept_unknown=True)
+
+        self._arbiter.modules_manager.stop_all()
+        self._broker_daemon.modules_manager.stop_all()
+        self._scheduler_daemon.modules_manager.stop_all()
+        self._receiver_daemon.modules_manager.stop_all()
 
     def fake_check(self, ref, exit_status, output="OK"):
         """
@@ -402,7 +648,7 @@ class AlignakTest(unittest2.TestCase):
         # Put the check result in the waiting results for the scheduler ...
         self._scheduler.waiting_results.put(check)
 
-    def scheduler_loop(self, count, items, mysched=None):
+    def scheduler_loop(self, count, items, scheduler=None):
         """
         Manage scheduler actions
 
@@ -410,39 +656,50 @@ class AlignakTest(unittest2.TestCase):
         :type count: int
         :param items: list of list [[object, exist_status, output]]
         :type items: list
-        :param mysched: The scheduler
-        :type mysched: None | object
+        :param scheduler: The scheduler
+        :type scheduler: None | object
         :return: None
         """
-        if mysched is None:
-            mysched = self._scheduler
+        if scheduler is None:
+            scheduler = self._scheduler
 
         macroresolver = MacroResolver()
-        macroresolver.init(mysched.sched_daemon.conf)
+        macroresolver.init(scheduler.my_daemon.sched.pushed_conf)
 
         for num in range(count):
-            print("Scheduler loop turn: %s" % num)
+            # print("Scheduler loop turn: %s" % num)
             for (item, exit_status, output) in items:
+                # print("- item checks creation turn: %s" % item)
                 if len(item.checks_in_progress) == 0:
-                    for i in mysched.recurrent_works:
-                        (name, fun, nb_ticks) = mysched.recurrent_works[i]
+                    # A first full scheduler loop turn to create the checks
+                    # if they do not yet exist!
+                    for i in scheduler.recurrent_works:
+                        (name, fun, nb_ticks) = scheduler.recurrent_works[i]
                         if nb_ticks == 1:
+                            # print(" . %s ...running." % name)
                             fun()
+                        # else:
+                        #     print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
+                else:
+                    print("Check is still in progress for %s" % item)
                 self.assertGreater(len(item.checks_in_progress), 0)
-                chk = mysched.checks[item.checks_in_progress[0]]
+                chk = scheduler.checks[item.checks_in_progress[0]]
                 chk.set_type_active()
                 chk.check_time = time.time()
                 chk.wait_time = 0.0001
                 chk.last_poll = chk.check_time
                 chk.output = output
                 chk.exit_status = exit_status
-                mysched.waiting_results.put(chk)
+                scheduler.waiting_results.put(chk)
 
-            for i in mysched.recurrent_works:
-                (name, fun, nb_ticks) = mysched.recurrent_works[i]
+            # print("-----\n- results fetching turn:")
+            for i in scheduler.recurrent_works:
+                (name, fun, nb_ticks) = scheduler.recurrent_works[i]
                 if nb_ticks == 1:
-                    # print("Execute: %s" % fun)
+                    # print(" . %s ...running." % name)
                     fun()
+                # else:
+                #     print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
 
     def manage_freshness_check(self, count=1, mysched=None):
         """Run the scheduler loop for freshness_check
@@ -453,20 +710,17 @@ class AlignakTest(unittest2.TestCase):
         :type mysched: None | object
         :return: n/a
         """
-        if mysched is None:
-            mysched = self.schedulers['scheduler-master']
-
         # Check freshness on each scheduler tick
-        mysched.sched.update_recurrent_works_tick('check_freshness', 1)
+        self._scheduler.update_recurrent_works_tick({'tick_check_freshness': 1})
 
         checks = []
         for num in range(count):
-            for i in mysched.sched.recurrent_works:
-                (name, fun, nb_ticks) = mysched.sched.recurrent_works[i]
+            for i in self._scheduler.recurrent_works:
+                (name, fun, nb_ticks) = self._scheduler.recurrent_works[i]
                 if nb_ticks == 1:
                     fun()
                 if name == 'check_freshness':
-                    checks = sorted(mysched.sched.checks.values(),
+                    checks = sorted(self._scheduler.checks.values(),
                                     key=lambda x: x.creation_time)
                     checks = [chk for chk in checks if chk.freshness_expired]
         return len(checks)
@@ -480,14 +734,14 @@ class AlignakTest(unittest2.TestCase):
         ext_cmd = ExternalCommand(external_command)
         if self.ecm_mode == 'applyer':
             res = None
-            self._scheduler.run_external_command(external_command)
+            self._scheduler.run_external_commands([external_command])
             self.external_command_loop()
         if self.ecm_mode == 'dispatcher':
             res = self.ecd.resolve_command(ext_cmd)
             if res and run:
-                self.arbiter.broks = {}
-                self.arbiter.add(ext_cmd)
-                self.arbiter.push_external_commands_to_schedulers()
+                self._arbiter.broks = {}
+                self._arbiter.add(ext_cmd)
+                self._arbiter.push_external_commands_to_schedulers()
         if self.ecm_mode == 'receiver':
             res = self.ecr.resolve_command(ext_cmd)
             if res and run:
@@ -500,10 +754,7 @@ class AlignakTest(unittest2.TestCase):
                 # Give broks to our broker
                 for brok in self._receiver_daemon.broks:
                     print("Brok receiver: %s : %s" % (brok, self._receiver_daemon.broks[brok]))
-                    self._broker.broks[brok] = self._receiver_daemon.broks[brok]
-                for brok in self._scheduler_daemon.broks:
-                    print("Brok scheduler: %s : %s" % (brok, self._scheduler_daemon.broks[brok]))
-                    self._broker.broks[brok] = self._scheduler_daemon.broks[brok]
+                    self._broker_daemon.external_broks[brok] = self._receiver_daemon.broks[brok]
         return res
 
     def external_command_loop(self):
@@ -514,12 +765,14 @@ class AlignakTest(unittest2.TestCase):
 
         :return:
         """
-        print("External commands loop - scheduler broks initial count: %d" % self._scheduler.nb_broks)
+        print("Scheduler loop turn:")
         for i in self._scheduler.recurrent_works:
             (name, fun, nb_ticks) = self._scheduler.recurrent_works[i]
             if nb_ticks == 1:
+                print(" . %s ...running." % name)
                 fun()
-        print("External commands loop - scheduler broks final count: %d" % self._scheduler.nb_broks)
+            else:
+                print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
         self.assert_no_log_match("External command Brok could not be sent to any daemon!")
 
     def worker_loop(self, verbose=True):
@@ -568,9 +821,13 @@ class AlignakTest(unittest2.TestCase):
         :param scheduler:
         :return:
         """
+        if getattr(self, 'logger', None) is None:
+            print "--- no logs because no initialized logger!"
+            return
+
         print "--- logs <<<----------------------------------"
-        collector_h = [hand for hand in self.logger.handlers
-                       if isinstance(hand, CollectorHandler)][0]
+        collector_h = [handler for handler in self.logger.handlers
+                       if isinstance(handler, CollectorHandler)][0]
         for log in collector_h.collector:
             self.safe_print(log)
 
@@ -579,10 +836,10 @@ class AlignakTest(unittest2.TestCase):
     def show_actions(self):
         """"Show the inner actions"""
         macroresolver = MacroResolver()
-        macroresolver.init(self._scheduler_daemon.conf)
+        macroresolver.init(self._scheduler_daemon.sched.pushed_conf)
 
-        print "--- Scheduler: %s" % self._scheduler.sched_daemon.name
-        print "--- actions <<<----------------------------------"
+        print("--- Scheduler: %s" % self._scheduler.my_daemon.name)
+        print("--- actions <<<----------------------------------")
         actions = sorted(self._scheduler.actions.values(), key=lambda x: (x.t_to_go, x.creation_time))
         for action in actions:
             print("Time to launch action: %s, creation: %s" % (action.t_to_go, action.creation_time))
@@ -593,9 +850,10 @@ class AlignakTest(unittest2.TestCase):
                 else:
                     hst = self._scheduler.find_item_by_id(item.host)
                     ref = "svc: %s/%s" % (hst.get_name(), item.get_name())
-                print "NOTIFICATION %s (%s - %s) [%s], created: %s for '%s': %s" \
+                print("NOTIFICATION %s (%s - %s) [%s], created: %s for '%s': %s"
                       % (action.type, action.uuid, action.status, ref,
-                         time.asctime(time.localtime(action.t_to_go)), action.contact_name, action.command)
+                         time.asctime(time.localtime(action.t_to_go)),
+                         action.contact_name, action.command))
             elif action.is_a == 'eventhandler':
                 print "EVENTHANDLER:", action
             else:
@@ -607,7 +865,7 @@ class AlignakTest(unittest2.TestCase):
         Show checks from the scheduler
         :return:
         """
-        print "--- Scheduler: %s" % self._scheduler.sched_daemon.name
+        print "--- Scheduler: %s" % self._scheduler.my_daemon.name
         print "--- checks <<<--------------------------------"
         checks = sorted(self._scheduler.checks.values(), key=lambda x: x.creation_time)
         for check in checks:
@@ -668,6 +926,28 @@ class AlignakTest(unittest2.TestCase):
         :return:
         """
         self._scheduler.actions = {}
+
+    def check_monitoring_logs(self, expected_logs, dump=True):
+        """
+        Get the monitoring_log broks and check that they match with the expected_logs provided
+
+        :param expected_logs: expected monitoring logs
+        :param dump: True to print out the monitoring logs
+        :return:
+        """
+        # We got 'monitoring_log' broks for logging to the monitoring logs...
+        monitoring_logs = []
+        for brok in sorted(self._main_broker.broks.values(), key=lambda x: x.creation_time):
+            if brok.type == 'monitoring_log':
+                data = unserialize(brok.data)
+                monitoring_logs.append((data['level'], data['message']))
+        if dump:
+            print("Monitoring logs: %s" % monitoring_logs)
+
+        assert len(expected_logs) == len(monitoring_logs), monitoring_logs
+
+        for log_level, log_message in expected_logs:
+            assert (log_level, log_message) in monitoring_logs, log_message
 
     def assert_actions_count(self, number):
         """
@@ -922,10 +1202,11 @@ class AlignakTest(unittest2.TestCase):
         """
         regex = re.compile(pattern)
 
+        my_broker = [b for b in self._scheduler.my_daemon.brokers.values()][0]
+
         monitoring_logs = []
-        print("Broker broks: %s" % self._broker.broks)
-        for brok_uuid in self._broker.broks:
-            brok = self._broker.broks[brok_uuid]
+        print("Broker broks: %s" % my_broker.broks)
+        for brok in my_broker.broks.values():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))

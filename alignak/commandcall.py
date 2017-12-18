@@ -121,7 +121,9 @@ class CommandCall(AlignakObject):
             if hasattr(self, prop):
                 res[prop] = getattr(self, prop)
 
-        res['command'] = self.command.serialize()
+        res['command'] = None
+        if self.command:
+            res['command'] = self.command.serialize()
         return res
 
     def get_command_and_args(self):

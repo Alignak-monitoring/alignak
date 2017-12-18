@@ -25,6 +25,8 @@ from alignak.util import alive_then_spare_then_deads, average_percentile
 
 
 class TestUnknownEventHandler(AlignakTest):
+    def setUp(self):
+        super(TestUnknownEventHandler, self).setUp()
 
     def test_sort_alive_then_spare_then_deads(self):
         SmallSat = namedtuple("SmallSat", ["alive", "spare"])
@@ -57,7 +59,3 @@ class TestUnknownEventHandler(AlignakTest):
         assert 8.7 == lat_avg, 'Average'
         assert 4.8 == lat_min, 'Minimum'
         assert 12.1 == lat_max, 'Maximum'
-
-if __name__ == '__main__':
-    AlignakTest.main()
-

@@ -258,6 +258,12 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'hostgroup': 'hostgroups',
     })
 
+    def __str__(self):
+        return '<Host %s, uuid=%s, %s (%s), realm: %s, use: %s />' \
+               % (self.get_full_name(), self.uuid, self.state, self.state_type,
+                  getattr(self, 'realm', 'Unset'), getattr(self, 'use', None))
+    __repr__ = __str__
+
 #######
 #                   __ _                       _   _
 #                  / _(_)                     | | (_)
@@ -367,6 +373,16 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             except AttributeError:  # outch, no name for this template
                 return 'UNNAMEDHOSTTEMPLATE'
 
+    def get_full_name(self):
+        """Accessor to host_name attribute
+
+        :return: host_name
+        :rtype: str
+        """
+        if self.is_tpl():
+            return "tpl-%s" % (self.name)
+        return getattr(self, 'host_name', 'unnamed')
+
     def get_groupname(self, hostgroups):
         """Get name of the first host's hostgroup (alphabetic sort)
 
@@ -410,14 +426,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             hostgroup = hostgroups[hostgroup_id]
             group_aliases.append(hostgroup.alias)
         return ','.join(sorted(group_aliases))
-
-    def get_full_name(self):
-        """Accessor to host_name attribute
-
-        :return: host_name
-        :rtype: str
-        """
-        return self.host_name
 
     def get_hostgroups(self):
         """Accessor to hostgroups attribute
@@ -463,12 +471,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: None
         """
         self.services.append(service)
-
-    def __str__(self):
-        return '<%s %s, realm: %s, use: %s />' \
-               % (self.__class__.__name__, self.get_full_name(),
-                  getattr(self, 'realm', 'Unset'), getattr(self, 'use', None))
-    __repr__ = __str__
 
     def is_excluded_for(self, service):
         """Check whether this host should have the passed service be "excluded" or "not included".
@@ -998,6 +1000,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :rtype: bool
         TODO: Refactor this, a lot of code duplication with Service.notification_is_blocked_by_item
         """
+        logger.debug("Checking if a host %s (%s) notification is blocked...",
+                     self.get_name(), self.state)
         if t_wished is None:
             t_wished = time.time()
 
@@ -1258,7 +1262,7 @@ class Hosts(SchedulingItems):
 
     def linkify(self, timeperiods=None, commands=None, contacts=None,  # pylint: disable=R0913
                 realms=None, resultmodulations=None, businessimpactmodulations=None,
-                escalations=None, hostgroups=None, triggers=None,
+                escalations=None, hostgroups=None,
                 checkmodulations=None, macromodulations=None):
         """Create link between objects::
 
@@ -1284,8 +1288,6 @@ class Hosts(SchedulingItems):
         :type escalations: alignak.objects.escalation.Escalations
         :param hostgroups: hostgroups to link
         :type hostgroups: alignak.objects.hostgroup.Hostgroups
-        :param triggers: triggers to link
-        :type triggers: alignak.objects.trigger.Triggers
         :param checkmodulations: checkmodulations to link
         :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
         :param macromodulations: macromodulations to link
@@ -1310,7 +1312,6 @@ class Hosts(SchedulingItems):
         # (just the escalation here, not serviceesca or hostesca).
         # This last one will be link in escalations linkify.
         self.linkify_with_escalations(escalations)
-        self.linkify_with_triggers(triggers)
         self.linkify_with_checkmodulations(checkmodulations)
         self.linkify_with_macromodulations(macromodulations)
 
@@ -1395,7 +1396,6 @@ class Hosts(SchedulingItems):
     def explode(self, hostgroups, contactgroups):
         """Explode hosts with hostgroups, contactgroups::
 
-        * Add triggers source to host triggers
         * Add contact from contactgroups to host contacts
         * Add host into their hostgroups as hostgroup members
 
@@ -1403,8 +1403,6 @@ class Hosts(SchedulingItems):
         :type hostgroups: alignak.objects.hostgroup.Hostgroups
         :param contactgroups: Contactgorups to explode
         :type contactgroups: alignak.objects.contactgroup.Contactgroups
-        :param triggers: Triggers to explode
-        :type triggers: alignak.objects.trigger.Triggers
         :return: None
         """
         for template in self.templates.itervalues():

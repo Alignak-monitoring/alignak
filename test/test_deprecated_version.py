@@ -6,6 +6,8 @@ import warnings
 from alignak_test import AlignakTest
 
 class Test_Deprecated_alignak_bin_VERSION(AlignakTest):
+    def setUp(self):
+        super(Test_Deprecated_alignak_bin_VERSION, self).setUp()
 
     def test_deprecated_version(self):
         """ Test the deprecated Alignak version warning """

@@ -175,12 +175,7 @@ class ModulesManager(object):
 
             # If it's an external module, create/update Queues()
             if instance.is_external:
-                if self.daemon.sync_manager:
-                    instance.create_queues(self.daemon.sync_manager)
-                else:
-                    instance.clear_queues()
-                    logger.warning("Module %s, synchronization manager is not yet initialized!",
-                                   instance.name)
+                instance.create_queues(self.daemon.sync_manager)
 
             # The module instance init function says if initialization is ok
             result = instance.init()
@@ -236,8 +231,9 @@ class ModulesManager(object):
 
         for (alignak_module, python_module) in self.modules_assoc:
             alignak_module.properties = python_module.properties.copy()
-            logger.info("Alignak starting module '%s', parameters: %s",
-                        alignak_module.get_name(), alignak_module.__dict__)
+            logger.info("Alignak starting module '%s'", alignak_module.get_name())
+            logger.debug("Module '%s', parameters: %s",
+                         alignak_module.get_name(), alignak_module.__dict__)
             try:
                 instance = python_module.get_instance(alignak_module)
                 if not isinstance(instance, BaseModule):  # pragma: no cover, simple protection
@@ -245,15 +241,9 @@ class ModulesManager(object):
                                                      "BaseModule instance: %s"
                                                      % (alignak_module.get_name(),
                                                         type(instance)))
-
-                if getattr(instance, 'modules', None):
-                    self.configuration_warnings.append("Module %s instance defines some "
-                                                       "sub-modules. This feature is not "
-                                                       "currently supported"
-                                                       % (alignak_module.get_name()))
                     raise AttributeError
+            # pragma: no cover, simple protection
             except Exception as exp:  # pylint: disable=W0703
-                # pragma: no cover, simple protection
                 logger.error("The module %s raised an exception on loading, I remove it!",
                              alignak_module.get_name())
                 logger.exception("Exception: %s", exp)
@@ -308,7 +298,7 @@ class ModulesManager(object):
             instance.stop_process()
             logger.info("External process stopped.")
 
-        instance.clear_queues()
+        instance.clear_queues(self.daemon.sync_manager)
 
         # Then do not listen anymore about it
         self.instances.remove(instance)
@@ -328,7 +318,7 @@ class ModulesManager(object):
                 logger.error("The external module %s died unexpectedly!", instance.name)
                 logger.info("Setting the module %s to restart", instance.name)
                 # We clean its queues, they are no more useful
-                instance.clear_queues()
+                instance.clear_queues(self.daemon.sync_manager)
                 self.to_restart.append(instance)
                 # Ok, no need to look at queue size now
                 continue
@@ -349,7 +339,7 @@ class ModulesManager(object):
                              instance.name, queue_size, self.daemon.max_queue_size)
                 logger.info("Setting the module %s to restart", instance.name)
                 # We clean its queues, they are no more useful
-                instance.clear_queues()
+                instance.clear_queues(self.daemon.sync_manager)
                 self.to_restart.append(instance)
 
     def try_to_restart_deads(self):
@@ -404,29 +394,12 @@ class ModulesManager(object):
                 if instance.is_external and phase in instance.phases and
                 instance not in self.to_restart]
 
-    def get_external_to_queues(self):
-        """Get a list of queue to external instances
-
-        :return: queue list
-        :rtype: list
-        """
-        return [instance.to_q for instance in self.instances
-                if instance.is_external and instance not in self.to_restart]
-
-    def get_external_from_queues(self):
-        """Get a list of queue from external instances
-
-        :return: queue list
-        :rtype: list
-        """
-        return [instance.from_q for instance in self.instances
-                if instance.is_external and instance not in self.to_restart]
-
     def stop_all(self):
         """Stop all module instances
 
         :return: None
         """
+        logger.info('Shutting down modules...')
         # Ask internal to quit if they can
         for instance in self.get_internal_instances():
             if hasattr(instance, 'quit') and callable(instance.quit):

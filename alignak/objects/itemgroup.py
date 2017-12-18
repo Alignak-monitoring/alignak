@@ -75,11 +75,13 @@ class Itemgroup(Item):
     })
 
     def __repr__(self):
-        if not self.members:
+        if getattr(self, 'members', None) is None or not getattr(self, 'members'):
             return '<%r %r, no members/>' % (self.__class__.__name__, self.get_name())
+        # Build a sorted list of unicode elements name or uuid, this to make it easier to compare ;)
+        dump_list = sorted([unicode(item.get_name()
+                                    if isinstance(item, Item) else item) for item in self])
         return '<%r %r, %d members: %r/>' \
-               % (self.__class__.__name__, self.get_name(),
-                  len(self.members), ', '.join([str(s) for s in self.members]))
+               % (self.__class__.__name__, self.get_name(), len(self.members), dump_list)
     __str__ = __repr__
 
     def copy_shell(self):
@@ -163,6 +165,10 @@ class Itemgroup(Item):
         """
         state = True
 
+        # Make members unique, remove duplicates
+        if self.members:
+            self.members = list(set(self.members))
+
         if self.unknown_members:
             for member in self.unknown_members:
                 msg = "[%s::%s] as %s, got unknown member '%s'" % (
@@ -219,13 +225,8 @@ class Itemgroup(Item):
 class Itemgroups(Items):
     """
     Class to manage list of groups of items
-    An itemgroups is used to regroup items group
+    An itemgroup is used to regroup items group
     """
-
-    def __repr__(self):
-        return '<%r, %d elements: %r/>' \
-               % (self.__class__.__name__, len(self), ', '.join([str(s) for s in self]))
-    __str__ = __repr__
 
     def add(self, itemgroup):
         """

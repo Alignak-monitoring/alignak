@@ -35,6 +35,8 @@ class TestServiceGroup(AlignakTest):
     """
     This class tests the servicegroups
     """
+    def setUp(self):
+        super(TestServiceGroup, self).setUp()
 
     def test_servicegroup(self):
         """ Default configuration service groups
@@ -43,9 +45,8 @@ class TestServiceGroup(AlignakTest):
         correctly
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
+        assert self.conf_is_correct
 
     def test_look_for_alias(self):
         """ Services groups alias
@@ -53,9 +54,8 @@ class TestServiceGroup(AlignakTest):
         Default configuration has no loading problems ... as of it servicegroups are parsed correctly
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/servicegroup/alignak_groups_with_no_alias.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
+        assert self.conf_is_correct
 
         #  Found a servicegroup named NOALIAS
         sg = self._scheduler.servicegroups.find_by_name("NOALIAS")
@@ -68,9 +68,8 @@ class TestServiceGroup(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/servicegroup/alignak_servicegroup_members.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
+        assert self.conf_is_correct
 
         #  Found a servicegroup named allhosts_and_groups
         sg = self._scheduler.servicegroups.find_by_name("allservices_and_groups")
@@ -89,9 +88,8 @@ class TestServiceGroup(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/servicegroup/alignak_servicegroup_members.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
+        assert self.conf_is_correct
 
         #  Found a servicegroup named allhosts_and_groups
         sg = self._scheduler.servicegroups.find_by_name("allservices_and_groups")
@@ -132,9 +130,8 @@ class TestServiceGroup(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/servicegroup/alignak_servicegroup_no_service.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
+        assert self.conf_is_correct
 
         # Found a servicegroup named void
         sg = self._scheduler.servicegroups.find_by_name("void")
@@ -155,13 +152,12 @@ class TestServiceGroup(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
+        assert self.conf_is_correct
         self.nb_servicegroups = len(self._scheduler.servicegroups)
 
         self.setup_with_file('cfg/servicegroup/alignak_servicegroup_with_space.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
+        assert self.conf_is_correct
 
         # Two more groups than the default configuration
         assert len(self._scheduler.servicegroups) == self.nb_servicegroups + 2
@@ -185,9 +181,8 @@ class TestServiceGroup(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/servicegroup/alignak_servicegroups_generated.cfg')
-        assert self._scheduler_daemon.conf.conf_is_correct
+        assert self.conf_is_correct
         self.nb_servicegroups = len(self._scheduler.servicegroups)
 
         sgs = []

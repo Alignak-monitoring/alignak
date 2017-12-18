@@ -29,17 +29,19 @@ from alignak_test import AlignakTest
 from alignak.misc.serialization import unserialize
 
 
-class Testretention(AlignakTest):
+class TestRetention(AlignakTest):
     """
     This class test retention
     """
+    def setUp(self):
+        super(TestRetention, self).setUp()
+
 
     def test_scheduler_retention(self):
         """ Test restore retention data
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -66,7 +68,7 @@ class Testretention(AlignakTest):
         excmd = '[%d] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;test_contact;My downtime' \
                 % (now, now, now + 1200)
         time.sleep(1)
-        self._scheduler.run_external_command(excmd)
+        self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
 
         # # Acknowledge service
@@ -149,6 +151,7 @@ class Testretention(AlignakTest):
         assert 0 == len(hostn.comments)
         assert 0 == len(hostn.notifications_in_progress)
 
+        self._main_broker.broks = {}
         self._scheduler.restore_retention_data(retention)
 
         assert hostn.last_state == 'DOWN'
@@ -191,19 +194,16 @@ class Testretention(AlignakTest):
         assert set([self._scheduler.contacts.find_by_name("test_contact").uuid]) == \
                          hostn.notified_contacts
 
-        # acknowledge
-        assert True == svcn.problem_has_been_acknowledged
+        # Retention load monitoring log
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        self._sched = self._scheduler
-        for brok in self._broker.broks.itervalues():
+        for brok in self._main_broker.broks.values():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
 
         expected_logs = [
-            (u'INFO', u'RETENTION LOAD: scheduler-master')
+            (u'info', u'RETENTION LOAD: scheduler-master scheduler')
         ]
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_logs
-

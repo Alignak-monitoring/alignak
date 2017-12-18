@@ -47,11 +47,7 @@ class TestMaintenancePeriod(AlignakTest):
     This class tests the maintenance_period
     """
     def setUp(self):
-        """
-        For each test load and check the configuration
-        :return: None
-        """
-        self.print_header()
+        super(TestMaintenancePeriod, self).setUp()
         self.setup_with_file('cfg/cfg_default.cfg')
         assert self.conf_is_correct
 
@@ -68,7 +64,6 @@ class TestMaintenancePeriod(AlignakTest):
         
         :return: None
         """
-        self.print_header()
         # Get the host
         host = self._sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []

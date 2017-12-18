@@ -142,7 +142,7 @@ def jsonify_r(obj):
     """
     res = {}
     cls = obj.__class__
-    if not hasattr(cls, 'properties'):  # pragma: no cover, should not happen, simple protection.
+    if not hasattr(cls, 'properties'):
         try:
             json.dumps(obj)
             return obj
@@ -727,6 +727,25 @@ def unique_value(val):
 
 
 # ##################### Sorting ################
+def master_then_spare(sat1, sat2):
+    """Compare two satellite links, master is preceding spare
+
+    :param sat1: first link to compare
+    :type sat1:
+    :param sat2: second link to compare
+    :type sat2:
+    :return: sat1 > sat2 (1) if sat1 is master
+             sat1 == sat2 (0) if both are master or spare
+             sat1 < sat2 (-1) if sat1 is spare and sat2 is master
+    :rtype: int
+    """
+    if sat1.spare == sat2.spare:
+        return 0
+    if sat1.spare and not sat2.spare:
+        return -1
+    return 1
+
+
 def alive_then_spare_then_deads(sat1, sat2):
     """Compare two satellite link
     based on alive attribute then spare attribute
@@ -745,24 +764,6 @@ def alive_then_spare_then_deads(sat1, sat2):
     if not sat2.alive or (sat2.alive and sat2.spare and sat1.alive):
         return -1
     return 1
-
-
-def sort_by_ids(x00, y00):
-    """Compare x00, y00 base on their id
-
-    :param x00: first elem to compare
-    :type x00: int
-    :param y00: second elem to compare
-    :type y00: int
-    :return: x00 > y00 (1) if x00.uuid > y00.uuid, x00 == y00 (0) if id equals, x00 < y00 (-1) else
-    :rtype: int
-    """
-    if x00.uuid < y00.uuid:
-        return -1
-    if x00.uuid > y00.uuid:
-        return 1
-    # So is equal
-    return 0
 
 
 def sort_by_number_values(x00, y00):
@@ -1274,23 +1275,35 @@ def is_complex_expr(expr):
 def parse_daemon_args(arbiter=False):
     """Generic parsing function for daemons
 
+    All daemons:
+        '-n', "--name": Set the name of the daemon to pick in the configuration files.
+        This allows an arbiter to find its own configuration in the whole Alignak configuration
+        Using this parameter is mandatory for all the daemons except for the arbiter
+        (defaults to arbiter-master). If several arbiters are existing in the
+        configuration this will allow to determine which one is the master/spare.
+        The spare arbiter must be launched with this parameter!
+
+        '-e', '--environment': Alignak environment file - the most important and mandatory
+        parameter to define the name of the alignak.ini configuration file
+
+        '-c', '--config': Daemon configuration file (ini file) - deprecated!
+        '-d', '--daemon': Run as a daemon
+        '-r', '--replace': Replace previous running daemon
+        '-f', '--debugfile': File to dump debug logs.
+
+        These parameters allow to override the one defined in the Alignak configuration file:
+            '-o', '--host': interface the daemon will listen to
+            '-p', '--port': port the daemon will listen to
+
+            '-l', '--log_file': set the daemon log file name
+            '-i', '--pid_file': set the daemon pid file name
+
     Arbiter only:
             "-a", "--arbiter": Monitored configuration file(s),
             (multiple -a can be used, and they will be concatenated to make a global configuration
-            file)
+            file) - Note that this parameter is not necessary anymore
             "-V", "--verify-config": Verify configuration file(s) and exit
-            "-n", "--config-name": Set the name of the arbiter to pick in the configuration files.
-            This allows an arbiter to find its own configuration in the whole Alignak configuration
-            Using this parameter is mandatory when several arbiters are existing in the
-            configuration to determine which one is the master/spare. The spare arbiter must be
-            launched with this parameter!
 
-    All daemons:
-        '-c', '--config': Daemon configuration file (ini file)
-        '-d', '--daemon': Run as a daemon
-        '-r', '--replace': Replace previous running daemon
-        '-f', '--debugfile': File to dump debug logs
-        '-e', '--environment': Alignak environment file
 
 
     :param arbiter: Do we parse args for arbiter?
@@ -1312,18 +1325,25 @@ def parse_daemon_args(arbiter=False):
                             help='Verify the configuration file(s) and exit')
 
         parser.add_argument('-k', '--alignak-name', dest='alignak_name',
-                            default='Default-arbiter',
-                            help='Set the name of the arbiter to pick in the configuration files '
+                            default='My Alignak',
+                            help='Set the name of the Alignak instance. If not set, the arbiter '
+                                 'name will be used in place. Note that if an alignak_name '
+                                 'variable is defined in the configuration, it will overwrite '
+                                 'this parameter.'
                                  'For a spare arbiter, this parameter must contain its name!')
+        parser.add_argument('-n', '--name', dest='daemon_name',
+                            default='arbiter-master',
+                            help='Daemon unique name. Must be unique for the same daemon type.')
+    else:
+        parser.add_argument('-n', '--name', dest='daemon_name', required=True,
+                            help='Daemon unique name. Must be unique for the same daemon type.')
 
-    parser.add_argument('-n', '--name', dest='daemon_name', default="Unnamed",
-                        help='Daemon unique name. Must be unique for the same daemon type.')
     parser.add_argument('-c', '--config', dest='config_file',
                         help='Daemon configuration file. '
                              'Deprecated parameter, do not use it anymore!')
 
     parser.add_argument('-d', '--daemon', dest='is_daemon', default=False, action='store_true',
-                        help='Run as a daemon.')
+                        help='Run as a daemon. Fork the launched process and daemonize.')
 
     parser.add_argument('-r', '--replace', dest='do_replace', default=False, action='store_true',
                         help='Replace previous running daemon if any pid file is found.')
@@ -1339,11 +1359,11 @@ def parse_daemon_args(arbiter=False):
                         help='Port used by the daemon. '
                              'Default is set according to the daemon type.')
 
-    parser.add_argument('-l', '--local_log', dest='log_filename',
-                        help='File to use for daemon log. Set as empty to disable log file.')
+    parser.add_argument('-l', '--log_file', dest='log_filename',
+                        help='File used for the daemon log. Set as empty to disable log file.')
 
     parser.add_argument('-i', '--pid_file', dest='pid_filename',
-                        help='File to use to store daemon pid')
+                        help='File used to store the daemon pid')
 
     parser.add_argument('-e', '--environment', dest='env_file', required=True,
                         default='../../etc/alignak.ini',

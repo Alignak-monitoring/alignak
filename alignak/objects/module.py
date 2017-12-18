@@ -78,11 +78,11 @@ class Module(Item):
         'python_name':
             StringProp(),
         # Old "deprecated" property - replaced with name
-        # 'module_alias':
-        #     StringProp(),
+        'module_alias':
+            StringProp(),
         # Old "deprecated" property - replaced with type
-        # 'module_types':
-        #     ListProp(default=[''], split_on_coma=True),
+        'module_types':
+            ListProp(default=[''], split_on_coma=True),
         # Do not manage modules having modules
         # 'modules':
         #     ListProp(default=[''], split_on_coma=True)
@@ -91,6 +91,18 @@ class Module(Item):
     macros = {}
 
     def __init__(self, params=None, parsing=True):
+        # Manage the missing module name
+        if 'name' not in params:
+            if 'module_alias' in params:
+                params['name'] = params['module_alias']
+            else:
+                params['name'] = "Unnamed"
+        if 'module_alias' not in params:
+            if 'name' in params:
+                params['module_alias'] = params['name']
+            else:
+                params['module_alias'] = "Unnamed"
+
         super(Module, self).__init__(params, parsing=parsing)
 
         self.fill_default()
@@ -106,13 +118,22 @@ class Module(Item):
                (self.__class__.__name__, self.name, self.python_name, self.type)
     __str__ = __repr__
 
-    @property
-    def module_alias(self):
-        """Getter for module_alias, maintain compatibility with older modules
-
-        :return: self.name
+    def get_name(self):
         """
-        return self.name
+        Get name of module
+
+        :return: Name of module
+        :rtype: str
+        """
+        return getattr(self, 'name', self.module_alias)
+
+    # @property
+    # def module_alias(self):
+    #     """Getter for module_alias, maintain compatibility with older modules
+    #
+    #     :return: self.name
+    #     """
+    #     return self.name
 
     def get_types(self):
         """
@@ -133,6 +154,18 @@ class Module(Item):
         """
         return module_type in self.module_types
 
+    def serialize(self):
+        res = super(Module, self).serialize()
+
+        # for prop in ['check_command', 'event_handler', 'snapshot_command', 'business_rule',
+        #              'acknowledgement']:
+        #     if getattr(self, prop) is None:
+        #         res[prop] = None
+        #     else:
+        #         res[prop] = getattr(self, prop).serialize()
+
+        return res
+
 
 class Modules(Items):
     """
@@ -149,4 +182,3 @@ class Modules(Items):
         """
         warnings.warn("Linking modules to modules (%s) is not managed by Alignak.".format(s=self),
                       DeprecationWarning, stacklevel=2)
-        pass

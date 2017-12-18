@@ -277,7 +277,7 @@ class Downtime(AlignakObject):
         self.can_be_deleted = True
         # when a downtime ends and the service was critical
         # a notification is sent with the next critical check
-        # So we should set a flag here which signals consume_result
+        # So we should set a flag here which informs the consume_result function
         # to send a notification
         item.in_scheduled_downtime_during_last_check = True
         return broks

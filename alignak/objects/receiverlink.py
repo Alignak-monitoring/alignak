@@ -45,7 +45,7 @@ This module provide ReceiverLink and ReceiverLinks classes used to manage receiv
 """
 import logging
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
-from alignak.property import BoolProp, IntegerProp, StringProp
+from alignak.property import IntegerProp, StringProp
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -58,26 +58,12 @@ class ReceiverLink(SatelliteLink):
     properties = SatelliteLink.properties.copy()
     properties.update({
         'type':
-            StringProp(default='receiver', fill_brok=['full_status']),
+            StringProp(default='receiver', fill_brok=['full_status'], to_send=True),
         'receiver_name':
             StringProp(default='', fill_brok=['full_status'], to_send=True),
         'port':
-            IntegerProp(default=7772, fill_brok=['full_status']),
-        'manage_sub_realms':
-            BoolProp(default=False, fill_brok=['full_status']),
-        'manage_arbiters':
-            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
-        'accept_passive_unknown_check_results':
-            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
+            IntegerProp(default=7772, fill_brok=['full_status'], to_send=True),
     })
-    #
-    # def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
-    #     """
-    #     Add this reactionner to the realm
-    #
-    #     :return: None
-    #     """
-    #     self.realm.receivers.append(self)
 
 
 class ReceiverLinks(SatelliteLinks):

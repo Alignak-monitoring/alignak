@@ -54,6 +54,8 @@ class TestExcludeServices(AlignakTest):
     """
 
     def setUp(self):
+        super(TestExcludeServices, self).setUp()
+
         self.setup_with_file('cfg/cfg_exclude_include_services.cfg')
         self._sched = self._scheduler
 
@@ -101,7 +103,3 @@ class TestExcludeServices(AlignakTest):
 
         for svc in ('srv-svc12', 'srv-svc21', 'proc proc1'):
             assert find(svc) is None, "%s found" % svc
-
-
-if __name__ == '__main__':
-    AlignakTest.main()

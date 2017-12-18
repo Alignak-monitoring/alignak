@@ -94,7 +94,6 @@ class SchedulerInterface(GenericInterface):
 
         for result in results:
             logger.debug("-> result: %s", result)
-            # resultobj = unserialize(result, True)
             result.set_type_active()
 
             # Update scheduler counters
@@ -116,50 +115,44 @@ class SchedulerInterface(GenericInterface):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_broks(self, bname):
+    def get_broks(self, broker_name):
         """Get broks from scheduler, used by brokers
 
-        :param bname: broker name, used to filter broks
-        :type bname: str
+        :param broker_name: broker name, used to filter broks
+        :type broker_name: str
         :return: serialized brok list
         :rtype: dict
         """
-        # Maybe it was not registered as it should, if so,
-        # do it for it
-        if bname not in self.app.sched.brokers:
-            self.fill_initial_broks(bname)
-        elif not self.app.sched.brokers[bname]['initialized']:
-            self.fill_initial_broks(bname)
-
-        if bname not in self.app.sched.brokers:
+        logger.debug("Getting broks for %s from the scheduler", broker_name)
+        broker_uuid = None
+        for broker_link in self.app.brokers.values():
+            if broker_name == broker_link.name:
+                broker_uuid = broker_link.uuid
+                break
+        else:
+            logger.warning("Requesting broks for an unknown broker: %s", broker_name)
             return {}
 
         # Now get the broks for this specific broker
-        res = self.app.sched.get_broks(bname)
+        res = self.app.get_broks(broker_name)
 
         # we do not more have a full broks in queue
-        self.app.sched.brokers[bname]['has_full_broks'] = False
+        self.app.brokers[broker_uuid].has_full_broks = False
         return serialize(res, True)
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def fill_initial_broks(self, bname):
+    def fill_initial_broks(self, broker_name):
         """Get initial_broks type broks from scheduler, used by brokers
         Do not send broks, only make scheduler internal processing
 
-        :param bname: broker name, used to filter broks
-        :type bname: str
+        :param broker_name: broker name, used to filter broks
+        :type broker_name: str
         :return: None
-        TODO: Maybe we should check_last time we did it to prevent DDoS
         """
         with self.app.conf_lock:
-            if bname not in self.app.sched.brokers:
-                return
-            env = self.app.sched.brokers[bname]
-            if not env['has_full_broks']:
-                logger.info("A new broker just connected : %s", bname)
-                # env['broks'].clear()
-                self.app.sched.fill_initial_broks(bname, with_logs=True)
+            logger.info("A new broker just connected : %s", broker_name)
+            return self.app.sched.fill_initial_broks(broker_name, with_logs=True)
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -213,15 +206,16 @@ class SchedulerInterface(GenericInterface):
     @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
-    def put_conf(self, conf=None):
+    def push_configuration(self, pushed_configuration=None):
         """Post conf to scheduler (from arbiter)
 
         :return: None
         """
         # Stop the current scheduling loop
         self.app.sched.stop_scheduling()
-        conf = cherrypy.request.json
-        super(SchedulerInterface, self).put_conf(conf['conf'])
+        pushed_configuration = cherrypy.request.json
+        return super(SchedulerInterface, self).push_configuration(
+            pushed_configuration=pushed_configuration['conf'])
 
     @cherrypy.expose
     @cherrypy.tools.json_out()

@@ -33,7 +33,7 @@ alignak-environment command line interface::
         This script will parse the provided configuration file and it will output all the
         variables defined in this file as Linux/Unix shell export variables.
 
-        As an example for a file as the default ./etc/alignak-realm2.ini, the script will output:
+        As an example for a file as the default ./etc/alignak.ini, the script will output:
             export ALIGNAK_VERSION=1.0.0
             export ALIGNAK_CONFIGURATION_DIST_BIN=../alignak/bin
             export ALIGNAK_CONFIGURATION_DIST_ETC=../etc
@@ -42,179 +42,7 @@ alignak-environment command line interface::
             export ALIGNAK_CONFIGURATION_DIST_LOG=/tmp
             export ALIGNAK_CONFIGURATION_USER=alignak
             export ALIGNAK_CONFIGURATION_GROUP=alignak
-            export ALIGNAK_CONFIGURATION_WORKDIR=/tmp
-            export ALIGNAK_CONFIGURATION_LOGDIR=/tmp
-            export ALIGNAK_CONFIGURATION_ETCDIR=../etc
-            export ALIGNAK_CONFIGURATION_USE_SSL=0
-            export ALIGNAK_CONFIGURATION_HARD_SSL_NAME_CHECK=0
-            export ALIGNAK_CONFIGURATION_CA_CERT=../etc/certs/ca.pem
-            export ALIGNAK_CONFIGURATION_SERVER_CERT=../etc/certs/server.crt
-            export ALIGNAK_CONFIGURATION_SERVER_KEY=../etc/certs/server.key
-            export ALIGNAK_CONFIGURATION_SERVER_DH=../etc/certs/server.pem
-            export ALIGNAK_CONFIGURATION_NAME=daemon
-            export ALIGNAK_CONFIGURATION_PORT=10000
-            export ALIGNAK_CONFIGURATION_PIDFILE=/tmp/daemon.pid
-            export ALIGNAK_CONFIGURATION_LOCAL_LOG=/tmp/daemon.log
-            export ALIGNAK_CONFIGURATION_MAX_QUEUE_SIZE=0
-            export ALIGNAK_CONFIGURATION_CFG=../etc/alignak.cfg
-            export ALIGNAK_CONFIGURATION_CFG2=''
-            export DAEMON_ARBITER_MASTER_DIST_BIN=../alignak/bin
-            export DAEMON_ARBITER_MASTER_DIST_ETC=../etc
-            export DAEMON_ARBITER_MASTER_DIST_VAR=/tmp
-            export DAEMON_ARBITER_MASTER_DIST_RUN=/tmp
-            export DAEMON_ARBITER_MASTER_DIST_LOG=/tmp
-            export DAEMON_ARBITER_MASTER_USER=alignak
-            export DAEMON_ARBITER_MASTER_GROUP=alignak
-            export DAEMON_ARBITER_MASTER_WORKDIR=/tmp
-            export DAEMON_ARBITER_MASTER_LOGDIR=/tmp
-            export DAEMON_ARBITER_MASTER_ETCDIR=../etc
-            export DAEMON_ARBITER_MASTER_USE_SSL=0
-            export DAEMON_ARBITER_MASTER_HARD_SSL_NAME_CHECK=0
-            export DAEMON_ARBITER_MASTER_CA_CERT=../etc/certs/ca.pem
-            export DAEMON_ARBITER_MASTER_SERVER_CERT=../etc/certs/server.crt
-            export DAEMON_ARBITER_MASTER_SERVER_KEY=../etc/certs/server.key
-            export DAEMON_ARBITER_MASTER_SERVER_DH=../etc/certs/server.pem
-            export DAEMON_ARBITER_MASTER_NAME=arbiter-master
-            export DAEMON_ARBITER_MASTER_PORT=7770
-            export DAEMON_ARBITER_MASTER_PIDFILE=/tmp/arbiter-master.pid
-            export DAEMON_ARBITER_MASTER_LOCAL_LOG=/tmp/arbiter-master.log
-            export DAEMON_ARBITER_MASTER_MAX_QUEUE_SIZE=0
-            export DAEMON_ARBITER_MASTER_DAEMON=alignak-arbiter
-            export DAEMON_SCHEDULER_MASTER_DIST_BIN=../alignak/bin
-            export DAEMON_SCHEDULER_MASTER_DIST_ETC=../etc
-            export DAEMON_SCHEDULER_MASTER_DIST_VAR=/tmp
-            export DAEMON_SCHEDULER_MASTER_DIST_RUN=/tmp
-            export DAEMON_SCHEDULER_MASTER_DIST_LOG=/tmp
-            export DAEMON_SCHEDULER_MASTER_USER=alignak
-            export DAEMON_SCHEDULER_MASTER_GROUP=alignak
-            export DAEMON_SCHEDULER_MASTER_WORKDIR=/tmp
-            export DAEMON_SCHEDULER_MASTER_LOGDIR=/tmp
-            export DAEMON_SCHEDULER_MASTER_ETCDIR=../etc
-            export DAEMON_SCHEDULER_MASTER_USE_SSL=0
-            export DAEMON_SCHEDULER_MASTER_HARD_SSL_NAME_CHECK=0
-            export DAEMON_SCHEDULER_MASTER_CA_CERT=../etc/certs/ca.pem
-            export DAEMON_SCHEDULER_MASTER_SERVER_CERT=../etc/certs/server.crt
-            export DAEMON_SCHEDULER_MASTER_SERVER_KEY=../etc/certs/server.key
-            export DAEMON_SCHEDULER_MASTER_SERVER_DH=../etc/certs/server.pem
-            export DAEMON_SCHEDULER_MASTER_NAME=scheduler-master
-            export DAEMON_SCHEDULER_MASTER_PORT=7768
-            export DAEMON_SCHEDULER_MASTER_PIDFILE=/tmp/scheduler-master.pid
-            export DAEMON_SCHEDULER_MASTER_LOCAL_LOG=/tmp/scheduler-master.log
-            export DAEMON_SCHEDULER_MASTER_MAX_QUEUE_SIZE=0
-            export DAEMON_SCHEDULER_MASTER_DAEMON=alignak-scheduler
-            export DAEMON_POLLER_MASTER_DIST_BIN=../alignak/bin
-            export DAEMON_POLLER_MASTER_DIST_ETC=../etc
-            export DAEMON_POLLER_MASTER_DIST_VAR=/tmp
-            export DAEMON_POLLER_MASTER_DIST_RUN=/tmp
-            export DAEMON_POLLER_MASTER_DIST_LOG=/tmp
-            export DAEMON_POLLER_MASTER_USER=alignak
-            export DAEMON_POLLER_MASTER_GROUP=alignak
-            export DAEMON_POLLER_MASTER_WORKDIR=/tmp
-            export DAEMON_POLLER_MASTER_LOGDIR=/tmp
-            export DAEMON_POLLER_MASTER_ETCDIR=../etc
-            export DAEMON_POLLER_MASTER_USE_SSL=0
-            export DAEMON_POLLER_MASTER_HARD_SSL_NAME_CHECK=0
-            export DAEMON_POLLER_MASTER_CA_CERT=../etc/certs/ca.pem
-            export DAEMON_POLLER_MASTER_SERVER_CERT=../etc/certs/server.crt
-            export DAEMON_POLLER_MASTER_SERVER_KEY=../etc/certs/server.key
-            export DAEMON_POLLER_MASTER_SERVER_DH=../etc/certs/server.pem
-            export DAEMON_POLLER_MASTER_NAME=poller-master
-            export DAEMON_POLLER_MASTER_PORT=7771
-            export DAEMON_POLLER_MASTER_PIDFILE=/tmp/poller-master.pid
-            export DAEMON_POLLER_MASTER_LOCAL_LOG=/tmp/poller-master.log
-            export DAEMON_POLLER_MASTER_MAX_QUEUE_SIZE=0
-            export DAEMON_POLLER_MASTER_DAEMON=alignak-poller
-            export DAEMON_REACTIONNER_MASTER_DIST_BIN=../alignak/bin
-            export DAEMON_REACTIONNER_MASTER_DIST_ETC=../etc
-            export DAEMON_REACTIONNER_MASTER_DIST_VAR=/tmp
-            export DAEMON_REACTIONNER_MASTER_DIST_RUN=/tmp
-            export DAEMON_REACTIONNER_MASTER_DIST_LOG=/tmp
-            export DAEMON_REACTIONNER_MASTER_USER=alignak
-            export DAEMON_REACTIONNER_MASTER_GROUP=alignak
-            export DAEMON_REACTIONNER_MASTER_WORKDIR=/tmp
-            export DAEMON_REACTIONNER_MASTER_LOGDIR=/tmp
-            export DAEMON_REACTIONNER_MASTER_ETCDIR=../etc
-            export DAEMON_REACTIONNER_MASTER_USE_SSL=0
-            export DAEMON_REACTIONNER_MASTER_HARD_SSL_NAME_CHECK=0
-            export DAEMON_REACTIONNER_MASTER_CA_CERT=../etc/certs/ca.pem
-            export DAEMON_REACTIONNER_MASTER_SERVER_CERT=../etc/certs/server.crt
-            export DAEMON_REACTIONNER_MASTER_SERVER_KEY=../etc/certs/server.key
-            export DAEMON_REACTIONNER_MASTER_SERVER_DH=../etc/certs/server.pem
-            export DAEMON_REACTIONNER_MASTER_NAME=reactionner-master
-            export DAEMON_REACTIONNER_MASTER_PORT=7769
-            export DAEMON_REACTIONNER_MASTER_PIDFILE=/tmp/reactionner-master.pid
-            export DAEMON_REACTIONNER_MASTER_LOCAL_LOG=/tmp/reactionner-master.log
-            export DAEMON_REACTIONNER_MASTER_MAX_QUEUE_SIZE=0
-            export DAEMON_REACTIONNER_MASTER_DAEMON=alignak-reactionner
-            export DAEMON_BROKER_MASTER_DIST_BIN=../alignak/bin
-            export DAEMON_BROKER_MASTER_DIST_ETC=../etc
-            export DAEMON_BROKER_MASTER_DIST_VAR=/tmp
-            export DAEMON_BROKER_MASTER_DIST_RUN=/tmp
-            export DAEMON_BROKER_MASTER_DIST_LOG=/tmp
-            export DAEMON_BROKER_MASTER_USER=alignak
-            export DAEMON_BROKER_MASTER_GROUP=alignak
-            export DAEMON_BROKER_MASTER_WORKDIR=/tmp
-            export DAEMON_BROKER_MASTER_LOGDIR=/tmp
-            export DAEMON_BROKER_MASTER_ETCDIR=../etc
-            export DAEMON_BROKER_MASTER_USE_SSL=0
-            export DAEMON_BROKER_MASTER_HARD_SSL_NAME_CHECK=0
-            export DAEMON_BROKER_MASTER_CA_CERT=../etc/certs/ca.pem
-            export DAEMON_BROKER_MASTER_SERVER_CERT=../etc/certs/server.crt
-            export DAEMON_BROKER_MASTER_SERVER_KEY=../etc/certs/server.key
-            export DAEMON_BROKER_MASTER_SERVER_DH=../etc/certs/server.pem
-            export DAEMON_BROKER_MASTER_NAME=broker-master
-            export DAEMON_BROKER_MASTER_PORT=7772
-            export DAEMON_BROKER_MASTER_PIDFILE=/tmp/broker-master.pid
-            export DAEMON_BROKER_MASTER_LOCAL_LOG=/tmp/broker-master.log
-            export DAEMON_BROKER_MASTER_MAX_QUEUE_SIZE=100000
-            export DAEMON_BROKER_MASTER_DAEMON=alignak-broker
-            export DAEMON_RECEIVER_MASTER_DIST_BIN=../alignak/bin
-            export DAEMON_RECEIVER_MASTER_DIST_ETC=../etc
-            export DAEMON_RECEIVER_MASTER_DIST_VAR=/tmp
-            export DAEMON_RECEIVER_MASTER_DIST_RUN=/tmp
-            export DAEMON_RECEIVER_MASTER_DIST_LOG=/tmp
-            export DAEMON_RECEIVER_MASTER_USER=alignak
-            export DAEMON_RECEIVER_MASTER_GROUP=alignak
-            export DAEMON_RECEIVER_MASTER_WORKDIR=/tmp
-            export DAEMON_RECEIVER_MASTER_LOGDIR=/tmp
-            export DAEMON_RECEIVER_MASTER_ETCDIR=../etc
-            export DAEMON_RECEIVER_MASTER_USE_SSL=0
-            export DAEMON_RECEIVER_MASTER_HARD_SSL_NAME_CHECK=0
-            export DAEMON_RECEIVER_MASTER_CA_CERT=../etc/certs/ca.pem
-            export DAEMON_RECEIVER_MASTER_SERVER_CERT=../etc/certs/server.crt
-            export DAEMON_RECEIVER_MASTER_SERVER_KEY=../etc/certs/server.key
-            export DAEMON_RECEIVER_MASTER_SERVER_DH=../etc/certs/server.pem
-            export DAEMON_RECEIVER_MASTER_NAME=receiver-master
-            export DAEMON_RECEIVER_MASTER_PORT=7773
-            export DAEMON_RECEIVER_MASTER_PIDFILE=/tmp/receiver-master.pid
-            export DAEMON_RECEIVER_MASTER_LOCAL_LOG=/tmp/receiver-master.log
-            export DAEMON_RECEIVER_MASTER_MAX_QUEUE_SIZE=0
-            export DAEMON_RECEIVER_MASTER_DAEMON=alignak-receiver
-            export MODULE_BACKEND_ARBITER_DIST_BIN=../alignak/bin
-            export MODULE_BACKEND_ARBITER_DIST_ETC=../etc
-            export MODULE_BACKEND_ARBITER_DIST_VAR=/tmp
-            export MODULE_BACKEND_ARBITER_DIST_RUN=/tmp
-            export MODULE_BACKEND_ARBITER_DIST_LOG=/tmp
-            export MODULE_BACKEND_ARBITER_USER=alignak
-            export MODULE_BACKEND_ARBITER_GROUP=alignak
-            export MODULE_BACKEND_ARBITER_WORKDIR=/tmp
-            export MODULE_BACKEND_ARBITER_LOGDIR=/tmp
-            export MODULE_BACKEND_ARBITER_ETCDIR=../etc
-            export MODULE_BACKEND_ARBITER_USE_SSL=0
-            export MODULE_BACKEND_ARBITER_HARD_SSL_NAME_CHECK=0
-            export MODULE_BACKEND_ARBITER_CA_CERT=../etc/certs/ca.pem
-            export MODULE_BACKEND_ARBITER_SERVER_CERT=../etc/certs/server.crt
-            export MODULE_BACKEND_ARBITER_SERVER_KEY=../etc/certs/server.key
-            export MODULE_BACKEND_ARBITER_SERVER_DH=../etc/certs/server.pem
-            export MODULE_BACKEND_ARBITER_NAME=daemon
-            export MODULE_BACKEND_ARBITER_PORT=10000
-            export MODULE_BACKEND_ARBITER_PIDFILE=/tmp/daemon.pid
-            export MODULE_BACKEND_ARBITER_LOCAL_LOG=/tmp/daemon.log
-            export MODULE_BACKEND_ARBITER_MAX_QUEUE_SIZE=0
-            export MODULE_BACKEND_ARBITER_PROCESS=alignak-arbiter
-            export MODULE_BACKEND_ARBITER_DAEMON=alignak-arbiter
-            export MODULE_BACKEND_ARBITER_CFG=../etc/daemons/arbiterd.ini
-            export MODULE_BACKEND_ARBITER_DEBUGFILE=/tmp/arbiter-debug.log
+            ...
 
         The export directives consider that shell variables must only contain [A-Za-z0-9_]
         in their name. All non alphanumeric characters are replaced with an underscore.
@@ -315,7 +143,7 @@ class AlignakConfigParser(object):
 
         Exit the script if some errors are encountered.
 
-        :return: None
+        :return: True/False
         """
         self.config = ConfigParser.ConfigParser()
         self.config.read(self.configuration_file)
@@ -346,9 +174,15 @@ class AlignakConfigParser(object):
                         inner_property = re.sub('[^0-9a-zA-Z]+', '_', inner_property)
                         inner_property = inner_property.upper()
                         print("export %s=%s" % (inner_property, cmd_quote(value)))
-        except ConfigParser.InterpolationMissingOptionError as err:
-            err = str(err)
-            wrong_variable = err.split('\n')[3].split(':')[1].strip()
+        except ConfigParser.ParsingError as exp:
+            print("* parsing error in config file : %s\n%s" %
+                  (self.configuration_file, exp.message))
+            if self.embedded:
+                return False
+            sys.exit(3)
+        except ConfigParser.InterpolationMissingOptionError as exp:
+            exp = str(exp)
+            wrong_variable = exp.split('\n')[3].split(':')[1].strip()
             print("* incorrect or missing variable '%s' in config file : %s" %
                   (wrong_variable, self.configuration_file))
             if self.embedded:
@@ -357,6 +191,8 @@ class AlignakConfigParser(object):
 
         if self.verbose:
             print("Configuration file parsed correctly")
+
+        return True
 
     def _search_sections(self, searched_sections=''):
         """
@@ -376,6 +212,14 @@ class AlignakConfigParser(object):
                 found_sections[section].update({key: value})
         return found_sections
 
+    def get_defaults(self):
+        """
+        Get all the parameters defined in the DEFAULT ini file section...
+
+        :return: a dict containing the default parameters
+        """
+        return self.config.defaults()
+
     def get_monitored_configuration(self):
         """
         Get the Alignak monitored configuration parameters
@@ -385,21 +229,26 @@ class AlignakConfigParser(object):
         configuration = self._search_sections(SECTION_CONFIGURATION)
         if SECTION_CONFIGURATION not in configuration:
             return []
-        for prop, value in configuration[SECTION_CONFIGURATION].items():
+        for prop, _ in configuration[SECTION_CONFIGURATION].items():
             if not prop.startswith('cfg'):
                 configuration[SECTION_CONFIGURATION].pop(prop)
         return configuration[SECTION_CONFIGURATION]
 
     def get_alignak_configuration(self):
         """
-        Get the Alignak global parameters. Indeed all the parameters defined in the DEFAULT
-        ini file section...
+        Get the Alignak configuration parameters, except the variables starting with 'cfg'
 
-        :return: a dict containing the Alignak parameters
+        :return: a dict containing the Alignak configuration files
         """
-        return self.config.defaults()
+        configuration = self._search_sections(SECTION_CONFIGURATION)
+        if SECTION_CONFIGURATION not in configuration:
+            return []
+        for prop, _ in configuration[SECTION_CONFIGURATION].items():
+            if prop.startswith('cfg'):
+                configuration[SECTION_CONFIGURATION].pop(prop)
+        return configuration[SECTION_CONFIGURATION]
 
-    def get_daemons(self, name=None, type=None):
+    def get_daemons(self, daemon_name=None, daemon_type=None):
         """
         Get the daemons configuration parameters
 
@@ -407,26 +256,26 @@ class AlignakConfigParser(object):
         If type is provided, get the configuration for all the daemons of this type, else
         get the configuration of all the daemons.
 
-        :param name: the searched daemon name
-        :param type: the searched daemon type
+        :param daemon_name: the searched daemon name
+        :param daemon_type: the searched daemon type
         :return: a dict containing the daemon(s) configuration parameters
         """
-        if name is not None:
-            sections = self._search_sections('daemon.' + name)
-            if 'daemon.' + name in sections:
-                return sections['daemon.' + name]
+        if daemon_name is not None:
+            sections = self._search_sections('daemon.%s' % daemon_name)
+            if 'daemon.%s' % daemon_name in sections:
+                return sections['daemon.' + daemon_name]
             return {}
 
-        if type is not None:
+        if daemon_type is not None:
             sections = self._search_sections('daemon.')
             for name, daemon in sections.items():
-                if 'type' not in daemon or not daemon['type'] == type:
+                if 'type' not in daemon or not daemon['type'] == daemon_type:
                     sections.pop(name)
             return sections
 
         return self._search_sections('daemon.')
 
-    def get_modules(self, name=None, daemon_name=None):
+    def get_modules(self, name=None, daemon_name=None, names_only=True):
         """
         Get the modules configuration parameters
 
@@ -436,6 +285,7 @@ class AlignakConfigParser(object):
 
         :param name: the searched module name
         :param daemon_name: the modules of this daemon
+        :param names_only: if True only returns the modules names, else all the configuration data
         :return: a dict containing the module(s) configuration parameters
         """
         if name is not None:
@@ -448,8 +298,12 @@ class AlignakConfigParser(object):
             section = self.get_daemons(daemon_name)
             if 'modules' in section and section['modules']:
                 modules = []
-                for module in section['modules'].split(','):
-                    modules.append(self.get_modules(module))
+                for module_name in section['modules'].split(','):
+                    if names_only:
+                        modules.append(module_name)
+                    else:
+                        modules.append(self.get_modules(name=module_name))
+                return modules
             return []
 
         return self._search_sections('module.')
@@ -460,7 +314,10 @@ def main():
     Main function
     """
     parsed_configuration = AlignakConfigParser()
-    parsed_configuration.parse()
+    try:
+        parsed_configuration.parse()
+    except ConfigParser.ParsingError as exp:
+        print("Environment file parsing error: %s", exp)
 
     if parsed_configuration.export:
         # Export Alignak version

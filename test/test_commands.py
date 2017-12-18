@@ -60,6 +60,8 @@ class TestCommand(AlignakTest):
     """
 
     def setUp(self):
+        super(TestCommand, self).setUp()
+
         self.setup_with_file('cfg/cfg_commands.cfg', verbose=False)
         assert self.conf_is_correct
 
@@ -68,7 +70,7 @@ class TestCommand(AlignakTest):
 
     def test_css_in_commands(self):
         """ Test CSS and HTML in command """
-        self.print_header()
+        pass
 
         # The test is implicit because the configuration got loaded!
 
@@ -136,8 +138,6 @@ class TestCommand(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         # No parameters
         c = Command()
         # No command_name nor command_line attribute exist!
@@ -161,8 +161,6 @@ class TestCommand(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         # Get a command
         c = self._sched.commands.find_by_name("command_poller_tag")
         assert c is not None
@@ -180,8 +178,6 @@ class TestCommand(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         t = {
             'command_name': '_internal_host_up',
             'command_line': '_internal_host_up'
@@ -209,8 +205,6 @@ class TestCommand(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         t = {
             'command_name': '_echo',
             'command_line': '_echo'
@@ -238,8 +232,6 @@ class TestCommand(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         t = {
             'command_name': 'check_command_test',
             'command_line': '/tmp/dummy_command.sh $ARG1$ $ARG2$',
@@ -269,8 +261,6 @@ class TestCommand(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         t = {
             'command_name': 'check_command_test',
             'command_line': '/tmp/dummy_command.sh $ARG1$ $ARG2$',

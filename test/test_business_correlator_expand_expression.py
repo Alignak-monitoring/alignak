@@ -61,6 +61,7 @@ PROFILE_BP_RULE_RE_PROCESSING = False
 class TestBusinessCorrelatorExpand(AlignakTest):
 
     def setUp(self):
+        super(TestBusinessCorrelatorExpand, self).setUp()
         self.setup_with_file('cfg/cfg_business_correlator_expression.cfg')
         assert self.conf_is_correct
         self._sched = self._scheduler

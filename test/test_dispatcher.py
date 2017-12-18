@@ -22,149 +22,438 @@
 This file tests the dispatcher (distribute configuration to satellites)
 """
 
+import re
 import time
+import datetime
 import pytest
 import requests_mock
-# from requests.packages.urllib3.response import HTTPResponse
+from freezegun import freeze_time
 from alignak_test import AlignakTest
 from alignak.misc.serialization import unserialize
+from alignak.daemons.arbiterdaemon import Arbiter
+from alignak.dispatcher import Dispatcher, DispatcherError
 
 
 class TestDispatcher(AlignakTest):
     """
     This class tests the dispatcher (distribute configuration to satellites)
     """
+    def setUp(self):
+        super(TestDispatcher, self).setUp()
 
-    def test_simple(self):
-        """ Simple test
+    def _dispatching(self, env_filename='cfg/dispatcher/simple.ini', loops=3, multi_realms=False):
+        """ Dispatching process: prepare, check, dispatch
 
-        have one realm and:
-        * 1 scheduler
-        * 1 poller
-        * 1 receiver
-        * 1 reactionner
-        * 1 broker
+        This function realize all the dispatching operations:
+        - load a monitoring configuration
+        - prepare the dispatching
+        - dispatch
+        - check the correct dispatching, including:
+            - check the configuration dispatched to the schedulers
+            - check the configuration dispatched to the spare arbiter (if any)
+        - run the check_reachable loop several times
+
+        if multi_realms is True, the scheduler configuration received are not checked against
+        the arbiter whole configuration. This would be really too complex to assert on this :(
+
+        Schedulers must have a port number with 7768 (eg. 7768,17768,27768,...)
+
+        Spare daemons must have a port number with 8770 (eg. 8770,18770,28770,...)
 
         :return: None
         """
-        self.print_header()
-        self.setup_with_file('cfg/dispatcher/simple.cfg')
-        assert 1 == len(self.arbiter.dispatcher.conf.realms)
-        for realm in self.arbiter.dispatcher.conf.realms:
-            assert 1 == len(realm.parts)
-            for cfg in realm.parts.values():
-                assert cfg.is_assigned
-        assert 1 == len(self.arbiter.dispatcher.schedulers)
-        for satellite in self.arbiter.dispatcher.satellites:
-            print("Satellite: %s" % satellite)
-            # All the satellites must have a scheduler link, except the scheduler !
-            if satellite.type == 'scheduler':
+        args = {
+            'env_file': env_filename, 'alignak_name': 'alignak-test', 'daemon_name': 'arbiter-master'
+        }
+        my_arbiter = Arbiter(**args)
+        my_arbiter.setup_alignak_logger()
+
+        # Clear logs
+        self.clear_logs()
+
+        my_arbiter.load_modules_manager()
+        my_arbiter.load_monitoring_config_file()
+        assert my_arbiter.conf.conf_is_correct is True
+        # logging.getLogger('alignak').setLevel(logging.DEBUG)
+
+        objects_map = {}
+        for _, _, strclss, _, _ in my_arbiter.conf.types_creations.values():
+            if strclss in ['hostescalations', 'serviceescalations']:
                 continue
-            assert {} != satellite.cfg['schedulers'], satellite.get_name()
-            assert 1 == len(satellite.cfg['schedulers']), 'must have 1 scheduler'
-        assert 4 == len(self.arbiter.dispatcher.satellites)
 
-        # check if scheduler has right the 6 hosts
-        assert 6 == len(self._scheduler.hosts)
+            objects_list = getattr(my_arbiter.conf, strclss, [])
+            objects_map[strclss] = {'count': len(objects_list), 'str': str(objects_list)}
+            # print("Got %d %s: %s" % (len(objects_list), strclss, objects_list))
 
-    def test_simple_multi_schedulers(self):
-        """ Simple test (one realm) but with multiple schedulers:
-        * 2 scheduler
-        * 1 poller
-        * 1 receiver
-        * 1 reactionner
-        * 1 broker
+        # Freeze the time !
+        initial_datetime = datetime.datetime.now()
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
+
+            # #1 - Get a new dispatcher
+            my_dispatcher = Dispatcher(my_arbiter.conf, my_arbiter.link_to_myself)
+            print("*** All daemons WS: %s"
+                  % ["%s:%s" % (link.address, link.port)
+                     for link in my_dispatcher.all_daemons_links])
+
+            assert my_dispatcher.dispatch_ok is False
+            assert my_dispatcher.new_to_dispatch is False
+            assert my_dispatcher.first_dispatch_done is False
+
+            self.assert_any_log_match(re.escape("Dispatcher arbiters/satellites map:"))
+            for link in my_dispatcher.all_daemons_links:
+                self.assert_any_log_match(re.escape(" - %s: %s" % (link.name, link.uri)))
+
+            # Simulate the daemons HTTP interface (very simple simulation !)
+            with requests_mock.mock() as mr:
+                for link in my_dispatcher.all_daemons_links:
+                    mr.get('http://%s:%s/ping' % (link.address, link.port),
+                           json='pong')
+                    mr.get('http://%s:%s/get_running_id' % (link.address, link.port),
+                           json=123456.123456)
+                    mr.get('http://%s:%s/fill_initial_broks' % (link.address, link.port),
+                           json=[])
+                    mr.post('http://%s:%s/push_configuration' % (link.address, link.port),
+                            json=True)
+                    mr.get('http://%s:%s/get_managed_configurations' % (link.address, link.port),
+                           json=link.cfg_managed)
+                    mr.get('http://%s:%s/do_not_run' % (link.address, link.port),
+                           json=True)
+
+                for link in my_dispatcher.all_daemons_links:
+                    # print("Satellite: %s / %s" % (link, link.cfg_to_manage))
+                    assert not link.hash
+                    assert not link.push_flavor
+                    assert not link.cfg_to_manage
+                    assert not link.cfg_managed
+
+                # #2 - Initialize connection with all our satellites
+                for satellite in my_dispatcher.all_daemons_links:
+                    assert my_arbiter.daemon_connection_init(satellite)
+                # All links have a running identifier
+                for link in my_dispatcher.all_daemons_links:
+                    if link == my_dispatcher.arbiter_link:
+                        continue
+                    assert link.running_id == 123456.123456
+                    self.assert_any_log_match(re.escape(
+                        "got the running identifier for %s %s" % (link.type, link.name)
+                    ))
+
+                # #3 - Check reachable - a configuration is not yet prepared,
+                # so only check reachable state
+                my_dispatcher.check_reachable()
+                assert my_dispatcher.dispatch_ok is False
+                assert my_dispatcher.first_dispatch_done is False
+                assert my_dispatcher.new_to_dispatch is False
+                # Not yet configured ...
+                for link in my_dispatcher.all_daemons_links:
+                    if link == my_dispatcher.arbiter_link:
+                        continue
+                    self.assert_any_log_match(re.escape(
+                        "The %s %s do not have a configuration" % (link.type, link.name)
+                    ))
+
+                # #3 - Check reachable - daemons got pinged too early...
+                my_dispatcher.check_reachable()
+                assert my_dispatcher.dispatch_ok is False
+                assert my_dispatcher.first_dispatch_done is False
+                assert my_dispatcher.new_to_dispatch is False
+                for link in my_dispatcher.all_daemons_links:
+                    if link == my_dispatcher.arbiter_link:
+                        continue
+                    self.assert_any_log_match(re.escape(
+                        "Too early to ping %s" % (link.name)
+                    ))
+                self.assert_no_log_match(re.escape(
+                    "Dispatcher, those daemons are not configured: "
+                    "reactionner-master,poller-master,broker-master,receiver-master,"
+                    "scheduler-master"
+                    ", and a configuration is ready to dispatch, run the dispatching..."
+                ))
+
+                # Time warp 5 seconds - overpass the ping period...
+                self.clear_logs()
+                frozen_datetime.tick(delta=datetime.timedelta(seconds=5))
+
+                # #3 - Check reachable - daemons provide their configuration
+                my_dispatcher.check_reachable()
+                assert my_dispatcher.dispatch_ok is False
+                assert my_dispatcher.first_dispatch_done is False
+                assert my_dispatcher.new_to_dispatch is False
+                # Still not configured ...
+                for link in my_dispatcher.all_daemons_links:
+                    if link == my_dispatcher.arbiter_link:
+                        continue
+                    self.assert_any_log_match(re.escape(
+                        "My (%s) fresh managed configuration: {}" % link.name
+                    ))
+
+                # #4 - Prepare dispatching
+                assert my_dispatcher.new_to_dispatch is False
+                my_dispatcher.prepare_dispatch()
+                assert my_dispatcher.dispatch_ok is False
+                assert my_dispatcher.first_dispatch_done is False
+                assert my_dispatcher.new_to_dispatch is True
+
+                self.assert_any_log_match(re.escape(
+                    "All configuration parts are assigned to schedulers and their satellites :)"
+                ))
+                # All links have a hash, push_flavor and cfg_to_manage
+                for link in my_dispatcher.all_daemons_links:
+                    print("Link: %s" % link)
+                    assert getattr(link, 'hash', None) is not None
+                    assert getattr(link, 'push_flavor', None) is not None
+                    assert getattr(link, 'cfg_to_manage', None) is not None
+                    assert not link.cfg_managed  # Not yet
+
+                # #5 - Check reachable - a configuration is prepared,
+                # this will force the daemons communication, no need for a time warp ;)
+                my_dispatcher.check_reachable()
+                for link in my_dispatcher.all_daemons_links:
+                    if link == my_dispatcher.arbiter_link:
+                        continue
+                    self.assert_any_log_match(re.escape(
+                        "My (%s) fresh managed configuration: {}" % link.name
+                    ))
+
+                self.assert_any_log_match(re.escape(
+                    "Dispatcher, those daemons are not configured:"))
+                self.assert_any_log_match(re.escape(
+                    ", and a configuration is ready to dispatch, run the dispatching..."))
+
+                self.assert_any_log_match(re.escape(
+                    "Trying to send configuration to the satellites..."))
+                for link in my_dispatcher.all_daemons_links:
+                    if link == my_dispatcher.arbiter_link:
+                        continue
+                    self.assert_any_log_match(re.escape(
+                        "Sending configuration to the %s %s" % (link.type, link.name)))
+                    self.assert_any_log_match(re.escape(
+                        "Configuration sent to the %s %s" % (link.type, link.name)))
+
+                # As of now the configuration is prepared and was dispatched to the daemons !
+                # Configuration already dispatched!
+                with pytest.raises(DispatcherError):
+                    my_dispatcher.dispatch()
+                self.show_logs()
+
+                # Hack the requests history to check and simulate  the configuration pushed...
+                history = mr.request_history
+                for index, request in enumerate(history):
+                    if 'push_configuration' in request.url:
+                        received = request.json()
+                        print(index, request.url, received)
+                        assert ['conf'] == received.keys()
+                        conf = received['conf']
+
+                        from pprint import pprint
+                        pprint(conf)
+                        assert 'alignak_name' in conf
+                        assert conf['alignak_name'] == 'My Alignak'
+
+                        assert 'self_conf' in conf
+                        assert conf['self_conf']
+                        i_am = None
+                        for link in my_dispatcher.all_daemons_links:
+                            if link.type == conf['self_conf']['type'] \
+                                    and link.name == conf['self_conf']['name']:
+                                i_am = link
+                                break
+                        else:
+                            assert False
+                        print("I am: %s" % link)
+
+                        # All links have a hash, push_flavor and cfg_to_manage
+                        assert 'hash' in conf
+                        assert 'managed_conf_id' in conf
+
+                        assert 'arbiters' in conf
+                        if conf['self_conf']['manage_arbiters']:
+                            # All the known arbiters
+                            assert conf['arbiters'].keys() == [arbiter_link.uuid for arbiter_link
+                                                               in my_dispatcher.arbiters]
+                        else:
+                            assert conf['arbiters'] == {}
+
+                        assert 'schedulers' in conf
+                        # Hack for the managed configurations
+                        link.cfg_managed = {}
+                        for scheduler_link in conf['schedulers'].values():
+                            link.cfg_managed[scheduler_link['instance_id']] = {
+                                'hash': scheduler_link['hash'],
+                                'push_flavor': scheduler_link['push_flavor'],
+                                'managed_conf_id': scheduler_link['managed_conf_id']
+                            }
+                        print("Managed: %s" % link.cfg_managed)
+
+                        assert 'modules' in conf
+                        assert conf['modules'] == []
+
+                        # Spare arbiter specific
+                        if '8770/push_configuration' in request.url:
+                            # Spare arbiter receives all the monitored configuration
+                            assert 'whole_conf' in conf
+                            # String serialized configuration
+                            assert isinstance(conf['whole_conf'], basestring)
+                            managed_conf_part = unserialize(conf['whole_conf'])
+                            # Test a property to be sure conf loaded correctly
+                            assert managed_conf_part.instance_id == conf['managed_conf_id']
+
+                            # The spare arbiter got the same objects count as the master arbiter prepared!
+                            for _, _, strclss, _, _ in managed_conf_part.types_creations.values():
+                                # These elements are not included in the serialized configuration!
+                                if strclss in ['hostescalations', 'serviceescalations',
+                                               'arbiters', 'schedulers', 'brokers',
+                                               'pollers', 'reactionners', 'receivers', 'realms',
+                                               'modules', 'hostsextinfo', 'servicesextinfo',
+                                               'hostdependencies', 'servicedependencies']:
+                                    continue
+
+                                objects_list = getattr(managed_conf_part, strclss, [])
+                                # print("Got %d %s: %s" % (len(objects_list), strclss, objects_list))
+                                # Count and string dup are the same !
+                                assert len(objects_list) == objects_map[strclss]['count']
+                                assert str(objects_list) == objects_map[strclss]['str']
+
+                        # Scheduler specific
+                        elif '7768/push_configuration' in request.url:
+                            assert 'conf_part' in conf
+                            # String serialized configuration
+                            assert isinstance(conf['conf_part'], basestring)
+                            managed_conf_part = unserialize(conf['conf_part'])
+                            # Test a property to be sure conf loaded correctly
+                            assert managed_conf_part.instance_id == conf['managed_conf_id']
+
+                            # Hack for the managed configurations
+                            link.cfg_managed = {
+                                conf['instance_id']: {
+                                    'hash': conf['hash'],
+                                    'push_flavor': conf['push_flavor'],
+                                    'managed_conf_id': conf['managed_conf_id']
+                                }
+                            }
+                            print("Managed: %s" % link.cfg_managed)
+
+                            # The scheduler got the same objects count as the arbiter prepared!
+                            for _, _, strclss, _, _ in managed_conf_part.types_creations.values():
+                                # These elements are not included in the serialized configuration!
+                                if strclss in ['hostescalations', 'serviceescalations',
+                                               'arbiters', 'schedulers', 'brokers',
+                                               'pollers', 'reactionners', 'receivers', 'realms',
+                                               'modules', 'hostsextinfo', 'servicesextinfo',
+                                               'hostdependencies', 'servicedependencies']:
+                                    continue
+
+                                objects_list = getattr(managed_conf_part, strclss, [])
+                                # print("Got %d %s: %s" % (len(objects_list), strclss, objects_list))
+                                if not multi_realms:
+                                    # Count and string dump are the same !
+                                    assert len(objects_list) == objects_map[strclss]['count']
+                                    assert str(objects_list) == objects_map[strclss]['str']
+
+                        else:
+                            # Satellites
+                            assert 'conf_part' not in conf
+                            assert 'see_my_schedulers' == conf['managed_conf_id']
+
+                for link in my_dispatcher.all_daemons_links:
+                    mr.get('http://%s:%s/get_managed_configurations' % (link.address, link.port),
+                           json=link.cfg_managed)
+
+                print("Check dispatching")
+                self.clear_logs()
+                assert my_dispatcher.check_dispatch() is True
+
+                for loop_count in range(0, loops):
+                    for tw in range(0, 4):
+                        # Time warp 1 second
+                        frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+
+                        print("Check reachable %s" % tw)
+                        self.clear_logs()
+                        my_dispatcher.check_reachable()
+                        for link in my_dispatcher.all_daemons_links:
+                            if link == my_dispatcher.arbiter_link:
+                                continue
+                            self.assert_any_log_match(re.escape(
+                                "Too early to ping %s" % (link.name)
+                            ))
+
+                    # Time warp 1 second
+                    frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+
+                    print("Check reachable response")
+                    self.clear_logs()
+                    my_dispatcher.check_reachable()
+                    for link in my_dispatcher.all_daemons_links:
+                        if link == my_dispatcher.arbiter_link:
+                            continue
+                        self.assert_any_log_match(re.escape(
+                            "My (%s) fresh managed configuration: %s"
+                            % (link.name, link.cfg_managed)
+                        ))
+
+    def test_bad_init(self):
+        """ Test that:
+        - bad configuration
+        - two master arbiters
+        are not correct and raise an exception!
 
         :return: None
         """
-        self.setup_with_file('cfg/dispatcher/simple.cfg', 'cfg/dispatcher/simple_multi_schedulers.ini')
-        assert 1 == len(self.arbiter.dispatcher.conf.realms)
-        for realm in self.arbiter.dispatcher.conf.realms:
-            assert 2 == len(realm.parts)
-            for cfg in realm.parts.values():
-                assert cfg.is_assigned
-        assert 2 == len(self.arbiter.dispatcher.schedulers)
-        assert 4 == len(self.arbiter.dispatcher.satellites)
-        # for satellite in self.arbiter.dispatcher.satellites:
-        #     self.assertNotEqual({}, satellite.cfg['schedulers'], satellite.get_name())
-        #     self.assertEqual(2, len(satellite.cfg['schedulers']),
-        #                      'must have 2 schedulers in {0}'.format(satellite.get_name()))
+        args = {
+            'env_file': 'cfg/dispatcher/two_master_arbiters.ini',
+            'alignak_name': 'alignak-test', 'daemon_name': 'arbiter-master'
+        }
+        self.my_arbiter = Arbiter(**args)
 
-        assert 3 == len(self._scheduler.hosts)
-        assert 3 == len(self.schedulers['scheduler-master2'].sched.hosts)
+        # Get a new dispatcher - raise an exception
+        with pytest.raises(DispatcherError):
+            Dispatcher(None, self.my_arbiter.link_to_myself)
 
-    def test_simple_multi_pollers(self):
-        """ Simple test (one realm) but with multiple pollers:
-        * 1 scheduler
-        * 2 poller
-        * 1 receiver
-        * 1 reactionner
-        * 1 broker
+        # Get a new dispatcher - raise an exception
+        with pytest.raises(DispatcherError):
+            Dispatcher(self.my_arbiter.conf, None)
 
-        :return: None
-        """
-        self.setup_with_file('cfg/dispatcher/simple.cfg', 'cfg/dispatcher/simple_multi_pollers.ini')
-        assert 1 == len(self.arbiter.dispatcher.conf.realms)
-        for realm in self.arbiter.dispatcher.conf.realms:
-            assert 1 == len(realm.parts)
-            for cfg in realm.parts.values():
-                assert cfg.is_assigned
-        assert 1 == len(self.arbiter.dispatcher.schedulers)
-        assert 5 == len(self.arbiter.dispatcher.satellites)
-        for satellite in self.arbiter.dispatcher.satellites:
-            assert {} != satellite.cfg['schedulers'], satellite.get_name()
-            assert 1 == len(satellite.cfg['schedulers']), \
-                             'must have 1 scheduler in {0}'.format(satellite.get_name())
+        # Prepare the Alignak configuration
+        self.my_arbiter.load_modules_manager()
+        self.my_arbiter.load_monitoring_config_file()
+        assert self.my_arbiter.conf.conf_is_correct is True
 
-    def test_realms(self):
-        """ Test with 2 realms.
-        realm 1:
-        * 1 scheduler
-        * 1 poller
-        * 1 receiver
-        * 1 reactionner
-        * 1 broker
+        # Get a new dispatcher - raise an exception (two master arbiters)
+        with pytest.raises(DispatcherError):
+            Dispatcher(self.my_arbiter.conf, self.my_arbiter.link_to_myself)
 
-        realm 2:
-        * 1 scheduler
-        * 1 poller
-        * 1 receiver
-        * 1 reactionner
-        * 1 broker
+    def test_dispatching_simple(self):
+        """ Test the dispatching process: simple configuration
 
         :return: None
         """
-        self.print_header()
-        self.setup_with_file('cfg/dispatcher/2-realms.cfg', 'cfg/dispatcher/2-realms.ini')
-        # 2 realms
-        assert 2 == len(self.arbiter.dispatcher.conf.realms)
-        for realm in self.arbiter.dispatcher.conf.realms:
-            assert 1 == len(realm.parts)
-            for cfg in realm.parts.values():
-                assert cfg.is_assigned
-        # 2 schedulers
-        print("Schedulers: %s")
-        for sat in self.arbiter.dispatcher.schedulers:
-            print("- %s" % sat)
-        assert 2 == len(self.arbiter.dispatcher.schedulers)
-        # 8 satellites
-        print("Satellites: %s")
-        for sat in self.arbiter.dispatcher.satellites:
-            print("- %s" % sat)
-        assert 8 == len(self.arbiter.dispatcher.satellites)
-        # 10 daemons links (2+8) + 1 arbiter
-        print("All links: %s")
-        for sat in self.arbiter.dispatcher.all_daemons_links:
-            print("- %s" % sat)
-        assert 11 == len(self.arbiter.dispatcher.all_daemons_links)
+        self._dispatching()
 
-        assert 6 == len(self.schedulers['scheduler-master'].sched.hosts)
-        assert 4 == len(self.schedulers['realm2-scheduler-master'].sched.hosts)
+    def test_dispatching_multiple_schedulers(self):
+        """ Test the dispatching process: 1 realm, 2 schedulers
 
-    def test_realms_with_sub(self):
-        """ Test with 2 realms but some satellites are sub_realms:
-            * All -> realm2
-            * realm3
+        :return: None
+        """
+        self._dispatching('cfg/dispatcher/simple_multi_schedulers.ini')
+
+    def test_dispatching_multiple_pollers(self):
+        """ Test the dispatching process: 1 realm, 2 pollers
+
+        :return: None
+        """
+        self._dispatching('cfg/dispatcher/simple_multi_pollers.ini')
+
+    def test_dispatching_multiple_realms(self):
+        """ Test the dispatching process: 2 realms, all daemons duplicated
+
+        :return: None
+        """
+        self._dispatching('cfg/dispatcher/2-realms.ini', multi_realms=True)
+
+    def test_dispatching_multiple_realms_sub_realms(self):
+        """ Test the dispatching process: 2 realms, some daemons are sub_realms managers
 
         realm All:
         * 1 scheduler
@@ -189,124 +478,23 @@ class TestDispatcher(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-        self.setup_with_file('cfg/dispatcher/realms_with_sub_realms.cfg',
-                             'cfg/dispatcher/realms_with_sub_realms.ini')
-        # Got 3 realms
-        assert 3 == len(self.arbiter.dispatcher.conf.realms)
-        for realm in self.arbiter.dispatcher.conf.realms:
-            assert 1 == len(realm.parts)
-            for cfg in realm.parts.values():
-                assert cfg.is_assigned
-        # 3 schedulers
-        assert 3 == len(self.arbiter.dispatcher.schedulers)
-        for satellite in self.arbiter.dispatcher.schedulers:
-            print("Scheduler: %s" % (satellite))
-        # 2 reactionners
-        # 3 pollers
-        # 3 receivers
-        # 2 brokers
-        assert 10 == len(self.arbiter.dispatcher.satellites), self.arbiter.dispatcher.satellites
-        for satellite in self.arbiter.dispatcher.satellites:
-            print("Satellite: %s, schedulers: %s" % (satellite, satellite.cfg['schedulers']))
-            if satellite.get_name() in ['realm3-poller-master', 'realm3-reactionner-master',
-                                          'realm3-broker-master']:
-                assert {} != satellite.cfg['schedulers'], satellite.get_name()
-                assert 1 == len(satellite.cfg['schedulers']), \
-                                 'must have 1 scheduler in {0}'.format(satellite.get_name())
-            elif satellite.get_name() in ['poller-master', 'reactionner-master', 'broker-master']:
-                assert {} != satellite.cfg['schedulers'], satellite.get_name()
-                assert 2 == len(satellite.cfg['schedulers']), \
-                                 'must have 2 schedulers in {0}'.format(satellite.get_name())
+        self._dispatching('cfg/dispatcher/realms_with_sub_realms.ini', multi_realms=True)
 
-    def test_realms_with_sub_multi_scheduler(self):
-        """ Test with 3 realms but some satellites are sub_realms + multi schedulers
-        realm All
-           |----- realm All1
-                     |----- realm All1a
-
-        realm All:
-        * 2 scheduler
-
-        realm All1:
-        * 3 scheduler
-
-        realm All1a:
-        * 2 scheduler
-
-        realm All + sub_realm:
-        * 1 poller
-        * 1 reactionner
-        * 1 broker
-        * 1 receiver
+    def test_dispatching_multiple_realms_sub_realms_multi_schedulers(self):
+        """ Test the dispatching process: 2 realms, some daemons are sub_realms managers and
+        we have several schedulers
 
         :return: None
         """
-        self.print_header()
-        self.setup_with_file('cfg/cfg_dispatcher_realm_with_sub_multi_schedulers.cfg')
-        self.show_logs()
-        assert self.conf_is_correct
+        self._dispatching('cfg/dispatcher/realms_with_sub_realms_multi_schedulers.ini',
+                          multi_realms=True)
 
-        for poller in self.pollers:
-            print(poller)
-        pollers = [self.pollers['poller-master'].uuid]
-        reactionners = [self.reactionners['reactionner-master'].uuid]
+    def test_dispatching_spare_arbiter(self):
+        """ Test the dispatching process: 1 realm, 1 spare arbiter
 
-        all_schedulers_uuid = []
-        # test schedulers
-        for name in ['scheduler-all-01', 'scheduler-all-02', 'scheduler-all1-01',
-                     'scheduler-all1-02', 'scheduler-all1-03', 'scheduler-all1a-01',
-                     'scheduler-all1a-02']:
-            assert self.schedulers[name].sched.pollers.keys() == pollers
-            assert self.schedulers[name].sched.reactionners.keys() == reactionners
-            assert self.schedulers[name].sched.brokers.keys() == ['broker-master']
-            all_schedulers_uuid.extend(self.schedulers[name].schedulers.keys())
-
-        # schedulers of realm All
-        gethosts = []
-        assert len(self.schedulers['scheduler-all-01'].sched.hosts) == 3
-        assert len(self.schedulers['scheduler-all-02'].sched.hosts) == 3
-        for h in self.schedulers['scheduler-all-01'].sched.hosts:
-            gethosts.append(h.host_name)
-        for h in self.schedulers['scheduler-all-02'].sched.hosts:
-            gethosts.append(h.host_name)
-        assert set(gethosts) == set(['srv_001', 'srv_002', 'srv_003', 'srv_004', 'test_router_0', 'test_host_0'])
-
-        # schedulers of realm All1
-        gethosts = []
-        assert len(self.schedulers['scheduler-all1-01'].sched.hosts) == 2
-        assert len(self.schedulers['scheduler-all1-02'].sched.hosts) == 2
-        assert len(self.schedulers['scheduler-all1-03'].sched.hosts) == 2
-        for h in self.schedulers['scheduler-all1-01'].sched.hosts:
-            gethosts.append(h.host_name)
-        for h in self.schedulers['scheduler-all1-02'].sched.hosts:
-            gethosts.append(h.host_name)
-        for h in self.schedulers['scheduler-all1-03'].sched.hosts:
-            gethosts.append(h.host_name)
-        assert set(gethosts) == set(['srv_101', 'srv_102', 'srv_103', 'srv_104', 'srv_105', 'srv_106'])
-
-        # schedulers of realm All1a
-        gethosts = []
-        assert len(self.schedulers['scheduler-all1a-01'].sched.hosts) == 2
-        assert len(self.schedulers['scheduler-all1a-02'].sched.hosts) == 2
-        for h in self.schedulers['scheduler-all1a-01'].sched.hosts:
-            gethosts.append(h.host_name)
-        for h in self.schedulers['scheduler-all1a-02'].sched.hosts:
-            gethosts.append(h.host_name)
-        assert set(gethosts) == set(['srv_201', 'srv_202', 'srv_203', 'srv_204'])
-
-        # test the poller
-        assert set(self.pollers['poller-master'].cfg['schedulers'].keys()) == set(all_schedulers_uuid)
-
-        # test the receiver has all hosts of all realms (the 3 realms)
-        assert set(self.receivers['receiver-master'].cfg['schedulers'].keys()) == set(all_schedulers_uuid)
-        # test get all hosts
-        hosts = []
-        for sched in self.receivers['receiver-master'].cfg['schedulers'].values():
-            hosts.extend(sched['hosts_names'])
-        assert set(hosts) == set(['srv_001', 'srv_002', 'srv_003', 'srv_004', 'srv_101', 'srv_102',
-                                 'srv_103', 'srv_104', 'srv_105', 'srv_106', 'srv_201', 'srv_202',
-                                 'srv_203', 'srv_204', 'test_router_0', 'test_host_0'])
+        :return: None
+        """
+        self._dispatching('cfg/dispatcher/spare_arbiter.ini')
 
     @pytest.mark.skip("Currently disabled - spare feature - and whatever this test seems broken!")
     def test_simple_scheduler_spare(self):
@@ -314,7 +502,6 @@ class TestDispatcher(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         with requests_mock.mock() as mockreq:
             for port in ['7768', '7772', '7771', '7769', '7773', '8002']:
                 mockreq.get('http://localhost:%s/ping' % port, json='pong')
@@ -327,15 +514,15 @@ class TestDispatcher(AlignakTest):
                 mockreq.get('http://localhost:%s/what_i_managed' % port, json=json_managed)
             mockreq.get('http://localhost:8002/what_i_managed', json='{}')
 
-            self.arbiter.dispatcher.check_alive()
-            self.arbiter.dispatcher.prepare_dispatch()
-            self.arbiter.dispatcher.dispatch_ok = True
+            self._arbiter.dispatcher.check_reachable()
+            self._arbiter.dispatcher.prepare_dispatch()
+            self._arbiter.dispatcher.dispatch_ok = True
 
-            assert 2 == len(self.arbiter.dispatcher.schedulers)
-            assert 4 == len(self.arbiter.dispatcher.satellites)
+            assert 2 == len(self._arbiter.dispatcher.schedulers)
+            assert 4 == len(self._arbiter.dispatcher.satellites)
             master_sched = None
             spare_sched = None
-            for scheduler in self.arbiter.dispatcher.schedulers:
+            for scheduler in self._arbiter.dispatcher.schedulers:
                 if scheduler.get_name() == 'scheduler-master':
                     scheduler.is_sent = True
                     master_sched = scheduler
@@ -347,7 +534,7 @@ class TestDispatcher(AlignakTest):
             assert spare_sched.ping
             assert 0 == spare_sched.attempt
 
-        for satellite in self.arbiter.dispatcher.satellites:
+        for satellite in self._arbiter.dispatcher.satellites:
             assert 1 == len(satellite.cfg['schedulers'])
             scheduler = satellite.cfg['schedulers'].itervalues().next()
             assert 'scheduler-master' == scheduler['name']
@@ -355,13 +542,13 @@ class TestDispatcher(AlignakTest):
         # now simulate master sched down
         master_sched.check_interval = 1
         spare_sched.check_interval = 1
-        for satellite in self.arbiter.dispatcher.receivers:
+        for satellite in self._arbiter.dispatcher.receivers:
             satellite.check_interval = 1
-        for satellite in self.arbiter.dispatcher.reactionners:
+        for satellite in self._arbiter.dispatcher.reactionners:
             satellite.check_interval = 1
-        for satellite in self.arbiter.dispatcher.brokers:
+        for satellite in self._arbiter.dispatcher.brokers:
             satellite.check_interval = 1
-        for satellite in self.arbiter.dispatcher.pollers:
+        for satellite in self._arbiter.dispatcher.pollers:
             satellite.check_interval = 1
         time.sleep(1)
 
@@ -376,21 +563,21 @@ class TestDispatcher(AlignakTest):
             for port in ['7772', '7771', '7769', '7773', '8002']:
                 mockreq.post('http://localhost:%s/put_conf' % port, json='true')
 
-            self.arbiter.dispatcher.check_alive()
-            self.arbiter.dispatcher.check_dispatch()
-            self.arbiter.dispatcher.prepare_dispatch()
-            self.arbiter.dispatcher.dispatch()
-            self.arbiter.dispatcher.check_bad_dispatch()
+            self._arbiter.dispatcher.check_reachable()
+            self._arbiter.dispatcher.check_dispatch()
+            self._arbiter.dispatcher.prepare_dispatch()
+            self._arbiter.dispatcher.dispatch()
+            self._arbiter.dispatcher.check_bad_dispatch()
 
             assert master_sched.ping
             assert 2 == master_sched.attempt
 
             time.sleep(1)
-            self.arbiter.dispatcher.check_alive()
-            self.arbiter.dispatcher.check_dispatch()
-            self.arbiter.dispatcher.prepare_dispatch()
-            self.arbiter.dispatcher.dispatch()
-            self.arbiter.dispatcher.check_bad_dispatch()
+            self._arbiter.dispatcher.check_reachable()
+            self._arbiter.dispatcher.check_dispatch()
+            self._arbiter.dispatcher.prepare_dispatch()
+            self._arbiter.dispatcher.dispatch()
+            self._arbiter.dispatcher.check_bad_dispatch()
 
             assert master_sched.ping
             assert 3 == master_sched.attempt
@@ -429,7 +616,7 @@ class TestDispatcher(AlignakTest):
             assert ['conf'] == conf_sent['scheduler-spare'].keys()
 
             json_managed_spare = {}
-            for satellite in self.arbiter.dispatcher.satellites:
+            for satellite in self._arbiter.dispatcher.satellites:
                 assert 1 == len(satellite.cfg['schedulers'])
                 scheduler = satellite.cfg['schedulers'].itervalues().next()
                 assert 'scheduler-spare' == scheduler['name']
@@ -449,11 +636,11 @@ class TestDispatcher(AlignakTest):
                 mockreq.post('http://localhost:%s/put_conf' % port, json='true')
 
             time.sleep(1)
-            self.arbiter.dispatcher.check_alive()
-            self.arbiter.dispatcher.check_dispatch()
-            self.arbiter.dispatcher.prepare_dispatch()
-            self.arbiter.dispatcher.dispatch()
-            self.arbiter.dispatcher.check_bad_dispatch()
+            self._arbiter.dispatcher.check_reachable()
+            self._arbiter.dispatcher.check_dispatch()
+            self._arbiter.dispatcher.prepare_dispatch()
+            self._arbiter.dispatcher.dispatch()
+            self._arbiter.dispatcher.check_bad_dispatch()
 
             assert master_sched.ping
             assert 0 == master_sched.attempt
@@ -478,45 +665,7 @@ class TestDispatcher(AlignakTest):
                                   'receiver']) == \
                              set(conf_sent.keys())
 
-            for satellite in self.arbiter.dispatcher.satellites:
+            for satellite in self._arbiter.dispatcher.satellites:
                 assert 1 == len(satellite.cfg['schedulers'])
                 scheduler = satellite.cfg['schedulers'].itervalues().next()
                 assert 'scheduler-master' == scheduler['name']
-
-    # @pytest.mark.skip("To be reactivated when spare will be implemented and tested")
-    def test_arbiter_spare(self):
-        """ Test with arbiter spare
-
-        :return: None
-        """
-        self.print_header()
-        with requests_mock.mock() as mockreq:
-            mockreq.get('http://localhost:8770/ping', json='pong')
-            mockreq.get('http://localhost:8770/what_i_managed', json='{}')
-            mockreq.post('http://localhost:8770/put_conf', json='true')
-            self.setup_with_file('cfg/dispatcher/simple.cfg', 'cfg/dispatcher/spare_arbiter.ini')
-            self.arbiter.dispatcher.check_alive()
-            # for arb in self.arbiter.dispatcher.arbiters:
-                # If not me and I'm a master
-                # if arb != self.arbiter.dispatcher.arbiter:
-                #     assert 0 == arb.attempt
-                #     assert {} == arb.managed_confs
-                # else:
-                #     assert 0 == arb.attempt
-                #     assert arb.managed_confs is not {}
-
-            print("start")
-            self.arbiter.dispatcher.check_dispatch()
-            print("dispatched")
-            # need time to have history filled
-            time.sleep(2)
-            history = mockreq.request_history
-            history_index = 0
-            for index, hist in enumerate(history):
-                if hist.url == 'http://localhost:8770/put_conf':
-                    history_index = index
-            conf_received = history[history_index].json()
-            assert ['conf'] == conf_received.keys()
-            spare_conf = unserialize(conf_received['conf'])
-            # Test a property to be sure conf loaded correctly
-            assert 5 == spare_conf.perfdata_timeout
