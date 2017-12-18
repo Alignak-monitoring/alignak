@@ -95,7 +95,9 @@ class CheckModulation(Item):
 
     def serialize(self):
         res = super(CheckModulation, self).serialize()
-        res['check_command'] = self.check_command.serialize()
+        res['check_command'] = None
+        if getattr(self, 'check_command', None):
+            res['check_command'] = self.check_command.serialize()
         return res
 
     def get_name(self):

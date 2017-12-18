@@ -240,6 +240,12 @@ class Service(SchedulingItem):
         'hostgroups':    'hostgroup_name',
     })
 
+    def __str__(self):
+        return '<Service %s, uuid=%s, %s (%s), use: %s />' \
+               % (self.get_full_name(), self.uuid, self.state, self.state_type,
+                  getattr(self, 'use', None))
+    __repr__ = __str__
+
 #######
 #                   __ _                       _   _
 #                  / _(_)                     | | (_)
@@ -264,15 +270,6 @@ class Service(SchedulingItem):
             self.state = 'CRITICAL'
         elif self.initial_state == 'x':
             self.state = 'UNREACHABLE'
-
-    def __repr__(self):
-        return '<Service %r/%r name=%r use=%r />' % (
-            getattr(self, 'host_name', None),
-            getattr(self, 'service_description', None),
-            getattr(self, 'name', None),
-            getattr(self, 'use', None)
-        )
-    __str__ = __repr__
 
     @property
     def unique_key(self):  # actually only used for (un)indexitem() via name_property..
@@ -316,6 +313,18 @@ class Service(SchedulingItem):
             return self.name
         return 'SERVICE-DESCRIPTION-MISSING'
 
+    def get_full_name(self):
+        """Get the full name for debugging (host_name/service_description)
+
+        :return: service full name
+        :rtype: str
+        """
+        if self.is_tpl():
+            return "tpl-%s/%s" % (getattr(self, 'host_name', 'XxX'), self.name)
+        if hasattr(self, 'host_name') and hasattr(self, 'service_description'):
+            return "%s/%s" % (self.host_name, self.service_description)
+        return 'UNKNOWN-SERVICE'
+
     def get_servicegroups(self):
         """Accessor to servicegroups attribute
 
@@ -331,16 +340,6 @@ class Service(SchedulingItem):
         :rtype: str
         """
         return ','.join([sgs[sg].get_name() for sg in self.servicegroups])
-
-    def get_full_name(self):
-        """Get the full name for debugging (host_name/service_description)
-
-        :return: service full name
-        :rtype: str
-        """
-        if self.host_name and hasattr(self, 'service_description'):
-            return "%s/%s" % (self.host_name, self.service_description)
-        return 'UNKNOWN-SERVICE'
 
     def get_hostgroups(self, hosts):
         """Wrapper to access hostgroups attribute of host attribute
@@ -1069,6 +1068,8 @@ class Service(SchedulingItem):
         :rtype: bool
         TODO: Refactor this, a lot of code duplication with Host.notification_is_blocked_by_item
         """
+        logger.debug("Checking if a service %s (%s) notification is blocked...",
+                     self.get_full_name(), self.state)
         host = hosts[self.host]
         if t_wished is None:
             t_wished = time.time()
@@ -1097,19 +1098,19 @@ class Service(SchedulingItem):
             self.state == 'OK' and 'r' not in self.notification_options or
             self.state == 'UNREACHABLE' and 'x' not in self.notification_options
         ):  # pylint: disable=R0911
-            logger.debug("Service: %s, notification %s sending is blocked by options",
-                         self.get_name(), n_type)
+            logger.debug("Service: %s, notification %s sending is blocked by options: %s",
+                         self.get_name(), n_type, self.notification_options)
             return True
 
         if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED') and
                 'f' not in self.notification_options):
-            logger.debug("Service: %s, notification %s sending is blocked by options",
-                         n_type, self.get_name())
+            logger.debug("Service: %s, notification %s sending is blocked by options: %s",
+                         n_type, self.get_full_name(), self.notification_options)
             return True
         if (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED') and
                 's' not in self.notification_options):
-            logger.debug("Service: %s, notification %s sending is blocked by options",
-                         n_type, self.get_name())
+            logger.debug("Service: %s, notification %s sending is blocked by options: %s",
+                         n_type, self.get_full_name(), self.notification_options)
             return True
 
         # Acknowledgements make no sense when the status is ok/up
@@ -1328,7 +1329,7 @@ class Services(SchedulingItems):
 
     def linkify(self, hosts, commands, timeperiods, contacts,  # pylint: disable=R0913
                 resultmodulations, businessimpactmodulations, escalations,
-                servicegroups, triggers, checkmodulations, macromodulations):
+                servicegroups, checkmodulations, macromodulations):
         """Create link between objects::
 
          * service -> host
@@ -1353,8 +1354,6 @@ class Services(SchedulingItems):
         :type escalations: alignak.objects.escalation.Escalations
         :param servicegroups: servicegroups to link
         :type servicegroups: alignak.objects.servicegroup.Servicegroups
-        :param triggers: triggers to link
-        :type triggers: alignak.objects.trigger.Triggers
         :param checkmodulations: checkmodulations to link
         :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
         :param macromodulations: macromodulations to link
@@ -1377,7 +1376,6 @@ class Services(SchedulingItems):
         # (just the escalation here, not serviceesca or hostesca).
         # This last one will be link in escalations linkify.
         self.linkify_with_escalations(escalations)
-        self.linkify_with_triggers(triggers)
         self.linkify_with_checkmodulations(checkmodulations)
         self.linkify_with_macromodulations(macromodulations)
 
@@ -1539,6 +1537,8 @@ class Services(SchedulingItems):
     def clean(self):
         """Remove services without host object linked to
 
+        Note that this sould not happen!
+
         :return: None
         """
         to_del = []
@@ -1611,7 +1611,7 @@ class Services(SchedulingItems):
         """
         host = hosts.find_by_name(host_name.strip())
         if host.is_excluded_for(service):
-            return
+            return None
         # Creates concrete instance
         new_s = service.copy()
         new_s.host_name = host_name

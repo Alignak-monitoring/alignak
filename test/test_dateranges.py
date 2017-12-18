@@ -40,6 +40,8 @@ class TestDateRanges(AlignakTest):
     """
     This class test dataranges
     """
+    def setUp(self):
+        super(TestDateRanges, self).setUp()
 
     def test_get_start_of_day(self):
         """ Test function get_start_of_day and return the timestamp of begin of day

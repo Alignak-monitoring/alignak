@@ -56,6 +56,7 @@ from alignak_test import AlignakTest
 
 class TestNotificationWay(AlignakTest):
     def setUp(self):
+        super(TestNotificationWay, self).setUp()
         self.setup_with_file('cfg/cfg_notification_ways.cfg')
         assert self.conf_is_correct
 
@@ -102,7 +103,8 @@ class TestNotificationWay(AlignakTest):
             'customs': {},
             'plus': {},
             'tags': set([]),
-            'downtimes': {}
+            'downtimes': {},
+            'conf_is_correct': True
         })
         # creation_time and log_actions will not be modified! They are set
         # only if they do not yet exist
@@ -280,7 +282,3 @@ class TestNotificationWay(AlignakTest):
                        sorted([command.get_name() for command in commands_contact_template_2])])
 
         assert sorted([['notify-service', 'notify-service-work'], ['notify-service-sms', 'notify-service-work']]) == resp
-
-
-if __name__ == '__main__':
-    AlignakTest.main()

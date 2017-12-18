@@ -367,6 +367,7 @@ class DictProp(Property):
     """Dict property
 
     """
+    # pylint: disable=keyword-arg-before-vararg
     def __init__(self, elts_prop=None, *args, **kwargs):
         """Dictionary of values.
              If elts_prop is not None, must be a Property subclass

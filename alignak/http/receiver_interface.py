@@ -38,16 +38,3 @@ class ReceiverInterface(GenericInterface):
         app = self.app  # TODO: remove this and use self directly...
         res = {'command_buffer_size': len(app.external_commands)}
         return res
-
-    @cherrypy.expose
-    @cherrypy.tools.json_in()
-    @cherrypy.tools.json_out()
-    def push_host_names(self):
-        """Push hostname/scheduler links
-        Use by the receivers to got the host names managed by the schedulers
-
-        :return: None
-        """
-        schedhosts = cherrypy.request.json
-        with self.app.lock:
-            self.app.push_host_names(schedhosts['sched_id'], schedhosts['hnames'])  # To int that

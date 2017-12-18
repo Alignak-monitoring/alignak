@@ -34,7 +34,7 @@ class TestDependencies(AlignakTest):
     """
     This class test dependencies between services, hosts
 
-    This is how name the tests:
+    This is how the tests are named:
 
     * test_u_<function_name>: unit test for a function
     * test_c_*: test configuration
@@ -45,13 +45,14 @@ class TestDependencies(AlignakTest):
     * test_*_m_*: test complex dependencies (> 2 dependencies)
     * test_*_h_*: test with hostgroups
     """
+    def setUp(self):
+        super(TestDependencies, self).setUp()
 
     def test_u_is_enable_action_dependent(self):
         """ Test the function is_enable_action_dependent in SchedulingItem
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
@@ -153,7 +154,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
@@ -216,11 +216,15 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
         assert len(self.configuration_warnings) == 0
+
+        # duplicate servicegroup 'pending', from:
+        # '/home/alignak/alignak/test/cfg/default/servicegroups.cfg:48' and
+        # '/home/alignak/alignak/test/cfg/default/servicegroups.cfg:48', using lastly defined.
+        # You may manually set the definition_order parameter to avoid this message.
 
         # test_host_00 -> test_router_00
         test_host_00 = self._scheduler.hosts.find_by_name("test_host_00")
@@ -284,7 +288,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
@@ -300,7 +303,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
@@ -316,7 +318,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
@@ -333,7 +334,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
@@ -348,7 +348,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
@@ -364,7 +363,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
@@ -379,7 +377,6 @@ class TestDependencies(AlignakTest):
 
         :return:
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
 
         assert self.conf_is_correct
@@ -399,7 +396,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad1.cfg')
         # self.show_logs()
@@ -421,7 +417,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad2.cfg')
         self.show_logs()
@@ -443,7 +438,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad3.cfg')
         self.show_logs()
@@ -462,7 +456,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad4.cfg')
         self.show_logs()
@@ -481,7 +474,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad5.cfg')
         self.show_logs()
@@ -500,7 +492,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad6.cfg')
         self.show_logs()
@@ -519,7 +510,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad7.cfg')
         self.show_logs()
@@ -542,7 +532,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad8.cfg')
         self.show_logs()
@@ -570,7 +559,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         assert self.conf_is_correct
 
@@ -634,7 +622,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         assert self.conf_is_correct
 
@@ -700,7 +687,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         assert self.conf_is_correct
 
@@ -754,7 +740,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         assert self.conf_is_correct
 
@@ -844,7 +829,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         assert self.conf_is_correct
 
@@ -926,7 +910,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         assert self.conf_is_correct
 
@@ -1002,7 +985,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_dependencies.cfg')
         assert self.conf_is_correct
 
@@ -1019,9 +1001,9 @@ class TestDependencies(AlignakTest):
 
         # Set host and service as OK
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;0;Host is UP' % time.time()
-        self._scheduler.run_external_command(excmd)
+        self._scheduler.run_external_commands([excmd])
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;0;Service is OK' % time.time()
-        self._scheduler.run_external_command(excmd)
+        self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         time.sleep(0.1)
         assert "UP" == host.state
@@ -1032,7 +1014,7 @@ class TestDependencies(AlignakTest):
 
         # Set host DOWN
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;2;Host is DOWN' % time.time()
-        self._scheduler.run_external_command(excmd)
+        self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         time.sleep(0.1)
         assert "DOWN" == host.state
@@ -1042,7 +1024,7 @@ class TestDependencies(AlignakTest):
 
         # Set host DOWN
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;2;Host is DOWN' % time.time()
-        self._scheduler.run_external_command(excmd)
+        self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         time.sleep(0.1)
         assert "DOWN" == host.state
@@ -1053,7 +1035,7 @@ class TestDependencies(AlignakTest):
 
         # Set host UP
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;0;Host is UP' % time.time()
-        self._scheduler.run_external_command(excmd)
+        self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         time.sleep(0.1)
         assert "UP" == host.state
@@ -1061,19 +1043,19 @@ class TestDependencies(AlignakTest):
         self.assert_actions_count(2)
 
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
-        self._scheduler.run_external_command(excmd)
+        self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         assert "CRITICAL" == svc.state
         assert "SOFT" == svc.state_type
         self.assert_actions_count(2)
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
-        self._scheduler.run_external_command(excmd)
+        self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         assert "CRITICAL" == svc.state
         assert "SOFT" == svc.state_type
         self.assert_actions_count(2)
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
-        self._scheduler.run_external_command(excmd)
+        self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         assert "CRITICAL" == svc.state
         # Need 3 attempts for the HARD state
@@ -1086,7 +1068,6 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
         assert self.conf_is_correct
 
@@ -1100,14 +1081,14 @@ class TestDependencies(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;host_A;service_P;0;Service is OK' % time.time()
-        self._scheduler.run_external_command(excmd)
+        self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         time.sleep(0.1)
         assert "UP" == host.state
         assert "OK" == svc.state
 
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;host_A;service_P;2;Service is CRITICAL' % time.time()
-        self._scheduler.run_external_command(excmd)
+        self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         assert "UP" == host.state
         assert "OK" == svc.state
@@ -1138,7 +1119,6 @@ class TestDependencies(AlignakTest):
         2nd solution: define an hostgroup_name and do not define a dependent_hostgroup_name
         :return:
         """
-        self.print_header()
         self.setup_with_file('cfg/dependencies/hostdep_through_hostgroup.cfg')
         assert self.conf_is_correct
 
@@ -1159,7 +1139,6 @@ class TestDependencies(AlignakTest):
         2nd solution: define an hostgroup_name and do not define a dependent_hostgroup_name
         :return:
         """
-        self.print_header()
         self.setup_with_file('cfg/dependencies/servicedependency_explode_hostgroup.cfg')
         self.show_logs()
         assert self.conf_is_correct
@@ -1210,7 +1189,6 @@ class TestDependencies(AlignakTest):
 
         :return:
         """
-        self.print_header()
         self.setup_with_file('cfg/dependencies/servicedependency_implicit_hostgroup.cfg')
         assert self.conf_is_correct
 
@@ -1267,7 +1245,6 @@ class TestDependencies(AlignakTest):
 
         :return:
         """
-        self.print_header()
         self.setup_with_file('cfg/dependencies/servicedependency_complex.cfg')
         assert self.conf_is_correct
 

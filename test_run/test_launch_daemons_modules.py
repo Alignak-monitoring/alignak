@@ -38,6 +38,31 @@ class TestLaunchDaemonsModules(AlignakTest):
     def setUp(self):
         self.procs = {}
 
+        # copy the default shipped configuration files in /tmp/etc and change the root folder
+        # used by the daemons for pid and log files in the alignak.ini file
+        if os.path.exists('/tmp/etc/alignak'):
+            shutil.rmtree('/tmp/etc/alignak')
+
+        if os.path.exists('/tmp/alignak.log'):
+            os.remove('/tmp/alignak.log')
+
+        print("Preparing configuration...")
+        shutil.copytree('../etc', '/tmp/etc/alignak')
+        files = ['/tmp/etc/alignak/alignak.ini']
+        replacements = {
+            '_dist=/usr/local/': '_dist=/tmp'
+        }
+        self._files_update(files, replacements)
+
+        # Clean the former existing pid and log files
+        print("Cleaning pid and log files...")
+        for daemon in ['arbiter-master', 'scheduler-master', 'broker-master',
+                       'poller-master', 'reactionner-master', 'receiver-master']:
+            if os.path.exists('/tmp/var/run/%s.pid' % daemon):
+                os.remove('/tmp/var/run/%s.pid' % daemon)
+            if os.path.exists('/tmp/var/log/%s.log' % daemon):
+                os.remove('/tmp/var/log/%s.log' % daemon)
+
     def tearDown(self):
         print("Test terminated!")
 
@@ -47,19 +72,32 @@ class TestLaunchDaemonsModules(AlignakTest):
 
         :return: None
         """
-        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'cfg/run_daemons_1')
-        tmp_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                  'run/test_launch_daemons_modules_1')
+        daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
+                        'receiver-master', 'scheduler-master']
 
-        # Currently it is the same as the default execution ... to be modified later.
-        cfg_modules = {
-            'arbiter': 'Example', 'scheduler': 'Example', 'broker': 'Example',
-            'poller': 'Example', 'reactionner': 'Example', 'receiver': 'Example',
-        }
-        nb_errors = self._run_alignk_daemons_modules(cfg_folder, tmp_folder, cfg_modules)
-        assert nb_errors == 0, "Error logs raised!"
-        print("No error logs raised when daemons started and loaded the modules")
-        self._kill_alignak_daemons()
+        self._run_alignak_daemons(cfg_folder='cfg/run_daemons_1', daemons_list=daemons_list,
+                                  run_folder='/tmp', runtime=10)
+
+        self._stop_alignak_daemons()
+
+        # Check daemons log files
+        ignored_warnings = [
+            'No realms defined,',
+            'Did not get any',
+            'notifications are enabled but no contacts',
+            'hosts configuration warnings',
+            'The module Example is not a worker one',
+            'Add failed attempt for ',
+            'is still living after a normal kill'
+        ]
+        (errors_raised, warnings_raised) = \
+            self._check_daemons_log_for_errors(daemons_list, ignored_warnings=ignored_warnings)
+
+        assert errors_raised == 0, "Error logs raised!"
+        print("No unexpected error logs raised by the daemons")
+
+        assert warnings_raised == 0, "Warning logs raised!"
+        print("No unexpected warning logs raised by the daemons")
 
     @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
     def test_daemons_modules_logs(self):
@@ -70,19 +108,37 @@ class TestLaunchDaemonsModules(AlignakTest):
         if os.path.exists('/tmp/monitoring-logs.log'):
             os.remove('/tmp/monitoring-logs.log')
 
-        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                  'cfg/run_daemons_logs')
-        tmp_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                  'run/test_launch_daemons_modules_logs')
+        daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
+                        'receiver-master', 'scheduler-master']
 
-        # Currently it is the same as the default execution ... to be modified later.
-        cfg_modules = {
-            'arbiter': '', 'scheduler': '', 'broker': 'logs',
-            'poller': '', 'reactionner': '', 'receiver': ''
-        }
-        nb_errors = self._run_alignk_daemons_modules(cfg_folder, tmp_folder, cfg_modules)
-        assert nb_errors == 0, "Error logs raised!"
-        print("No error logs raised when daemons started and loaded the modules")
+        self._run_alignak_daemons(cfg_folder='cfg/run_daemons_logs',
+                                  daemons_list=daemons_list,
+                                  run_folder='/tmp', runtime=30, arbiter_only=True)
+
+        self._stop_alignak_daemons()
+
+        # Check daemons log files
+        ignored_warnings = [
+            'Alignak Backend is not configured. Some module features will not be available.',
+            'defined logger configuration file '
+            # 'Error on backend login: ',
+            # 'Alignak backend is currently not available',
+            # 'Exception: BackendException raised with code 1000',
+            # 'Response: '
+        ]
+        ignored_errors = [
+            # 'Error on backend login: ',
+            # 'Configured user account is not allowed for this module'
+        ]
+        (errors_raised, warnings_raised) = \
+            self._check_daemons_log_for_errors(daemons_list, ignored_warnings=ignored_warnings,
+                                               ignored_errors=ignored_errors)
+
+        assert errors_raised == 0, "Error logs raised!"
+        print("No unexpected error logs raised by the daemons")
+
+        assert warnings_raised == 0, "Warning logs raised!"
+        print("No unexpected warning logs raised by the daemons")
 
         assert os.path.exists('/tmp/monitoring-logs.log'), '/tmp/monitoring-logs.log does not exist!'
         count = 0
@@ -97,9 +153,9 @@ class TestLaunchDaemonsModules(AlignakTest):
         [1496076886] INFO: TIMEPERIOD TRANSITION: workhours;-1;1
         """
         assert count >= 2
-        self._kill_alignak_daemons()
 
-    @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
+    # @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
+    @pytest.mark.skip("No real interest for Alignak testings...")
     def test_daemons_modules_logs_restart_module(self):
         """Running the Alignak daemons with the monitoring logs module - stop and restart the module
 
@@ -118,7 +174,7 @@ class TestLaunchDaemonsModules(AlignakTest):
             'arbiter': '', 'scheduler': '', 'broker': 'logs',
             'poller': '', 'reactionner': '', 'receiver': ''
         }
-        nb_errors = self._run_alignk_daemons_modules(cfg_folder, tmp_folder, cfg_modules, 10)
+        nb_errors = self._run_alignak_daemons_modules(cfg_folder, tmp_folder, cfg_modules, 10)
         assert nb_errors == 0, "Error logs raised!"
         print("No error logs raised when daemons started and loaded the modules")
 
@@ -230,7 +286,8 @@ class TestLaunchDaemonsModules(AlignakTest):
         """
         assert count >= 2
 
-    @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
+    # @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
+    @pytest.mark.skip("No real interest for Alignak testings...")
     def test_daemons_modules_ws(self):
         """Running the Alignak daemons with the Web services module
 
@@ -322,7 +379,8 @@ class TestLaunchDaemonsModules(AlignakTest):
                 print("Last checked log %s: %s" % (name, log))
                 assert log in logs, logs
 
-    @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
+    # @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
+    @pytest.mark.skip("No real interest for Alignak testings...")
     def test_daemons_modules_ws_logs(self):
         """Running the Alignak daemons with the Web services and Logs modules
 
@@ -452,7 +510,8 @@ class TestLaunchDaemonsModules(AlignakTest):
                 print("Last checked log %s: %s" % (name, log))
                 assert log in logs, logs
 
-    @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
+    # @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
+    @pytest.mark.skip("No real interest for Alignak testings...")
     def test_daemons_modules_backend(self):
         """Running the Alignak daemons with the backend modules - backend is not running so
         all modules are in error

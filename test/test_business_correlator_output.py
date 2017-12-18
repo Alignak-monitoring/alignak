@@ -56,6 +56,7 @@ from alignak.macroresolver import MacroResolver
 class TestBusinesscorrelOutput(AlignakTest):
 
     def setUp(self):
+        super(TestBusinesscorrelOutput, self).setUp()
         self.setup_with_file('cfg/cfg_business_correlator_output.cfg')
         assert self.conf_is_correct
         self._sched = self._scheduler

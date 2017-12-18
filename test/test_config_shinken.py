@@ -30,17 +30,18 @@ from alignak_test import AlignakTest
 import pytest
 
 
-class TestConfig(AlignakTest):
+class TestConfigShinken(AlignakTest):
     """
     This class tests the configuration
     """
+    def setUp(self):
+        super(TestConfigShinken, self).setUp()
 
     def test_config_ok(self):
         """ Default configuration has no loading problems ...
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/_shinken/_main.cfg')
         self.show_logs()
         assert self.conf_is_correct
@@ -50,68 +51,76 @@ class TestConfig(AlignakTest):
         assert len(self.configuration_errors) == 0
         # No warning messages
         print self.configuration_warnings
-        assert len(self.configuration_warnings) == 3
-        assert self.configuration_warnings == [
-            u"Some hosts exist in the realm 'France' but no broker is defined for this realm",
-            u"Added a broker in the realm 'France'",
-            u'Host graphite use/inherit from an unknown template: graphite ! '
-            u'from: cfg/_shinken/hosts/graphite.cfg:1',
-        ]
+        assert len(self.configuration_warnings) == 1
+        # l = [
+        #     u"Some hosts exist in the realm 'France' but no broker is defined for this realm",
+        #     u"Added a broker (broker-France, http://127.0.0.1:7772/) for the realm 'France'",
+        #     u'Host graphite use/inherit from an unknown template: graphite ! from: /home/alignak/alignak/test/cfg/_shinken/hosts/graphite.cfg:1'
+        # ]
+        self.assert_any_cfg_log_match(
+            "Host graphite use/inherit from an unknown template: graphite ! "
+        )
+        # self.assert_any_cfg_log_match(
+        #     "Some hosts exist in the realm 'France' but no broker is defined for this realm"
+        # )
+        # self.assert_any_cfg_log_match(re.escape(
+        #     "Added a broker (broker-France, http://127.0.0.1:7772/) for the realm 'France'"
+        # ))
 
         # Arbiter named as in the configuration
-        assert self.arbiter.conf.conf_is_correct
-        arbiter_link = self.arbiter.conf.arbiters.find_by_name('arbiter-master')
+        assert self._arbiter.conf.conf_is_correct
+        arbiter_link = self._arbiter.conf.arbiters.find_by_name('arbiter-master')
         assert arbiter_link is not None
         assert arbiter_link.configuration_errors == []
         assert arbiter_link.configuration_warnings == []
 
         # Scheduler named as in the configuration
-        assert self.arbiter.conf.conf_is_correct
-        scheduler_link = self.arbiter.conf.schedulers.find_by_name('scheduler-master')
+        assert self._arbiter.conf.conf_is_correct
+        scheduler_link = self._arbiter.conf.schedulers.find_by_name('scheduler-master')
         assert scheduler_link is not None
         # Scheduler configuration is ok
-        assert self._scheduler.conf.conf_is_correct
+        assert self._scheduler.pushed_conf.conf_is_correct
 
         # Broker, Poller, Reactionner named as in the configuration
-        link = self.arbiter.conf.brokers.find_by_name('broker-master')
+        link = self._arbiter.conf.brokers.find_by_name('broker-master')
         assert link is not None
-        link = self.arbiter.conf.pollers.find_by_name('poller-master')
+        link = self._arbiter.conf.pollers.find_by_name('poller-master')
         assert link is not None
-        link = self.arbiter.conf.reactionners.find_by_name('reactionner-master')
+        link = self._arbiter.conf.reactionners.find_by_name('reactionner-master')
         assert link is not None
 
         # Receiver - no default receiver created
-        link = self.arbiter.conf.receivers.find_by_name('receiver-master')
+        link = self._arbiter.conf.receivers.find_by_name('receiver-master')
         assert link is not None
 
-        for item in self.arbiter.conf.commands:
+        for item in self._arbiter.conf.commands:
             print("Command: %s" % item)
-        assert len(self.arbiter.conf.commands) == 106
+        assert len(self._arbiter.conf.commands) == 106
 
-        for item in self.arbiter.conf.timeperiods:
+        for item in self._arbiter.conf.timeperiods:
             print("Timeperiod: %s" % item)
-        assert len(self.arbiter.conf.timeperiods) == 4
+        assert len(self._arbiter.conf.timeperiods) == 4
 
-        for item in self.arbiter.conf.contacts:
+        for item in self._arbiter.conf.contacts:
             print("Contact: %s" % item)
-        assert len(self.arbiter.conf.contacts) == 7
+        assert len(self._arbiter.conf.contacts) == 7
 
-        for item in self.arbiter.conf.contactgroups:
+        for item in self._arbiter.conf.contactgroups:
             print("Contacts group: %s" % item)
-        assert len(self.arbiter.conf.contactgroups) == 3
+        assert len(self._arbiter.conf.contactgroups) == 3
 
-        for item in self.arbiter.conf.hosts:
+        for item in self._arbiter.conf.hosts:
             print("Host: %s" % item)
-        assert len(self.arbiter.conf.hosts) == 13
+        assert len(self._arbiter.conf.hosts) == 13
 
-        for item in self.arbiter.conf.hostgroups:
+        for item in self._arbiter.conf.hostgroups:
             print("Hosts group: %s" % item)
-        assert len(self.arbiter.conf.hostgroups) == 8
+        assert len(self._arbiter.conf.hostgroups) == 8
 
-        for item in self.arbiter.conf.services:
+        for item in self._arbiter.conf.services:
             print("Service: %s" % item)
-        assert len(self.arbiter.conf.services) == 94
+        assert len(self._arbiter.conf.services) == 94
 
-        for item in self.arbiter.conf.servicegroups:
+        for item in self._arbiter.conf.servicegroups:
             print("Services group: %s" % item)
-        assert len(self.arbiter.conf.servicegroups) == 5
+        assert len(self._arbiter.conf.servicegroups) == 5

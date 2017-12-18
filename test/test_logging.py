@@ -48,10 +48,11 @@ Test alignak.logging
 import time
 import logging
 import os.path
+import pytest
 from datetime import datetime
 
-from logging import DEBUG, INFO, WARNING
-from alignak.log import setup_logger, DEFAULT_FORMATTER_NAMED
+from logging import DEBUG, INFO, WARNING, Formatter
+from alignak.log import setup_logger
 
 from alignak_test import AlignakTest, CollectorHandler
 
@@ -65,9 +66,9 @@ class TestLogging(AlignakTest):
 
         # Add collector for test purpose.
         collector_h = CollectorHandler()
-        collector_h.setFormatter(DEFAULT_FORMATTER_NAMED)
+        collector_h.setFormatter(Formatter('[%(created)i] %(levelname)s: [%(name)s] %(message)s'))
         self.logger.addHandler(collector_h)
-        # self.assertEqual(len(self.logger.handlers), 1)
+        self.assertEqual(len(self.logger.handlers), 1)
 
         self.logger.setLevel(INFO)
 
@@ -110,6 +111,7 @@ class TestLogging(AlignakTest):
         self.assert_any_log_match("This message will be collected")
         self.assert_no_log_match("This message won't be collected")
 
+    @pytest.mark.skip("Deprecated - new logger configuration")
     def test_log_config_console(self):
         """ Default logger setup updates root logger and adds a console handler
 
@@ -142,6 +144,7 @@ class TestLogging(AlignakTest):
         self.logger.info(msg)
         self.assert_any_log_match('[\[0-9\]*] INFO: \[%s\] %s' % (self.logger.name, msg))
 
+    @pytest.mark.skip("Deprecated - new logger configuration")
     def test_log_config_human_date(self):
         """ Default logger setup uses a timestamp date format, a human date can be used instead
 
@@ -154,6 +157,7 @@ class TestLogging(AlignakTest):
         assert my_logger.name == "alignak"
         assert len(my_logger.handlers) == 2
 
+    @pytest.mark.skip("Deprecated - new logger configuration")
     def test_log_config_file(self):
         """ Logger setup allows to update alignak root logger with a timed rotating file handler
 
@@ -202,7 +206,3 @@ class TestLogging(AlignakTest):
         msg = "Message"
         self.logger.info(msg)
         self.assert_any_log_match('[\[0-9\]*] INFO: \[%s\] %s' % (self.logger.name, msg))
-
-
-if __name__ == '__main__':
-    AlignakTest.main()

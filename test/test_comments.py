@@ -30,13 +30,14 @@ class TestComments(AlignakTest):
     """
     This class test the comments (acknowledge, downtimes...).
     """
+    def setUp(self):
+        super(TestComments, self).setUp()
 
     def test_host_acknowledge(self):
         """Test add / delete comment for acknowledge on host
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -52,7 +53,7 @@ class TestComments(AlignakTest):
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n".\
             format(int(now), host.host_name, 2, 0, 1, 'darth vader', 'normal process')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
@@ -65,7 +66,7 @@ class TestComments(AlignakTest):
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n".\
             format(int(now), host.host_name, 2, 0, 1, 'darth vader', 'normal new process')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
@@ -87,7 +88,6 @@ class TestComments(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -103,7 +103,7 @@ class TestComments(AlignakTest):
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM_EXPIRE;{1};{2};{3};{4};{5};{6};{7}\n".\
             format(int(now), host.host_name, 2, 0, 1, int(now) + 3, 'darth vader', 'normal process')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
@@ -126,7 +126,6 @@ class TestComments(AlignakTest):
         :return: None
         """
 
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -152,7 +151,7 @@ class TestComments(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
             format(int(now), host.host_name, svc.service_description, 2, 0, 1, 'darth vader',
                    'normal process')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
@@ -172,7 +171,6 @@ class TestComments(AlignakTest):
         pass
 
     def test_host_comment(self):
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -186,7 +184,7 @@ class TestComments(AlignakTest):
         now = time.time()
         cmd = "[{0}] ADD_HOST_COMMENT;{1};{2};{3};{4}\n". \
             format(int(now), host.host_name, 1, 'darth vader', 'nice comment')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.1)
@@ -198,7 +196,7 @@ class TestComments(AlignakTest):
         now = time.time()
         cmd = "[{0}] ADD_HOST_COMMENT;{1};{2};{3};{4}\n". \
             format(int(now), host.host_name, 1, 'emperor', 'nice comment yes')
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.1)
@@ -209,7 +207,7 @@ class TestComments(AlignakTest):
         now = time.time()
         cmd = "[{0}] DEL_ALL_HOST_COMMENTS;{1}\n". \
             format(int(now), host.host_name)
-        self._scheduler.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.1)

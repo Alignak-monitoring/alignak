@@ -1,0 +1,42 @@
+{
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+        "alignak": {
+            "format": "[%(asctime)s] %(levelname)s: [%(name)s] %(message)s"
+            ,"datefmt": "%Y-%m-%d %H:%M:%S"
+        }
+    },
+
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": "DEBUG",
+            "formatter": "alignak",
+            "stream": "ext://sys.stdout"
+        },
+        "monitoring_logs": {
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "level": "INFO",
+            "formatter": "alignak",
+            "filename": "%(logdir)s/alignak-monitoring-logs.log",
+            "when": "midnight",
+            "interval": 1,
+            "backupCount": 365,
+            "encoding": "utf8"
+        }
+    },
+
+    "loggers": {
+        "alignak-monitoring": {
+            "level": "INFO",
+            "handlers": ["monitoring_logs"],
+            "propagate": "no"
+        }
+    },
+
+    "root": {
+        "level": "INFO",
+        "handlers": ["console", "monitoring_logs"]
+    }
+}

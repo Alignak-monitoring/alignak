@@ -57,8 +57,6 @@
 This module provide Broker class used to run a broker daemon
 """
 
-import os
-import sys
 import time
 import traceback
 import threading
@@ -71,8 +69,7 @@ from multiprocessing import active_children
 from alignak.objects import *
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.satellite import BaseSatellite
-from alignak.property import IntegerProp, StringProp
-from alignak.util import sort_by_ids
+from alignak.property import IntegerProp, StringProp, BoolProp
 from alignak.stats import statsmgr
 from alignak.http.broker_interface import BrokerInterface
 from alignak.objects.satellitelink import SatelliteLink
@@ -91,7 +88,10 @@ class Broker(BaseSatellite):
         'type':
             StringProp(default='broker'),
         'port':
-            IntegerProp(default=7772)
+            IntegerProp(default=7772),
+        'got_initial_broks':
+            BoolProp(default=False)
+
     })
 
     def __init__(self, **kwargs):
@@ -101,8 +101,7 @@ class Broker(BaseSatellite):
         """
         super(Broker, self).__init__(kwargs.get('daemon_name', 'Default-broker'), **kwargs)
 
-        # Our arbiters
-        self.arbiters = {}
+        # Our schedulers and arbiters are initialized in the base class
 
         # Our pollers, reactionners and receivers
         self.pollers = {}
@@ -114,12 +113,13 @@ class Broker(BaseSatellite):
 
         # Can have a queue of external_commands given by modules
         # will be processed by arbiter
-        self.external_commands = []
+        # Inherited from the base class
+        # self.external_commands = []
 
         # All broks to manage
-        self.broks = []  # broks to manage
-        # broks raised this turn and that needs to be put in self.broks
-        self.broks_internal_raised = []
+        self.external_broks = []  # broks to manage
+        # broks raised internally by the broker
+        self.internal_broks = []
         # broks raised by the arbiters, we need a lock so the push can be in parallel
         # to our current activities and won't lock the arbiter
         self.arbiter_broks = []
@@ -128,6 +128,29 @@ class Broker(BaseSatellite):
         self.timeout = 1.0
 
         self.http_interface = BrokerInterface(self)
+
+    # def daemon_connection_init(self, satellite):
+    #     """Overloads the base class method for specific broker feature:
+    #     When (re)connecting to a scheduler, ask for the initial broks
+    #
+    #     :param satellite: link of the daemon to connect to
+    #     :type satellite: SatelliteLink
+    #     :return: True if the connection is established, else False
+    #     """
+    #     res = super(Broker, self).daemon_connection_init(satellite)
+    #
+    #     # If I (re)connect to a scheduler
+    #     if satellite.type == 'scheduler':
+    #         logger.info("[%s] Asking my initial broks from '%s'", self.name, satellite.name)
+    #         _t0 = time.time()
+    #         my_initial_broks = satellite.get_initial_broks(self.name)
+    #         statsmgr.timer('initial-broks.%s' % satellite.name, time.time() - _t0)
+    #         if not my_initial_broks:
+    #             logger.warning("No initial broks were raised, my scheduler is not yet ready...")
+    #         else:
+    #             self.got_initial_broks = True
+    #             logger.info("Got %d initial broks from '%s'", my_initial_broks, satellite.name)
+    #     return res
 
     def add(self, elt):  # pragma: no cover, seems not to be used
         """Add an element to the broker lists
@@ -147,7 +170,7 @@ class Broker(BaseSatellite):
         if cls_type == 'brok':
             # We tag the broks with our instance_id
             elt.instance_id = self.instance_id
-            self.broks_internal_raised.append(elt)
+            self.internal_broks.append(elt)
             statsmgr.counter('broks.added', 1)
             return
         elif cls_type == 'externalcommand':
@@ -203,7 +226,7 @@ class Broker(BaseSatellite):
                 module.manage_brok(brok)
                 statsmgr.timer('manage-broks.internal.%s' % module.get_name(), time.time() - _t0)
             except Exception as exp:  # pylint: disable=broad-except
-                logger.warning("The mod %s raise an exception: %s, "
+                logger.warning("The module %s raised an exception: %s, "
                                "I'm tagging it to restart later", module.get_name(), str(exp))
                 logger.exception(exp)
                 self.modules_manager.set_to_restart(module)
@@ -214,10 +237,10 @@ class Broker(BaseSatellite):
 
         :return: None
         """
-        statsmgr.gauge('get-new-broks-count.broker', len(self.broks_internal_raised))
+        statsmgr.gauge('get-new-broks-count.broker', len(self.internal_broks))
         # Add the broks to our global list
-        self.broks.extend(self.broks_internal_raised)
-        self.broks_internal_raised = []
+        self.external_broks.extend(self.internal_broks)
+        self.internal_broks = []
 
     def get_arbiter_broks(self):
         """We will get in the broks list the broks from the arbiters,
@@ -229,40 +252,32 @@ class Broker(BaseSatellite):
         with self.arbiter_broks_lock:
             statsmgr.gauge('get-new-broks-count.arbiter', len(self.arbiter_broks))
             # Add the broks to our global list
-            self.broks.extend(self.arbiter_broks)
+            self.external_broks.extend(self.arbiter_broks)
             self.arbiter_broks = []
 
-    def get_new_broks(self, s_type='scheduler'):
-        """Get new broks from daemon defined in type parameter
+    def get_new_broks(self):
+        """Get new broks from our satellites
 
-        :param s_type: type of object
-        :type s_type: str
         :return: None
         """
-        # Get the good links tab for looping..
-        links = self.get_links_of_type(s_type)
-        if links is None:
-            logger.debug('Type unknown for connection! %s', s_type)
-            return
+        for satellites in [self.schedulers, self.pollers, self.reactionners, self.receivers]:
+            for satellite_link in satellites.values():
+                logger.debug("Getting broks from %s", satellite_link)
 
-        # We check for new check in each schedulers and put
-        # the result in new_checks
-        for s_id in links:
-            link = links[s_id]
-            logger.debug("Getting broks from %s", link.name)
+                _t0 = time.time()
+                tmp_broks = satellite_link.get_broks(self.name)
+                if tmp_broks:
+                    logger.debug("Got %d Broks from %s in %s",
+                                 len(tmp_broks), satellite_link.name, time.time() - _t0)
+                    statsmgr.gauge('get-new-broks-count.%s'
+                                   % (satellite_link.name), len(tmp_broks))
+                    statsmgr.timer('get-new-broks-time.%s'
+                                   % (satellite_link.name), time.time() - _t0)
+                    for brok in tmp_broks.values():
+                        brok.instance_id = satellite_link.instance_id
 
-            _t0 = time.time()
-            tmp_broks = link.get_broks(self.name)
-            if tmp_broks:
-                logger.debug("Got %d Broks from %s in %s",
-                             len(tmp_broks), link.name, time.time() - _t0)
-            statsmgr.gauge('get-new-broks-count.%s' % (link.name), len(tmp_broks))
-            statsmgr.timer('get-new-broks-time.%s' % (link.name), time.time() - _t0)
-            for brok in tmp_broks.values():
-                brok.instance_id = link.instance_id
-
-            # Add the broks to our global list
-            self.broks.extend(tmp_broks.values())
+                    # Add the broks to our global list
+                    self.external_broks.extend(tmp_broks.values())
 
     def get_retention_data(self):  # pragma: no cover, useful?
         """Get all broks
@@ -273,7 +288,7 @@ class Broker(BaseSatellite):
         :return: broks container
         :rtype: object
         """
-        return self.broks
+        return self.external_broks
 
     def restore_retention_data(self, data):  # pragma: no cover, useful?
         """Add data to broks container
@@ -285,7 +300,7 @@ class Broker(BaseSatellite):
         :type data: list
         :return: None
         """
-        self.broks.extend(data)
+        self.external_broks.extend(data)
 
     def do_stop(self):
         """Stop all children of this process
@@ -298,7 +313,7 @@ class Broker(BaseSatellite):
             child.join(1)
         super(Broker, self).do_stop()
 
-    def setup_new_conf(self):  # pylint: disable=R0915,R0912
+    def setup_new_conf(self):
         """Broker custom setup_new_conf method
 
         This function calls the base satellite treatment and manages the configuration needed
@@ -313,49 +328,46 @@ class Broker(BaseSatellite):
 
         # ...then our own specific treatment!
         with self.conf_lock:
-            print("Broker - New configuration for: %s / %s" % (self.type, self.name))
-            logger.info("[%s] Received a new configuration", self.name)
+            # # self_conf is our own configuration from the alignak environment
+            # self_conf = self.cur_conf['self_conf']
+            self.got_initial_broks = False
 
-            # self_conf is our own configuration from the alignak environment
-            self_conf = self.cur_conf['self_conf']
-
-            # Now we create our pollers, reactionners and brokers
-            for link_type in ['pollers', 'reactionners', 'brokers']:
+            # Now we create our pollers, reactionners and receivers
+            for link_type in ['pollers', 'reactionners', 'receivers']:
                 if link_type not in self.cur_conf['satellites']:
-                    logger.error("[%s] Missing %s in the configuration!", self.name, link_type)
-                    print("***[%s] Missing %s in the configuration!!!" % (self.name, link_type))
+                    logger.error("[%s] No %s in the configuration!", self.name, link_type)
                     continue
 
+                my_satellites = getattr(self, link_type, {})
                 received_satellites = self.cur_conf['satellites'][link_type]
-                logger.debug("[%s] - received %s: %s", self.name, link_type, received_satellites)
-                my_satellites = getattr(self, link_type)
-                print("My %s satellites: %s" % (link_type, my_satellites))
-                print("My %s received satellites:" % (link_type))
                 for link_uuid in received_satellites:
-                    print("- %s / %s" % (link_uuid, received_satellites[link_uuid]))
-                    logger.debug("[%s] - my current %s: %s", self.name, link_type, my_satellites)
+                    rs_conf = received_satellites[link_uuid]
+                    logger.info("- received %s - %s: %s", rs_conf['instance_id'],
+                                rs_conf['type'], rs_conf['name'])
 
                     # Must look if we already had a configuration and save our broks
-                    already_got = received_satellites.get('_id') in my_satellites
+                    already_got = rs_conf['instance_id'] in my_satellites
                     broks = {}
                     actions = {}
                     wait_homerun = {}
                     external_commands = {}
                     running_id = 0
                     if already_got:
-                        print("Already got!")
+                        logger.warning("I already got: %s", rs_conf['instance_id'])
                         # Save some information
                         running_id = my_satellites[link_uuid].running_id
                         (broks, actions,
-                         wait_homerun, external_commands) = link.get_and_clear_context()
+                         wait_homerun, external_commands) = \
+                            my_satellites[link_uuid].get_and_clear_context()
                         # Delete the former link
                         del my_satellites[link_uuid]
 
                     # My new satellite link...
-                    new_link = SatelliteLink.get_a_satellite_link(
-                        link_type[:-1], received_satellites[link_uuid])
-                    my_satellites[link_uuid] = new_link
-                    print("My new %s satellite: %s" % (link_type, new_link))
+                    new_link = SatelliteLink.get_a_satellite_link(link_type[:-1],
+                                                                  rs_conf)
+                    my_satellites[new_link.uuid] = new_link
+                    logger.info("I got a new %s satellite: %s", link_type, new_link)
+                    # print("My new %s satellite: %s" % (link_type, new_link))
 
                     new_link.running_id = running_id
                     new_link.external_commands = external_commands
@@ -363,50 +375,63 @@ class Broker(BaseSatellite):
                     new_link.wait_homerun = wait_homerun
                     new_link.actions = actions
 
-                    # replacing sattelite address and port by those defined in satellitemap
-                    if new_link.name in self_conf.get('satellitemap', {}):
-                        new_link = dict(new_link)  # make a copy
-                        new_link.update(self_conf.get('satellitemap', {})[new_link.name])
-
-                logger.debug("We have our %s: %s", link_type, my_satellites)
-                logger.info("We have our %s:", link_type)
-                print("We have our %s" % link_type)
-                for sat_link in my_satellites.values():
-                    logger.info(" - %s, %s", sat_link.name, sat_link.address)
-                    print(" - %s, %s" % (sat_link.name, sat_link))
+                    # # replacing satellite address and port by those defined in satellite_map
+                    # # todo: necessary ?
+                    # if new_link.name in self_conf.get('satellite_map', {}):
+                    #     new_link = dict(new_link)  # make a copy
+                    #     new_link.update(self_conf.get('satellite_map', {})[new_link.name])
 
             if not self.have_modules:
-                self.modules = self_conf['modules']
-                self.have_modules = True
+                try:
+                    self.modules = unserialize(self.cur_conf['modules'], no_load=True)
+                except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
+                    logger.error('Cannot un-serialize modules configuration '
+                                 'received from arbiter: %s', exp)
+                if self.modules:
+                    logger.info("I received some modules configuration: %s", self.modules)
+                    self.have_modules = True
 
-                # Ok now start, or restart them!
-                # Set modules, init them and start external ones
-                self.do_load_modules(self.modules)
-                # and start external modules too
-                self.modules_manager.start_external_instances()
+                    # Ok now start, or restart them!
+                    # Set modules, init them and start external ones
+                    self.do_load_modules(self.modules)
+                    # and start external modules too
+                    self.modules_manager.start_external_instances()
+                else:
+                    logger.info("I do not have modules")
+
+            # Initialize connection with my schedulers first
+            logger.info("Initializing connection with my schedulers:")
+            my_satellites = self.get_links_of_type(s_type='scheduler')
+            for satellite in my_satellites.values():
+                logger.info("- %s/%s", satellite.type, satellite.name)
+                if not self.daemon_connection_init(satellite):
+                    logger.error("Satellite connection failed: %s", satellite)
 
             # Initialize connection with all our satellites
-            my_satellites = self.get_links_of_type(s_type=None)
-            for sat_link in my_satellites:
-                satellite = my_satellites[sat_link]
-                print("Initialize connection with: %s" % satellite)
-                self.daemon_connection_init(satellite.uuid, s_type=satellite.type)
+            logger.info("Initializing connection with my satellites:")
+            for sat_type in ['arbiter', 'reactionner', 'poller', 'receiver']:
+                my_satellites = self.get_links_of_type(s_type=sat_type)
+                for satellite in my_satellites.values():
+                    logger.info("- %s/%s", satellite.type, satellite.name)
+                    if not self.daemon_connection_init(satellite):
+                        logger.error("Satellite connection failed: %s", satellite)
 
     def clean_previous_run(self):
         """Clean all (when we received new conf)
 
         :return: None
         """
+        # Execute the base class treatment...
+        super(Broker, self).clean_previous_run()
+
         # Clean all satellites relations
         self.pollers.clear()
         self.reactionners.clear()
         self.receivers.clear()
-        self.schedulers.clear()
-        self.arbiters.clear()
 
         # Clean our internal objects
-        self.broks = self.broks[:]
-        self.broks_internal_raised = self.broks_internal_raised[:]
+        self.external_broks = self.external_broks[:]
+        self.internal_broks = self.internal_broks[:]
         with self.arbiter_broks_lock:
             self.arbiter_broks = self.arbiter_broks[:]
         self.external_commands = self.external_commands[:]
@@ -415,42 +440,37 @@ class Broker(BaseSatellite):
         # self.have_modules = False
         # self.modules_manager.clear_instances()
 
-    def get_stats_struct(self):
-        """Get information of modules (internal and external) and add metrics of them
-
-        :return: dictionary with state of all modules (internal and external)
-        :rtype: dict
-        :return: None
-        """
-        now = int(time.time())
-        # call the daemon one
-        res = super(Broker, self).get_stats_struct()
-        res.update({'name': self.name, 'type': 'broker'})
-        metrics = res['metrics']
-        # metrics specific
-        metrics.append('broker.%s.external-commands.queue %d %d' % (
-            self.name, len(self.external_commands), now))
-        metrics.append('broker.%s.broks.queue %d %d' % (self.name, len(self.broks), now))
-        return res
-
     def do_loop_turn(self):
-        """Loop use to:
+        """Loop used to:
          * check if modules are alive, if not restart them
          * add broks to queue of each modules
 
          :return: None
         """
-        logger.debug("Begin Loop: still some old unmanaged broks (%d)", len(self.broks))
-        if self.broks:
-            statsmgr.gauge('unmanaged.broks', len(self.broks))
+        if not self.got_initial_broks:
+            # Asking initial broks from my schedulers
+            my_satellites = self.get_links_of_type(s_type='scheduler')
+            for satellite in my_satellites.values():
+                logger.info("[%s] Asking my initial broks from '%s'", self.name, satellite.name)
+                _t0 = time.time()
+                my_initial_broks = satellite.get_initial_broks(self.name)
+                statsmgr.timer('initial-broks.%s' % satellite.name, time.time() - _t0)
+                if not my_initial_broks:
+                    logger.info("No initial broks were raised, my scheduler is not yet ready...")
+                    return
+                else:
+                    self.got_initial_broks = True
+                    logger.info("Got %d initial broks from '%s'", my_initial_broks, satellite.name)
 
-        # Begin to clean modules
+        logger.debug("Begin Loop: still some old broks to manage (%d)", len(self.external_broks))
+        if self.external_broks:
+            statsmgr.gauge('unmanaged.broks', len(self.external_broks))
+
+        # Try to see if one of my module is dead, and restart previously dead modules
         self.check_and_del_zombie_modules()
 
-        # Now we check if we received a new configuration - no sleep time, we will sleep later...
-        self.watch_for_new_conf()
-        if self.new_conf:
-            self.setup_new_conf()
+        # Call modules that manage a starting tick pass
+        self.hook_point('tick')
 
         # Maybe the last loop we did raised some broks internally
         self.get_internal_broks()
@@ -459,15 +479,11 @@ class Broker(BaseSatellite):
         self.get_arbiter_broks()
 
         # Now get broks from our distant daemons
-        for _type in ['scheduler', 'poller', 'reactionner', 'receiver']:
-            self.get_new_broks(s_type=_type)
-
-        # Sort the brok list by id
-        self.broks.sort(sort_by_ids)
+        self.get_new_broks()
 
         # Get the list of broks not yet sent to our external modules
         _t0 = time.time()
-        broks_to_send = [brok for brok in self.broks if getattr(brok, 'to_be_sent', True)]
+        broks_to_send = [brok for brok in self.external_broks if getattr(brok, 'to_be_sent', True)]
         statsmgr.gauge('get-new-broks-count.to_send', len(broks_to_send))
 
         # Send the broks to all external modules to_q queue so they can get the whole packet
@@ -492,46 +508,60 @@ class Broker(BaseSatellite):
             brok.to_be_sent = False
         logger.debug("Time to send %s broks (%d secs)", len(broks_to_send), time.time() - _t0)
 
-        # We must add new broks at the end of the list, so we reverse the list
-        self.broks.reverse()
-
         # Make the internal modules manage the broks
         start = time.time()
-        while self.broks:
+        while self.external_broks:
             now = time.time()
             # Do not 'manage' more than 1s, we must get new broks
             # every 1s
             if now - start > 1:
                 logger.warning("Did not managed all my broks, remaining %d broks...",
-                               len(self.broks))
+                               len(self.external_broks))
                 break
 
-            brok = self.broks.pop()
+            brok = self.external_broks.pop()
             if self.modules_manager.get_internal_instances():
                 self.manage_brok(brok)
                 # Make a very short pause to avoid overloading
                 self.make_a_pause(0.01, check_time_change=False)
             else:
                 if getattr(brok, 'to_be_sent', False):
-                    self.broks.append(brok)
+                    self.external_broks.append(brok)
 
         # Maybe our external modules raised 'objects', so get them
         if self.get_objects_from_from_queues():
             statsmgr.gauge('got.external-commands', len(self.external_commands))
-            statsmgr.gauge('got.broks', len(self.broks))
+            statsmgr.gauge('got.broks', len(self.external_broks))
 
-        # Maybe we do not have something to do, so we wait a little
-        # TODO: redone the diff management....
-        if not self.broks:
-            while self.timeout > 0:
-                begin = time.time()
-                self.watch_for_new_conf(1.0)
-                end = time.time()
-                self.timeout = self.timeout - (end - begin)
-            self.timeout = 1.0
+    def get_daemon_stats(self, details=False):
+        """Increase the stats provided by the Daemon base class
 
-        # Say to modules it's a new tick :)
-        self.hook_point('tick')
+        :return: stats dictionary
+        :rtype: dict
+        """
+        now = int(time.time())
+        # Call the base Daemon one
+        res = super(Broker, self).get_daemon_stats(details=details)
+
+        res.update({'name': self.name, 'type': self.type})
+
+        counters = res['counters']
+        counters['external-broks'] = len(self.external_broks)
+        counters['internal-broks'] = len(self.internal_broks)
+        counters['arbiter-broks'] = len(self.arbiter_broks)
+        counters['pollers'] = len(self.pollers)
+        counters['reactionners'] = len(self.reactionners)
+        counters['receivers'] = len(self.receivers)
+
+        metrics = res['metrics']
+        metrics.append('%s.%s.external-broks.queue %d %d'
+                       % (self.type, self.name, len(self.external_broks), now))
+        metrics.append('%s.%s.internal-broks.queue %d %d'
+                       % (self.type, self.name, len(self.internal_broks), now))
+        metrics.append('%s.%s.arbiter-broks.queue %d %d'
+                       % (self.type, self.name, len(self.arbiter_broks), now))
+
+        return res
 
     def main(self):
         """Main function, will loop forever
@@ -539,20 +569,14 @@ class Broker(BaseSatellite):
         :return: None
         """
         try:
+            # Configure the logger
             self.setup_alignak_logger()
 
-            # Look if we are enabled or not. If ok, start the daemon mode
-            self.look_for_early_exit()
-
-            logger.info("[Broker] Using working directory: %s", os.path.abspath(self.workdir))
-
-            # todo:
-            # This function returns False if some problem is detected during initialization
-            # (eg. communication port not free)
-            # Perharps we should stop the initialization process and exit?
+            # Start the daemon mode
             if not self.do_daemon_init_and_start():
-                return
+                self.exit_on_error(message="Daemon initialization error", exit_code=3)
 
+            # Setup our modules manager
             self.load_modules_manager()
 
             #  We wait for initial conf
@@ -565,8 +589,9 @@ class Broker(BaseSatellite):
             self.hook_point('load_retention')
 
             # Now the main loop
-            self.do_mainloop()
+            self.do_main_loop()
 
+            self.request_stop()
         except Exception:
-            self.print_unrecoverable(traceback.format_exc())
+            self.exit_on_exception(traceback.format_exc())
             raise

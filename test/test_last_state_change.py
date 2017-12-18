@@ -27,16 +27,14 @@ from alignak_test import AlignakTest
 
 
 class TestHostsvcLastStateChange(AlignakTest):
-    """
-    This class test acknowledge
-    """
+    def setUp(self):
+        super(TestHostsvcLastStateChange, self).setUp()
 
     def test_host(self):
         """ Test the last_state_change of host
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -76,7 +74,6 @@ class TestHostsvcLastStateChange(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -103,6 +100,7 @@ class TestHostsvcLastStateChange(AlignakTest):
         time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "SOFT" == host_router.state_type
+        # The host is still considered as UP
         assert "UP" == host.state
         assert "HARD" == host.state_type
 
@@ -110,6 +108,7 @@ class TestHostsvcLastStateChange(AlignakTest):
         time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "SOFT" == host_router.state_type
+        # The host is still considered as UP
         assert "UP" == host.state
         assert "HARD" == host.state_type
 
@@ -117,7 +116,8 @@ class TestHostsvcLastStateChange(AlignakTest):
         time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
-        assert "UP" == host.state
+        # The host is now unreachable
+        assert "UNREACHABLE" == host.state
         assert "HARD" == host.state_type
 
         before = time.time()
@@ -127,6 +127,7 @@ class TestHostsvcLastStateChange(AlignakTest):
         time.sleep(0.2)
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
+        # The host remains unreachable
         assert "UNREACHABLE" == host.state
         assert "SOFT" == host.state_type
 
@@ -153,7 +154,6 @@ class TestHostsvcLastStateChange(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")

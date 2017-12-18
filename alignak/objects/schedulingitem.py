@@ -77,8 +77,7 @@ from alignak.dependencynode import DependencyNode
 from alignak.check import Check
 from alignak.property import (BoolProp, IntegerProp, FloatProp, SetProp,
                               CharProp, StringProp, ListProp, DictProp)
-from alignak.util import from_set_to_list, get_obj_name, \
-    format_t_into_dhms_format
+from alignak.util import from_set_to_list, format_t_into_dhms_format
 from alignak.notification import Notification
 from alignak.macroresolver import MacroResolver
 from alignak.eventhandler import EventHandler
@@ -211,12 +210,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Business_Impact value
         'business_impact':
             IntegerProp(default=2, fill_brok=['full_status']),
-
-        # Load some triggers
-        'trigger_name':
-            StringProp(default=''),
-        'trigger_broker_raise_enabled':
-            BoolProp(default=False),
 
         # Trending
         'trending_policies':
@@ -437,9 +430,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Set if the element just change its father/son topology
         'topology_change':
             BoolProp(default=False, fill_brok=['full_status']),
-        # Trigger list
-        'triggers':
-            ListProp(default=[]),
         # snapshots part
         'last_snapshot':
             IntegerProp(default=0, fill_brok=['full_status'], retention=True),
@@ -496,7 +486,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         for prop in ['check_command', 'event_handler', 'snapshot_command', 'business_rule',
                      'acknowledgement']:
-            if getattr(self, prop) is None:
+            if getattr(self, prop, None) is None:
                 res[prop] = None
             else:
                 res[prop] = getattr(self, prop).serialize()
@@ -529,30 +519,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return:
         """
         setattr(self, 'snapshot_command', CommandCall(command_params))
-
-    def linkify_with_triggers(self, triggers):
-        """
-        Link with triggers
-
-        :param triggers: Triggers object
-        :type triggers: alignak.objects.trigger.Triggers
-        :return: None
-        """
-        # Get our trigger string and trigger names in the same list
-        self.triggers.extend([self.trigger_name])
-
-        new_triggers = []
-        for tname in self.triggers:
-            if tname == '':
-                continue
-            trigger = triggers.find_by_name(tname)
-            if trigger:
-                setattr(trigger, 'trigger_broker_raise_enabled', self.trigger_broker_raise_enabled)
-                new_triggers.append(trigger.uuid)
-            else:
-                self.add_error("the %s %s has an unknown trigger_name '%s'"
-                               % (self.__class__.my_type, self.get_full_name(), tname))
-        self.triggers = new_triggers
 
     def add_flapping_change(self, sample):
         """Add a flapping sample and keep cls.flap_history samples
@@ -912,7 +878,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         now = time.time()
         was_an_impact = self.is_impact
-        # Our father already look of he impacts us. So if we are here,
+        # Our father already look if he impacts us. So if we are here,
         # it's that we really are impacted
         self.is_impact = True
 
@@ -921,12 +887,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # problem list
         # TODO: remove this unused check
         if self.is_impact:
+            logger.debug("I am impacted: %s", self)
             # Maybe I was a problem myself, now I can say: not my fault!
             if self.is_problem:
                 self.no_more_a_problem(hosts, services, timeperiods, bi_modulations)
 
-            # Ok, we are now an impact, we should take the good state
-            # but only when we just go in impact state
+            # Ok, we are now impacted, we should take the good state
+            # but only when we just go to the impacted state
             if not was_an_impact:
                 self.set_impact_state()
 
@@ -934,14 +901,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             impacts.append(self.uuid)
             if prob.uuid not in self.source_problems:
                 self.source_problems.append(prob.uuid)
-            # we should send this problem to all potential impact that
+            # we should send this problem to all potential impacted that
             # depend on us
-            for (impact_id, status, timeperiod_id, _) in self.act_depend_of_me:
+            for (impacted_item_id, status, timeperiod_id, _) in self.act_depend_of_me:
                 # Check if the status is ok for impact
-                if impact_id in hosts:
-                    impact = hosts[impact_id]
+                if impacted_item_id in hosts:
+                    impact = hosts[impacted_item_id]
                 else:
-                    impact = services[impact_id]
+                    impact = services[impacted_item_id]
                 timeperiod = timeperiods[timeperiod_id]
                 for stat in status:
                     if self.is_state(stat):
@@ -1396,7 +1363,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # If we do not force and we are in downtime, bailout
         # if the no_event_handlers_during_downtimes is 1 in conf
         if not ext_cmd and self.in_scheduled_downtime and cls.no_event_handlers_during_downtimes:
-            logger.debug("Event handler wilkl not be launched. "
+            logger.debug("Event handler will not be launched. "
                          "The item %s is in a scheduled downtime", self.get_full_name())
             return
 
@@ -1550,7 +1517,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     def consume_result(self, chk, notif_period, hosts,
                        services, timeperiods, macromodulations, checkmodulations, bi_modulations,
-                       res_modulations, triggers, checks):
+                       res_modulations, checks):
         # pylint: disable=R0915,R0912,R0913,E1101
         """Consume a check return and send action in return
         main function of reaction of checks like raise notifications
@@ -1582,8 +1549,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type bi_modulations: alignak.object.businessimpactmodulation.Businessimpactmodulations
         :param res_modulations: result modulation are used to change the ouput of a check
         :type res_modulations: alignak.object.resultmodulation.Resultmodulations
-        :param triggers: triggers objects, also used to change the output/status of a check, or more
-        :type triggers: alignak.objects.trigger.Triggers
         :param checks: checks dict, used to get checks_in_progress for the object
         :type checks: dict
         :return: Dependent checks
@@ -1652,7 +1617,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.last_chk = int(chk.check_time)
         self.output = chk.output
         self.long_output = chk.long_output
-        # self.check_type = chk.check_type  # 0 => Active check, 1 => passive check
         if self.__class__.process_performance_data and self.process_perf_data:
             self.last_perf_data = self.perf_data
             self.perf_data = chk.perf_data
@@ -1894,18 +1858,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.raise_freshness_log_entry(int(now - self.last_state_update -
                                                self.freshness_threshold))
 
-        # if self.freshness_expired and not self.freshness_log_raised:
-        #     self.raise_freshness_log_entry(int(now - self.last_state_update -
-        #                                        self.freshness_threshold))
-
-        # Now launch trigger if needed.
-        # If it's from a trigger raised check, do not raise a new one
-        if not chk.from_trigger:
-            self.eval_triggers(triggers)
-        if chk.from_trigger or not chk.from_trigger and \
-                sum(1 for t in self.triggers
-                    if triggers[t].trigger_broker_raise_enabled) == 0:
-            self.broks.append(self.get_check_result_brok())
+        self.broks.append(self.get_check_result_brok())
 
         self.get_perfdata_command(hosts, macromodulations, timeperiods)
         # Also snapshot if need :)
@@ -2739,28 +2692,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         check.check_time = time.time()
         check.exit_status = state
 
-    def eval_triggers(self, triggers):
-        """Launch triggers
-
-        :param triggers: triggers objects, also used to change the output/status of a check, or more
-        :type triggers: alignak.objects.trigger.Triggers
-        :return: None
-        """
-        for t in triggers:
-            print("t: %s" % t)
-        for t in self.triggers:
-            print("self t: %s" % t)
-        for trigger_id in triggers:
-            print("trigger: %s" % trigger_id)
-            trigger = triggers[trigger_id]
-            try:
-                trigger.eval(self)
-            # pylint: disable=W0703
-            except Exception:  # pragma: no cover, simple protection
-                logger.error("We got an exception from a trigger on %s for %s",
-                             self.get_full_name().decode('utf8', 'ignore'),
-                             str(traceback.format_exc()))
-
     def fill_data_brok_from(self, data, brok_type):
         """Fill data brok dependent on the brok_type
 
@@ -3044,6 +2975,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         cls = self.__class__
         if cls.enable_problem_impacts_states_change:
+            logger.debug("%s is impacted and goes UNREACHABLE", self)
+
             # Track the old state (problem occured before a new check)
             self.state_before_impact = self.state
             self.state_id_before_impact = self.state_id
@@ -3343,14 +3276,3 @@ class SchedulingItems(CommandCallItems):
         for item in self:
             item.create_business_rules(hosts, services, hostgroups,
                                        servicegroups, macromodulations, timeperiods)
-
-    def linkify_with_triggers(self, triggers):
-        """
-        Link triggers
-
-        :param triggers: triggers object
-        :type triggers: alignak.objects.trigger.Triggers
-        :return: None
-        """
-        for i in self:
-            i.linkify_with_triggers(triggers)

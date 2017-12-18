@@ -64,31 +64,27 @@ class Load:
         self.exp = 0  # first exp
         self.mins = mins  # Number of minute of the avg
         self.last_update = 0  # last update of the value
-        self.val = initial_value  # first value
+        self.load = initial_value  # first value
 
-    def update_load(self, new_val, forced_interval=None):
+    def update_load(self, sleep_time):
         """Update load with the new value
 
-        :param new_val: value used to compute new load
-        :type new_val: int
-        :param forced_interval: boolean indicating if we force the interval for the value
-        :type forced_interval: bool
+        :param sleep_time: value used to compute new load
+        :type sleep_time: int
         :return: None
         """
-        # The first call do not change the value, just tag
-        # the beginning of last_update
+        # The first call do not change the value, just tag the beginning of last_update
         # IF  we force : bail out all time thing
-        if not forced_interval and self.last_update == 0:
+        if not self.last_update:
             self.last_update = time.time()
             return
+
         now = time.time()
         try:
-            if forced_interval:
-                diff = forced_interval
-            else:
-                diff = now - self.last_update
-            self.exp = 1 / math.exp(diff / (self.mins * 60.0))
-            self.val = new_val + self.exp * (self.val - new_val)
+            difference = now - self.last_update
+            self.exp = 1 / math.exp(difference / (self.mins * 60.0))
+
+            self.load = sleep_time + self.exp * (self.load - sleep_time)
             self.last_update = now
         except OverflowError:  # if the time change without notice, we overflow :(
             pass
@@ -101,4 +97,4 @@ class Load:
         :return: the load value
         :rtype: int
         """
-        return self.val
+        return self.load

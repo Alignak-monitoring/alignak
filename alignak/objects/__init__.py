@@ -72,7 +72,6 @@ from alignak.objects.servicegroup import Servicegroup, Servicegroups
 from alignak.objects.servicedependency import Servicedependency, Servicedependencies
 from alignak.objects.hostdependency import Hostdependency, Hostdependencies
 from alignak.objects.module import Module, Modules
-from alignak.objects.trigger import Trigger, Triggers
 from alignak.objects.businessimpactmodulation import Businessimpactmodulation, \
     Businessimpactmodulations
 from alignak.objects.macromodulation import MacroModulation, MacroModulations

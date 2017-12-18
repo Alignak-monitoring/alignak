@@ -82,10 +82,11 @@ def unserialize(j_obj, no_load=False):
 
     :param j_obj: json object, dict
     :type j_obj: str (before loads)
-    :param no_load: if True, j_obj is a dict, otherwize it's a json and need loads it
+    :param no_load: if True, j_obj is a dict, otherwise it's a json and need loads it
     :type no_load: bool
     :return: un-serialized object
     """
+    print("Unserialize: %s" % j_obj)
 
     if no_load:
         data = j_obj
@@ -107,6 +108,7 @@ def unserialize(j_obj, no_load=False):
 
     elif isinstance(data, list):
         return [unserialize(item, True) for item in data]
+
     else:
         return data
 
@@ -125,27 +127,27 @@ def get_alignak_class(python_path):
     :return: alignak class
     :raise AlignakClassLookupException
     """
-    module, a_class = python_path.rsplit('.', 1)
+    a_module, a_class = python_path.rsplit('.', 1)
 
-    if not module.startswith('alignak'):
+    if not a_module.startswith('alignak'):
         raise AlignakClassLookupException("Can't recreate object in module: %s. "
-                                          "Not an Alignak module" % module)
+                                          "Not an Alignak module" % a_module)
 
-    if module not in sys.modules:
+    if a_module not in sys.modules:
         raise AlignakClassLookupException("Can't recreate object in unknown module: %s. "
                                           "No such Alignak module. Alignak versions may mismatch" %
-                                          module)
+                                          a_module)
 
-    pymodule = sys.modules[module]
+    pymodule = sys.modules[a_module]
 
     if not hasattr(pymodule, a_class):
         raise AlignakClassLookupException("Can't recreate object %s in %s module. "
                                           "Module does not have this attribute. "
-                                          "Alignak versions may mismatch" % (a_class, module))
+                                          "Alignak versions may mismatch" % (a_class, a_module))
 
     if not isinstance(getattr(pymodule, a_class), type):
         raise AlignakClassLookupException("Can't recreate object %s in %s module. "
-                                          "This type is not a class" % (a_class, module))
+                                          "This type is not a class" % (a_class, a_module))
 
     return getattr(pymodule, a_class)
 

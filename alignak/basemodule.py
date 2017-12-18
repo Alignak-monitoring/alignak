@@ -58,7 +58,6 @@ import time
 import traceback
 import re
 from multiprocessing import Queue, Process
-import warnings
 import logging
 
 from alignak.misc.common import setproctitle
@@ -139,6 +138,14 @@ class BaseModule(object):
         """
         return self.name
 
+    def get_name(self):
+        """Wrapper to access name attribute
+
+        :return: module name
+        :rtype: str
+        """
+        return self.name
+
     def init(self):  # pylint: disable=R0201
         """Handle this module "post" init ; just before it'll be started.
 
@@ -164,25 +171,49 @@ class BaseModule(object):
         """
         self.loaded_into = daemon_name
 
-    def create_queues(self, manager):
-        """Create the shared queues that will be used by alignak daemon
+    def create_queues(self, manager=None):
+        """
+        Create the shared queues that will be used by alignak daemon
         process and this module process.
         But clear queues if they were already set before recreating new one.
 
-        :param manager: SyncManager() object
-        :type manager: SyncManager
+        Note:
+        If manager is None, then we are running the unit tests for the modules and
+        we must create some queues for the external modules without a SyncManager
+
+        :param manager: Manager() object
+        :type manager: None | object
         :return: None
         """
-        self.clear_queues()
+        self.clear_queues(manager)
+        # If no Manager() object, go with classic Queue()
+        if not manager:
+            self.from_q = Queue()
+            self.to_q = Queue()
+        else:
+            self.from_q = manager.Queue()
+            self.to_q = manager.Queue()
 
-        self.from_q = manager.Queue()
-        self.to_q = manager.Queue()
-
-    def clear_queues(self):
+    def clear_queues(self, manager):
         """Release the resources associated to the queues of this instance
 
+        :param manager: Manager() object
+        :type manager: None | object
         :return: None
         """
+        for queue in (self.to_q, self.from_q):
+            if queue is None:
+                continue
+            # If we got no manager, we directly call the clean
+            if not manager:
+                try:
+                    queue.close()
+                    queue.join_thread()
+                except AttributeError:
+                    pass
+            # else:
+            #    q._callmethod('close')
+            #    q._callmethod('join_thread')
         self.to_q = self.from_q = None
 
     def start_module(self):
@@ -263,11 +294,11 @@ class BaseModule(object):
         # Wait for 10 seconds before killing the process abruptly
         self.process.join(timeout=10)
         if self.process.is_alive():
-            logger.warning("%r is still alive after normal kill, I help it to die", self.name)
+            logger.warning("%r is still living after a normal kill, I help it to die", self.name)
             self.kill()
             self.process.join(1)
             if self.process.is_alive():
-                logger.error("%r still alive after brutal kill, I leave it.", self.name)
+                logger.error("%r still living after brutal kill, I leave it.", self.name)
 
         self.process = None
 
@@ -307,8 +338,7 @@ class BaseModule(object):
         :type frame:
         :return: None
         """
-        logger.info("Module '%s' (pid=%d) received a signal: %s",
-                    self.name, self.process.pid, SIGNALS_TO_NAMES_DICT[sig])
+        logger.info("Module '%s' received a signal: %s", self.name, SIGNALS_TO_NAMES_DICT[sig])
 
         if sig == signal.SIGHUP:
             # if SIGHUP, reload configuration in arbiter
@@ -329,17 +359,19 @@ class BaseModule(object):
 
         :return: None
         """
+        if sigs is None:
+            sigs = (signal.SIGTERM, signal.SIGINT, signal.SIGUSR1, signal.SIGUSR2, signal.SIGHUP)
+
         func = self.manage_signal
         if os.name == "nt":  # pragma: no cover, no Windows implementation currently
             try:
                 import win32api
                 win32api.SetConsoleCtrlHandler(func, True)
             except ImportError:
-                version = ".".join([str(i) for i in sys.version_info[:2]])
+                version = ".".join([str(i) for i in os.sys.version_info[:2]])
                 raise Exception("pywin32 not installed for Python " + version)
         else:
-            for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGUSR1,
-                        signal.SIGUSR2, signal.SIGHUP):
+            for sig in sigs:
                 signal.signal(sig, func)
 
     set_exit_handler = set_signal_handler

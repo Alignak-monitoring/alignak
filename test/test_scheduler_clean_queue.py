@@ -30,6 +30,8 @@ class TestSchedulerCleanQueue(AlignakTest):
     """
     This class test the cleaning queue in scheduler
     """
+    def setUp(self):
+        super(TestSchedulerCleanQueue, self).setUp()
 
     def test_clean_broks(self):
         """ Test clean broks in scheduler
@@ -52,24 +54,55 @@ class TestSchedulerCleanQueue(AlignakTest):
         svc.event_handler_enabled = False
 
         # Define clean queue each time for the test
-        self._scheduler.update_recurrent_works_tick({'clean_queues': 1000})
+        # Set force the queues cleaning tick to be very high (no cleaning during the test)
+        self._scheduler.pushed_conf.tick_clean_queues = 1000
+        self._scheduler.update_recurrent_works_tick({'tick_clean_queues': 1000})
 
         self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 0, 'OK']])
         time.sleep(0.1)
-        brok_limit = 5 * (len(self._scheduler.hosts) +
+        broks_limit = 5 * (len(self._scheduler.hosts) +
                           len(self._scheduler.services))
-        brok_limit += 1
-        assert len(self._scheduler.broks) < brok_limit
+        broks_limit += 1
+        print("Broks limit is %d broks" % (broks_limit))
+
+        broks = {}
+        for broker in self._scheduler.my_daemon.brokers.values():
+            print("Broker: %s has %d broks" % (broker, len(broker.broks)))
+            for brok in broks:
+                print("- %s: %s" % (brok, broks[brok].type))
+            broks.update(broker.broks)
+            assert len(broker.broks) < broks_limit
+        # Limit is not yet reached... 9 broks raised!
+        assert len(broks) < broks_limit
 
         for _ in xrange(0, 10):
             self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
             time.sleep(0.1)
             self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 0, 'OK']])
             time.sleep(0.1)
-        assert len(self._scheduler.broks) > brok_limit
-        self._scheduler.update_recurrent_works_tick('clean_queues', 1)
+
+        for broker in self._scheduler.my_daemon.brokers.values():
+            broks.update(broker.broks)
+            # Broker has too much broks!
+            assert len(broker.broks) > broks_limit
+        # Limit is reached!
+        assert len(broks) > broks_limit
+
+        # Change broks cleaning period to force cleaning
+        self._scheduler.pushed_conf.tick_clean_queues = 1
+        self._scheduler.update_recurrent_works_tick({'tick_clean_queues': 1})
+
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
-        assert len(self._scheduler.broks) <= brok_limit
+
+        broks = {}
+        for broker in self._scheduler.my_daemon.brokers.values():
+            print("Broker: %s has %d broks" % (broker, len(broker.broks)))
+            for brok in broks:
+                print("- %s: %s" % (brok, broks[brok].type))
+            broks.update(broker.broks)
+            assert len(broker.broks) < broks_limit
+        # Limit is not yet reached... 9 broks raised!
+        assert len(broks) < broks_limit
 
     def test_clean_checks(self):
         """ Test clean checks in scheduler
@@ -92,9 +125,10 @@ class TestSchedulerCleanQueue(AlignakTest):
         svc.event_handler_enabled = False
 
         # Define clean queue each time for the test
-        self._scheduler.update_recurrent_works_tick({'clean_queues': 1})
-
-        self._scheduler.update_recurrent_works_tick('delete_zombie_checks', 1000)
+        # Set force the queues cleanning tick
+        self._scheduler.pushed_conf.tick_clean_queues = 1
+        self._scheduler.update_recurrent_works_tick({'tick_clean_queues': 1})
+        self._scheduler.update_recurrent_works_tick({'tick_delete_zombie_checks': 1})
 
         self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 0, 'OK']])
         time.sleep(0.1)
@@ -138,8 +172,9 @@ class TestSchedulerCleanQueue(AlignakTest):
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
         # Define clean queue each time for the test
-        self._scheduler.update_recurrent_works_tick({'clean_queues': 1000})
-        self._scheduler.update_recurrent_works_tick({'delete_zombie_actions': 1000})
+        self._scheduler.pushed_conf.tick_clean_queues = 1000
+        self._scheduler.update_recurrent_works_tick({'tick_clean_queues': 1000})
+        self._scheduler.update_recurrent_works_tick({'tick_delete_zombie_actions': 1000})
 
         self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 0, 'OK']])
         time.sleep(0.1)
@@ -154,6 +189,8 @@ class TestSchedulerCleanQueue(AlignakTest):
             self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 0, 'OK']])
             time.sleep(0.1)
         assert len(self._scheduler.actions) > action_limit
-        self._scheduler.update_recurrent_works_tick({'clean_queues': 1})
+        # Set force the queues cleanning tick
+        self._scheduler.pushed_conf.tick_clean_queues = 1
+        self._scheduler.update_recurrent_works_tick({'tick_clean_queues': 1})
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
         assert len(self._scheduler.actions) <= action_limit

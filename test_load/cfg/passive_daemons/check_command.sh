@@ -12,6 +12,6 @@ else
 fi
 echo "$NOW - Hi, checking $1/$2 -> exit=$STATE | Sleep=$SLEEP" >> /tmp/checks.log
 
-echo "Hi, checking $1/$2 -> exit=$STATE | Sleep=$SLEEP"
 sleep $SLEEP
+echo "Hi, checking $1/$2 -> exit=$STATE | Sleep=$SLEEP"
 exit $STATE

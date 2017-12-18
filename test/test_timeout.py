@@ -63,6 +63,8 @@ from alignak.objects.contact import Contact
 
 class TestWorkerTimeout(AlignakTest):
     def setUp(self):
+        super(TestWorkerTimeout, self).setUp()
+
         # we have an external process, so we must un-fake time functions
         self.setup_with_file('cfg/cfg_check_worker_timeout.cfg')
         assert self.conf_is_correct
@@ -148,6 +150,3 @@ class TestWorkerTimeout(AlignakTest):
         self.show_logs()
         self.assert_any_log_match("Contact alignak service notification command "
                                   "'libexec/sleep_command.sh 7 ' timed out after 2 seconds")
-
-if __name__ == '__main__':
-    AlignakTest.main()

@@ -140,23 +140,23 @@ class MacroResolver(Borg):
 
         # For searching class and elements for on-demand
         # we need link to types
-        self.conf = conf
+        self.my_conf = conf
         self.lists_on_demand = []
-        self.hosts = conf.hosts
+        self.hosts = self.my_conf.hosts
         # For special void host_name handling...
         self.host_class = self.hosts.inner_class
         self.lists_on_demand.append(self.hosts)
-        self.services = conf.services
-        self.contacts = conf.contacts
+        self.services = self.my_conf.services
+        self.contacts = self.my_conf.contacts
         self.lists_on_demand.append(self.contacts)
-        self.hostgroups = conf.hostgroups
+        self.hostgroups = self.my_conf.hostgroups
         self.lists_on_demand.append(self.hostgroups)
-        self.commands = conf.commands
-        self.servicegroups = conf.servicegroups
+        self.commands = self.my_conf.commands
+        self.servicegroups = self.my_conf.servicegroups
         self.lists_on_demand.append(self.servicegroups)
-        self.contactgroups = conf.contactgroups
+        self.contactgroups = self.my_conf.contactgroups
         self.lists_on_demand.append(self.contactgroups)
-        self.illegal_macro_output_chars = conf.illegal_macro_output_chars
+        self.illegal_macro_output_chars = self.my_conf.illegal_macro_output_chars
 
     @staticmethod
     def _get_macros(chain):
@@ -290,8 +290,8 @@ class MacroResolver(Borg):
         """
         # Now we prepare the classes for looking at the class.macros
         data.append(self)  # For getting global MACROS
-        if hasattr(self, 'conf'):
-            data.append(self.conf)  # For USERN macros
+        if hasattr(self, 'my_conf'):
+            data.append(self.my_conf)  # For USERN macros
 
         # we should do some loops for nested macros
         # like $USER1$ hiding like a ninja in a $ARG2$ Macro. And if
@@ -463,6 +463,7 @@ class MacroResolver(Borg):
             except IndexError:
                 # Required argument not found, returns an empty string
                 return ''
+        return ''
 
     def _resolve_ondemand(self, macro, data):
         """Get on demand macro value

@@ -18,46 +18,77 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 #
 """
-This module provides logging facilities for Alignak.
+This module provides logging facilities for Alignak:
+- a main root logger for the running daemon
+- a monitoring log logger
+
+It defines a colored stream handler class to allow using colored log. Using this class is
+as follows: alignak.log.ColorStreamHandler
+
+It also defines a UTC time formatter usable as alignak.log.UTCFormatter
+
+The setup_logger function initializes the daemon logger with the JSON provided configuration file.
+
+The make_monitoring_log function emits a log to the monitoring log logger and returns a brok for
+the Alignak broker.
 """
-import os
 import sys
+import json
+import time
 
 import logging
-from logging import Formatter, StreamHandler
-from logging.handlers import TimedRotatingFileHandler
+from logging import Handler, StreamHandler
 
 from termcolor import cprint
 
 from alignak.brok import Brok
 
+if sys.version_info < (2, 7):
+    from alignak.misc.dictconfig import dictConfig as logger_dictConfig
+else:
+    from logging.config import dictConfig as logger_dictConfig
+
 # Default values for root logger
-ROOT_LOGGER_NAME = 'alignak'
-ROOT_LOGGER_LEVEL = logging.INFO
+ALIGNAK_LOGGER_NAME = 'alignak'
+ALIGNAK_LOGGER_LEVEL = logging.INFO
 
-# Default ISO8601 UTC date formatting:
-HUMAN_DATE_FORMAT = '%Y-%m-%d %H:%M:%S %Z'
-
-# Default log formatter (no human timestamp)
-DEFAULT_FORMATTER_NAMED = Formatter('[%(created)i] %(levelname)s: [%(name)s] %(message)s')
-
-# Human timestamped log formatter
-HUMAN_FORMATTER_NAMED = Formatter('[%(asctime)s] %(levelname)s: [%(name)s] %(message)s',
-                                  HUMAN_DATE_FORMAT)
-
-# Time rotation for file logger
-ROTATION_WHEN = 'midnight'
-ROTATION_INTERVAL = 1
-ROTATION_COUNT = 5
+# Default values for monitoring logger
+MONITORING_LOGGER_NAME = 'monitoring-log'
 
 
-logger = logging.getLogger(ROOT_LOGGER_NAME)  # pylint: disable=C0103
-logger.setLevel(ROOT_LOGGER_LEVEL)
+logging.basicConfig(filename='/tmp/alignak.log', level=logging.DEBUG)
+
+logger = logging.getLogger(ALIGNAK_LOGGER_NAME)  # pylint: disable=C0103
+logger.setLevel(ALIGNAK_LOGGER_LEVEL)
+
+
+class UTCFormatter(logging.Formatter):
+    """This logging formatter converts the log date/time to UTC"""
+    converter = time.gmtime
+
+
+class CollectorHandler(Handler):
+    """
+    This logging handler collects all the emitted logs in an inner list.
+
+    Note: This s only used for unit tests purpose
+    """
+
+    def __init__(self):
+        Handler.__init__(self, logging.DEBUG)
+        self.collector = []
+
+    def emit(self, record):
+        try:
+            msg = self.format(record)
+            self.collector.append(msg)
+        except TypeError:
+            self.handleError(record)
 
 
 class ColorStreamHandler(StreamHandler):
     """
-    This log handler provides colored logs when logs are emitted to a tty.
+    This logging handler provides colored logs when logs are emitted to a tty.
     """
     def emit(self, record):
         try:
@@ -74,69 +105,71 @@ class ColorStreamHandler(StreamHandler):
             self.handleError(record)
 
 
-def setup_logger(logger_, level=logging.INFO, log_file=None, log_console=True,
-                 when=ROTATION_WHEN, interval=ROTATION_INTERVAL, backup_count=ROTATION_COUNT,
-                 human_log=False, human_date_format=HUMAN_DATE_FORMAT):
+def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_file=''):
     """
     Configure the provided logger
-    - appends a ColorStreamHandler if it is not yet present
-    - manages the formatter according to the required timestamp
-    - appends a TimedRotatingFileHandler if it is not yet present for the same file
-    - update level and formatter for already existing handlers
+    - get and update the content of the Json configuration file
+    - configure the logger with this file
 
-    :param logger_: logger object to configure. If None, configure the root logger
-    :param level: log level
-    :param log_file:
-    :param log_console: True to configure the console stream handler
-    :param human_log: use a human readeable date format
-    :param when:
-    :param interval:
-    :param backup_count:
-    :param human_date_format
-    :return: the modified logger object
+    If a log_dir and process_name are provided, the format and filename in the configuration file
+    are updated with the provided values if they contain the patterns %(logdir)s and %(daemon)s
+
+    If a log file name is provide, it will override the default defined log file name.
+
+    :param logger_configuration_file: Python Json logger configuration file
+    :rtype logger_configuration_file: str
+    :param log_dir: default log directory to update the defined logging handlers
+    :rtype log_dir: str
+    :param process_name: process name to update the defined logging formatters
+    :rtype process_name: str
+    :param log_file: log file name to update the defined log file
+    :rtype log_file: str
+    :return: None
     """
-    if logger_ is None:
-        logger_ = logging.getLogger(ROOT_LOGGER_NAME)
+    logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+    for handler in logger_.handlers:
+        if getattr(handler, '_name', None) == 'daemons':
+            # Already configured... exit
+            print("Alignak logger is already configured, handlers:")
+            # Update the declared formats with the process name
+            for handler in logger_.handlers:
+                print("- handler: %s" % handler._name)
+                if process_name and 'NOTSET' in handler.formatter._fmt:
+                    handler.formatter._fmt = handler.formatter._fmt.replace("NOTSET", process_name)
+            break
+    else:
+        print("Initializing Alignak logger (%s)..." % logger_configuration_file)
+        with open(logger_configuration_file, 'rt') as _file:
+            config = json.load(_file)
+            if not process_name:
+                process_name = 'NOTSET'
+            if not log_dir:
+                log_dir = '/tmp'
+            # Update the declared formats with the process name
+            for formatter in config['formatters']:
+                if 'format' not in config['formatters'][formatter]:
+                    continue
+                config['formatters'][formatter]['format'] = \
+                    config['formatters'][formatter]['format'].replace("%(daemon)s", process_name)
 
-    # Set logger level
-    if level is not None:
-        if not isinstance(level, int):
-            level = getattr(logging, level, None)
-        logger_.setLevel(level)
+            # Update the declared log file names with the log directory
+            for handler in config['handlers']:
+                if 'filename' not in config['handlers'][handler]:
+                    continue
+                if log_file:
+                    config['handlers'][handler]['filename'] = log_file
+                else:
+                    config['handlers'][handler]['filename'] = \
+                        config['handlers'][handler]['filename'].replace("%(logdir)s", log_dir)
+                config['handlers'][handler]['filename'] = \
+                    config['handlers'][handler]['filename'].replace("%(daemon)s", process_name)
 
-    formatter = DEFAULT_FORMATTER_NAMED
-    if human_log:
-        formatter = Formatter('[%(asctime)s] %(levelname)s: [%(name)s] %(message)s',
-                              human_date_format)
-
-    if log_console and hasattr(sys.stdout, 'isatty'):
+        # Configure the logger, any error will raise an exception
+        logger_dictConfig(config)
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        print("Logger: %s" % logger_)
         for handler in logger_.handlers:
-            if isinstance(handler, ColorStreamHandler):
-                if handler.level != level:
-                    handler.setLevel(level)
-                handler.setFormatter(formatter)
-                break
-        else:
-            csh = ColorStreamHandler(sys.stdout)
-            csh.setFormatter(formatter)
-            logger_.addHandler(csh)
-
-    if log_file:
-        for handler in logger_.handlers:
-            if isinstance(handler, TimedRotatingFileHandler) \
-                    and handler.baseFilename == os.path.abspath(log_file):
-                if handler.level != level:
-                    handler.setLevel(level)
-                handler.setFormatter(formatter)
-                break
-        else:
-            file_handler = TimedRotatingFileHandler(log_file,
-                                                    when=when, interval=interval,
-                                                    backupCount=backup_count)
-            file_handler.setFormatter(formatter)
-            logger_.addHandler(file_handler)
-
-    return logger_
+            print("- handler: %s" % handler._name)
 
 
 def get_logger_fds(logger_):
@@ -147,7 +180,7 @@ def get_logger_fds(logger_):
     :return: list of file descriptors
     """
     if logger_ is None:
-        logger_ = logging.getLogger(ROOT_LOGGER_NAME)
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
 
     fds = []
     for handler in logger_.handlers:
@@ -162,14 +195,33 @@ def get_logger_fds(logger_):
 
 def make_monitoring_log(level, message):
     """
-    Function used to build the monitoring log. Build a Brok typed as monitoring_log with
-    the message to log
+    Function used to build the monitoring log.
 
-    TODO: replace with dedicated brok for each event to log
+    Emit a log message with the provided level to the monitoring log logger.
+    Build a Brok typed as monitoring_log with the provided message
+
+    TODO: replace with dedicated brok for each event to log - really useful?
 
     :param level: log level as defined in logging
-    :param message: message to insert into the monitoring log
+    :param message: message to send to the monitoring log logger
     :return:
     """
-    logger.debug("Monitoring log: %s / %s", level, message)
+    logging.getLogger(ALIGNAK_LOGGER_NAME).debug("Monitoring log: %s / %s", level, message)
+    level = level.lower()
+    if level not in ['debug', 'info', 'warning', 'error', 'critical']:
+        return False
+
+    # Emit to our monitoring log logger
+    message = message.replace('\r', '\\r')
+    message = message.replace('\n', '\\n')
+    logger_ = logging.getLogger(MONITORING_LOGGER_NAME)
+    logging_function = getattr(logger_, level)
+    try:
+        message = message.decode('utf8', 'ignore')
+    except UnicodeEncodeError:
+        pass
+
+    logging_function(message)
+
+    # ... and returns a brok
     return Brok({'type': 'monitoring_log', 'data': {'level': level, 'message': message}})

@@ -26,6 +26,8 @@ import random
 import time
 import cherrypy
 
+from alignak.version import VERSION
+from alignak.log import ALIGNAK_LOGGER_NAME
 from alignak.misc.serialization import serialize
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
@@ -64,13 +66,45 @@ class GenericInterface(object):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
+    def stop_request(self, stop_now):
+        """The arbiter says that Alignak will stop soon
+
+        :param stop_now: stop now or go to stop wait mode
+        :type stop_now: bool
+        :return: None
+        """
+        logger.debug("Stop now: %s", stop_now)
+
+        self.app.interrupted = (stop_now == '1')
+        self.app.will_stop = True
+
+        return True
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
     def get_start_time(self):
         """Get the start time of the daemon
 
-        :return: start time
-        :rtype: int
+        :return: start timestamp
+        :rtype: float
         """
         return self.start_time
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def get_id(self):
+        """Get the daemon identity
+
+        :return: daemon identity
+        :rtype: dict
+        """
+        res = {
+            "alignak": self.app.alignak_name,
+            "type": self.app.type,
+            "name": self.app.name,
+            "version": VERSION
+        }
+        return res
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -85,23 +119,27 @@ class GenericInterface(object):
     @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
-    def put_conf(self, conf=None):
+    def push_configuration(self, pushed_configuration=None):
         """Send a new configuration to the daemon (internal)
 
-        :param conf: new conf to send
+        :param pushed_configuration: new conf to send
         :return: None
         """
-        if conf is None:
+        if pushed_configuration is None:
             confs = cherrypy.request.json
-            conf = confs['conf']
+            pushed_configuration = confs['conf']
+        # Safer to lock this one also
         with self.app.conf_lock:
-            self.app.new_conf = conf  # Safer to lock this one also
-    put_conf.method = 'post'
+            self.app.new_conf = pushed_configuration
+            return True
+    push_configuration.method = 'post'
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def have_conf(self, magic_hash=None):  # pylint: disable=W0613
         """Get the daemon cur_conf state
+
+        todo !!
 
         :return: boolean indicating if the daemon has a conf
         :rtype: bool
@@ -117,38 +155,38 @@ class GenericInterface(object):
     @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
-    def set_log_level(self, loglevel=None):  # pylint: disable=R0201
+    def set_log_level(self, log_level=None):  # pylint: disable=R0201
         """Set the current log level in [NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, UNKNOWN]
 
-        :param loglevel: a value in one of the above
-        :type loglevel: str
+        :param log_level: a value in one of the above
+        :type log_level: str
         :return: None
         """
-        if loglevel is None:
-            parameters = cherrypy.request.json
-            loglevel = parameters['loglevel']
-        alignak_logger = logging.getLogger("alignak")
-        alignak_logger.setLevel(loglevel)
-        return loglevel
+        if log_level is None:
+            log_level = cherrypy.request.json['log_level']
+
+        if log_level not in ['DEBUG', 'INFO', 'WARNING', 'ERROR']:
+            return {"message": "Required log level is not allowed: %s" % log_level}
+        if self.app.type == 'arbiter':
+            return {"message": "Changing the arbiter log level is not supported: %s" % log_level}
+        self.app.log_level = log_level
+        # self.app.setup_alignak_logger()
+        alignak_logger = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        alignak_logger.setLevel(log_level)
+        return log_level
     set_log_level.method = 'post'
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def get_log_level(self):  # pylint: disable=R0201
         """Get the current log level in [NOTSET, DEBUG, INFO, WARNING, ERROR, CRITICAL, UNKNOWN]
-
-        TODO: I am quite sure that this function does not return
-        the real log level of the current daemon :(
         :return: current log level
         :rtype: str
         """
-        alignak_logger = logging.getLogger("alignak")
-        return {logging.NOTSET: 'NOTSET',
-                logging.DEBUG: 'DEBUG',
-                logging.INFO: 'INFO',
-                logging.WARNING: 'WARNING',
-                logging.ERROR: 'ERROR',
-                logging.CRITICAL: 'CRITICAL'}.get(alignak_logger.getEffectiveLevel(), 'UNKNOWN')
+        alignak_logger = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        res = self.get_id()
+        res.update({"log_level": alignak_logger.getEffectiveLevel()})
+        return res
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -207,13 +245,13 @@ class GenericInterface(object):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def what_i_managed(self):
-        """Arbiter ask me which scheduler id I manage
+    def get_managed_configurations(self):
+        """The Arbiter asks me which scheduler configuration I am managing
 
         :return: managed configuration ids
         :rtype: dict
         """
-        return self.app.what_i_managed()
+        return self.app.get_managed_configurations()
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -237,13 +275,11 @@ class GenericInterface(object):
         :return: serialized external command list
         :rtype: str
         """
-        if hasattr(self.app, 'external_commands_lock'):
-            with self.app.external_commands_lock:
-                cmds = self.app.get_external_commands()
-                raw = serialize(cmds, True)
-        else:
-            raw = []
-        return raw
+        res = []
+        with self.app.external_commands_lock:
+            cmds = self.app.get_external_commands()
+            res = serialize(cmds, True)
+        return res
 
     @cherrypy.expose
     @cherrypy.tools.json_in()
@@ -260,22 +296,22 @@ class GenericInterface(object):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_returns(self, sched_id):
+    def get_returns(self, scheduler_instance_id):
         """Get actions returns (serialized)
         for the scheduler with _id = sched_id
 
-        :param sched_id: id of the scheduler
-        :type sched_id: int
+        :param scheduler_instance_id: instance id of the scheduler
+        :type scheduler_instance_id: str
         :return: serialized list
         :rtype: str
         """
         with self.app.lock:
-            ret = self.app.get_return_for_passive(sched_id)
-            return serialize(ret, True)
+            res = self.app.get_return_for_passive(scheduler_instance_id)
+        return serialize(res, True)
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_broks(self, bname):  # pylint: disable=W0613
+    def get_broks(self, broker_name):  # pylint: disable=W0613
         """Get broks from the daemon
 
         :return: Brok list serialized
@@ -283,7 +319,6 @@ class GenericInterface(object):
         """
         with self.app.lock:
             res = self.app.get_broks()
-
         return serialize(res, True)
 
     @cherrypy.expose
@@ -300,7 +335,7 @@ class GenericInterface(object):
         if hasattr(app, 'schedulers'):
             try:
                 # Get queue stats
-                for sched_id, sched in app.schedulers.iteritems():
+                for sched_id, scheduler_link in app.schedulers.iteritems():
                     lst = []
                     res[sched_id] = lst
                     for mod in app.q_by_mod:
@@ -308,7 +343,8 @@ class GenericInterface(object):
                         for (worker_id, queue) in app.q_by_mod[mod].items():
                             try:
                                 lst.append({
-                                    'scheduler_name': sched['name'],
+                                    'scheduler_instance_id': scheduler_link.instance_id,
+                                    'scheduler_name': scheduler_link.name,
                                     'module': mod,
                                     'worker': worker_id,
                                     'worker_queue_size': queue.qsize(),
@@ -319,4 +355,22 @@ class GenericInterface(object):
             except Exception:  # pylint: disable=broad-except
                 pass
 
+        return res
+
+    @cherrypy.expose
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def get_stats(self, details=False):
+        """Get stats from the daemon
+
+        :param details: Details are required (different from 0)
+        :type details str
+
+        :return: daemon stats
+        :rtype: dict
+        """
+        if details is not False:
+            details = bool(details)
+        res = self.get_id()
+        res.update(self.app.get_daemon_stats(details))
         return res

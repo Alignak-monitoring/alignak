@@ -57,6 +57,65 @@
 #
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
+# -*- coding: utf-8 -*-
+# pylint: disable=too-many-lines
+#
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
+#
+# This file is part of Alignak.
+#
+# Alignak is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Alignak is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+#
+# This file incorporates work covered by the following copyright and
+# permission notice:
+#
+#  Copyright (C) 2009-2014:
+#     Hartmut Goebel, h.goebel@goebel-consult.de
+#     David Moreau Simard, dmsimard@iweb.com
+#     Andrew McGilvray, amcgilvray@kixeye.com
+#     Guillaume Bour, guillaume@bour.cc
+#     Alexandre Viau, alexandre@alexandreviau.net
+#     Frédéric Vachon, fredvac@gmail.com
+#     aviau, alexandre.viau@savoirfairelinux.com
+#     xkilian, fmikus@acktomic.com
+#     Nicolas Dupeux, nicolas@dupeux.net
+#     Zoran Zaric, zz@zoranzaric.de
+#     Gerhard Lausser, gerhard.lausser@consol.de
+#     Daniel Hokka Zakrisson, daniel@hozac.com
+#     Grégory Starck, g.starck@gmail.com
+#     Alexander Springer, alex.spri@gmail.com
+#     Sebastien Coavoux, s.coavoux@free.fr
+#     Christophe Simon, geektophe@gmail.com
+#     Jean Gabes, naparuba@gmail.com
+#     david hannequin, david.hannequin@gmail.com
+#     Romain Forlot, rforlot@yahoo.com
+
+#  This file is part of Shinken.
+#
+#  Shinken is free software: you can redistribute it and/or modify
+#  it under the terms of the GNU Affero General Public License as published by
+#  the Free Software Foundation, either version 3 of the License, or
+#  (at your option) any later version.
+#
+#  Shinken is distributed in the hope that it will be useful,
+#  but WITHOUT ANY WARRANTY; without even the implied warranty of
+#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#  GNU Affero General Public License for more details.
+#
+#  You should have received a copy of the GNU Affero General Public License
+#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 """
 This module provides abstraction for creating daemon in Alignak
 """
@@ -66,16 +125,19 @@ import os
 import errno
 import sys
 import time
+import json
+import socket
 import signal
 from copy import copy
-import select
-import ConfigParser
 import threading
 import logging
 import warnings
 import traceback
 from Queue import Empty, Full
 from multiprocessing.managers import SyncManager
+
+import ConfigParser
+import psutil
 
 try:
     from pwd import getpwnam, getpwuid
@@ -133,17 +195,15 @@ except ImportError as exp:  # pragma: no cover, not for unit tests...
 
 from alignak.log import setup_logger, get_logger_fds
 from alignak.http.daemon import HTTPDaemon, PortNotFree
+from alignak.load import Load
 from alignak.stats import statsmgr
 from alignak.modulesmanager import ModulesManager
-from alignak.property import StringProp, BoolProp, PathProp, ConfigPathProp, IntegerProp, \
-    LogLevelProp, ListProp
+from alignak.property import StringProp, BoolProp, PathProp
+from alignak.property import IntegerProp, FloatProp, LogLevelProp, ListProp
 from alignak.misc.common import setproctitle
 from alignak.version import VERSION
 
 from alignak.bin.alignak_environment import AlignakConfigParser
-
-if 'ALIGNAK_DAEMONS_MONITORING' in os.environ:
-    import psutil
 
 
 # Friendly names for the system signals
@@ -162,27 +222,28 @@ UMASK = 027
 class EnvironmentFile(Exception):
     """Exception raised when the Alignak environment file is missing or corrupted"""
 
-    def __init__(self, msg=None):
-        if not msg:
-            msg = "Alignak environment file is missing or corrupted"
+    def __init__(self, msg):
+        Exception.__init__(self, msg)
+
+
+class InvalidCredentials(Exception):
+    """Exception raised when daemon credentials are invalid"""
+
+    def __init__(self, msg):
         Exception.__init__(self, msg)
 
 
 class InvalidWorkingDir(Exception):
     """Exception raised when daemon working directory is invalid"""
 
-    def __init__(self, msg=None):
-        if not msg:
-            msg = "Invalid working directory"
+    def __init__(self, msg):
         Exception.__init__(self, msg)
 
 
 class InvalidPidFile(Exception):
     """Exception raised when a pid file is invalid"""
 
-    def __init__(self, msg=None):
-        if not msg:
-            msg = "Invalid PID file"
+    def __init__(self, msg):
         Exception.__init__(self, msg)
 
 
@@ -205,69 +266,92 @@ class Daemon(object):
             StringProp(default='unknown'),
         'name':
             StringProp(),
+        # Alignak main configuration file
         'env_filename':
             StringProp(default=''),
-        'use_log_file':
-            BoolProp(default=True),
-        'log_filename':
-            StringProp(default=''),
+
+        # Deprecated - not used anywhere
+        # 'use_log_file':
+        #     BoolProp(default=True),
+        'log_loop':         # Set True to log the daemon loop activity
+            BoolProp(default=False),
+
         'pid_filename':
             StringProp(default=''),
+
+        # Daemon directories
         'etcdir':   # /usr/local/etc/alignak
             PathProp(default=DEFAULT_WORK_DIR),
-        # 'rundir':   # /usr/local/var/run/alignak
-        #     PathProp(default=DEFAULT_WORK_DIR),
         'workdir':  # /usr/local/var/run/alignak
             PathProp(default=DEFAULT_WORK_DIR),
         'vardir':   # /usr/local/var/lib/alignak
             PathProp(default=DEFAULT_WORK_DIR),
         'logdir':   # /usr/local/var/log/alignak
             PathProp(default=DEFAULT_WORK_DIR),
+
+        # Interface the daemon will listen to
         'host':
             StringProp(default='0.0.0.0'),
+        # Server hostname
+        'host_name':
+            StringProp(default='localhost'),
+
+        # Credentials the daemon will fork to
         'user':
             StringProp(default=get_cur_user()),
         'group':
             StringProp(default=get_cur_group()),
+
         'use_ssl':
             BoolProp(default=False),
+        # Not used currently
+        'hard_ssl_name_check':
+            BoolProp(default=False),
+        'server_cert':
+            StringProp(default='etc/certs/server.cert'),
         'server_key':
             StringProp(default='etc/certs/server.key'),
         'ca_cert':
             StringProp(default=''),
+        # Not used currently
         'server_dh':
             StringProp(default=''),
-        'server_cert':
-            StringProp(default='etc/certs/server.cert'),
-        # 'pidfile':
-        #     StringProp(default=''),
-        'human_timestamp_log':
-            BoolProp(default=True),
-        'human_date_format':
-            StringProp(default='%Y-%m-%d %H:%M:%S %Z'),
-        'log_level':
-            LogLevelProp(default='INFO'),
-        'log_rotation_when':
-            StringProp(default='midnight'),
-        'log_rotation_interval':
-            IntegerProp(default=1),
-        'log_rotation_count':
-            IntegerProp(default=7),
-        'hard_ssl_name_check':
+
+        # Deprecated in favor of logger_configuration
+        # 'human_timestamp_log':
+        #     BoolProp(default=True),
+        # 'human_date_format':
+        #     StringProp(default='%Y-%m-%d %H:%M:%S %Z'),
+        # 'log_level':
+        #     LogLevelProp(default='INFO'),
+        # 'log_rotation_when':
+        #     StringProp(default='midnight'),
+        # 'log_rotation_interval':
+        #     IntegerProp(default=1),
+        # 'log_rotation_count':
+        #     IntegerProp(default=7),
+        'logger_configuration':
+            StringProp(default='./alignak-logger.json'),
+        # Override log file name
+        'log_filename':
+            StringProp(default=''),
+        # Set True to include cherrypy logs in the daemon log file
+        'log_cherrypy':
             BoolProp(default=False),
+
         'idontcareaboutsecurity':
             BoolProp(default=False),
         'do_replace':
             BoolProp(default=False),
         'is_daemon':
             BoolProp(default=False),
-        'daemon_enabled':
+        'active':
             BoolProp(default=True),
         'spare':
             BoolProp(default=False),
         'max_queue_size':
             IntegerProp(default=0),
-        'daemon_thread_pool_size':
+        'thread_pool_size':
             IntegerProp(default=8),
         'debug':
             BoolProp(default=False),
@@ -277,6 +361,15 @@ class Daemon(object):
             ListProp(default=[]),
         'monitoring_config_files':
             ListProp(default=[]),
+
+        # Daemon start time
+        'start_time':
+            FloatProp(default=0.0),
+
+        'pause_duration':
+            FloatProp(default=0.5),
+        'maximum_loop_duration':
+            FloatProp(default=1.0),
 
         # Daemon modules
         'modules':
@@ -346,20 +439,19 @@ class Daemon(object):
         # Self daemon monitoring (cpu, memory)
         self.daemon_monitoring = False
         self.daemon_monitoring_period = 10
-        if 'ALIGNAK_DAEMONS_MONITORING' in os.environ:
+        if 'ALIGNAK_DAEMON_MONITORING' in os.environ:
             self.daemon_monitoring = True
-            if os.environ['ALIGNAK_DAEMONS_MONITORING']:
-                try:
-                    self.daemon_monitoring_period = int(os.environ['ALIGNAK_DAEMONS_MONITORING'])
-                except ValueError:
-                    pass
+            try:
+                self.system_health_period = int(os.environ.get('ALIGNAK_DAEMON_MONITORING', '10'))
+            except ValueError:  # pragma: no cover, simple protection
+                pass
         if self.daemon_monitoring:
             logger.info("Daemon '%s' self monitoring is enabled, reporting every %d loop count.",
                         self.name, self.daemon_monitoring_period)
 
         # I almost certainly got an Alignak environment file
         if 'env_file' not in kwargs:
-            raise EnvironmentFile
+            self.exit_on_error("Alignak environment file is missing or corrupted")
 
         self.env_filename = kwargs['env_file']
         if self.env_filename != os.path.abspath(self.env_filename):
@@ -379,7 +471,7 @@ class Daemon(object):
 
             for prop, value in self.alignak_env.get_monitored_configuration().items():
                 self.pre_log.append(("DEBUG",
-                                     " found Alignak monitoring "
+                                     "Found Alignak monitoring "
                                      "configuration parameter, %s = %s" % (prop, value)))
                 # Ignore empty value
                 if not value:
@@ -389,8 +481,14 @@ class Daemon(object):
                 if not os.path.isabs(value):
                     value = os.path.abspath(os.path.join(configuration_dir, value))
                 self.monitoring_config_files.append(value)
+            if self.type == 'arbiter' and not self.monitoring_config_files:
+                self.pre_log.append(("WARNING",
+                                     "No Alignak monitoring configuration files. "
+                                     "An arbiter daemon need to have this configuration "
+                                     "to be able to start correctly."))
 
-            for prop, value in self.alignak_env.get_daemons(name=self.name).items():
+            my_configuration = self.alignak_env.get_daemons(daemon_name=self.name).items()
+            for prop, value in my_configuration:
                 self.pre_log.append(("DEBUG",
                                      " found daemon parameter, %s = %s" % (prop, value)))
                 if getattr(self, prop, None) is None:
@@ -399,24 +497,54 @@ class Daemon(object):
                     self.pre_log.append(("DEBUG", " -> setting %s = %s" % (prop, value)))
                 elif callable(getattr(self, prop)):
                     # For a declared property, that match a self function name
-                    raise EnvironmentFile("Variable %s cannot be defined as a property because "
-                                          "it exists a callable function with the same name!"
-                                          % prop)
+                    self.exit_on_error("Variable %s cannot be defined as a property because "
+                                       "it exists a callable function with the same name!"
+                                       % prop)
                 else:
                     # For a declared property, cast the read value
                     current_prop = getattr(self, prop)
                     setattr(self, prop, my_properties[prop].pythonize(value))
                     self.pre_log.append(("DEBUG", " -> updating %s = %s to %s"
                                          % (prop, current_prop, getattr(self, prop))))
+            if not my_configuration:
+                self.pre_log.append(("DEBUG",
+                                     "No defined configuration for the daemon: %s. "
+                                     "Using the 'alignak-configuration' section "
+                                     "variables as parameters for the daemon:" % self.name))
+                # Set the global Alignak configuration parametes as the current daemon properties
+                logger.info("Getting alignak configuration to configure the daemon...")
+                for prop, value in self.alignak_env.get_alignak_configuration().items():
+                    if prop in ['name'] or prop.startswith('_'):
+                        self.pre_log.append(("DEBUG",
+                                             "- ignoring '%s' variable." % prop))
+                        continue
+                    if prop in self.properties:
+                        entry = self.properties[prop]
+                        setattr(self, prop, entry.pythonize(value))
+                    else:
+                        setattr(self, prop, value)
+                    logger.info("- setting '%s' as %s", prop, getattr(self, prop))
+                    self.pre_log.append(("DEBUG",
+                                         "- setting '%s' as %s" % (prop, getattr(self, prop))))
 
+        except ConfigParser.ParsingError as exp:
+            # print("Daemon '%s' did not correctly read Alignak environment file: %s"
+            #       % (self.name, args['<cfg_file>']))
+            # print("Exception: %s\n%s" % (exp, traceback.format_exc()))
+            self.exit_on_exception(EnvironmentFile(exp.message))
         except ValueError as exp:
             print("Daemon '%s' did not correctly read Alignak environment file: %s"
                   % (self.name, args['<cfg_file>']))
             print("Exception: %s\n%s" % (exp, traceback.format_exc()))
-            raise EnvironmentFile("Exception: %s" % (exp))
+            self.exit_on_exception(EnvironmentFile("Exception: %s" % (exp)))
 
-        # And perhaps some other parameters from the initial command line
-        if 'config_file' in kwargs and kwargs['config_file']:
+        # Stop me if it I am disabled in the configuration
+        if not self.active:
+            self.exit_on_error(message="This daemon is disabled in Alignak configuration. Exiting.",
+                               exit_code=0)
+
+        # And perhaps some old parameters from the initial command line!
+        if 'config_file' in kwargs and kwargs['config_file']:  # pragma: no cover, simple log
             warnings.warn(
                 "Using daemon configuration file is now deprecated. The daemon -c parameter "
                 "should not be used anymore in favor the -e environment file parameter.",
@@ -425,11 +553,9 @@ class Daemon(object):
                                   "The daemon -c command line parameter should not be "
                                   "used anymore in favor the -e environment file parameter.")
 
-        if 'daemon_enabled' in kwargs:
-            self.daemon_enabled = BoolProp().pythonize(kwargs['daemon_enabled'])
-        if 'is_daemon' in kwargs:
+        if 'is_daemon' in kwargs and kwargs['is_daemon']:
             self.is_daemon = BoolProp().pythonize(kwargs['is_daemon'])
-        if 'do_replace' in kwargs:
+        if 'do_replace' in kwargs and kwargs['do_replace']:
             self.do_replace = BoolProp().pythonize(kwargs['do_replace'])
         if 'debug' in kwargs:
             self.debug = BoolProp().pythonize(kwargs['debug'])
@@ -452,6 +578,18 @@ class Daemon(object):
         if self.is_daemon:
             print("Daemon '%s' is in daemon mode" % self.name)
 
+        # Alignak logger configuration file
+        if os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None):
+            self.logger_configuration = os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None)
+        if self.logger_configuration != os.path.abspath(self.logger_configuration):
+            if self.logger_configuration == './alignak-logger.json':
+                self.logger_configuration = os.path.join(os.path.dirname(self.env_filename),
+                                                         self.logger_configuration)
+            else:
+                self.logger_configuration = os.path.abspath(self.logger_configuration)
+        print("Daemon '%s' logger configuration file: %s"
+              % (self.name, self.logger_configuration))
+
         # Make my paths properties be absolute paths
         for prop, entry in my_properties.items():
             # Set absolute paths for
@@ -461,7 +599,6 @@ class Daemon(object):
         # Log file...
         self.log_filename = PathProp().pythonize("%s.log" % self.name)
         self.log_filename = os.path.abspath(os.path.join(self.logdir, self.log_filename))
-
         if 'log_filename' in kwargs and kwargs['log_filename']:
             self.log_filename = PathProp().pythonize(kwargs['log_filename'])
             # Make it an absolute path file in the log directory
@@ -469,34 +606,23 @@ class Daemon(object):
                 if self.log_filename:
                     self.log_filename = os.path.abspath(os.path.join(self.logdir,
                                                                      self.log_filename))
-                    print("Daemon '%s' is started with an overidden log file: %s"
-                          % (self.name, self.log_filename))
                 else:
                     self.use_log_file = False
                     print("Daemon '%s' will not log to a file: %s" % (self.name))
+            print("Daemon '%s' is started with an overridden log file: %s"
+                  % (self.name, self.log_filename))
 
-        dirname = os.path.dirname(self.log_filename)
-        try:
-            os.makedirs(dirname)
-            print("Daemon '%s' log directory did not exist, I created: %s" % (self.name, dirname))
-            self.pre_log.append(("WARNING",
-                                 "Daemon '%s' log directory did not exist, I created: %s"
-                                 % (self.name, dirname)))
-        except OSError as exp:
-            if exp.errno == errno.EEXIST and os.path.isdir(dirname):
-                # Directory still exists...
-                pass
+            self.set_dir_filename(self.log_filename)
+        else:
+            # Log file name is not overridden, the logger will use the configured default one
+            if self.log_cherrypy:
+                self.log_cherrypy = self.log_filename
             else:
-                self.pre_log.append(("ERROR",
-                                     "Daemon '%s' log directory did not exist, "
-                                     "and I could not create: %s. Exception: %s"
-                                     % (self.name, dirname, exp)))
-                raise EnvironmentFile("Daemon '%s' log directory did not exist, "
-                                      "and I could not create: '%s'. Exception: %s"
-                                      % (self.name, dirname, exp))
+                self.log_cherrypy = None
+            self.log_filename = ''
 
         # pid file is stored in the working directory
-        self.pid = 0
+        self.pid = os.getpid()
         self.pid_filename = PathProp().pythonize("%s.pid" % self.name)
         self.pid_filename = os.path.abspath(os.path.join(self.workdir, self.pid_filename))
         if 'pid_filename' in kwargs and kwargs['pid_filename']:
@@ -504,28 +630,10 @@ class Daemon(object):
             # Make it an absolute path file in the pid directory
             if self.pid_filename != os.path.abspath(self.pid_filename):
                 self.pid_filename = os.path.abspath(os.path.join(self.workdir, self.pid_filename))
-            print("Daemon '%s' is started with an overidden pid file: %s"
+            print("Daemon '%s' is started with an overridden pid file: %s"
                   % (self.name, self.pid_filename))
 
-        dirname = os.path.dirname(self.pid_filename)
-        try:
-            os.makedirs(dirname)
-            print("Daemon '%s' pid directory did not exist, I created: %s" % (self.name, dirname))
-            self.pre_log.append(("WARNING",
-                                 "Daemon '%s' pid directory did not exist, I created: %s"
-                                 % (self.name, dirname)))
-        except OSError as exp:
-            if exp.errno == errno.EEXIST and os.path.isdir(dirname):
-                # Directory still exists...
-                pass
-            else:
-                self.pre_pid.append(("ERROR",
-                                     "Daemon '%s' pid directory did not exist, "
-                                     "and I could not create: %s. Exception: %s"
-                                     % (self.name, dirname, exp)))
-                raise EnvironmentFile("Daemon '%s' pid directory did not exist, "
-                                      "and I could not create: %s. Exception: %s"
-                                      % (self.name, dirname, exp))
+        self.set_dir_filename(self.pid_filename)
 
         # Track time
         now = time.time()
@@ -534,15 +642,19 @@ class Daemon(object):
         self.sleep_time = 0.0  # used to track the time we wait
 
         self.interrupted = False
+        self.will_stop = False
 
         self.http_thread = None
         self.http_daemon = None
+        # Semaphore for the HTTP interface
+        self.lock = threading.RLock()
 
         # Configuration dispatch
+        # when self.new_conf is not None, the arbiter sent a new configuration to manage
         self.new_conf = None
         self.cur_conf = None
+        # Specific Semaphore for the configuration
         self.conf_lock = threading.RLock()
-        # self.lock = threading.RLock()
 
         # Flag to know if we need to dump memory or not
         self.need_dump_memory = False
@@ -557,7 +669,8 @@ class Daemon(object):
         self.local_log_fds = None
 
         # Log loop turns if environment variable is set
-        self.log_loop = 'TEST_LOG_LOOP' in os.environ
+        if 'TEST_LOG_LOOP' in os.environ:
+            self.log_loop = 'TEST_LOG_LOOP' in os.environ
 
         # Activity information log period (every activity_log_period loop, raise a log)
         self.activity_log_period = int(os.getenv('ALIGNAK_ACTIVITY_LOG', 600))
@@ -565,6 +678,9 @@ class Daemon(object):
         # Put in queue some debug output we will raise
         # when we will be in daemon
         self.debug_output = []
+
+        # Daemon load 1 minute
+        self.load_1_min = Load(initial_value=1)
 
         # We will initialize the Manager() when we load modules
         # and are really forked
@@ -590,7 +706,33 @@ class Daemon(object):
             _scheme = 'https'
         return _scheme
 
-    # At least, lose the local log file if needed
+    def set_dir_filename(self, filename):
+        """Check and create directory for the filename
+
+        :param filename: file name
+        :type filename; str
+
+        :return: None
+        """
+        dirname = os.path.dirname(filename)
+        try:
+            os.makedirs(dirname)
+            self.pre_log.append(("WARNING",
+                                 "Daemon '%s' directory %s did not exist, I created it."
+                                 % (self.name, dirname)))
+        except OSError as exp:
+            if exp.errno == errno.EEXIST and os.path.isdir(dirname):
+                # Directory still exists...
+                pass
+            else:
+                self.pre_log.append(("ERROR",
+                                     "Daemon directory '%s' did not exist, "
+                                     "and I could not create. Exception: %s"
+                                     % (dirname, exp)))
+                raise EnvironmentFile("Daemon directory '%s' did not exist, "
+                                      "and I could not create.'. Exception: %s"
+                                      % (dirname, exp))
+
     def do_stop(self):
         """Execute the stop of this daemon:
          - request the daemon to stop
@@ -603,25 +745,6 @@ class Daemon(object):
         """
         logger.info("Stopping %s...", self.name)
 
-        if self.http_daemon:
-            logger.info("Shutting down the HTTP daemon...")
-            self.http_daemon.request_stop()
-
-        if self.http_thread:
-            logger.debug("Joining HTTP thread...")
-            # Add a timeout to join so that we can manually quit
-            self.http_thread.join(timeout=15)
-            if self.http_thread.is_alive():  # pragma: no cover, should never happen...
-                logger.warning("http_thread failed to terminate. Calling _Thread__stop")
-                try:
-                    self.http_thread._Thread__stop()  # pylint: disable=E1101
-                except Exception:  # pylint: disable=W0703
-                    pass
-            self.http_thread = None
-
-        if self.http_daemon:
-            self.http_daemon = None
-
         if self.sync_manager:
             logger.info("Shutting down synchronization manager...")
             self.sync_manager.shutdown()
@@ -629,41 +752,140 @@ class Daemon(object):
 
         # Maybe the modules manager is not even created!
         if self.modules_manager:
-            # todo: clean this!
-            # We save what we can but NOT for the scheduler
-            # because the current sched object is a dummy one
-            # and the old one has already done it!
-            # todo: I comment this code because it looks unuseful !
-            # Only the scheduler needs retention module, the other daemons
-            # do not store anything in retention. Retention is to be removed from other daemons!
-            # if not hasattr(self, 'sched'):
-            #     self.hook_point('save_retention')
-
-            # And we quit
-            logger.info('Shutting down modules...')
+            logger.info("Shutting down modules manager...")
             self.modules_manager.stop_all()
 
-    def request_stop(self):  # pragma: no cover, not used during test because of sys.exit !
+        # todo: daemonize the process thanks to CherryPy plugin
+        if self.http_daemon:
+            logger.info("Shutting down the HTTP daemon...")
+            self.http_daemon.stop()
+            self.http_daemon = None
+
+        # todo: daemonize the process thanks to CherryPy plugin
+        if self.http_thread:
+            logger.info("Checking HTTP thread...")
+            # Let a few seconds to exit
+            self.http_thread.join(timeout=3)
+            if self.http_thread.is_alive():  # pragma: no cover, should never happen...
+                logger.warning("HTTP thread did not terminated. Force stopping the thread..")
+                try:
+                    self.http_thread._Thread__stop()  # pylint: disable=E1101
+                except Exception as exp:  # pylint: disable=broad-except
+                    print("Exception: %s" % exp)
+            else:
+                logger.info("HTTP thread exited")
+            self.http_thread = None
+
+    def request_stop(self, message='', exit_code=0):
         """Remove pid and stop daemon
 
         :return: None
         """
+        # Log an error message if exit code is not 0
+        if exit_code:
+            if message:
+                logger.error(message)
+            logger.error("Sorry, I bail out, exit code: %d", exit_code)
+        else:
+            logger.info(message)
+
         _ts = time.time()
         self.unlink()
         self.do_stop()
         statsmgr.timer('stop-delay', time.time() - _ts)
 
         logger.info("Stopped %s.", self.name)
-        sys.exit(0)
+        sys.exit(exit_code)
 
-    def look_for_early_exit(self):
-        """Stop the daemon if it is not enabled
+    def get_links_of_type(self, s_type=None):
+        """Return the `s_type` satellite list (eg. schedulers)
 
+        If s_type is None, returns a dictionary of all satellites, else returns the dictionary
+        of the s_type satellites
+
+        The returned dict is indexed with the satellites uuid.
+
+        :param s_type: satellite type
+        :type s_type: str
+        :return: dictionary of satellites
+        :rtype: dict
+        """
+        satellites = {
+            'arbiter': getattr(self, 'arbiters', []),
+            'scheduler': getattr(self, 'schedulers', []),
+            'broker': getattr(self, 'brokers', []),
+            'poller': getattr(self, 'pollers', []),
+            'reactionner': getattr(self, 'reactionners', []),
+            'receiver': getattr(self, 'receivers', [])
+        }
+        if not s_type:
+            result = {}
+            for sat_type in satellites:
+                # if sat_type == self.type:
+                #     continue
+                for sat_uuid in satellites[sat_type]:
+                    result[sat_uuid] = satellites[sat_type][sat_uuid]
+            return result
+        if s_type in satellites:
+            return satellites[s_type]
+
+        return None
+
+    def daemon_connection_init(self, s_link):
+        """Initialize a connection with the daemon for the provided satellite link
+
+        Initialize the connection (HTTP client) to the daemon and get its running identifier.
+        Returns True if it succeeds else if any error occur or the daemon is inactive
+        it returns False.
+
+        Assume the daemon should be reachable because we are initializing the connection...
+        as such, force set the link reachable property
+
+        NB: if the daemon is configured as passive, or if it is a daemon link that is
+        inactive then it returns False without trying a connection.
+
+        :param s_link: link of the daemon to connect to
+        :type s_link: SatelliteLink
+        :return: True if the connection is established, else False
+        """
+        logger.debug("Daemon connection initialization: %s %s", s_link.type, s_link.name)
+
+        # # We do not want to initiate the connections to the passive daemons
+        # # (eg. pollers, reactionners may be set as passive daemons)
+        # if s_link.passive:
+        #     logger.info("%s '%s' is set as passive, do not initalize its connection!",
+        #                 s_link.type, s_link.name)
+        #     # Create the daemon connection
+        #     s_link.create_connection()
+        #
+        #     return True
+
+        # If the link is not not active, I do not try to initialize the connection, just useless ;)
+        if not s_link.active:
+            logger.warning("%s '%s' is not active, do not initialize its connection!",
+                           s_link.type, s_link.name)
+            return False
+
+        # Create the daemon connection
+        s_link.create_connection()
+
+        # Get the connection running identifier - first client / server communication
+        logger.debug("[%s] Getting running identifier for '%s'", self.name, s_link.name)
+        _t0 = time.time()
+        # Assume the daemon should be alive and reachable
+        # because we are initializing the connection...
+        s_link.alive = True
+        s_link.reachable = True
+        got_a_running_id = s_link.get_running_id()
+        statsmgr.timer('con-initialization.%s' % s_link.name, time.time() - _t0)
+
+        return got_a_running_id
+
+    def setup_new_conf(self):
+        """Setup the new configuration received from Arbiter
         :return: None
         """
-        if not self.daemon_enabled:
-            logger.info('This daemon is disabled in Alignak configuration. Bailing out')
-            self.request_stop()
+        raise NotImplementedError()
 
     def do_loop_turn(self):
         """Abstract method for daemon loop turn.
@@ -673,38 +895,79 @@ class Daemon(object):
         """
         raise NotImplementedError()
 
-    def do_mainloop(self):
+    def do_before_loop(self):  # pylint: disable=no-self-use
+        """Called before the main daemon loop.
+
+        :return: None
+        """
+        logger.debug("Nothing to do before the main loop")
+        return
+
+    def do_main_loop(self):  # pylint: disable=too-many-branches, too-many-statements
         """Main loop for an Alignak daemon
 
         :return: None
         """
         # Increased on each loop turn
         self.loop_count = 0
-        while True:
+
+        # Daemon start timestamp
+        self.start_time = time.time()
+
+        # For the pause duration
+        logger.info("[%s] pause duration: %.2f",
+                    self.name, self.pause_duration)
+
+        # For the maximum expected loop duration
+        logger.info("[%s] maximum expected loop duration: %.2f",
+                    self.name, self.maximum_loop_duration)
+
+        # Treatments before starting the main loop...
+        self.do_before_loop()
+
+        logger.info("[%s] starting main loop: %.2f", self.name, self.start_time)
+        while not self.interrupted:
+            loop_start_ts = time.time()
+
+            # Maybe someone said we will stop...
+            if self.will_stop and not self.type == 'arbiter':
+                logger.info("death-wait mode... waiting for death")
+                _, _ = self.make_a_pause(1.0)
+                continue
+
             # Increment loop count
             self.loop_count += 1
             if self.log_loop:
-                logger.debug("[%s] --- %d", self.name, self.loop_count)
-            _ts = time.time()
-            self.do_loop_turn()
+                logger.debug("--- %d", self.loop_count)
 
-            # If someone asked us to dump memory, do it
-            if self.need_dump_memory:
-                logger.debug('Dumping memory')
-                self.dump_memory()
-                self.need_dump_memory = False
-            if self.need_objects_dump:
-                logger.debug('Dumping objects')
-                self.need_objects_dump = False
+            # Maybe the arbiter pushed a new configuration...
+            if self.watch_for_new_conf(timeout=0):
+                logger.info("I got a new configuration...")
+                # Manage the new configuration
+                self.setup_new_conf()
 
-            statsmgr.timer('loop-turn', time.time() - _ts)
+            for satellite in self.get_links_of_type(s_type=None).values():
+                if not satellite.alive and not satellite.passive:
+                    logger.info("Trying to restore connection for %s/%s",
+                                satellite.type, satellite.name)
+                    self.daemon_connection_init(satellite)
+
+            # Each loop turn, execute the daemon specific treatment...
+            # only if the daemon has a configuration to manage
+            if self.cur_conf:
+                _ts = time.time()
+                self.do_loop_turn()
+                statsmgr.timer('loop-turn', time.time() - _ts)
+            else:
+                logger.info("+++ loop %d, did not yet received my configuration",
+                            self.loop_count)
+
+            # Daemon load
+            # fixme: measuring the scheduler load with this method is a non-sense ...
+            self.load_1_min.update_load(self.sleep_time)
+
             if self.log_loop:
-                logger.debug("[%s] +++ %d", self.name, self.loop_count)
-
-            # If someone asked us a configuration reloading
-            if self.need_config_reload:
-                logger.debug('Ask for configuration reloading')
-                return
+                logger.debug("+++ %d, load: %s", self.loop_count, self.load_1_min.load)
 
             if self.daemon_monitoring and (self.loop_count % self.daemon_monitoring_period == 1):
                 perfdatas = []
@@ -739,15 +1002,70 @@ class Daemon(object):
                                  my_process.status(), " ".join(perfdatas))
 
             if self.activity_log_period and (self.loop_count % self.activity_log_period == 1):
-                logger.info("Daemon %s is alive", self.name)
+                logger.info("Daemon %s is living: loop #%s ;)", self.name, self.loop_count)
 
+            # Maybe the arbiter pushed a new configuration...
+            if self.watch_for_new_conf(0.05):
+                logger.warning("The arbiter pushed a new configuration... ")
+
+            # Loop end
+            loop_end_ts = time.time()
+            loop_duration = loop_end_ts - loop_start_ts
+
+            pause = self.maximum_loop_duration - loop_duration
+            if loop_duration > self.maximum_loop_duration:
+                logger.warning("The %s %s loop exceeded the maximum expected loop duration: %.2f. "
+                               "The last loop needed %.2f seconds to execute. "
+                               "You should try to reduce the load on this %s.",
+                               self.type, self.name, self.maximum_loop_duration,
+                               loop_duration, self.type)
+                # Make a very very short pause ...
+                pause = 0.01
+
+            # Pause the daemon execution to avoid too much load on the system
+            logger.debug("Before pause: timeout: %s", pause)
+            work, time_changed = self.make_a_pause(pause)
+            logger.debug("After pause: %.2f / %.2f, sleep time: %.2f",
+                         work, time_changed, self.sleep_time)
+            if work > self.pause_duration:
+                logger.warning("Too much work during the pause (%.2f out of %.2f)! "
+                               "The scheduler should rest for a while... but one need to change "
+                               "its code for this. Please log an issue in the project repository;",
+                               work, self.pause_duration)
+                self.pause_duration += 0.1
+            self.sleep_time = 0.0
+
+            # And now, the whole average time spent
+            elapsed_time = loop_end_ts - self.start_time
             if self.log_loop:
-                logger.debug("[%s] +++ %d", self.name, self.loop_count)
-            # Maybe we ask us to die, if so, do it :)
+                logger.debug("Elapsed time, current loop: %.2f, from start: %.2f (%d loops)",
+                             loop_duration, elapsed_time, self.loop_count)
+            statsmgr.gauge('loop.count', self.loop_count)
+            statsmgr.timer('loop.duration', loop_duration)
+            statsmgr.timer('run.duration', elapsed_time)
+
+            # Maybe someone said we will stop...
+            if self.will_stop:
+                if self.type == 'arbiter':
+                    self.will_stop = False
+                else:
+                    logger.info("The arbiter said we will stop soon - go to death-wait mode")
+
+            # Maybe someone asked us to die, if so, do it :)
             if self.interrupted:
-                logger.info("[%s] Someone asked us to stop", self.name)
-                break
-        self.request_stop()
+                logger.info("Someone asked us to stop now")
+                continue
+
+            # If someone asked us a configuration reloading
+            if self.need_config_reload and self.type == 'arbiter':
+                logger.warning("Someone provoked a configuration reload")
+                return
+
+            # If someone asked us to dump memory, do it
+            if self.need_dump_memory:
+                logger.debug('Dumping memory')
+                self.dump_memory()
+                self.need_dump_memory = False
 
     def do_load_modules(self, modules):
         """Wrapper for calling load_and_init method of modules_manager attribute
@@ -797,7 +1115,7 @@ class Daemon(object):
                        "an issue in the project repository;)")
 
     def load_modules_manager(self):
-        """Instantiate the dameon ModulesManager and load the SyncManager (multiprocessing)
+        """Instantiate the daemon ModulesManager and load the SyncManager (multiprocessing)
 
         :param daemon_name: daemon name
         :type elt: str
@@ -814,7 +1132,7 @@ class Daemon(object):
         logger.info("Changing working directory to: %s", self.workdir)
         try:
             os.chdir(self.workdir)
-        except Exception, exp:
+        except Exception as exp:
             raise InvalidWorkingDir(exp)
         self.pre_log.append(("INFO", "Using working directory: %s" % os.path.abspath(self.workdir)))
 
@@ -827,7 +1145,7 @@ class Daemon(object):
         try:
             os.unlink(self.pid_filename)
         except OSError as exp:
-            logger.error("Got an error unlinking our pid file: %s", exp)
+            logger.debug("Got an error unlinking our pid file: %s", exp)
 
     @staticmethod
     def check_shm():
@@ -901,21 +1219,22 @@ class Daemon(object):
             return
 
         try:
-            logger.info("Killing process: '%s'", pid)
+            logger.debug("Truing to kill the former existing process: '%s'", pid)
             os.kill(pid, 0)
-        except Exception as err:  # pylint: disable=W0703
+        except OSError:
             # consider any exception as a stale pid file.
             # this includes :
             #  * PermissionError when a process with same pid exists but is executed by another user
             #  * ProcessLookupError: [Errno 3] No such process
-            logger.info("Stale pid file exists (%s), Reusing it.", err)
+            self.pre_log.append(("DEBUG", "No former instance to replace"))
+            logger.info("A stale pid file exists, reusing it")
             return
 
         if not self.do_replace:
-            raise SystemExit("valid pidfile exists (pid=%s) and not forced to replace. Exiting."
-                             % pid)
+            raise SystemExit("A valid pid file still exists (pid=%s) and "
+                             "I am not allowed to replace. Exiting!" % pid)
 
-        self.pre_log.append(("DEBUG", "Replacing previous instance: %d" % pid))
+        self.pre_log.append(("DEBUG", "Replacing former instance: %d" % pid))
         try:
             pgid = os.getpgid(pid)
             os.killpg(pgid, signal.SIGQUIT)
@@ -1044,8 +1363,6 @@ class Daemon(object):
         self.pid = os.getpid()
         self.pre_log.append(("DEBUG", "We are now fully daemonized :) pid=%d" % self.pid))
 
-    # The Manager is a sub-process, so we must be sure it won't have
-    # a socket of our http server alive
     @staticmethod
     def _create_manager():
         """Instantiate and start a SyncManager
@@ -1087,10 +1404,13 @@ class Daemon(object):
         self.sync_manager = self._create_manager()
         logger.info("Created")
 
+        # todo: daemonize the process thanks to CherryPy plugin
         logger.info("Starting http_daemon thread..")
-        self.http_thread = threading.Thread(None, self.http_daemon_thread, 'http_thread')
+        self.http_thread = threading.Thread(target=self.http_daemon_thread,
+                                            name='http_thread_%s' % self.name)
         self.http_thread.daemon = True
         self.http_thread.start()
+        time.sleep(1)
         logger.info("HTTP daemon thread started")
 
         return True
@@ -1101,46 +1421,43 @@ class Daemon(object):
 
         :return: True if initialization is ok, else False
         """
-        if hasattr(self, 'use_ssl'):  # "common" daemon
-            ssl_conf = self
-        else:
-            ssl_conf = self.conf     # arbiter daemon..
-
-        use_ssl = ssl_conf.use_ssl
+        use_ssl = self.use_ssl
         ca_cert = ssl_cert = ssl_key = server_dh = None
 
         # The SSL part
         if use_ssl:
-            ssl_cert = os.path.abspath(str(ssl_conf.server_cert))
+            ssl_cert = os.path.abspath(self.server_cert)
             if not os.path.exists(ssl_cert):
-                logger.error('Error : the SSL certificate %s is missing (server_cert).'
-                             'Please fix it in your configuration', ssl_cert)
-                sys.exit(2)
+                self.exit_on_error("The configured SSL server certificate file '%s' "
+                                   "does not exist." % ssl_cert, exit_code=2)
+            logger.info("Using SSL server certificate: %s", ssl_cert)
 
-            if str(ssl_conf.server_dh) != '':
-                server_dh = os.path.abspath(str(ssl_conf.server_dh))
+            ssl_key = os.path.abspath(self.server_key)
+            if not os.path.exists(ssl_key):
+                self.exit_on_error("The configured SSL server key file '%s' "
+                                   "does not exist." % ssl_key, exit_code=2)
+            logger.info("Using SSL server key: %s", ssl_key)
+
+            if self.server_dh:
+                server_dh = os.path.abspath(self.server_dh)
                 logger.info("Using ssl dh cert file: %s", server_dh)
+                self.exit_on_error("Sorry, but using a DH configuration "
+                                   "is not currently supported!", exit_code=2)
 
-            if str(ssl_conf.ca_cert) != '':
-                ca_cert = os.path.abspath(str(ssl_conf.ca_cert))
+            if self.ca_cert:
+                ca_cert = os.path.abspath(self.ca_cert)
                 logger.info("Using ssl ca cert file: %s", ca_cert)
 
-            ssl_key = os.path.abspath(str(ssl_conf.server_key))
-            if not os.path.exists(ssl_key):
-                logger.error('Error : the SSL key %s is missing (server_key).'
-                             'Please fix it in your configuration', ssl_key)
-                sys.exit(2)
-            logger.info("Using ssl server cert/key files: %s/%s", ssl_cert, ssl_key)
-
-            if ssl_conf.hard_ssl_name_check:
+            if self.hard_ssl_name_check:
                 logger.info("Enabling hard SSL server name verification")
 
-        # Let's create the HTTPDaemon, it will be exec after
+        # Let's create the HTTPDaemon, it will be started later
         # pylint: disable=E1101
         try:
             self.http_daemon = HTTPDaemon(self.host, self.port, self.http_interface,
                                           use_ssl, ca_cert, ssl_key,
-                                          ssl_cert, server_dh, self.daemon_thread_pool_size)
+                                          ssl_cert, server_dh, self.thread_pool_size,
+                                          self.log_cherrypy)
         except PortNotFree:
             logger.error('The HTTP daemon port (%s:%d) is not free...', self.host, self.port)
             # logger.exception('The HTTP daemon port is not free: %s', exp)
@@ -1199,19 +1516,27 @@ class Daemon(object):
             return
 
         if (self.user == 'root' or self.group == 'root') and not insane:  # pragma: no cover
-            logger.error("You want the application run under the root account?")
-            logger.error("I do not agree with it. If you really want it, put:")
-            logger.error("idontcareaboutsecurity=1")
-            logger.error("in the config file")
-            logger.error("Exiting")
-            sys.exit(2)
+            logger.error("You want the application to run with the root account credentials? "
+                         "It is not a safe configuration!")
+            logger.error("If you really want it, set: 'idontcareaboutsecurity=1' "
+                         "in the configuration file")
+            raise InvalidCredentials("Running with the root account is not safe.")
 
-        uid = self.find_uid_from_name()
-        gid = self.find_gid_from_name()
+        uid = None
+        try:
+            uid = getpwnam(self.user)[2]
+        except KeyError:
+            logger.error("The required user %s is unknown", self.user)
+
+        gid = None
+        try:
+            gid = getgrnam(self.group)[2]
+        except KeyError:
+            logger.error("The required group %s is unknown", self.group)
 
         if uid is None or gid is None:
-            logger.error("uid or gid is none. Exiting")
-            sys.exit(2)
+            raise InvalidCredentials("Configured user/group (%s/%s) are not valid."
+                                     % (self.user, self.group))
 
         # Maybe the os module got the initgroups function. If so, try to call it.
         # Do this when we are still root
@@ -1258,7 +1583,7 @@ class Daemon(object):
             self.need_dump_memory = True
         elif sig == signal.SIGUSR2:  # if USR2, ask objects dump
             self.need_objects_dump = True
-        elif sig == signal.SIGHUP:  # if HUP, reload configuration in arbiter
+        elif sig == signal.SIGHUP:  # if HUP, reload the monitoring configuration
             self.need_config_reload = True
         else:  # Ok, really ask us to die :)
             logger.info("request to stop the daemon")
@@ -1274,6 +1599,9 @@ class Daemon(object):
 
         :return: None
         """
+        if sigs is None:
+            sigs = (signal.SIGTERM, signal.SIGINT, signal.SIGUSR1, signal.SIGUSR2, signal.SIGHUP)
+
         func = self.manage_signal
         if os.name == "nt":  # pragma: no cover, no Windows implementation currently
             try:
@@ -1283,8 +1611,8 @@ class Daemon(object):
                 version = ".".join([str(i) for i in sys.version_info[:2]])
                 raise Exception("pywin32 not installed for Python " + version)
         else:
-            for sig in (signal.SIGTERM, signal.SIGINT, signal.SIGUSR1,
-                        signal.SIGUSR2, signal.SIGHUP):
+            # Only some signals are managed...
+            for sig in sigs:
                 signal.signal(sig, func)
 
     set_exit_handler = set_signal_handler
@@ -1305,8 +1633,10 @@ class Daemon(object):
         else:
             setproctitle("alignak-%s" % self.type)
 
-    def get_header(self):
+    def get_header(self, configuration=False):
         """Get the log file header
+
+        If configuration is True, this returns the daemon configuration
 
         :return: A string list containing project name, daemon name, version, licence etc.
         :rtype: list
@@ -1316,11 +1646,12 @@ class Daemon(object):
                   "Copyright (c) 2015-2017: Alignak Team",
                   "License: AGPL",
                   "-----",
-                  "My pid: %s" % self.pid,
-                  "My configuration: "]
+                  "My pid: %s" % self.pid]
 
-        for prop, _ in sorted(self.properties.items()):
-            header.append(" - %s=%s" % (prop, getattr(self, prop)))
+        if configuration:
+            header = ["My configuration: "]
+            for prop, _ in sorted(self.properties.items()):
+                header.append(" - %s=%s" % (prop, getattr(self, prop)))
 
         return header
 
@@ -1337,11 +1668,13 @@ class Daemon(object):
             self.http_daemon.run()
         except PortNotFree as exp:
             # print("Exception: %s" % str(exp))
-            # logger.exception('The HTTP daemon port is not free: %s', exp)
+            logger.exception('The HTTP daemon port is not free: %s', exp)
             raise
         except Exception as exp:  # pylint: disable=W0703
-            logger.exception('The HTTP daemon failed with the error %s, exiting', str(exp))
-            raise
+            self.exit_on_exception(exp)
+            # logger.exception('The HTTP daemon failed with the error %s, exiting', str(exp))
+            # logger.critical("Back trace of the error:\n%s", traceback.format_exc())
+            # raise
         logger.info("HTTP main thread exiting")
 
     def make_a_pause(self, timeout=0.0001, check_time_change=True):
@@ -1395,6 +1728,7 @@ class Daemon(object):
         return elapsed, time_changed
 
     def check_for_system_time_change(self):
+        # pylint: disable=no-member
         """Check if our system time change. If so, change our
 
         :return: 0 if the difference < 900, difference else
@@ -1417,7 +1751,8 @@ class Daemon(object):
 
         return difference
 
-    def compensate_system_time_change(self, difference, timeperiods):  # pylint: disable=R0201,W0613
+    def compensate_system_time_change(self, difference, timeperiods):
+        # pylint: disable=no-self-use, no-member, unused-argument
         """Default action for system time change. Actually a log is done
 
         :return: None
@@ -1438,13 +1773,27 @@ class Daemon(object):
         while not self.new_conf and not self.interrupted:
             # Make a pause and check if the system time changed
             _, _ = self.make_a_pause(timeout, check_time_change=True)
-            # sys.stdout.write(".")
-            # sys.stdout.flush()
+
         if not self.interrupted:
             logger.info("Got initial configuration, waited for: %.2f", time.time() - _ts)
             statsmgr.timer('initial-configuration', time.time() - _ts)
         else:
             logger.info("Interrupted before getting the initial configuration")
+
+    def watch_for_new_conf(self, timeout=0):
+        """Check if a new configuration was sent to the daemon
+
+        This function is called on each daemon loop turn. Basically it is a sleep...
+
+        If a new configuration was posted, this function returns True
+
+        :param timeout: timeout to wait. Default is no wait time.
+        :type timeout: float
+        :return: None
+        """
+        logger.debug("Watching for a new configuration, timeout: %s", timeout)
+        self.make_a_pause(timeout=timeout, check_time_change=False)
+        return self.new_conf is not None
 
     def hook_point(self, hook_name):
         """Used to call module function that may define a hook function
@@ -1457,17 +1806,19 @@ class Daemon(object):
         for module in self.modules_manager.instances:
             _ts = time.time()
             full_hook_name = 'hook_' + hook_name
-            if hasattr(module, full_hook_name):
-                fun = getattr(module, full_hook_name)
-                try:
-                    fun(self)
-                except Exception as exp:  # pylint: disable=W0703
-                    logger.warning('The instance %s raised an exception %s. I disabled it,'
-                                   'and set it to restart later', module.name, str(exp))
-                    logger.exception('Exception %s', exp)
-                    self.modules_manager.set_to_restart(module)
-                else:
-                    statsmgr.timer('core.hook.%s.%s' % (module.name, hook_name), time.time() - _ts)
+            if not hasattr(module, full_hook_name):
+                continue
+
+            fun = getattr(module, full_hook_name)
+            try:
+                fun(self)
+            except Exception as exp:  # pylint: disable=W0703
+                logger.warning('The instance %s raised an exception %s. I disabled it,'
+                               'and set it to restart later', module.name, str(exp))
+                logger.exception('Exception %s', exp)
+                self.modules_manager.set_to_restart(module)
+            else:
+                statsmgr.timer('core.hook.%s.%s' % (module.name, hook_name), time.time() - _ts)
 
     def get_retention_data(self):  # pylint: disable=R0201
         """Basic function to get retention data,
@@ -1486,12 +1837,9 @@ class Daemon(object):
         """
         pass
 
-    def get_stats_struct(self):
+    def get_daemon_stats(self, details=False):  # pylint: disable=unused-argument
         """Get state of modules and create a scheme for stats data of daemon
         This may be overridden in subclasses (and it is...)
-
-        NOTE: This is overriden by all the daemons but it is never called anywhere. Inherited
-         from the shinken.io implementation in Shinken!
 
         :return: A dict with the following structure
         ::
@@ -1510,47 +1858,101 @@ class Daemon(object):
 
         """
         res = {
-            'metrics': [], 'version': VERSION, 'name': self.name, 'type': self.type,
+            "alignak": getattr(self, 'alignak_name', 'unknown'),
+            "type": getattr(self, 'type', 'unknown'),
+            "name": getattr(self, 'name', 'unknown'),
+            "version": VERSION,
+            "program_start": self.program_start,
+            "spare": self.spare,
+            "load": self.load_1_min.load,
+            'counters': {},
+            'metrics': [],
             'modules': {
                 'internal': {}, 'external': {}
             }
         }
-        modules = res['modules']
 
+        # Modules information
+        modules = res['modules']
+        counters = res['counters']
+        counters['modules'] = len(self.modules_manager.instances)
         # first get data for all internal modules
         for instance in self.modules_manager.get_internal_instances():
             state = {True: 'ok', False: 'stopped'}[(instance
                                                     not in self.modules_manager.to_restart)]
-            env = {'name': instance.name, 'state': state}
-            modules['internal'][instance.name] = env
+            modules['internal'][instance.name] = {'name': instance.name, 'state': state}
         # Same but for external ones
         for instance in self.modules_manager.get_external_instances():
             state = {True: 'ok', False: 'stopped'}[(instance
                                                     not in self.modules_manager.to_restart)]
-            env = {'name': instance.name, 'state': state}
-            modules['external'][instance.name] = env
+            modules['internal'][instance.name] = {'name': instance.name, 'state': state}
 
         return res
 
-    @staticmethod
-    def print_unrecoverable(trace):
-        """Log generic message when getting an unrecoverable error
+    def exit_ok(self, message, exit_code=None):
+        """Log a message and exit
 
-        :param trace: stack trace of the Exception
-        :type trace:
+        :param exit_code: if not None, exit with the provided value as exit code
+        :type exit_code: int
+        :param message: message for the exit reason
+        :type message: str
         :return: None
         """
-        logger.critical("I got an unrecoverable error. I have to exit.")
-        logger.critical("You can get help at https://github.com/Alignak-monitoring/alignak")
-        logger.critical("If you think this is a bug, create a new issue including as much "
-                        "details as possible (version, configuration, ...")
+        logger.info("Exiting...")
+        if message:
+            logger.info("-----")
+            logger.error("Exit message: %s", message)
+            logger.info("-----")
+
+        self.request_stop()
+
+        if exit_code is not None:
+            exit(exit_code)
+
+    def exit_on_error(self, message, exit_code=None):
+        # pylint: disable=no-self-use
+        """Log generic message when getting an error and exit
+
+        :param exit_code: if not None, exit with the provided value as exit code
+        :type exit_code: int
+        :param message: message for the exit reason
+        :type message: str
+        :return: None
+        """
+        logger.error("I got an unrecoverable error. I have to exit.")
+        if message:
+            logger.error("-----")
+            logger.error("Error message: %s", message)
+        logger.error("-----")
+        logger.error("You can get help at https://github.com/Alignak-monitoring/alignak")
+        logger.error("If you think this is a bug, create a new issue including as much "
+                     "details as possible (version, configuration,...)")
+        if exit_code is not None:
+            exit(exit_code)
+
+    def exit_on_exception(self, raised_exception, message='', exit_code=1):
+        """Log generic message when getting an unrecoverable error
+
+        :param raised_exception: raised Exception
+        :type raised_exception: Exception
+        :param message: message for the exit reason
+        :type message: str
+        :param exit_code: exit with the provided value as exit code
+        :type exit_code: int
+        :return: None
+        """
+        self.exit_on_error(message=message, exit_code=None)
+
         logger.critical("-----")
-        logger.critical("Back trace of the error: %s", trace)
+        logger.critical("Exception: %s", str(raised_exception))
+        logger.critical("Back trace of the error:\n%s", traceback.format_exc())
+
+        exit(exit_code)
 
     def get_objects_from_from_queues(self):
         """ Get objects from "from" queues and add them.
 
-        :return: True if we got some objects, False otherwise.
+        :return: True if we got something in the queue, False otherwise.
         :rtype: bool
         """
         had_some_objects = False
@@ -1559,26 +1961,22 @@ class Daemon(object):
             if not queue:
                 continue
             while True:
-                start = time.time()
                 queue_size = queue.qsize()
                 if queue_size:
-                    statsmgr.gauge('queues.external.%s.from.size' % module.get_name(), queue_size)
+                    statsmgr.gauge('queue.from.%s.size' % module.get_name(), queue_size)
                 try:
                     obj = queue.get_nowait()
                 except Full:
                     logger.warning("Module %s from queue is full", module.get_name())
                 except Empty:
-                    logger.debug("Module %s from queue is full", module.get_name())
                     break
                 except (IOError, EOFError) as exp:
                     logger.warning("Module %s from queue is no more available: %s",
                                    module.get_name(), str(exp))
-                except Exception as exp:  # pylint: disable=W0703
+                except Exception as exp:  # pylint: disable=broad-except
                     logger.error("An external module queue got a problem '%s'", str(exp))
                 else:
                     had_some_objects = True
-                    statsmgr.timer('queues.external.%s.from.get' % module.get_name(),
-                                   time.time() - start)
                     self.add(obj)
 
         return had_some_objects
@@ -1589,44 +1987,33 @@ class Daemon(object):
         - configure the global daemon handler (root logger)
         - log the daemon Alignak header
 
+        - configure the global Alignak monitoring log
+
         :return: None
         """
-        # Force the debug level if the daemon is said to start with such level
-        log_level = self.log_level
-        if self.debug:
-            log_level = 'DEBUG'
-
-        # Set the human timestamp log if required
-        human_log_format = getattr(self, 'human_timestamp_log', False)
-
-        # Register local log file if required
-        if self.use_log_file:
-            try:
-                # pylint: disable=E1101
-                setup_logger(None, level=log_level, human_log=human_log_format,
-                             log_console=True, log_file=self.log_filename,
-                             when=self.log_rotation_when, interval=self.log_rotation_interval,
-                             backup_count=self.log_rotation_count,
-                             human_date_format=self.human_date_format)
-            except IOError as exp:  # pragma: no cover, not with unit tests...
-                logger.error("Opening the log file '%s' failed with '%s'", self.log_filename, exp)
-                sys.exit(2)
-            logger.debug("Using the local log file '%s'", self.log_filename)
-            self.local_log_fds = get_logger_fds(None)
-        else:  # pragma: no cover, not with unit tests...
-            setup_logger(None, level=log_level, human_log=human_log_format,
-                         log_console=True, log_file=None)
-            logger.warning("No local log file")
+        # Configure the daemon logger
+        try:
+            # Make sure that the log directory is existing
+            self.set_dir_filename(os.path.join(self.logdir, 'fake'))
+            setup_logger(logger_configuration_file=self.logger_configuration,
+                         log_dir=self.logdir, process_name=self.name,
+                         log_file=self.log_filename)
+        except Exception as exp:  # pylint: disable=broad-except
+            print("Exception: %s" % exp)
+            self.exit_on_exception(exp, message="Logger configuration error!")
 
         logger.debug("Alignak daemon logger configured")
 
-        # Log daemon header
         for line in self.get_header():
             logger.info(line)
 
+        # Log daemon configuration
+        for line in self.get_header(configuration=True):
+            logger.debug(line)
+
         # We can now output some previously silenced debug output
         if self.pre_log:
-            logger.debug("--- Messages stored prior to our configuration:")
+            logger.debug("--- Start - Log prior to our configuration:")
             for level, message in self.pre_log:
                 if level.lower() == "debug":
                     logger.debug("--- %s", message)
@@ -1634,4 +2021,4 @@ class Daemon(object):
                     logger.info("--- %s", message)
                 elif level.lower() == "warning":
                     logger.warning("--- %s", message)
-            logger.debug("---")
+            logger.debug("--- Stop - Log prior to our configuration")

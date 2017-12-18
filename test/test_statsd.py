@@ -27,6 +27,7 @@ This file test the StatsD interface
 import re
 import socket
 import threading
+import logging
 
 from alignak.brok import Brok
 
@@ -75,16 +76,22 @@ class FakeStatsdServer(threading.Thread):
         sock.close()
 
 
-class TestStats(AlignakTest):
+class TestStatsD(AlignakTest):
     """
     This class test the StatsD interface
     """
-
     def setUp(self):
+        super(TestStatsD, self).setUp()
+
         # Create our own stats manager...
         # do not use the global object to restart with a fresh one on each test
         self.statsmgr = Stats()
         self.fake_server = FakeStatsdServer(port=8125)
+
+        # Setup a logger...
+        self.setup_logger()
+        self.logger.setLevel(logging.DEBUG)
+        self.clear_logs()
 
     def tearDown(self):
         self.fake_server.stop()
@@ -94,19 +101,12 @@ class TestStats(AlignakTest):
         """ Stats manager exists
         :return:
         """
-        self.print_header()
         assert 'statsmgr' in globals()
 
     def test_statsmgr_register_disabled(self):
         """ Stats manager is registered as disabled
         :return:
         """
-        self.print_header()
-
-        # Setup a logger...
-        self.setup_logger()
-        self.clear_logs()
-
         # Register stats manager as disabled
         assert not self.statsmgr.register('arbiter-master', 'arbiter',
                                           statsd_host='localhost', statsd_port=8125,
@@ -119,12 +119,6 @@ class TestStats(AlignakTest):
         """ Stats manager is registered as disabled, but broks are enabled
         :return:
         """
-        self.print_header()
-
-        # Setup a logger...
-        self.setup_logger()
-        self.clear_logs()
-
         # Register stats manager as disabled
         assert not self.statsmgr.register('arbiter-master', 'arbiter',
                                           statsd_host='localhost', statsd_port=8125,
@@ -139,12 +133,6 @@ class TestStats(AlignakTest):
         """ Stats manager is registered as enabled
         :return:
         """
-        self.print_header()
-
-        # Setup a logger...
-        self.setup_logger()
-        self.clear_logs()
-
         # Register stats manager as enabled
         assert self.statsmgr.statsd_sock is None
         assert self.statsmgr.statsd_addr is None
@@ -156,26 +144,24 @@ class TestStats(AlignakTest):
         assert self.statsmgr.statsd_sock is not None
         assert self.statsmgr.statsd_addr is not None
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Sending arbiter/arbiter-master daemon statistics '
-            'to: localhost:8125, prefix: alignak'
+            'DEBUG: [alignak.stats] StatsD configuration for arbiter-master - localhost:8125, '
+            'prefix: alignak, enabled: True, broks: False, file: None'
         ), 0)
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Trying to contact StatsD server...'
+            'INFO: [alignak.stats] Sending arbiter-master daemon statistics '
+            'to: localhost:8125, prefix: alignak'
         ), 1)
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] StatsD server contacted'
+            'INFO: [alignak.stats] Trying to contact StatsD server...'
         ), 2)
+        self.assert_log_match(re.escape(
+            'INFO: [alignak.stats] StatsD server contacted'
+        ), 3)
 
     def test_statsmgr_register_enabled_broks(self):
         """ Stats manager is registered as enabled and broks are enabled
         :return:
         """
-        self.print_header()
-
-        # Setup a logger...
-        self.setup_logger()
-        self.clear_logs()
-
         # Register stats manager as enabled
         assert self.statsmgr.statsd_sock is None
         assert self.statsmgr.statsd_addr is None
@@ -188,26 +174,24 @@ class TestStats(AlignakTest):
         assert self.statsmgr.statsd_sock is not None
         assert self.statsmgr.statsd_addr is not None
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Sending arbiter/arbiter-master daemon statistics '
-            'to: localhost:8125, prefix: alignak'
+            'DEBUG: [alignak.stats] StatsD configuration for arbiter-master - localhost:8125, '
+            'prefix: alignak, enabled: True, broks: True, file: None'
         ), 0)
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Trying to contact StatsD server...'
+            'INFO: [alignak.stats] Sending arbiter-master daemon statistics '
+            'to: localhost:8125, prefix: alignak'
         ), 1)
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] StatsD server contacted'
+            'INFO: [alignak.stats] Trying to contact StatsD server...'
         ), 2)
+        self.assert_log_match(re.escape(
+            'INFO: [alignak.stats] StatsD server contacted'
+        ), 3)
 
     def test_statsmgr_connect(self):
         """ Test connection in disabled mode
         :return:
         """
-        self.print_header()
-
-        # Setup a logger...
-        self.setup_logger()
-        self.clear_logs()
-
         # Register stats manager as disabled
         assert not self.statsmgr.register('arbiter-master', 'arbiter',
                                            statsd_host='localhost', statsd_port=8125,
@@ -226,26 +210,20 @@ class TestStats(AlignakTest):
         """ Test connection with a bad port
         :return:
         """
-        self.print_header()
-
-        # Setup a logger...
-        self.setup_logger()
-        self.clear_logs()
-
         # Register stats manager as enabled (another port than the default one)
         assert self.statsmgr.register('arbiter-master', 'arbiter',
                                           statsd_host='localhost', statsd_port=8888,
                                           statsd_prefix='alignak', statsd_enabled=True)
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Sending arbiter/arbiter-master daemon statistics '
+            'INFO: [alignak.stats] Sending arbiter-master daemon statistics '
             'to: localhost:8888, prefix: alignak'
-        ), 0)
-        self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Trying to contact StatsD server...'
         ), 1)
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] StatsD server contacted'
+            'INFO: [alignak.stats] Trying to contact StatsD server...'
         ), 2)
+        self.assert_log_match(re.escape(
+            'INFO: [alignak.stats] StatsD server contacted'
+        ), 3)
 
         # "Connected" to StatsD server - even with a bad port number!
         self.assert_no_log_match('Cannot create StatsD socket')
@@ -254,12 +232,6 @@ class TestStats(AlignakTest):
         """ Test sending data for a timer
         :return:
         """
-        self.print_header()
-
-        # Setup a logger...
-        self.setup_logger()
-        self.clear_logs()
-
         # Register stats manager as enabled
         self.statsmgr.register('arbiter-master', 'arbiter',
                                statsd_host='localhost', statsd_port=8125,
@@ -267,17 +239,17 @@ class TestStats(AlignakTest):
                                broks_enabled=True)
         self.show_logs()
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Sending arbiter/arbiter-master daemon statistics to: localhost:8125, prefix: alignak'
-        ), 0)
-        self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Trying to contact StatsD server...'
+            'INFO: [alignak.stats] Sending arbiter-master daemon statistics to: localhost:8125, prefix: alignak'
         ), 1)
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] StatsD server contacted'
+            'INFO: [alignak.stats] Trying to contact StatsD server...'
         ), 2)
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Alignak internal statistics are sent to StatsD.'
+            'INFO: [alignak.stats] StatsD server contacted'
         ), 3)
+        self.assert_log_match(re.escape(
+            'INFO: [alignak.stats] Alignak internal statistics are sent to StatsD.'
+        ), 4)
 
         assert self.statsmgr.stats == {}
 
@@ -348,12 +320,6 @@ class TestStats(AlignakTest):
         """ Test sending data for a counter
         :return:
         """
-        self.print_header()
-
-        # Setup a logger...
-        self.setup_logger()
-        self.clear_logs()
-
         # Register stats manager as enabled
         self.statsmgr.register('broker-master', 'broker',
                                statsd_host='localhost', statsd_port=8125,
@@ -361,17 +327,17 @@ class TestStats(AlignakTest):
                                broks_enabled=True)
         self.show_logs()
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Sending broker/broker-master daemon statistics to: localhost:8125, prefix: alignak'
-        ), 0)
-        self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Trying to contact StatsD server...'
+            'INFO: [alignak.stats] Sending broker-master daemon statistics to: localhost:8125, prefix: alignak'
         ), 1)
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] StatsD server contacted'
+            'INFO: [alignak.stats] Trying to contact StatsD server...'
         ), 2)
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Alignak internal statistics are sent to StatsD.'
+            'INFO: [alignak.stats] StatsD server contacted'
         ), 3)
+        self.assert_log_match(re.escape(
+            'INFO: [alignak.stats] Alignak internal statistics are sent to StatsD.'
+        ), 4)
 
         assert self.statsmgr.stats == {}
 
@@ -442,12 +408,6 @@ class TestStats(AlignakTest):
         """ Test sending data for a gauge
         :return:
         """
-        self.print_header()
-
-        # Setup a logger...
-        self.setup_logger()
-        self.clear_logs()
-
         # Register stats manager as enabled
         self.statsmgr.register('arbiter-master', 'arbiter',
                                statsd_host='localhost', statsd_port=8125,
@@ -455,17 +415,17 @@ class TestStats(AlignakTest):
                                broks_enabled=True)
         self.show_logs()
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Sending arbiter/arbiter-master daemon statistics to: localhost:8125, prefix: alignak'
-        ), 0)
-        self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Trying to contact StatsD server...'
+            'INFO: [alignak.stats] Sending arbiter-master daemon statistics to: localhost:8125, prefix: alignak'
         ), 1)
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] StatsD server contacted'
+            'INFO: [alignak.stats] Trying to contact StatsD server...'
         ), 2)
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Alignak internal statistics are sent to StatsD.'
+            'INFO: [alignak.stats] StatsD server contacted'
         ), 3)
+        self.assert_log_match(re.escape(
+            'INFO: [alignak.stats] Alignak internal statistics are sent to StatsD.'
+        ), 4)
 
         assert self.statsmgr.stats == {}
 
@@ -555,6 +515,11 @@ class TestStatsFile(AlignakTest):
         if os.path.exists('/tmp/stats.alignak'):
             os.remove('/tmp/stats.alignak')
 
+        # Setup a logger...
+        self.setup_logger()
+        self.logger.setLevel(logging.DEBUG)
+        self.clear_logs()
+
     def tearDown(self):
         self.statsmgr.file_d.close()
 
@@ -573,19 +538,13 @@ class TestStatsFile(AlignakTest):
         """ Test sending data for a timer
         :return:
         """
-        self.print_header()
-
-        # Setup a logger...
-        self.setup_logger()
-        self.clear_logs()
-
         # Register stats manager as enabled but no report to StatsD
         self.statsmgr.register('arbiter-master', 'arbiter',
                                statsd_enabled=True, statsd_host=None)
         self.show_logs()
         self.assert_log_match(re.escape(
             'INFO: [alignak.stats] Alignak internal statistics are written in the file /tmp/stats.alignak'
-        ), 0)
+        ), 1)
 
         assert self.statsmgr.stats == {}
 
@@ -610,19 +569,13 @@ class TestStatsFile(AlignakTest):
         """ Test sending data for a counter
         :return:
         """
-        self.print_header()
-
-        # Setup a logger...
-        self.setup_logger()
-        self.clear_logs()
-
         # Register stats manager as enabled but no report to StatsD
         self.statsmgr.register('arbiter-master', 'arbiter',
                                statsd_enabled=True, statsd_host=None)
         self.show_logs()
         self.assert_log_match(re.escape(
             'INFO: [alignak.stats] Alignak internal statistics are written in the file /tmp/stats.alignak'
-        ), 0)
+        ), 1)
 
         assert self.statsmgr.stats == {}
 
@@ -637,12 +590,6 @@ class TestStatsFile(AlignakTest):
         """ Test sending data for a gauge
         :return:
         """
-        self.print_header()
-
-        # Setup a logger...
-        self.setup_logger()
-        self.clear_logs()
-
         # Register stats manager as enabled
         self.statsmgr.register('arbiter-master', 'arbiter',
                                statsd_host='localhost', statsd_port=8125,
@@ -650,20 +597,20 @@ class TestStatsFile(AlignakTest):
                                broks_enabled=True)
         self.show_logs()
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Sending arbiter/arbiter-master daemon statistics to: localhost:8125, prefix: alignak'
-        ), 0)
-        self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Trying to contact StatsD server...'
+            'INFO: [alignak.stats] Sending arbiter-master daemon statistics to: localhost:8125, prefix: alignak'
         ), 1)
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] StatsD server contacted'
+            'INFO: [alignak.stats] Trying to contact StatsD server...'
         ), 2)
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Alignak internal statistics are sent to StatsD.'
+            'INFO: [alignak.stats] StatsD server contacted'
         ), 3)
         self.assert_log_match(re.escape(
-            'INFO: [alignak.stats] Alignak internal statistics are written in the file /tmp/stats.alignak'
+            'INFO: [alignak.stats] Alignak internal statistics are sent to StatsD.'
         ), 4)
+        self.assert_log_match(re.escape(
+            'INFO: [alignak.stats] Alignak internal statistics are written in the file /tmp/stats.alignak'
+        ), 5)
 
         assert self.statsmgr.stats == {}
 

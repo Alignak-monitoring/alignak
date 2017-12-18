@@ -60,10 +60,9 @@ elements like service, hosts or contacts.
 """
 # pylint: disable=C0302
 # pylint: disable=R0904
+import uuid
 import time
 import itertools
-import uuid
-import warnings
 import logging
 
 from copy import copy
@@ -130,6 +129,7 @@ class Item(AlignakObject):
         # logger.debug("Initializing a %s with %s", self.my_type, params)
         if not parsing:
             # Unserializing an existing object
+            # todo: Why not initializing the running properties in this case?
             super(Item, self).__init__(params, parsing)
             return
 
@@ -203,36 +203,21 @@ class Item(AlignakObject):
                 val[0] = val[0][1:]
                 self.plus[key] = val   # we remove the +
             elif key[0] == "_":
-                custom_name = key.upper()
-                self.customs[custom_name] = val
+                # Except for some specific configuration variables
+                if not key.startswith('_dist'):
+                    custom_name = key.upper()
+                    self.customs[custom_name] = val
             else:
                 setattr(self, key, val)
 
         # Change Nagios2 names to Nagios3 ones (before using them)
         self.old_properties_names_to_new()
 
-    @property
-    def id(self):  # pragma: no cover, deprecation
-        # pylint: disable=C0103
-        """Getter for id, raise deprecation warning
-
-        :return: self.uuid
-        """
-        warnings.warn("Access to deprecated attribute id %s Item class" % self.__class__,
-                      DeprecationWarning, stacklevel=2)
-        return self.uuid
-
-    @id.setter
-    def id(self, value):  # pragma: no cover, deprecation
-        # pylint: disable=C0103
-        """Setter for id, raise deprecation warning
-
-        :param value: value to set
-        :return: None
-        """
-        warnings.warn("Access to deprecated attribute id of %s class" % self.__class__,
-                      DeprecationWarning, stacklevel=2)
-        self.uuid = value
+    # Simply moved all the __ functions near the initialization
+    def __str__(self):
+        cls_name = self.__class__.__name__
+        return '<%s name=%r />' % (cls_name, self.get_name())
+    __repr__ = __str__
 
     def init_running_properties(self):
         """
@@ -281,9 +266,9 @@ class Item(AlignakObject):
 
         :return: None
         """
-        for property in ('imported_from', 'use', 'plus', 'templates',):
+        for prop in ('imported_from', 'use', 'plus', 'templates', 'register'):
             try:
-                delattr(self, property)
+                delattr(self, prop)
             except AttributeError:
                 pass
 
@@ -298,12 +283,6 @@ class Item(AlignakObject):
         """
         return getattr(self, 'name', "unknown")
 
-    def __str__(self):
-        cls_name = self.__class__.__name__
-        return '<%s "name"=%r />' % (cls_name, self.get_name())
-
-    __repr__ = __str__
-
     def is_tpl(self):
         """
         Check if this object is a template
@@ -312,15 +291,6 @@ class Item(AlignakObject):
         :rtype: bool
         """
         return not getattr(self, "register", True)
-
-    def fill_default(self):
-        """
-        Define the object properties with a default value when the property is not yet defined
-
-        :return: None
-        """
-        # Simply call the super class method
-        super(Item, self).fill_default()
 
     def serialize(self):
         """This function serialize into a simple dict object.
@@ -367,18 +337,18 @@ class Item(AlignakObject):
         :return: None
         """
         logger.debug("Propagate global parameter for %s:", cls)
-        for property, entry in global_configuration.properties.items():
+        for prop, entry in global_configuration.properties.items():
             # If some global managed configuration properties have a class_inherit clause,
             if not entry.managed or not getattr(entry, 'class_inherit'):
                 continue
             for (cls_dest, change_name) in entry.class_inherit:
                 if cls_dest == cls:  # ok, we've got something to get
-                    value = getattr(global_configuration, property)
+                    value = getattr(global_configuration, prop)
                     logger.debug("- global parameter %s=%s -> %s=%s",
-                                 property, getattr(global_configuration, property),
+                                 prop, getattr(global_configuration, prop),
                                  change_name, value)
                     if change_name is None:
-                        setattr(cls, property, value)
+                        setattr(cls, prop, value)
                     else:
                         setattr(cls, change_name, value)
 
@@ -680,7 +650,7 @@ class Item(AlignakObject):
         self.fill_data_brok_from(data, 'check_result')
         return Brok({'type': self.my_type + '_snapshot', 'data': data})
 
-    def dump(self, dfile=None):  # pragma: no cover, never called
+    def dump(self, dump_file=None):  # pragma: no cover, never called
         # pylint: disable=W0613
         """
         Dump properties
@@ -741,6 +711,47 @@ class Items(object):
                 self.add_item(self.inner_class(item, parsing=parsing))
         else:
             self.add_items(items, index_items)
+
+    # Simply moved all the __ functions near the initialization
+    def __repr__(self):
+        # Build a sorted list of unicode elements name or uuid, this to make it easier to compare ;)
+        dump_list = sorted([unicode(item.get_name()
+                                    if isinstance(item, Item) else item) for item in self])
+        return '<%r, %d elements: %r/>' % (self.__class__.__name__, len(self), dump_list)
+    __str__ = __repr__
+
+    def __iter__(self):
+        return self.items.itervalues()
+
+    def __len__(self):
+        return len(self.items)
+
+    def __delitem__(self, key):
+        try:
+            self.unindex_item(self.items[key])
+            del self.items[key]
+        except KeyError:  # we don't want it, we do not have it. All is perfect
+            pass
+
+    def __setitem__(self, key, value):
+        self.items[key] = value
+        name_property = getattr(self.__class__, "name_property", None)
+        if name_property:
+            self.index_item(value)
+
+    def __getitem__(self, key):
+        """Get a specific objects for Items dict.
+        Ie : a host in the Hosts dict, a service in the Service dict etc.
+
+        :param key: object uuid
+        :type key: str
+        :return: The wanted object
+        :rtype: alignak.object.item.Item
+        """
+        return self.items[key] if key else None
+
+    def __contains__(self, key):
+        return key in self.items
 
     @staticmethod
     def get_source(item):  # pragma: no cover, never called
@@ -988,39 +999,6 @@ class Items(object):
             return
         self.name_to_item.pop(getattr(item, name_property, ''), None)
 
-    def __iter__(self):
-        return self.items.itervalues()
-
-    def __len__(self):
-        return len(self.items)
-
-    def __delitem__(self, key):
-        try:
-            self.unindex_item(self.items[key])
-            del self.items[key]
-        except KeyError:  # we don't want it, we do not have it. All is perfect
-            pass
-
-    def __setitem__(self, key, value):
-        self.items[key] = value
-        name_property = getattr(self.__class__, "name_property", None)
-        if name_property:
-            self.index_item(value)
-
-    def __getitem__(self, key):
-        """Get a specific objects for Items dict.
-        Ie : a host in the Hosts dict, a service in the Service dict etc.
-
-        :param key: object uuid
-        :type key: str
-        :return: The wanted object
-        :rtype: alignak.object.item.Item
-        """
-        return self.items[key] if key else None
-
-    def __contains__(self, key):
-        return key in self.items
-
     def find_by_name(self, name):
         """
         Find an item by name
@@ -1163,12 +1141,12 @@ class Items(object):
             if i.configuration_warnings:
                 self.configuration_warnings += i.configuration_warnings
 
-        # Log all previously sawn warnings
+        # Raise all previous warnings
         if self.configuration_warnings:
             for msg in self.configuration_warnings:
                 logger.warning("[items] %s", msg)
 
-        # Raise all previously sawn errors
+        # Raise all previous errors
         if self.configuration_errors:
             valid = False
             for msg in self.configuration_errors:
@@ -1201,11 +1179,6 @@ class Items(object):
         """
         for i in self:
             i.fill_default()
-
-    def __repr__(self):
-        return '<%r, %d elements: %r/>' \
-               % (self.__class__.__name__, len(self), ', '.join([str(s) for s in self]))
-    __str__ = __repr__
 
     def serialize(self):
         """This function serialize items into a simple dict object.
@@ -1412,18 +1385,6 @@ class Items(object):
                 # Got a real one, just set it :)
                 setattr(i, prop, timeperiod.uuid)
 
-    def linkify_with_triggers(self, triggers):  # pragma: no cover, never called
-        """Link triggers
-
-        TODO: still useful?
-
-        :param triggers: triggers object
-        :type triggers: object
-        :return: None
-        """
-        for i in self:
-            i.linkify_with_triggers(triggers)
-
     def linkify_with_checkmodulations(self, checkmodulations):
         """
         Link checkmodulation object
@@ -1601,18 +1562,6 @@ class Items(object):
                 hnames.add(host)
 
         item.host_name = ','.join(hnames)
-
-    def explode_trigger_string_into_triggers(self, triggers):  # pragma: no cover, never called
-        """Get al trigger in triggers and manage them
-
-        TODO: still useful?
-
-        :param triggers: triggers object
-        :type triggers: object
-        :return: None
-        """
-        for i in self:
-            i.explode_trigger_string_into_triggers(triggers)
 
     def no_loop_in_parents(self, attr1, attr2):
         """

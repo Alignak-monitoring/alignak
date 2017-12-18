@@ -60,9 +60,6 @@ import pytest
 class PropertyTests:
     """Common tests for all property classes"""
 
-    def setUp(self):
-        pass
-
     def test_no_default_value(self):
         p = self.prop_class()
         assert p.default is NONE_OBJECT

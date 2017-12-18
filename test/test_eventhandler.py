@@ -36,13 +36,14 @@ class TestEventhandler(AlignakTest):
     """
     This class test the eventhandler
     """
+    def setUp(self):
+        super(TestEventhandler, self).setUp()
 
     def test_global_unknown_event_handler(self):
         """ Test global event handler unknown command
 
         :return: None
         """
-        self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/cfg_global_event_handlers_not_found.cfg')
         assert self.conf_is_correct is False
@@ -56,7 +57,6 @@ class TestEventhandler(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_global_event_handlers.cfg')
 
         self._sched = self._scheduler
@@ -133,8 +133,12 @@ class TestEventhandler(AlignakTest):
         self.assert_actions_match(3, 'test_global_host_eventhandler.pl DOWN SOFT', 'command')
         self.assert_actions_match(4, 'test_global_host_eventhandler.pl UP SOFT', 'command')
 
+        # Get my first broker link
+        my_broker = [b for b in self._scheduler.my_daemon.brokers.values()][0]
+
+        # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._broker.broks.itervalues():
+        for brok in sorted(my_broker.broks.values(), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -168,7 +172,6 @@ class TestEventhandler(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -224,7 +227,6 @@ class TestEventhandler(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -281,7 +283,6 @@ class TestEventhandler(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -363,7 +364,6 @@ class TestEventhandler(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -419,7 +419,6 @@ class TestEventhandler(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -476,7 +475,6 @@ class TestEventhandler(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
         host = self._scheduler.hosts.find_by_name("test_host_0")

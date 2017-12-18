@@ -143,7 +143,11 @@ class Timerange(AlignakObject):
             self.is_valid = matches is not None
             if self.is_valid:
                 self.hstart, self.mstart, self.hend, self.mend = [int(g) for g in matches.groups()]
-
+            else:
+                self.hstart = "00:00"
+                self.mstart = "00:00"
+                self.hend = "00:00"
+                self.mend = "00:00"
         else:
             self.hstart = params["hstart"]
             self.mstart = params["mstart"]

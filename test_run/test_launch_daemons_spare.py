@@ -31,19 +31,22 @@ from alignak_test import AlignakTest
 
 
 class TestLaunchDaemonsSpare(AlignakTest):
-    def _get_subproc_data(self, name):
-        try:
-            print("Polling %s" % name)
-            if self.procs[name].poll():
-                print("Killing %s..." % name)
-                os.kill(self.procs[name].pid, signal.SIGKILL)
-            print("%s terminated" % name)
-
-        except Exception as err:
-            print("Problem on terminate and wait subproc %s: %s" % (name, err))
-
     def setUp(self):
-        self.procs = {}
+        # Set an environment variable to activate the logging of checks execution
+        # With this the pollers/schedulers will raise INFO logs about the checks execution
+        os.environ['TEST_LOG_ACTIONS'] = 'INFO'
+
+        # Alignak daemons monitoring everay 3 seconds
+        os.environ['ALIGNAK_DAEMONS_MONITORING'] = '3'
+
+        # Alignak arbiter self-monitoring - report statistics every 5 loop counts
+        os.environ['TEST_LOG_MONITORING'] = '5'
+
+        # Log daemons loop turn
+        os.environ['TEST_LOG_LOOP'] = 'INFO'
+
+    def tearDown(self):
+        print("Test terminated!")
 
     def checkDaemonsLogsForErrors(self, daemons_list):
         """
@@ -207,7 +210,7 @@ class TestLaunchDaemonsSpare(AlignakTest):
 
         assert errors_raised == 0, "Some error logs were raised!"
 
-    @pytest.mark.skip("Currently no spare daemons tests")
+    @pytest.mark.skip("Currently no spare daemons tests...")
     def test_daemons_spare(self):
         """ Running the Alignak daemons for a spare configuration
 

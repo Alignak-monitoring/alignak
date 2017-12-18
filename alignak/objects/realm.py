@@ -57,7 +57,7 @@ import copy
 import logging
 from alignak.objects.item import Item
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
-from alignak.property import BoolProp, StringProp, DictProp, ListProp
+from alignak.property import BoolProp, StringProp, DictProp, ListProp, IntegerProp
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -75,7 +75,9 @@ class Realm(Itemgroup):
     properties = Itemgroup.properties.copy()
     properties.update({
         'realm_name':
-            StringProp(fill_brok=['full_status']),
+            StringProp(default='', fill_brok=['full_status']),
+        'name':
+            StringProp(default='', fill_brok=['full_status']),
         'alias':
             StringProp(default=''),
         # No status_broker_name because it put hosts, not host_name
@@ -85,25 +87,46 @@ class Realm(Itemgroup):
             ListProp(default=[], split_on_coma=True),
         'default':
             BoolProp(default=False),
+        'passively_checked_hosts':
+            BoolProp(default=None),
+        'actively_checked_hosts':
+            BoolProp(default=None),
     })
 
     running_properties = Item.running_properties.copy()
     running_properties.update({
         # Those lists contain only the uuid of the satellite link, not the whole object!
-        'arbiters': ListProp(default=[]),
-        'schedulers': ListProp(default=[]),
-        'brokers': ListProp(default=[]),
-        'pollers': ListProp(default=[]),
-        'reactionners': ListProp(default=[]),
-        'receivers': ListProp(default=[]),
-        'potential_brokers': ListProp(default=[]),
-        'potential_pollers': ListProp(default=[]),
-        'potential_reactionners': ListProp(default=[]),
-        'potential_receivers': ListProp(default=[]),
-        'parts': DictProp(default={}),
-        'serialized_parts': DictProp(default={}),
-        'unknown_higher_realms': ListProp(default=[]),
-        'all_sub_members': ListProp(default=[]),
+        'arbiters':
+            ListProp(default=[]),
+        'schedulers':
+            ListProp(default=[]),
+        'brokers':
+            ListProp(default=[]),
+        'pollers':
+            ListProp(default=[]),
+        'reactionners':
+            ListProp(default=[]),
+        'receivers':
+            ListProp(default=[]),
+        'potential_brokers':
+            ListProp(default=[]),
+        'potential_pollers':
+            ListProp(default=[]),
+        'potential_reactionners':
+            ListProp(default=[]),
+        'potential_receivers':
+            ListProp(default=[]),
+        # Once configuration is prepared, the count of the hosts in the realm
+        'hosts_count':
+            IntegerProp(default=0),
+        'packs':
+            DictProp(default={}),
+        'parts':
+            DictProp(default={}),
+        'unknown_higher_realms':
+            ListProp(default=[]),
+        'all_sub_members':
+            ListProp(default=[]),
     })
 
     macros = {
@@ -118,6 +141,9 @@ class Realm(Itemgroup):
 
         # Define a packs list for the configuration preparation
         self.packs = []
+        # Once the configuration got prepared, packs becomes a dictionary!
+        # packs is a dictionary indexed with the configuration part
+        # number and containing the list of hosts
 
         # List of satellites related to the realm
         self.to_satellites = {
@@ -155,16 +181,24 @@ class Realm(Itemgroup):
         else:
             res = res + ', %d members: %r' \
                         % (len(self.members), ', '.join([str(s) for s in self.members]))
-        if not self.parts:
+        if not self.hosts_count:
+            res = res + ', no hosts'
+        else:
+            res = res + ', %d hosts' % self.hosts_count
+        if not getattr(self, 'parts', None):
             res = res + ', no parts'
         else:
-            res = res + ', %d parts: %r' \
-                        % (len(self.parts), ', '.join([str(s) for s in self.parts]))
+            res = res + ', %d parts' % len(self.parts)
+        if not getattr(self, 'packs', None):
+            res = res + ', no packs'
+        else:
+            res = res + ', %d packs' % len(self.packs)
         return res + '/>'
     __str__ = __repr__
 
     @property
     def name(self):
+        """Get the realm name"""
         return self.get_name()
 
     def get_name(self):
@@ -230,17 +264,16 @@ class Realm(Itemgroup):
                     getattr(self, 'potential_%ss' % sat_type).append(sat_link.uuid)
                     break
                 else:
-                    print("Not found: %s" % sat_link_uuid)
                     logger.error("Satellite %s declared in the realm %s not found "
                                  "in the configuration satellites!", sat_link_uuid, self.name)
 
-        logger.info("%s: (in/potential) (schedulers:%d) (pollers:%d/%d) "
-                    "(reactionners:%d/%d) (brokers:%d/%d) (receivers:%d/%d)"
-                    % (self.name, len(self.schedulers),
-                       self.nb_pollers, len(self.potential_pollers),
-                       self.nb_reactionners, len(self.potential_reactionners),
-                       self.nb_brokers, len(self.potential_brokers),
-                       self.nb_receivers, len(self.potential_receivers)))
+        logger.info(" Realm %s: (in/potential) (schedulers:%d) (pollers:%d/%d) "
+                    "(reactionners:%d/%d) (brokers:%d/%d) (receivers:%d/%d)", self.name,
+                    len(self.schedulers),
+                    self.nb_pollers, len(self.potential_pollers),
+                    self.nb_reactionners, len(self.potential_reactionners),
+                    self.nb_brokers, len(self.potential_brokers),
+                    self.nb_receivers, len(self.potential_receivers))
 
     def fill_realm_members_with_higher_realms(self, realms):
         """
@@ -332,7 +365,7 @@ class Realm(Itemgroup):
         logger.debug("[realm %s] do not have this kind of satellites: %s", self.name, s_type)
         return []
 
-    def get_potential_satellites_by_type(self, satellites, s_type, alive=True):
+    def get_potential_satellites_by_type(self, satellites, s_type, reachable=True):
         """Generic function to access one of the potential satellite attribute
         ie : self.potential_pollers, self.potential_reactionners ...
 
@@ -340,8 +373,8 @@ class Realm(Itemgroup):
         :type satellites: SatelliteLink list
         :param s_type: satellite type wanted
         :type s_type: str
-        :param alive: only the alive satellites
-        :type alive: bool
+        :param reachable: only the reachable satellites
+        :type reachable: bool
         :return: self.potential_*type*s
         :rtype: list
         """
@@ -355,7 +388,7 @@ class Realm(Itemgroup):
                 if sat_link_uuid != sat_link.uuid:
                     continue
 
-                if not alive or (alive and sat_link.alive and sat_link.reachable):
+                if not reachable or (reachable and sat_link.reachable):
                     matching_satellites.append(sat_link)
                 break
 
@@ -379,8 +412,8 @@ class Realm(Itemgroup):
 
     def get_links_for_a_broker(self, pollers, reactionners, receivers, realms,
                                manage_sub_realms=False):
-        """Get a configuration dictionary with pollers, reactionners and brokers links
-        for a scheduler
+        """Get a configuration dictionary with pollers, reactionners and receivers links
+        for a broker
 
         :param pollers: pollers
         :type pollers:
@@ -464,9 +497,8 @@ class Realm(Itemgroup):
             for broker_id in self.brokers:
                 broker = brokers[broker_id]
                 cfg['brokers'][broker.uuid] = broker.give_satellite_cfg()
-        except Exception as exp:
+        except Exception as exp:  # pylint: disable=broad-except
             logger.exception("realm.get_links_for_a_scheduler: %s", exp)
-            pass
 
         return cfg
 
@@ -574,7 +606,7 @@ class Realms(Itemgroups):
                 msg = "More than one realm is defined as the default one: %s. " \
                       "I set %s as the temporary default realm." \
                   % (','.join(found_names), default_realm_name)
-                self.add_error(msg)
+                self.add_warning(msg)
 
         return default_realm
 
@@ -593,5 +625,6 @@ class Realms(Itemgroups):
         :type satellites: tuple
         :return: None
         """
+        logger.info("Realms satellites:")
         for realm in self:
             realm.prepare_for_satellites_conf(satellites)

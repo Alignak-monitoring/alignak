@@ -59,6 +59,8 @@ class TestEndParsingType(AlignakTest):
     """
     This class test properties types after config loaded and parsed
     """
+    def setUp(self):
+        super(TestEndParsingType, self).setUp()
 
     def check_object_property(self, obj, prop):
         """ Check the property of an object
@@ -146,11 +148,10 @@ class TestEndParsingType(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        for objects in (self.arbiter.conf.arbiters, self.arbiter.conf.contacts,
-                        self.arbiter.conf.notificationways, self.arbiter.conf.hosts):
+        for objects in (self._arbiter.conf.arbiters, self._arbiter.conf.contacts,
+                        self._arbiter.conf.notificationways, self._arbiter.conf.hosts):
             self.check_objects_from(objects)
 
         print "== test Check() =="

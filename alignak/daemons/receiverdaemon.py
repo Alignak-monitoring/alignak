@@ -51,15 +51,13 @@
 """
 This module provide Receiver class used to run a receiver daemon
 """
-import os
 import time
 import traceback
 import logging
-from multiprocessing import active_children
 
-from alignak.misc.serialization import unserialize
+from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.satellite import Satellite
-from alignak.property import PathProp, IntegerProp, StringProp
+from alignak.property import IntegerProp, StringProp
 from alignak.external_command import ExternalCommand, ExternalCommandManager
 from alignak.stats import statsmgr
 from alignak.http.receiver_interface import ReceiverInterface
@@ -88,28 +86,28 @@ class Receiver(Satellite):
         """
         super(Receiver, self).__init__(kwargs.get('daemon_name', 'Default-receiver'), **kwargs)
 
+        # Our schedulers and arbiters are initialized in the base class
+
         # Our related daemons
-        self.arbiters = {}
-        self.pollers = {}
-        self.reactionners = {}
+        # self.pollers = {}
+        # self.reactionners = {}
 
         # Modules are load one time
         self.have_modules = False
 
         # Now an external commands manager and a list for the external_commands
         self.external_commands_manager = None
-        self.external_commands = []
+
         # and the unprocessed one, a buffer
         self.unprocessed_external_commands = []
 
-        self.host_assoc = {}
         self.accept_passive_unknown_check_results = False
 
         self.http_interface = ReceiverInterface(self)
 
     def add(self, elt):
         """Add an object to the receiver one
-        Handles brok and externalcommand
+        Handles brok and external commands
 
         :param elt: object to add
         :type elt: object
@@ -127,69 +125,44 @@ class Receiver(Satellite):
             self.unprocessed_external_commands.append(elt)
             statsmgr.counter('external-commands.added', 1)
 
-    def push_host_names(self, sched_id, hnames):
-        """Link hostnames to scheduler id.
-        Called by alignak.satellite.IForArbiter.push_host_names
-
-        :param sched_id: scheduler id to link to
-        :type sched_id: int
-        :param hnames: host names list
-        :type hnames: list
-        :return: None
-        """
-        for h_name in hnames:
-            self.host_assoc[h_name] = sched_id
-
-    def get_sched_from_hname(self, hname):
-        """Get scheduler linked to the given host_name
-
-        :param hname: host_name we want the scheduler from
-        :type hname: str
-        :return: scheduler with id corresponding to the mapping table
-        :rtype: dict
-        """
-        item = self.host_assoc.get(hname, None)
-        sched = self.schedulers.get(item, None)
-        return sched
-
-    def manage_brok(self, brok):  # pragma: no cover, seems not to be used anywhere
-        """Send brok to modules. Modules have to implement their own manage_brok function.
-        They usually do if they inherits from basemodule
-        REF: doc/receiver-modules.png (4-5)
-
-        TODO: why should this daemon manage a brok? It is the brokers job!!!
-
-        :param brok: brok to manage
-        :type brok: alignak.brok.Brok
-        :return: None
-        """
-        to_del = []
-        # Call all modules if they catch the call
-        for mod in self.modules_manager.get_internal_instances():
-            try:
-                mod.manage_brok(brok)
-            except Exception, exp:  # pylint: disable=W0703
-                logger.warning("The mod %s raise an exception: %s, I kill it",
-                               mod.get_name(), str(exp))
-                logger.warning("Exception type: %s", type(exp))
-                logger.warning("Back trace of this kill: %s", traceback.format_exc())
-                to_del.append(mod)
-        # Now remove mod that raise an exception
-        self.modules_manager.clear_instances(to_del)
-
-    def do_stop(self):
-        """Stop the Receiver
-        Wait for children to stop and call super(Receiver, self).do_stop()
-
-        :return: None
-        """
-
-        act = active_children()
-        for child in act:
-            child.terminate()
-            child.join(1)
-        super(Receiver, self).do_stop()
-
+    # def manage_brok(self, brok):  # pragma: no cover, seems not to be used anywhere
+    #     """Send brok to modules. Modules have to implement their own manage_brok function.
+    #     They usually do if they inherits from basemodule
+    #     REF: doc/receiver-modules.png (4-5)
+    #
+    #     TODO: why should this daemon manage a brok? It is the brokers job!!!
+    #
+    #     :param brok: brok to manage
+    #     :type brok: alignak.brok.Brok
+    #     :return: None
+    #     """
+    #     to_del = []
+    #     # Call all modules if they catch the call
+    #     for mod in self.modules_manager.get_internal_instances():
+    #         try:
+    #             mod.manage_brok(brok)
+    #         except Exception, exp:  # pylint: disable=W0703
+    #             logger.warning("The mod %s raise an exception: %s, I kill it",
+    #                            mod.get_name(), str(exp))
+    #             logger.warning("Exception type: %s", type(exp))
+    #             logger.warning("Back trace of this kill: %s", traceback.format_exc())
+    #             to_del.append(mod)
+    #     # Now remove mod that raise an exception
+    #     self.modules_manager.clear_instances(to_del)
+    #
+    # def do_stop(self):
+    #     """Stop the Receiver
+    #     Wait for children to stop and call super(Receiver, self).do_stop()
+    #
+    #     :return: None
+    #     """
+    #
+    #     act = active_children()
+    #     for child in act:
+    #         child.terminate()
+    #         child.join(1)
+    #     super(Receiver, self).do_stop()
+    #
     def setup_new_conf(self):
         """Receiver custom setup_new_conf method
 
@@ -205,31 +178,25 @@ class Receiver(Satellite):
 
         # ...then our own specific treatment!
         with self.conf_lock:
-            print("Receiver - New configuration for: %s / %s" % (self.type, self.name))
-            logger.info("[%s] Received a new configuration", self.name)
-            print("Receiver - My schedulers: %s" % self.schedulers)
-
             # self_conf is our own configuration from the alignak environment
             self_conf = self.cur_conf['self_conf']
 
-            # If we've got something in the schedulers, we do not want it anymore
-            # Beware that schedulers are not SchedulerLink objects
-            # but only schedulers configuration!
-            self.host_assoc = {}
-            # For each scheduler, we received its managed hosts list
-            for link_uuid in self.schedulers:
-                # We received the hosts names for each scheduler
-                print("Received hosts names: %s" % self.schedulers[link_uuid].hosts_names)
-                self.push_host_names(link_uuid, self.schedulers[link_uuid].hosts_names)
-
             # Configure and start our modules
             if not self.have_modules:
-                self.modules = self_conf['modules']
-                self.have_modules = True
+                try:
+                    self.modules = unserialize(self.cur_conf['modules'], no_load=True)
+                except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
+                    logger.error('Cannot un-serialize modules configuration '
+                                 'received from arbiter: %s', exp)
+                if self.modules:
+                    logger.info("I received some modules configuration: %s", self.modules)
+                    self.have_modules = True
 
-                self.do_load_modules(self.modules)
-                # and start external modules too
-                self.modules_manager.start_external_instances()
+                    self.do_load_modules(self.modules)
+                    # and start external modules too
+                    self.modules_manager.start_external_instances()
+                else:
+                    logger.info("I do not have modules")
 
             # Now create the external commands manager
             # We are a receiver: our role is to get and dispatch commands to the schedulers
@@ -237,12 +204,13 @@ class Receiver(Satellite):
                 ExternalCommandManager(None, 'receiver', self,
                                        self_conf.get('accept_passive_unknown_check_results', False))
 
-            # # Initialize connection with all our satellites
-            # my_satellites = self.get_links_of_type(s_type=None)
-            # for sat_link in my_satellites:
-            #     satellite = my_satellites[sat_link]
-            #     print("Initialize connection with: %s" % satellite)
-            #     self.daemon_connection_init(satellite.uuid, s_type=satellite.type)
+            # Initialize connection with all our satellites
+            logger.info("Initializing connection with my satellites:")
+            my_satellites = self.get_links_of_type(s_type=None)
+            for satellite in my_satellites.values():
+                logger.info("- : %s/%s", satellite.type, satellite.name)
+                if not self.daemon_connection_init(satellite):
+                    logger.error("Satellite connection failed: %s", satellite)
 
     def push_external_commands_to_schedulers(self):
         """Send a HTTP request to the schedulers (POST /run_external_commands)
@@ -266,10 +234,9 @@ class Receiver(Satellite):
             if cmd and cmd['global']:
                 # Send global command to all our schedulers
                 for scheduler_link_uuid in self.schedulers:
-                    link = self.schedulers[scheduler_link_uuid]
-                    link.external_commands.append(ext_cmd)
+                    self.schedulers[scheduler_link_uuid].my_daemon.external_commands.append(ext_cmd)
 
-        # Now for all alive schedulers, send the commands
+        # Now for all active schedulers, send the commands
         pushed_commands = 0
         failed_commands = 0
         for scheduler_link_uuid in self.schedulers:
@@ -316,7 +283,7 @@ class Receiver(Satellite):
         self.check_and_del_zombie_modules()
 
         # Now we check if we received a new configuration - no sleep time, we will sleep later...
-        self.watch_for_new_conf()
+        self.watch_for_new_conf(0.1)
         if self.new_conf:
             self.setup_new_conf()
 
@@ -332,10 +299,32 @@ class Receiver(Satellite):
         self.push_external_commands_to_schedulers()
         statsmgr.timer('core.push-external-commands', time.time() - _t0)
 
-        # Maybe we do not have something to do, so we wait a little
-        # todo: check broks in the receiver ???
-        if not self.broks:
-            self.watch_for_new_conf(0.1)
+        # Say to modules it's a new tick :)
+        self.hook_point('tick')
+
+    def get_daemon_stats(self, details=False):
+        """Increase the stats provided by the Daemon base class
+
+        :return: stats dictionary
+        :rtype: dict
+        """
+        now = int(time.time())
+        # Call the base Daemon one
+        res = super(Receiver, self).get_daemon_stats(details=details)
+
+        res.update({'name': self.name, 'type': self.type})
+
+        counters = res['counters']
+        counters['external-commands'] = len(self.external_commands)
+        counters['unprocessed-external-commands'] = len(self.unprocessed_external_commands)
+
+        metrics = res['metrics']
+        metrics.append('%s.%s.external-commands.queue %d %d'
+                       % (self.type, self.name, len(self.external_commands), now))
+        metrics.append('%s.%s.unprocessed-external-commands.queue %d %d'
+                       % (self.type, self.name, len(self.external_commands), now))
+
+        return res
 
     def main(self):
         """Main receiver function
@@ -344,18 +333,14 @@ class Receiver(Satellite):
         :return: None
         """
         try:
+            # Configure the logger
             self.setup_alignak_logger()
 
-            # Look if we are enabled or not. If ok, start the daemon mode
-            self.look_for_early_exit()
-
-            # todo:
-            # This function returns False if some problem is detected during initialization
-            # (eg. communication port not free)
-            # Perharps we should stop the initialization process and exit?
+            # Start the daemon mode
             if not self.do_daemon_init_and_start():
-                return
+                self.exit_on_error(message="Daemon initialization error", exit_code=3)
 
+            # Setup our modules manager
             self.load_modules_manager()
 
             #  We wait for initial conf
@@ -365,39 +350,9 @@ class Receiver(Satellite):
             self.setup_new_conf()
 
             # Now the main loop
-            self.do_mainloop()
+            self.do_main_loop()
 
+            self.request_stop()
         except Exception:
-            self.print_unrecoverable(traceback.format_exc())
+            self.exit_on_exception(traceback.format_exc())
             raise
-
-    def get_stats_struct(self):
-        """Get state of modules and create a scheme for stats data of daemon
-        This may be overridden in subclasses
-
-        :return: A dict with the following structure
-        ::
-
-           { 'metrics': ['%s.%s.external-commands.queue %d %d'],
-             'version': VERSION,
-             'name': self.name,
-             'type': _type,
-             'passive': self.passive,
-             'modules':
-                         {'internal': {'name': "MYMODULE1", 'state': 'ok'},
-                         {'external': {'name': "MYMODULE2", 'state': 'stopped'},
-                        ]
-           }
-
-        :rtype: dict
-        """
-        now = int(time.time())
-        # call the daemon one
-        res = super(Receiver, self).get_stats_struct()
-        res.update({'name': self.name, 'type': 'receiver'})
-        metrics = res['metrics']
-        # metrics specific
-        metrics.append('receiver.%s.external-commands.queue %d %d' % (
-            self.name, len(self.external_commands), now))
-
-        return res

@@ -57,6 +57,7 @@ class TestContactDowntime(AlignakTest):
     """
 
     def setUp(self):
+        super(TestContactDowntime, self).setUp()
         self.setup_with_file("cfg/cfg_default.cfg")
         self._sched = self._scheduler
 
@@ -64,7 +65,6 @@ class TestContactDowntime(AlignakTest):
         """
         Test contact downtime and brok creation associated
         """
-        self.print_header()
         # schedule a 2-minute downtime
         # downtime must be active
         # consume a good result, sleep for a minute
@@ -77,7 +77,7 @@ class TestContactDowntime(AlignakTest):
         # downtime valid for the next 2 minutes
         test_contact = self._sched.contacts.find_by_name('test_contact')
         cmd = "[%lu] SCHEDULE_CONTACT_DOWNTIME;test_contact;%d;%d;lausser;blablub" % (now, now, now + duration)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         self.external_command_loop()
 
         svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
@@ -138,7 +138,6 @@ class TestContactDowntime(AlignakTest):
 
 
     def test_contact_downtime_and_cancel(self):
-        self.print_header()
         # schedule a 2-minute downtime
         # downtime must be active
         # consume a good result, sleep for a minute
@@ -151,7 +150,7 @@ class TestContactDowntime(AlignakTest):
         # downtime valid for the next 2 minutes
         test_contact = self._sched.contacts.find_by_name('test_contact')
         cmd = "[%lu] SCHEDULE_CONTACT_DOWNTIME;test_contact;%d;%d;lausser;blablub" % (now, now, now + duration)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
 
         svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -185,7 +184,7 @@ class TestContactDowntime(AlignakTest):
         downtime_id = list(test_contact.downtimes)[0]
         # OK, Now we cancel this downtime, we do not need it anymore
         cmd = "[%lu] DEL_CONTACT_DOWNTIME;%s" % (now, downtime_id)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
 
         # We check if the downtime is tag as to remove
         assert downtime.can_be_deleted
@@ -205,7 +204,3 @@ class TestContactDowntime(AlignakTest):
         # raise notif during a downtime for this contact
         self.scheduler_loop(3, [[svc, 2, 'CRITICAL']])
         self.assert_any_brok_match('SERVICE NOTIFICATION.*;CRITICAL')
-
-
-if __name__ == '__main__':
-    AlignakTest.main()

@@ -56,6 +56,9 @@ from alignak.objects.timeperiod import Timeperiod
 
 
 class TestTimeperiods(AlignakTest):
+    def setUp(self):
+        super(TestTimeperiods, self).setUp()
+
 
     def test_timeperiod_no_daterange(self):
         """
@@ -63,7 +66,6 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         now = time.time()
 
         timeperiod = Timeperiod()
@@ -77,7 +79,6 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         now = time.time()
         # Get the 12 of july 2010 at 15:00, monday
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
@@ -98,7 +99,6 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         now = time.time()
         # Get the 12 of july 2010 at 15:00, monday
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
@@ -127,7 +127,6 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         timeperiod = Timeperiod()
         timeperiod.resolve_daterange(timeperiod.dateranges, 'monday 00:00-24:00')
         first_nov = int(time.mktime(time.strptime("1 Nov 2010 00:00:00", "%d %b %Y %H:%M:%S")))
@@ -148,7 +147,6 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         timeperiod = Timeperiod()
         timeperiod.resolve_daterange(timeperiod.dateranges, 'monday 00:00-24:00')
 
@@ -174,7 +172,6 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         timeperiod = Timeperiod()
         timeperiod.resolve_daterange(timeperiod.dateranges, 'monday 00:00-24:00')
         first_nov = int(time.mktime(time.strptime("26 Oct 2010 00:00:00", "%d %b %Y %H:%M:%S")))
@@ -194,7 +191,6 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         now = time.time()
         # Get the 12 of july 2010 at 15:00, monday
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
@@ -261,7 +257,6 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         now = time.time()
         # Get the 12 of july 2010 at 15:00, monday
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
@@ -302,7 +297,6 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         now = time.time()
         # Get the 12 of july 2010 at 15:00, monday
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
@@ -342,7 +336,6 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         now = time.time()
         # Get the 12 of july 2010 at 15:00, monday
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
@@ -378,7 +371,6 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         now = time.time()
         # Get the 12 of july 2010 at 15:00, monday
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
@@ -420,7 +412,6 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         now = time.time()
         # Get the 12 of july 2010 at 15:00, monday
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
@@ -464,7 +455,6 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         now = time.time()
         # Get the 12 of july 2010 at 15:00, monday
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
@@ -497,7 +487,6 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         now = time.time()
         # Get the 13 of july 2010 at 15:00, tuesday
         july_the_13 = time.mktime(time.strptime("13 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
@@ -531,7 +520,6 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         # Get the 13 of july 2010 at 15:00, tuesday
         july_the_13 = time.mktime(time.strptime("13 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
         print july_the_13
@@ -554,7 +542,6 @@ class TestTimeperiods(AlignakTest):
         """
         https://github.com/naparuba/shinken/issues/1385
         """
-        self.print_header()
         tp = Timeperiod()
         tp.timeperiod_name = 'mercredi2-22-02'
         tp.resolve_daterange(tp.dateranges, 'wednesday 2              00:00-02:00,22:00-24:00')
@@ -600,7 +587,6 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_timeperiods.cfg')
         tp = self._scheduler.timeperiods.find_by_name("us-holidays")
         self.assertEqual(7, len(tp.dateranges))
@@ -657,6 +643,3 @@ class TestTimeperiods(AlignakTest):
             },
         ]
         self.assertItemsEqual(ref, mydateranges)
-
-if __name__ == '__main__':
-    AlignakTest.main()

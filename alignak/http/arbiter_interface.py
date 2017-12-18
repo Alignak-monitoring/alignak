@@ -24,7 +24,6 @@ import json
 import cherrypy
 
 from alignak.http.generic_interface import GenericInterface
-from alignak.util import jsonify_r
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -34,17 +33,19 @@ class ArbiterInterface(GenericInterface):
 
     """
     @cherrypy.expose
-    def put_conf(self, conf=None):
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def push_configuration(self, pushed_configuration=None):
         """HTTP POST to the arbiter with the new conf (master send to slave)
 
         :param conf: serialized new configuration
         :type conf:
         :return: None
         """
-        with self.app.conf_lock:
-            super(ArbiterInterface, self).put_conf(conf)
-            self.app.must_run = False
-    put_conf.method = 'POST'
+        pushed_configuration = cherrypy.request.json
+        self.app.must_run = False
+        return super(ArbiterInterface, self).push_configuration(
+            pushed_configuration=pushed_configuration['conf'])
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -94,30 +95,15 @@ class ArbiterInterface(GenericInterface):
         """
         with self.app.conf_lock:
             res = {}
-            if not daemon_type:
-                return res
 
             for s_type in ['arbiter', 'scheduler', 'poller', 'reactionner', 'receiver', 'broker']:
-                if daemon_type != s_type:
+                if daemon_type and daemon_type != s_type:
                     continue
                 satellite_list = []
                 res[s_type] = satellite_list
-                daemon_name_attr = s_type + "_name"
-                for daemon_link in self.app.get_daemon_links(s_type):
-                    # if hasattr(daemon_link, daemon_name_attr):
-                    #     satellite_list.append(getattr(daemon_link, daemon_name_attr))
+                for daemon_link in getattr(self.app.conf, s_type + 's', []):
                     satellite_list.append(daemon_link.name)
             return res
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def what_i_managed(self):
-        """Dummy call for the arbiter
-
-        :return: {}, always
-        :rtype: dict
-        """
-        return {}
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -166,7 +152,7 @@ class ArbiterInterface(GenericInterface):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_objects_properties(self, table):
+    def get_objects_properties(self, table):  # pylint: disable=no-self-use, unused-argument
         """'Dump all objects of the required type existing in the configuration:
             - hosts, services, contacts,
             - hostgroups, servicegroups, contactgroups
@@ -178,14 +164,4 @@ class ArbiterInterface(GenericInterface):
         :return: list all properties of all objects
         :rtype: list
         """
-        with self.app.conf_lock:
-            logger.debug('ASK:: table= %s', str(table))
-            objs = getattr(self.app.conf, table, None)
-            logger.debug("OBJS:: %s", str(objs))
-            if objs is None or not objs:
-                return []
-            res = []
-            for obj in objs:
-                j_obj = jsonify_r(obj)
-                res.append(j_obj)
-            return res
+        return {'message': "Deprecated in favor of the get_stats endpoint."}

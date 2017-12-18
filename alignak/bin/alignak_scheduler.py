@@ -83,6 +83,7 @@
  In case the arbiter has a new conf to send, the scheduler is stopped
  and a new one is created.
 """
+from __future__ import print_function
 from alignak.daemons.schedulerdaemon import Alignak
 from alignak.util import parse_daemon_args
 
@@ -92,9 +93,13 @@ def main():
 
     :return: None
     """
-    args = parse_daemon_args()
-    daemon = Alignak(debug=args.debug_file is not None, **args.__dict__)
-    daemon.main()
+    try:
+        args = parse_daemon_args()
+        daemon = Alignak(debug=args.debug_file is not None, **args.__dict__)
+        daemon.main()
+    except Exception as exp:  # pylint: disable=broad-except
+        print("*** Exited because: %s" % str(exp))
+        exit(1)
 
 
 if __name__ == '__main__':

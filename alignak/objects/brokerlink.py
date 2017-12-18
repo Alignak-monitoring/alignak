@@ -44,7 +44,7 @@ This module provide BrokerLink and BrokerLinks classes used to manage brokers
 """
 
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
-from alignak.property import IntegerProp, StringProp
+from alignak.property import IntegerProp, StringProp, BoolProp
 
 
 class BrokerLink(SatelliteLink):
@@ -55,30 +55,30 @@ class BrokerLink(SatelliteLink):
     properties = SatelliteLink.properties.copy()
     properties.update({
         'type':
-            StringProp(default='broker', fill_brok=['full_status']),
+            StringProp(default='broker', fill_brok=['full_status'], to_send=True),
         'broker_name':
-            StringProp(default='', fill_brok=['full_status'], to_send=True),
+            StringProp(default='', fill_brok=['full_status']),
         'port':
-            IntegerProp(default=7772, fill_brok=['full_status']),
+            IntegerProp(default=7772, fill_brok=['full_status'], to_send=True),
+        'initialized':
+            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
     })
 
-    # def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
-    #     """
-    #     Add this broker to the realm
-    #
-    #     :return: None
-    #     """
-    #     self.realm.brokers.append(self)
+    def prepare_for_conf(self):
+        """Initialize the pushed configuration dictionary
+        with the inner properties that are to be propagated to the satellite link.
 
-    def give_satellite_cfg(self):
+        :return: None
         """
-        Get configuration of the Reactionner satellite
+        super(BrokerLink, self).prepare_for_conf()
 
-        :return: dictionary of link information
-        :rtype: dict
-        """
-        res = super(BrokerLink, self).give_satellite_cfg()
-        return res
+        self.cfg.update({
+            'satellites': {
+                'receivers': {},
+                'pollers': {},
+                'reactionners': {}
+            }
+        })
 
 
 class BrokerLinks(SatelliteLinks):
