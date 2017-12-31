@@ -631,7 +631,7 @@ class DaemonsLaunch(AlignakTest):
 
             ';alignak_launched=1': 'alignak_launched=1'
         }
-        self._files_update(files, replacements)
+        # self._files_update(files, replacements)
 
         if ssl:
             if os.path.exists('/%s/certs' % cfg_folder):
