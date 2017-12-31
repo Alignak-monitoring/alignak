@@ -251,6 +251,11 @@ class BaseSatellite(Daemon):
             if 'modules' not in self.cur_conf:
                 self.cur_conf['modules'] = []
 
+            if 'satellites' not in self.cur_conf:
+                self.cur_conf['satellites'] = []
+            if 'modules' not in self.cur_conf:
+                self.cur_conf['modules'] = []
+
             # Update Alignak name
             self.alignak_name = self.cur_conf['alignak_name']
             logger.info("My Alignak instance: %s", self.alignak_name)

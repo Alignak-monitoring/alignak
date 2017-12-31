@@ -1680,7 +1680,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Log all satellites list
         logger.info("Alignak configured daemons list:")
-        logger.debug("Alignak configured daemons list:")
         self.log_daemons_list()
 
         # Get realms names and ids
