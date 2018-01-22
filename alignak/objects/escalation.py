@@ -71,6 +71,8 @@ class Escalation(Item):
             StringProp(),
         'host_name':
             StringProp(default=''),
+        'hostgroup_name':
+            StringProp(''),
         'service_description':
             StringProp(default=''),
         'first_notification':

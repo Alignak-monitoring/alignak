@@ -1,10 +1,14 @@
 {
     "version": 1,
-    "disable_existing_loggers": false,
+    "disable_existing_loggers": true,
     "formatters": {
+        "unit_tests": {
+            "format": "[%(asctime)s] %(levelname)s: [%(daemon)s.%(name)s] %(message)s"
+        ,"datefmt": "%Y-%m-%d %H:%M:%S"
+        },
         "alignak": {
             "format": "[%(asctime)s] %(levelname)s: [%(daemon)s.%(name)s] %(message)s"
-            ,"datefmt": "%Y-%m-%d %H:%M:%S"
+        ,"datefmt": "%Y-%m-%d %H:%M:%S"
         },
         "monitoring-log": {
             "format": "[%(asctime)s] %(levelname)s: %(message)s"
@@ -13,21 +17,26 @@
     },
 
     "handlers": {
+        "unit_tests": {
+            "class": "alignak.log.CollectorHandler",
+            "level": "INFO",
+            "formatter": "unit_tests"
+        },
         "console": {
             "class": "logging.StreamHandler",
-            "level": "DEBUG",
+            "level": "ERROR",
             "formatter": "alignak",
             "stream": "ext://sys.stdout"
         },
         "color_console": {
             "class": "alignak.log.ColorStreamHandler",
-            "level": "DEBUG",
+            "level": "ERROR",
             "formatter": "alignak",
             "stream": "ext://sys.stdout"
         },
         "daemons": {
             "class": "logging.handlers.TimedRotatingFileHandler",
-            "level": "DEBUG",
+            "level": "INFO",
             "formatter": "alignak",
             "filename": "%(logdir)s/%(daemon)s.log",
             "when": "midnight",
@@ -49,8 +58,8 @@
 
     "loggers": {
         "alignak": {
-            "level": "INFO",
-            "handlers": ["color_console", "daemons"],
+            "level": "DEBUG",
+            "handlers": ["unit_tests", "color_console", "daemons"],
             "propagate": "no"
         },
         "monitoring-log": {

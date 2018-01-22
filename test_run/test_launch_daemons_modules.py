@@ -36,7 +36,7 @@ from alignak_test import AlignakTest
 
 class TestLaunchDaemonsModules(AlignakTest):
     def setUp(self):
-        self.procs = {}
+        super(TestLaunchDaemonsModules, self).setUp()
 
         # copy the default shipped configuration files in /tmp/etc and change the root folder
         # used by the daemons for pid and log files in the alignak.ini file
@@ -45,6 +45,9 @@ class TestLaunchDaemonsModules(AlignakTest):
 
         if os.path.exists('/tmp/alignak.log'):
             os.remove('/tmp/alignak.log')
+
+        if os.path.exists('/tmp/monitoring-logs.log'):
+            os.remove('/tmp/monitoring-logs.log')
 
         print("Preparing configuration...")
         shutil.copytree('../etc', '/tmp/etc/alignak')
@@ -99,7 +102,8 @@ class TestLaunchDaemonsModules(AlignakTest):
         assert warnings_raised == 0, "Warning logs raised!"
         print("No unexpected warning logs raised by the daemons")
 
-    @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
+    # @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
+    @pytest.mark.skip("No real interest for Alignak testings...")
     def test_daemons_modules_logs(self):
         """Running the Alignak daemons with the monitoring logs module
 
@@ -238,6 +242,7 @@ class TestLaunchDaemonsModules(AlignakTest):
         }
 
         errors_raised = 0
+        travis_run = 'TRAVIS' in os.environ
         for name in ['broker']:
             assert os.path.exists('/tmp/%sd.log' % name), '/tmp/%sd.log does not exist!' % name
             print("-----\n%s log file\n" % name)
@@ -263,10 +268,12 @@ class TestLaunchDaemonsModules(AlignakTest):
                         line = line.split('INFO: ')
                         line = line[1]
                         line = line.strip()
-                        print("    %s" % line)
+                        if not travis_run:
+                            print("    %s" % line)
                     logs.append(line)
 
-            print(logs)
+            if not travis_run:
+                print(logs)
             for log in expected_logs[name]:
                 print("Last checked log %s: %s" % (name, log))
                 assert log in logs, logs

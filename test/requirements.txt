@@ -11,6 +11,9 @@ pytest-cov
 # Let coverage use the most recent version
 coverage==4.3.4
 
+# Report coverage results to codecov.io
+codecov
+
 # Report coverage results to coveralls.io
 coveralls
 

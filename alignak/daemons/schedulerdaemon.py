@@ -317,7 +317,11 @@ class Alignak(BaseSatellite):
             t00 = time.time()
             try:
                 received_conf_part = unserialize(conf_part)
-            except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
+                assert received_conf_part is not None
+            except AssertionError as exp:
+                # This to indicate that no configuration is managed by this scheduler...
+                logger.warning("No managed configuration received from arbiter")
+            except AlignakClassLookupException:  # pragma: no cover
                 # This to indicate that the new configuration is not managed...
                 self.new_conf = "Cannot un-serialize configuration received from arbiter"
                 logger.error(self.new_conf)
@@ -328,6 +332,12 @@ class Alignak(BaseSatellite):
                 self.new_conf = "Cannot un-serialize configuration received from arbiter"
                 logger.error(self.new_conf)
                 self.exit_on_exception(exp, self.new_conf)
+
+            # if not received_conf_part:
+            #     return
+
+            print("Monitored configuration %s received at %d. Un-serialized in %d secs"
+                  % (received_conf_part, t00, time.time() - t00))
             logger.info("Monitored configuration %s received at %d. Un-serialized in %d secs",
                         received_conf_part, t00, time.time() - t00)
             logger.info("Scheduler received configuration : %s", received_conf_part)
@@ -387,7 +397,7 @@ class Alignak(BaseSatellite):
                         # get('satellite_map', {})[satellite_object.name])
 
             # First mix conf and override_conf to have our definitive conf
-            for prop in self.cur_conf['override_conf']:
+            for prop in getattr(self.cur_conf, 'override_conf', []):
                 logger.debug("Overriden: %s / %s ", prop, getattr(received_conf_part, prop, None))
                 logger.debug("Overriding: %s / %s ", prop, self.cur_conf['override_conf'])
                 setattr(received_conf_part, prop, self.cur_conf['override_conf'].get(prop, None))
@@ -409,41 +419,42 @@ class Alignak(BaseSatellite):
                 else:
                     logger.info("I do not have modules")
 
-            logger.info("Loading configuration...")
-            # Propagate the global parameters to the configuration items
-            received_conf_part.explode_global_conf()
+            if received_conf_part:
+                logger.info("Loading configuration...")
+                # Propagate the global parameters to the configuration items
+                received_conf_part.explode_global_conf()
 
-            # We give the configuration to our scheduler
-            self.sched.reset()
-            self.sched.load_conf(self.cur_conf['instance_id'],
-                                 self.cur_conf['instance_name'],
-                                 received_conf_part)
-            # self.sched.set_satellites(self.pollers, self.reactionners, self.brokers)
-            # Once loaded, the scheduler has an inner pushed_conf object
-            logger.info("Loaded: %s", self.sched.pushed_conf)
+                # We give the configuration to our scheduler
+                self.sched.reset()
+                self.sched.load_conf(self.cur_conf['instance_id'],
+                                     self.cur_conf['instance_name'],
+                                     received_conf_part)
 
-            # Update the scheduler ticks according to the configuration
-            self.sched.update_recurrent_works_tick(self_conf)
+                # Once loaded, the scheduler has an inner pushed_conf object
+                logger.info("Loaded: %s", self.sched.pushed_conf)
 
-            # We must update our pushed configuration macros with correct values
-            # from the configuration parameters
-            # self.sched.pushed_conf.fill_resource_macros_names_macros()
+                # Update the scheduler ticks according to the configuration
+                self.sched.update_recurrent_works_tick(self_conf)
 
-            # Creating the Macroresolver Class & unique instance
-            m_solver = MacroResolver()
-            m_solver.init(received_conf_part)
+                # We must update our pushed configuration macros with correct values
+                # from the configuration parameters
+                # self.sched.pushed_conf.fill_resource_macros_names_macros()
 
-            # Now create the external commands manager
-            # We are an applyer: our role is not to dispatch commands, but to apply them
-            ecm = ExternalCommandManager(received_conf_part, 'applyer', self.sched,
-                                         self_conf.get('accept_passive_unknown_check_results',
-                                                       False))
+                # Creating the Macroresolver Class & unique instance
+                m_solver = MacroResolver()
+                m_solver.init(received_conf_part)
 
-            # Scheduler needs to know about this external command manager to use it if necessary
-            self.sched.external_commands_manager = ecm
+                # Now create the external commands manager
+                # We are an applyer: our role is not to dispatch commands, but to apply them
+                ecm = ExternalCommandManager(received_conf_part, 'applyer', self.sched,
+                                             self_conf.get('accept_passive_unknown_check_results',
+                                                           False))
 
-            # Ok now we can load the retention data
-            self.sched.retention_load()
+                # Scheduler needs to know about this external command manager to use it if necessary
+                self.sched.external_commands_manager = ecm
+
+                # Ok now we can load the retention data
+                self.sched.retention_load()
 
             # Create brok new conf
             brok = Brok({'type': 'new_conf', 'data': {}})
@@ -457,9 +468,10 @@ class Alignak(BaseSatellite):
                 if not self.daemon_connection_init(satellite):
                     logger.error("Satellite connection failed: %s", satellite)
 
-            # Enable the scheduling process
-            logger.info("Loaded: %s", self.sched.pushed_conf)
-            self.sched.start_scheduling()
+            if received_conf_part:
+                # Enable the scheduling process
+                logger.info("Loaded: %s", self.sched.pushed_conf)
+                self.sched.start_scheduling()
 
     def clean_previous_run(self):
         """Clean variables from previous configuration

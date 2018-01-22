@@ -185,7 +185,15 @@ class TestNotifications(AlignakTest):
         self.assert_actions_match(0, 'PROBLEM', 'type')
         # self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
 
+        time.sleep(2.0)
+        self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
+        print("coucou")
+        self.show_actions()
+        self.assert_actions_count(1)
+
         self.scheduler_loop(1, [[svc, 0, 'OK']])
+        assert "HARD" == svc.state_type
+        assert "OK" == svc.state
         time.sleep(0.1)
         assert 0 == svc.current_notification_number, 'Ok HARD, no notifications'
         self.show_actions()
@@ -273,7 +281,7 @@ class TestNotifications(AlignakTest):
         self._scheduler.put_results(action)
         # re-loop scheduler to manage this
         self.external_command_loop()
-        self.external_command_loop()
+        # self.external_command_loop()
         self.assert_actions_count(3)
         assert svc.current_notification_number == 3
 

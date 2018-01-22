@@ -41,9 +41,9 @@ from alignak.http.scheduler_interface import SchedulerInterface
 from alignak.http.broker_interface import BrokerInterface
 
 
-class DaemonsLaunch(AlignakTest):
+class TestLaunchDaemons(AlignakTest):
     def setUp(self):
-        super(DaemonsLaunch, self).setUp()
+        super(TestLaunchDaemons, self).setUp()
 
         # copy the default shipped configuration files in /tmp/etc and change the root folder
         # used by the daemons for pid and log files in the alignak.ini file
@@ -52,6 +52,9 @@ class DaemonsLaunch(AlignakTest):
 
         if os.path.exists('/tmp/alignak.log'):
             os.remove('/tmp/alignak.log')
+
+        if os.path.exists('/tmp/monitoring-logs.log'):
+            os.remove('/tmp/monitoring-logs.log')
 
         print("Preparing configuration...")
         shutil.copytree('../etc', '/tmp/etc/alignak')
@@ -573,7 +576,6 @@ class DaemonsLaunch(AlignakTest):
                 assert False, "stderr output!"
         assert ok == 5
 
-    # @pytest.mark.skip("Temporary exclude !!!!!!!!!!!!!!!!!!!!!")
     def test_daemons_api_no_ssl(self):
         """ Running all the Alignak daemons - no SSL
 
@@ -596,8 +598,8 @@ class DaemonsLaunch(AlignakTest):
 
         :return:
         """
-        # Set an environment variable to change the default period of activity log (every 600 loops)
-        os.environ['ALIGNAK_ACTIVITY_LOG'] = '2'
+        # Set an environment variable to change the default period of activity log (every 60 loops)
+        os.environ['ALIGNAK_ACTIVITY_LOG'] = '60'
 
         req = requests.Session()
 
@@ -631,7 +633,7 @@ class DaemonsLaunch(AlignakTest):
 
             ';alignak_launched=1': 'alignak_launched=1'
         }
-        # self._files_update(files, replacements)
+        self._files_update(files, replacements)
 
         if ssl:
             if os.path.exists('/%s/certs' % cfg_folder):
@@ -808,7 +810,6 @@ class DaemonsLaunch(AlignakTest):
             #         "services": {"count": 0},
             #         "commands": {"count": 4},
             #         "notificationways": {"count": 0},
-            #         "triggers": {"count": 0},
             #         "timeperiods": {"count": 1},
             #         "modules": {"count": 0},
             #         "checkmodulations": {"count": 0},
@@ -831,7 +832,7 @@ class DaemonsLaunch(AlignakTest):
             raw_data = req.get("%s://localhost:%s/have_conf" % (scheme, satellite_map[daemon]), verify=False)
             data = raw_data.json()
             print("%s, have_conf: %s" % (daemon, data))
-            # assert data == True, "Daemon %s should have a conf!" % daemon
+            assert data == True, "Daemon %s should have a conf!" % daemon
 
             # raw_data = req.get("%s://localhost:%s/have_conf?magic_hash=1234567890" % (http, satellite_map[daemon]), verify=False)
             # data = raw_data.json()

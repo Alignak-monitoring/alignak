@@ -460,6 +460,8 @@ class TestRealms(AlignakTest):
                              verbose=False)
         assert self.conf_is_correct
 
+        print("Realms: %s" % self._arbiter.conf.realms)
+
         world = self._arbiter.conf.realms.find_by_name('World')
         assert world is not None
         europe = self._arbiter.conf.realms.find_by_name('Europe')
@@ -480,16 +482,16 @@ class TestRealms(AlignakTest):
         assert len(europe.get_satellites_by_type('scheduler')) == 1
         assert len(europe.get_satellites_by_type('broker')) == 1
         assert len(europe.get_satellites_by_type('poller')) == 0
-        assert len(europe.get_satellites_by_type('receiver')) == 0
-        assert len(europe.get_satellites_by_type('reactionner')) == 0
+        assert len(europe.get_satellites_by_type('receiver')) == 1
+        assert len(europe.get_satellites_by_type('reactionner')) == 1
 
         # Get satellites of the Paris realm
         assert len(europe.get_satellites_by_type('arbiter')) == 0
         assert len(europe.get_satellites_by_type('scheduler')) == 1
         assert len(europe.get_satellites_by_type('broker')) == 1
         assert len(europe.get_satellites_by_type('poller')) == 0
-        assert len(europe.get_satellites_by_type('receiver')) == 0
-        assert len(europe.get_satellites_by_type('reactionner')) == 0
+        assert len(europe.get_satellites_by_type('receiver')) == 1
+        assert len(europe.get_satellites_by_type('reactionner')) == 1
 
         assert europe.uuid in world.all_sub_members
         assert paris.uuid in europe.all_sub_members
@@ -502,6 +504,8 @@ class TestRealms(AlignakTest):
         self.setup_with_file('cfg/realms/sub_realms.cfg', 'cfg/realms/sub_realms.ini',
                              verbose=False)
         assert self.conf_is_correct
+
+        print("Realms: %s" % self._arbiter.conf.realms)
 
         world = self._arbiter.conf.realms.find_by_name('World')
         assert world is not None
@@ -545,8 +549,8 @@ class TestRealms(AlignakTest):
         Turin = self._arbiter.conf.realms.find_by_name('Turin')
         assert Turin is not None
 
-        Rome = self._arbiter.conf.realms.find_by_name('Rome')
-        assert Rome is not None
+        Roma = self._arbiter.conf.realms.find_by_name('Roma')
+        assert Roma is not None
 
         Italy = self._arbiter.conf.realms.find_by_name('Italy')
         assert Italy is not None
@@ -566,23 +570,48 @@ class TestRealms(AlignakTest):
         World = self._arbiter.conf.realms.find_by_name('World')
         assert World is not None
 
-        # check property all_sub_members
-        assert Osaka.all_sub_members == []
-        assert Tokyo.all_sub_members == []
-        assert Japan.all_sub_members == [Tokyo.uuid,Osaka.uuid]
-        assert Asia.all_sub_members == [Tokyo.uuid,Osaka.uuid,Japan.uuid]
+        # Check members for each realm - members list is an ordered list!
+        print("The World: %s" % (World))
+        assert World.realm_members != [Europe.get_name(), Asia.get_name()]
+        assert World.realm_members == [Asia.get_name(), Europe.get_name()]
+        print("Asia: %s" % (Asia))
+        assert Asia.realm_members == [Japan.get_name()]
+        assert Japan.realm_members != [Tokyo.get_name(), Osaka.get_name()]
+        assert Japan.realm_members == [Osaka.get_name(), Tokyo.get_name()]
+        print("Europe: %s" % (Europe))
+        assert Europe.realm_members == [France.get_name(), Italy.get_name()]
+        assert Italy.realm_members == [Roma.get_name(), Turin.get_name()]
+        assert France.realm_members == [Lyon.get_name(), Paris.get_name()]
 
-        assert Turin.all_sub_members == []
-        assert Rome.all_sub_members == []
-        assert Italy.all_sub_members == [Rome.uuid,Turin.uuid]
-
+        # Check all_sub_members for each realm - ordered lists!
         assert Lyon.all_sub_members == []
         assert Paris.all_sub_members == []
-        assert France.all_sub_members == [Paris.uuid,Lyon.uuid]
+        assert France.all_sub_members == [Lyon.uuid, Paris.uuid]
 
-        assert set(Europe.all_sub_members) == set([Paris.uuid,Lyon.uuid,France.uuid,Rome.uuid,Turin.uuid,Italy.uuid])
+        assert Turin.all_sub_members == []
+        assert Roma.all_sub_members == []
+        assert Italy.all_sub_members == [Roma.uuid, Turin.uuid]
 
-        assert set(World.all_sub_members) == set([Paris.uuid,Lyon.uuid,France.uuid,Rome.uuid,Turin.uuid,Italy.uuid,Europe.uuid,Tokyo.uuid,Osaka.uuid,Japan.uuid,Asia.uuid])
+        assert Osaka.all_sub_members == []
+        assert Tokyo.all_sub_members == []
+        assert Japan.all_sub_members == [Osaka.uuid, Tokyo.uuid]
+        assert Asia.all_sub_members == [Japan.uuid, Osaka.uuid, Tokyo.uuid]
+
+        assert Europe.all_sub_members == [France.uuid, Lyon.uuid, Paris.uuid,
+                                          Italy.uuid, Roma.uuid, Turin.uuid]
+
+        assert World.all_sub_members_names == [
+            'Asia',
+                'Japan', 'Osaka', 'Tokyo',
+            'Europe',
+                'France', 'Lyon', 'Paris',
+                'Italy', 'Roma', 'Turin']
+        assert World.all_sub_members == [
+            Asia.uuid,
+                Japan.uuid, Osaka.uuid, Tokyo.uuid,
+            Europe.uuid,
+                France.uuid, Lyon.uuid, Paris.uuid,
+                Italy.uuid, Roma.uuid, Turin.uuid]
 
         # check satellites defined in each realms
         broker_uuid = self._arbiter.conf.brokers.find_by_name('broker-master').uuid
@@ -590,8 +619,8 @@ class TestRealms(AlignakTest):
         receiver_uuid = self._arbiter.conf.receivers.find_by_name('receiver-master').uuid
         reactionner_uuid = self._arbiter.conf.reactionners.find_by_name('reactionner-master').uuid
 
-        for realm in [Osaka, Tokyo, Japan, Asia, Turin, Rome, Italy, Lyon, Paris, France, Europe, World]:
-            print 'Realm name: %s' % realm.realm_name
+        for realm in [Osaka, Tokyo, Japan, Asia, Turin, Roma, Italy, Lyon, Paris, France, Europe, World]:
+            print "Realm %s, brokers: %s" % (realm.realm_name, realm.brokers)
             if realm.realm_name != 'France':
                 assert realm.brokers == [broker_uuid]
                 assert realm.potential_brokers == [broker_uuid]

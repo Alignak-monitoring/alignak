@@ -226,12 +226,6 @@ class SatelliteLink(Item):
         If a satellite_map property exists in the provided parameters, it will update
         the default existing one
         """
-        # self.type = None
-        # self.name = None
-        # self.satellite_map = {}
-        # self.con = None
-        # self.uri = ''
-        #
         super(SatelliteLink, self).__init__(params, parsing)
 
         logger.debug("Initialize a %s, params: %s", self.__class__.__name__, params)
@@ -422,7 +416,7 @@ class SatelliteLink(Item):
         :rtype: dict
         """
         res = {}
-        daemon_properties = ['host', 'address', 'port', 'spare', 'configuration_sent',
+        daemon_properties = ['uri', 'spare', 'configuration_sent',
                              'realm_name', 'manage_sub_realms',
                              'active', 'reachable', 'alive', 'passive',
                              'last_check', 'polling_interval', 'max_check_attempts']
@@ -1046,7 +1040,7 @@ class SatelliteLinks(Items):
             try:
                 realm_name = link.realm.strip()
                 # If no realm name, use the default one
-                if realm_name == '':
+                if not realm_name:
                     realm = realms.get_default()
                 else:  # find the realm one
                     realm = realms.find_by_name(realm_name)

@@ -44,25 +44,8 @@ class TestDispatcher(AlignakTest):
         """Test starting"""
         super(TestDispatcher, self).setUp()
 
-        # Save and change the collector logger log level
-        self.former_level = None
-        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
-        for handler in logger_.handlers:
-            if getattr(handler, '_name', None) == 'unit_tests':
-                self.former_level = handler.level
-                handler.setLevel(logging.DEBUG)
-                break
-
-    def tearDown(self):
-        """Test ending"""
-        # Restore the collector logger log level
-        if self.former_level:
-            logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
-            for handler in logger_.handlers:
-                if getattr(handler, '_name', None) == 'unit_tests':
-                    handler.level = self.former_level
-                    break
-
+        # Log at DEBUG level
+        self.set_debug_log()
 
     def _dispatching(self, env_filename='cfg/dispatcher/simple.ini', loops=3, multi_realms=False):
         """ Dispatching process: prepare, check, dispatch
@@ -284,7 +267,7 @@ class TestDispatcher(AlignakTest):
                                 break
                         else:
                             assert False
-                        print("I am: %s" % link)
+                        print("I am: %s" % i_am)
                         print("I have: %s" % conf)
 
                         # All links have a hash, push_flavor and cfg_to_manage
@@ -506,7 +489,16 @@ class TestDispatcher(AlignakTest):
 
     def test_dispatching_multiple_realms_sub_realms_multi_schedulers(self):
         """ Test the dispatching process: 2 realms, some daemons are sub_realms managers and
-        we have several schedulers
+        we have several schedulers. daemons with (+) are manage_sub_realms=1
+
+        realm All (6 hosts):
+        * 2 schedulers (+)
+
+        realm All / All1 (6 hosts):
+        * 3 schedulers (+)
+
+        realm All / All1 / All1a (4 hosts):
+        * 2 schedulers (+)
 
         :return: None
         """

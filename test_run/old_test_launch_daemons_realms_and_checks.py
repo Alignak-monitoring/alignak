@@ -34,15 +34,20 @@ from alignak_test import AlignakTest
 
 class TestLaunchDaemonsRealms(AlignakTest):
     def setUp(self):
+        super(TestLaunchDaemonsRealms, self).setUp()
+
         # Set an environment variable to activate the logging of checks execution
         # With this the pollers/schedulers will raise INFO logs about the checks execution
-        os.environ['TEST_LOG_ACTIONS'] = 'INFO'
+        os.environ['TEST_LOG_ACTIONS'] = 'WARNING'
+
+        # Set an environment variable to change the default period of activity log (every 60 loops)
+        os.environ['ALIGNAK_ACTIVITY_LOG'] = '60'
 
         # Alignak daemons monitoring everay 3 seconds
-        os.environ['ALIGNAK_DAEMONS_MONITORING'] = '3'
+        os.environ['ALIGNAK_DAEMON_MONITORING'] = '3'
 
         # Alignak arbiter self-monitoring - report statistics every 5 loop counts
-        os.environ['TEST_LOG_MONITORING'] = '5'
+        os.environ['ALIGNAK_SYSTEM_MONITORING'] = '5'
 
         # Log daemons loop turn
         os.environ['TEST_LOG_LOOP'] = 'INFO'
@@ -56,8 +61,6 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         daemons_list = ['broker-master', 'broker-north', 'broker-south',
                         'poller-master', 'poller-north', 'poller-south',
                         'reactionner-master',
@@ -99,8 +102,6 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
                         'receiver-master', 'scheduler-master']
 
@@ -138,8 +139,6 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         daemons_list = ['broker-master', 'broker-north', 'broker-south',
                         'poller-master', 'poller-north', 'poller-south',
                         'reactionner-master',
@@ -270,6 +269,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         }
 
         errors_raised = 0
+        travis_run = 'TRAVIS' in os.environ
         for name in ['poller-master', 'poller-north', 'poller-south',
                      'scheduler-master', 'scheduler-north', 'scheduler-south']:
             assert os.path.exists('/tmp/%s.log' % name), '/tmp/%s.log does not exist!' % name
@@ -280,20 +280,26 @@ class TestLaunchDaemonsRealms(AlignakTest):
                 for line in lines:
                     # Catches WARNING and ERROR logs
                     if 'WARNING:' in line:
-                        print("line: %s" % line)
+                        # Catch warning for actions execution
+                        line = line.split('WARNING: ')
+                        line = line[1]
+                        line = line.strip()
+                        line = line.split('] ')
+                        if not travis_run:
+                            try:
+                                line = line[1]
+                                line = line.strip()
+                                print("line: %s" % line)
+                            except IndexError:
+                                print("***line: %s" % line)
+                        logs.append(line)
                     if 'ERROR:' in line or 'CRITICAL:' in line:
                         errors_raised += 1
                         print("error: %s" % line)
                     # Catches INFO logs
                     if 'INFO:' in line:
-                        line = line.split('INFO: ')
-                        line = line[1]
-                        line = line.strip()
-                        line = line.split('] ')
-                        line = line[1]
-                        line = line.strip()
-                        print("line: %s" % line)
-                        logs.append(line)
+                        if not travis_run:
+                            print("line: %s" % line)
 
             for log in expected_logs[name]:
                 print("Last checked log %s: %s" % (name, log))

@@ -45,10 +45,10 @@ def serialize(obj, no_dump=False):
     :rtype: dict | str
     """
     if hasattr(obj, "serialize") and callable(obj.serialize):
-        o_cls = obj.__class__
-        o_dict = {'__sys_python_module__': '', 'content': {}}
-        o_dict['content'] = obj.serialize()
-        o_dict['__sys_python_module__'] = "%s.%s" % (o_cls.__module__, o_cls.__name__)
+        o_dict = {
+            '__sys_python_module__': "%s.%s" % (obj.__class__.__module__, obj.__class__.__name__),
+            'content': obj.serialize()
+        }
 
     elif isinstance(obj, dict):
         o_dict = {}
@@ -86,7 +86,9 @@ def unserialize(j_obj, no_load=False):
     :type no_load: bool
     :return: un-serialized object
     """
-    print("Unserialize: %s" % j_obj)
+    if not j_obj:
+        return j_obj
+    # print("Unserialize: %s" % j_obj)
 
     if no_load:
         data = j_obj
@@ -108,7 +110,6 @@ def unserialize(j_obj, no_load=False):
 
     elif isinstance(data, list):
         return [unserialize(item, True) for item in data]
-
     else:
         return data
 

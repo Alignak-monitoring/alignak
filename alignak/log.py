@@ -83,7 +83,7 @@ class CollectorHandler(Handler):
         try:
             msg = self.format(record)
             self.collector.append(msg)
-        except TypeError:
+        except TypeError:  # pragma: no cover, simple protection
             self.handleError(record)
 
 
@@ -97,12 +97,12 @@ class ColorStreamHandler(StreamHandler):
             colors = {'DEBUG': 'cyan', 'INFO': 'magenta',
                       'WARNING': 'yellow', 'CRITICAL': 'magenta', 'ERROR': 'red'}
             cprint(msg, colors[record.levelname])
-        except UnicodeEncodeError:
+        except UnicodeEncodeError:  # pragma: no cover, simple protection
             print msg.encode('ascii', 'ignore')
-        except IOError:
+        except IOError:  # pragma: no cover, simple protection
             # May happen when process are closing
             pass
-        except TypeError:
+        except TypeError:  # pragma: no cover, simple protection
             self.handleError(record)
 
 
@@ -131,21 +131,17 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
     for handler in logger_.handlers:
         if getattr(handler, '_name', None) == 'daemons':
             # Already configured... exit
-            print("Alignak logger is already configured, handlers:")
             # Update the declared formats with the process name
-            for handler in logger_.handlers:
-                print("- handler: %s" % handler._name)
-                if process_name and 'alignak_tests' in handler.formatter._fmt:
-                    handler.formatter._fmt = \
-                        handler.formatter._fmt.replace("alignak_tests", process_name)
-                if getattr(handler, 'filename', None):
-                    if process_name and 'alignak_tests' in handler.filename:
-                        handler.filename = \
-                            handler.formatter._fmt.replace("alignak_tests", process_name)
-                    print("- handler: %s" % handler.filename)
+            for hdlr in logger_.handlers:
+                if process_name and 'alignak_tests' in hdlr.formatter._fmt:
+                    hdlr.formatter._fmt = \
+                        hdlr.formatter._fmt.replace("alignak_tests", process_name)
+                if getattr(hdlr, 'filename', None):
+                    if process_name and 'alignak_tests' in hdlr.filename:
+                        hdlr.filename = \
+                            hdlr.formatter._fmt.replace("alignak_tests", process_name)
             break
     else:
-        print("Initializing Alignak logger (%s)..." % logger_configuration_file)
         with open(logger_configuration_file, 'rt') as _file:
             config = json.load(_file)
             truncate = False
@@ -163,26 +159,24 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
                     config['formatters'][formatter]['format'].replace("%(daemon)s", process_name)
 
             # Update the declared log file names with the log directory
-            for handler in config['handlers']:
-                if 'filename' not in config['handlers'][handler]:
+            for hdlr in config['handlers']:
+                if 'filename' not in config['handlers'][hdlr]:
                     continue
                 if log_file:
-                    config['handlers'][handler]['filename'] = log_file
+                    config['handlers'][hdlr]['filename'] = log_file
                 else:
-                    config['handlers'][handler]['filename'] = \
-                        config['handlers'][handler]['filename'].replace("%(logdir)s", log_dir)
-                config['handlers'][handler]['filename'] = \
-                    config['handlers'][handler]['filename'].replace("%(daemon)s", process_name)
-                if truncate and os.path.exists(config['handlers'][handler]['filename']):
-                    with open(config['handlers'][handler]['filename'], "w") as file:
-                        file.truncate()
+
+                    config['handlers'][hdlr]['filename'] = \
+                        config['handlers'][hdlr]['filename'].replace("%(logdir)s", log_dir)
+
+                config['handlers'][hdlr]['filename'] = \
+                    config['handlers'][hdlr]['filename'].replace("%(daemon)s", process_name)
+                if truncate and os.path.exists(config['handlers'][hdlr]['filename']):
+                    with open(config['handlers'][hdlr]['filename'], "w") as file_log_file:
+                        file_log_file.truncate()
 
         # Configure the logger, any error will raise an exception
         logger_dictConfig(config)
-        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
-        print("Logger: %s" % logger_)
-        for handler in logger_.handlers:
-            print("- handler: %s" % handler._name)
 
 
 def get_logger_fds(logger_):
