@@ -1,10 +1,25 @@
 language: python
 sudo: true
 python:
+#  - "2.6"
   - "2.7"
+env:
+  - TEST_SUITE=unit_tests
+  - TEST_SUITE=integration
+  - TEST_SUITE=codingstandard
+  - TEST_SUITE=virtualenv
+
+#matrix:
+#  exclude:
+#  - python: "2.6"
+#    env: TEST_SUITE=integration
+#  - python: "2.6"
+#    env: TEST_SUITE=codingstandard
+#  - python: "2.6"
+#    env: TEST_SUITE=virtualenv
 #
-#services:
-#  - mongodb
+services:
+  - mongodb
 
 # command to install dependencies
 # some are only used for travis/coveralls so we are installing them here only
@@ -21,26 +36,75 @@ script:
   # Code static analysis
   # todo...
 
-  # Virtual environment setup tests
-  - set -ev
-  - ./test/test_virtualenv_setup.sh
+  - |
+    if [[ $TEST_SUITE == 'virtualenv' ]]; then
+      # Virtual environment setup tests
+      ./test/test_virtualenv_setup.sh || travis_terminate 1;
+    fi
 
-  # Run tests and code dynamic analysis
-  - cd test
+  - |
+    if [[ $TEST_SUITE == 'codingstandard' ]]; then
+      # Static code analysis
+      # -- pycodestyle (former pep8)
+      # Exclude the dictconfig.py vendor file
+      travis_wait 60 pycodestyle --max-line-length=100 --exclude='*.pyc,alignak/misc/dictconfig.py' alignak/* || travis_terminate 1;
+      # -- pylint
+      unset PYTHONWARNINGS
+      travis_wait 60 pylint --rcfile=.pylintrc -r no alignak || travis_terminate 1;
+      export PYTHONWARNINGS=all
+      # -- pep257
+      travis_wait 60 pep257 --select=D300 alignak || travis_terminate 1;
+    fi
 
-  # Delete previously existing coverage results
-  - coverage erase
+  - |
+    if [[ $TEST_SUITE == 'unit_tests' ]]; then
+      # Run unit tests and code dynamic analysis
+      cd test
+      coverage erase
+      # Run test suite with py.test running its coverage plugin
+      # Dump the 10 slowest tests
+      pytest --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
+      cd ..
+      cp test/.coverage .
+      codecov
+    fi
 
-  # Run test suite with py.test running its coverage plugin
-  # Verbose mode to have the test list
-  # Dump the 10 slowest tests
-  - pytest --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py
-  # Report about coverage
-  - coverage report -m
-  - cd ..
+  - |
+    if [[ $TEST_SUITE == 'integration' ]]; then
+      # Run load tests and code dynamic analysis
+      cd test_load
+      coverage erase
+      # Run test suite with py.test running its coverage plugin
+      # Dump the 10 slowest tests - do not capture to have some activity in Travis
+      pytest --durations=10 --no-print-logs --capture=no -s --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
+      cd ..
+      cp test_load/.coverage .
+      codecov
+
+      # Run load tests and code dynamic analysis
+      cd test_run
+      coverage erase
+      # Run test suite with py.test running its coverage plugin
+      # Dump the 10 slowest tests - do not capture to have some activity in Travis
+      pytest --durations=10 --no-print-logs --capture=no -s --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
+      cd ..
+      cp test_run/.coverage .
+      codecov
+    fi
 
 after_success:
-  # to get coverage data with relative paths and not absolute we have to
-  # execute coveralls from the base directory of the project,
-  # so we need to move the .coverage file here :
-  - mv test/.coverage . && coveralls --rcfile=test/.coveragerc -v
+  - |
+    if [[ $TEST_SUITE == 'unit_tests' && $TRAVIS_PYTHON_VERSION == '2.7' ]]; then
+      # to get coverage data with relative paths and not absolute we have to
+      # execute coveralls from the base directory of the project,
+      # so we need to move the .coverage file here :
+      mv test/.coverage ./coverage_unit
+      mv test_load/.coverage ./coverage_load
+      mv test_run/.coverage ./coverage_run
+      # Combine the coverage collected data
+      coverage combine coverage_unit coverage_load coverage_run
+
+      echo "Submitting coverage results to coveralls.io..."
+      coveralls -v --rcfile=test/.coveragerc
+      echo "Submitted"
+    fi

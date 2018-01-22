@@ -33,6 +33,9 @@ from alignak_test import AlignakTest
 
 class TestDaemonsSingleInstance(AlignakTest):
     def setUp(self):
+        """Test starting"""
+        super(TestDaemonsSingleInstance, self).setUp()
+
         # Set an environment variable to activate the logging of checks execution
         # With this the pollers/schedulers will raise INFO logs about the checks execution
         os.environ['TEST_LOG_ACTIONS'] = 'INFO'
@@ -41,13 +44,13 @@ class TestDaemonsSingleInstance(AlignakTest):
         os.environ['ALIGNAK_DAEMONS_MONITORING'] = '3'
 
         # Alignak arbiter self-monitoring - report statistics every 5 loop counts
-        os.environ['TEST_LOG_MONITORING'] = '5'
+        os.environ['ALIGNAK_SYSTEM_MONITORING'] = '5'
 
         # Log daemons loop turn
         os.environ['TEST_LOG_LOOP'] = 'INFO'
 
         # Alignak logs alerts and notifications
-        os.environ['TEST_LOG_ALERTS'] = 'WARNING'
+        os.environ['TEST_LOG_ALERTS'] = 'INFO'
         os.environ['TEST_LOG_NOTIFICATIONS'] = 'WARNING'
 
         # Alignak do not run plugins but only simulate
@@ -73,19 +76,24 @@ class TestDaemonsSingleInstance(AlignakTest):
         nb_notifications = 0
         nb_problems = 0
 
+        travis_run = 'TRAVIS' in os.environ
+
         for daemon in daemons_list:
             print("-----\n%s log file\n-----\n" % ('/tmp/%s.log' % daemon))
             with open('/tmp/%s.log' % daemon) as f:
                 for line in f:
                     if 'SERVICE ALERT:' in line or 'HOST ALERT:' in line:
                         nb_alerts += 1
-                        print(line[:-1])
+                        if not travis_run:
+                            print(line[:-1])
                     if 'SERVICE NOTIFICATION:' in line or 'HOST NOTIFICATION:' in line:
                         nb_notifications += 1
-                        print(line[:-1])
+                        if not travis_run:
+                            print(line[:-1])
                     if 'actions never came back for the satellite' in line:
                         nb_problems += 1
-                        print(line[:-1])
+                        if not travis_run:
+                            print(line[:-1])
         print("Found: %d service alerts" % nb_alerts)
         print("Found: %d service notifications" % nb_notifications)
         print("Found: %d problems" % nb_problems)
@@ -154,6 +162,12 @@ class TestDaemonsSingleInstance(AlignakTest):
             'SERVICE ALERT: ',
             'HOST NOTIFICATION: ',
             'SERVICE NOTIFICATION: ',
+            'Launch command: ',
+            'Action ',
+            'Check result for ',
+            'Performance data',
+            'Echo the current state ',
+            'Got check result: '
             # todo: Temporary: because of unordered daemon stop !
             # 'that we must be related with cannot be connected',
             # 'Exception: Server not available',

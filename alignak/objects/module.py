@@ -72,7 +72,7 @@ class Module(Item):
         'name':
             StringProp(default='unset'),
         'type':
-            ListProp(default=['unset'], split_on_coma=True),
+            StringProp(default='unset'),
         'daemon':
             StringProp(default='unset'),
         'python_name':
@@ -92,12 +92,12 @@ class Module(Item):
 
     def __init__(self, params=None, parsing=True):
         # Manage the missing module name
-        if 'name' not in params:
+        if params and 'name' not in params:
             if 'module_alias' in params:
                 params['name'] = params['module_alias']
             else:
                 params['name'] = "Unnamed"
-        if 'module_alias' not in params:
+        if params and 'module_alias' not in params:
             if 'name' in params:
                 params['module_alias'] = params['name']
             else:

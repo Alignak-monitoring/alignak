@@ -60,6 +60,8 @@ from alignak_test import AlignakTest, CollectorHandler
 class TestLogging(AlignakTest):
 
     def setUp(self):
+        super(TestLogging, self).setUp()
+
         # By default get alignak logger and setup to Info level and add collector
         self.logger = logging.getLogger("alignak")
         self.logger.handlers = []

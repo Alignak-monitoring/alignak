@@ -32,6 +32,8 @@ from alignak_test import AlignakTest
 
 class TestLaunchDaemonsPassive(AlignakTest):
     def setUp(self):
+        super(TestLaunchDaemonsPassive, self).setUp()
+
         # Set an environment variable to activate the logging of checks execution
         # With this the pollers/schedulers will raise INFO logs about the checks execution
         os.environ['TEST_LOG_ACTIONS'] = 'INFO'
@@ -54,8 +56,6 @@ class TestLaunchDaemonsPassive(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         # Set an environment variable to activate the logging of checks execution
         # With this the pollers/schedulers will raise WARNING logs about the checks execution
         os.environ['TEST_LOG_ACTIONS'] = 'INFO'

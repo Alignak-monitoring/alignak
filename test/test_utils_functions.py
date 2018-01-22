@@ -24,9 +24,9 @@ from collections import namedtuple
 from alignak.util import alive_then_spare_then_deads, average_percentile
 
 
-class TestUnknownEventHandler(AlignakTest):
+class TestUtils(AlignakTest):
     def setUp(self):
-        super(TestUnknownEventHandler, self).setUp()
+        super(TestUtils, self).setUp()
 
     def test_sort_alive_then_spare_then_deads(self):
         SmallSat = namedtuple("SmallSat", ["alive", "spare"])
@@ -54,8 +54,16 @@ class TestUnknownEventHandler(AlignakTest):
                "Function alive_then_spare_then_deads does not sort as exepcted!"
 
     def test_average_percentile(self):
+        # No values
+        my_values = []
+        lat_avg, lat_min, lat_max = average_percentile(my_values)
+        assert lat_avg is None
+        assert lat_min is None
+        assert lat_max is None
+
         my_values = [10, 8, 9, 7, 3, 11, 7, 13, 9, 10]
         lat_avg, lat_min, lat_max = average_percentile(my_values)
+        print("result: %.2f, %.2f, %.2f" % (lat_min, lat_avg, lat_max))
         assert 8.7 == lat_avg, 'Average'
         assert 4.8 == lat_min, 'Minimum'
         assert 12.1 == lat_max, 'Maximum'

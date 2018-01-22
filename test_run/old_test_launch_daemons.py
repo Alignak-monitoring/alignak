@@ -41,8 +41,10 @@ from alignak.http.scheduler_interface import SchedulerInterface
 from alignak.http.broker_interface import BrokerInterface
 
 
-class DaemonsStartTest(AlignakTest):
+class TestLaunchDaemons(AlignakTest):
     def setUp(self):
+        super(TestLaunchDaemons, self).setUp()
+
         # copy the default shipped configuration files in /tmp/etc and change the root folder
         # used by the daemons for pid and log files in the alignak.ini file
         if os.path.exists('/tmp/etc/alignak'):
@@ -50,6 +52,9 @@ class DaemonsStartTest(AlignakTest):
 
         if os.path.exists('/tmp/alignak.log'):
             os.remove('/tmp/alignak.log')
+
+        if os.path.exists('/tmp/monitoring-logs.log'):
+            os.remove('/tmp/monitoring-logs.log')
 
         print("Preparing configuration...")
         shutil.copytree('../etc', '/tmp/etc/alignak')
@@ -599,12 +604,14 @@ class DaemonsStartTest(AlignakTest):
         req = requests.Session()
 
         # Set an environment variable to activate the logging of system cpu, memory and disk
-        os.environ['ALIGNAK_DAEMONS_MONITORING'] = '2'
+        os.environ['ALIGNAK_DAEMON_MONITORING'] = '2'
 
+        print("Clean former run...")
         cfg_folder = os.path.abspath('./run/test_launch_daemons')
         if os.path.exists(cfg_folder):
             shutil.rmtree(cfg_folder)
 
+        print("Copy run configuration...")
         # Copy the default Alignak shipped configuration to the run directory
         shutil.copytree('../etc', cfg_folder)
 
@@ -622,10 +629,11 @@ class DaemonsStartTest(AlignakTest):
             ';log_cherrypy=1': 'log_cherrypy=1',
 
             'daemons_stop_timeout=30': 'daemons_stop_timeout=5',
+            ';daemons_start_timeout=0': 'daemons_start_timeout=20',
 
             ';alignak_launched=1': 'alignak_launched=1'
         }
-        # self._files_update(files, replacements)
+        self._files_update(files, replacements)
 
         if ssl:
             if os.path.exists('/%s/certs' % cfg_folder):
@@ -661,9 +669,8 @@ class DaemonsStartTest(AlignakTest):
         daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
                         'receiver-master', 'scheduler-master']
 
-        # Run daemons for 4 minutes
         self._run_alignak_daemons(cfg_folder=cfg_folder,
-                                  daemons_list=daemons_list, runtime=5)
+                                  daemons_list=daemons_list, runtime=60)
 
         scheme = 'http'
         if ssl:

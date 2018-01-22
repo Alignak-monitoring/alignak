@@ -59,10 +59,43 @@ import sys
 import json
 import argparse
 import logging
-
-import numpy as np
-
 from alignak.version import VERSION
+
+# pylint: disable=unused-import
+NUMPY = True
+try:
+    # use numpy if installed
+    import numpy as np
+    from numpy import percentile as percentile
+except ImportError:
+    import math
+    import functools
+
+    # Replace the numpy percentile function!
+    def percentile(N, percent, key=lambda x: x):
+        # pylint: disable=invalid-name
+        """
+        Find the percentile of a list of values.
+
+        @parameter N - is a list of values. Note N MUST BE already sorted.
+        @parameter percent - a float value from 0.0 to 1.0.
+        @parameter key - optional key function to compute value from each element of N.
+
+        @return - the percentile of the values
+        """
+        if not N:
+            return None
+        if percent > 1:
+            percent = percent / 100
+        k = (len(N)-1) * percent
+        f = math.floor(k)
+        c = math.ceil(k)
+        if f == c:
+            return key(N[int(k)])
+        d0 = key(N[int(f)]) * (c-k)
+        d1 = key(N[int(c)]) * (k-f)
+        return d0+d1
+
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -327,7 +360,8 @@ def merge_periods(data):
         if period[0] != end and period[0] != (end - 1):
             end = period[1]
 
-    dat = np.array(newdata)
+    # dat = np.array(newdata)
+    dat = newdata
     new_intervals = []
     cur_start = None
     cur_end = None
@@ -794,15 +828,13 @@ def average_percentile(values):
     :return: tuple containing average, min and max value
     :rtype: tuple
     """
-    length = len(values)
-
-    if length == 0:
+    if not values:
         return None, None, None
 
-    value_avg = round(float(sum(values)) / length, 2)
+    value_avg = round(float(sum(values)) / len(values), 2)
     # pylint: disable=E1101
-    value_max = round(np.percentile(values, 95), 2)
-    value_min = round(np.percentile(values, 5), 2)
+    value_max = round(percentile(values, 95), 2)
+    value_min = round(percentile(values, 5), 2)
     return value_avg, value_min, value_max
 
 

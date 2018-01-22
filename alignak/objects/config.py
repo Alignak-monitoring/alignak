@@ -2413,6 +2413,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             for host_id in hosts_pack:
                 print("Host: %s" % (host_id))
                 host = self.hosts[host_id]
+                logger.debug("  - %s", host.get_name())
                 passively_checked_hosts = passively_checked_hosts or host.passive_checks_enabled
                 actively_checked_hosts = actively_checked_hosts or host.active_checks_enabled
                 if host.realm:
@@ -2433,6 +2434,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             if len(tmp_realms) == 1:  # Ok, good
                 realm = self.realms[tmp_realms.pop()]
                 # Set the current hosts pack to its realm
+                logger.debug(" - append pack %s to realm %s", hosts_pack, realm.get_name())
                 realm.packs.append(hosts_pack)
                 # Set if the realm only has passively or actively checked hosts...
                 realm.passively_checked_hosts = passively_checked_hosts
@@ -2466,6 +2468,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                                    if self.schedulers[s_id].active and
                                    not self.schedulers[s_id].spare]
             nb_schedulers = len(no_spare_schedulers)
+            logger.info("  %d schedulers in the realm %s", nb_schedulers, realm.get_name())
 
             # Maybe there is no scheduler in the realm, it can be a
             # big problem if there are elements in packs
@@ -2568,7 +2571,15 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :return: None
         """
         # User must have set a spare if he needed one
-        nb_parts = sum(1 for s in self.schedulers if not s.spare and s.active)
+        logger.info("Splitting the configuration into parts:")
+        nb_parts = 0
+        for realm in self.realms:
+            no_spare_schedulers = [s_id for s_id in realm.schedulers
+                                   if self.schedulers[s_id].active and
+                                   not self.schedulers[s_id].spare]
+            nb_schedulers = len(no_spare_schedulers)
+            nb_parts += nb_schedulers
+            logger.info(" - %d schedulers in the realm %s", nb_schedulers, realm.get_name())
 
         if nb_parts == 0:
             logger.warning("Splitting the configuration into parts but I found no scheduler. "
@@ -2640,37 +2651,39 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         logger.info("Realms:")
         for realm in self.realms:
-            logger.info(" Realm: %s / %s", realm, realm.packs)
-            for part_index in realm.packs:
-                logger.info(" - pack: %s / %d hosts", part_index, len(realm.packs[part_index]))
-                if not realm.packs[part_index]:
-                    logger.debug("No configuration for this realm, because of an empty hosts pack")
-                    continue
+            logger.info(" - realm: %s", realm)
+            for idx in realm.packs:
+                logger.info("   - pack: %s / %d hosts", idx, len(realm.packs[idx]))
+                for host_id in realm.packs[idx]:
+                    host = self.hosts[host_id]
+                    logger.info("    %s", host.get_name())
 
         # We have packs for realms and elements into configurations, let's merge this...
+        logger.info("Realms:")
         offset = 0
         for realm in self.realms:
-            logger.info(" Realm: %s / %s", realm, realm.packs)
-            for part_index in realm.packs:
-                logger.info(" - pack: %s / %d hosts", part_index, len(realm.packs[part_index]))
-                if not realm.packs[part_index]:
-                    logger.info("No hosts are declared in this realm")
+            logger.info(" Realm: %s", realm)
+            for idx in realm.packs:
+                logger.info(" - pack: %s / %d hosts", idx, len(realm.packs[idx]))
+                if not realm.packs[idx]:
+                    logger.info(" - no hosts are declared in this realm pack.")
                     # continue
                 try:
-                    instance_id = self.parts[part_index + offset].instance_id
-                    for host_id in realm.packs[part_index]:
+                    instance_id = self.parts[idx + offset].instance_id
+                    for host_id in realm.packs[idx]:
                         host = self.hosts[host_id]
-                        host.pack_id = part_index
-                        self.parts[part_index + offset].hosts.add_item(host)
+                        host.pack_id = idx
+                        self.parts[idx + offset].hosts.add_item(host)
                         for service_id in host.services:
                             service = self.services[service_id]
-                            self.parts[part_index + offset].services.add_item(service)
+                            self.parts[idx + offset].services.add_item(service)
                     # Now the conf can be linked with the realm
-                    realm.parts.update({instance_id: self.parts[part_index + offset]})
+                    realm.parts.update({instance_id: self.parts[idx + offset]})
                     # offset += 1
                 except KeyError:
-                    logger.info("No configuration part to be affected "
-                                "because no hosts in the realm.")
+                    logger.info(" - no configuration part is affected "
+                                "because of mismatching hosts packs / schedulers count. "
+                                "Probably too much schedulers for the hosts count!")
 
             offset += len(realm.packs)
             del realm.packs

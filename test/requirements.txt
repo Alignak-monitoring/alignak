@@ -16,6 +16,9 @@ pytest-cov; python_version >= '2.7'
 # Let coverage use the most recent version
 coverage
 
+# Report coverage results to codecov.io
+codecov
+
 # Report coverage results to coveralls.io
 coveralls
 

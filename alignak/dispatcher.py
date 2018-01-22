@@ -557,6 +557,12 @@ class Dispatcher:
 
             logger.info('   arbiter configuration prepared for %s', arbiter_link.name)
 
+        # main_realm = self.alignak_conf.realms.find_by_name('All')
+        # all_realms = main_realm.all_sub_members
+        # for realm_uuid in all_realms:
+        #     realm = self.alignak_conf.realms[realm_uuid]
+        #     logger.info("- realm %s: %s", realm_uuid, realm)
+
         for realm in self.alignak_conf.realms:
             logger.info("- realm %s: %d configuration part(s)", realm.name, len(realm.parts))
 

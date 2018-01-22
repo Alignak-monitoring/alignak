@@ -770,7 +770,7 @@ class TestConfig(AlignakTest):
         # Configuration errors
         self.assert_any_cfg_log_match(re.escape(
             'More than one realm is defined as the default one: All,Realm1,Realm2,Realm4. '
-            'I set All as the temporary default realm.'))
+            'I set All as the default realm.'))
         self.assert_any_cfg_log_match(re.escape(
             u'Configuration in host::test_host_realm3 is incorrect; '))
         self.assert_any_cfg_log_match(re.escape(
@@ -780,7 +780,7 @@ class TestConfig(AlignakTest):
         self.assert_any_cfg_log_match(re.escape(
             u'Configuration in realm::Realm4 is incorrect; '))
         self.assert_any_cfg_log_match(re.escape(
-            u"[realm::Realm4] as realm, got unknown member 'UNKNOWN_HOST'"))
+            u"[realm::Realm4] as realm, got unknown member 'UNKNOWN_REALM'"))
         self.assert_any_cfg_log_match(re.escape(
             'realms configuration is incorrect!'))
         # self.assert_any_cfg_log_match(re.escape(

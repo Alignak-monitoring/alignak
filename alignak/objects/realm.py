@@ -66,8 +66,9 @@ logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class Realm(Itemgroup):
-    """Realm class is used to implement realm. It is basically a set of Host or Service
-    assigned to a specific set of Scheduler/Poller (other daemon are optional)
+    """Realm class is used to implement realm.
+    It is basically a group of Hosts assigned to a specific Scheduler/Poller
+    (other daemon are optional)
 
     """
     my_type = 'realm'
@@ -80,7 +81,6 @@ class Realm(Itemgroup):
             StringProp(default='', fill_brok=['full_status']),
         'alias':
             StringProp(default=''),
-        # No status_broker_name because it put hosts, not host_name
         'realm_members':
             ListProp(default=[], split_on_coma=True),
         'higher_realms':
@@ -123,15 +123,19 @@ class Realm(Itemgroup):
             DictProp(default={}),
         'parts':
             DictProp(default={}),
-        'unknown_higher_realms':
-            ListProp(default=[]),
+        # Realm level in the realms hierarchy
+        'level':
+            IntegerProp(default=-1),
+        # All the sub realms (children and grand-children)
         'all_sub_members':
+            ListProp(default=[]),
+        'all_sub_members_names':
             ListProp(default=[]),
     })
 
     macros = {
         'REALMNAME': 'realm_name',
-        'REALMMEMBERS': 'members',
+        'REALMMEMBERS': 'realm_members',
     }
 
     def __init__(self, params=None, parsing=True):
@@ -175,12 +179,18 @@ class Realm(Itemgroup):
             setattr(self, 'potential_%ss' % sat_type, [])
 
     def __repr__(self):
-        res = '<%r %r' % (self.__class__.__name__, self.get_name())
-        if not self.members:
-            res = res + ', no members'
+        res = '<%r %r (%d)' % (self.__class__.__name__, self.get_name(), self.level)
+        if not self.realm_members:
+            res = res + ', no sub-realms'
         else:
-            res = res + ', %d members: %r' \
-                        % (len(self.members), ', '.join([str(s) for s in self.members]))
+            res = res + ', %d sub-realms: %r' \
+                        % (len(self.realm_members), ', '.join([str(s) for s in self.realm_members]))
+            if not self.all_sub_members_names:
+                res = res + ', no sub-sub-realms'
+            else:
+                res = res + ', %d sub-sub-realms: %r' \
+                            % (len(self.all_sub_members_names),
+                               ', '.join([str(s) for s in self.all_sub_members_names]))
         if not self.hosts_count:
             res = res + ', no hosts'
         else:
@@ -208,30 +218,6 @@ class Realm(Itemgroup):
         :rtype: str
         """
         return self.realm_name
-
-    def add_string_member(self, member):
-        """Add a realm to all_sub_members attribute
-
-        :param member: realm names to add
-        :type member: list
-        :return: None
-        """
-        self.all_sub_members.extend(member)
-
-    def get_realm_members(self):
-        """
-        Get list of members of this realm
-
-        :return: list of realm (members)
-        :rtype: list
-        """
-        # TODO: consistency: a Realm instance should always have its real_members defined,
-        if hasattr(self, 'realm_members'):
-            # more over it should already be decoded/parsed to its final type:
-            # a list of strings (being the names of the members)
-            return [r.strip() for r in self.realm_members]
-
-        return []
 
     def prepare_for_satellites_conf(self, satellites):
         """Update the following attributes of a realm::
@@ -275,22 +261,6 @@ class Realm(Itemgroup):
                     self.nb_brokers, len(self.potential_brokers),
                     self.nb_receivers, len(self.potential_receivers))
 
-    def fill_realm_members_with_higher_realms(self, realms):
-        """
-        if we have higher_realms defined, fill realm_members of the realm with my realm_name
-
-        :param realms: list of all realms objects
-        :type realms: list
-        :return: None
-        """
-        higher_realms = getattr(self, 'higher_realms', [])
-        for realm_nane in higher_realms:
-            realm = realms.find_by_name(realm_nane.strip())
-            if realm is not None:
-                if not hasattr(realm, 'realm_members'):
-                    realm.realm_members = []
-                realm.realm_members.append(self.realm_name)
-
     def get_realms_by_explosion(self, realms):
         """Get all members of this realm including members of sub-realms on multi-levels
 
@@ -299,37 +269,58 @@ class Realm(Itemgroup):
         :return: list of members and add realm to realm_members attribute
         :rtype: list
         """
-        # The recursive part
-        # rec_tag is set to False every HG we explode
-        # so if True here, it must be a loop in HG
-        # calls... not GOOD!
-        if self.rec_tag:
+        # If rec_tag is already set, then we detected a loop in the realms hierarchy!
+        if getattr(self, 'rec_tag', False):
             self.add_error("Error: there is a loop in the realm definition %s" % self.get_name())
             return None
 
-        # Ok, not a loop, we tag it and continue
+        # Ok, not in a loop, we tag the realm and parse its members
         self.rec_tag = True
 
-        # we have yet exploded this realm
-        if self.all_sub_members != []:
-            return self.all_sub_members
+        # Order realm members list by name
+        self.realm_members = sorted(self.realm_members)
+        for member in self.realm_members:
+            realm = realms.find_by_name(member)
+            if not realm:
+                self.add_string_unknown_member(member)
+                continue
 
-        p_mbrs = self.get_realm_members()
-        for p_mbr in p_mbrs:
-            realm = realms.find_by_name(p_mbr.strip())
-            if realm is not None:
-                value = realm.get_realms_by_explosion(realms)
-                if value is None:
-                    # case loop problem
-                    self.all_sub_members = []
-                    self.realm_members = []
-                    return None
-                elif value:
-                    self.add_string_member(value)
-                self.add_string_member([realm.realm_name])
-            else:
-                self.add_string_unknown_member(p_mbr.strip())
+            children = realm.get_realms_by_explosion(realms)
+            if children is None:
+                # We got a loop in our children definition
+                self.all_sub_members = []
+                self.realm_members = []
+                return None
+
+        # Return the list of all unique members
         return self.all_sub_members
+
+    def set_level(self, level, realms):
+        """Set the realm level in the realms hierarchy
+
+        :return: None
+        """
+        # print("- set: %s (%s)" % (self.get_name(), self.uuid))
+        self.level = level
+        self.all_sub_members = []
+        self.all_sub_members_names = []
+        for child in sorted(self.realm_members):
+            child = realms.find_by_name(child)
+            if child:
+                self.all_sub_members.append(child.uuid)
+                self.all_sub_members_names.append(child.get_name())
+                grand_children = child.set_level(self.level + 1, realms)
+                for grand_child in grand_children:
+                    if grand_child in self.all_sub_members_names:
+                        # print("Already %s" % grand_child)
+                        continue
+                    self.all_sub_members_names.append(grand_child)
+                    grand_child = realms.find_by_name(grand_child)
+                    if grand_child:
+                        self.all_sub_members.append(grand_child.uuid)
+        # print("-> : %s" % self.all_sub_members)
+        # print("-> : %s" % self.all_sub_members_names)
+        return self.all_sub_members_names
 
     def get_all_subs_satellites_by_type(self, sat_type, realms):
         """Get all satellites of the wanted type in this realm recursively
@@ -510,59 +501,78 @@ class Realms(Itemgroups):
     name_property = "realm_name"  # is used for finding realms
     inner_class = Realm
 
+    def __repr__(self):
+        res = []
+        for realm in self:
+            res.append('%s %s' % ('+' * realm.level, realm.get_name()))
+        return '\n'.join(res)
+    __str__ = __repr__
+
     def linkify(self):
-        """Links sub-realms (parent / son),
-        add new realm_members,
-
-        :return: None
-        """
-        self.linkify_p_by_p()
-
-    def linkify_p_by_p(self):
         """Links sub-realms (parent / son)
-        Realm are links with all_sub_members
-        It's filled with realm_members and higher_realms defined in configuration file
+        Realms are linked to all their sub realms whatever the level
 
-        It convert name with uuid of realm members
+        Set the realm level according to the realm position in the hierarchy
 
         :return: None
         """
-        for realm in self.items.values():
-            mbrs = realm.all_sub_members
-            # The new member list, in id
-            new_mbrs = []
-            for mbr in mbrs:
-                if mbr in self:
-                    # We have a uuid here not a name
-                    new_mbrs.append(mbr)
+        for realm in self:
+            realm.all_sub_members_names = realm.all_sub_members
+
+            # The new member list (uuid list)
+            new_members = []
+            for member in realm.all_sub_members:
+                # if member in self:
+                #     # We have a uuid here not a name
+                #     new_members.append(member)
+                #     continue
+                new_member = self.find_by_name(member)
+                if new_member is not None:
+                    new_members.append(new_member.uuid)
+                # else:
+                #     realm.add_string_unknown_member(member)
+            # List of all unique members
+            realm.all_sub_members = new_members
+            # realm.all_sub_members = list(set(new_members))
+            # realm.all_sub_members_uuid = new_members
+
+        # Set realm level, from the highest level realms...
+        for realm in self:
+            for tmp_realm in self:
+                # Ignore if it is me...
+                if tmp_realm == realm:
                     continue
-                new_mbr = self.find_by_name(mbr)
-                if new_mbr is not None:
-                    new_mbrs.append(new_mbr.uuid)
-                else:
-                    realm.add_string_unknown_member(mbr)
-            realm.all_sub_members = new_mbrs
+                # Ignore if I am a sub realm of another realm
+                if realm.get_name() in tmp_realm.realm_members:
+                    break
+            else:
+                # This realm is not in the children of any realm
+                realm.level = 0
+                realm.set_level(0, self)
 
     def explode(self):
-        """Explode realms with each realm_members to fill all_sub_members property
+        """Explode realms with each realm_members and higher_realms to get all the
+        realms sub realms.
 
         :return: None
         """
-        for realm in self:
-            realm.fill_realm_members_with_higher_realms(self)
+        # Manage higher realms where defined
+        for realm in [tmp_realm for tmp_realm in self if tmp_realm.higher_realms]:
+            for parent in realm.higher_realms:
+                higher_realm = self.find_by_name(parent)
+                if higher_realm:
+                    # Add the realm to its parent realm members
+                    higher_realm.realm_members.append(realm.get_name())
 
         for realm in self:
-            if hasattr(realm, 'realm_members') and realm.realm_members != []:
-                # get_realms_by_explosion is a recursive
-                # function, so we must tag hg so we do not loop
-                for tmp_p in self:
-                    tmp_p.rec_tag = False
-                realm.get_realms_by_explosion(self)
+            # Set a recursion tag to protect against loop
+            for tmp_realm in self:
+                tmp_realm.rec_tag = False
+            realm.get_realms_by_explosion(self)
 
-        # We clean the tags
-        for tmp_p in self.items.values():
-            if hasattr(tmp_p, 'rec_tag'):
-                del tmp_p.rec_tag
+        # Clean the recursion tag
+        for tmp_realm in self:
+            del tmp_realm.rec_tag
 
     def get_default(self, check=False):
         """Get the default realm
@@ -586,9 +596,8 @@ class Realms(Itemgroups):
             found.append(default_realm)
 
             if check:
-                msg = "No realm is defined as the default one! I set %s as the default realm" \
-                      % (default_realm_name)
-                self.add_error(msg)
+                self.add_error("No realm is defined as the default one! "
+                               "I set %s as the default realm" % (default_realm_name))
 
         default_realm = found[0]
         if len(found) > 1:
@@ -603,10 +612,9 @@ class Realms(Itemgroups):
                     realm.default = False
 
             if check:
-                msg = "More than one realm is defined as the default one: %s. " \
-                      "I set %s as the temporary default realm." \
-                  % (','.join(found_names), default_realm_name)
-                self.add_warning(msg)
+                self.add_warning("More than one realm is defined as the default one: %s. "
+                                 "I set %s as the default realm."
+                                 % (','.join(found_names), default_realm_name))
 
         return default_realm
 

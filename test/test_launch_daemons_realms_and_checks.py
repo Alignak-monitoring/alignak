@@ -38,7 +38,10 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         # Set an environment variable to activate the logging of checks execution
         # With this the pollers/schedulers will raise INFO logs about the checks execution
-        os.environ['TEST_LOG_ACTIONS'] = 'INFO'
+        os.environ['TEST_LOG_ACTIONS'] = 'WARNING'
+
+        # Set an environment variable to change the default period of activity log (every 60 loops)
+        os.environ['ALIGNAK_ACTIVITY_LOG'] = '60'
 
         # Alignak daemons monitoring everay 3 seconds
         os.environ['ALIGNAK_DAEMON_MONITORING'] = '3'
@@ -78,7 +81,14 @@ class TestLaunchDaemonsRealms(AlignakTest):
             'that we must be related with cannot be connected',
             'Exception: Server not available',
             'Setting the satellite ',
-            'Add failed attempt'
+            'Add failed attempt',
+            'Launch command',
+            'Check result',
+            'Performance data',
+            'Action',
+            'Got check result',
+            'Echo the current state',
+            'Set host'
         ]
         ignored_errors = [
         ]
@@ -116,7 +126,14 @@ class TestLaunchDaemonsRealms(AlignakTest):
             'that we must be related with cannot be connected',
             'Exception: Server not available',
             'Setting the satellite ',
-            'Add failed attempt'
+            'Add failed attempt',
+            'Launch command',
+            'Check result',
+            'Performance data',
+            'Action',
+            'Got check result',
+            'Echo the current state',
+            'Set host'
         ]
         ignored_errors = [
         ]
@@ -157,7 +174,14 @@ class TestLaunchDaemonsRealms(AlignakTest):
             'that we must be related with cannot be connected',
             'Exception: Server not available',
             'Setting the satellite ',
-            'Add failed attempt'
+            'Add failed attempt',
+            'Launch command',
+            'Check result',
+            'Performance data',
+            'Action',
+            'Got check result',
+            'Echo the current state',
+            'Set host'
         ]
         ignored_errors = [
         ]
@@ -266,6 +290,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         }
 
         errors_raised = 0
+        travis_run = 'TRAVIS' in os.environ
         for name in ['poller-master', 'poller-north', 'poller-south',
                      'scheduler-master', 'scheduler-north', 'scheduler-south']:
             assert os.path.exists('/tmp/%s.log' % name), '/tmp/%s.log does not exist!' % name
@@ -276,20 +301,27 @@ class TestLaunchDaemonsRealms(AlignakTest):
                 for line in lines:
                     # Catches WARNING and ERROR logs
                     if 'WARNING:' in line:
-                        print("warning: %s" % line)
+                        # Catch warning for actions execution
+                        line = line.split('WARNING: ')
+                        line = line[1]
+                        line = line.strip()
+                        line = line.split('] ')
+                        try:
+                            line = line[1]
+                            line = line.strip()
+                            if not travis_run:
+                                print("line: %s" % line)
+                        except IndexError:
+                            if not travis_run:
+                                print("***line: %s" % line)
+                        logs.append(line)
                     if 'ERROR:' in line or 'CRITICAL:' in line:
                         errors_raised += 1
                         print("error: %s" % line)
                     # Catches INFO logs
                     if 'INFO:' in line:
-                        line = line.split('INFO: ')
-                        line = line[1]
-                        line = line.strip()
-                        line = line.split('] ')
-                        line = line[1]
-                        line = line.strip()
-                        print("info: %s" % line)
-                        logs.append(line)
+                        if not travis_run:
+                            print("line: %s" % line)
 
             for log in expected_logs[name]:
                 print("Last checked log %s: %s" % (name, log))

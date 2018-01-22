@@ -85,23 +85,33 @@ class AlignakTest(unittest2.TestCase):
             return self.assertRegexpMatches(*args, **kwargs)
 
     def setUp(self):
-        """All tests initialization"""
+        """All tests initialization:
+        - output test identifier
+        - setup test logger
+        - track running Alignak daemons
+        - output system cpu/memory
+        """
         self.my_pid = os.getpid()
 
         print "\n" + self.id()
         print ("-" * 80)
         print("Test current working directory: %s" % (os.getcwd()))
-        logger_configuration_file = os.path.join(os.getcwd(), './cfg/alignak-logger.json')
-        setup_logger(logger_configuration_file, log_dir=None, process_name='', log_file='')
 
-        print("Tracking remaining processes...")
+        # Configure Alignak logger with test configuration
+        logger_configuration_file = os.path.join(os.getcwd(), './cfg/alignak-logger.json')
+        self.former_log_level = None
+        setup_logger(logger_configuration_file, log_dir=None, process_name='', log_file='')
+        self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        self.logger_.info("Test: %s", self.id())
+
+        # To make sure that no running daemon exist
         for daemon in ['broker', 'poller', 'reactionner', 'receiver', 'scheduler', 'arbiter']:
             for proc in psutil.process_iter():
                 if daemon not in proc.name():
                     continue
                 if proc.pid == self.my_pid:
                     continue
-                print("- found %s" % (proc.name()))
+                assert False, "*** Found a running Alignak daemon: %s" % (proc.name())
 
         print("System information:")
         perfdatas = []
@@ -130,6 +140,28 @@ class AlignakTest(unittest2.TestCase):
 
         print "-> memory: %s" % " ".join(perfdatas)
         print ("-" * 80) + "\n"
+
+    def tearDown(self):
+        """Test ending:
+        - restore initial log level if it got changed
+        """
+        # Restore the collector logger log level
+        if self.former_log_level:
+            logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+            for handler in logger_.handlers:
+                if getattr(handler, '_name', None) == 'unit_tests':
+                    handler.level = self.former_log_level
+                    break
+
+    def set_debug_log(self):
+        """Set the test logger at DEBUG level - useful for some tests that check debug log"""
+        # Change the collector logger log level
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for handler in logger_.handlers:
+            if getattr(handler, '_name', None) == 'unit_tests':
+                self.former_log_level = handler.level
+                handler.setLevel(logging.DEBUG)
+                break
 
     def _files_update(self, files, replacements):
         """Update files content with the defined replacements
@@ -309,6 +341,7 @@ class AlignakTest(unittest2.TestCase):
         :return:
         """
         print("Get information from log files...")
+        travis_run = 'TRAVIS' in os.environ
         nb_errors = 0
         nb_warnings = 0
         for daemon in ['arbiter-master'] + daemons_list:
@@ -319,7 +352,8 @@ class AlignakTest(unittest2.TestCase):
             with open('/tmp/%s.log' % daemon) as f:
                 for line in f:
                     if 'WARNING: ' in line or daemon_errors:
-                        print(line[:-1])
+                        if not travis_run:
+                            print(line[:-1])
                         if 'Cannot call the additional groups setting ' not in line \
                                 and 'loop exceeded the maximum expected' not in line \
                                 and 'ignoring repeated file' not in line:
@@ -1034,7 +1068,7 @@ class AlignakTest(unittest2.TestCase):
                                 "logs=[[[\n%s\n]]]"
                                 % (index, pattern, '\n'.join('\t%s=%s' % (idx, b.strip())
                                                              for idx, b in
-                                                             enumerate(collector_h.collector))))
+                                                             enumerate(handler.collector))))
                 break
         else:
             assert False, "Alignak test Logger is not initialized correctly!"
