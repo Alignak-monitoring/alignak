@@ -19,7 +19,7 @@
     "handlers": {
         "unit_tests": {
             "class": "alignak.log.CollectorHandler",
-            "level": "DEBUG",
+            "level": "INFO",
             "formatter": "unit_tests"
         },
         "console": {

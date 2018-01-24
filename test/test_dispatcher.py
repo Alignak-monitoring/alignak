@@ -26,9 +26,11 @@ import re
 import time
 import datetime
 import pytest
+import logging
 import requests_mock
 from freezegun import freeze_time
 from alignak_test import AlignakTest
+from alignak.log import ALIGNAK_LOGGER_NAME
 from alignak.misc.serialization import unserialize
 from alignak.daemons.arbiterdaemon import Arbiter
 from alignak.dispatcher import Dispatcher, DispatcherError
@@ -39,7 +41,28 @@ class TestDispatcher(AlignakTest):
     This class tests the dispatcher (distribute configuration to satellites)
     """
     def setUp(self):
+        """Test starting"""
         super(TestDispatcher, self).setUp()
+
+        # Save and change the collector logger log level
+        self.former_level = None
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for handler in logger_.handlers:
+            if getattr(handler, '_name', None) == 'unit_tests':
+                self.former_level = handler.level
+                handler.setLevel(logging.DEBUG)
+                break
+
+    def tearDown(self):
+        """Test ending"""
+        # Restore the collector logger log level
+        if self.former_level:
+            logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+            for handler in logger_.handlers:
+                if getattr(handler, '_name', None) == 'unit_tests':
+                    handler.level = self.former_level
+                    break
+
 
     def _dispatching(self, env_filename='cfg/dispatcher/simple.ini', loops=3, multi_realms=False):
         """ Dispatching process: prepare, check, dispatch
@@ -262,6 +285,7 @@ class TestDispatcher(AlignakTest):
                         else:
                             assert False
                         print("I am: %s" % link)
+                        print("I have: %s" % conf)
 
                         # All links have a hash, push_flavor and cfg_to_manage
                         assert 'hash' in conf

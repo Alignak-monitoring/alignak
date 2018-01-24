@@ -240,7 +240,10 @@ class BaseSatellite(Daemon):
 
             logger.debug("Received a new configuration, containing:")
             for key in self.cur_conf:
-                logger.debug("- %s: %s", key, self.cur_conf[key])
+                try:
+                    logger.debug("- %s: %s", key, self.cur_conf[key])
+                except UnicodeDecodeError:
+                    logger.error("- %s: %s", key, self.cur_conf[key].decode('utf8', 'ignore'))
             logger.debug("satellite self configuration part: %s", self_conf)
 
             if 'satellites' not in self.cur_conf:

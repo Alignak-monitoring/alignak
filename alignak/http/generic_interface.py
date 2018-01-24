@@ -222,9 +222,7 @@ class GenericInterface(object):
 
             full_api[fun][u"args"] = a_dict
 
-        full_api[u"side_note"] = u"When posting data you have to serialize value. Example : " \
-                                 u"POST /set_log_level " \
-                                 u"{'loglevel' : serialize('INFO')}"
+        full_api[u"side_note"] = u"When posting data you have to use the JSON format."
 
         return full_api
 
