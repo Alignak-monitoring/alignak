@@ -47,7 +47,7 @@ from logging.handlers import TimedRotatingFileHandler
 import requests_mock
 
 import alignak
-from alignak.log import ALIGNAK_LOGGER_NAME, ColorStreamHandler
+from alignak.log import setup_logger, ALIGNAK_LOGGER_NAME, ColorStreamHandler, CollectorHandler
 from alignak.bin.alignak_environment import AlignakConfigParser
 from alignak.objects.config import Config
 from alignak.objects.command import Command
@@ -78,58 +78,58 @@ from alignak.daemons.brokerdaemon import Broker
 from alignak.daemons.arbiterdaemon import Arbiter
 from alignak.daemons.receiverdaemon import Receiver
 
-class CollectorHandler(Handler):
-    """
-    This log handler collects all emitted log.
-
-    Used for tet purpose (assertion)
-    """
-
-    def __init__(self):
-        Handler.__init__(self, logging.DEBUG)
-        self.collector = []
-
-    def emit(self, record):
-        try:
-            msg = self.format(record)
-            self.collector.append(msg)
-        except TypeError:
-            self.handleError(record)
-
-
 class AlignakTest(unittest2.TestCase):
 
     if sys.version_info < (2, 7):
         def assertRegex(self, *args, **kwargs):
             return self.assertRegexpMatches(*args, **kwargs)
 
-    def setup_logger(self):
-        """
-        Setup a log collector
-        :return:
-        """
-        self.logger = logging.getLogger(ALIGNAK_LOGGER_NAME)
+    def setUp(self):
+        """All tests initialization"""
+        self.my_pid = os.getpid()
 
-        print("Setup Logger: %s" % self.logger)
-        for handler in self.logger.handlers:
-            if isinstance(handler, (CollectorHandler)):
-                print("Collector, logs: %d" % len(handler.collector))
-            if not isinstance(handler, (CollectorHandler, ColorStreamHandler)):
-                if os.path.exists(handler.baseFilename):
-                    statinfo = os.stat(handler.baseFilename)
-                    print("*** still exists: %s, %d bytes" % (handler.baseFilename, statinfo.st_size))
-                    if statinfo.st_size > 1024 * 1024:
-                        os.remove(handler.baseFilename)
-                        print(" => removed: %s" % handler.baseFilename)
+        print "\n" + self.id()
+        print ("-" * 80)
+        print("Test current working directory: %s" % (os.getcwd()))
+        logger_configuration_file = os.path.join(os.getcwd(), './cfg/alignak-logger.json')
+        setup_logger(logger_configuration_file, log_dir=None, process_name='', log_file='')
 
-        for handler in self.logger.handlers:
-            if isinstance(handler, CollectorHandler):
-                break
-        else:
-            # Add collector for test purpose, but only add it once !
-            collector_h = CollectorHandler()
-            collector_h.setFormatter(Formatter('[%(created)i] %(levelname)s: [%(name)s] %(message)s'))
-            self.logger.addHandler(collector_h)
+        print("Tracking remaining processes...")
+        for daemon in ['broker', 'poller', 'reactionner', 'receiver', 'scheduler', 'arbiter']:
+            for proc in psutil.process_iter():
+                if daemon not in proc.name():
+                    continue
+                if proc.pid == self.my_pid:
+                    continue
+                print("- found %s" % (proc.name()))
+
+        print("System information:")
+        perfdatas = []
+        cpu_count = psutil.cpu_count()
+        perfdatas.append("'cpu_count'=%d" % cpu_count)
+
+        cpu_percents = psutil.cpu_percent(percpu=True)
+        cpu = 1
+        for percent in cpu_percents:
+            perfdatas.append("'cpu_%d_percent'=%.2f%%" % (cpu, percent))
+            cpu += 1
+        print "-> cpu: %s" % " ".join(perfdatas)
+
+        perfdatas = []
+        virtual_memory = psutil.virtual_memory()
+        for key in virtual_memory._fields:
+            if 'percent' in key:
+                perfdatas.append("'mem_percent_used_%s'=%.2f%%"
+                                 % (key, getattr(virtual_memory, key)))
+
+        swap_memory = psutil.swap_memory()
+        for key in swap_memory._fields:
+            if 'percent' in key:
+                perfdatas.append("'swap_used_%s'=%.2f%%"
+                                 % (key, getattr(swap_memory, key)))
+
+        print "-> memory: %s" % " ".join(perfdatas)
+        print ("-" * 80) + "\n"
 
     def _files_update(self, files, replacements):
         """Update files content with the defined replacements
@@ -163,6 +163,8 @@ class AlignakTest(unittest2.TestCase):
             for name, proc in self.procs.items():
                 if arbiter_only and name not in ['arbiter-master']:
                     continue
+                if proc.pid == self.my_pid:
+                    continue
                 print("Asking %s (pid=%d) to end..." % (name, proc.pid))
                 try:
                     daemon_process = psutil.Process(proc.pid)
@@ -177,7 +179,7 @@ class AlignakTest(unittest2.TestCase):
                     # default delay or set a shorter delay than the default one
                     daemon_process.wait(10)
                 except psutil.TimeoutExpired:
-                    print("***** timeout 10 seconds, force-killing the daemon...")
+                    print("***** stopping timeout 10 seconds, force-killing the daemon...")
                     daemon_process.kill()
                 except psutil.NoSuchProcess:
                     print("not existing!")
@@ -192,6 +194,8 @@ class AlignakTest(unittest2.TestCase):
             for proc in psutil.process_iter():
                 if daemon not in proc.name():
                     continue
+                if proc.pid == self.my_pid:
+                    continue
                 print("- killing %s" % (proc.name()))
                 try:
                     daemon_process = psutil.Process(proc.pid)
@@ -205,7 +209,6 @@ class AlignakTest(unittest2.TestCase):
                 except psutil.TimeoutExpired:
                     print("***** timeout 10 seconds, force-killing the daemon...")
                     daemon_process.kill()
-
 
     def _run_alignak_daemons(self, cfg_folder='/tmp', runtime=30,
                              daemons_list=[], spare_daemons=[], piped=False, run_folder='',
@@ -448,9 +451,6 @@ class AlignakTest(unittest2.TestCase):
             # self._arbiter.debug = True
             self._arbiter.setup_alignak_logger()
 
-            # Add our own logger handler for test purpose.
-            self.setup_logger()
-
             # Setup our modules manager
             self._arbiter.load_modules_manager()
 
@@ -495,7 +495,6 @@ class AlignakTest(unittest2.TestCase):
                 mr.get('http://%s:%s/ping' % (link.address, link.port), json='pong')
                 mr.get('http://%s:%s/get_running_id' % (link.address, link.port), json=123456.123456)
                 mr.get('http://%s:%s/fill_initial_broks' % (link.address, link.port), json=[])
-                mr.post('http://%s:%s/push_configuration' % (link.address, link.port), json=True)
                 mr.get('http://%s:%s/get_managed_configurations' % (link.address, link.port), json={})
 
             self._arbiter.dispatcher.check_reachable(test=True)
@@ -505,18 +504,22 @@ class AlignakTest(unittest2.TestCase):
             # Check that all the daemons links got a configuration
             for sat_type in ('arbiters', 'schedulers', 'reactionners',
                              'brokers', 'receivers', 'pollers'):
-                print("- for %s:" % (sat_type))
+                if verbose:
+                    print("- for %s:" % (sat_type))
                 for sat_link in getattr(self._arbiter.dispatcher, sat_type):
-                    print(" - %s" % (sat_link))
+                    if verbose:
+                        print(" - %s" % (sat_link))
                     pushed_configuration = getattr(sat_link, 'unit_test_pushed_configuration', None)
                     if pushed_configuration:
                         # print("- %s / %s" % (sat_link.name, pushed_configuration))
-                        print("   pushed configuration, contains:")
-                        for key in pushed_configuration:
-                            print("   . %s = %s" % (key, pushed_configuration[key]))
+                        if verbose:
+                            print("   pushed configuration, contains:")
+                            for key in pushed_configuration:
+                                print("   . %s = %s" % (key, pushed_configuration[key]))
                     # Update the test class satellites lists
                     getattr(self, sat_type).update({sat_link.name: pushed_configuration})
-                print("- my %s: %s" % (sat_type, getattr(self, sat_type).keys()))
+                if verbose:
+                    print("- my %s: %s" % (sat_type, getattr(self, sat_type).keys()))
 
             self.eca = None
             # Initialize a Scheduler daemon
@@ -527,7 +530,6 @@ class AlignakTest(unittest2.TestCase):
                     'env_file': self.env_filename, 'daemon_name': scheduler.name,
                 }
                 self._scheduler_daemon = Alignak(**args)
-                self._scheduler_daemon.setup_alignak_logger()
                 self._scheduler_daemon.load_modules_manager()
 
                 # Simulate the scheduler daemon receiving the configuration from its arbiter
@@ -551,7 +553,6 @@ class AlignakTest(unittest2.TestCase):
                     'env_file': self.env_filename, 'daemon_name': broker.name,
                 }
                 self._broker_daemon = Broker(**args)
-                self._broker_daemon.setup_alignak_logger()
                 self._broker_daemon.load_modules_manager()
 
                 # Simulate the scheduler daemon receiving the configuration from its arbiter
@@ -586,18 +587,18 @@ class AlignakTest(unittest2.TestCase):
                 for scheduler in self._receiver_daemon.schedulers.values():
                     scheduler.my_daemon = self._receiver_daemon
 
-            self.ecm_mode = 'applyer'
+        self.ecm_mode = 'applyer'
 
-            # Now we create an external commands manager in receiver mode
-            self.ecr = None
-            if self._receiver:
-                self.ecr = ExternalCommandManager(None, 'receiver', self._receiver_daemon,
-                                                  accept_unknown=True)
-                self._receiver.external_commands_manager = self.ecr
-
-            # and an external commands manager in dispatcher mode for the arbiter
-            self.ecd = ExternalCommandManager(self._arbiter.conf, 'dispatcher', self._arbiter,
+        # Now we create an external commands manager in receiver mode
+        self.ecr = None
+        if self._receiver:
+            self.ecr = ExternalCommandManager(None, 'receiver', self._receiver_daemon,
                                               accept_unknown=True)
+            self._receiver.external_commands_manager = self.ecr
+
+        # and an external commands manager in dispatcher mode for the arbiter
+        self.ecd = ExternalCommandManager(self._arbiter.conf, 'dispatcher', self._arbiter,
+                                          accept_unknown=True)
 
         self._arbiter.modules_manager.stop_all()
         self._broker_daemon.modules_manager.stop_all()
@@ -813,25 +814,18 @@ class AlignakTest(unittest2.TestCase):
         # We should not have the check anymore
         self.assertEqual(0, len(svc_br.actions))
 
-    def show_logs(self, scheduler=False):
-        """
-        Show logs. Get logs collected by the collector handler and print them
-
-        @verified
-        :param scheduler:
-        :return:
-        """
-        if getattr(self, 'logger', None) is None:
-            print "--- no logs because no initialized logger!"
-            return
-
-        print "--- logs <<<----------------------------------"
-        collector_h = [handler for handler in self.logger.handlers
-                       if isinstance(handler, CollectorHandler)][0]
-        for log in collector_h.collector:
-            self.safe_print(log)
-
-        print "--- logs >>>----------------------------------"
+    def show_logs(self):
+        """Show logs. Get logs collected by the unit tests collector handler and print them"""
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for handler in logger_.handlers:
+            if isinstance(handler, CollectorHandler):
+                print "--- logs <<<----------------------------------"
+                for log in handler.collector:
+                    self.safe_print(log)
+                print "--- logs >>>----------------------------------"
+                break
+        else:
+            assert False, "Alignak test Logger is not initialized correctly!"
 
     def show_actions(self):
         """"Show the inner actions"""
@@ -872,31 +866,18 @@ class AlignakTest(unittest2.TestCase):
             print("- %s" % check)
         print "--- checks >>>--------------------------------"
 
-    def show_and_clear_logs(self):
-        """
-        Prints and then deletes the current logs stored in the log collector
-
-        @verified
-        :return:
-        """
-        self.show_logs()
-        self.clear_logs()
-
     def show_and_clear_actions(self):
         self.show_actions()
         self.clear_actions()
 
     def count_logs(self):
-        """
-        Count the log lines in the Arbiter broks.
-        If 'scheduler' is True, then uses the scheduler's broks list.
-
-        @verified
-        :return:
-        """
-        collector_h = [hand for hand in self.logger.handlers
-                       if isinstance(hand, CollectorHandler)][0]
-        return len(collector_h.collector)
+        """Count the logs collected by the unit tests collector handler and print them"""
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for handler in logger_.handlers:
+            if isinstance(handler, CollectorHandler):
+                return len(handler.collector)
+        else:
+            assert False, "Alignak test Logger is not initialized correctly!"
 
     def count_actions(self):
         """
@@ -914,9 +895,13 @@ class AlignakTest(unittest2.TestCase):
         @verified
         :return:
         """
-        collector_h = [hand for hand in self.logger.handlers
-                       if isinstance(hand, CollectorHandler)][0]
-        collector_h.collector = []
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for handler in logger_.handlers:
+            if isinstance(handler, CollectorHandler):
+                handler.collector = []
+                break
+        else:
+            assert False, "Alignak test Logger is not initialized correctly!"
 
     def clear_actions(self):
         """
@@ -1026,32 +1011,33 @@ class AlignakTest(unittest2.TestCase):
         """
         self.assertIsNotNone(pattern, "Searched pattern can not be None!")
 
-        collector_h = [hand for hand in self.logger.handlers
-                       if isinstance(hand, CollectorHandler)][0]
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for handler in logger_.handlers:
+            if isinstance(handler, CollectorHandler):
+                regex = re.compile(pattern)
+                log_num = 0
 
-        regex = re.compile(pattern)
-        log_num = 0
+                found = False
+                for log in handler.collector:
+                    if index is None:
+                        if regex.search(log):
+                            found = True
+                            break
+                    elif index == log_num:
+                        if regex.search(log):
+                            found = True
+                            break
+                    log_num += 1
 
-        found = False
-        for log in collector_h.collector:
-            if index is None:
-                if regex.search(log):
-                    found = True
-                    break
-            elif index == log_num:
-                if regex.search(log):
-                    found = True
-                    break
-            log_num += 1
-
-        self.assertTrue(found,
-                        "Not found a matching log line in logs:\nindex=%s pattern=%r\n"
-                        "logs=[[[\n%s\n]]]" % (
-                            index, pattern, '\n'.join('\t%s=%s' % (idx, b.strip())
-                                                      for idx, b in enumerate(collector_h.collector)
-                                                      )
-                            )
-                        )
+                self.assertTrue(found,
+                                "Not found a matching log line in logs:\nindex=%s pattern=%r\n"
+                                "logs=[[[\n%s\n]]]"
+                                % (index, pattern, '\n'.join('\t%s=%s' % (idx, b.strip())
+                                                             for idx, b in
+                                                             enumerate(collector_h.collector))))
+                break
+        else:
+            assert False, "Alignak test Logger is not initialized correctly!"
 
     def assert_checks_count(self, number):
         """
@@ -1152,40 +1138,41 @@ class AlignakTest(unittest2.TestCase):
         :param assert_not:
         :return:
         """
-        regex = re.compile(pattern)
+        self.assertIsNotNone(pattern, "Searched pattern can not be None!")
 
-        collector_h = [hand for hand in self.logger.handlers
-                       if isinstance(hand, CollectorHandler)][0]
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for handler in logger_.handlers:
+            if isinstance(handler, CollectorHandler):
+                regex = re.compile(pattern)
 
-        for log in collector_h.collector:
-            if re.search(regex, log):
-                self.assertTrue(not assert_not,
-                                "Found matching log line:\n"
-                                "pattern = %r\nbrok log = %r" % (pattern, log))
-                return
-
-        self.assertTrue(assert_not, "No matching log line found:\n"
-                                    "pattern = %r\n" "logs broks = %r" % (pattern,
-                                                                          collector_h.collector))
+                for log in handler.collector:
+                    if re.search(regex, log):
+                        self.assertTrue(not assert_not,
+                                        "Found matching log line:\n"
+                                        "pattern: %r\nlog: %r" % (pattern, log))
+                        break
+                else:
+                    for log in handler.collector:
+                        print(".%s" % log)
+                    self.assertTrue(assert_not,
+                                    "No matching log line found:\n"
+                                    "pattern: %r\n" "logs: %r" % (pattern, handler.collector))
+                break
+        else:
+            assert False, "Alignak test Logger is not initialized correctly!"
 
     def assert_any_log_match(self, pattern):
-        """
-        Assert if any log (Arbiter or Scheduler if True) matches the pattern
+        """Assert if any of the collected log matches the pattern
 
-        @verified
         :param pattern:
-        :param scheduler:
         :return:
         """
         self._any_log_match(pattern, assert_not=False)
 
     def assert_no_log_match(self, pattern):
-        """
-        Assert if no log (Arbiter or Scheduler if True) matches the pattern
+        """Assert if no collected log matches the pattern
 
-        @verified
         :param pattern:
-        :param scheduler:
         :return:
         """
         self._any_log_match(pattern, assert_not=True)
@@ -1244,20 +1231,20 @@ class AlignakTest(unittest2.TestCase):
         self._any_brok_match(pattern, level, assert_not=True)
 
     def get_log_match(self, pattern):
-        regex = re.compile(pattern)
-        res = []
-        collector_h = [hand for hand in self.logger.handlers
-                       if isinstance(hand, CollectorHandler)][0]
+        """Get the collected logs matching the provided pattern"""
+        self.assertIsNotNone(pattern, "Searched pattern can not be None!")
 
-        for log in collector_h.collector:
-            if re.search(regex, log):
-                res.append(log)
-        return res
-
-    def print_header(self):
-        print "\n" + "#" * 80 + "\n" + "#" + " " * 78 + "#"
-        print "#" + string.center(self.id(), 78) + "#"
-        print "#" + " " * 78 + "#\n" + "#" * 80 + "\n"
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for handler in logger_.handlers:
+            if isinstance(handler, CollectorHandler):
+                regex = re.compile(pattern)
+                res = []
+                for log in handler.collector:
+                    if re.search(regex, log):
+                        res.append(log)
+                return res
+        else:
+            assert False, "Alignak test Logger is not initialized correctly!"
 
     def show_configuration_logs(self):
         """
@@ -1362,7 +1349,3 @@ class AlignakTest(unittest2.TestCase):
                 sys.stderr.write('Error on write to sys.stdout with %s encoding: err=%s\nTrying with ascii' % (
                     coding, err))
         sys.stdout.write(b'\n')
-
-
-if __name__ == '__main__':
-    unittest2.main()

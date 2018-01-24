@@ -32,6 +32,7 @@ The setup_logger function initializes the daemon logger with the JSON provided c
 The make_monitoring_log function emits a log to the monitoring log logger and returns a brok for
 the Alignak broker.
 """
+import os
 import sys
 import json
 import time
@@ -134,15 +135,24 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
             # Update the declared formats with the process name
             for handler in logger_.handlers:
                 print("- handler: %s" % handler._name)
-                if process_name and 'NOTSET' in handler.formatter._fmt:
-                    handler.formatter._fmt = handler.formatter._fmt.replace("NOTSET", process_name)
+                if process_name and 'alignak_tests' in handler.formatter._fmt:
+                    handler.formatter._fmt = \
+                        handler.formatter._fmt.replace("alignak_tests", process_name)
+                if getattr(handler, 'filename', None):
+                    if process_name and 'alignak_tests' in handler.filename:
+                        handler.filename = \
+                            handler.formatter._fmt.replace("alignak_tests", process_name)
+                    print("- handler: %s" % handler.filename)
             break
     else:
         print("Initializing Alignak logger (%s)..." % logger_configuration_file)
         with open(logger_configuration_file, 'rt') as _file:
             config = json.load(_file)
+            truncate = False
+            if not process_name and not log_dir:
+                truncate = True
             if not process_name:
-                process_name = 'NOTSET'
+                process_name = 'alignak_tests'
             if not log_dir:
                 log_dir = '/tmp'
             # Update the declared formats with the process name
@@ -163,6 +173,9 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
                         config['handlers'][handler]['filename'].replace("%(logdir)s", log_dir)
                 config['handlers'][handler]['filename'] = \
                     config['handlers'][handler]['filename'].replace("%(daemon)s", process_name)
+                if truncate and os.path.exists(config['handlers'][handler]['filename']):
+                    with open(config['handlers'][handler]['filename'], "w") as file:
+                        file.truncate()
 
         # Configure the logger, any error will raise an exception
         logger_dictConfig(config)
