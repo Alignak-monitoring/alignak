@@ -549,9 +549,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 if ret is not None:
                     logger.error("*** %s exited on start!", daemon_name)
                     for line in iter(self.my_satellites[daemon_name].stdout.readline, b''):
-                        logger.error(">>> " + line.rstrip())
+                        logger.error(">>> %s", line.rstrip())
                     for line in iter(self.my_satellites[daemon_name].stderr.readline, b''):
-                        logger.error(">>> " + line.rstrip())
+                        logger.error(">>> %s", line.rstrip())
                     result = False
                 else:
                     logger.info("%s running (pid=%d)",

@@ -376,7 +376,7 @@ class TestModules(AlignakTest):
         for mod in self.arbiter.conf.modules:
             print (mod.__dict__)
 
-        time_hacker.set_real_time()
+        # time_hacker.set_real_time()
 
         # Create an Alignak module
         mod = Module({

@@ -821,6 +821,7 @@ class Daemon(object):
         logger.info("Created")
 
         logger.info("Starting http_daemon thread..")
+        # pylint: disable=bad-thread-instantiation
         self.http_thread = threading.Thread(None, self.http_daemon_thread, 'http_thread')
         self.http_thread.daemon = True
         self.http_thread.start()

@@ -1597,6 +1597,7 @@ class Services(SchedulingItems):
             new_s.host_name = hname
             self.add_item(new_s)
 
+    # pylint: disable=inconsistent-return-statements
     def _local_create_service(self, hosts, host_name, service):
         """Create a new service based on a host_name and service instance.
 

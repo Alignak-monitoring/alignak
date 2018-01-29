@@ -442,6 +442,7 @@ class MacroResolver(Borg):
                     continue
 
     @staticmethod
+    # pylint: disable=inconsistent-return-statements
     def _resolve_argn(macro, args):
         """Get argument from macro name
         ie : $ARG3$ -> args[2]
