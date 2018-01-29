@@ -224,7 +224,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         # Set an environment variable to activate the logging of checks execution
         # With this the pollers/schedulers will raise INFO logs about the checks execution
-        os.environ['TEST_LOG_ACTIONS'] = 'INFO'
+        os.environ['TEST_LOG_ACTIONS'] = 'WARNING'
 
         # Run daemons for 2 minutes
         self.run_and_check_alignak_daemons(120)
