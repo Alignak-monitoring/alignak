@@ -58,7 +58,7 @@ class TestLaunchDaemonsModules(AlignakTest):
             children = daemon_process.children(recursive=True)
             daemon_process.terminate()
             try:
-                daemon_process.wait(10)
+                daemon_process.wait(60)
             except psutil.TimeoutExpired:
                 print("timeout!")
             except psutil.NoSuchProcess:

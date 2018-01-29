@@ -306,6 +306,7 @@ class SatelliteLink(Item):
         if self.attempt == self.max_check_attempts:
             self.set_dead()
 
+    # pylint: disable=inconsistent-return-statements
     def update_infos(self, now):
         """Update satellite info each self.check_interval seconds
         so we smooth arbiter actions for just useful actions.
@@ -348,6 +349,7 @@ class SatelliteLink(Item):
         """
         self.managed_confs[cfg_id] = push_flavor
 
+    # pylint: disable=inconsistent-return-statements
     def ping(self):
         """Send a HTTP request to the satellite (GET /ping)
         Add failed attempt if an error occurs
@@ -463,6 +465,7 @@ class SatelliteLink(Item):
 
         return False
 
+    # pylint: disable=inconsistent-return-statements
     def remove_from_conf(self, sched_id):  # pragma: no cover, no more used
         """Send a HTTP request to the satellite (GET /remove_from_conf)
         Tell a satellite to remove a scheduler from conf
@@ -502,6 +505,7 @@ class SatelliteLink(Item):
 
         return False
 
+    # pylint: disable=inconsistent-return-statements
     def update_managed_conf(self):
         """Send a HTTP request to the satellite (GET /what_i_managed)
         and update managed_conf attribute with dict (cleaned)
