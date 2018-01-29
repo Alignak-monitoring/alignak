@@ -227,7 +227,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         os.environ['TEST_LOG_ACTIONS'] = 'WARNING'
 
         # Run daemons for 2 minutes
-        self.run_and_check_alignak_daemons(120)
+        self.run_and_check_alignak_daemons(180)
 
         # Expected logs from the daemons
         expected_logs = {
