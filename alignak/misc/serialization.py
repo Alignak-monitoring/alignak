@@ -110,6 +110,7 @@ def unserialize(j_obj, no_load=False):
 
     elif isinstance(data, list):
         return [unserialize(item, True) for item in data]
+
     else:
         return data
 

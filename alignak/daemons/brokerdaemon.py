@@ -129,6 +129,29 @@ class Broker(BaseSatellite):
 
         self.http_interface = BrokerInterface(self)
 
+    # def daemon_connection_init(self, satellite):
+    #     """Overloads the base class method for specific broker feature:
+    #     When (re)connecting to a scheduler, ask for the initial broks
+    #
+    #     :param satellite: link of the daemon to connect to
+    #     :type satellite: SatelliteLink
+    #     :return: True if the connection is established, else False
+    #     """
+    #     res = super(Broker, self).daemon_connection_init(satellite)
+    #
+    #     # If I (re)connect to a scheduler
+    #     if satellite.type == 'scheduler':
+    #         logger.info("[%s] Asking my initial broks from '%s'", self.name, satellite.name)
+    #         _t0 = time.time()
+    #         my_initial_broks = satellite.get_initial_broks(self.name)
+    #         statsmgr.timer('initial-broks.%s' % satellite.name, time.time() - _t0)
+    #         if not my_initial_broks:
+    #             logger.warning("No initial broks were raised, my scheduler is not yet ready...")
+    #         else:
+    #             self.got_initial_broks = True
+    #             logger.info("Got %d initial broks from '%s'", my_initial_broks, satellite.name)
+    #     return res
+
     def add(self, elt):  # pragma: no cover, seems not to be used
         """Add an element to the broker lists
 
@@ -184,7 +207,7 @@ class Broker(BaseSatellite):
                 logger.error(data['trace'])
 
             statsmgr.counter('message.added', 1)
-                # The module death will be looked for elsewhere and restarted.
+            # The module death will be looked for elsewhere and restarted.
 
     def manage_brok(self, brok):
         """Get a brok.

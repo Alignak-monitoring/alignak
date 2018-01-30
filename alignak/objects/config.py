@@ -2339,7 +2339,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Now the relations
         for host in self.hosts:
-            print("Have an host: %s" % (host))
             # Add parent relations
             for parent in host.parents:
                 if parent:
@@ -2409,9 +2408,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             passively_checked_hosts = False
             actively_checked_hosts = False
             tmp_realms = set()
-            print("Hosts: %s" % (self.hosts))
+            logger.debug(" - host pack hosts:")
             for host_id in hosts_pack:
-                print("Host: %s" % (host_id))
                 host = self.hosts[host_id]
                 logger.debug("  - %s", host.get_name())
                 passively_checked_hosts = passively_checked_hosts or host.passive_checks_enabled

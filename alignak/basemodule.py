@@ -171,8 +171,9 @@ class BaseModule(object):
         """
         self.loaded_into = daemon_name
 
-    def create_queues(self, manager):
-        """Create the shared queues that will be used by alignak daemon
+    def create_queues(self, manager=None):
+        """
+        Create the shared queues that will be used by alignak daemon
         process and this module process.
         But clear queues if they were already set before recreating new one.
 
@@ -180,18 +181,24 @@ class BaseModule(object):
         If manager is None, then we are running the unit tests for the modules and
         we must create some queues for the external modules without a SyncManager
 
-        :param manager: SyncManager() object
-        :type manager: SyncManager
+        :param manager: Manager() object
+        :type manager: None | object
         :return: None
         """
-        self.clear_queues()
+        self.clear_queues(manager)
+        # If no Manager() object, go with classic Queue()
+        if not manager:
+            self.from_q = Queue()
+            self.to_q = Queue()
+        else:
+            self.from_q = manager.Queue()
+            self.to_q = manager.Queue()
 
-        self.from_q = manager.Queue()
-        self.to_q = manager.Queue()
-
-    def clear_queues(self):
+    def clear_queues(self, manager):
         """Release the resources associated to the queues of this instance
 
+        :param manager: Manager() object
+        :type manager: None | object
         :return: None
         """
         for queue in (self.to_q, self.from_q):

@@ -165,10 +165,8 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
                 if log_file:
                     config['handlers'][hdlr]['filename'] = log_file
                 else:
-
                     config['handlers'][hdlr]['filename'] = \
                         config['handlers'][hdlr]['filename'].replace("%(logdir)s", log_dir)
-
                 config['handlers'][hdlr]['filename'] = \
                     config['handlers'][hdlr]['filename'].replace("%(daemon)s", process_name)
                 if truncate and os.path.exists(config['handlers'][hdlr]['filename']):
