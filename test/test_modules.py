@@ -405,8 +405,8 @@ class TestModules(AlignakTest):
                              'cfg/default_with_modules/alignak.ini')
         assert self.conf_is_correct
 
-        for mod in self._arbiter.conf.modules:
-            print (mod.__dict__)
+        # for mod in self._arbiter.conf.modules:
+        #     print (mod.__dict__)
 
         # Create an Alignak module
         mod = Module({
