@@ -531,25 +531,29 @@ class AlignakTest(unittest2.TestCase):
                 mr.get('http://%s:%s/fill_initial_broks' % (link.address, link.port), json=[])
                 mr.get('http://%s:%s/get_managed_configurations' % (link.address, link.port), json={})
 
-        self._arbiter.dispatcher.check_reachable(test=True)
-        self._arbiter.dispatcher.check_dispatch()
-        print("-----\nConfiguration got dispatched.")
+            self._arbiter.dispatcher.check_reachable(test=True)
+            self._arbiter.dispatcher.check_dispatch()
+            print("-----\nConfiguration got dispatched.")
 
-        # Check that all the daemons links got a configuration
-        for sat_type in ('arbiters', 'schedulers', 'reactionners',
-                         'brokers', 'receivers', 'pollers'):
-            if verbose:print("- for %s:" % (sat_type))
-            for sat_link in getattr(self._arbiter.dispatcher, sat_type):
-                if verbose:print(" - %s" % (sat_link))
-                pushed_configuration = getattr(sat_link, 'unit_test_pushed_configuration', None)
-                if pushed_configuration:
-                    # print("- %s / %s" % (sat_link.name, pushed_configuration))
-                    if verbose:print("   pushed configuration, contains:")
-                    for key in pushed_configuration:
-                        print("   . %s = %s" % (key, pushed_configuration[key]))
-                # Update the test class satellites lists
-                getattr(self, sat_type).update({sat_link.name: pushed_configuration})if verbose:
-            print("- my %s: %s" % (sat_type, getattr(self, sat_type).keys()))
+            # Check that all the daemons links got a configuration
+            for sat_type in ('arbiters', 'schedulers', 'reactionners',
+                             'brokers', 'receivers', 'pollers'):
+                if verbose:
+                    print("- for %s:" % (sat_type))
+                for sat_link in getattr(self._arbiter.dispatcher, sat_type):
+                    if verbose:
+                        print(" - %s" % (sat_link))
+                    pushed_configuration = getattr(sat_link, 'unit_test_pushed_configuration', None)
+                    if pushed_configuration:
+                        # print("- %s / %s" % (sat_link.name, pushed_configuration))
+                        if verbose:
+                            print("   pushed configuration, contains:")
+                            for key in pushed_configuration:
+                                print("   . %s = %s" % (key, pushed_configuration[key]))
+                    # Update the test class satellites lists
+                    getattr(self, sat_type).update({sat_link.name: pushed_configuration})
+                if verbose:
+                    print("- my %s: %s" % (sat_type, getattr(self, sat_type).keys()))
 
             self.eca = None
             # Initialize a Scheduler daemon
@@ -560,21 +564,20 @@ class AlignakTest(unittest2.TestCase):
                     'env_file': self.env_filename, 'daemon_name': scheduler.name,
                 }
                 self._scheduler_daemon = Alignak(**args)
-
                 self._scheduler_daemon.load_modules_manager()
 
-            # Simulate the scheduler daemon receiving the configuration from its arbiter
-            pushed_configuration = scheduler.unit_test_pushed_configuration
-            self._scheduler_daemon.new_conf = pushed_configuration
-            self._scheduler_daemon.setup_new_conf()
-            assert self._scheduler_daemon.new_conf is None
-            self._schedulers[scheduler.name] = self._scheduler_daemon.sched
+                # Simulate the scheduler daemon receiving the configuration from its arbiter
+                pushed_configuration = scheduler.unit_test_pushed_configuration
+                self._scheduler_daemon.new_conf = pushed_configuration
+                self._scheduler_daemon.setup_new_conf()
+                assert self._scheduler_daemon.new_conf is None
+                self._schedulers[scheduler.name] = self._scheduler_daemon.sched
 
-            # Store the last scheduler object to get used in some other functions!
-            # this is the real scheduler, not the scheduler daemon!
-            self._scheduler = self._scheduler_daemon.sched
-            self._scheduler.my_daemon = self._scheduler_daemon
-            print("Got a default scheduler: %s\n-----" % self._scheduler)
+                # Store the last scheduler object to get used in some other functions!
+                # this is the real scheduler, not the scheduler daemon!
+                self._scheduler = self._scheduler_daemon.sched
+                self._scheduler.my_daemon = self._scheduler_daemon
+                print("Got a default scheduler: %s\n-----" % self._scheduler)
 
             # Initialize a Broker daemon
             for broker in self._arbiter.dispatcher.brokers:
@@ -584,40 +587,39 @@ class AlignakTest(unittest2.TestCase):
                     'env_file': self.env_filename, 'daemon_name': broker.name,
                 }
                 self._broker_daemon = Broker(**args)
-
                 self._broker_daemon.load_modules_manager()
 
-            # Simulate the scheduler daemon receiving the configuration from its arbiter
-            pushed_configuration = broker.unit_test_pushed_configuration
-            self._broker_daemon.new_conf = pushed_configuration
-            self._broker_daemon.setup_new_conf()
-            print("Got a default broker daemon: %s\n-----" % self._broker_daemon)
+                # Simulate the scheduler daemon receiving the configuration from its arbiter
+                pushed_configuration = broker.unit_test_pushed_configuration
+                self._broker_daemon.new_conf = pushed_configuration
+                self._broker_daemon.setup_new_conf()
+                print("Got a default broker daemon: %s\n-----" % self._broker_daemon)
 
-        # Get my first broker link
-        self._main_broker = None
-        if self._scheduler.my_daemon.brokers:
-            self._main_broker = [b for b in self._scheduler.my_daemon.brokers.values()][0]
+            # Get my first broker link
+            self._main_broker = None
+            if self._scheduler.my_daemon.brokers:
+                self._main_broker = [b for b in self._scheduler.my_daemon.brokers.values()][0]
 
-        # Initialize a Receiver daemon
-        self._receiver = None
-        for receiver in self._arbiter.dispatcher.receivers:
-            print("-----\nGot a receiver: %s (%s)" % (receiver.name, receiver))
-            # Simulate the receiver daemon start
-            args = {
-                'env_file': self.env_filename, 'daemon_name': receiver.name,
-            }
-            self._receiver_daemon = Receiver(**args)
-            self._receiver_daemon.load_modules_manager()
+            # Initialize a Receiver daemon
+            self._receiver = None
+            for receiver in self._arbiter.dispatcher.receivers:
+                print("-----\nGot a receiver: %s (%s)" % (receiver.name, receiver))
+                # Simulate the receiver daemon start
+                args = {
+                    'env_file': self.env_filename, 'daemon_name': receiver.name,
+                }
+                self._receiver_daemon = Receiver(**args)
+                self._receiver_daemon.load_modules_manager()
 
-            # Simulate the scheduler daemon receiving the configuration from its arbiter
-            pushed_configuration = receiver.unit_test_pushed_configuration
-            self._receiver_daemon.new_conf = pushed_configuration
-            self._receiver_daemon.setup_new_conf()
-            self._receiver = receiver
-            print("Got a default receiver: %s\n-----" % self._receiver)
+                # Simulate the scheduler daemon receiving the configuration from its arbiter
+                pushed_configuration = receiver.unit_test_pushed_configuration
+                self._receiver_daemon.new_conf = pushed_configuration
+                self._receiver_daemon.setup_new_conf()
+                self._receiver = receiver
+                print("Got a default receiver: %s\n-----" % self._receiver)
 
-            for scheduler in self._receiver_daemon.schedulers.values():
-                scheduler.my_daemon = self._receiver_daemon
+                for scheduler in self._receiver_daemon.schedulers.values():
+                    scheduler.my_daemon = self._receiver_daemon
 
         self.ecm_mode = 'applyer'
 
@@ -729,6 +731,7 @@ class AlignakTest(unittest2.TestCase):
             for i in scheduler.recurrent_works:
                 (name, fun, nb_ticks) = scheduler.recurrent_works[i]
                 if nb_ticks == 1:
+                    # print(" . %s ...running." % name)
                     fun()
                 # else:
                 #     print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
