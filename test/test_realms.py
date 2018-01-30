@@ -116,7 +116,7 @@ class TestRealms(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/realms/no_default_realm.cfg', 'cfg/realms/no_default_realm.ini')
+        self.setup_with_file('cfg/realms/no_defined_realms.cfg', 'cfg/realms/no_default_realm.ini')
         assert self.conf_is_correct
         self.show_logs()
 

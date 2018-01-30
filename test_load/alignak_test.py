@@ -760,33 +760,6 @@ class AlignakTest(unittest2.TestCase):
                     checks = [chk for chk in checks if chk.freshness_expired]
         return len(checks)
 
-    def manage_freshness_check(self, count=1, mysched=None):
-        """Run the scheduler loop for freshness_check
-
-        :param count: number of scheduler loop turns
-        :type count: int
-        :param mysched: a specific scheduler to get used
-        :type mysched: None | object
-        :return: n/a
-        """
-        if mysched is None:
-            mysched = self.schedulers['scheduler-master']
-
-        # Check freshness on each scheduler tick
-        mysched.sched.update_recurrent_works_tick('check_freshness', 1)
-
-        checks = []
-        for num in range(count):
-            for i in mysched.sched.recurrent_works:
-                (name, fun, nb_ticks) = mysched.sched.recurrent_works[i]
-                if nb_ticks == 1:
-                    fun()
-                if name == 'check_freshness':
-                    checks = sorted(mysched.sched.checks.values(),
-                                    key=lambda x: x.creation_time)
-                    checks = [chk for chk in checks if chk.freshness_expired]
-        return len(checks)
-
     def manage_external_command(self, external_command, run=True):
         """Manage an external command.
 
@@ -897,7 +870,7 @@ class AlignakTest(unittest2.TestCase):
         print("--- actions <<<----------------------------------")
         actions = sorted(self._scheduler.actions.values(), key=lambda x: (x.t_to_go, x.creation_time))
         for action in actions:
-            print("Time to launch action: %s, creation: %s" % (action.t_to_go, action.creation_time))
+            print("Time to launch action: %s, creation: %s, now: %s" % (action.t_to_go, action.creation_time, time.time()))
             if action.is_a == 'notification':
                 item = self._scheduler.find_item_by_id(action.ref)
                 if item.my_type == "host":
