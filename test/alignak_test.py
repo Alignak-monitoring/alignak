@@ -368,7 +368,7 @@ class AlignakTest(unittest2.TestCase):
                 if name == 'check_freshness':
                     checks = sorted(mysched.sched.checks.values(),
                                     key=lambda x: x.creation_time)
-                    checks = [chk for chk in checks if chk.freshness_expired]
+                    checks = [chk for chk in checks if chk.freshness_expiry_check]
         return len(checks)
 
     def manage_external_command(self, external_command, run=True):

@@ -715,7 +715,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                         expiry_date = time.strftime("%Y-%m-%d %H:%M:%S %Z")
                         chk.output = "Freshness period expired: %s" % expiry_date
                         chk.set_type_passive()
-                        chk.freshness_expired = True
+                        chk.freshness_expiry_check = True
+                        chk.check_time = time.time()
                         if self.my_type == 'host':
                             if self.freshness_state == 'o':
                                 chk.exit_status = 0
@@ -1593,7 +1594,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         ok_up = self.__class__.ok_up  # OK for service, UP for host
         now = int(time.time())
-        if not chk.freshness_expired:
+        if not chk.freshness_expiry_check:
             self.freshness_expired = False
 
         if 'TEST_LOG_ACTIONS' in os.environ:
@@ -1665,7 +1666,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if resultmod is not None:
                 chk.exit_status = resultmod.module_return(chk.exit_status, timeperiods)
 
-        if not chk.freshness_expired:
+        if not chk.freshness_expiry_check:
             # Only update the last state date if not in freshness expiry
             self.last_state_update = time.time()
             if chk.exit_status == 1 and self.__class__.my_type == 'host':
@@ -1885,14 +1886,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.last_hard_state_change = int(time.time())
 
             # If the check is a freshness one, set freshness as expired
-            if chk.freshness_expired:
+            if chk.freshness_expiry_check:
                 self.freshness_expired = True
 
         # update event/problem-counters
         self.update_event_and_problem_id()
 
         # Raise a log if freshness check expired
-        if chk.freshness_expired:
+        if chk.freshness_expiry_check:
             self.raise_freshness_log_entry(int(now - self.last_state_update -
                                                self.freshness_threshold))
 
