@@ -1,7 +1,0 @@
-# The Alignak backend requires a minimum Python 2.7 version
-
-# Alignak backend (develop branch)
--e git+git://github.com/Alignak-monitoring-contrib/alignak-backend.git@develop#egg=alignak-backend
-
-# Alignak backend module (develop branch)
--e git+git://github.com/Alignak-monitoring-contrib/alignak-module-backend.git@develop#egg=alignak-module-backend
