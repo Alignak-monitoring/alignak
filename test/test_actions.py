@@ -200,7 +200,7 @@ class TestAction(AlignakTest):
             'long_output': '',
             'output': '',
             'passive_check': False,
-            'freshness_expired': False,
+            'freshness_expiry_check': False,
             'perf_data': '',
             'poller_tag': 'None',
             'reactionner_tag': 'None',

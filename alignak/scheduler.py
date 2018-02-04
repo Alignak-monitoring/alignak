@@ -1959,7 +1959,7 @@ class Scheduler(object):  # pylint: disable=R0902
         if self.pushed_conf.check_host_freshness:
             # Freshness check is configured for hosts - get the list of concerned hosts:
             # host check freshness is enabled and the host is only passively checked
-            hosts = [h for h in self.hosts if h.check_freshness and
+            hosts = [h for h in self.hosts if h.check_freshness and not h.freshness_expired and
                      h.passive_checks_enabled and not h.active_checks_enabled]
             statsmgr.gauge('freshness.hosts-count', len(hosts))
             items.extend(hosts)
