@@ -156,11 +156,14 @@ class AlignakTest(unittest2.TestCase):
     def set_debug_log(self):
         """Set the test logger at DEBUG level - useful for some tests that check debug log"""
         # Change the collector logger log level
+        print("set_debug_log")
         logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
         for handler in logger_.handlers:
+            print("handler: %s" % handler)
             if getattr(handler, '_name', None) == 'unit_tests':
                 self.former_log_level = handler.level
                 handler.setLevel(logging.DEBUG)
+                print("handler debug!")
                 break
 
     def _files_update(self, files, replacements):

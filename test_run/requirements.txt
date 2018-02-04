@@ -1,7 +1,0 @@
-# this is the requirements dedicated to tests for daemons load.
-
-# Alignak WS module (develop branch)
--e git+git://github.com/Alignak-monitoring-contrib/alignak-module-ws.git@develop#egg=alignak-module-ws
-
-# Alignak logs module (develop branch)
--e git+git://github.com/Alignak-monitoring-contrib/alignak-module-logs.git@develop#egg=alignak-module-logs

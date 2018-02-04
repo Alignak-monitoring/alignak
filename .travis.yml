@@ -1,7 +1,7 @@
 language: python
 sudo: true
 python:
-#  - "2.6"
+  - "2.6"
   - "2.7"
 env:
   - TEST_SUITE=unit_tests
@@ -9,15 +9,15 @@ env:
   - TEST_SUITE=codingstandard
   - TEST_SUITE=virtualenv
 
-#matrix:
-#  exclude:
-#  - python: "2.6"
-#    env: TEST_SUITE=integration
-#  - python: "2.6"
-#    env: TEST_SUITE=codingstandard
-#  - python: "2.6"
-#    env: TEST_SUITE=virtualenv
-#
+matrix:
+  exclude:
+  - python: "2.6"
+    env: TEST_SUITE=integration
+  - python: "2.6"
+    env: TEST_SUITE=codingstandard
+  - python: "2.6"
+    env: TEST_SUITE=virtualenv
+
 services:
   - mongodb
 
@@ -63,7 +63,14 @@ script:
       coverage erase
       # Run test suite with py.test running its coverage plugin
       # Dump the 10 slowest tests
-      pytest --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
+      - |
+        if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then
+          pytest --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
+        fi
+      - |
+        if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then
+          pytest --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
+        fi
       cd ..
       cp test/.coverage .
       codecov
@@ -76,7 +83,7 @@ script:
       coverage erase
       # Run test suite with py.test running its coverage plugin
       # Dump the 10 slowest tests - do not capture to have some activity in Travis
-      pytest --durations=10 --no-print-logs --capture=no -s --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
+      pytest --durations=10 --no-print-logs --capture=no -s --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
       cd ..
       cp test_load/.coverage .
       codecov
@@ -86,7 +93,7 @@ script:
       coverage erase
       # Run test suite with py.test running its coverage plugin
       # Dump the 10 slowest tests - do not capture to have some activity in Travis
-      pytest --durations=10 --no-print-logs --capture=no -s --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
+      pytest --durations=10 --no-print-logs --capture=no -s --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
       cd ..
       cp test_run/.coverage .
       codecov
