@@ -1,7 +1,12 @@
 # this is the requirements dedicated to tests.
+# Get project requirements
 -r ../requirements.txt
+
+# then tests specific requirements:
 unittest2
-mock
+mock<2.0.0; python_version >= '2.7'
+requests_mock
+ordereddict==1.1
 
 # Use py.test as test-runner
 pytest<3.3.0; python_version < '2.7'
@@ -15,7 +20,8 @@ coverage==4.3.4
 coveralls
 
 # Static code analysis libraries
-pylint
+pylint<1.5.0; python_version < '2.7'
+pylint; python_version >= '2.7'
 pycodestyle
 pep257
 
@@ -24,5 +30,3 @@ freezegun
 
 # Alignak example module (develop branch)
 -e git+git://github.com/Alignak-monitoring/alignak-module-example.git@develop#egg=alignak-module-example
-ordereddict==1.1
-requests_mock
