@@ -85,7 +85,7 @@ class Check(Action):  # pylint: disable=R0902
             StringProp(default=''),
         'passive_check':
             BoolProp(default=False),
-        'freshness_expired':
+        'freshness_expiry_check':
             BoolProp(default=False),
         'poller_tag':
             StringProp(default='None'),
