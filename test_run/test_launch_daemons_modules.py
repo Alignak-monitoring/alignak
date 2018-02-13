@@ -220,12 +220,14 @@ class TestLaunchDaemonsModules(AlignakTest):
 
         sleep(1)
 
-        print("Testing that pid files and log files exist...")
+        print("Testing that arbiter pid files and log files exist...")
         for daemon in ['arbiter']:
-            assert os.path.exists('/tmp/%sd.pid' % daemon), '/tmp/%sd.pid does not exist!' % daemon
+            if not os.path.exists('/tmp/%sd.pid' % daemon):
+                print('/tmp/%sd.pid does not exist!' % daemon)
             assert os.path.exists('/tmp/%sd.log' % daemon), '/tmp/%sd.log does not exist!' % daemon
 
         # Let the arbiter build and dispatch its configuration
+        print("Sleeping: %d seconds" % runtime)
         sleep(runtime)
 
         print("Check if some errors were raised...")
@@ -262,9 +264,9 @@ class TestLaunchDaemonsModules(AlignakTest):
         nb_errors = self._run_daemons_modules(cfg_folder=cfg_folder,
                                               tmp_folder='./run/test_launch_daemons_modules_1',
                                               cfg_modules=cfg_modules)
+        self.kill_daemons()
         assert nb_errors == 0, "Error logs raised!"
         print("No error logs raised when daemons started and loaded the modules")
-        self.kill_daemons()
 
     @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
     def test_daemons_modules_logs(self):
@@ -286,6 +288,8 @@ class TestLaunchDaemonsModules(AlignakTest):
             'poller': '', 'reactionner': '', 'receiver': ''
         }
         nb_errors = self._run_daemons_modules(cfg_folder, tmp_folder, cfg_modules, 10)
+        self.kill_daemons()
+
         assert nb_errors == 0, "Error logs raised!"
         print("No error logs raised when daemons started and loaded the modules")
 
@@ -302,7 +306,6 @@ class TestLaunchDaemonsModules(AlignakTest):
         [1496076886] INFO: TIMEPERIOD TRANSITION: workhours;-1;1
         """
         assert count >= 2
-        self.kill_daemons()
 
     @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
     def test_daemons_modules_logs_restart_module(self):
@@ -675,7 +678,7 @@ class TestLaunchDaemonsModules(AlignakTest):
             'broker': 'backend_broker',
             'poller': '', 'reactionner': '', 'receiver': ''
         }
-        nb_errors = self._run_daemons_modules(cfg_folder, tmp_folder, cfg_modules, 10)
+        nb_errors = self._run_daemons_modules(cfg_folder, tmp_folder, cfg_modules, 120)
 
         # Search the WS module
         # module_pid = None
