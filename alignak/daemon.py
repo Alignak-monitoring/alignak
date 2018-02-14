@@ -483,9 +483,13 @@ class Daemon(object):
                 self.monitoring_config_files.append(value)
             if self.type == 'arbiter' and not self.monitoring_config_files:
                 self.pre_log.append(("WARNING",
-                                     "No Alignak monitoring configuration files. "
-                                     "An arbiter daemon need to have this configuration "
-                                     "to be able to start correctly."))
+                                     "No Alignak monitoring configuration files. "))
+                self.pre_log.append(("WARNING",
+                                     "An arbiter daemon may need to use this file "
+                                     "to get configured correctly (macros, extra variables,...)."))
+                self.pre_log.append(("WARNING",
+                                     "If needed, edit the 'alignak.ini' configuration file "
+                                     "to declare a CFG= defining an 'alignak.cfg file."))
 
             my_configuration = self.alignak_env.get_daemons(daemon_name=self.name).items()
             for prop, value in my_configuration:
@@ -1128,7 +1132,6 @@ class Daemon(object):
 
         :return: None
         """
-        self.workdir = os.path.abspath(self.workdir)
         logger.info("Changing working directory to: %s", self.workdir)
         try:
             os.chdir(self.workdir)
@@ -1184,8 +1187,9 @@ class Daemon(object):
                 # If it doesn't exist too, we create it as void
                 self.fpid = open(self.pid_filename, 'w+')
         except Exception as err:
-            print("Exception: %s" % err)
-            raise InvalidPidFile(err)
+            self.exit_on_error("Error opening pid file: %s. Error: %s. "
+                               "Check the %s/%s account permissions to write this file."
+                               % (self.pid_filename, str(err), self.user, self.group), 1)
 
     def check_parallel_run(self):  # pragma: no cover, not with unit tests...
         """Check (in pid file) if there isn't already a daemon running.
@@ -1231,8 +1235,8 @@ class Daemon(object):
             return
 
         if not self.do_replace:
-            raise SystemExit("A valid pid file still exists (pid=%s) and "
-                             "I am not allowed to replace. Exiting!" % pid)
+            self.exit_on_error("A valid pid file still exists (pid=%s) and "
+                               "I am not allowed to replace. Exiting!" % pid)
 
         self.pre_log.append(("DEBUG", "Replacing former instance: %d" % pid))
         try:
@@ -1476,47 +1480,19 @@ class Daemon(object):
         # and try to restart previous dead :)
         self.modules_manager.try_to_restart_deads()
 
-    def find_uid_from_name(self):
-        """Wrapper for getpwnam : get the uid of user attribute
+    def change_to_user_group(self):
+        """ Change to configured user/group for the running program.
+        If user/group are not valid, we exit with code 1
+        If change failed we exit with code 2
 
-        :return: Uid of user attribute
-        :rtype: str | None
-        """
-        try:
-            return getpwnam(self.user)[2]
-        except KeyError:  # pragma: no cover, should not happen...
-            logger.error("The user %s is unknown", self.user)
-            return None
-
-    def find_gid_from_name(self):
-        """Wrapper for getgrnam : get the uid of user attribute
-
-        :return: Uid of user attribute
-        :rtype: str | None
-        """
-        try:
-            return getgrnam(self.group)[2]
-        except KeyError:  # pragma: no cover, should not happen
-            logger.error("The group %s is unknown", self.group)
-            return None
-
-    def change_to_user_group(self, insane=None):
-        """ Change to user of the running program.
-        If change failed we sys.exit(2)
-
-        :param insane: boolean to allow running as root (True to allow)
-        :type insane: bool
         :return: None
         """
-        if insane is None:
-            insane = self.idontcareaboutsecurity
-
         # TODO: change user on nt
         if os.name == 'nt':  # pragma: no cover, no Windows implementation currently
             logger.warning("You can't change user on this system")
             return
 
-        if (self.user == 'root' or self.group == 'root') and not insane:  # pragma: no cover
+        if (self.user == 'root' or self.group == 'root') and not self.idontcareaboutsecurity:
             logger.error("You want the application to run with the root account credentials? "
                          "It is not a safe configuration!")
             logger.error("If you really want it, set: 'idontcareaboutsecurity=1' "
@@ -1525,19 +1501,19 @@ class Daemon(object):
 
         uid = None
         try:
-            uid = getpwnam(self.user)[2]
+            uid = getpwnam(self.user).pw_uid
         except KeyError:
             logger.error("The required user %s is unknown", self.user)
 
         gid = None
         try:
-            gid = getgrnam(self.group)[2]
+            gid = getgrnam(self.group).gr_gid
         except KeyError:
             logger.error("The required group %s is unknown", self.group)
 
         if uid is None or gid is None:
-            raise InvalidCredentials("Configured user/group (%s/%s) are not valid."
-                                     % (self.user, self.group))
+            self.exit_on_error("Configured user/group (%s/%s) are not valid."
+                               % (self.user, self.group), 1)
 
         # Maybe the os module got the initgroups function. If so, try to call it.
         # Do this when we are still root
@@ -1562,9 +1538,8 @@ class Daemon(object):
             os.setregid(gid, gid)
             os.setreuid(uid, uid)
         except OSError as err:  # pragma: no cover, not with unit tests...
-            logger.error("Cannot change user/group to %s/%s (%s [%d]). Exiting...",
-                         self.user, self.group, err.strerror, err.errno)
-            sys.exit(2)
+            self.exit_on_error("Cannot change user/group to %s/%s (%s [%d]). Exiting..."
+                               % (self.user, self.group, err.strerror, err.errno), 2)
 
     def manage_signal(self, sig, frame):  # pylint: disable=W0613
         """Manage signals caught by the daemon

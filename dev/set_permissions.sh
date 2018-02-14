@@ -50,20 +50,20 @@ id -Gn $ACCOUNT |grep -E '(^|[[:blank:]])nagios($|[[:blank:]])' >/dev/null ||
 ## Create directories with proper permissions
 for i in $PREFIX/etc/alignak $PREFIX/var/run/alignak $PREFIX/var/log/alignak $PREFIX/var/lib/alignak $PREFIX/var/libexec/alignak
 do
-   mkdir -p $i
-   echo "Setting '$ACCOUNT' ownership on: $i"
-   chown -R $ACCOUNT:$ACCOUNT $i
-done
+    mkdir -p $i
+    echo "Setting '$ACCOUNT' ownership on: $i"
+    chown -R $ACCOUNT:$ACCOUNT $i
 
-echo "Setting file permissions on: $PREFIX/etc/alignak"
-find $PREFIX/etc/alignak -type f -exec chmod 664 {} +
-find $PREFIX/etc/alignak -type d -exec chmod 775 {} +
+    echo "Setting file permissions on: $i"
+    find $i -type f -exec chmod 664 {} +
+    find $i -type d -exec chmod 775 {} +
+done
 
 ### Set permissions on alignak-backend settings
 if [ -d "$PREFIX/etc/alignak-backend" ]; then
    echo "Setting '$ACCOUNT' ownership on $PREFIX/etc/alignak-backend"
    chown -R $ACCOUNT:$ACCOUNT $PREFIX/etc/alignak-backend
-   
+
    echo "Setting file permissions on: $PREFIX/etc/alignak-backend"
    find $PREFIX/etc/alignak-backend -type f -exec chmod 664 {} +
    find $PREFIX/etc/alignak-backend -type d -exec chmod 775 {} +
@@ -72,7 +72,7 @@ fi
 if [ -d "$PREFIX/var/log/alignak-backend" ]; then
    echo "Setting '$ACCOUNT' ownership on $PREFIX/var/log/alignak-backend"
    chown -R $ACCOUNT:$ACCOUNT $PREFIX/var/log/alignak-backend
-   
+
    echo "Setting file permissions on: $PREFIX/var/log/alignak-backend"
    find $PREFIX/var/log/alignak-backend -type f -exec chmod 664 {} +
    find $PREFIX/var/log/alignak-backend -type d -exec chmod 775 {} +
