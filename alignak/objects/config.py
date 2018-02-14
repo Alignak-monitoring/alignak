@@ -989,7 +989,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         res = StringIO()
 
         # Make sure the configuration files are not repeated...
-        if not self.read_config_silent:
+        if not self.read_config_silent and files:
             logger.info("Reading the configuration files...")
         for c_file in files:
             # Make sure the configuration files are not repeated...
@@ -1117,7 +1117,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :rtype: dict
         """
-        if not self.read_config_silent:
+        if not self.read_config_silent and buf:
             logger.info("Parsing the configuration files...")
         params = []
         objectscfg = {}

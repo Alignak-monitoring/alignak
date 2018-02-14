@@ -382,7 +382,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         else:
             logger.info("Environment file: %s", self.env_filename)
 
-        logger.info("Loading configuration from %s", self.monitoring_config_files)
+        if self.monitoring_config_files:
+            logger.info("Loading monitored system configuration from %s",
+                        self.monitoring_config_files)
+        else:
+            logger.info("No file configured for monitored system configuration")
         # REF: doc/alignak-conf-dispatching.png (1)
         raw_objects = self.conf.read_config_buf(
             self.conf.read_config(self.monitoring_config_files)
@@ -398,7 +402,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             self.request_stop("*** One or more problems were encountered while "
                               "processing the configuration (first check)...", exit_code=1)
 
-        logger.info("I correctly loaded the configuration files")
+        if self.monitoring_config_files:
+            logger.info("I correctly loaded the configuration files")
 
         # Alignak global environment file
         # -------------------------------
@@ -879,38 +884,39 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         result = True
 
-        logger.info("Alignak configuration daemons stop:")
+        if self.my_daemons:
+            logger.info("Alignak configuration daemons stop:")
 
-        start = time.time()
-        for daemon in self.my_daemons.values():
-            # Terminate the daemon and its children process
-            procs = daemon['process'].children()
-            procs.append(daemon['process'])
-            for process in procs:
-                try:
-                    logger.info("Terminating process %s", process.name())
-                    process.terminate()
-                except psutil.AccessDenied:
-                    logger.warning("Process %s is %s", process.name(), process.status())
+            start = time.time()
+            for daemon in self.my_daemons.values():
+                # Terminate the daemon and its children process
+                procs = daemon['process'].children()
+                procs.append(daemon['process'])
+                for process in procs:
+                    try:
+                        logger.info("Terminating process %s", process.name())
+                        process.terminate()
+                    except psutil.AccessDenied:
+                        logger.warning("Process %s is %s", process.name(), process.status())
 
-        for daemon in self.my_daemons.values():
-            # Stop the daemon and its children process
-            procs = daemon['process'].children()
-            procs.append(daemon['process'])
-            _, alive = psutil.wait_procs(procs, timeout=timeout, callback=on_terminate)
-            if alive:
-                # Kill processes
-                for process in alive:
-                    logger.warning("Process %s did not stopped, trying to kill", process.name())
-                    process.kill()
-                _, alive = psutil.wait_procs(alive, timeout=timeout, callback=on_terminate)
+            for daemon in self.my_daemons.values():
+                # Stop the daemon and its children process
+                procs = daemon['process'].children()
+                procs.append(daemon['process'])
+                _, alive = psutil.wait_procs(procs, timeout=timeout, callback=on_terminate)
                 if alive:
-                    # give up
+                    # Kill processes
                     for process in alive:
-                        logger.warning("process %s survived SIGKILL; giving up", process.name())
-                        result = False
+                        logger.warning("Process %s did not stopped, trying to kill", process.name())
+                        process.kill()
+                    _, alive = psutil.wait_procs(alive, timeout=timeout, callback=on_terminate)
+                    if alive:
+                        # give up
+                        for process in alive:
+                            logger.warning("process %s survived SIGKILL; giving up", process.name())
+                            result = False
 
-        logger.debug("Stopping daemons duration: %.2f seconds", time.time() - start)
+            logger.debug("Stopping daemons duration: %.2f seconds", time.time() - start)
 
         return result
 
