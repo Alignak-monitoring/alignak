@@ -954,6 +954,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             types_creations = self.conf.types_creations
             for o_type in types_creations:
                 (_, _, prop, _, _) = types_creations[o_type]
+                if prop in ['arbiters', 'brokers', 'schedulers',
+                            'pollers', 'reactionners', 'receivers']:
+                    continue
                 if prop not in got_objects:
                     logger.warning("Did not get any '%s' objects from %s", prop, instance.name)
                     continue

@@ -2749,10 +2749,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :return: None
         """
-        logger.info('Serializing the configuration for my spare arbiter...')
+        if [s_id for s_id in self.arbiters
+            if self.arbiters[s_id].active and
+                    not self.arbiters[s_id].spare]:
+            logger.info('Serializing the configuration for my spare arbiter...')
 
-        # Now serialize the whole configuration, for sending to spare arbiters
-        self.spare_arbiter_conf = serialize(self)
+            # Now serialize the whole configuration, for sending to spare arbiters
+            self.spare_arbiter_conf = serialize(self)
 
     def dump(self, dump_file=None):
         """Dump configuration to a file in a JSON format
