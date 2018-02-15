@@ -2749,7 +2749,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :return: None
         """
-        if [s_id for s_id in self.arbiters if self.arbiters[s_id].spare]:
+        if [arbiter_link for arbiter_link in self.arbiters if arbiter_link.spare]:
             logger.info('Serializing the configuration for my spare arbiter...')
 
             # Now serialize the whole configuration, for sending to spare arbiters
