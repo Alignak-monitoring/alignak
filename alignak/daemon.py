@@ -1186,10 +1186,10 @@ class Daemon(object):
             else:
                 # If it doesn't exist too, we create it as void
                 self.fpid = open(self.pid_filename, 'w+')
-        except Exception as err:
+        except Exception as exp:  # pylint: disable=broad-except
             self.exit_on_error("Error opening pid file: %s. Error: %s. "
                                "Check the %s/%s account permissions to write this file."
-                               % (self.pid_filename, str(err), self.user, self.group), 1)
+                               % (self.pid_filename, str(exp), self.user, self.group), 1)
 
     def check_parallel_run(self):  # pragma: no cover, not with unit tests...
         """Check (in pid file) if there isn't already a daemon running.
