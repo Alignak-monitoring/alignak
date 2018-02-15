@@ -172,7 +172,7 @@ class TestLaunchDaemonsModules(AlignakTest):
             sleep(0.1)
             print("- %s launched (pid=%d)" % (daemon, self.procs[daemon].pid))
 
-        sleep(1)
+        sleep(3)
 
         print("Testing daemons start")
         for name, proc in self.procs.items():
@@ -678,7 +678,7 @@ class TestLaunchDaemonsModules(AlignakTest):
             'broker': 'backend_broker',
             'poller': '', 'reactionner': '', 'receiver': ''
         }
-        nb_errors = self._run_daemons_modules(cfg_folder, tmp_folder, cfg_modules, 120)
+        nb_errors = self._run_daemons_modules(cfg_folder, tmp_folder, cfg_modules, 20)
 
         # Search the WS module
         # module_pid = None
@@ -725,10 +725,10 @@ class TestLaunchDaemonsModules(AlignakTest):
                 "[alignak.modulesmanager] Loaded Python module 'alignak_module_backend.broker' (backend_broker)",
                 # "[alignak.module] Give an instance of alignak_module_backend.broker for alias: backend_broker",
                 "[alignak.module.backend_broker] Number of processes used by backend client: 1",
-                "[alignak.module.backend_broker] Alignak backend is not available for login. No backend connection, attempt: 1",
-                "[alignak.module.backend_broker] Alignak backend connection is not available. Checking if livestate update is allowed is not possible.",
-                "[alignak.modulesmanager] Trying to initialize module: backend_broker",
+                # "[alignak.module.backend_broker] Error on backend login: ",
+                "[alignak.module.backend_broker] Configured user account is not allowed for this module",
                 "[alignak.daemon] I correctly loaded my modules: [backend_broker]",
+                "[alignak.modulesmanager] Trying to initialize module: backend_broker",
             ],
             'scheduler': [
                 "[alignak.modulesmanager] Importing Python module 'alignak_module_backend.scheduler' for backend_scheduler...",
@@ -759,7 +759,9 @@ class TestLaunchDaemonsModules(AlignakTest):
                         print("--- %s" % line[:-1])
                     if 'ERROR:' in line:
                         print("*** %s" % line[:-1])
-                        if "Alignak backend connection is not available. " not in line:
+                        if "Error on backend login:" not in line \
+                            and "Configured user account is not allowed for this module" not in line \
+                            and "Alignak backend connection is not available. " not in line:
                             errors_raised += 1
                         line = line.split('ERROR: ')
                         line = line[1]
