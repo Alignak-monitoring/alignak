@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-lines
 #
-# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -377,10 +377,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             logger.info("-----")
 
         # Maybe we do not have environment file
-        if not self.alignak_env:
-            self.exit_on_error("*** No Alignak environment file. Exiting...", exit_code=2)
-        else:
-            logger.info("Environment file: %s", self.env_filename)
+        # if not self.alignak_env:
+        #     self.exit_on_error("*** No Alignak environment file. Exiting...", exit_code=2)
+        # else:
+        #     logger.info("Environment file: %s", self.env_filename)
 
         if self.monitoring_config_files:
             logger.info("Loading monitored system configuration from %s",
@@ -505,8 +505,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Check that an arbiter link exists and create the appropriate relations
         # If no arbiter exists, create one with the provided data
-        self.conf.early_arbiter_linking(self.name,
-                                        self.alignak_env.get_alignak_configuration())
+        params = {}
+        if self.alignak_env:
+            params = self.alignak_env.get_alignak_configuration()
+        self.conf.early_arbiter_linking(self.name, params)
 
         # Search which arbiter I am in the arbiter links list
         for lnk_arbiter in self.conf.arbiters:
@@ -566,9 +568,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Call modules get_alignak_configuration() to load Alignak configuration parameters
         # (example modules: alignak_backend)
-        _t0 = time.time()
-        self.load_modules_alignak_configuration()
-        statsmgr.timer('core.hook.get_alignak_configuration', time.time() - _t0)
+        # _t0 = time.time()
+        # self.load_modules_alignak_configuration()
+        # statsmgr.timer('core.hook.get_alignak_configuration', time.time() - _t0)
 
         # Call modules get_objects() to load new objects from arbiter modules
         # (example modules: alignak_backend)
@@ -692,6 +694,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             # Display found warnings and errors
             self.conf.show_errors()
             self.request_stop()
+
+        del raw_objects
 
         # Display found warnings and errors
         self.conf.show_errors()
@@ -955,7 +959,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             for o_type in types_creations:
                 (_, _, prop, _, _) = types_creations[o_type]
                 if prop in ['arbiters', 'brokers', 'schedulers',
-                            'pollers', 'reactionners', 'receivers']:
+                            'pollers', 'reactionners', 'receivers', 'modules']:
                     continue
                 if prop not in got_objects:
                     logger.warning("Did not get any '%s' objects from %s", prop, instance.name)
@@ -1395,7 +1399,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # todo: make it configurable?
         # time.sleep(0.5)
-        _, _ = self.make_a_pause(0.5)
+        # _, _ = self.make_a_pause(0.01)
 
         if not self.kill_request:
             # Main loop treatment

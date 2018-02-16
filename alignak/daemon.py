@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-lines
 #
-# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -60,7 +60,7 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=too-many-lines
 #
-# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -436,111 +436,101 @@ class Daemon(object):
                 else:
                     setattr(self, prop, entry.pythonize(entry.default))
 
-        # Self daemon monitoring (cpu, memory)
-        self.daemon_monitoring = False
-        self.daemon_monitoring_period = 10
-        if 'ALIGNAK_DAEMON_MONITORING' in os.environ:
-            self.daemon_monitoring = True
-            try:
-                self.system_health_period = int(os.environ.get('ALIGNAK_DAEMON_MONITORING', '10'))
-            except ValueError:  # pragma: no cover, simple protection
-                pass
-        if self.daemon_monitoring:
-            logger.info("Daemon '%s' self monitoring is enabled, reporting every %d loop count.",
-                        self.name, self.daemon_monitoring_period)
-
-        # I almost certainly got an Alignak environment file
+        # I must have an Alignak environment file
         if 'env_file' not in kwargs:
             self.exit_on_error("Alignak environment file is missing or corrupted")
 
-        self.env_filename = kwargs['env_file']
-        if self.env_filename != os.path.abspath(self.env_filename):
-            self.env_filename = os.path.abspath(self.env_filename)
-        print("Daemon '%s' is started with an environment file: %s"
-              % (self.name, self.env_filename))
-        self.pre_log.append(("DEBUG",
-                             "Daemon '%s' is started with an environment file: %s"
-                             % (self.name, self.env_filename)))
+        if kwargs['env_file']:
+            self.env_filename = kwargs['env_file']
+            if self.env_filename != os.path.abspath(self.env_filename):
+                self.env_filename = os.path.abspath(self.env_filename)
+            print("Daemon '%s' is started with an environment file: %s"
+                  % (self.name, self.env_filename))
+            self.pre_log.append(("DEBUG",
+                                 "Daemon '%s' is started with an environment file: %s"
+                                 % (self.name, self.env_filename)))
 
-        # Read Alignak environment file
-        args = {'<cfg_file>': self.env_filename, '--verbose': self.debug}
-        configuration_dir = os.path.dirname(self.env_filename)
-        try:
-            self.alignak_env = AlignakConfigParser(args)
-            self.alignak_env.parse()
+            # Read Alignak environment file
+            args = {'<cfg_file>': self.env_filename, '--verbose': self.debug}
+            configuration_dir = os.path.dirname(self.env_filename)
+            try:
+                self.alignak_env = AlignakConfigParser(args)
+                self.alignak_env.parse()
 
-            for prop, value in self.alignak_env.get_monitored_configuration().items():
-                self.pre_log.append(("DEBUG",
-                                     "Found Alignak monitoring "
-                                     "configuration parameter, %s = %s" % (prop, value)))
-                # Ignore empty value
-                if not value:
-                    continue
-
-                # Make the path absolute
-                if not os.path.isabs(value):
-                    value = os.path.abspath(os.path.join(configuration_dir, value))
-                self.monitoring_config_files.append(value)
-            if self.type == 'arbiter' and not self.monitoring_config_files:
-                self.pre_log.append(("WARNING",
-                                     "No Alignak monitoring configuration files. "))
-                self.pre_log.append(("WARNING",
-                                     "An arbiter daemon may need to use this file "
-                                     "to get configured correctly (macros, extra variables,...)."))
-                self.pre_log.append(("WARNING",
-                                     "If needed, edit the 'alignak.ini' configuration file "
-                                     "to declare a CFG= defining an 'alignak.cfg file."))
-
-            my_configuration = self.alignak_env.get_daemons(daemon_name=self.name).items()
-            for prop, value in my_configuration:
-                self.pre_log.append(("DEBUG",
-                                     " found daemon parameter, %s = %s" % (prop, value)))
-                if getattr(self, prop, None) is None:
-                    # For an undeclared property, store the value as a string
-                    setattr(self, prop, value)
-                    self.pre_log.append(("DEBUG", " -> setting %s = %s" % (prop, value)))
-                elif callable(getattr(self, prop)):
-                    # For a declared property, that match a self function name
-                    self.exit_on_error("Variable %s cannot be defined as a property because "
-                                       "it exists a callable function with the same name!"
-                                       % prop)
-                else:
-                    # For a declared property, cast the read value
-                    current_prop = getattr(self, prop)
-                    setattr(self, prop, my_properties[prop].pythonize(value))
-                    self.pre_log.append(("DEBUG", " -> updating %s = %s to %s"
-                                         % (prop, current_prop, getattr(self, prop))))
-            if not my_configuration:
-                self.pre_log.append(("DEBUG",
-                                     "No defined configuration for the daemon: %s. "
-                                     "Using the 'alignak-configuration' section "
-                                     "variables as parameters for the daemon:" % self.name))
-                # Set the global Alignak configuration parametes as the current daemon properties
-                logger.info("Getting alignak configuration to configure the daemon...")
-                for prop, value in self.alignak_env.get_alignak_configuration().items():
-                    if prop in ['name'] or prop.startswith('_'):
-                        self.pre_log.append(("DEBUG",
-                                             "- ignoring '%s' variable." % prop))
-                        continue
-                    if prop in self.properties:
-                        entry = self.properties[prop]
-                        setattr(self, prop, entry.pythonize(value))
-                    else:
-                        setattr(self, prop, value)
-                    logger.info("- setting '%s' as %s", prop, getattr(self, prop))
+                for prop, value in self.alignak_env.get_monitored_configuration().items():
                     self.pre_log.append(("DEBUG",
-                                         "- setting '%s' as %s" % (prop, getattr(self, prop))))
+                                         "Found Alignak monitoring "
+                                         "configuration parameter, %s = %s" % (prop, value)))
+                    # Ignore empty value
+                    if not value:
+                        continue
 
-        except ConfigParser.ParsingError as exp:
-            # print("Daemon '%s' did not correctly read Alignak environment file: %s"
-            #       % (self.name, args['<cfg_file>']))
-            # print("Exception: %s\n%s" % (exp, traceback.format_exc()))
-            self.exit_on_exception(EnvironmentFile(exp.message))
-        except ValueError as exp:
-            print("Daemon '%s' did not correctly read Alignak environment file: %s"
-                  % (self.name, args['<cfg_file>']))
-            print("Exception: %s\n%s" % (exp, traceback.format_exc()))
-            self.exit_on_exception(EnvironmentFile("Exception: %s" % (exp)))
+                    # Make the path absolute
+                    if not os.path.isabs(value):
+                        value = os.path.abspath(os.path.join(configuration_dir, value))
+                    self.monitoring_config_files.append(value)
+                if self.type == 'arbiter' and not self.monitoring_config_files:
+                    self.pre_log.append(("WARNING",
+                                         "No Alignak monitoring configuration files. "))
+                    self.pre_log.append(("WARNING",
+                                         "An arbiter daemon may need to use this file "
+                                         "to get configured correctly "
+                                         "(macros, extra variables,...)."))
+                    self.pre_log.append(("WARNING",
+                                         "If needed, edit the 'alignak.ini' configuration file "
+                                         "to declare a CFG= defining an 'alignak.cfg file."))
+
+                my_configuration = self.alignak_env.get_daemons(daemon_name=self.name).items()
+                for prop, value in my_configuration:
+                    self.pre_log.append(("DEBUG",
+                                         " found daemon parameter, %s = %s" % (prop, value)))
+                    if getattr(self, prop, None) is None:
+                        # For an undeclared property, store the value as a string
+                        setattr(self, prop, value)
+                        self.pre_log.append(("DEBUG", " -> setting %s = %s" % (prop, value)))
+                    elif callable(getattr(self, prop)):
+                        # For a declared property, that match a self function name
+                        self.exit_on_error("Variable %s cannot be defined as a property because "
+                                           "it exists a callable function with the same name!"
+                                           % prop)
+                    else:
+                        # For a declared property, cast the read value
+                        current_prop = getattr(self, prop)
+                        setattr(self, prop, my_properties[prop].pythonize(value))
+                        self.pre_log.append(("DEBUG", " -> updating %s = %s to %s"
+                                             % (prop, current_prop, getattr(self, prop))))
+                if not my_configuration:
+                    self.pre_log.append(("DEBUG",
+                                         "No defined configuration for the daemon: %s. "
+                                         "Using the 'alignak-configuration' section "
+                                         "variables as parameters for the daemon:" % self.name))
+                    # Set the global Alignak configuration parameters
+                    # as the current daemon properties
+                    logger.info("Getting alignak configuration to configure the daemon...")
+                    for prop, value in self.alignak_env.get_alignak_configuration().items():
+                        if prop in ['name'] or prop.startswith('_'):
+                            self.pre_log.append(("DEBUG",
+                                                 "- ignoring '%s' variable." % prop))
+                            continue
+                        if prop in self.properties:
+                            entry = self.properties[prop]
+                            setattr(self, prop, entry.pythonize(value))
+                        else:
+                            setattr(self, prop, value)
+                        logger.info("- setting '%s' as %s", prop, getattr(self, prop))
+                        self.pre_log.append(("DEBUG",
+                                             "- setting '%s' as %s" % (prop, getattr(self, prop))))
+
+            except ConfigParser.ParsingError as exp:
+                # print("Daemon '%s' did not correctly read Alignak environment file: %s"
+                #       % (self.name, args['<cfg_file>']))
+                # print("Exception: %s\n%s" % (exp, traceback.format_exc()))
+                self.exit_on_exception(EnvironmentFile(exp.message))
+            except ValueError as exp:
+                print("Daemon '%s' did not correctly read Alignak environment file: %s"
+                      % (self.name, args['<cfg_file>']))
+                print("Exception: %s\n%s" % (exp, traceback.format_exc()))
+                self.exit_on_exception(EnvironmentFile("Exception: %s" % (exp)))
 
         # Stop me if it I am disabled in the configuration
         if not self.active:
@@ -638,6 +628,24 @@ class Daemon(object):
                   % (self.name, self.pid_filename))
 
         self.set_dir_filename(self.pid_filename)
+
+        # Self daemon monitoring (cpu, memory)
+        self.daemon_monitoring = False
+        self.daemon_monitoring_period = 10
+        if 'ALIGNAK_DAEMON_MONITORING' in os.environ:
+            self.daemon_monitoring = True
+            try:
+                self.system_health_period = int(os.environ.get('ALIGNAK_DAEMON_MONITORING', '10'))
+            except ValueError:  # pragma: no cover, simple protection
+                pass
+        if self.daemon_monitoring:
+            print("Daemon self monitoring is enabled, reporting every %d loop count."
+                  % self.daemon_monitoring_period)
+
+        # Configure our Stats manager
+        statsmgr.register(self.name, self.type,
+                          statsd_host=self.statsd_host, statsd_port=self.statsd_port,
+                          statsd_prefix=self.statsd_prefix, statsd_enabled=self.statsd_enabled)
 
         # Track time
         now = time.time()
@@ -935,7 +943,7 @@ class Daemon(object):
 
             # Maybe someone said we will stop...
             if self.will_stop and not self.type == 'arbiter':
-                logger.info("death-wait mode... waiting for death")
+                logger.debug("death-wait mode... waiting for death")
                 _, _ = self.make_a_pause(1.0)
                 continue
 
@@ -1618,7 +1626,7 @@ class Daemon(object):
         """
         header = ["-----",
                   "Alignak %s - %s daemon" % (VERSION, self.name),
-                  "Copyright (c) 2015-2017: Alignak Team",
+                  "Copyright (c) 2015-2018: Alignak Team",
                   "License: AGPL",
                   "-----",
                   "My pid: %s" % self.pid]
@@ -1974,7 +1982,7 @@ class Daemon(object):
                          log_dir=self.logdir, process_name=self.name,
                          log_file=self.log_filename)
         except Exception as exp:  # pylint: disable=broad-except
-            print("Exception: %s" % exp)
+            print("Exception when setting-up the logger: %s" % exp)
             self.exit_on_exception(exp, message="Logger configuration error!")
 
         logger.debug("Alignak daemon logger configured")

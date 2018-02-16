@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -130,6 +130,19 @@ class BaseModule(object):
         # External module force kill delay - default is to wait for
         # 60 seconds before killing a module abruptly
         self.kill_delay = int(getattr(mod_conf, 'kill_delay', '60'))
+
+        # Self module monitoring (cpu, memory)
+        self.module_monitoring = False
+        self.module_monitoring_period = 10
+        if 'ALIGNAK_DAEMON_MONITORING' in os.environ:
+            self.module_monitoring = True
+            try:
+                self.system_health_period = int(os.environ.get('ALIGNAK_DAEMON_MONITORING', '10'))
+            except ValueError:  # pragma: no cover, simple protection
+                pass
+        if self.module_monitoring:
+            print("Module self monitoring is enabled, reporting every %d loop count."
+                  % self.module_monitoring_period)
 
     @property
     def alias(self):

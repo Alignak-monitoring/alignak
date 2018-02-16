@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -32,6 +32,7 @@ The setup_logger function initializes the daemon logger with the JSON provided c
 The make_monitoring_log function emits a log to the monitoring log logger and returns a brok for
 the Alignak broker.
 """
+from __future__ import print_function
 import os
 import sys
 import json
@@ -98,7 +99,7 @@ class ColorStreamHandler(StreamHandler):
                       'WARNING': 'yellow', 'CRITICAL': 'magenta', 'ERROR': 'red'}
             cprint(msg, colors[record.levelname])
         except UnicodeEncodeError:  # pragma: no cover, simple protection
-            print msg.encode('ascii', 'ignore')
+            print(msg.encode('ascii', 'ignore'))
         except IOError:  # pragma: no cover, simple protection
             # May happen when process are closing
             pass
@@ -142,6 +143,10 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
                             hdlr.formatter._fmt.replace("alignak_tests", process_name)
             break
     else:
+        if not logger_configuration_file or not os.path.exists(logger_configuration_file):
+            print("The logger configuration file does not exist: %s" % logger_configuration_file)
+            return
+
         with open(logger_configuration_file, 'rt') as _file:
             config = json.load(_file)
             truncate = False

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -2879,7 +2879,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         logger.warning("The freshness period of %s '%s' is expired by %s "
                        "(threshold=%s + %ss). Attempt: %s / %s. "
                        "I'm forcing the state to freshness state (%s / %s).",
-                       self.my_type, self.get_name(),
+                       self.my_type, self.get_full_name(),
                        format_t_into_dhms_format(t_stale_by),
                        format_t_into_dhms_format(self.freshness_threshold),
                        self.additional_freshness_latency,

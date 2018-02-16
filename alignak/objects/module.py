@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -56,7 +56,7 @@ import logging
 import warnings
 from alignak.objects.item import Item, Items
 
-from alignak.property import StringProp, ListProp
+from alignak.property import StringProp, ListProp, IntegerProp, BoolProp
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -86,6 +86,16 @@ class Module(Item):
         # Do not manage modules having modules
         # 'modules':
         #     ListProp(default=[''], split_on_coma=True)
+
+        # Local statsd daemon for collecting daemon metrics
+        'statsd_host':
+            StringProp(default='localhost'),
+        'statsd_port':
+            IntegerProp(default=8125),
+        'statsd_prefix':
+            StringProp(default='alignak'),
+        'statsd_enabled':
+            BoolProp(default=False)
     })
 
     macros = {}

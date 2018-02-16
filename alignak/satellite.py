@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -270,13 +270,13 @@ class BaseSatellite(Daemon):
                 os.environ['TZ'] = use_timezone
                 time.tzset()
 
-            # Configure our Stats manager
-            statsmgr.register(self.name, self.type,
-                              statsd_host=self_conf.get('statsd_host', 'localhost'),
-                              statsd_port=self_conf.get('statsd_port', 8125),
-                              statsd_prefix=self_conf.get('statsd_prefix', 'alignak'),
-                              statsd_enabled=self_conf.get('statsd_enabled', False))
-
+            # # Configure our Stats manager
+            # statsmgr.register(self.name, self.type,
+            #                   statsd_host=self_conf.get('statsd_host', 'localhost'),
+            #                   statsd_port=self_conf.get('statsd_port', 8125),
+            #                   statsd_prefix=self_conf.get('statsd_prefix', 'alignak'),
+            #                   statsd_enabled=self_conf.get('statsd_enabled', False))
+            #
             # Now we create our arbiters and schedulers links
             for link_type in ['arbiters', 'schedulers']:
                 if link_type not in self.cur_conf:
