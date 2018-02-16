@@ -1004,7 +1004,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         params = []
         if alignak_cfg:
             logger.info("Got Alignak global configuration:")
-            for key, value in alignak_cfg.iteritems():
+            for key, value in sorted(alignak_cfg.iteritems()):
                 logger.info("- %s = %s", key, value)
                 # properties starting with an _ character are "transformed" to macro variables
                 if key.startswith('_'):
@@ -1326,7 +1326,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             statsmgr.timer('dispatcher.dispatch', time.time() - _t0)
 
             # Make a pause to let our satellites get ready...
-            pause = max(1.0, len(self.my_daemons) * 0.5)
+            pause = max(self.conf.daemons_dispatch_timeout, len(self.my_daemons) * 0.5)
             # pause = len(self.my_daemons) * 0.2
             logger.info("- pausing %d seconds...", pause)
             time.sleep(pause)
@@ -1698,5 +1698,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     self.load_monitoring_config_file()
 
         except Exception as exp:
+            # Only a master arbiter can stop the daemons
+            if self.is_master:
+                # Stop the daemons
+                self.daemons_stop(timeout=self.conf.daemons_stop_timeout)
             self.exit_on_exception(raised_exception=exp)
             raise
