@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -396,7 +396,7 @@ class template_Daemon_Start():
         expected_result = [
             "-----",
             "Alignak %s - %s daemon" % (VERSION, daemon.name),
-            "Copyright (c) 2015-2017: Alignak Team",
+            "Copyright (c) 2015-2018: Alignak Team",
             "License: AGPL",
             "-----",
             "My pid: %s" % daemon.pid

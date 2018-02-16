@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -72,7 +72,7 @@ def main():
                 break
             daemon = None
     except Exception as exp:  # pylint: disable=broad-except
-        print("*** Exited because: %s" % str(exp))
+        print("*** Daemon %s Exited because: %s" % (daemon, str(exp)))
         exit(1)
 
 

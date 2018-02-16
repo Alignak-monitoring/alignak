@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -138,7 +138,7 @@ class ArbiterInterface(GenericInterface):
                         if not hasattr(daemon, prop):
                             continue
                         if prop in ["realms", "conf", "con", "tags", "modules", "cfg",
-                                    "broks"]:
+                                    "broks", "cfg_to_manage"]:
                             continue
                         val = getattr(daemon, prop)
                         # give a try to a json able object

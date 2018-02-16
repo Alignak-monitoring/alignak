@@ -2,7 +2,7 @@
 # pylint:disable=too-many-public-methods
 
 #
-# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -590,10 +590,11 @@ class SatelliteLink(Item):
                 if not link.alive:
                     logger.warning("%s is not alive for %s", link.name, fn_name)
                     return None
-                if not link.reachable:
-                    raise LinkError("The %s %s is not reachable" % (link.type, link.name))
 
                 try:
+                    if not link.reachable:
+                        raise LinkError("The %s %s is not reachable" % (link.type, link.name))
+
                     logger.debug("[%s] Calling: %s, %s, %s", link.name, fn_name, args, kwargs)
                     return func(*args, **kwargs)
                 except HTTPClientConnectionException as exp:
@@ -602,7 +603,7 @@ class SatelliteLink(Item):
                     logger.warning("A daemon (%s/%s) that we must be related with "
                                    "cannot be connected: %s", link.type, link.name, exp)
                     link.set_dead()
-                except HTTPClientTimeoutException as exp:
+                except (LinkError, HTTPClientTimeoutException) as exp:
                     link.add_failed_check_attempt("Connection timeout "
                                                   "with '%s': %s" % (fn_name, str(exp)))
                     return False

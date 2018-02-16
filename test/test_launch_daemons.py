@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -97,6 +97,60 @@ class TestLaunchDaemons(AlignakTest):
         assert "usage: alignak_arbiter.py" in stderr
         # Arbiter process must exit with a return code == 2
         assert ret == 2
+
+    def test_arbiter_no_environment(self):
+        """ Running the Alignak Arbiter without environment file
+
+        :return:
+        """
+        print("Launching arbiter without environment file...")
+        args = ["../alignak/bin/alignak_arbiter.py"]
+        arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
+
+        # Waiting for arbiter to parse the configuration
+        sleep(3)
+
+        ret = arbiter.poll()
+        print("*** Arbiter exited with code: %d" % ret)
+        assert ret is not None, "Arbiter is still running!"
+        stdout = arbiter.stdout.read()
+        print(stdout)
+        stderr = arbiter.stderr.read()
+        print(stderr)
+        assert "usage: alignak_arbiter.py" in stderr
+        # Arbiter process must exit with a return code == 2
+        assert ret == 2
+
+    def test_arbiter_class_no_environment(self):
+        """ Instantiate the Alignak Arbiter class without environment file
+
+        :return:
+        """
+        from alignak.daemons.arbiterdaemon import Arbiter
+        print("Instantiate arbiter without environment file...")
+        # Using values that are usually provided by the command line parameters
+        args = {
+            'env_file': '',
+            'alignak_name': 'alignak-test', 'daemon_name': 'arbiter-master',
+            'monitoring_files': ['../etc/alignak.cfg']
+        }
+        self.arbiter = Arbiter(**args)
+
+        print("Arbiter: %s" % (self.arbiter))
+        assert self.arbiter.env_filename == ''
+        assert self.arbiter.monitoring_config_files == [os.path.abspath('../etc/alignak.cfg')]
+
+        # Configure the logger
+        self.arbiter.log_level = 'ERROR'
+        self.arbiter.setup_alignak_logger()
+
+        # Setup our modules manager
+        self.arbiter.load_modules_manager()
+
+        # Load and initialize the arbiter configuration
+        # This to check that the configuration is correct!
+        self.arbiter.load_monitoring_config_file()
 
     def test_arbiter_unexisting_environment(self):
         """ Running the Alignak Arbiter with a not existing environment file
@@ -408,7 +462,6 @@ class TestLaunchDaemons(AlignakTest):
         # and no log exit with the pid filename
         # assert os.path.exists("/tmp/arbiter.pid")
 
-    # @pytest.mark.skip("Do not care about log command line parameter")
     def test_arbiter_parameters_log(self):
         """ Run the Alignak Arbiter with some parameters - log file name
 

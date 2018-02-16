@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -156,11 +156,14 @@ class AlignakTest(unittest2.TestCase):
     def set_debug_log(self):
         """Set the test logger at DEBUG level - useful for some tests that check debug log"""
         # Change the collector logger log level
+        print("set_debug_log")
         logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
         for handler in logger_.handlers:
+            print("handler: %s" % handler)
             if getattr(handler, '_name', None) == 'unit_tests':
                 self.former_log_level = handler.level
                 handler.setLevel(logging.DEBUG)
+                print("handler debug!")
                 break
 
     def _files_update(self, files, replacements):
@@ -430,12 +433,13 @@ class AlignakTest(unittest2.TestCase):
         if os.path.exists('/tmp/etc/alignak'):
             shutil.rmtree('/tmp/etc/alignak')
 
-        shutil.copytree('../etc', '/tmp/etc/alignak')
-        files = ['/tmp/etc/alignak/alignak.ini']
-        replacements = {
-            '_dist=/usr/local/': '_dist=/tmp'
-        }
-        self._files_update(files, replacements)
+        if os.path.exists('../etc'):
+            shutil.copytree('../etc', '/tmp/etc/alignak')
+            files = ['/tmp/etc/alignak/alignak.ini']
+            replacements = {
+                '_dist=/usr/local/': '_dist=/tmp'
+            }
+            self._files_update(files, replacements)
         print("Prepared")
 
         # Initialize the Arbiter with no daemon configuration file
@@ -757,7 +761,7 @@ class AlignakTest(unittest2.TestCase):
                 if name == 'check_freshness':
                     checks = sorted(self._scheduler.checks.values(),
                                     key=lambda x: x.creation_time)
-                    checks = [chk for chk in checks if chk.freshness_expired]
+                    checks = [chk for chk in checks if chk.freshness_expiry_check]
         return len(checks)
 
     def manage_external_command(self, external_command, run=True):

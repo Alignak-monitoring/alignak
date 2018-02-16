@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -705,6 +706,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
             IntegerProp(default=5),
 
         'daemons_start_timeout':
+            IntegerProp(default=0),
+
+        'daemons_dispatch_timeout':
             IntegerProp(default=0),
 
         'daemons_stop_timeout':
@@ -2652,9 +2656,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             logger.info(" - realm: %s", realm)
             for idx in realm.packs:
                 logger.info("   - pack: %s / %d hosts", idx, len(realm.packs[idx]))
-                for host_id in realm.packs[idx]:
-                    host = self.hosts[host_id]
-                    logger.info("    %s", host.get_name())
+                logger.info("    : %s", ','.join([self.hosts[host_id].get_name()
+                                                  for host_id in realm.packs[idx]]))
 
         # We have packs for realms and elements into configurations, let's merge this...
         logger.info("Realms:")

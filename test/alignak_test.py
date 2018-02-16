@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -433,12 +433,13 @@ class AlignakTest(unittest2.TestCase):
         if os.path.exists('/tmp/etc/alignak'):
             shutil.rmtree('/tmp/etc/alignak')
 
-        shutil.copytree('../etc', '/tmp/etc/alignak')
-        files = ['/tmp/etc/alignak/alignak.ini']
-        replacements = {
-            '_dist=/usr/local/': '_dist=/tmp'
-        }
-        self._files_update(files, replacements)
+        if os.path.exists('../etc'):
+            shutil.copytree('../etc', '/tmp/etc/alignak')
+            files = ['/tmp/etc/alignak/alignak.ini']
+            replacements = {
+                '_dist=/usr/local/': '_dist=/tmp'
+            }
+            self._files_update(files, replacements)
         print("Prepared")
 
         # Initialize the Arbiter with no daemon configuration file
