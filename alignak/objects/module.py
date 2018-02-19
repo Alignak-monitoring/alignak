@@ -87,6 +87,10 @@ class Module(Item):
         # 'modules':
         #     ListProp(default=[''], split_on_coma=True)
 
+        # Module log level
+        'log_level':
+            StringProp(default='INFO'),
+
         # Local statsd daemon for collecting daemon metrics
         'statsd_host':
             StringProp(default='localhost'),
