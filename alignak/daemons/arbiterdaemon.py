@@ -1233,7 +1233,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """
         logger.info("received a signal: %s", SIGNALS_TO_NAMES_DICT[sig])
         # Request the arbiter to stop
-        if sig in [signal.SIGKILL, signal.SIGTERM]:
+        if sig in [signal.SIGINT, signal.SIGKILL]:
             self.kill_request = True
             self.kill_timestamp = time.time()
         else:

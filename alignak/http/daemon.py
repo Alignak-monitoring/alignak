@@ -97,7 +97,7 @@ class HTTPDaemon(object):
         # For embedding into a WSGI server
         # cherrypy.config.update({'environment': 'embedded'})
 
-        # Configure server interface
+        # Configure HTTP server
         cherrypy.config.update({'engine.autoreload.on': False,
                                 'server.thread_pool': thread_pool_size,
                                 'server.socket_host': self.host,
@@ -141,24 +141,8 @@ class HTTPDaemon(object):
 
         cherrypy.log("Serving application: %s" % http_interface)
 
-        # todo: daemonize the process thanks to CherryPy plugin
-        # Daemonizer(cherrypy.engine).subscribe()
-
         # Mount the main application (an Alignak daemon interface)
         cherrypy.tree.mount(http_interface, '/', config)
-        # cherrypy.engine.signals.subscribe()
-
-        # todo: daemonize the process thanks to CherryPy plugin
-        # if hasattr(cherrypy.engine, 'block'):
-        #     # 3.1 syntax
-        #     cherrypy.engine.start()
-        #     cherrypy.engine.block()
-        # else:
-        #     # 3.0 syntax
-        #     cherrypy.server.quickstart()
-        #     cherrypy.engine.start()
-        #
-        # atexit.register(cherrypy.engine.stop)
 
     def run(self):
         """Wrapper to start the CherryPy server
@@ -167,6 +151,10 @@ class HTTPDaemon(object):
 
         :return: None
         """
+        # # self.server.subscribe()
+        # cherrypy.engine.start()
+        # cherrypy.engine.block()
+
         def _started_callback():
             """Callback function when Cherrypy Engine is started"""
             cherrypy.log("CherryPy engine started and listening...")

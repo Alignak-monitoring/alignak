@@ -635,7 +635,8 @@ class Daemon(object):
         if 'ALIGNAK_DAEMON_MONITORING' in os.environ:
             self.daemon_monitoring = True
             try:
-                self.system_health_period = int(os.environ.get('ALIGNAK_DAEMON_MONITORING', '10'))
+                self.daemon_monitoring_period = int(os.environ.get('ALIGNAK_DAEMON_MONITORING',
+                                                                   '10'))
             except ValueError:  # pragma: no cover, simple protection
                 pass
         if self.daemon_monitoring:
@@ -1560,8 +1561,7 @@ class Daemon(object):
         :type frame:
         :return: None
         """
-        logger.info("process '%s' (pid=%d) received a signal: %s",
-                    self.name, os.getpid(), SIGNALS_TO_NAMES_DICT[sig])
+        logger.info("received a signal: %s", SIGNALS_TO_NAMES_DICT[sig])
         if sig == signal.SIGUSR1:  # if USR1, ask a memory dump
             self.need_dump_memory = True
         elif sig == signal.SIGUSR2:  # if USR2, ask objects dump
