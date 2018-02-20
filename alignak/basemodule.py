@@ -258,7 +258,7 @@ class BaseModule(object):
         if self.process:
             self.stop_process()
         logger.info("Starting external process for module %s...", self.name)
-        proc = Process(target=self.start_module, args=())
+        proc = Process(target=self.start_module, args=(), group=None)
 
         # Under windows we should not call start() on an object that got
         # its process as object, so we remove it and we set it in a earlier
@@ -351,7 +351,7 @@ class BaseModule(object):
         :type frame:
         :return: None
         """
-        logger.info("Module '%s' received a signal: %s", self.name, SIGNALS_TO_NAMES_DICT[sig])
+        logger.info("received a signal: %s", SIGNALS_TO_NAMES_DICT[sig])
 
         if sig == signal.SIGHUP:
             # if SIGHUP, reload configuration in arbiter
@@ -360,7 +360,7 @@ class BaseModule(object):
 
         logger.info("Request to stop the module")
         self.interrupted = True
-        self.process = None
+        # self.process = None
 
     def set_signal_handler(self, sigs=None):
         """Set the signal handler to manage_signal (defined in this class)
