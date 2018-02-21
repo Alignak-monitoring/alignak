@@ -108,19 +108,10 @@ class HTTPDaemon(object):
                                 'log.access_file': '',
                                 'log.error_file': ''})
         if log_file:
-            # Build log files name based on the provided daemon log file name
-            # todo: this to have a specific file which name is based upon provided log file name...
-            # if log_file is True:
-            #     dir=os.path.dirname(log_file)
-            #     base=os.path.basename(log_file).split('.')
-            #     access_log = os.path.join(dir, base[0] + '_access.log')
-            #     error_log = os.path.join(dir, base[0] + '_error.log')
-            # else:
             # Log into the provided log file
-            access_log = error_log = log_file
             cherrypy.config.update({'log.screen': True,
-                                    'log.access_file': access_log,
-                                    'log.error_file': error_log})
+                                    'log.access_file': log_file,
+                                    'log.error_file': log_file})
             cherrypy.log.access_log.setLevel(logging.DEBUG)
             cherrypy.log.error_log.setLevel(logging.DEBUG)
             cherrypy.log("CherryPy logging: %s" % (log_file))
@@ -151,10 +142,6 @@ class HTTPDaemon(object):
 
         :return: None
         """
-        # # self.server.subscribe()
-        # cherrypy.engine.start()
-        # cherrypy.engine.block()
-
         def _started_callback():
             """Callback function when Cherrypy Engine is started"""
             cherrypy.log("CherryPy engine started and listening...")
@@ -181,8 +168,4 @@ class HTTPDaemon(object):
             pass
         except SystemExit:
             cherrypy.log('SystemExit raised: shutting down bus')
-            # self.exit()        # if cherrypy.engine.state == cherrypy.process.bus.states.STARTED:
-        #     cherrypy.engine.stop()
-        # else:
-        #     cherrypy.engine.exit()
         cherrypy.log("Stopped")

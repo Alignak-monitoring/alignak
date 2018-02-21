@@ -534,8 +534,8 @@ class Daemon(object):
 
         # Stop me if it I am disabled in the configuration
         if not self.active:
-            self.exit_on_error(message="This daemon is disabled in Alignak configuration. Exiting.",
-                               exit_code=0)
+            self.exit_ok(message="This daemon is disabled in Alignak configuration. Exiting.",
+                         exit_code=0)
 
         # And perhaps some old parameters from the initial command line!
         if 'config_file' in kwargs and kwargs['config_file']:  # pragma: no cover, simple log
@@ -571,6 +571,22 @@ class Daemon(object):
 
         if self.is_daemon:
             print("Daemon '%s' is in daemon mode" % self.name)
+
+        self.uid = None
+        try:
+            self.uid = getpwnam(self.user).pw_uid
+        except KeyError:
+            logger.error("The required user %s is unknown", self.user)
+
+        self.gid = None
+        try:
+            self.gid = getgrnam(self.group).gr_gid
+        except KeyError:
+            logger.error("The required group %s is unknown", self.group)
+
+        if self.uid is None or self.gid is None:
+            self.exit_on_error("Configured user/group (%s/%s) are not valid."
+                               % (self.user, self.group), exit_code=1)
 
         # Alignak logger configuration file
         if os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None):
@@ -640,8 +656,8 @@ class Daemon(object):
             except ValueError:  # pragma: no cover, simple protection
                 pass
         if self.daemon_monitoring:
-            print("Daemon self monitoring is enabled, reporting every %d loop count."
-                  % self.daemon_monitoring_period)
+            print("Daemon '%s' self monitoring is enabled, reporting every %d loop count."
+                  % (self.name, self.daemon_monitoring_period))
 
         # Configure our Stats manager
         statsmgr.register(self.name, self.type,
@@ -708,6 +724,15 @@ class Daemon(object):
     __str__ = __repr__
 
     @property
+    def pidfile(self):
+        """Return the pid file name - make it compatible with old implementation
+
+        :return: pid_filename property
+        :rtype: str
+        """
+        return self.pid_filename
+
+    @property
     def scheme(self):
         """Daemon interface scheme
 
@@ -730,9 +755,11 @@ class Daemon(object):
         dirname = os.path.dirname(filename)
         try:
             os.makedirs(dirname)
+            os.chown(dirname, self.uid, self.gid)
             self.pre_log.append(("WARNING",
-                                 "Daemon '%s' directory %s did not exist, I created it."
-                                 % (self.name, dirname)))
+                                 "Daemon '%s' directory %s did not exist, I created it. "
+                                 "I set ownership for this directory to %s:%s."
+                                 % (self.name, dirname, self.user, self.group)))
         except OSError as exp:
             if exp.errno == errno.EEXIST and os.path.isdir(dirname):
                 # Directory still exists...
@@ -1224,7 +1251,7 @@ class Daemon(object):
                 logger.debug("Not found an existing pid: %s", self.pid_filename)
                 return
         except (IOError, ValueError) as err:
-            logger.warning("pidfile is empty or has an invalid content: %s", self.pid_filename)
+            logger.warning("PID file is empty or has an invalid content: %s", self.pid_filename)
             return
 
         if pid == os.getpid():
@@ -1983,7 +2010,7 @@ class Daemon(object):
                          log_dir=self.logdir, process_name=self.name,
                          log_file=self.log_filename)
         except Exception as exp:  # pylint: disable=broad-except
-            print("Exception when setting-up the logger: %s" % exp)
+            print("***** %s - exception when setting-up the logger: %s" % (self.name, exp))
             self.exit_on_exception(exp, message="Logger configuration error!")
 
         logger.debug("Alignak daemon logger configured")

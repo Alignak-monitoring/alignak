@@ -234,7 +234,7 @@ class Receiver(Satellite):
             if cmd and cmd['global']:
                 # Send global command to all our schedulers
                 for scheduler_link_uuid in self.schedulers:
-                    self.schedulers[scheduler_link_uuid].my_daemon.external_commands.append(ext_cmd)
+                    self.schedulers[scheduler_link_uuid].pushed_commands.append(ext_cmd)
 
         # Now for all active schedulers, send the commands
         pushed_commands = 0
@@ -243,13 +243,12 @@ class Receiver(Satellite):
             link = self.schedulers[scheduler_link_uuid]
 
             if not link.active:
-                logger.warning("The scheduler '%s' is not active, it is not possible to push "
-                               "external commands to its connection!", link.name)
-                return
+                logger.debug("The scheduler '%s' is not active, it is not possible to push "
+                             "external commands to its connection!", link.name)
+                continue
 
             # If there are some commands for this scheduler...
-            external_commands = link.external_commands
-            commands = [ext_cmd.cmd_line for ext_cmd in external_commands]
+            commands = [ext_cmd.cmd_line for ext_cmd in link.pushed_commands]
             if not commands:
                 logger.debug("The scheduler '%s' has no commands.", link.name)
                 continue
@@ -258,7 +257,7 @@ class Receiver(Satellite):
             sent = link.push_external_commands(commands)
 
             # Whether we sent the commands or not, clean the scheduler list
-            link.external_commands = []
+            link.pushed_commands = []
 
             # If we didn't sent them, add the commands to the arbiter list
             if sent:
@@ -268,7 +267,7 @@ class Receiver(Satellite):
                 failed_commands = failed_commands + len(commands)
                 statsmgr.gauge('external-commands.failed.%s' % link.name, len(commands))
                 # Kepp the not sent commands... for a next try
-                self.external_commands.extend(external_commands)
+                self.external_commands.extend(commands)
 
         statsmgr.gauge('external-commands.pushed.all', pushed_commands)
         statsmgr.gauge('external-commands.failed.all', failed_commands)

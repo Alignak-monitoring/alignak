@@ -111,11 +111,6 @@ class Broker(BaseSatellite):
         # Modules are load one time
         self.have_modules = False
 
-        # Can have a queue of external_commands given by modules
-        # will be processed by arbiter
-        # Inherited from the base class
-        # self.external_commands = []
-
         # All broks to manage
         self.external_broks = []  # broks to manage
         # broks raised internally by the broker

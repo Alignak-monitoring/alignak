@@ -68,7 +68,7 @@ script:
           pytest --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
         fi
       - |
-        if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then
+        if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then
           pytest --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
         fi
       cd ..
