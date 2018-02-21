@@ -1968,7 +1968,7 @@ class Scheduler(object):  # pylint: disable=R0902
             # service check freshness is enabled and the service is only passively checked and
             # the depending host is not freshness expired
             services = [s for s in self.services if not self.hosts[s.host].freshness_expired and
-                        s.check_freshness and
+                        s.check_freshness and not s.freshness_expired and
                         s.passive_checks_enabled and not s.active_checks_enabled]
             statsmgr.gauge('freshness.services-count', len(services))
             items.extend(services)
