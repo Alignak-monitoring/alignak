@@ -749,9 +749,6 @@ class AlignakTest(unittest2.TestCase):
         :type mysched: None | object
         :return: n/a
         """
-        # Check freshness on each scheduler tick
-        self._scheduler.update_recurrent_works_tick({'tick_check_freshness': 1})
-
         checks = []
         for num in range(count):
             for i in self._scheduler.recurrent_works:

@@ -534,6 +534,8 @@ class TestNotifications(AlignakTest):
             # Time warp 10 seconds
             frozen_datetime.tick(delta=datetime.timedelta(seconds=10))
 
+            # Check freshness on each scheduler tick
+            self._scheduler.update_recurrent_works_tick({'tick_check_freshness': 1})
             self.manage_freshness_check(1)
             self.show_logs()
             time.sleep(0.1)
