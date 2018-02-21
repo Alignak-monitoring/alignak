@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -520,7 +520,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         # Acknowledge disappeared because host went OK
         assert False == router.problem_has_been_acknowledged
 
-    @pytest.mark.skip("Currently disabled - to be refactored!")
+    # @pytest.mark.skip("Currently disabled - to be refactored!")
     def test_unknown_check_result_command_scheduler(self):
         """ Unknown check results commands managed by the scheduler
         :return:
@@ -644,7 +644,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
             'A command was received for the host .*, '
             'but the host could not be found!')
 
-    @pytest.mark.skip("Currently disabled - to be refactored!")
+    # @pytest.mark.skip("Currently disabled - to be refactored!")
     def test_unknown_check_result_command_receiver(self):
         """ Unknown check results commands managed by the receiver
         :return:

@@ -206,6 +206,7 @@ class Item(AlignakObject):
                 # Except for some specific configuration variables
                 if not key.startswith('_dist'):
                     custom_name = key.upper()
+                    print("Custom: %s = %s" % (custom_name, val))
                     self.customs[custom_name] = val
             else:
                 setattr(self, key, val)

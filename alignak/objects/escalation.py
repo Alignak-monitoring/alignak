@@ -90,7 +90,7 @@ class Escalation(Item):
         'escalation_period':
             StringProp(default=''),
         'escalation_options':
-            ListProp(default=['d', 'u', 'r', 'w', 'c'], split_on_coma=True),
+            ListProp(default=['d', 'x', 'r', 'w', 'c'], split_on_coma=True),
         'contacts':
             ListProp(default=[], split_on_coma=True),
         'contact_groups':
@@ -106,6 +106,15 @@ class Escalation(Item):
                           'first_notification_time', 'last_notification_time')
     special_properties_time_based = ('contacts', 'contact_groups',
                                      'first_notification', 'last_notification')
+
+    def __init__(self, params=None, parsing=True):
+        if params is None:
+            params = {}
+
+        for prop in ['escalation_options']:
+            if prop in params:
+                params[prop] = [p.replace('u', 'x') for p in params[prop]]
+        super(Escalation, self).__init__(params, parsing=parsing)
 
     def get_name(self):
         """Accessor to escalation_name attribute
@@ -143,7 +152,7 @@ class Escalation(Item):
         small_states = {
             'WARNING': 'w', 'UNKNOWN': 'u', 'CRITICAL': 'c',
             'RECOVERY': 'r', 'FLAPPING': 'f', 'DOWNTIME': 's',
-            'DOWN': 'd', 'UNREACHABLE': 'u', 'OK': 'o', 'UP': 'o'
+            'DOWN': 'd', 'UNREACHABLE': 'x', 'OK': 'o', 'UP': 'o'
         }
 
         # If we are not time based, we check notification numbers:

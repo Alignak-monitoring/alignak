@@ -786,8 +786,7 @@ class AlignakTest(unittest2.TestCase):
             if res and run:
                 self._receiver_daemon.broks = {}
                 self._receiver_daemon.add(ext_cmd)
-                # self._receiver_daemon.external_commands.append(ext_cmd)
-                self._receiver_daemon.push_external_commands_to_schedulers()
+                # self._receiver_daemon.push_external_commands_to_schedulers()
                 # # Our scheduler
                 # self._scheduler = self.schedulers['scheduler-master'].sched
                 # Give broks to our broker

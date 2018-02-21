@@ -234,7 +234,7 @@ class SatelliteLink(Item):
         self.broks = {}
         self.actions = {}
         self.wait_homerun = {}
-        self.external_commands = {}
+        self.pushed_commands = []
 
         self.init_running_properties()
 
@@ -359,11 +359,11 @@ class SatelliteLink(Item):
         :return: list of all broks of the satellite link
         :rtype: list
         """
-        res = (self.broks, self.actions, self.wait_homerun, self.external_commands)
+        res = (self.broks, self.actions, self.wait_homerun, self.pushed_commands)
         self.broks = {}
         self.actions = {}
         self.wait_homerun = {}
-        self.external_commands = {}
+        self.pushed_commands = []
         return res
 
     def get_and_clear_broks(self):
@@ -927,33 +927,28 @@ class SatelliteLink(Item):
     @valid_connection()
     @communicate()
     def push_external_commands(self, commands):
-        """Send a HTTP request to the satellite (GET /ping)
-        and THEN Send a HTTP request to the satellite (POST /run_external_commands)
-        Send external commands to the satellite
-
-        The first ping ensure the satellite is there to avoid a big timeout
+        """Send a HTTP request to the satellite (POST /run_external_commands)
+        to send the external commands to the satellite
 
         :param results: Results list to send
         :type results: list
         :return: True on success, False on failure
         :rtype: bool
         """
-        logger.debug("[%s] Pushing %d external commands", self.name, len(commands))
+        logger.debug("Pushing %d external commands", len(commands))
         return self.con.post('run_external_commands', {'cmds': commands}, wait='long')
 
     @valid_connection()
     @communicate()
     def get_external_commands(self):
-        """Send a HTTP request to the satellite (GET /ping)
-        and THEN send a HTTP request to the satellite (GET /get_external_commands)
-        Get external commands from satellite.
-        Un-serialize data received.
+        """Send a HTTP request to the satellite (GET /get_external_commands) to
+        get the external commands from the satellite.
 
         :return: External Command list on success, [] on failure
         :rtype: list
         """
         res = self.con.get('get_external_commands', wait='long')
-        logger.debug("Got external commands from %s: %s", self.name, res)
+        logger.debug("Got %d external commands from %s: %s", len(res), self.name, res)
         return res
 
     @valid_connection()

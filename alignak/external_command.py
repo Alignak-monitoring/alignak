@@ -577,7 +577,7 @@ class ExternalCommandManager:
             for scheduler_link in self.my_conf.schedulers:
                 logger.debug("Preparing an external command '%s' for the scheduler %s",
                              excmd, scheduler_link.name)
-                scheduler_link.external_commands.append(excmd.cmd_line)
+                scheduler_link.pushed_commands.append(excmd.cmd_line)
 
         return cmd
 
@@ -593,19 +593,21 @@ class ExternalCommandManager:
         :type extcmd: alignak.external_command.ExternalCommand
         :return: None
         """
+        print("****Calling search_host_and_dispatch for %s / %s", self.mode, host_name)
         logger.debug("Calling search_host_and_dispatch for %s", host_name)
         host_found = False
 
         # If we are a receiver, just look in the receiver
         if self.mode == 'receiver':
-            logger.debug("Receiver looking a scheduler for the external command %s %s",
+            logger.debug("Receiver is searching a scheduler for the external command %s %s",
                          host_name, command)
             scheduler_link = self.daemon.get_scheduler_from_hostname(host_name)
             if scheduler_link:
+                print("****Found: %s", scheduler_link)
                 host_found = True
                 logger.debug("Receiver pushing external command to scheduler %s",
                              scheduler_link.name)
-                scheduler_link.my_daemon.external_commands.append(extcmd)
+                scheduler_link.pushed_commands.append(extcmd)
             else:
                 logger.warning("I did not found a scheduler for the host: %s", host_name)
         else:
@@ -3031,7 +3033,7 @@ class ExternalCommandManager:
 
         # Maybe the check is just too old, if so, bail out!
         if self.current_timestamp < host.last_chk:
-            logger.warning('%s > Passive host check is too old (%d seconds). '
+            logger.warning('%s > Passive host check is too old (%.2f seconds). '
                            'Ignoring, check output: %s',
                            host.get_full_name(), self.current_timestamp < host.last_chk,
                            plugin_output)

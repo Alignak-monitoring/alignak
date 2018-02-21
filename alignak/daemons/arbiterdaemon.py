@@ -1402,6 +1402,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # _, _ = self.make_a_pause(0.01)
 
         if not self.kill_request:
+
+
             # Main loop treatment
             # Try to see if one of my module is dead, and restart previously dead modules
             self.check_and_del_zombie_modules()
