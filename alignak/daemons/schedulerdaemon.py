@@ -266,6 +266,7 @@ class Alignak(BaseSatellite):
             # If scheduling is not yet enabled, enable scheduling
             if not self.sched.must_schedule:
                 self.sched.start_scheduling()
+                self.sched.before_run()
             self.sched.run()
         else:
             logger.warning("#%d - No monitoring configuration to scheduler...",
@@ -545,6 +546,9 @@ class Alignak(BaseSatellite):
 
             # Now the main loop
             self.do_main_loop()
+
+            # On main loop exit, call the scheduler after run process
+            self.sched.after_run()
 
             self.request_stop()
         except Exception:
