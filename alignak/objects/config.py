@@ -708,6 +708,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'daemons_start_timeout':
             IntegerProp(default=0),
 
+        'daemons_new_conf_timeout':
+            IntegerProp(default=0),
+
         'daemons_dispatch_timeout':
             IntegerProp(default=0),
 

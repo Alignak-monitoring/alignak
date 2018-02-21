@@ -1686,7 +1686,14 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     self.request_stop()
                 else:
                     self.need_config_reload = False
-                    logger.info('Reloading configuration')
+
+                    # Clear the former configuration
+                    self.conf = Config()
+                    # Load monitoring configuration files
+                    logger.info('Reloading configuration...')
+                    self.load_monitoring_config_file()
+                    logger.info('Configuration reloaded')
+
                     # Initialize connection with all our satellites
                     for satellite in self.dispatcher.all_daemons_links:
                         if satellite != self.link_to_myself:
@@ -1694,14 +1701,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                             satellite.configuration_sent = False
 
                     # Make a pause to let our satellites get ready...
-                    pause = len(self.my_daemons) * 0.5
+                    pause = max(self.conf.daemons_new_conf_timeout, len(self.my_daemons) * 0.5)
                     logger.info("Pausing %d seconds...", pause)
                     time.sleep(pause)
-
-                    # Clear the former configuration
-                    self.conf = Config()
-                    # Load monitoring configuration files
-                    self.load_monitoring_config_file()
 
         except Exception as exp:
             # Only a master arbiter can stop the daemons

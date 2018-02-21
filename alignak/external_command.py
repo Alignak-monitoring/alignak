@@ -593,7 +593,6 @@ class ExternalCommandManager:
         :type extcmd: alignak.external_command.ExternalCommand
         :return: None
         """
-        print("****Calling search_host_and_dispatch for %s / %s", self.mode, host_name)
         logger.debug("Calling search_host_and_dispatch for %s", host_name)
         host_found = False
 
@@ -603,7 +602,6 @@ class ExternalCommandManager:
                          host_name, command)
             scheduler_link = self.daemon.get_scheduler_from_hostname(host_name)
             if scheduler_link:
-                print("****Found: %s", scheduler_link)
                 host_found = True
                 logger.debug("Receiver pushing external command to scheduler %s",
                              scheduler_link.name)
