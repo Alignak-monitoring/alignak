@@ -1952,6 +1952,17 @@ class Scheduler(object):  # pylint: disable=R0902
         Iter over all hosts and services to check freshness if check_freshness enabled and
         passive_checks_enabled are set
 
+        For the host items, the list of hosts to check contains hosts that:
+        - have freshness check enabled
+        - are not yet freshness expired
+        - are only passively checked
+
+        For the service items, the list of services to check contains services that:
+        - do not depend upon an host that is freshness expired
+        - have freshness check enabled
+        - are not yet freshness expired
+        - are only passively checked
+
         :return: None
         """
         _t0 = time.time()

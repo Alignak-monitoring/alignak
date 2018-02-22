@@ -547,6 +547,38 @@ class TestPassiveChecks(AlignakTest):
     def test_freshness_expiration_repeat_service(self):
         """ We test the running property freshness_expired to know if we are in
         expiration freshness or not - test for a service
+        - retry_interval is 1
+        - max_check_attempts is 3
+
+        This test runs with the services declare on test_host_F in the configuration
+
+        :return: None
+        """
+        self._freshness_expiration_repeat_service('test_svc_6')
+
+    def test_freshness_expiration_repeat_service_2(self):
+        """ We test the running property freshness_expired to know if we are in
+        expiration freshness or not - test for a service
+        retry_interval is 0
+        max_check_attempts is 2
+
+        :return: None
+        """
+        self._freshness_expiration_repeat_service('test_svc_7', count=2)
+
+    def test_freshness_expiration_repeat_service_3(self):
+        """ We test the running property freshness_expired to know if we are in
+        expiration freshness or not - test for a service
+        retry_interval is 0
+        max_check_attempts is 1
+
+        :return: None
+        """
+        self._freshness_expiration_repeat_service('test_svc_8', count=1)
+
+    def _freshness_expiration_repeat_service(self, svc_description, count=3):
+        """ We test the running property freshness_expired to know if we are in
+        expiration freshness or not - test for a service
 
         :return: None
         """
@@ -567,17 +599,18 @@ class TestPassiveChecks(AlignakTest):
         print("Host F: state: %s/%s, last state update: %s" % (host_f.state_type, host_f.state, host_f.last_state_update))
         for s in host_f.services:
             s = self._scheduler.services[s]
-            print("Service %s: freshness check: %s (%d s), state: %s/%s, last state update: %s"
-                  % (s.get_name(), s.check_freshness, s.freshness_threshold, s.state_type, s.state, s.last_state_update))
-            svc_f = s
-            break
+            if s.get_name() == svc_description:
+                print("Service %s: freshness check: %s (%d s), state: %s/%s, last state update: %s"
+                      % (s.get_name(), s.check_freshness, s.freshness_threshold, s.state_type, s.state, s.last_state_update))
+                svc_f = s
+                break
         assert svc_f is not None
 
         assert "x" == svc_f.freshness_state
         assert 1200 == svc_f.freshness_threshold
         # Check attempts
         assert 0 == svc_f.attempt
-        assert 3 == svc_f.max_check_attempts
+        assert count == svc_f.max_check_attempts
 
         # Force freshness threshold and latency
         svc_f.freshness_threshold = 1
@@ -589,11 +622,13 @@ class TestPassiveChecks(AlignakTest):
                     s.check_freshness and not s.freshness_expired and
                     s.passive_checks_enabled and not s.active_checks_enabled]
         print("Freshness expired services: %d" % len(services))
-        # 7 potential services to check for freshness
-        assert 7 == len(services)
+        # Some potential services to check for freshness
+        services_count = len(services)
 
         assert 0 == self.manage_freshness_check(1)
-        print("Service: state: %s/%s, last state update: %s" % (svc_f.state_type, svc_f.state, svc_f.last_state_update))
+        print("Service %s: state: %s/%s, last state update: %s, attempt: %d / %d"
+              % (svc_description, svc_f.state_type, svc_f.state, svc_f.last_state_update,
+                 svc_f.attempt, svc_f.max_check_attempts))
         # We are still ok...
         assert "OK" == svc_f.state
         assert "HARD" == svc_f.state_type
@@ -601,29 +636,45 @@ class TestPassiveChecks(AlignakTest):
         # Wait for more than freshness threshold + latency...
         time.sleep(3)
 
-        checks_count = self.manage_freshness_check(1)
-        assert 1 == checks_count
-        print("Service: state: %s/%s, last state update: %s" % (svc_f.state_type, svc_f.state, svc_f.last_state_update))
-        assert "UNREACHABLE" == svc_f.state
-        assert "SOFT" == svc_f.state_type
-        assert False == svc_f.freshness_expired
-        assert 1 == svc_f.attempt
+        for idx in range(1, count):
+            assert 1 == self.manage_freshness_check()
+            print("Attempt %d: state: %s/%s, last state update: %s, attempt: %d / %d"
+                  % (idx, svc_f.state_type, svc_f.state, svc_f.last_state_update,
+                     svc_f.attempt, svc_f.max_check_attempts))
+            assert "UNREACHABLE" == svc_f.state
+            assert "SOFT" == svc_f.state_type
+            assert False == svc_f.freshness_expired
+            assert svc_f.attempt == idx
 
-        time.sleep(1)
-        assert 1 == self.manage_freshness_check(1)
-        print("Service: state: %s/%s, last state update: %s" % (svc_f.state_type, svc_f.state, svc_f.last_state_update))
-        assert "UNREACHABLE" == svc_f.state
-        assert "SOFT" == svc_f.state_type
-        assert False == svc_f.freshness_expired
-        assert 2 == svc_f.attempt
+            time.sleep(1)
 
-        time.sleep(1)
-        assert 1 == self.manage_freshness_check(1)
-        print("Service: state: %s/%s, last state update: %s" % (svc_f.state_type, svc_f.state, svc_f.last_state_update))
+        self.show_logs()
+
+        # Last check loop must raise a freshness expired and max attempts is reached !
+        assert 1 == self.manage_freshness_check()
+        print("Last attempt: state: %s/%s, last state update: %s, attempt: %d / %d"
+              % (svc_f.state_type, svc_f.state, svc_f.last_state_update,
+                 svc_f.attempt, svc_f.max_check_attempts))
         assert "UNREACHABLE" == svc_f.state
         assert "HARD" == svc_f.state_type
+        assert True == svc_f.is_max_attempts()
         assert True == svc_f.freshness_expired
-        assert 3 == svc_f.attempt
+        assert svc_f.attempt == count
+
+        # assert 1 == self.manage_freshness_check(1)
+        # print("Service: state: %s/%s, last state update: %s" % (svc_f.state_type, svc_f.state, svc_f.last_state_update))
+        # assert "UNREACHABLE" == svc_f.state
+        # assert "SOFT" == svc_f.state_type
+        # assert False == svc_f.freshness_expired
+        # assert 2 == svc_f.attempt
+        # time.sleep(1)
+        #
+        # assert 1 == self.manage_freshness_check(1)
+        # print("Service: state: %s/%s, last state update: %s" % (svc_f.state_type, svc_f.state, svc_f.last_state_update))
+        # assert "UNREACHABLE" == svc_f.state
+        # assert "HARD" == svc_f.state_type
+        # assert True == svc_f.freshness_expired
+        # assert 3 == svc_f.attempt
 
         # Same as the scheduler list ;)
         services = [s for s in self._scheduler.services
@@ -631,42 +682,44 @@ class TestPassiveChecks(AlignakTest):
                     s.check_freshness and not s.freshness_expired and
                     s.passive_checks_enabled and not s.active_checks_enabled]
         print("Freshness expired services: %d" % len(services))
-        # Only 6 now !
-        assert 6 == len(services)
+        # One less service to check now !
+        assert len(services) == services_count - 1
 
-        # Then no more change for this service !
-        time.sleep(1)
-        assert 0 == self.manage_freshness_check(1)
-        assert "UNREACHABLE" == svc_f.state
-        assert "HARD" == svc_f.state_type
-        assert True == svc_f.is_max_attempts()
-        assert True == svc_f.freshness_expired
-        assert 3 == svc_f.attempt
+        # Then no more change for this service ... even if 5 more loops are run!
+        for idx in range(1, 5):
+            assert 0 == self.manage_freshness_check(1)
+            assert "UNREACHABLE" == svc_f.state
+            assert "HARD" == svc_f.state_type
+            assert True == svc_f.is_max_attempts()
+            assert True == svc_f.freshness_expired
+            assert svc_f.attempt == count
+            time.sleep(0.5)
+
         self.show_checks()
-
-        time.sleep(1)
-        assert 0 == self.manage_freshness_check(1)
-        assert "UNREACHABLE" == svc_f.state
-        assert "HARD" == svc_f.state_type
-        assert True == svc_f.is_max_attempts()
-        assert True == svc_f.freshness_expired
-        assert 3 == svc_f.attempt
-
         self.show_logs()
 
         # The freshness log is raised for each check attempt
         assert len(self.get_log_match(
             "alignak.objects.schedulingitem] "
-            "The freshness period of service 'test_host_F/test_svc_6'")) == 3
+            "The freshness period of service 'test_host_F/%s'" % svc_description)) == count
 
-        assert len(self.get_log_match("Attempt: 1 / 3. ")) == 1
-        assert len(self.get_log_match("Attempt: 2 / 3. ")) == 1
-        assert len(self.get_log_match("Attempt: 3 / 3. ")) == 1
+        for idx in range(1, count+1):
+            assert len(self.get_log_match("Attempt: %d / %d. "
+                                          % (idx, svc_f.max_check_attempts))) == 1
+        assert len(self.get_log_match("x / SOFT")) == count - 1
+        assert len(self.get_log_match("x / HARD")) == 1
 
         # Now receive check_result (passive), so we must be outside of freshness_expired
-        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_F;test_svc_6;0;Service is OK' % time.time()
+        excmd = "[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_F;%s;0;Service is OK" \
+                % (time.time(), svc_description)
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         assert 'OK' == svc_f.state
+        assert "HARD" == svc_f.state_type
         assert 'Service is OK' == svc_f.output
+        if count > 1:
+            assert False == svc_f.is_max_attempts()
+        else:
+            assert True == svc_f.is_max_attempts()
         assert False == svc_f.freshness_expired
+        assert svc_f.attempt == 1

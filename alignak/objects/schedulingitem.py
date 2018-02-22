@@ -676,8 +676,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                         # Create a new check for the scheduler
                         chk = self.launch_check(now, hosts, services, timeperiods,
                                                 macromodulations, checkmodulations, checks)
-                        expiry_date = time.strftime("%Y-%m-%d %H:%M:%S %Z")
-                        chk.output = "Freshness period expired: %s" % expiry_date
+                        chk.output = "Freshness period expired: %s" \
+                                     % time.strftime("%Y-%m-%d %H:%M:%S %Z")
                         chk.set_type_passive()
                         chk.freshness_expiry_check = True
                         chk.check_time = time.time()
@@ -1754,6 +1754,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 # Also launch the event handler, he might fix it.
                 self.attempt = 1
                 self.state_type = 'SOFT'
+                if self.is_max_attempts():
+                    self.state_type = 'HARD'
                 self.raise_alert_log_entry()
                 self.get_event_handlers(hosts, macromodulations, timeperiods)
 
