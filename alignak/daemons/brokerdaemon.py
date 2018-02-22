@@ -278,7 +278,7 @@ class Broker(BaseSatellite):
         """Get all broks
 
         TODO: using retention in the broker is dangerous and
-        do not seem of any utility with Alignak
+        do not seem of any utility with Alignak. To be removed!
 
         :return: broks container
         :rtype: object
@@ -288,8 +288,8 @@ class Broker(BaseSatellite):
     def restore_retention_data(self, data):  # pragma: no cover, useful?
         """Add data to broks container
 
-        TODO: using retention in the arbiter is dangerous and
-        do not seem of any utility with Alignak
+        TODO: using retention in the broker is dangerous and
+        do not seem of any utility with Alignak. To be removed!
 
         :param data: broks to add
         :type data: list

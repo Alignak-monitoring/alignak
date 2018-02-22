@@ -1834,6 +1834,8 @@ class Daemon(object):
         """Basic function to get retention data,
         Maybe be overridden by subclasses to implement real get
 
+        TODO: only the scheduler is retention capable. To be removed!
+
         :return: A list of Alignak object (scheduling items)
         :rtype: list
         """
@@ -1842,6 +1844,8 @@ class Daemon(object):
     def restore_retention_data(self, data):
         """Basic function to save retention data,
         Maybe be overridden by subclasses to implement real save
+
+        TODO: only the scheduler is retention capable. To be removed!
 
         :return: None
         """
