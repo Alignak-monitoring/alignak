@@ -1568,14 +1568,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 logger.info("Got check result: %d for '%s'",
                             chk.exit_status, self.get_full_name())
 
-
-        Check =  {
-            'log_actions': False, 'exit_status': 4, 'passive_check': True, 'creation_time': 1519301981.81177, 'reactionner_tag': 'None', 'worker_id': 'none', 's_time': 0.0, 'uuid': '845657bbe63a4ae2989f1f38aeb95cd8', 'check_time': 1519301981.811901, 'long_output': '', 'state': 0, 'internal': True, 'u_time': 0.0, 'env': {}, 'ref_type': 'service', 'depend_on_me': [], 'ref': u'14792e68bb034481b5ad8007cf3d0abb', 'status': 'waitconsume', 'execution_time': 0.0, 't_to_go': 1519301981.810678, 'module_type': u'fork', '_in_timeout': False, 'freshness_expiry_check': True, 'dependency_check': False, 'type': '', 'depend_on': [], 'is_a': 'check', 'poller_tag': u'None', 'command': u'_echo', 'timeout': 60, 'output': 'Freshness period expired: 2018-02-22 13:19:41 CET', 'perf_data': ''
-        }
-# [2018-02-22 13:19:41] WARNING: [scheduler-master.alignak.objects.schedulingitem] The freshness period of service 'fred_host_0/dev_IOPanelPC' is expired by 1d 0h 11m 52s (threshold=0d 0h 20m 0s + 15s). Attempt: 0 / 1. I'm forcing the state to freshness state (x / HARD).
-
-
-
         # ============ MANAGE THE CHECK ============ #
         # Not OK, waitconsume and have dependencies, put this check in waitdep, create if
         # necessary the check of dependent items and nothing else ;)

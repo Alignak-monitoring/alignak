@@ -2,11 +2,9 @@
 Alignak collectd plugin
 =======================
 
-*Alignak project - modern Nagios compatible monitoring framework*
-
 Alignak daemons have an HTTP json API that allows to get information about the daemons status. Especially, the arbiter daemon has an endpoint providing many useful data to be aware of the global Alignak framework status.
 
-Thanks to `collectd <https://collectd.org/>`_, some metrics can be collected and provided to a graphite database.
+Thanks to `collectd <https://collectd.org/>`_, some metrics can be easily collected and provided to a graphite database. Then a smart Grafana dashboard allows to have a nice interface to monitor you Alignak instance :)
 
 
 Installation
