@@ -1012,6 +1012,7 @@ class Daemon(object):
                     statsmgr.counter("num_threads", my_process.num_threads())
                     # perfdatas.append("num_ctx_switches=%d" % my_process.num_ctx_switches())
                     perfdatas.append("num_fds=%d" % my_process.num_fds())
+                    statsmgr.counter("num_fds", my_process.num_fds())
                     # perfdatas.append("num_handles=%d" % my_process.num_handles())
                     perfdatas.append("create_time=%d" % my_process.create_time())
                     perfdatas.append("cpu_num=%d" % my_process.cpu_num())

@@ -676,8 +676,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                         # Create a new check for the scheduler
                         chk = self.launch_check(now, hosts, services, timeperiods,
                                                 macromodulations, checkmodulations, checks)
-                        expiry_date = time.strftime("%Y-%m-%d %H:%M:%S %Z")
-                        chk.output = "Freshness period expired: %s" % expiry_date
+                        chk.output = "Freshness period expired: %s" \
+                                     % time.strftime("%Y-%m-%d %H:%M:%S %Z")
                         chk.set_type_passive()
                         chk.freshness_expiry_check = True
                         chk.check_time = time.time()
@@ -1568,6 +1568,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 logger.info("Got check result: %d for '%s'",
                             chk.exit_status, self.get_full_name())
 
+
+        Check =  {
+            'log_actions': False, 'exit_status': 4, 'passive_check': True, 'creation_time': 1519301981.81177, 'reactionner_tag': 'None', 'worker_id': 'none', 's_time': 0.0, 'uuid': '845657bbe63a4ae2989f1f38aeb95cd8', 'check_time': 1519301981.811901, 'long_output': '', 'state': 0, 'internal': True, 'u_time': 0.0, 'env': {}, 'ref_type': 'service', 'depend_on_me': [], 'ref': u'14792e68bb034481b5ad8007cf3d0abb', 'status': 'waitconsume', 'execution_time': 0.0, 't_to_go': 1519301981.810678, 'module_type': u'fork', '_in_timeout': False, 'freshness_expiry_check': True, 'dependency_check': False, 'type': '', 'depend_on': [], 'is_a': 'check', 'poller_tag': u'None', 'command': u'_echo', 'timeout': 60, 'output': 'Freshness period expired: 2018-02-22 13:19:41 CET', 'perf_data': ''
+        }
+# [2018-02-22 13:19:41] WARNING: [scheduler-master.alignak.objects.schedulingitem] The freshness period of service 'fred_host_0/dev_IOPanelPC' is expired by 1d 0h 11m 52s (threshold=0d 0h 20m 0s + 15s). Attempt: 0 / 1. I'm forcing the state to freshness state (x / HARD).
+
+
+
         # ============ MANAGE THE CHECK ============ #
         # Not OK, waitconsume and have dependencies, put this check in waitdep, create if
         # necessary the check of dependent items and nothing else ;)
@@ -1664,7 +1672,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 # the check go in zombie state to be removed later
                 chk.status = 'zombie'
 
-        # print("Check: %s / %s / %s" % (chk.exit_status, self.last_state, self.get_full_name()))
         # from UP/OK/PENDING
         # to UP/OK
         if chk.exit_status == 0 and self.last_state in (ok_up, 'PENDING'):
@@ -1733,6 +1740,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # from UP/OK
         # to WARNING/CRITICAL/UNKNOWN/UNREACHABLE/DOWN
         elif chk.exit_status != 0 and self.last_state in (ok_up, 'PENDING'):
+            self.attempt = 1
             if self.is_max_attempts():
                 # Now we are in HARD
                 self.state_type = 'HARD'
@@ -1752,8 +1760,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             else:
                 # This is the first NON-OK result. Initiate the SOFT-sequence
                 # Also launch the event handler, he might fix it.
-                self.attempt = 1
                 self.state_type = 'SOFT'
+                if self.is_max_attempts():
+                    self.state_type = 'HARD'
                 self.raise_alert_log_entry()
                 self.get_event_handlers(hosts, macromodulations, timeperiods)
 
@@ -1847,6 +1856,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 (self.last_state_type == 'SOFT' or self.last_state != self.state):
             self.last_hard_state_change = int(time.time())
 
+        if self.state_type == 'HARD':
             # If the check is a freshness one, set freshness as expired
             if chk.freshness_expiry_check:
                 self.freshness_expired = True
