@@ -949,7 +949,7 @@ class SatelliteLink(Item):
         """
         res = self.con.get('get_external_commands', wait='long')
         logger.debug("Got %d external commands from %s: %s", len(res), self.name, res)
-        return res
+        return unserialize(res, True)
 
     @valid_connection()
     @communicate()

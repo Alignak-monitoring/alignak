@@ -285,6 +285,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
     def get_external_commands(self):
         """Get the external commands
 
+        todo: This would not be useful if the Arbiter inherited
+        from a Satellite rather than a Daemon
+
         :return: External commands list
         :rtype: list
         """
@@ -296,8 +299,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
     def get_external_commands_from_satellites(self):
         """Get external commands from all other satellites (only receivers)
 
-        As of now, only the receiver satellites may raise some broks that the arbiter will push
-        to all the known schedulers.
+        As of now, only the receiver satellites may raise some external commands that
+        the arbiter will push to all the known schedulers.
 
         :return: None
         """
@@ -1194,7 +1197,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """Get data for retention
 
         TODO: using retention in the arbiter is dangerous and
-        do not seem of any utility with Alignak
+        do not seem of any utility with Alignak. To be removed!
 
         :return: broks and external commands in a dict
         :rtype: dict
@@ -1209,7 +1212,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """Restore data from retention (broks, and external commands)
 
         TODO: using retention in the arbiter is dangerous and
-        do not seem of any utility with Alignak
+        do not seem of any utility with Alignak. To be removed!
 
         :param data: data to restore
         :type data: dict
@@ -1402,8 +1405,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # _, _ = self.make_a_pause(0.01)
 
         if not self.kill_request:
-
-
             # Main loop treatment
             # Try to see if one of my module is dead, and restart previously dead modules
             self.check_and_del_zombie_modules()
@@ -1447,25 +1448,26 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             self.get_objects_from_from_queues()
             statsmgr.timer('get-objects-from-queues', time.time() - _t0)
 
-            # Maybe our satellites raised new broks. Reap them...
-            _t0 = time.time()
-            self.get_broks_from_satellites()
-            statsmgr.timer('broks.got', time.time() - _t0)
-
-            # Maybe our satellites raised new external commands. Reap them...
-            _t0 = time.time()
-            self.get_external_commands_from_satellites()
-            statsmgr.timer('external-commands.got', time.time() - _t0)
-
-            # One broker is responsible for our broks, we give him our broks
-            _t0 = time.time()
-            self.push_broks_to_broker()
-            statsmgr.timer('broks.pushed', time.time() - _t0)
-
-            # We push our external commands to our schedulers...
-            _t0 = time.time()
-            self.push_external_commands_to_schedulers()
-            statsmgr.timer('external-commands.pushed', time.time() - _t0)
+            # It is not the arbiter's job to manage broks and external commands!
+            # # Maybe our satellites raised new broks. Reap them...
+            # _t0 = time.time()
+            # self.get_broks_from_satellites()
+            # statsmgr.timer('broks.got', time.time() - _t0)
+            #
+            # # Maybe our satellites raised new external commands. Reap them...
+            # _t0 = time.time()
+            # self.get_external_commands_from_satellites()
+            # statsmgr.timer('external-commands.got', time.time() - _t0)
+            #
+            # # One broker is responsible for our broks, we give him our broks
+            # _t0 = time.time()
+            # self.push_broks_to_broker()
+            # statsmgr.timer('broks.pushed', time.time() - _t0)
+            #
+            # # We push our external commands to our schedulers...
+            # _t0 = time.time()
+            # self.push_external_commands_to_schedulers()
+            # statsmgr.timer('external-commands.pushed', time.time() - _t0)
 
         if self.system_health and (self.loop_count % self.system_health_period == 1):
             perfdatas = []

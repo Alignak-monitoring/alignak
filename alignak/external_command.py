@@ -524,7 +524,7 @@ class ExternalCommandManager:
         logger.critical("External command or Brok could not be sent to any daemon!")
 
     def resolve_command(self, excmd):
-        """Parse command and dispatch it (to sched for example) if necessary
+        """Parse command and dispatch it (to schedulers for example) if necessary
         If the command is not global it will be executed.
 
         :param excmd: external command to handle
