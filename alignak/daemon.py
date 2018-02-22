@@ -890,16 +890,6 @@ class Daemon(object):
         """
         logger.debug("Daemon connection initialization: %s %s", s_link.type, s_link.name)
 
-        # # We do not want to initiate the connections to the passive daemons
-        # # (eg. pollers, reactionners may be set as passive daemons)
-        # if s_link.passive:
-        #     logger.info("%s '%s' is set as passive, do not initalize its connection!",
-        #                 s_link.type, s_link.name)
-        #     # Create the daemon connection
-        #     s_link.create_connection()
-        #
-        #     return True
-
         # If the link is not not active, I do not try to initialize the connection, just useless ;)
         if not s_link.active:
             logger.warning("%s '%s' is not active, do not initialize its connection!",
@@ -986,11 +976,16 @@ class Daemon(object):
                 # Manage the new configuration
                 self.setup_new_conf()
 
+            # Trying to restore our related daemons lost connections
             for satellite in self.get_links_of_type(s_type=None).values():
+                # Not for configuration disabled satellites
+                if not satellite.active:
+                    continue
                 if not satellite.alive and not satellite.passive:
-                    logger.info("Trying to restore connection for %s/%s",
+                    logger.info("Trying to restore connection for %s/%s...",
                                 satellite.type, satellite.name)
-                    self.daemon_connection_init(satellite)
+                    if self.daemon_connection_init(satellite):
+                        logger.info("Connection restored")
 
             # Each loop turn, execute the daemon specific treatment...
             # only if the daemon has a configuration to manage
