@@ -200,15 +200,11 @@ from alignak.stats import statsmgr
 from alignak.modulesmanager import ModulesManager
 from alignak.property import StringProp, BoolProp, PathProp
 from alignak.property import IntegerProp, FloatProp, LogLevelProp, ListProp
-from alignak.misc.common import setproctitle
+from alignak.misc.common import setproctitle, SIGNALS_TO_NAMES_DICT
 from alignak.version import VERSION
 
 from alignak.bin.alignak_environment import AlignakConfigParser
 
-
-# Friendly names for the system signals
-SIGNALS_TO_NAMES_DICT = dict((k, v) for v, k in reversed(sorted(signal.__dict__.items()))
-                             if v.startswith('SIG') and not v.startswith('SIG_'))
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -697,6 +693,12 @@ class Daemon(object):
         # Track the file descriptors allocated by the logger
         self.local_log_fds = None
 
+        # Increased on each loop turn
+        self.loop_count = None
+
+        # Daemon start timestamp
+        self.start_time = None
+
         # Log loop turns if environment variable is set
         if 'TEST_LOG_LOOP' in os.environ:
             self.log_loop = 'TEST_LOG_LOOP' in os.environ
@@ -705,7 +707,7 @@ class Daemon(object):
         self.activity_log_period = int(os.getenv('ALIGNAK_ACTIVITY_LOG', 600))
 
         # Put in queue some debug output we will raise
-        # when we will be in daemon
+        # when we will be daemonized
         self.debug_output = []
 
         # Daemon load 1 minute
@@ -939,10 +941,12 @@ class Daemon(object):
         :return: None
         """
         # Increased on each loop turn
-        self.loop_count = 0
+        if self.loop_count is None:
+            self.loop_count = 0
 
         # Daemon start timestamp
-        self.start_time = time.time()
+        if self.start_time is None:
+            self.start_time = time.time()
 
         # For the pause duration
         logger.info("[%s] pause duration: %.2f",
@@ -1094,7 +1098,8 @@ class Daemon(object):
 
             # If someone asked us a configuration reloading
             if self.need_config_reload and self.type == 'arbiter':
-                logger.warning("Someone provoked a configuration reload")
+                logger.warning("Someone requested a configuration reload")
+                logger.info("Exiting daemon main loop")
                 return
 
             # If someone asked us to dump memory, do it

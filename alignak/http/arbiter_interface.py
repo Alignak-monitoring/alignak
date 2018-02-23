@@ -35,6 +35,29 @@ class ArbiterInterface(GenericInterface):
     @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
+    def reload_configuration(self):
+        """Ask to the arbiter to reload the monitored configuration
+
+        Returns False if the arbiter is not a master arbiter
+
+        :return: True if configuration reload is accepted
+        """
+        # If I'm the master, ignore the command and raise a log
+        if not self.app.is_master:
+            logger.warning("I received a request to reload the monitored configuration. "
+                           "I am not the Master, ignore and continue to run.")
+            return False
+
+        logger.info("I received a request to reload the monitored configuration.")
+        if self.app.loading_configuration:
+            logger.info("I am still reloading the monitored configuration ;)")
+
+        self.app.need_config_reload = True
+        return True
+
+    @cherrypy.expose
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
     def push_configuration(self, pushed_configuration=None):
         """HTTP POST to the arbiter with the new conf (master send to slave)
 

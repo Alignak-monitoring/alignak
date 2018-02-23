@@ -36,13 +36,16 @@ class TestLaunchDaemonsPassive(AlignakTest):
 
         # Set an environment variable to activate the logging of checks execution
         # With this the pollers/schedulers will raise INFO logs about the checks execution
-        os.environ['TEST_LOG_ACTIONS'] = 'INFO'
+        os.environ['TEST_LOG_ACTIONS'] = 'WARNING'
+
+        # Set an environment variable to change the default period of activity log (every 60 loops)
+        os.environ['ALIGNAK_ACTIVITY_LOG'] = '60'
 
         # Alignak daemons monitoring everay 3 seconds
-        os.environ['ALIGNAK_DAEMONS_MONITORING'] = '3'
+        os.environ['ALIGNAK_DAEMON_MONITORING'] = '3'
 
         # Alignak arbiter self-monitoring - report statistics every 5 loop counts
-        os.environ['TEST_LOG_MONITORING'] = '5'
+        os.environ['ALIGNAK_SYSTEM_MONITORING'] = '5'
 
         # Log daemons loop turn
         os.environ['TEST_LOG_LOOP'] = 'INFO'
