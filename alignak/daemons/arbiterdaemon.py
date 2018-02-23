@@ -72,12 +72,13 @@ import threading
 
 import psutil
 
+from alignak.misc.common import setproctitle, SIGNALS_TO_NAMES_DICT
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.config import Config
 from alignak.macroresolver import MacroResolver
 from alignak.external_command import ExternalCommandManager
 from alignak.dispatcher import Dispatcher
-from alignak.daemon import Daemon, SIGNALS_TO_NAMES_DICT
+from alignak.daemon import Daemon
 from alignak.stats import statsmgr
 from alignak.brok import Brok
 from alignak.external_command import ExternalCommand
@@ -525,7 +526,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 continue
 
             logger.info("I found myself in the configuration: %s", lnk_arbiter.name)
-            self.link_to_myself = lnk_arbiter
+            if self.link_to_myself is None:
+                # I update only if it does not yet exist (first configuration load)!
+                # I will not change myself because I am simply reloading a configuration ;)
+                self.link_to_myself = lnk_arbiter
             # Set myself as alive ;)
             self.link_to_myself.set_alive()
 
@@ -807,8 +811,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     continue
 
                 if satellite.name in self.my_daemons:
-                    logger.warning("Daemon '%s' said as missing is yet configured, "
-                                   "it looks strange...", satellite.name)
+                    logger.info("Daemon '%s' is still launched", satellite.name)
                     continue
 
                 started = self.start_daemon(satellite)
@@ -1234,41 +1237,20 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         :return: None
         TODO: Refactor with Daemon one
         """
-        logger.info("received a signal: %s", SIGNALS_TO_NAMES_DICT[sig])
         # Request the arbiter to stop
         if sig in [signal.SIGINT, signal.SIGKILL]:
+            logger.info("received a signal: %s", SIGNALS_TO_NAMES_DICT[sig])
             self.kill_request = True
             self.kill_timestamp = time.time()
+            logger.info("request to stop in progress")
         else:
             Daemon.manage_signal(self, sig, frame)
 
-    def do_before_loop(self):
-        """Called before the main daemon loop.
+    def configuration_dispatch(self):
+        """Monitored configuration preparation and dispatch
 
         :return: None
         """
-        logger.info("I am the arbiter: %s", self.link_to_myself.name)
-
-        # If I am a spare, I do not have anything to do here...
-        if not self.is_master:
-            logger.debug("Waiting for my master death...")
-            return
-
-        # Arbiter check if some daemons need to be started
-        logger.info("Start the configuration daemons...")
-        if not self.daemons_start(run_daemons=True):
-            self.request_stop(message="Some Alignak daemons did not started correctly.",
-                              exit_code=4)
-
-        if not self.daemons_check():
-            self.request_stop(message="Some Alignak daemons cannot be checked.",
-                              exit_code=4)
-
-        # Make a pause to let our started daemons get ready...
-        pause = max(self.conf.daemons_start_timeout, len(self.my_daemons) * 0.5)
-        logger.info("Pausing %d seconds...", pause)
-        time.sleep(pause)
-
         self.dispatcher = Dispatcher(self.conf, self.link_to_myself)
         # I set my own dispatched configuration as the provided one...
         # because I will not push a configuration to myself :)
@@ -1289,7 +1271,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 if not satellite.active:
                     continue
                 connected = self.daemon_connection_init(satellite)
-                logger.info("- %s is %s", satellite, connected)
+                logger.debug("  %s is %s", satellite, connected)
                 self.all_connected = self.all_connected and connected
 
             if self.all_connected:
@@ -1354,9 +1336,35 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                                       "Sorry, I bail out!" % first_connection_try_count,
                                       exit_code=4)
 
-        # _t0 = time.time()
-        # self.dispatcher.check_bad_dispatch()
-        # statsmgr.timer('dispatcher.check-dispatch', time.time() - _t0)
+    def do_before_loop(self):
+        """Called before the main daemon loop.
+
+        :return: None
+        """
+        logger.info("I am the arbiter: %s", self.link_to_myself.name)
+
+        # If I am a spare, I do not have anything to do here...
+        if not self.is_master:
+            logger.debug("Waiting for my master death...")
+            return
+
+        # Arbiter check if some daemons need to be started
+        logger.info("Start the configuration daemons...")
+        if not self.daemons_start(run_daemons=True):
+            self.request_stop(message="Some Alignak daemons did not started correctly.",
+                              exit_code=4)
+
+        if not self.daemons_check():
+            self.request_stop(message="Some Alignak daemons cannot be checked.",
+                              exit_code=4)
+
+        # Make a pause to let our started daemons get ready...
+        pause = max(self.conf.daemons_start_timeout, len(self.my_daemons) * 0.5)
+        logger.info("Pausing %d seconds...", pause)
+        time.sleep(pause)
+
+        # Prepare and dispatch the monitored configuration
+        self.configuration_dispatch()
 
         # Now we can get all initial broks for our satellites
         _t0 = time.time()
@@ -1415,12 +1423,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             # Look for logging timeperiods activation change (active/inactive)
             self.check_and_log_tp_activation_change()
 
-        # Check that my daemons are alive
-        if not self.daemons_check():
-            self.request_stop(message="Some Alignak daemons cannot be checked.",
-                              exit_code=4)
+            # Check that my daemons are alive
+            if not self.daemons_check():
+                self.request_stop(message="Some Alignak daemons cannot be checked.",
+                                  exit_code=4)
 
-        if not self.kill_request:
             # Now the dispatcher job
             _t0 = time.time()
             self.dispatcher.check_reachable()
@@ -1691,22 +1698,27 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     self.need_config_reload = False
 
                     # Clear the former configuration
+                    self.link_to_myself = None
                     self.conf = Config()
                     # Load monitoring configuration files
-                    logger.info('Reloading configuration...')
+                    logger.warning('--- Reloading configuration...')
                     self.load_monitoring_config_file()
-                    logger.info('Configuration reloaded')
+                    logger.warning('--- Configuration reloaded')
 
-                    # Request our satellites to wait for a new configuration
-                    for satellite in self.dispatcher.all_daemons_links:
-                        if satellite != self.link_to_myself:
-                            satellite.wait_new_conf()
-                            satellite.configuration_sent = False
+                    # # Prepare and dispatch the monitored configuration
+                    # self.configuration_dispatch()
+
+                    # # Request our satellites to wait for a new configuration
+                    # for satellite in self.dispatcher.all_daemons_links:
+                    #     if satellite != self.link_to_myself:
+                    #         satellite.wait_new_conf()
+                    #         satellite.configuration_sent = False
 
                     # Make a pause to let our satellites get ready...
-                    pause = max(self.conf.daemons_new_conf_timeout, len(self.my_daemons) * 0.5)
-                    logger.info("Pausing %d seconds...", pause)
-                    time.sleep(pause)
+                    pause = self.conf.daemons_new_conf_timeout
+                    if pause:
+                        logger.info("Pausing %d seconds...", pause)
+                        time.sleep(pause)
 
         except Exception as exp:
             # Only a master arbiter can stop the daemons

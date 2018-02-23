@@ -156,23 +156,28 @@ class TestDaemonsSingleInstance(AlignakTest):
         # errors_raised = self.checkDaemonsLogsForErrors(daemons_list)
         # Check daemons log files
         ignored_warnings = [
+            # Action execution log
             'Timeout raised for ',
             'spent too much time:',
+            'Launch command',
+            'Check result',
+            'Performance data',
+            'Action',
+            'Got check result',
+            'Echo the current state',
+            'Set host',
+            # Monitoring Events
             'HOST ALERT: ',
             'SERVICE ALERT: ',
             'HOST NOTIFICATION: ',
             'SERVICE NOTIFICATION: ',
-            'Launch command: ',
-            'Action ',
-            'Check result for ',
-            'Performance data',
-            'Echo the current state ',
-            'Got check result: '
             # todo: Temporary: because of unordered daemon stop !
             # 'that we must be related with cannot be connected',
             # 'Exception: Server not available',
             # 'Setting the satellite ',
             # 'Add failed attempt'
+            # Sometimes not killed during the test because of SIGTERM
+            'did not stopped, trying to kill'
         ]
         ignored_errors = [
         ]

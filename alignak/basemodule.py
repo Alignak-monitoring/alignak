@@ -60,11 +60,7 @@ import re
 from multiprocessing import Queue, Process
 import logging
 
-from alignak.misc.common import setproctitle
-
-# Friendly names for the system signals
-SIGNALS_TO_NAMES_DICT = dict((k, v) for v, k in reversed(sorted(signal.__dict__.items()))
-                             if v.startswith('SIG') and not v.startswith('SIG_'))
+from alignak.misc.common import setproctitle, SIGNALS_TO_NAMES_DICT
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
