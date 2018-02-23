@@ -189,6 +189,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # All dameons connection are valid
         self.all_connected = False
 
+        # Configuration loading / reloading
+        self.need_config_reload = False
+        self.loading_configuration = False
+
         self.http_interface = ArbiterInterface(self)
         self.conf = Config()
 
@@ -372,6 +376,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         :return: None
         """
+        self.loading_configuration = True
+
         if self.verify_only:
             # Force the global logger at INFO level
             alignak_logger = logging.getLogger("alignak")
@@ -562,6 +568,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # And it will make it simpler to configure...
         if not self.is_master:
             logger.info("I am not the master arbiter, I stop parsing the configuration")
+            self.loading_configuration = False
             return
 
         # we request the instances without them being *started*
@@ -706,6 +713,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Display found warnings and errors
         self.conf.show_errors()
+
+        self.loading_configuration = False
 
     def request_stop(self, message='', exit_code=0):
         """Stop the Arbiter daemon
@@ -1695,30 +1704,32 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     # If not configuration reload, stop the arbiter daemon
                     self.request_stop()
                 else:
-                    self.need_config_reload = False
+                    # Loop if a configuration reload is raised while
+                    # still reloading the configuration
+                    while self.need_config_reload:
+                        # Clear the former configuration
+                        self.need_config_reload = False
+                        self.link_to_myself = None
+                        self.conf = Config()
+                        # Load monitoring configuration files
+                        logger.warning('--- Reloading configuration...')
+                        self.load_monitoring_config_file()
+                        logger.warning('--- Configuration reloaded')
 
-                    # Clear the former configuration
-                    self.link_to_myself = None
-                    self.conf = Config()
-                    # Load monitoring configuration files
-                    logger.warning('--- Reloading configuration...')
-                    self.load_monitoring_config_file()
-                    logger.warning('--- Configuration reloaded')
+                        # # Prepare and dispatch the monitored configuration
+                        # self.configuration_dispatch()
 
-                    # # Prepare and dispatch the monitored configuration
-                    # self.configuration_dispatch()
+                        # # Request our satellites to wait for a new configuration
+                        # for satellite in self.dispatcher.all_daemons_links:
+                        #     if satellite != self.link_to_myself:
+                        #         satellite.wait_new_conf()
+                        #         satellite.configuration_sent = False
 
-                    # # Request our satellites to wait for a new configuration
-                    # for satellite in self.dispatcher.all_daemons_links:
-                    #     if satellite != self.link_to_myself:
-                    #         satellite.wait_new_conf()
-                    #         satellite.configuration_sent = False
-
-                    # Make a pause to let our satellites get ready...
-                    pause = self.conf.daemons_new_conf_timeout
-                    if pause:
-                        logger.info("Pausing %d seconds...", pause)
-                        time.sleep(pause)
+                        # Make a pause to let our satellites get ready...
+                        pause = self.conf.daemons_new_conf_timeout
+                        if pause:
+                            logger.info("Pausing %d seconds...", pause)
+                            time.sleep(pause)
 
         except Exception as exp:
             # Only a master arbiter can stop the daemons

@@ -49,6 +49,9 @@ class ArbiterInterface(GenericInterface):
             return False
 
         logger.info("I received a request to reload the monitored configuration.")
+        if self.app.loading_configuration:
+            logger.info("I am still reloading the monitored configuration ;)")
+
         self.app.need_config_reload = True
         return True
 
