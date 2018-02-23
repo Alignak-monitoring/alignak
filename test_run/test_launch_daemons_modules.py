@@ -92,6 +92,8 @@ class TestLaunchDaemonsModules(AlignakTest):
             'The module Example is not a worker one',
             'Add failed attempt for ',
             'is still living after a normal kill'
+            # Sometimes not killed during the test because of SIGTERM
+            'did not stopped, trying to kill'
         ]
         (errors_raised, warnings_raised) = \
             self._check_daemons_log_for_errors(daemons_list, ignored_warnings=ignored_warnings)

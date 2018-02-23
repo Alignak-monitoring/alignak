@@ -72,7 +72,7 @@ import threading
 
 import psutil
 
-from alignak.misc.common import setproctitle, SIGNALS_TO_NAMES_DICT
+from alignak.misc.common import SIGNALS_TO_NAMES_DICT
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.config import Config
 from alignak.macroresolver import MacroResolver
