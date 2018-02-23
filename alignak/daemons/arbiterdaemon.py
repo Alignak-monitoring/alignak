@@ -1685,6 +1685,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
                 # Exiting the main loop because of a configuration reload
                 if not self.need_config_reload:
+                    # If not configuration reload, stop the arbiter daemon
                     self.request_stop()
                 else:
                     self.need_config_reload = False
@@ -1696,7 +1697,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     self.load_monitoring_config_file()
                     logger.info('Configuration reloaded')
 
-                    # Initialize connection with all our satellites
+                    # Request our satellites to wait for a new configuration
                     for satellite in self.dispatcher.all_daemons_links:
                         if satellite != self.link_to_myself:
                             satellite.wait_new_conf()
