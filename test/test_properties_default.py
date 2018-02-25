@@ -170,6 +170,7 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('state_retention_file', ''),
         ('retention_update_interval', 60),
         ('use_syslog', False),
+        ('monitoring_log_broks', False),
         ('log_notifications', True),
         ('log_snapshots', True),
         ('log_flappings', True),
@@ -259,6 +260,8 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('daemons_log_folder', '/usr/local/var/log/alignak'),
         ('daemons_check_period', 5),
         ('daemons_start_timeout', 0),
+        ('daemons_dispatch_timeout', 0),
+        ('daemons_new_conf_timeout', 0),
         ('daemons_stop_timeout', 30)
         ])
 
@@ -389,7 +392,7 @@ class TestEscalation(PropertiesTester, AlignakTest):
         ('name', ''),
         ('notification_interval', -1),
         ('escalation_period', ''),
-        ('escalation_options', ['d','u','r','w','c']),
+        ('escalation_options', ['d','x','r','w','c']),
         ])
 
     def setUp(self):
@@ -445,7 +448,7 @@ class TestHostescalation(PropertiesTester, AlignakTest):
         ('name', ''),
         ('notification_interval', 30),
         ('escalation_period', ''),
-        ('escalation_options', ['d','u','r','w','c']),
+        ('escalation_options', ['d','x','r','w','c']),
         ])
 
     def setUp(self):

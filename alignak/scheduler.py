@@ -486,11 +486,13 @@ class Scheduler(object):  # pylint: disable=R0902
         :type cmds: list
         :return: None
         """
+        if not self.external_commands_manager:
+            return
+
         _t0 = time.time()
         logger.debug("Scheduler '%s' got %d commands", self.name, len(cmds))
         for command in cmds:
-            ext_cmd = ExternalCommand(command)
-            self.external_commands_manager.resolve_command(ext_cmd)
+            self.external_commands_manager.resolve_command(ExternalCommand(command))
         statsmgr.timer('core.run_external_commands', time.time() - _t0)
 
     def add_brok(self, brok, broker_uuid=None):
@@ -1325,7 +1327,8 @@ class Scheduler(object):  # pylint: disable=R0902
         :rtype: dict
         """
         brok = make_monitoring_log('INFO', 'RETENTION SAVE: %s' % self.name)
-        self.add(brok)
+        if self.pushed_conf.monitoring_log_broks:
+            self.add(brok)
         # We create an all_data dict with list of useful retention data dicts
         # of our hosts and services
         all_data = {'hosts': {}, 'services': {}}
@@ -1460,7 +1463,8 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         brok = make_monitoring_log('INFO', 'RETENTION LOAD: %s' % self.name)
-        self.add(brok)
+        if self.pushed_conf.monitoring_log_broks:
+            self.add(brok)
 
         ret_hosts = data['hosts']
         for ret_h_name in ret_hosts:
@@ -1937,6 +1941,8 @@ class Scheduler(object):  # pylint: disable=R0902
         # be eaten
         for elt in self.all_my_hosts_and_services():
             for brok in elt.broks:
+                if brok.type == 'monitoring_log' and not self.pushed_conf.monitoring_log_broks:
+                    continue
                 self.add(brok)
             # We take all, we can clear it
             elt.broks = []
@@ -1944,6 +1950,8 @@ class Scheduler(object):  # pylint: disable=R0902
         # Also fetch broks from contact (like contactdowntime)
         for contact in self.contacts:
             for brok in contact.broks:
+                if brok.type == 'monitoring_log' and not self.pushed_conf.monitoring_log_broks:
+                    continue
                 self.add(brok)
             contact.broks = []
 
@@ -1965,6 +1973,9 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
+        # Get tick count
+        # (_, _, tick) = self.recurrent_works['check_freshness']
+
         _t0 = time.time()
         items = []
         if self.pushed_conf.check_host_freshness:
@@ -1990,12 +2001,12 @@ class Scheduler(object):  # pylint: disable=R0902
         for elt in items:
             chk = elt.do_check_freshness(self.hosts, self.services, self.timeperiods,
                                          self.macromodulations, self.checkmodulations,
-                                         self.checks)
+                                         self.checks, when=_t0)
             if chk is not None:
                 self.add(chk)
                 self.waiting_results.put(chk)
                 raised_checks += 1
-        statsmgr.gauge('freshness.raised-checks', len(hosts))
+        statsmgr.gauge('freshness.raised-checks', raised_checks)
         statsmgr.timer('freshness.do-check', time.time() - _t0)
 
     def check_orphaned(self):

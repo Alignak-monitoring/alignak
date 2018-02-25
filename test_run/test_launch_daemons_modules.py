@@ -91,7 +91,7 @@ class TestLaunchDaemonsModules(AlignakTest):
             'hosts configuration warnings',
             'The module Example is not a worker one',
             'Add failed attempt for ',
-            'is still living after a normal kill'
+            'is still living after a normal kill',
             # Sometimes not killed during the test because of SIGTERM
             'did not stopped, trying to kill'
         ]

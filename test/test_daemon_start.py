@@ -62,7 +62,6 @@ import logging
 from alignak_test import AlignakTest
 
 from alignak.version import VERSION
-from alignak.daemon import InvalidPidFile, InvalidWorkingDir
 from alignak.daemons.pollerdaemon import Poller
 from alignak.daemons.brokerdaemon import Broker
 from alignak.daemons.schedulerdaemon import Alignak
@@ -351,8 +350,9 @@ class template_Daemon_Start():
         daemon.workdir = tempfile.mkdtemp()
         daemon.pid_filename = os.path.abspath(os.path.join('/DONOTEXISTS', "daemon.pid"))
 
-        with pytest.raises(InvalidPidFile):
-            self.start_daemon(daemon)
+        with pytest.raises(SystemExit):
+            rc = self.start_daemon(daemon)
+            assert rc == 1
         # Stop the daemon
         self.stop_daemon(daemon)
 
@@ -364,8 +364,9 @@ class template_Daemon_Start():
         daemon = self.get_daemon()
         daemon.workdir = '/DONOTEXISTS'
 
-        with pytest.raises(InvalidWorkingDir):
-            self.start_daemon(daemon)
+        with pytest.raises(SystemExit):
+            rc = self.start_daemon(daemon)
+            assert rc == 1
         # Stop the daemon
         self.stop_daemon(daemon)
 

@@ -44,7 +44,7 @@ from alignak.http.broker_interface import BrokerInterface
 class TestDaemonsApi(AlignakTest):
     """Test the daemons HTTP API"""
     def setUp(self):
-        super(TestLaunchDaemons, self).setUp()
+        super(TestDaemonsApi, self).setUp()
 
         # copy the default shipped configuration files in /tmp/etc and change the root folder
         # used by the daemons for pid and log files in the alignak.ini file

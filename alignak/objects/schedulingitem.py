@@ -626,7 +626,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         return self.attempt >= self.max_check_attempts
 
     def do_check_freshness(self, hosts, services, timeperiods, macromodulations, checkmodulations,
-                           checks):
+                           checks, when=None):
         # pylint: disable=too-many-nested-blocks
         """Check freshness and schedule a check now if necessary.
 
@@ -657,53 +657,53 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return: A check or None
         :rtype: None | object
         """
-        now = time.time()
+        now = when
+        if not now:
+            now = time.time()
         # Before, check if class (host or service) have check_freshness OK
         # Then check if item want freshness, then check freshness
         cls = self.__class__
-        if not self.in_checking and self.freshness_threshold != 0:
-            logger.debug("Checking freshness for %s, last state update: %s, now: %s.",
-                         self.get_full_name(), self.last_state_update, now)
-            # If we never check this item, we begin the freshness period
-            if self.last_state_update == 0.0:
+        if not self.in_checking and self.freshness_threshold and not self.freshness_expired:
+            # logger.debug("Checking freshness for %s, last state update: %s, now: %s.",
+            #              self.get_full_name(), self.last_state_update, now)
+            # If we never checked this item, we begin the freshness period
+            if not self.last_state_update:
                 self.last_state_update = now
             if self.last_state_update < now - \
                     (self.freshness_threshold + cls.additional_freshness_latency):
-                # Do not create a check if the item is already freshness_expired...
-                if not self.freshness_expired:
-                    timeperiod = timeperiods[self.check_period]
-                    if timeperiod is None or timeperiod.is_time_valid(now):
-                        # Create a new check for the scheduler
-                        chk = self.launch_check(now, hosts, services, timeperiods,
-                                                macromodulations, checkmodulations, checks)
-                        chk.output = "Freshness period expired: %s" \
-                                     % time.strftime("%Y-%m-%d %H:%M:%S %Z")
-                        chk.set_type_passive()
-                        chk.freshness_expiry_check = True
-                        chk.check_time = time.time()
-                        if self.my_type == 'host':
-                            if self.freshness_state == 'o':
-                                chk.exit_status = 0
-                            elif self.freshness_state == 'd':
-                                chk.exit_status = 2
-                            elif self.freshness_state in ['u', 'x']:
-                                chk.exit_status = 4
-                        else:
-                            if self.freshness_state == 'o':
-                                chk.exit_status = 0
-                            elif self.freshness_state == 'w':
-                                chk.exit_status = 1
-                            elif self.freshness_state == 'c':
-                                chk.exit_status = 2
-                            elif self.freshness_state == 'u':
-                                chk.exit_status = 3
-                            elif self.freshness_state == 'x':
-                                chk.exit_status = 4
-
-                        return chk
+                timeperiod = timeperiods[self.check_period]
+                if timeperiod is None or timeperiod.is_time_valid(now):
+                    # Create a new check for the scheduler
+                    chk = self.launch_check(now, hosts, services, timeperiods,
+                                            macromodulations, checkmodulations, checks)
+                    chk.output = "Freshness period expired: %s" \
+                                 % time.strftime("%Y-%m-%d %H:%M:%S %Z")
+                    chk.set_type_passive()
+                    chk.freshness_expiry_check = True
+                    chk.check_time = time.time()
+                    if self.my_type == 'host':
+                        if self.freshness_state == 'o':
+                            chk.exit_status = 0
+                        elif self.freshness_state == 'd':
+                            chk.exit_status = 2
+                        elif self.freshness_state in ['u', 'x']:
+                            chk.exit_status = 4
                     else:
-                        logger.debug("Ignored freshness check for %s, because "
-                                     "we are not in the check period.", self.get_full_name())
+                        if self.freshness_state == 'o':
+                            chk.exit_status = 0
+                        elif self.freshness_state == 'w':
+                            chk.exit_status = 1
+                        elif self.freshness_state == 'c':
+                            chk.exit_status = 2
+                        elif self.freshness_state == 'u':
+                            chk.exit_status = 3
+                        elif self.freshness_state == 'x':
+                            chk.exit_status = 4
+
+                    return chk
+                else:
+                    logger.debug("Ignored freshness check for %s, because "
+                                 "we are not in the check period.", self.get_full_name())
         return None
 
     def set_myself_as_problem(self, hosts, services, timeperiods, bi_modulations):

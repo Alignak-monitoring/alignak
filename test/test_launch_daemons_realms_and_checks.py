@@ -88,7 +88,8 @@ class TestLaunchDaemonsRealms(AlignakTest):
             'Action',
             'Got check result',
             'Echo the current state',
-            'Set host'
+            'Set host',
+            'did not stopped, trying to kill'
         ]
         ignored_errors = [
         ]
@@ -133,7 +134,8 @@ class TestLaunchDaemonsRealms(AlignakTest):
             'Action',
             'Got check result',
             'Echo the current state',
-            'Set host'
+            'Set host',
+            'did not stopped, trying to kill'
         ]
         ignored_errors = [
         ]

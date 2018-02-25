@@ -437,7 +437,10 @@ class AlignakTest(unittest2.TestCase):
             shutil.copytree('../etc', '/tmp/etc/alignak')
             files = ['/tmp/etc/alignak/alignak.ini']
             replacements = {
-                '_dist=/usr/local/': '_dist=/tmp'
+                '_dist=/usr/local/': '_dist=/tmp',
+                'user=alignak': ';user=alignak',
+                'group=alignak': ';group=alignak'
+
             }
             self._files_update(files, replacements)
         print("Prepared")

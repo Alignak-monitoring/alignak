@@ -358,6 +358,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
             BoolProp(default=False),
 
         # Monitoring logs configuration
+        'monitoring_log_broks':
+            BoolProp(default=False, fill_brok=['full_status']),
+
         'log_notifications':
             BoolProp(default=True, fill_brok=['full_status'],
                      class_inherit=[(Host, None), (Service, None)]),
