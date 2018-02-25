@@ -1986,6 +1986,7 @@ class Scheduler(object):  # pylint: disable=R0902
         statsmgr.timer('freshness.items-list', time.time() - _t0)
 
         _t0 = time.time()
+        raised_checks = 0
         for elt in items:
             chk = elt.do_check_freshness(self.hosts, self.services, self.timeperiods,
                                          self.macromodulations, self.checkmodulations,
@@ -1993,6 +1994,8 @@ class Scheduler(object):  # pylint: disable=R0902
             if chk is not None:
                 self.add(chk)
                 self.waiting_results.put(chk)
+                raised_checks += 1
+        statsmgr.gauge('freshness.raised-checks', len(hosts))
         statsmgr.timer('freshness.do-check', time.time() - _t0)
 
     def check_orphaned(self):
