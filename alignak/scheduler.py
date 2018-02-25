@@ -1325,7 +1325,8 @@ class Scheduler(object):  # pylint: disable=R0902
         :rtype: dict
         """
         brok = make_monitoring_log('INFO', 'RETENTION SAVE: %s' % self.name)
-        self.add(brok)
+        if self.pushed_conf.monitoring_log_broks:
+            self.add(brok)
         # We create an all_data dict with list of useful retention data dicts
         # of our hosts and services
         all_data = {'hosts': {}, 'services': {}}
@@ -1460,7 +1461,8 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         brok = make_monitoring_log('INFO', 'RETENTION LOAD: %s' % self.name)
-        self.add(brok)
+        if self.pushed_conf.monitoring_log_broks:
+            self.add(brok)
 
         ret_hosts = data['hosts']
         for ret_h_name in ret_hosts:
@@ -1937,6 +1939,8 @@ class Scheduler(object):  # pylint: disable=R0902
         # be eaten
         for elt in self.all_my_hosts_and_services():
             for brok in elt.broks:
+                if brok.type == 'monitoring_log' and not self.pushed_conf.monitoring_log_broks:
+                    continue
                 self.add(brok)
             # We take all, we can clear it
             elt.broks = []
@@ -1944,6 +1948,8 @@ class Scheduler(object):  # pylint: disable=R0902
         # Also fetch broks from contact (like contactdowntime)
         for contact in self.contacts:
             for brok in contact.broks:
+                if brok.type == 'monitoring_log' and not self.pushed_conf.monitoring_log_broks:
+                    continue
                 self.add(brok)
             contact.broks = []
 

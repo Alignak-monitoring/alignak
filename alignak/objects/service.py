@@ -638,7 +638,6 @@ class Service(SchedulingItem):
             )
         )
         self.broks.append(brok)
-        self.broks.append(brok)
 
         if 'TEST_LOG_ALERTS' in os.environ:
             if os.environ['TEST_LOG_ALERTS'] == 'WARNING':
