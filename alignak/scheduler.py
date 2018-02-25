@@ -1971,6 +1971,9 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
+        # Get tick count
+        # (_, _, tick) = self.recurrent_works['check_freshness']
+
         _t0 = time.time()
         items = []
         if self.pushed_conf.check_host_freshness:
@@ -1996,12 +1999,12 @@ class Scheduler(object):  # pylint: disable=R0902
         for elt in items:
             chk = elt.do_check_freshness(self.hosts, self.services, self.timeperiods,
                                          self.macromodulations, self.checkmodulations,
-                                         self.checks)
+                                         self.checks, when=_t0)
             if chk is not None:
                 self.add(chk)
                 self.waiting_results.put(chk)
                 raised_checks += 1
-        statsmgr.gauge('freshness.raised-checks', len(hosts))
+        statsmgr.gauge('freshness.raised-checks', raised_checks)
         statsmgr.timer('freshness.do-check', time.time() - _t0)
 
     def check_orphaned(self):

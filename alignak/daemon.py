@@ -222,27 +222,6 @@ class EnvironmentFile(Exception):
         Exception.__init__(self, msg)
 
 
-class InvalidCredentials(Exception):
-    """Exception raised when daemon credentials are invalid"""
-
-    def __init__(self, msg):
-        Exception.__init__(self, msg)
-
-
-class InvalidWorkingDir(Exception):
-    """Exception raised when daemon working directory is invalid"""
-
-    def __init__(self, msg):
-        Exception.__init__(self, msg)
-
-
-class InvalidPidFile(Exception):
-    """Exception raised when a pid file is invalid"""
-
-    def __init__(self, msg):
-        Exception.__init__(self, msg)
-
-
 # This default value is used to declare the properties that are Path properties
 # During the daemon initialization, this value is replaced with the real daemon working directory
 # and it will be overloaded with the value defined in the daemon configuration or launch parameters
@@ -959,6 +938,8 @@ class Daemon(object):
         # Treatments before starting the main loop...
         self.do_before_loop()
 
+        elapsed_time = 0
+
         logger.info("[%s] starting main loop: %.2f", self.name, self.start_time)
         while not self.interrupted:
             loop_start_ts = time.time()
@@ -1002,9 +983,8 @@ class Daemon(object):
                             self.loop_count)
 
             # Daemon load
-            # fixme: measuring the scheduler load with this method is a non-sense ...
-            self.load_1_min.update_load(self.sleep_time)
-
+            self.load_1_min.update_load(self.maximum_loop_duration - elapsed_time)
+            statsmgr.gauge('load_1_min', self.load_1_min.get_load())
             if self.log_loop:
                 logger.debug("+++ %d, load: %s", self.loop_count, self.load_1_min.load)
 
@@ -1173,7 +1153,10 @@ class Daemon(object):
         try:
             os.chdir(self.workdir)
         except Exception as exp:
-            raise InvalidWorkingDir(exp)
+            self.exit_on_error("Error changing to working directory: %s. Error: %s. "
+                               "Check the existence of %s and the %s/%s account "
+                               "permissions on this directory."
+                               % (self.workdir, str(exp), self.workdir, self.user, self.group), 1)
         self.pre_log.append(("INFO", "Using working directory: %s" % os.path.abspath(self.workdir)))
 
     def unlink(self):
@@ -1533,7 +1516,9 @@ class Daemon(object):
                          "It is not a safe configuration!")
             logger.error("If you really want it, set: 'idontcareaboutsecurity=1' "
                          "in the configuration file")
-            raise InvalidCredentials("Running with the root account is not safe.")
+            self.exit_on_error("You want the application to run with the root account credentials? "
+                               "It is not a safe configuration! If you really want it, "
+                               "set: 'idontcareaboutsecurity=1' in the configuration file.", 1)
 
         uid = None
         try:

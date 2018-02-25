@@ -1815,7 +1815,7 @@ class ExternalCommandManager:
                                        'DEL_HOST_DOWNTIME: downtime_id id: %s does not exist '
                                        'and cannot be deleted.' % downtime_id)
             if self.my_conf.monitoring_log_broks:
-                broks.append()
+                broks.append(brok)
         for brok in broks:
             self.send_an_element(brok)
 
@@ -1862,7 +1862,7 @@ class ExternalCommandManager:
                                        'DEL_SVC_DOWNTIME: downtime_id id: %s does not exist '
                                        'and cannot be deleted.' % downtime_id)
             if self.my_conf.monitoring_log_broks:
-                broks.append()
+                broks.append(brok)
         for brok in broks:
             self.send_an_element(brok)
 
