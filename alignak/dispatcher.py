@@ -248,7 +248,7 @@ class Dispatcher:
                     # the daemon is not yet configured
                     not_configured.append(daemon_link)
                     # # Ask to wait for a new configuration
-                    # daemon_link.wait_new_conf()
+                    daemon_link.wait_new_conf()
                     daemon_link.configuration_sent = False
             else:
                 # Got a timeout !

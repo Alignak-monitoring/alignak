@@ -263,6 +263,16 @@ class AlignakTest(unittest2.TestCase):
             run_folder = cfg_folder
         print("Running Alignak daemons, cfg_folder: %s, run_folder: %s" % (cfg_folder, run_folder))
 
+        # Update alignak.ini file to avoid using the alignak:alignak user account
+        files = ['%s/alignak.ini' % cfg_folder]
+        replacements = {
+            'user=alignak': ';user=alignak',
+            'group=alignak': ';group=alignak'
+
+        }
+        print("Commenting user/group in alignak.ini...")
+        self._files_update(files, replacements)
+
         print("Cleaning pid and log files...")
         for name in daemons_list + ['arbiter-master']:
             # if arbiter_only and name not in ['arbiter-master']:
@@ -305,12 +315,26 @@ class AlignakTest(unittest2.TestCase):
             ret = proc.poll()
             if ret is not None:
                 print("*** %s exited on start!" % (name))
+                if os.path.exists("/tmp/alignak.log"):
+                    with open("/tmp/alignak.log") as f:
+                        for line in f:
+                            print("xxx %s" % line)
+
+                if os.path.exists("%s/arbiter-master.log" % cfg_folder):
+                    with open("%s/arbiter-master.log" % cfg_folder) as f:
+                        for line in f:
+                            print("... %s" % line)
+
                 if proc.stdout:
                     for line in iter(proc.stdout.readline, b''):
                         print(">>> " + line.rstrip())
+                else:
+                    print("No stdout!")
                 if proc.stderr:
                     for line in iter(proc.stderr.readline, b''):
                         print(">>> " + line.rstrip())
+                else:
+                    print("No stderr!")
             assert ret is None, "Daemon %s not started!" % name
             print("%s running (pid=%d)" % (name, self.procs[name].pid))
 
@@ -535,6 +559,7 @@ class AlignakTest(unittest2.TestCase):
             for link in self._arbiter.dispatcher.all_daemons_links:
                 mr.get('http://%s:%s/ping' % (link.address, link.port), json='pong')
                 mr.get('http://%s:%s/get_running_id' % (link.address, link.port), json=123456.123456)
+                mr.get('http://%s:%s/wait_new_conf' % (link.address, link.port), json=True)
                 mr.get('http://%s:%s/fill_initial_broks' % (link.address, link.port), json=[])
                 mr.get('http://%s:%s/get_managed_configurations' % (link.address, link.port), json={})
 
@@ -1185,15 +1210,14 @@ class AlignakTest(unittest2.TestCase):
                 for log in handler.collector:
                     if re.search(regex, log):
                         self.assertTrue(not assert_not,
-                                        "Found matching log line:\n"
-                                        "pattern: %r\nlog: %r" % (pattern, log))
+                                        "Found matching log line, pattern: %r\nlog: %r"
+                                        % (pattern, log))
                         break
                 else:
                     for log in handler.collector:
                         print(".%s" % log)
                     self.assertTrue(assert_not,
-                                    "No matching log line found:\n"
-                                    "pattern: %r\n" "logs: %r" % (pattern, handler.collector))
+                                    "No matching log line found, pattern: %r\n" % pattern)
                 break
         else:
             assert False, "Alignak test Logger is not initialized correctly!"

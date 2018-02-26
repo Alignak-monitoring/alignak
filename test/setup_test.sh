@@ -26,6 +26,9 @@ cd $BASE_PATH
 
 pip install --upgrade pip
 
+sudo addgroup --system alignak
+sudo adduser --system alignak --ingroup alignak
+
 # install prog AND tests requirements :
 pip install -e .
 pip install --upgrade -r test/requirements.txt

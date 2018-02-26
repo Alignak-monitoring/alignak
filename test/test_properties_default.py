@@ -448,7 +448,7 @@ class TestHostescalation(PropertiesTester, AlignakTest):
         ('name', ''),
         ('notification_interval', 30),
         ('escalation_period', ''),
-        ('escalation_options', ['d','x','r','w','c']),
+        ('escalation_options', ['d','x','r']),
         ])
 
     def setUp(self):

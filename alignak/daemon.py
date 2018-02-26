@@ -350,6 +350,15 @@ class Daemon(object):
         'modules':
             ListProp(default=[]),
 
+        # Alignak will report its status to its monitor
+        # Interface is the same as the Alignak WS module PATCH/host
+        'alignak_monitor':
+            StringProp(default=''),
+        'alignak_monitor_username':
+            StringProp(default=''),
+        'alignak_monitor_password':
+            StringProp(default=''),
+
         # Local statsd daemon for collecting daemon metrics
         'statsd_host':
             StringProp(default='localhost'),
@@ -806,6 +815,7 @@ class Daemon(object):
             logger.error("Sorry, I bail out, exit code: %d", exit_code)
         else:
             logger.info(message)
+        print("Message: %s" % message)
 
         _ts = time.time()
         self.unlink()
@@ -849,7 +859,7 @@ class Daemon(object):
 
         return None
 
-    def daemon_connection_init(self, s_link):
+    def daemon_connection_init(self, s_link, wait_new_conf=False):
         """Initialize a connection with the daemon for the provided satellite link
 
         Initialize the connection (HTTP client) to the daemon and get its running identifier.
@@ -858,6 +868,10 @@ class Daemon(object):
 
         Assume the daemon should be reachable because we are initializing the connection...
         as such, force set the link reachable property
+
+        If wait_new_conf is set, the daemon is requested to wait a new configuration if
+         we get a running identifier. This is used by the arbiter when a new configuration
+         must be dispatched
 
         NB: if the daemon is configured as passive, or if it is a daemon link that is
         inactive then it returns False without trying a connection.
@@ -885,10 +899,12 @@ class Daemon(object):
         s_link.alive = True
         s_link.reachable = True
         got_a_running_id = None
-        for idx in range(0, self.link.max_check_attempts):
+        for _ in range(0, s_link.max_check_attempts):
             got_a_running_id = s_link.get_running_id()
             if got_a_running_id:
-                self.link.last_connection = time.time()
+                s_link.last_connection = time.time()
+                if wait_new_conf:
+                    s_link.wait_new_conf()
                 break
             time.sleep(0.3)
         statsmgr.timer('con-initialization.%s' % s_link.name, time.time() - _t0)
@@ -1187,6 +1203,8 @@ class Daemon(object):
             if not mode & stat.S_IWUSR or not mode & stat.S_IRUSR:
                 logger.critical("The directory %s is not writable or readable."
                                 "Please make it read writable: %s", shm_path, shm_path)
+                print("The directory %s is not writable or readable."
+                      "Please make it read writable: %s" % (shm_path, shm_path))
                 sys.exit(2)
 
     def __open_pidfile(self, write=False):

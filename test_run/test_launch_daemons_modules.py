@@ -93,7 +93,8 @@ class TestLaunchDaemonsModules(AlignakTest):
             'Add failed attempt for ',
             'is still living after a normal kill',
             # Sometimes not killed during the test because of SIGTERM
-            'did not stopped, trying to kill'
+            'did not stopped, trying to kill',
+            'My Arbiter wants me to wait for a new configuration'
         ]
         (errors_raised, warnings_raised) = \
             self._check_daemons_log_for_errors(daemons_list, ignored_warnings=ignored_warnings)

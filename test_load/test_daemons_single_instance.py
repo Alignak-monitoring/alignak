@@ -177,7 +177,8 @@ class TestDaemonsSingleInstance(AlignakTest):
             # 'Setting the satellite ',
             # 'Add failed attempt'
             # Sometimes not killed during the test because of SIGTERM
-            'did not stopped, trying to kill'
+            'did not stopped, trying to kill',
+            'My Arbiter wants me to wait for a new configuration'
         ]
         ignored_errors = [
         ]

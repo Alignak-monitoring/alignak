@@ -460,7 +460,7 @@ class ExternalCommandManager:
         Note that the daemon parameter is really a Daemon object except for the scheduler where
         it is a Scheduler object!
 
-        If `accept_passive_unknown_check_results` is True, then aBrok will be created even if
+        If `accept_passive_unknown_check_results` is True, then a Brok will be created even if
         passive checks are received for unknown host/service else a Warning log will be emitted..
 
         Note: the receiver mode has no configuration

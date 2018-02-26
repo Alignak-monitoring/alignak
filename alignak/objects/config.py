@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-# -*- coding: utf-8 -*-
 #
 # Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
@@ -742,10 +741,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # 'USERn': '$USERn$' # Add at run time
     }
 
-    # We create dict of objects
-    # Dictionary: objects type: {Class of object, Class of objects list,
-    # 'name of the Config property for the objects', True to create an intial index,
-    # True if the property is clonable
+    # To create dict of objects from the raw objects got from files or backend
+    # Dictionary: objects type: {
+    #   Class of object,
+    #   Class of objects list,
+    #   'name of the Config property for the objects',
+    #   True to create an intial index,
+    #   True if the property is clonable
+    # }
     types_creations = {
         'timeperiod':
             (Timeperiod, Timeperiods, 'timeperiods', True, True),

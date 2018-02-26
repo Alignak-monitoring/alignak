@@ -397,7 +397,7 @@ class TestBusinessCorrelatorExpand(AlignakTest):
         assert bp_rule is svc_cor.business_rule
         bp_rule = svc_cor.business_rule
         assert 2 == bp_rule.get_state(self._sched.hosts, self._sched.services)
-        assert 0 == svc_cor.last_hard_state_id
+        assert 2 == svc_cor.last_hard_state_id
 
         # Get macro modulation value and change its value
         mod = self._sched.macromodulations.find_by_name("xof_modulation")

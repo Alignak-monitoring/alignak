@@ -535,6 +535,7 @@ class AlignakTest(unittest2.TestCase):
             for link in self._arbiter.dispatcher.all_daemons_links:
                 mr.get('http://%s:%s/ping' % (link.address, link.port), json='pong')
                 mr.get('http://%s:%s/get_running_id' % (link.address, link.port), json=123456.123456)
+                mr.get('http://%s:%s/wait_new_conf' % (link.address, link.port), json=True)
                 mr.get('http://%s:%s/fill_initial_broks' % (link.address, link.port), json=[])
                 mr.get('http://%s:%s/get_managed_configurations' % (link.address, link.port), json={})
 
@@ -1185,15 +1186,14 @@ class AlignakTest(unittest2.TestCase):
                 for log in handler.collector:
                     if re.search(regex, log):
                         self.assertTrue(not assert_not,
-                                        "Found matching log line:\n"
-                                        "pattern: %r\nlog: %r" % (pattern, log))
+                                        "Found matching log line, pattern: %r\nlog: %r"
+                                        % (pattern, log))
                         break
                 else:
                     for log in handler.collector:
                         print(".%s" % log)
                     self.assertTrue(assert_not,
-                                    "No matching log line found:\n"
-                                    "pattern: %r\n" "logs: %r" % (pattern, handler.collector))
+                                    "No matching log line found, pattern: %r\n" % pattern)
                 break
         else:
             assert False, "Alignak test Logger is not initialized correctly!"

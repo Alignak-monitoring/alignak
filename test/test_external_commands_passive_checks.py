@@ -520,7 +520,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         # Acknowledge disappeared because host went OK
         assert False == router.problem_has_been_acknowledged
 
-    # @pytest.mark.skip("Currently disabled - to be refactored!")
+    @pytest.mark.skip("Currently disabled - to be refactored!")
     def test_unknown_check_result_command_scheduler(self):
         """ Unknown check results commands managed by the scheduler
         :return:
@@ -644,7 +644,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
             'A command was received for the host .*, '
             'but the host could not be found!')
 
-    # @pytest.mark.skip("Currently disabled - to be refactored!")
+    @pytest.mark.skip("Currently disabled - to be refactored!")
     def test_unknown_check_result_command_receiver(self):
         """ Unknown check results commands managed by the receiver
         :return:
@@ -656,7 +656,8 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         # Now create the external commands manager
         # We are a receiver: our role is to get and dispatch commands to the schedulers
         self._receiver.external_commands_manager = \
-            ExternalCommandManager(None, 'receiver', self._receiver_daemon,True)
+            ExternalCommandManager(None, 'receiver', self._receiver_daemon,
+                                   self._receiver.accept_passive_unknown_check_results)
 
         # Clear logs and broks
         self.clear_logs()
@@ -674,12 +675,14 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         for broker_link_uuid in self._scheduler.my_daemon.brokers:
             print("Broker: %s" % self._scheduler.my_daemon.brokers[broker_link_uuid])
             broks.extend([b for b in self._scheduler.my_daemon.brokers[broker_link_uuid].broks.values()])
-
         for b in broks:
             print("Brok: %s" % b)
 
-        for brok in sorted(self._main_broker.broks.values(), key=lambda x: x.creation_time):
-            print("Brok: %s" % b)
+        # for brok in sorted(self._main_broker.broks.values(), key=lambda x: x.creation_time):
+        #     print("Brok: %s" % brok)
+
+        for brok in sorted(self._receiver_daemon.broks.values(), key=lambda x: x.creation_time):
+            print("--Brok: %s" % brok)
 
         broks = [b for b in broks if b.type == 'unknown_service_check_result']
         assert len(broks) == 1

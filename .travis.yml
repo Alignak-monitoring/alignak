@@ -1,5 +1,5 @@
 language: python
-sudo: true
+sudo: required
 python:
   - "2.6"
   - "2.7"
@@ -10,6 +10,9 @@ env:
   - TEST_SUITE=virtualenv
 
 matrix:
+  fast_finish: true
+  allow_failures:
+    - python: "2.6"
   exclude:
   - python: "2.6"
     env: TEST_SUITE=integration
@@ -33,9 +36,6 @@ script:
   # To help eventual debug, knowing which exact packages are installed can be rather useful ;)
   - pip freeze
 
-  # Code static analysis
-  # todo...
-
   - |
     if [[ $TEST_SUITE == 'virtualenv' ]]; then
       # Virtual environment setup tests
@@ -58,21 +58,27 @@ script:
 
   - |
     if [[ $TEST_SUITE == 'unit_tests' ]]; then
-      # Run unit tests and code dynamic analysis
+      # Run unit tests and code coverage analysis
       cd test
       coverage erase
       # Run test suite with py.test running its coverage plugin
       # Dump the 10 slowest tests
       - |
         if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then
-          pytest --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
+#          pytest --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_a*.py test_b*.py test_d*.py test_e*.py test_f*.py test_h*.py test_i*.py
+#          pytest --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_l*.py test_m*.py test_n*.py test_p*.py
+#          pytest --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_r*.py test_s*.py test_t*.py test_u*.py
+          pytest --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_launch_daemons.py
+          coverage combine
           cd ..
           cp test/.coverage .
           codecov
         fi
       - |
         if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then
-          pytest --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
+          pytest --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_a*.py test_b*.py test_d*.py test_e*.py test_f*.py test_h*.py test_i*.py || travis_terminate 1;
+          pytest --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_l*.py test_m*.py test_n*.py test_p*.py || travis_terminate 1;
+          pytest --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_r*.py test_s*.py test_t*.py test_u*.py || travis_terminate 1;
         fi
     fi
 
@@ -80,20 +86,18 @@ script:
     if [[ $TEST_SUITE == 'integration' ]]; then
       # Run load tests and code dynamic analysis
       cd test_load
-      coverage erase
       # Run test suite with py.test running its coverage plugin
       # Dump the 10 slowest tests - do not capture to have some activity in Travis
-      pytest --durations=10 --no-print-logs --capture=no -s --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
+      travis_wait 60 pytest --durations=10 --no-print-logs --capture=no -s --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
       cd ..
       cp test_load/.coverage .
       codecov
 
       # Run load tests and code dynamic analysis
       cd test_run
-      coverage erase
       # Run test suite with py.test running its coverage plugin
       # Dump the 10 slowest tests - do not capture to have some activity in Travis
-      pytest --durations=10 --no-print-logs --capture=no -s --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
+      travis_wait 60 pytest --durations=10 --no-print-logs --capture=no -s --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
       cd ..
       cp test_run/.coverage .
       codecov

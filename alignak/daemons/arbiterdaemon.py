@@ -85,6 +85,7 @@ from alignak.external_command import ExternalCommand
 from alignak.property import IntegerProp, StringProp
 from alignak.http.arbiter_interface import ArbiterInterface
 from alignak.objects.satellitelink import SatelliteLink
+from alignak.monitor import MonitorConnection
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
@@ -115,6 +116,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # My daemons...
         self.daemons_last_check = 0
         self.my_daemons = {}
+
+        # My report monitor interface
+        self.my_monitor = None
 
         super(Arbiter, self).__init__(kwargs.get('daemon_name', 'Default-Arbiter'), **kwargs)
 
@@ -1669,6 +1673,161 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 # "long_output": "Long output...",
                 # "perf_data": "'counter'=1"
             })
+
+        return res
+
+    def push_passive_check(self, details=False):
+        """Push the alignak overall state as a passive check
+
+        Build all the daemons overall state as a passive check that can be notified
+        to the Alignak WS
+
+        The Alignak Arbiter is considered as an host which services are all the Alignak
+        running daemons. An Alignak daemon is considered as a service of an Alignak host.
+
+        As such, it reports its status as a passive service check formatted as defined for
+        the Alignak WS module (see http://alignak-module-ws.readthedocs.io)
+
+        :return: A dict with the following structure
+        ::
+        {
+            'name': 'type and name of the daemon',
+            'livestate': {
+                'state': "ok",
+                'output': "state message",
+                'long_output': "state message - longer ... if any",
+                'perf_data': "daemon metrics (if any...)"
+            }
+            "services": {
+                "daemon-1": {
+                    'name': 'type and name of the daemon',
+                    'livestate': {
+                        'state': "ok",
+                        'output': "state message",
+                        'long_output': "state message - longer ... if any",
+                        'perf_data': "daemon metrics (if any...)"
+                    }
+                }
+                .../...
+                "daemon-N": {
+                    'name': 'type and name of the daemon',
+                    'livestate': {
+                        'state': "ok",
+                        'output': "state message",
+                        'long_output': "state message - longer ... if any",
+                        'perf_data': "daemon metrics (if any...)"
+                    }
+                }
+            }
+        }
+
+        :rtype: dict
+
+        """
+        now = int(time.time())
+
+        # Get the arbiter statistics
+        inner_stats = self.get_daemon_stats(details=details)
+
+        res = {
+            "name": inner_stats['alignak'],
+            "template": {
+                "_templates": ["alignak", "important"],
+                "alias": inner_stats['alignak'],
+                "active_checks_enabled": False,
+                "passive_checks_enabled": True,
+                "notes": u''
+            },
+            "variables": {
+            },
+            "livestate": {
+                "timestamp": now,
+                "state": "unknown",
+                "output": "",
+                "long_output": "",
+                "perf_data": ""
+            },
+            "services": {}
+        }
+
+        # Create self arbiter service - I am now considered as a service for my Alignak monitor!
+        if 'live_state' in inner_stats:
+            live_state = inner_stats['live_state']
+            res['services'][inner_stats['name']] = {
+                "name": inner_stats['name'],
+                "livestate": {
+                    "timestamp": now,
+                    "state": ["ok", "warning", "critical", "unknown"][live_state['state']],
+                    "output": live_state['output'],
+                    "long_output": live_state['long_output'] if 'long_output' in live_state else "",
+                    "perf_data": live_state['perf_data'] if 'perf_data' in live_state else ""
+                }
+            }
+
+        # Alignak performance data are:
+        # 1/ the monitored items counters
+        if 'counters' in inner_stats:
+            metrics = []
+            my_counters = [strclss for _, _, strclss, _, _ in self.conf.types_creations.values()
+                           if strclss not in ['hostescalations', 'serviceescalations']]
+            for counter in inner_stats['counters']:
+                # Only the arbiter created objects...
+                if counter not in my_counters:
+                    continue
+                metrics.append("'%s'=%d" % (counter, inner_stats['counters'][counter]))
+            res['livestate']['perf_data'] = ' '.join(metrics)
+
+        # Report the arbiter daemons states, but only if they exist...
+        if 'daemons_states' in inner_stats:
+            state = 0
+            long_output = []
+            for daemon_id in inner_stats['daemons_states']:
+                daemon = inner_stats['daemons_states'][daemon_id]
+                res['services'][daemon_id] = {
+                    "name": daemon_id,
+                    "livestate": {
+                        "timestamp": now,
+                        "name": "%s_%s" % (daemon['type'], daemon['name']),
+                        "state": ["ok", "warning", "critical", "unknown"][daemon['live_state']],
+                        "output": [
+                            "daemon is alive and reachable.",
+                            "daemon is not reachable.",
+                            "daemon is not alive."
+                        ][daemon['live_state']],
+                        "long_output": "Realm: %s (%s). Listening on: %s"
+                                       % (daemon['realm_name'], daemon['manage_sub_realms'],
+                                          daemon['uri']),
+                        "perf_data": "last_check=%.2f" % daemon['last_check']
+                    }
+                }
+                state = max(state, daemon['live_state'])
+                long_output.append("%s - %s" % (res['services'][daemon_id]['name'],
+                                                res['services'][daemon_id]['livestate']['output']))
+
+            res['livestate'].update({
+                "state": "up",  # Always Up ;)
+                "output": [
+                    "All my daemons are up and running.",
+                    "Some of my daemons are not reachable.",
+                    "Some of my daemons are not responding!"
+                ][state],
+                "long_output": '\n'.join(long_output)
+            })
+
+        if self.alignak_monitor:
+            logger.debug("Pushing Alignak passive check to %s: %s", self.alignak_monitor, res)
+
+            if self.my_monitor is None:
+                self.my_monitor = MonitorConnection(self.alignak_monitor)
+
+            if not self.my_monitor.authenticated:
+                self.my_monitor.login(self.alignak_monitor_username,
+                                      self.alignak_monitor_password)
+
+            result = self.my_monitor.patch('host', res)
+            print(result)
+        else:
+            logger.debug("No configured Alignak monitor to receive: %s", res)
 
         return res
 

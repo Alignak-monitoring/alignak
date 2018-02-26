@@ -117,6 +117,8 @@ class TestDispatcher(AlignakTest):
                            json='pong')
                     mr.get('http://%s:%s/get_running_id' % (link.address, link.port),
                            json=123456.123456)
+                    mr.get('http://%s:%s/wait_new_conf' % (link.address, link.port),
+                           json=True)
                     mr.get('http://%s:%s/fill_initial_broks' % (link.address, link.port),
                            json=[])
                     mr.post('http://%s:%s/push_configuration' % (link.address, link.port),
@@ -164,12 +166,14 @@ class TestDispatcher(AlignakTest):
                 assert my_dispatcher.dispatch_ok is False
                 assert my_dispatcher.first_dispatch_done is False
                 assert my_dispatcher.new_to_dispatch is False
-                for link in my_dispatcher.all_daemons_links:
-                    if link == my_dispatcher.arbiter_link:
-                        continue
-                    self.assert_any_log_match(re.escape(
-                        "Too early to ping %s" % (link.name)
-                    ))
+                # Only for Python > 2.7, DEBUG logs ...
+                if sys.version_info > (2, 7):
+                    for link in my_dispatcher.all_daemons_links:
+                        if link == my_dispatcher.arbiter_link:
+                            continue
+                        self.assert_any_log_match(re.escape(
+                            "Too early to ping %s" % (link.name)
+                        ))
                 self.assert_no_log_match(re.escape(
                     "Dispatcher, those daemons are not configured: "
                     "reactionner-master,poller-master,broker-master,receiver-master,"
@@ -379,12 +383,14 @@ class TestDispatcher(AlignakTest):
                         print("Check reachable %s" % tw)
                         self.clear_logs()
                         my_dispatcher.check_reachable()
-                        for link in my_dispatcher.all_daemons_links:
-                            if link == my_dispatcher.arbiter_link:
-                                continue
-                            self.assert_any_log_match(re.escape(
-                                "Too early to ping %s" % (link.name)
-                            ))
+                        # Only for Python > 2.7, DEBUG logs ...
+                        if sys.version_info > (2, 7):
+                            for link in my_dispatcher.all_daemons_links:
+                                if link == my_dispatcher.arbiter_link:
+                                    continue
+                                self.assert_any_log_match(re.escape(
+                                    "Too early to ping %s" % (link.name)
+                                ))
 
                     # Time warp 1 second
                     frozen_datetime.tick(delta=datetime.timedelta(seconds=1))

@@ -89,7 +89,8 @@ class TestLaunchDaemonsRealms(AlignakTest):
             'Got check result',
             'Echo the current state',
             'Set host',
-            'did not stopped, trying to kill'
+            'did not stopped, trying to kill',
+            'My Arbiter wants me to wait for a new configuration'
         ]
         ignored_errors = [
         ]
@@ -135,7 +136,8 @@ class TestLaunchDaemonsRealms(AlignakTest):
             'Got check result',
             'Echo the current state',
             'Set host',
-            'did not stopped, trying to kill'
+            'did not stopped, trying to kill',
+            'My Arbiter wants me to wait for a new configuration'
         ]
         ignored_errors = [
         ]
@@ -186,7 +188,8 @@ class TestLaunchDaemonsRealms(AlignakTest):
             'Echo the current state',
             'Set host',
             # Sometimes not killed during the test because of SIGTERM
-            'did not stopped, trying to kill'
+            'did not stopped, trying to kill',
+            'My Arbiter wants me to wait for a new configuration'
         ]
         ignored_errors = [
         ]
@@ -367,7 +370,8 @@ class TestLaunchDaemonsRealms(AlignakTest):
             'Echo the current state',
             'Set host',
             # Sometimes not killed during the test because of SIGTERM
-            'did not stopped, trying to kill'
+            'did not stopped, trying to kill',
+            'My Arbiter wants me to wait for a new configuration'
         ]
         ignored_errors = [
             # 'Error on backend login: ',

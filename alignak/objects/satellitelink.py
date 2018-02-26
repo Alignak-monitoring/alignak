@@ -415,8 +415,7 @@ class SatelliteLink(Item):
         :return: dictionary of information common to all the links
         :rtype: dict
         """
-        res = {}
-        daemon_properties = ['uri', 'spare', 'configuration_sent',
+        daemon_properties = ['type', 'name', 'uri', 'spare', 'configuration_sent',
                              'realm_name', 'manage_sub_realms',
                              'active', 'reachable', 'alive', 'passive',
                              'last_check', 'polling_interval', 'max_check_attempts']

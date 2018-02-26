@@ -9,5 +9,5 @@
 # Alignak logs module (develop branch)
 -e git+git://github.com/Alignak-monitoring-contrib/alignak-module-logs.git@develop#egg=alignak-module-logs
 
-# Alignak ws module (develop branch)
--e git+git://github.com/Alignak-monitoring-contrib/alignak-module-ws.git@develop#egg=alignak-module-ws
+# Alignak ws module (develop+environment branch)
+-e git+git://github.com/Alignak-monitoring-contrib/alignak-module-ws.git@develop+environment#egg=alignak-module-ws
