@@ -17,8 +17,6 @@ matrix:
     env: TEST_SUITE=codingstandard
   - python: "2.6"
     env: TEST_SUITE=virtualenv
-  allow_failures:
-  - python: "2.6"
 
 services:
   - mongodb
