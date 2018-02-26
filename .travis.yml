@@ -17,9 +17,11 @@ matrix:
     env: TEST_SUITE=codingstandard
   - python: "2.6"
     env: TEST_SUITE=virtualenv
+
+matrix:
+  fast_finish: true
   allow_failures:
-  - python: "2.6"
-    env: TEST_SUITE=unit_tests
+    - python: "2.6"
 
 services:
   - mongodb
