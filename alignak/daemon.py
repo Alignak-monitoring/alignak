@@ -1152,7 +1152,7 @@ class Daemon(object):
         logger.info("Changing working directory to: %s", self.workdir)
         try:
             os.chdir(self.workdir)
-        except Exception as exp:
+        except OSError as exp:
             self.exit_on_error("Error changing to working directory: %s. Error: %s. "
                                "Check the existence of %s and the %s/%s account "
                                "permissions on this directory."

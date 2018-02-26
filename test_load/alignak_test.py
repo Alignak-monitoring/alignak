@@ -437,7 +437,10 @@ class AlignakTest(unittest2.TestCase):
             shutil.copytree('../etc', '/tmp/etc/alignak')
             files = ['/tmp/etc/alignak/alignak.ini']
             replacements = {
-                '_dist=/usr/local/': '_dist=/tmp'
+                '_dist=/usr/local/': '_dist=/tmp',
+                'user=alignak': ';user=alignak',
+                'group=alignak': ';group=alignak'
+
             }
             self._files_update(files, replacements)
         print("Prepared")
@@ -749,9 +752,6 @@ class AlignakTest(unittest2.TestCase):
         :type mysched: None | object
         :return: n/a
         """
-        # Check freshness on each scheduler tick
-        self._scheduler.update_recurrent_works_tick({'tick_check_freshness': 1})
-
         checks = []
         for num in range(count):
             for i in self._scheduler.recurrent_works:
