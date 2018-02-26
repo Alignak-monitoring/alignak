@@ -17,6 +17,8 @@ matrix:
     env: TEST_SUITE=codingstandard
   - python: "2.6"
     env: TEST_SUITE=virtualenv
+  allow_failures:
+  - python: "2.6"
 
 services:
   - mongodb
@@ -36,12 +38,14 @@ script:
   # Code static analysis
   # todo...
 
-  - if [[ $TEST_SUITE == 'virtualenv' ]]; then
+  - |
+    if [[ $TEST_SUITE == 'virtualenv' ]]; then
       # Virtual environment setup tests
       ./test/test_virtualenv_setup.sh || travis_terminate 1;
     fi
 
-  - if [[ $TEST_SUITE == 'codingstandard' ]]; then
+  - |
+    if [[ $TEST_SUITE == 'codingstandard' ]]; then
       # Static code analysis
       # -- pycodestyle (former pep8)
       # Exclude the dictconfig.py vendor file
@@ -54,23 +58,28 @@ script:
       travis_wait 60 pep257 --select=D300 alignak || travis_terminate 1;
     fi
 
-  - if [[ $TEST_SUITE == 'unit_tests' ]]; then
+  - |
+    if [[ $TEST_SUITE == 'unit_tests' ]]; then
       # Run unit tests and code dynamic analysis
       cd test
+      coverage erase
       # Run test suite with py.test running its coverage plugin
       # Dump the 10 slowest tests
-      - if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then
+      - |
+        if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then
           pytest --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
           cd ..
           cp test/.coverage .
           codecov
         fi
-      - if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then
+      - |
+        if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then
           pytest --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
         fi
     fi
 
-  - if [[ $TEST_SUITE == 'integration' ]]; then
+  - |
+    if [[ $TEST_SUITE == 'integration' ]]; then
       # Run load tests and code dynamic analysis
       cd test_load
       # Run test suite with py.test running its coverage plugin
@@ -91,7 +100,8 @@ script:
     fi
 
 after_success:
-  - if [[ $TEST_SUITE == 'unit_tests' && $TRAVIS_PYTHON_VERSION == '2.7' ]]; then
+  - |
+    if [[ $TEST_SUITE == 'unit_tests' && $TRAVIS_PYTHON_VERSION == '2.7' ]]; then
       # to get coverage data with relative paths and not absolute we have to
       # execute coveralls from the base directory of the project,
       # so we need to move the .coverage file here :
