@@ -608,8 +608,6 @@ class SatelliteLink(Item):
                                                   "with '%s': %s" % (fn_name, str(exp)))
                     return False
                 except HTTPClientDataException as exp:
-                    # link.add_failed_check_attempt("HTTP response error "
-                    #                               "with '%s': %s" % (fn_name, str(exp)))
                     # A Data error is raised when the daemon HTTP reponse is not 200!
                     # No way with the communication if some problems exist in the daemon interface!
                     # Abort all

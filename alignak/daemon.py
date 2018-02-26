@@ -884,7 +884,13 @@ class Daemon(object):
         # because we are initializing the connection...
         s_link.alive = True
         s_link.reachable = True
-        got_a_running_id = s_link.get_running_id()
+        got_a_running_id = None
+        for idx in range(0, self.link.max_check_attempts):
+            got_a_running_id = s_link.get_running_id()
+            if got_a_running_id:
+                self.link.last_connection = time.time()
+                break
+            time.sleep(0.3)
         statsmgr.timer('con-initialization.%s' % s_link.name, time.time() - _t0)
 
         return got_a_running_id
