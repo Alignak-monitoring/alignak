@@ -19,6 +19,7 @@ matrix:
     env: TEST_SUITE=virtualenv
   allow_failures:
   - python: "2.6"
+    env: TEST_SUITE=unit_tests
 
 services:
   - mongodb
