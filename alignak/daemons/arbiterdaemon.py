@@ -578,6 +578,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.do_load_modules(self.link_to_myself.modules)
 
         # Call modules that manage this read configuration pass
+        _ts = time.time()
         self.hook_point('read_configuration')
 
         # Call modules get_alignak_configuration() to load Alignak configuration parameters
@@ -588,14 +589,16 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Call modules get_objects() to load new objects from arbiter modules
         # (example modules: alignak_backend)
-        _t0 = time.time()
         self.load_modules_configuration_objects(raw_objects)
-        statsmgr.timer('core.hook.get_objects', time.time() - _t0)
+        statsmgr.timer('configuration.get_objects', time.time() - _ts)
 
+        logger.info("Creating objects...")
         # Create objects for all the configuration
         # for daemon_type in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
         #     self.conf.create_objects_for_type(raw_objects, daemon_type)
+        _ts = time.time()
         self.conf.create_objects(raw_objects)
+        statsmgr.timer('configuration.create_objects', time.time() - _ts)
 
         # Maybe configuration is already invalid
         if not self.conf.conf_is_correct:
@@ -604,6 +607,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                               "the configuration (second check)...", exit_code=1)
 
         # Manage all post-conf modules
+        _ts = time.time()
+        logger.info("Preparing configuration...")
         self.hook_point('early_configuration')
 
         # Create Template links
@@ -655,12 +660,16 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Manage all post-conf modules
         self.hook_point('late_configuration')
+        statsmgr.timer('configuration.prepare', time.time() - _ts)
 
         # Configuration is correct?
+        _ts = time.time()
+        logger.info("Checking configuration...")
         self.conf.is_correct()
 
         # Clean objects of temporary/unnecessary attributes for live work:
         self.conf.clean()
+        statsmgr.timer('configuration.check', time.time() - _ts)
 
         # Dump Alignak macros
         logger.info("Alignak global macros:")
@@ -672,6 +681,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             logger.info("- $%s$ = %s", macro_name, macro_value)
 
         # REF: doc/alignak-conf-dispatching.png (2)
+        _ts = time.time()
+        logger.info("Splitting configuration...")
         self.conf.cut_into_parts()
         # Here, the self.conf.parts exist
         # And the realms have some 'packs'
@@ -685,6 +696,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Some properties need to be prepared (somehow "flatten"...) before being sent,
         # This to prepare the configuration that will be sent to our spare arbiter (if any)
         self.conf.prepare_for_sending()
+        statsmgr.timer('configuration.split', time.time() - _ts)
         # Here, the self.conf.spare_arbiter_conf exist
 
         # Still a last configuration check because some things may have changed when
@@ -815,12 +827,12 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     continue
 
                 if not satellite.active:
-                    logger.warning("Daemon '%s' is declared but not set as active, "
+                    logger.warning("- daemon '%s' is declared but not set as active, "
                                    "do not start...", satellite.name)
                     continue
 
                 if satellite.name in self.my_daemons:
-                    logger.info("Daemon '%s' is still launched", satellite.name)
+                    logger.warning("- daemon '%s' is still launched", satellite.name)
                     continue
 
                 started = self.start_daemon(satellite)
@@ -1715,15 +1727,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                         logger.warning('--- Reloading configuration...')
                         self.load_monitoring_config_file()
                         logger.warning('--- Configuration reloaded')
-
-                        # # Prepare and dispatch the monitored configuration
-                        # self.configuration_dispatch()
-
-                        # # Request our satellites to wait for a new configuration
-                        # for satellite in self.dispatcher.all_daemons_links:
-                        #     if satellite != self.link_to_myself:
-                        #         satellite.wait_new_conf()
-                        #         satellite.configuration_sent = False
 
                         # Make a pause to let our satellites get ready...
                         pause = self.conf.daemons_new_conf_timeout
