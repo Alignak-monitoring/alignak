@@ -486,11 +486,13 @@ class Scheduler(object):  # pylint: disable=R0902
         :type cmds: list
         :return: None
         """
+        if not self.external_commands_manager:
+            return
+
         _t0 = time.time()
         logger.debug("Scheduler '%s' got %d commands", self.name, len(cmds))
         for command in cmds:
-            ext_cmd = ExternalCommand(command)
-            self.external_commands_manager.resolve_command(ext_cmd)
+            self.external_commands_manager.resolve_command(ExternalCommand(command))
         statsmgr.timer('core.run_external_commands', time.time() - _t0)
 
     def add_brok(self, brok, broker_uuid=None):
