@@ -497,9 +497,6 @@ class Daemon(object):
                                              "- setting '%s' as %s" % (prop, getattr(self, prop))))
 
             except ConfigParser.ParsingError as exp:
-                # print("Daemon '%s' did not correctly read Alignak environment file: %s"
-                #       % (self.name, args['<cfg_file>']))
-                # print("Exception: %s\n%s" % (exp, traceback.format_exc()))
                 self.exit_on_exception(EnvironmentFile(exp.message))
             except ValueError as exp:
                 print("Daemon '%s' did not correctly read Alignak environment file: %s"
