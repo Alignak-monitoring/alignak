@@ -1747,13 +1747,13 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 "long_output": "",
                 "perf_data": ""
             },
-            "services": {}
+            "services": []
         }
 
         # Create self arbiter service - I am now considered as a service for my Alignak monitor!
         if 'live_state' in inner_stats:
             live_state = inner_stats['live_state']
-            res['services'][inner_stats['name']] = {
+            res['services'].append({
                 "name": inner_stats['name'],
                 "livestate": {
                     "timestamp": now,
@@ -1762,7 +1762,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     "long_output": live_state['long_output'] if 'long_output' in live_state else "",
                     "perf_data": live_state['perf_data'] if 'perf_data' in live_state else ""
                 }
-            }
+            })
 
         # Alignak performance data are:
         # 1/ the monitored items counters
@@ -1783,7 +1783,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             long_output = []
             for daemon_id in inner_stats['daemons_states']:
                 daemon = inner_stats['daemons_states'][daemon_id]
-                res['services'][daemon_id] = {
+                res['services'].append({
                     "name": daemon_id,
                     "livestate": {
                         "timestamp": now,
@@ -1799,10 +1799,12 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                                           daemon['uri']),
                         "perf_data": "last_check=%.2f" % daemon['last_check']
                     }
-                }
+                })
                 state = max(state, daemon['live_state'])
-                long_output.append("%s - %s" % (res['services'][daemon_id]['name'],
-                                                res['services'][daemon_id]['livestate']['output']))
+                long_output.append(
+                    "%s - %s" % (daemon_id, ["daemon is alive and reachable.",
+                                             "daemon is not reachable.",
+                                             "daemon is not alive."][daemon['live_state']]))
 
             res['livestate'].update({
                 "state": "up",  # Always Up ;)

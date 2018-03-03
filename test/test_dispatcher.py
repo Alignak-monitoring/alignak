@@ -22,6 +22,7 @@
 This file tests the dispatcher (distribute configuration to satellites)
 """
 
+import os
 import re
 import time
 import datetime
@@ -167,7 +168,7 @@ class TestDispatcher(AlignakTest):
                 assert my_dispatcher.first_dispatch_done is False
                 assert my_dispatcher.new_to_dispatch is False
                 # Only for Python > 2.7, DEBUG logs ...
-                if sys.version_info > (2, 7):
+                if os.sys.version_info > (2, 7):
                     for link in my_dispatcher.all_daemons_links:
                         if link == my_dispatcher.arbiter_link:
                             continue

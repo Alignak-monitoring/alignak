@@ -65,14 +65,12 @@ script:
       # Dump the 10 slowest tests
       - |
         if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then
-#          pytest --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_a*.py test_b*.py test_d*.py test_e*.py test_f*.py test_h*.py test_i*.py
-#          pytest --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_l*.py test_m*.py test_n*.py test_p*.py
-#          pytest --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_r*.py test_s*.py test_t*.py test_u*.py
-          pytest --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_launch_daemons.py
+          pytest --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py
           coverage combine
           cd ..
           cp test/.coverage .
           codecov
+          echo 'Submitted'
         fi
       - |
         if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then

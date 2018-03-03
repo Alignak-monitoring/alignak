@@ -104,54 +104,6 @@ class TestMonitor(AlignakTest):
 
         # Simulate the daemons HTTP interface (very simple simulation !)
         with requests_mock.mock() as mr:
-        #     # Only for the daemons dispatching process !
-        #     # ----------------
-        #     # Copied from the test_dispatcher.py
-        #     for link in my_dispatcher.all_daemons_links:
-        #         mr.get('http://%s:%s/ping' % (link.address, link.port),
-        #                json='pong')
-        #         mr.get('http://%s:%s/get_running_id' % (link.address, link.port),
-        #                json=123456.123456)
-        #         mr.get('http://%s:%s/fill_initial_broks' % (link.address, link.port),
-        #                json=[])
-        #         mr.post('http://%s:%s/push_configuration' % (link.address, link.port),
-        #                 json=True)
-        #         mr.get('http://%s:%s/get_managed_configurations' % (link.address, link.port),
-        #                json=link.cfg_managed)
-        #         mr.get('http://%s:%s/do_not_run' % (link.address, link.port),
-        #                json=True)
-        #
-        #     # #2 - Initialize connection with all our satellites
-        #     for satellite in my_dispatcher.all_daemons_links:
-        #         assert my_arbiter.daemon_connection_init(satellite)
-        #     # All links have a running identifier
-        #     for link in my_dispatcher.all_daemons_links:
-        #         if link == my_dispatcher.arbiter_link:
-        #             continue
-        #         assert link.running_id == 123456.123456
-        #         self.assert_any_log_match(re.escape(
-        #             "got the running identifier for %s %s" % (link.type, link.name)
-        #         ))
-        #
-        #     # #4 - Prepare dispatching
-        #     assert my_dispatcher.new_to_dispatch is False
-        #     my_dispatcher.prepare_dispatch()
-        #
-        #     # #5 - Check reachable - a configuration is prepared,
-        #     # this will force the daemons communication, no need for a time warp ;)
-        #     my_dispatcher.check_reachable()
-        #     for link in my_dispatcher.all_daemons_links:
-        #         if link == my_dispatcher.arbiter_link:
-        #             continue
-        #         self.assert_any_log_match(re.escape(
-        #             "My (%s) fresh managed configuration: {}" % link.name
-        #         ))
-        #
-        # # ----------------
-
-
-            # Simulate the Alignak monitor Web service
-            # -----------
             mr.post('%s/login' % (my_arbiter.alignak_monitor),
                     json={
                         "_status": "OK",
@@ -191,11 +143,9 @@ class TestMonitor(AlignakTest):
                     assert received['livestate']['long_output'] == u'poller-master - daemon is not reachable.\nreactionner-master - daemon is not reachable.\nscheduler-master - daemon is not reachable.\nbroker-master - daemon is not reachable.\nreceiver-master - daemon is not reachable.'
 
                     for link in my_dispatcher.all_daemons_links:
-                        assert link.name in received['services']
+                        assert link.name in [service['name'] for service in received['services']]
 
-                    for service_name in received['services']:
-                        service = received['services'][service_name]
-
+                    for service in received['services']:
                         assert 'name' in service
                         assert 'livestate' in service
                         assert 'timestamp' in service['livestate']
@@ -212,7 +162,7 @@ class TestMonitor(AlignakTest):
         """
         self._monitoring()
 
-    # @pytest.mark.skip("Only for local tests ... directly send information to a monitor host.")
+    @pytest.mark.skip("Only for local tests ... directly send information to a monitor host.")
     def test_real(self):
         args = {
             'env_file': 'cfg/monitor/simple.ini',
