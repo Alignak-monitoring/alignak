@@ -604,7 +604,8 @@ class TestHost(PropertiesTester, AlignakTest):
         self.item = Host(parsing=True)
 
 
-@pytest.mark.skip("Not easily testable because it sometimes include the Daemon properties :/")
+@pytest.mark.skip("Not easily testable because it sometimes "
+                  "include the Daemon properties - see # 955 :/")
 class TestModule(PropertiesTester, AlignakTest):
 
     unused_props = []

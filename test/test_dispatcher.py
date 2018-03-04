@@ -385,7 +385,7 @@ class TestDispatcher(AlignakTest):
                         self.clear_logs()
                         my_dispatcher.check_reachable()
                         # Only for Python > 2.7, DEBUG logs ...
-                        if sys.version_info > (2, 7):
+                        if os.sys.version_info > (2, 7):
                             for link in my_dispatcher.all_daemons_links:
                                 if link == my_dispatcher.arbiter_link:
                                     continue
@@ -450,7 +450,7 @@ class TestDispatcher(AlignakTest):
 
         :return: None
         """
-        self._dispatching('cfg/dispatcher/simple_multi_schedulers.ini')
+        self._dispatching('cfg/dispatcher/simple_multi_schedulers.ini', multi_realms=True)
 
     def test_dispatching_multiple_pollers(self):
         """ Test the dispatching process: 1 realm, 2 pollers

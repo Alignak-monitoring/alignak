@@ -60,23 +60,23 @@ script:
     if [[ $TEST_SUITE == 'unit_tests' ]]; then
       # Run unit tests and code coverage analysis
       cd test
-      coverage erase
+      # coverage erase
       # Run test suite with py.test running its coverage plugin
       # Dump the 10 slowest tests
+      # Do not print log synthesis on test end
       - |
         if [[ $TRAVIS_PYTHON_VERSION == '2.7' ]]; then
-          pytest --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py
-          coverage combine
+          pytest --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
+          # coverage combine
           cd ..
           cp test/.coverage .
-          codecov
-          echo 'Submitted'
+          # codecov
+          bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
+          # echo 'Submitted'
         fi
       - |
         if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then
-          pytest --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_a*.py test_b*.py test_d*.py test_e*.py test_f*.py test_h*.py test_i*.py || travis_terminate 1;
-          pytest --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_l*.py test_m*.py test_n*.py test_p*.py || travis_terminate 1;
-          pytest --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_r*.py test_s*.py test_t*.py test_u*.py || travis_terminate 1;
+          pytest --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
         fi
     fi
 
@@ -89,7 +89,8 @@ script:
       travis_wait 60 pytest --durations=10 --no-print-logs --capture=no -s --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
       cd ..
       cp test_load/.coverage .
-      codecov
+      # codecov
+      bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
 
       # Run load tests and code dynamic analysis
       cd test_run
@@ -98,7 +99,8 @@ script:
       travis_wait 60 pytest --durations=10 --no-print-logs --capture=no -s --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
       cd ..
       cp test_run/.coverage .
-      codecov
+      # codecov
+      bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
     fi
 
 after_success:

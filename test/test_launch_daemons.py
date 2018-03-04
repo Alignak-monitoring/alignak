@@ -252,7 +252,8 @@ class TestLaunchDaemons(AlignakTest):
         # assert ret == 4
         # No error messages be sent to stderr but in the log
         # Cherrypy
-        assert not stderr
+        if os.sys.version_info > (2, 7):
+            assert not stderr
         # Errors must exist in the logs
         assert errors
 

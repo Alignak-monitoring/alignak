@@ -1827,7 +1827,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                                       self.alignak_monitor_password)
 
             result = self.my_monitor.patch('host', res)
-            print(result)
+            logger.debug("Monitor reporting result: %s", result)
         else:
             logger.debug("No configured Alignak monitor to receive: %s", res)
 

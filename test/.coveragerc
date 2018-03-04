@@ -13,8 +13,7 @@ exclude_lines =
 
 [run]
 ;branch = True
-source =
-    alignak
+source = alignak
 
 omit =
     alignak/bin/*

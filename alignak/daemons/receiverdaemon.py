@@ -114,9 +114,9 @@ class Receiver(Satellite):
         :return: None
         """
         cls_type = elt.__class__.my_type
-        if cls_type == 'brok':
-            # For brok, we TAG brok with our instance_id
-            elt.instance_id = 0
+        if cls_type == 'brok':  # pragma: no cover, seems not to be used anywhere!
+            # We tag the broks with our instance_id
+            elt.instance_id = self.instance_id
             self.broks[elt.uuid] = elt
             statsmgr.counter('broks.added', 1)
             return
