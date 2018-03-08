@@ -100,17 +100,15 @@ def unserialize(j_obj, no_load=False):
             cls = get_alignak_class(data['__sys_python_module__'])
             return cls(data['content'], parsing=False)
 
-        else:
-            data_dict = {}
-            for key, value in data.iteritems():
-                data_dict[key] = unserialize(value, True)
-            return data_dict
+        data_dict = {}
+        for key, value in data.iteritems():
+            data_dict[key] = unserialize(value, True)
+        return data_dict
 
     elif isinstance(data, list):
         return [unserialize(item, True) for item in data]
 
-    else:
-        return data
+    return data
 
 
 def get_alignak_class(python_path):

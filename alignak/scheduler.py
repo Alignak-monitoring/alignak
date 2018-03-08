@@ -998,6 +998,8 @@ class Scheduler(object):  # pylint: disable=R0902
             except KeyError as exp:  # pragma: no cover, simple protection
                 # Cannot find notification - drop it
                 logger.warning('put_results:: get unknown notification : %s ', str(exp))
+                for uuid in self.actions:
+                    logger.debug('put_results:: known action: %s ', self.actions[uuid])
                 return
 
             # We will only see child notifications here
@@ -1070,7 +1072,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 # Cannot find check - drop it
                 logger.warning('put_results:: get unknown check: %s ', action)
                 for uuid in self.checks:
-                    logger.warning('put_results:: known check: %s ', self.checks[uuid])
+                    logger.debug('put_results:: known check: %s ', self.checks[uuid])
                 return
 
             try:
