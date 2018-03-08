@@ -69,11 +69,13 @@ script:
           pytest --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
           # coverage combine
           cd ..
+          cp test/.coverage ./save_coverage
           cp test/.coverage .
           # codecov
           bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
           # echo 'Submitted'
         fi
+
       - |
         if [[ $TRAVIS_PYTHON_VERSION == '2.6' ]]; then
           pytest --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
@@ -109,11 +111,11 @@ after_success:
       # to get coverage data with relative paths and not absolute we have to
       # execute coveralls from the base directory of the project,
       # so we need to move the .coverage file here :
-      mv test/.coverage ./coverage_unit
-      mv test_load/.coverage ./coverage_load
-      mv test_run/.coverage ./coverage_run
+      # mv test/.coverage ./coverage_unit
+      # mv test_load/.coverage ./coverage_load
+      # mv test_run/.coverage ./coverage_run
       # Combine the coverage collected data
-      coverage combine coverage_unit coverage_load coverage_run
+      # coverage combine coverage_unit coverage_load coverage_run
 
       echo "Submitting coverage results to coveralls.io..."
       coveralls -v --rcfile=test/.coveragerc
