@@ -214,7 +214,7 @@ class Item(AlignakObject):
         self.old_properties_names_to_new()
 
     # Simply moved all the __ functions near the initialization
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         cls_name = self.__class__.__name__
         return '<%s name=%r />' % (cls_name, self.get_name())
     __repr__ = __str__
@@ -713,7 +713,7 @@ class Items(object):
             self.add_items(items, index_items)
 
     # Simply moved all the __ functions near the initialization
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         # Build a sorted list of unicode elements name or uuid, this to make it easier to compare ;)
         dump_list = sorted([unicode(item.get_name()
                                     if isinstance(item, Item) else item) for item in self])

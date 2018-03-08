@@ -130,7 +130,7 @@ class Downtime(AlignakObject):
         else:
             super(Downtime, self).__init__(params, parsing)
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         if self.is_in_effect is True:
             active = "active"
         else:

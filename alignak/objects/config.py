@@ -879,7 +879,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # Store daemons detected as missing during the configuration check
         self.missing_daemons = []
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return '<%s %s - %s />' % (self.__class__.__name__, self.instance_id,
                                    getattr(self, 'config_name', 'unknown'))
     __str__ = __repr__

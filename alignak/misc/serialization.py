@@ -98,8 +98,6 @@ def unserialize(j_obj, no_load=False):
     if isinstance(data, dict):
         if '__sys_python_module__' in data:
             cls = get_alignak_class(data['__sys_python_module__'])
-            if cls is None:
-                return {}
             return cls(data['content'], parsing=False)
 
         else:
@@ -131,23 +129,23 @@ def get_alignak_class(python_path):
     """
     a_module, a_class = python_path.rsplit('.', 1)
 
-    if not a_module.startswith('alignak'):
+    if not a_module.startswith('alignak'):  # pragma: no cover - should never happen!
         raise AlignakClassLookupException("Can't recreate object in module: %s. "
                                           "Not an Alignak module" % a_module)
 
-    if a_module not in sys.modules:
+    if a_module not in sys.modules:  # pragma: no cover - should never happen!
         raise AlignakClassLookupException("Can't recreate object in unknown module: %s. "
                                           "No such Alignak module. Alignak versions may mismatch" %
                                           a_module)
 
     pymodule = sys.modules[a_module]
 
-    if not hasattr(pymodule, a_class):
+    if not hasattr(pymodule, a_class):  # pragma: no cover - should never happen!
         raise AlignakClassLookupException("Can't recreate object %s in %s module. "
                                           "Module does not have this attribute. "
                                           "Alignak versions may mismatch" % (a_class, a_module))
 
-    if not isinstance(getattr(pymodule, a_class), type):
+    if not isinstance(getattr(pymodule, a_class), type):  # pragma: no cover - should never happen!
         raise AlignakClassLookupException("Can't recreate object %s in %s module. "
                                           "This type is not a class" % (a_class, a_module))
 

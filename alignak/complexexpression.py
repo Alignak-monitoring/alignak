@@ -62,7 +62,7 @@ class ComplexExpressionNode(object):
         self.leaf = False
         self.content = None
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         if not self.leaf:
             return "Op:'%s' Leaf:%s Sons:'[%s] IsNot:%s'" % \
                    (self.operand, self.leaf, ','.join([str(s) for s in self.sons]), self.not_value)

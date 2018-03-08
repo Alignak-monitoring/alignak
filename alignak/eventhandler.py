@@ -124,5 +124,5 @@ class EventHandler(Action):
         """
         return timestamp >= self.t_to_go
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return "Check %s status:%s command:%s" % (self.uuid, self.status, self.command)

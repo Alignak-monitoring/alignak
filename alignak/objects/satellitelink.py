@@ -74,7 +74,7 @@ class LinkError(Exception):
         logger.error(msg)
         self.msg = msg
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         """Exception to String"""
         return "Satellite link error: %s" % self.msg
 
@@ -276,7 +276,7 @@ class SatelliteLink(Item):
         # Create the daemon connection
         self.create_connection()
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return '<%s - %s/%s, %s//%s:%s, rid: %s, spare: %s, managing: %s (%s) />' \
                % (self.instance_id, self.type, self.name,
                   self.scheme, self.address, self.port, self.running_id, self.spare,
@@ -1003,7 +1003,7 @@ class SatelliteLinks(Items):
     name_property = "name"
     inner_class = SatelliteLink
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return '<%r %d elements: %r/>' % \
                (self.__class__.__name__, len(self), ', '.join([s.name for s in self]))
     __str__ = __repr__

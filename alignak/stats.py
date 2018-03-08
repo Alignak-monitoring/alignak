@@ -241,7 +241,7 @@ class Stats(object):
         if 'ALIGNAK_STATS_FILE_DATE_FMT' in os.environ:
             self.date_fmt = os.environ['ALIGNAK_STATS_FILE_DATE_FMT']
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return '<StatsD report to %r/%r, enabled: %r />' \
                % (self.host, self.port, self.statsd_enabled)
     __str__ = __repr__

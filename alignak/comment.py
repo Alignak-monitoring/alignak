@@ -105,5 +105,5 @@ class Comment(AlignakObject):
             self.entry_time = int(time.time())
         self.fill_default()
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return "Comment id=%s %s" % (self.uuid, self.comment)

@@ -85,7 +85,7 @@ class DispatcherError(Exception):
         super(DispatcherError, self).__init__()
         self.message = msg
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         """Exception to String"""
         return "Dispatcher error: %s" % (self.message)
 

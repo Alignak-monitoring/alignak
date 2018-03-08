@@ -95,7 +95,7 @@ class Check(Action):  # pylint: disable=R0902
             BoolProp(default=False),
     })
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return "Check %s %s, item: %s, status: %s, command:'%s'" % \
                (self.uuid, "active" if not self.passive_check else "passive",
                 self.ref, self.status, self.command)

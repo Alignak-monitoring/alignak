@@ -100,7 +100,7 @@ class Metric:  # pylint: disable=R0903
                 self.min = 0
                 self.max = 100
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         string = "%s=%s%s" % (self.name, self.value, self.uom)
         if self.warning:
             string += ";%s" % (self.warning)

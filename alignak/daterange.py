@@ -168,7 +168,7 @@ class Timerange(AlignakObject):
                 "hend": self.hend, "mend": self.mend,
                 "is_valid": self.is_valid}
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return str(self.__dict__)
 
     def get_sec_from_morning(self):
@@ -224,7 +224,7 @@ class AbstractDaterange(AlignakObject):
     """
     timeranges = []
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         # TODO: What's the point of returning '' always
         return ''  # str(self.__dict__)
 

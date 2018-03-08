@@ -75,7 +75,7 @@ class HTTPClientDataException(Exception):  # pragma: no cover, hopefully never r
         self.uri = uri
         self.msg = "Bad server response for %s: %s - %s" % (self.uri, self.code, self.text)
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         """Exception to String"""
         return self.msg
 
@@ -96,7 +96,7 @@ class HTTPClientTimeoutException(Exception):  # pragma: no cover, not with unit 
         self.timeout = timeout
         self.uri = uri
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         """Exception to String"""
         return "Request timeout (%d seconds) for %s" % (self.timeout, self.uri)
 
@@ -116,7 +116,7 @@ class HTTPClientConnectionException(Exception):
         self.uri = uri
         self.msg = msg
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         """Exception to String"""
         return "Server not available: %s - %s" % (self.uri, self.msg)
 

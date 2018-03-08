@@ -117,7 +117,7 @@ class Brok(object):
         return {"type": self.type, "instance_id": self.instance_id, "data": self.data,
                 "prepared": self.prepared, "creation_time": self.creation_time, "uuid": self.uuid}
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return "Brok %s: %s" % (self.type, self.data)
     __str__ = __repr__
 

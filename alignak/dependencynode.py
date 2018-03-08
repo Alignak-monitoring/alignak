@@ -94,7 +94,7 @@ class DependencyNode(object):
             if 'not_value' in params:
                 self.not_value = params['not_value']
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return '"Op:%s Val:%s Sons:[\'%s\'] IsNot:%s"' % (self.operand, self.of_values,
                                                           ','.join([str(s) for s in self.sons]),
                                                           self.not_value)

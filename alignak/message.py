@@ -91,7 +91,7 @@ class Message:
         """
         return self._source
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         """String representation of message
 
         :return: source - id, type: %s, data: %s

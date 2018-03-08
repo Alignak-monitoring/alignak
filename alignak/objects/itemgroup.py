@@ -74,7 +74,7 @@ class Itemgroup(Item):
         'unknown_members': ListProp(default=[]),
     })
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         if getattr(self, 'members', None) is None or not getattr(self, 'members'):
             return '<%r %r, no members/>' % (self.__class__.__name__, self.get_name())
         # Build a sorted list of unicode elements name or uuid, this to make it easier to compare ;)

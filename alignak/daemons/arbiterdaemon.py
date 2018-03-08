@@ -154,9 +154,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.verify_only = False
         if 'verify_only' in kwargs and kwargs['verify_only']:
             self.verify_only = kwargs.get('verify_only', False)
-        self.analyse = None
-        if 'analyse' in kwargs and kwargs['analyse']:
-            self.analyse = kwargs.get('analyse', False)
         self.alignak_name = self.name
         if 'alignak_name' in kwargs and kwargs['alignak_name']:
             self.alignak_name = kwargs['alignak_name']
@@ -242,7 +239,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         logger.debug("Get managed configuration: %s", res)
         return res
 
-    def push_broks_to_broker(self):
+    def push_broks_to_broker(self):  # pragma: no cover - not used!
         """Send all broks from arbiter internal list to broker
 
         The arbiter get some broks and then pushes them to all the brokers.
@@ -268,7 +265,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             # No one is anymore interested with...
             self.broks.clear()
 
-    def push_external_commands_to_schedulers(self):
+    def push_external_commands_to_schedulers(self):  # pragma: no cover - not used!
         """Send external commands to schedulers
 
         :return: None
@@ -305,7 +302,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.external_commands = []
         return res
 
-    def get_external_commands_from_satellites(self):
+    def get_external_commands_from_satellites(self):  # pragma: no cover - not used!
         """Get external commands from all other satellites (only receivers)
 
         As of now, only the receiver satellites may raise some external commands that
@@ -326,7 +323,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             for external_command in external_commands:
                 self.external_commands.append(external_command)
 
-    def get_broks_from_satellites(self):
+    def get_broks_from_satellites(self):  # pragma: no cover - not used!
         """Get broks from my all internal satellite links
 
         The arbiter get the broks from ALL the known satellites
@@ -1418,6 +1415,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             logger.debug("Waiting for my master death...")
             self.wait_for_master_death()
             return
+
+        if self.alignak_monitor and (self.loop_count % self.alignak_monitor_period == 1):
+            self.push_passive_check(details=True)
 
         # Maybe an external process requested Alignak stop...
         if self.kill_request:

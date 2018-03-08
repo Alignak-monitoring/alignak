@@ -194,7 +194,7 @@ class Contact(Item):
                 del params[prop]
         super(Contact, self).__init__(params, parsing=parsing)
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return '<Contact %s, uuid=%s, use: %s />' \
                % (self.get_name(), self.uuid, getattr(self, 'use', None))
     __repr__ = __str__

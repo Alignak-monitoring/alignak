@@ -178,7 +178,7 @@ class Realm(Itemgroup):
             setattr(self, "nb_%ss" % sat_type, 0)
             setattr(self, 'potential_%ss' % sat_type, [])
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         res = '<%r %r (%d)' % (self.__class__.__name__, self.get_name(), self.level)
         if not self.realm_members:
             res = res + ', no sub-realms'
@@ -501,7 +501,7 @@ class Realms(Itemgroups):
     name_property = "realm_name"  # is used for finding realms
     inner_class = Realm
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         res = []
         for realm in self:
             res.append('%s %s' % ('+' * realm.level, realm.get_name()))

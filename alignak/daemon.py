@@ -354,6 +354,8 @@ class Daemon(object):
         # Interface is the same as the Alignak WS module PATCH/host
         'alignak_monitor':
             StringProp(default=''),
+        'alignak_monitor_period':
+            IntegerProp(default=30),
         'alignak_monitor_username':
             StringProp(default=''),
         'alignak_monitor_password':
@@ -705,7 +707,7 @@ class Daemon(object):
         os.umask(UMASK)
         self.set_signal_handler()
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return '<Daemon %r/%r, listening on %r:%r:%d />' % \
                (self.type, self.name, self.scheme, self.host, self.port)
     __str__ = __repr__

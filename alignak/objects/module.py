@@ -127,7 +127,7 @@ class Module(Item):
             if getattr(self, prop, None):
                 delattr(self, prop)
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return '<%r %r, module: %r, type(s): %r />' % \
                (self.__class__.__name__, self.name, self.python_name, self.type)
     __str__ = __repr__

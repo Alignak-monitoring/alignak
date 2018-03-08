@@ -258,7 +258,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'hostgroup': 'hostgroups',
     })
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return '<Host %s, uuid=%s, %s (%s), realm: %s, use: %s />' \
                % (self.get_full_name(), self.uuid, self.state, self.state_type,
                   getattr(self, 'realm', 'Unset'), getattr(self, 'use', None))

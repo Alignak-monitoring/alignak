@@ -545,7 +545,7 @@ class Timeperiod(Item):
 
         return super(Timeperiod, self).is_correct() and state
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         """
         Get readable object
 

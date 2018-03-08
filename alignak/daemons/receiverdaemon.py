@@ -125,44 +125,6 @@ class Receiver(Satellite):
             self.unprocessed_external_commands.append(elt)
             statsmgr.counter('external-commands.added', 1)
 
-    # def manage_brok(self, brok):  # pragma: no cover, seems not to be used anywhere
-    #     """Send brok to modules. Modules have to implement their own manage_brok function.
-    #     They usually do if they inherits from basemodule
-    #     REF: doc/receiver-modules.png (4-5)
-    #
-    #     TODO: why should this daemon manage a brok? It is the brokers job!!!
-    #
-    #     :param brok: brok to manage
-    #     :type brok: alignak.brok.Brok
-    #     :return: None
-    #     """
-    #     to_del = []
-    #     # Call all modules if they catch the call
-    #     for mod in self.modules_manager.get_internal_instances():
-    #         try:
-    #             mod.manage_brok(brok)
-    #         except Exception, exp:  # pylint: disable=W0703
-    #             logger.warning("The mod %s raise an exception: %s, I kill it",
-    #                            mod.get_name(), str(exp))
-    #             logger.warning("Exception type: %s", type(exp))
-    #             logger.warning("Back trace of this kill: %s", traceback.format_exc())
-    #             to_del.append(mod)
-    #     # Now remove mod that raise an exception
-    #     self.modules_manager.clear_instances(to_del)
-    #
-    # def do_stop(self):
-    #     """Stop the Receiver
-    #     Wait for children to stop and call super(Receiver, self).do_stop()
-    #
-    #     :return: None
-    #     """
-    #
-    #     act = active_children()
-    #     for child in act:
-    #         child.terminate()
-    #         child.join(1)
-    #     super(Receiver, self).do_stop()
-    #
     def setup_new_conf(self):
         """Receiver custom setup_new_conf method
 

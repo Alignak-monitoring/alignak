@@ -146,7 +146,7 @@ class CommandCall(AlignakObject):
         """
         return self.valid
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return str(self.__dict__)
 
     def get_name(self):

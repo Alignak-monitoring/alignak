@@ -240,7 +240,7 @@ class Service(SchedulingItem):
         'hostgroups':    'hostgroup_name',
     })
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return '<Service %s, uuid=%s, %s (%s), use: %s />' \
                % (self.get_full_name(), self.uuid, self.state, self.state_type,
                   getattr(self, 'use', None))

@@ -64,7 +64,7 @@ class MonitorConnection(object):
 
         logger.info("Alignak monitor, endpoint: %s", self.url_endpoint_root)
 
-    def __repr__(self):
+    def __repr__(self):  # pragma: no cover
         return '<WS report to %r, authenticated: %r />' \
                % (self.url_endpoint_root, self.authenticated)
     __str__ = __repr__
