@@ -30,7 +30,6 @@ import requests
 from requests import RequestException
 from requests.auth import HTTPBasicAuth
 from requests.adapters import HTTPAdapter
-from urllib3.util import Retry
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -47,14 +46,9 @@ class MonitorConnection(object):
         self.session = requests.Session()
         self.session.header = {'Content-Type': 'application/json'}
 
-        # Needed for retrying requests (104 - Connection reset by peer for example)
-        methods = ['POST', 'HEAD', 'GET', 'PUT', 'DELETE', 'PATCH']
-        http_retry = Retry(total=5, connect=5, read=5, backoff_factor=0.1,
-                           method_whitelist=methods)
-        https_retry = Retry(total=5, connect=5, read=5, backoff_factor=0.1,
-                            method_whitelist=methods)
-        http_adapter = HTTPAdapter(max_retries=http_retry)
-        https_adapter = HTTPAdapter(max_retries=https_retry)
+        # Requests HTTP adapters
+        http_adapter = HTTPAdapter(max_retries=3)
+        https_adapter = HTTPAdapter(max_retries=3)
         self.session.mount('http://', http_adapter)
         self.session.mount('https://', https_adapter)
 

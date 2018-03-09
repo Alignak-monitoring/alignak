@@ -105,13 +105,11 @@ class AlignakTest(unittest2.TestCase):
         self.logger_.info("Test: %s", self.id())
 
         # To make sure that no running daemon exist
+        print("Checking Alignak running daemons...")
         for daemon in ['broker', 'poller', 'reactionner', 'receiver', 'scheduler', 'arbiter']:
             for proc in psutil.process_iter():
-                if daemon not in proc.name():
-                    continue
-                if proc.pid == self.my_pid:
-                    continue
-                assert False, "*** Found a running Alignak daemon: %s" % (proc.name())
+                if 'alignak' in proc.name() and daemon in proc.name():
+                    assert False, "*** Found a running Alignak daemon: %s" % (proc.name())
 
         print("System information:")
         perfdatas = []
