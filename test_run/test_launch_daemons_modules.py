@@ -99,7 +99,7 @@ class TestLaunchDaemonsModules(AlignakTest):
         (errors_raised, warnings_raised) = \
             self._check_daemons_log_for_errors(daemons_list, ignored_warnings=ignored_warnings)
 
-        self.kill_daemons()
+        # self.kill_daemons()
         assert errors_raised == 0, "Error logs raised!"
         print("No unexpected error logs raised by the daemons")
 
@@ -142,7 +142,7 @@ class TestLaunchDaemonsModules(AlignakTest):
             self._check_daemons_log_for_errors(daemons_list, ignored_warnings=ignored_warnings,
                                                ignored_errors=ignored_errors)
 
-        self.kill_daemons()
+        # self.kill_daemons()
         assert errors_raised == 0, "Error logs raised!"
         print("No unexpected error logs raised by the daemons")
 
@@ -223,7 +223,7 @@ class TestLaunchDaemonsModules(AlignakTest):
         # Wait for the module to restart
         time.sleep(5)
 
-        self._kill_alignak_daemons()
+        # self._kill_alignak_daemons()
 
         # Search for some specific logs in the broker daemon logs
         expected_logs = {
@@ -327,7 +327,7 @@ class TestLaunchDaemonsModules(AlignakTest):
                 module_pid = proc.pid
         assert module_pid is not None
 
-        self._kill_alignak_daemons()
+        self._stop_alignak_daemons()
 
         # Search for some specific logs in the broker daemon logs
         expected_logs = {
