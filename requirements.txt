@@ -23,8 +23,8 @@ ujson
 
 # numpy for date and percentile computation - needs a compimler on the installation target system!
 # Uncomment or `pip install numpy` to use numpy library for math functions
-#numpy<1.12.0; python_version < '2.7'
-#numpy; python_version >= '2.7'
+# numpy<1.12.0; python_version < '2.7'
+# numpy; python_version >= '2.7'
 
 # SSL between the daemons
 # This requirement is only a requirement if you intend to use SLL for the inter-daemons

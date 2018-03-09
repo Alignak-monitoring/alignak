@@ -141,15 +141,6 @@ class HTTPClient(object):
         self._requests_con = requests.Session()
         self.set_proxy(proxy)
 
-    # @property
-    # def connection(self):
-    #     """Get connection attribute
-    #
-    #     :return:
-    #     :rtype:
-    #     """
-    #     return self._requests_con
-    #
     def make_uri(self, path):
         """Create uri from path
 

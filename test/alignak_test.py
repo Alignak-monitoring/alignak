@@ -94,7 +94,7 @@ class AlignakTest(unittest2.TestCase):
         self.my_pid = os.getpid()
 
         print "\n" + self.id()
-        print ("-" * 80)
+        print("-" * 80)
         print("Test current working directory: %s" % (os.getcwd()))
 
         # Configure Alignak logger with test configuration
@@ -552,6 +552,7 @@ class AlignakTest(unittest2.TestCase):
                                                                          accept_unknown=True)
 
         print("All daemons WS: %s" % ["%s:%s" % (link.address, link.port) for link in self._arbiter.dispatcher.all_daemons_links])
+
         # Simulate the daemons HTTP interface (very simple simulation !)
         with requests_mock.mock() as mr:
             for link in self._arbiter.dispatcher.all_daemons_links:
@@ -648,8 +649,8 @@ class AlignakTest(unittest2.TestCase):
                 self._receiver = receiver
                 print("Got a default receiver: %s\n-----" % self._receiver)
 
-                for scheduler in self._receiver_daemon.schedulers.values():
-                    scheduler.my_daemon = self._receiver_daemon
+                # for scheduler in self._receiver_daemon.schedulers.values():
+                #     scheduler.my_daemon = self._receiver_daemon
 
         self.ecm_mode = 'applyer'
 

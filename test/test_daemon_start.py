@@ -59,6 +59,8 @@ import shutil
 
 import logging
 
+import psutil
+
 from alignak_test import AlignakTest
 
 from alignak.version import VERSION
@@ -158,10 +160,11 @@ class template_Daemon_Start():
         :return:
         """
 
+        print("Get daemon...")
         daemon = self.create_daemon(is_daemon, do_replace, debug_file)
-
-        # Setup logger
-        daemon.setup_alignak_logger()
+        #
+        # # Setup logger
+        # daemon.setup_alignak_logger()
 
         # configuration may be "relative" :
         # some config file reference others with a relative path (from THIS_DIR).
@@ -185,8 +188,11 @@ class template_Daemon_Start():
         """
         print("Starting daemon: %s" % daemon.name)
         daemon.load_modules_manager()
-        daemon.do_load_modules([])
-        daemon.do_daemon_init_and_start()
+        # daemon.do_load_modules([])
+        daemon.do_daemon_init_and_start(set_proc_title=False)
+
+        # Setup logger
+        daemon.setup_alignak_logger()
 
     def stop_daemon(self, daemon):
         """
@@ -200,8 +206,9 @@ class template_Daemon_Start():
         print("Stopping daemon: %s" % daemon.name)
         daemon.unlink()
         daemon.do_stop()
+        print("Stopped")
 
-    def test_debug_config_and_start_and_stop(self):
+    def test_config_and_start_and_stop_debug(self):
         """ Test configuration loaded, daemon started and stopped - daemon in debug mode
 
         :return:
@@ -215,8 +222,8 @@ class template_Daemon_Start():
         :return:
         """
         # Start normally
-        daemon = self.get_daemon(is_daemon=False, do_replace=False, free_port=False,
-                                 debug_file=debug_file)
+        daemon = self.get_daemon(debug_file=debug_file)
+        print("Got daemon: %s" % daemon)
         if debug_file:
             assert daemon.debug is True
         else:
@@ -493,9 +500,10 @@ class template_Daemon_Start():
         time.sleep(1)
 
         # Stop the daemon
-        d1.do_stop()
+        # d1.do_stop()
         time.sleep(1)
-        print("Stopped")
+        #  Stop the daemon
+        self.stop_daemon(d1)
 
 #############################################################################
 

@@ -94,6 +94,10 @@ class PropertiesTester(object):
         prop_names = set(list(self.properties.keys()) + self.unused_props + self.without_default)
 
         print("Testing all properties are tested:")
+        for name in item.properties:
+            print("- %s" % name)
+
+        print("Testing all properties are tested:")
         print("- list: %s" % prop_names)
         for name in item.properties:
             if name.startswith('$') and name.endswith('$'):
@@ -604,8 +608,8 @@ class TestHost(PropertiesTester, AlignakTest):
         self.item = Host(parsing=True)
 
 
-@pytest.mark.skip("Not easily testable because it sometimes "
-                  "include the Daemon properties - see # 955 :/")
+# @pytest.mark.skip("Not easily testable because it sometimes "
+#                   "include the Daemon properties - see # 955 :/")
 class TestModule(PropertiesTester, AlignakTest):
 
     unused_props = []
@@ -623,15 +627,23 @@ class TestModule(PropertiesTester, AlignakTest):
         ('type', 'unset'),
         ('daemon', 'unset'),
         ('module_types', ['']),
-        ('enable_problem_impacts_states_change', False),
-        ('log_notifications', False)
-        ])
+        # ('enable_problem_impacts_states_change', False),
+        # ('log_notifications', False),
+        ('log_level', 'INFO'),
+        ('statsd_host', 'localhost'),
+        ('statsd_port', 8125),
+        ('statsd_prefix', 'alignak'),
+        ('statsd_enabled', False)
+    ])
 
     def setUp(self):
         super(TestModule, self).setUp()
         from alignak.objects.module import Module
 
         self.item = Module(parsing=True)
+        print("Item properties:")
+        for name in self.item.properties:
+            print("- %s" % name)
 
 
 class TestNotificationWay(PropertiesTester, AlignakTest):
@@ -765,7 +777,7 @@ class TestServiceescalation(PropertiesTester, AlignakTest):
         ('name', ''),
         ('notification_interval', 30),
         ('escalation_period', ''),
-        ('escalation_options', ['d','u','r','w','c']),
+        ('escalation_options', ['w','x','c','r']),
         ])
 
     def setUp(self):

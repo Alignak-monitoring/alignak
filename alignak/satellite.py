@@ -258,11 +258,6 @@ class BaseSatellite(Daemon):
             # This to indicate that the new configuration got managed...
             self.new_conf = None
 
-            # Get our name from the received configuration
-            # self.name = self_conf.get('name', 'Unnamed %s' % self.type)
-            # Set my own process title
-            self.set_proctitle(self.name)
-
             # Set our timezone from arbiter
             use_timezone = self_conf.get('use_timezone', 'NOTSET')
             if use_timezone != 'NOTSET':
@@ -270,13 +265,6 @@ class BaseSatellite(Daemon):
                 os.environ['TZ'] = use_timezone
                 time.tzset()
 
-            # # Configure our Stats manager
-            # statsmgr.register(self.name, self.type,
-            #                   statsd_host=self_conf.get('statsd_host', 'localhost'),
-            #                   statsd_port=self_conf.get('statsd_port', 8125),
-            #                   statsd_prefix=self_conf.get('statsd_prefix', 'alignak'),
-            #                   statsd_enabled=self_conf.get('statsd_enabled', False))
-            #
             # Now we create our arbiters and schedulers links
             for link_type in ['arbiters', 'schedulers']:
                 if link_type not in self.cur_conf:
@@ -1035,12 +1023,12 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         :return: None
         """
         try:
-            # Configure the logger
-            self.setup_alignak_logger()
-
             # Start the daemon mode
             if not self.do_daemon_init_and_start():
                 self.exit_on_error(message="Daemon initialization error", exit_code=3)
+
+            # Configure the logger
+            self.setup_alignak_logger()
 
             self.do_post_daemon_init()
 

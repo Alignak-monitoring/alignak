@@ -422,6 +422,10 @@ class Daemon(object):
                 else:
                     setattr(self, prop, entry.pythonize(entry.default))
 
+        # Configuration file name in environment
+        if os.environ.get('ALIGNAK_CONFIGURATION_FILE'):
+            kwargs['env_file'] = [os.path.abspath(os.environ.get('ALIGNAK_CONFIGURATION_FILE'))]
+
         # I must have an Alignak environment file
         if 'env_file' not in kwargs:
             self.exit_on_error("Alignak environment file is missing or corrupted")
@@ -605,7 +609,7 @@ class Daemon(object):
             print("Daemon '%s' is started with an overridden log file: %s"
                   % (self.name, self.log_filename))
 
-            self.set_dir_filename(self.log_filename)
+            self.check_dir(os.path.dirname(self.log_filename))
         else:
             # Log file name is not overridden, the logger will use the configured default one
             if self.log_cherrypy:
@@ -625,8 +629,6 @@ class Daemon(object):
                 self.pid_filename = os.path.abspath(os.path.join(self.workdir, self.pid_filename))
             print("Daemon '%s' is started with an overridden pid file: %s"
                   % (self.name, self.pid_filename))
-
-        self.set_dir_filename(self.pid_filename)
 
         # Self daemon monitoring (cpu, memory)
         self.daemon_monitoring = False
@@ -733,19 +735,31 @@ class Daemon(object):
             _scheme = 'https'
         return _scheme
 
-    def set_dir_filename(self, filename):
-        """Check and create directory for the filename
+    def check_dir(self, dirname):
+        """Check and create directory
 
-        :param filename: file name
-        :type filename; str
+        :param dirname: file name
+        :type dirname; str
 
         :return: None
         """
-        dirname = os.path.dirname(filename)
         try:
             os.makedirs(dirname)
-            os.chown(dirname, self.uid, self.gid)
-            self.pre_log.append(("WARNING",
+            dir_stat = os.stat(dirname)
+            print("Created the directory: %s, stat: %s" % (dirname, dir_stat))
+            if not dir_stat.st_uid == self.uid:
+                os.chown(dirname, self.uid, self.gid)
+                os.chmod(dirname, 0775)
+                dir_stat = os.stat(dirname)
+                print("Changed directory ownership and permissions: %s, stat: %s"
+                      % (dirname, dir_stat))
+
+            self.pre_log.append(("DEBUG",
+                                 "Daemon '%s' directory %s checking... "
+                                 "User uid: %s, directory stat: %s."
+                                 % (self.name, dirname, os.getuid(), dir_stat)))
+
+            self.pre_log.append(("INFO",
                                  "Daemon '%s' directory %s did not exist, I created it. "
                                  "I set ownership for this directory to %s:%s."
                                  % (self.name, dirname, self.user, self.group)))
@@ -758,9 +772,9 @@ class Daemon(object):
                                      "Daemon directory '%s' did not exist, "
                                      "and I could not create. Exception: %s"
                                      % (dirname, exp)))
-                raise EnvironmentFile("Daemon directory '%s' did not exist, "
-                                      "and I could not create.'. Exception: %s"
-                                      % (dirname, exp))
+                self.exit_on_error("Daemon directory '%s' did not exist, "
+                                   "and I could not create.'. Exception: %s"
+                                   % (dirname, exp))
 
     def do_stop(self):
         """Execute the stop of this daemon:
@@ -786,13 +800,13 @@ class Daemon(object):
 
         # todo: daemonize the process thanks to CherryPy plugin
         if self.http_daemon:
-            logger.info("Shutting down the HTTP daemon...")
+            logger.info("Shutting down HTTP daemon...")
             self.http_daemon.stop()
             self.http_daemon = None
 
         # todo: daemonize the process thanks to CherryPy plugin
         if self.http_thread:
-            logger.info("Checking HTTP thread...")
+            logger.debug("Checking HTTP thread...")
             # Let a few seconds to exit
             self.http_thread.join(timeout=3)
             if self.http_thread.is_alive():  # pragma: no cover, should never happen...
@@ -802,7 +816,7 @@ class Daemon(object):
                 except Exception as exp:  # pylint: disable=broad-except
                     print("Exception: %s" % exp)
             else:
-                logger.info("HTTP thread exited")
+                logger.debug("HTTP thread exited")
             self.http_thread = None
 
     def request_stop(self, message='', exit_code=0):
@@ -817,7 +831,6 @@ class Daemon(object):
             logger.error("Sorry, I bail out, exit code: %d", exit_code)
         else:
             logger.info(message)
-        print("Message: %s" % message)
 
         _ts = time.time()
         self.unlink()
@@ -1171,6 +1184,8 @@ class Daemon(object):
         :return: None
         """
         logger.info("Changing working directory to: %s", self.workdir)
+
+        self.check_dir(self.workdir)
         try:
             os.chdir(self.workdir)
         except OSError as exp:
@@ -1421,22 +1436,37 @@ class Daemon(object):
         manager.start()
         return manager
 
-    def do_daemon_init_and_start(self):
+    def do_daemon_init_and_start(self, set_proc_title=True):
         """Main daemon function.
         Clean, allocates, initializes and starts all necessary resources to go in daemon mode.
 
-        :param daemon_name: daemon instance name (eg. arbiter-master). If not provided, only the
-        daemon name (eg. arbiter) will be used for the process title
-        :type daemon_name: str
+        The set_proc_title parameter is mainly useful for the Alignak unit tests.
+        This to avoid changing the test process name!
+
+        :param set_proc_title: if set (default), the process title is changed to the daemon name
+        :type set_proc_title: bool
         :return: False if the HTTP daemon can not be initialized, else True
         """
-        self.set_proctitle(self.name)
+        if set_proc_title:
+            self.set_proctitle(self.name)
+
         self.change_to_user_group()
         self.change_to_workdir()
         self.check_parallel_run()
         if not self.setup_communication_daemon():
             logger.error("I could not setup my communication daemon...")
             return False
+
+        # Set ownership on some default log files. It may happen that these default
+        # files are owned by a privileged user account
+        try:
+            for log_file in ['alignak.log', 'monitoring-logs.log']:
+                if os.path.exists('/tmp/%s' % log_file):
+                    with open('/tmp/%s' % log_file, "w") as file_log_file:
+                        os.fchown(file_log_file.fileno(), self.uid, self.gid)
+        except Exception as exp:  # pylint: disable=broad-except
+            #  pragma: no cover
+            print("Could not set default log files ownership, exception: %s" % str(exp))
 
         if self.is_daemon:
             # Do not close the local_log file too if it's open
@@ -1680,7 +1710,7 @@ class Daemon(object):
 
         :return: None
         """
-        logger.info("HTTP main thread running")
+        logger.debug("HTTP thread running")
         # The main thing is to have a pool of X concurrent requests for the http_daemon,
         # so "no_lock" calls can always be directly answer without having a "locked" version to
         # finish
@@ -1695,7 +1725,7 @@ class Daemon(object):
             # logger.exception('The HTTP daemon failed with the error %s, exiting', str(exp))
             # logger.critical("Back trace of the error:\n%s", traceback.format_exc())
             # raise
-        logger.info("HTTP main thread exiting")
+        logger.debug("HTTP thread exiting")
 
     def make_a_pause(self, timeout=0.0001, check_time_change=True):
         """ Wait up to timeout and check for system time change.
@@ -2013,12 +2043,16 @@ class Daemon(object):
 
         - configure the global Alignak monitoring log
 
+        This function is called very early on daemon start. The daemon is not yet forked and
+        may still run with a high privileged user account. This is why, the log file ownership
+        may be set accordingly to the running user account.
+
         :return: None
         """
         # Configure the daemon logger
         try:
             # Make sure that the log directory is existing
-            self.set_dir_filename(os.path.join(self.logdir, 'fake'))
+            self.check_dir(self.logdir)
             setup_logger(logger_configuration_file=self.logger_configuration,
                          log_dir=self.logdir, process_name=self.name,
                          log_file=self.log_filename)

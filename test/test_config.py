@@ -114,8 +114,8 @@ class TestConfig(AlignakTest):
         assert link is not None
 
     def test_config_conf_inner_properties(self):
-        """ Default configuration has no loading problems ... and inner default proerties are
-        correctly valued
+        """ Default configuration has no loading problems ...
+        and inner default properties are correctly valued
 
         :return: None
         """
@@ -564,7 +564,7 @@ class TestConfig(AlignakTest):
         ))
         self.assert_any_cfg_log_match(re.escape(
             "Your configuration parameter 'command_file = /tmp/command' needs to use an "
-            "external module such as 'logs' but I did not found one!"
+            "external module such as 'external_commands' but I did not found one!"
         ))
 
         # Warning messages

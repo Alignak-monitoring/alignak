@@ -197,7 +197,7 @@ class TestLaunchDaemons(AlignakTest):
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
         # Waiting for arbiter to parse the configuration
-        sleep(30)
+        sleep(60)
 
         ret = arbiter.poll()
         assert ret is not None, "Arbiter is still running!"
@@ -339,7 +339,7 @@ class TestLaunchDaemons(AlignakTest):
         assert ret == 0
 
     def test_arbiter_no_daemons(self):
-        """ Run the Alignak Arbiter some running daemons missing
+        """ Run the Alignak Arbiter - some expected daemons are missing
 
         :return:
         """
@@ -357,7 +357,7 @@ class TestLaunchDaemons(AlignakTest):
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
-        sleep(30)
+        sleep(60)
 
         # The arbiter will have stopped!
 
@@ -370,6 +370,10 @@ class TestLaunchDaemons(AlignakTest):
                 ok = False
                 # Only WARNING because of missing daemons...
                 if 'that we must be related with cannot be connected' in line:
+                    ok = True
+                if 'Add failed attempt for' in line:
+                    ok = True
+                if 'as dead, too much failed attempts' in line:
                     ok = True
                 # if 'Exception: Server not available:' in line:
                 #     ok = True

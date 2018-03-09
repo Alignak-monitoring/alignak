@@ -479,6 +479,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     if 'module_types' in module_cfg and 'type' not in module_cfg:
                         module_cfg['type'] = module_cfg['module_types']
                         module_cfg.pop('module_types')
+                    logger.debug("Module cfg %s params: %s", module_cfg['name'], module_cfg)
 
             for _, module_cfg in self.alignak_env.get_modules().items():
                 logger.info("- got a module %s, type: %s",
@@ -487,7 +488,13 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 for cfg_module in raw_objects['module']:
                     if cfg_module.get('name', 'unset') == [module_cfg['name']]:
                         logger.info("  updating module Cfg file configuration")
-                raw_objects['module'].append(module_cfg)
+                        cfg_module = module_cfg
+                        logger.debug("Module cfg %s updated params: %s",
+                                     module_cfg['name'], module_cfg)
+                        break
+                else:
+                    raw_objects['module'].append(module_cfg)
+                    logger.debug("Module env %s params: %s", module_cfg['name'], module_cfg)
             if not raw_objects['module']:
                 logger.info("- No configured modules.")
 
@@ -1302,7 +1309,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             else:
                 logger.warning("- satellites connection #%s is not correct; "
                                "let's give another chance...", first_connection_try_count)
-                time.sleep(1.0)
+                time.sleep(3.0)
                 if first_connection_try_count >= 3:
                     self.request_stop("All the daemons connections could not be established "
                                       "despite %d tries! "
@@ -1837,24 +1844,22 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """Main arbiter function::
 
         * Set logger
-        * Log Alignak headers
         * Init daemon
         * Launch modules
-        * Load retention
-        * Do mainloop
+        * Endless main process loop
 
         :return: None
         """
         try:
-            # Configure the logger
-            self.setup_alignak_logger()
+            # Start the daemon mode
+            if not self.do_daemon_init_and_start():
+                self.exit_on_error(message="Daemon initialization error", exit_code=3)
 
             # Setup our modules manager
             self.load_modules_manager()
 
-            # Start the daemon mode
-            if not self.do_daemon_init_and_start():
-                self.exit_on_error(message="Daemon initialization error", exit_code=3)
+            # Configure the logger
+            self.setup_alignak_logger()
 
             # Load monitoring configuration files
             self.load_monitoring_config_file()

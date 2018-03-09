@@ -264,7 +264,11 @@ class TestSetupNewConf(AlignakTest):
             mockreq.get('http://127.0.0.1:7768/get_managed_configurations', json={})
             
             broker.setup_new_conf()
+
+            # Check modules received configuration
             assert 1 == len(broker.modules)
+            print("Modules: %s" % broker.modules)
+            print(" - : %s" % broker.modules[0].__dict__)
             assert broker.modules[0].module_alias == 'Example'
             assert broker.modules[0].option_1 == 'foo'
             assert broker.modules[0].option_2 == 'bar'

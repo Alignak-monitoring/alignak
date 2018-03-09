@@ -191,7 +191,7 @@ class TestModules(AlignakTest):
         self.assert_any_log_match(
             re.escape(
                 "Your configuration parameter 'command_file = /var/alignak.cmd' needs to use "
-                "an external module such as 'logs' but I did not found one!"
+                "an external module such as 'external_commands' but I did not found one!"
             )
         )
 

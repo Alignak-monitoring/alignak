@@ -23,7 +23,7 @@
 # This file is used to test reading and processing of config files
 #
 import time
-import ujson
+import json
 import pytest
 from alignak_test import AlignakTest
 from alignak.external_command import ExternalCommand, ExternalCommandManager
@@ -722,21 +722,21 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         excmd = '[1234567890] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is UP'
         expected = {'time_stamp': 1234567890, 'return_code': '2', 'host_name': 'test_host_0',
                     'output': 'Host is UP', 'perf_data': None}
-        result = ujson.loads(ExternalCommandManager.get_unknown_check_result_brok(excmd).data)
+        result = json.loads(ExternalCommandManager.get_unknown_check_result_brok(excmd).data)
         assert expected == result
 
         # unknown_host_check_result_brok with perfdata
         excmd = '[1234567890] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is UP|rtt=9999'
         expected = {'time_stamp': 1234567890, 'return_code': '2', 'host_name': 'test_host_0',
                     'output': 'Host is UP', 'perf_data': 'rtt=9999'}
-        result = ujson.loads(ExternalCommandManager.get_unknown_check_result_brok(excmd).data)
+        result = json.loads(ExternalCommandManager.get_unknown_check_result_brok(excmd).data)
         assert expected == result
 
         # unknown_service_check_result_brok
         excmd = '[1234567890] PROCESS_HOST_CHECK_RESULT;host-checked;0;Everything OK'
         expected = {'time_stamp': 1234567890, 'return_code': '0', 'host_name': 'host-checked',
                     'output': 'Everything OK', 'perf_data': None}
-        result = ujson.loads(ExternalCommandManager.get_unknown_check_result_brok(excmd).data)
+        result = json.loads(ExternalCommandManager.get_unknown_check_result_brok(excmd).data)
         assert expected == result
 
         # unknown_service_check_result_brok with perfdata
@@ -744,7 +744,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         expected = {'host_name': 'test_host_0', 'time_stamp': 1234567890,
                     'service_description': 'test_ok_0', 'return_code': '1',
                     'output': 'Service is WARNING', 'perf_data': 'rtt=9999;5;10;0;10000'}
-        result = ujson.loads(ExternalCommandManager.get_unknown_check_result_brok(excmd).data)
+        result = json.loads(ExternalCommandManager.get_unknown_check_result_brok(excmd).data)
         assert expected == result
 
     def test_services_acknowledge(self):

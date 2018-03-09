@@ -361,6 +361,7 @@ class Broker(BaseSatellite):
                                  'received from arbiter: %s', exp)
                 if self.modules:
                     logger.info("I received some modules configuration: %s", self.modules)
+                    print("I received some modules configuration: %s", self.modules[0].__dict__)
                     self.have_modules = True
 
                     # Ok now start, or restart them!
@@ -541,15 +542,15 @@ class Broker(BaseSatellite):
         :return: None
         """
         try:
-            # Configure the logger
-            self.setup_alignak_logger()
-
             # Start the daemon mode
             if not self.do_daemon_init_and_start():
                 self.exit_on_error(message="Daemon initialization error", exit_code=3)
 
             # Setup our modules manager
             self.load_modules_manager()
+
+            # Configure the logger
+            self.setup_alignak_logger()
 
             #  We wait for initial conf
             self.wait_for_initial_conf()

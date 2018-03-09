@@ -94,7 +94,6 @@ class TestDaemonsApi(AlignakTest):
         # requests.packages.urllib3.disable_warnings()
         self._run_daemons_and_test_api(ssl=True)
 
-    @pytest.mark.skip("Temp! Travis test")
     def _run_daemons_and_test_api(self, ssl=False):
         """ Running all the Alignak daemons to check their correct launch and API
 
@@ -137,7 +136,7 @@ class TestDaemonsApi(AlignakTest):
             'group=alignak': ';group=alignak',
 
             ';alignak_launched=1': 'alignak_launched=1',
-            # ';is_daemon=1': 'is_daemon=0'
+            ';is_daemon=1': 'is_daemon=0'
         }
         self._files_update(files, replacements)
 
@@ -176,13 +175,14 @@ class TestDaemonsApi(AlignakTest):
                         'receiver-master', 'scheduler-master']
 
         self._run_alignak_daemons(cfg_folder=cfg_folder,
-                                  daemons_list=daemons_list, runtime=60)
+                                  daemons_list=daemons_list, runtime=5)
 
         scheme = 'http'
         if ssl:
             scheme = 'https'
 
         # -----
+        time.sleep(30)
         print("Testing ping")
         for name, port in satellite_map.items():
             if name == 'arbiter':   # No self ping!
@@ -563,9 +563,11 @@ class TestDaemonsApi(AlignakTest):
         print("Testing signals")
         for name, proc in self.procs.items():
             # SIGUSR1: memory dump
+            print("%s, send signal SIGUSR1" % (name))
             self.procs[name].send_signal(signal.SIGUSR1)
             time.sleep(1.0)
             # SIGUSR2: objects dump
+            print("%s, send signal SIGUSR2" % (name))
             self.procs[name].send_signal(signal.SIGUSR2)
             time.sleep(1.0)
             # SIGHUP: reload configuration
@@ -574,7 +576,7 @@ class TestDaemonsApi(AlignakTest):
             # Other signals is considered as a request to stop...
 
         # This function will only send a SIGTERM to the arbiter daemon
-        self._stop_alignak_daemons()
+        self._stop_alignak_daemons(arbiter_only=True)
 
         # The arbiter daemon will then request its satellites to stop...
         # this is the same as the following code:

@@ -337,8 +337,6 @@ class Alignak(BaseSatellite):
             # if not received_conf_part:
             #     return
 
-            print("Monitored configuration %s received at %d. Un-serialized in %d secs"
-                  % (received_conf_part, t00, time.time() - t00))
             logger.info("Monitored configuration %s received at %d. Un-serialized in %d secs",
                         received_conf_part, t00, time.time() - t00)
             logger.info("Scheduler received configuration : %s", received_conf_part)
@@ -528,15 +526,15 @@ class Alignak(BaseSatellite):
         :return: None
         """
         try:
-            # Configure the logger
-            self.setup_alignak_logger()
-
             # Start the daemon mode
             if not self.do_daemon_init_and_start():
                 self.exit_on_error(message="Daemon initialization error", exit_code=3)
 
             # Setup our modules manager
             self.load_modules_manager()
+
+            # Configure the logger
+            self.setup_alignak_logger()
 
             #  We wait for initial conf
             self.wait_for_initial_conf()

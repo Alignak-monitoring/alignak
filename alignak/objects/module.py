@@ -105,6 +105,44 @@ class Module(Item):
     macros = {}
 
     def __init__(self, params=None, parsing=True):
+        # Must be declared in this function rather than as class variable. This because the
+        # modules may have some properties that are not the same from one instance to another.
+        # Other objects very often have the same properties... but not the modules!
+        self.properties = Item.properties.copy()
+        self.properties.update({
+            'name':
+                StringProp(default='unset'),
+            'type':
+                StringProp(default='unset'),
+            'daemon':
+                StringProp(default='unset'),
+            'python_name':
+                StringProp(),
+            # Old "deprecated" property - replaced with name
+            'module_alias':
+                StringProp(),
+            # Old "deprecated" property - replaced with type
+            'module_types':
+                ListProp(default=[''], split_on_coma=True),
+            # Do not manage modules having modules
+            # 'modules':
+            #     ListProp(default=[''], split_on_coma=True)
+
+            # Module log level
+            'log_level':
+                StringProp(default='INFO'),
+
+            # Local statsd daemon for collecting daemon metrics
+            'statsd_host':
+                StringProp(default='localhost'),
+            'statsd_port':
+                IntegerProp(default=8125),
+            'statsd_prefix':
+                StringProp(default='alignak'),
+            'statsd_enabled':
+                BoolProp(default=False)
+        })
+
         # Manage the missing module name
         if params and 'name' not in params:
             if 'module_alias' in params:
@@ -129,7 +167,8 @@ class Module(Item):
 
     def __repr__(self):  # pragma: no cover
         return '<%r %r, module: %r, type(s): %r />' % \
-               (self.__class__.__name__, self.name, self.python_name, self.type)
+               (self.__class__.__name__, self.name, getattr(self, 'python_name', 'Unknown'),
+                getattr(self, 'type', 'Unknown'))
     __str__ = __repr__
 
     def get_name(self):
@@ -140,14 +179,6 @@ class Module(Item):
         :rtype: str
         """
         return getattr(self, 'name', self.module_alias)
-
-    # @property
-    # def module_alias(self):
-    #     """Getter for module_alias, maintain compatibility with older modules
-    #
-    #     :return: self.name
-    #     """
-    #     return self.name
 
     def get_types(self):
         """
@@ -169,14 +200,18 @@ class Module(Item):
         return module_type in self.module_types
 
     def serialize(self):
+        """A module may have some properties that are not defined in the class properties list.
+        Serializing a module is the same as serializing an Item but we also also include all the
+        existing properties that are not defined in the properties or running_properties
+        class list.
+        """
         res = super(Module, self).serialize()
 
-        # for prop in ['check_command', 'event_handler', 'snapshot_command', 'business_rule',
-        #              'acknowledgement']:
-        #     if getattr(self, prop) is None:
-        #         res[prop] = None
-        #     else:
-        #         res[prop] = getattr(self, prop).serialize()
+        cls = self.__class__
+        for prop in self.__dict__:
+            if prop in cls.properties or prop in cls.running_properties:
+                continue
+            res[prop] = getattr(self, prop)
 
         return res
 

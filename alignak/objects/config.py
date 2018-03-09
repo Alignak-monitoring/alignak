@@ -1322,8 +1322,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
         lst = []
         try:
             for obj_cfg in raw_objects[o_type]:
+                my_object = cls(obj_cfg)
                 # We create the object
-                lst.append(cls(obj_cfg))
+                lst.append(my_object)
         except KeyError:
             logger.debug("No %s objects in the raw configuration objects", o_type)
 
@@ -1939,6 +1940,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
         be ignored and the functions will be disabled, else it encourages the user to set the
         correct parameters in the installed modules.
 
+        TODO :clean and deprecate this part of the configuration checking!
+
         :return: None
         """
         # For status_dat
@@ -2040,13 +2043,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # Ok, the user wants external commands file, search for such a module
             if not self.got_arbiter_module_type_defined('external_commands'):
                 msg = "Your configuration parameter '%s = %s' needs to use an external module " \
-                      "such as 'logs' but I did not found one!" % \
+                      "such as 'external_commands' but I did not found one!" % \
                       ('command_file', self.command_file)
                 logger.error(msg)
                 self.add_error(msg)
             else:
                 msg = "Your configuration parameters '%s = %s' are deprecated " \
-                      "and will be ignored. Please configure your external 'logs' module " \
+                      "and will be ignored. Please configure the 'external_commands' module " \
                       "as expected." % \
                       ('command_file', self.command_file)
                 logger.warning(msg)

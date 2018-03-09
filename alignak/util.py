@@ -67,7 +67,7 @@ try:
     # use numpy if installed
     import numpy as np
     from numpy import percentile as percentile
-except ImportError:
+except ImportError:  # pragma: no cover
     import math
     import functools
 

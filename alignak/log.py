@@ -58,7 +58,7 @@ ALIGNAK_LOGGER_LEVEL = logging.INFO
 MONITORING_LOGGER_NAME = 'monitoring-log'
 
 
-logging.basicConfig(filename='/tmp/alignak.log', level=logging.DEBUG)
+# logging.basicConfig(filename='/tmp/alignak.log', level=logging.DEBUG)
 
 logger = logging.getLogger(ALIGNAK_LOGGER_NAME)  # pylint: disable=C0103
 logger.setLevel(ALIGNAK_LOGGER_LEVEL)
@@ -126,6 +126,10 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
     :rtype process_name: str
     :param log_file: log file name to update the defined log file
     :rtype log_file: str
+    :param uid: if set, the log files will be chowned to his user/group
+    :rtype uid: int
+    :param gid: if set, the log files will be chowned to his user/group
+    :rtype gid: int
     :return: None
     """
     logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)

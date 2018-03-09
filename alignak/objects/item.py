@@ -180,7 +180,8 @@ class Item(AlignakObject):
                 else:
                     logger.debug("Guessing the property '%s' type because it "
                                  "is not in %s object properties", key, self.__class__.__name__)
-                    self.properties[key] = ToGuessProp(default='')
+                    # self.properties[key] = ToGuessProp(default='')
+                    # setattr(self, key, ToGuessProp(default=''))
                     val = ToGuessProp.pythonize(params[key])
                     logger.debug("Set the property '%s' type as %s", key, type(val))
             except (PythonizeError, ValueError) as expt:
