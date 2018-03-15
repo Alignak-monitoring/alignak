@@ -77,7 +77,7 @@ script:
       # Run unit tests and code coverage analysis
       cd test
       echo "Starting tests..."
-      pytest --durations=10 test_*.py || travis_terminate 1;
+      pytest --verbose --durations=10 test_*.py || travis_terminate 1;
     fi
 
   - |

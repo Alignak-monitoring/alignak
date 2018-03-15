@@ -874,7 +874,7 @@ class Daemon(object):
 
         return None
 
-    def daemon_connection_init(self, s_link, wait_new_conf=False):
+    def daemon_connection_init(self, s_link, set_wait_new_conf=False):
         """Initialize a connection with the daemon for the provided satellite link
 
         Initialize the connection (HTTP client) to the daemon and get its running identifier.
@@ -884,7 +884,7 @@ class Daemon(object):
         Assume the daemon should be reachable because we are initializing the connection...
         as such, force set the link reachable property
 
-        If wait_new_conf is set, the daemon is requested to wait a new configuration if
+        If set_wait_new_conf is set, the daemon is requested to wait a new configuration if
          we get a running identifier. This is used by the arbiter when a new configuration
          must be dispatched
 
@@ -893,6 +893,8 @@ class Daemon(object):
 
         :param s_link: link of the daemon to connect to
         :type s_link: SatelliteLink
+        :param set_wait_new_conf: if the daemon must got the wait new configuration state
+        :type set_wait_new_conf: bool
         :return: True if the connection is established, else False
         """
         logger.debug("Daemon connection initialization: %s %s", s_link.type, s_link.name)
@@ -918,7 +920,7 @@ class Daemon(object):
             got_a_running_id = s_link.get_running_id()
             if got_a_running_id:
                 s_link.last_connection = time.time()
-                if wait_new_conf:
+                if set_wait_new_conf:
                     s_link.wait_new_conf()
                 break
             time.sleep(0.3)

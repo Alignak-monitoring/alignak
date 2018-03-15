@@ -840,7 +840,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     continue
 
                 if satellite.name in self.my_daemons:
-                    logger.warning("- daemon '%s' is still launched", satellite.name)
+                    logger.warning("- daemon '%s' is already running", satellite.name)
                     continue
 
                 started = self.start_daemon(satellite)
@@ -1299,7 +1299,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     continue
                 if not satellite.active:
                     continue
-                connected = self.daemon_connection_init(satellite)
+                connected = self.daemon_connection_init(satellite, set_wait_new_conf=True)
                 logger.debug("  %s is %s", satellite, connected)
                 self.all_connected = self.all_connected and connected
 
@@ -1890,9 +1890,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                         self.link_to_myself = None
                         self.conf = Config()
                         # Load monitoring configuration files
+                        _ts = time.time()
                         logger.warning('--- Reloading configuration...')
                         self.load_monitoring_config_file()
-                        logger.warning('--- Configuration reloaded')
+                        logger.warning('--- Configuration reloaded, %.2f seconds',
+                                       time.time() - _ts)
 
                         # Make a pause to let our satellites get ready...
                         pause = self.conf.daemons_new_conf_timeout

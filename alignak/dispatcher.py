@@ -248,7 +248,7 @@ class Dispatcher:
                     # the daemon is not yet configured
                     not_configured.append(daemon_link)
                     # # Ask to wait for a new configuration
-                    daemon_link.wait_new_conf()
+                    # daemon_link.wait_new_conf()
                     daemon_link.configuration_sent = False
             else:
                 # Got a timeout !
@@ -394,7 +394,7 @@ class Dispatcher:
                                    "not have one! I ask it to idle now",
                                    daemon_link.get_name())
                     daemon_link.active = False
-                    daemon_link.wait_new_conf()
+                    # daemon_link.wait_new_conf()
                     # I do not care about order not send or not. If not,
                     # The next loop will resent it
 
@@ -423,8 +423,8 @@ class Dispatcher:
             # We can put it idle, no active and wait_new_conf
             if len(id_to_delete) == len(cfg_ids):
                 satellite.active = False
-                logger.info("I ask %s to wait for a new conf", satellite.get_name())
-                satellite.wait_new_conf()
+                # logger.info("I ask %s to wait for a new conf", satellite.get_name())
+                # satellite.wait_new_conf()
             else:
                 # It is not fully idle, just less cfg
                 for r_id in id_to_delete:
