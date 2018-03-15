@@ -209,7 +209,7 @@ class Module(Item):
 
         cls = self.__class__
         for prop in self.__dict__:
-            if prop in cls.properties or prop in cls.running_properties:
+            if prop in cls.properties or prop in cls.running_properties or prop in ['properties']:
                 continue
             res[prop] = getattr(self, prop)
 
