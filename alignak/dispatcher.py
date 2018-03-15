@@ -737,7 +737,6 @@ class Dispatcher:
                                 self.alignak_conf.realms, sat_link.manage_sub_realms)})
 
                         # Hash the whole configuration
-                        print("***: %s / %s" % (sat_link.name, sat_link.cfg))
                         sat_link.cfg['hash'] = hashlib.sha1(
                             json.dumps(sat_link.cfg, sort_keys=True)).hexdigest()
 

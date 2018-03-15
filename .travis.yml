@@ -116,7 +116,7 @@ after_success:
       # coverage combine coverage_unit coverage_load coverage_run
 
       echo "Submitting coverage results to coveralls.io..."
-      coveralls -v --rcfile=test/.coveragerc
+      coveralls --rcfile=test/.coveragerc
       echo "Submitted"
     fi
 
