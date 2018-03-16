@@ -308,6 +308,37 @@ class TestLaunchDaemons(AlignakTest):
         # Errors must exist in the logs
         assert errors
 
+    def test_arbiter_i_am_not_configured(self):
+        """ Running the Alignak Arbiter with bad monitoring configuration (unknown sub directory)
+
+        :return:
+        """
+        print("Launching arbiter with a bad arbiter configuration...")
+
+        # Update monitoring configuration file name
+        files = ['/tmp/etc/alignak/alignak.ini']
+        replacements = {
+            ';CFG=%(etcdir)s/alignak.cfg': 'CFG=%(etcdir)s/alignak.cfg',
+            ';log_cherrypy=1': 'log_cherrypy=1'
+        }
+        self._files_update(files, replacements)
+
+        args = ["../alignak/bin/alignak_arbiter.py", "-e", "/tmp/etc/alignak/alignak.ini", "-n", "my-arbiter-name"]
+        arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
+
+        # Waiting for arbiter to parse the configuration
+        sleep(3)
+
+        ret = arbiter.poll()
+        print("*** Arbiter exited with code: %d" % ret)
+        assert ret is not None, "Arbiter is still running!"
+        stdout = arbiter.stdout.read()
+        stderr = arbiter.stderr.read()
+        assert "I cannot find my own configuration (my-arbiter-name)" in stdout
+        # Arbiter process must exit with a return code == 1
+        assert ret == 1
+
     def test_arbiter_verify(self):
         """ Running the Alignak Arbiter in verify mode only with the default shipped configuration
 

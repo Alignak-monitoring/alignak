@@ -44,6 +44,15 @@ from alignak.http.broker_interface import BrokerInterface
 class TestDaemonsApi(AlignakTest):
     """Test the daemons HTTP API"""
     def setUp(self):
+        # Set an environment variable to change the default period of activity log (every 60 loops)
+        os.environ['ALIGNAK_ACTIVITY_LOG'] = '60'
+
+        # Set an environment variable to activate the logging of system cpu, memory and disk
+        os.environ['ALIGNAK_DAEMON_MONITORING'] = '2'
+
+        # This function will stop all the running daemons (if any ...)
+        self._stop_alignak_daemons(arbiter_only=False)
+
         super(TestDaemonsApi, self).setUp()
 
         # copy the default shipped configuration files in /tmp/etc and change the root folder
@@ -75,6 +84,12 @@ class TestDaemonsApi(AlignakTest):
                 os.remove('/tmp/var/log/%s.log' % daemon)
 
     def tearDown(self):
+        # Set an environment variable to change the default period of activity log (every 60 loops)
+        os.environ['ALIGNAK_ACTIVITY_LOG'] = ''
+
+        # Set an environment variable to activate the logging of system cpu, memory and disk
+        os.environ['ALIGNAK_DAEMON_MONITORING'] = ''
+
         print("Test terminated!")
 
     def test_daemons_api_no_ssl(self):
@@ -95,17 +110,14 @@ class TestDaemonsApi(AlignakTest):
         self._run_daemons_and_test_api(ssl=True)
 
     def _run_daemons_and_test_api(self, ssl=False):
-        """ Running all the Alignak daemons to check their correct launch and API
+        """ Running all the Alignak daemons to check their correct launch and API responses
+
+        This test concerns only the main API features ...
 
         :return:
         """
-        # Set an environment variable to change the default period of activity log (every 60 loops)
-        os.environ['ALIGNAK_ACTIVITY_LOG'] = '60'
-
         req = requests.Session()
 
-        # Set an environment variable to activate the logging of system cpu, memory and disk
-        os.environ['ALIGNAK_DAEMON_MONITORING'] = '2'
 
         print("Clean former run...")
         cfg_folder = os.path.abspath('./run/test_launch_daemons')
@@ -129,8 +141,11 @@ class TestDaemonsApi(AlignakTest):
             ';CFG=%(etcdir)s/alignak.cfg': 'CFG=%s/alignak.cfg' % cfg_folder,
             # ';log_cherrypy=1': 'log_cherrypy=1',
 
-            'daemons_stop_timeout=30': 'daemons_stop_timeout=5',
-            ';daemons_start_timeout=0': 'daemons_start_timeout=20',
+            'polling_interval=5': '',
+            'daemons_check_period=5': '',
+            'daemons_stop_timeout=10': 'daemons_stop_timeout=5',
+            ';daemons_start_timeout=0': 'daemons_start_timeout=5',
+            ';daemons_dispatch_timeout=0': 'daemons_dispatch_timeout=0',
 
             'user=alignak': ';user=alignak',
             'group=alignak': ';group=alignak',
@@ -182,7 +197,6 @@ class TestDaemonsApi(AlignakTest):
             scheme = 'https'
 
         # -----
-        time.sleep(30)
         print("Testing ping")
         for name, port in satellite_map.items():
             if name == 'arbiter':   # No self ping!
@@ -574,6 +588,157 @@ class TestDaemonsApi(AlignakTest):
             # self.procs[name].send_signal(signal.SIGHUP)
             # time.sleep(1.0)
             # Other signals is considered as a request to stop...
+
+        # This function will only send a SIGTERM to the arbiter daemon
+        self._stop_alignak_daemons(arbiter_only=True)
+
+        # The arbiter daemon will then request its satellites to stop...
+        # this is the same as the following code:
+        # print("Testing stop_request - tell the daemons we will stop soon...")
+        # for name, port in satellite_map.items():
+        #     if name in ['arbiter']:
+        #         continue
+        #     raw_data = req.get("%s://localhost:%s/stop_request?stop_now=" % (scheme, port),
+        #                        params={'stop_now': False}, verify=False)
+        #     data = raw_data.json()
+        #     assert data is True
+        #
+        # time.sleep(2)
+        # print("Testing stop_request - tell the daemons they must stop now!")
+        # for name, port in satellite_map.items():
+        #     if name in ['arbiter']:
+        #         continue
+        #     raw_data = req.get("%s://localhost:%s/stop_request?stop_now=" % (scheme, port),
+        #                        params={'stop_now': True}, verify=False)
+        #     data = raw_data.json()
+        #     assert data is True
+
+        print("Done testing")
+
+    def test_daemons_configuration(self):
+        """ Running all the Alignak daemons - test configuration dispatching
+
+        :return:
+        """
+        self._run_daemons_and_configure(ssl=False)
+
+    def _run_daemons_and_configure(self, ssl=False):
+        """ Running all the Alignak daemons to check their correct launch and API
+
+        Tests for the configuration dispatch API
+
+        :return:
+        """
+        print("Clean former run...")
+        cfg_folder = os.path.abspath('./run/test_launch_daemons')
+        if os.path.exists(cfg_folder):
+            shutil.rmtree(cfg_folder)
+
+        print("Copy run configuration (../etc) to %s..." % cfg_folder)
+        # Copy the default Alignak shipped configuration to the run directory
+        shutil.copytree('../etc', cfg_folder)
+
+        # Update monitoring configuration parameters
+        files = ['%s/alignak.ini' % cfg_folder]
+        replacements = {
+            '_dist=/usr/local/': '_dist=%s' % cfg_folder,
+            '%(_dist)s/bin': cfg_folder,
+            '%(_dist)s/etc/alignak': cfg_folder,
+            '%(_dist)s/var/lib/alignak': cfg_folder,
+            '%(_dist)s/var/run/alignak': cfg_folder,
+            '%(_dist)s/var/log/alignak': cfg_folder,
+
+            ';CFG=%(etcdir)s/alignak.cfg': 'CFG=%s/alignak.cfg' % cfg_folder,
+            # ';log_cherrypy=1': 'log_cherrypy=1',
+
+            'polling_interval=5': '',
+            'daemons_check_period=5': '',
+            'daemons_stop_timeout=10': 'daemons_stop_timeout=5',
+            ';daemons_start_timeout=0': 'daemons_start_timeout=5',
+            ';daemons_dispatch_timeout=0': 'daemons_dispatch_timeout=0',
+
+            'user=alignak': ';user=alignak',
+            'group=alignak': ';group=alignak',
+
+            ';alignak_launched=1': 'alignak_launched=1',
+            ';is_daemon=1': 'is_daemon=0'
+        }
+        self._files_update(files, replacements)
+
+        self.procs = {}
+        satellite_map = {
+            'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
+            'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
+        }
+
+        daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
+                        'receiver-master', 'scheduler-master']
+
+        self._run_alignak_daemons(cfg_folder=cfg_folder,
+                                  daemons_list=daemons_list, runtime=5)
+
+        scheme = 'http'
+        if ssl:
+            scheme = 'https'
+
+        req = requests.Session()
+
+        # Here the daemons got started by the arbiter and the arbiter dispatched a configuration
+        # We will ask to wait for a new configuration
+
+        # -----
+        # 1/ get the running identifier (confirm the daemon is running)
+        print("--- get_running_id")
+        for name, port in satellite_map.items():
+            raw_data = req.get("%s://localhost:%s/get_running_id" % (scheme, port), verify=False)
+            print("Got (raw): %s" % raw_data)
+            data = raw_data.json()
+            print("%s, my running id: %s" % (name, data))
+            assert isinstance(data, unicode), "Data is not an unicode!"
+        # -----
+
+        # -----
+        # 2/ ask if have a configuration - must have one!
+        print("--- have_conf")
+        # Except Arbiter (not spare)
+        for name, port in satellite_map.items():
+            if name == 'arbiter-master':
+                continue
+            raw_data = req.get("%s://localhost:%s/have_conf" % (scheme, port), verify=False)
+            print("have_conf, got (raw): %s" % raw_data)
+            data = raw_data.json()
+            print("%s, have_conf: %s" % (name, data))
+            assert data == True, "Daemon %s should have a conf!" % name
+
+        # -----
+        # 3/ ask to wait for a new configuration
+        print("--- wait_new_conf")
+        for name, port in satellite_map.items():
+            if name == 'arbiter-master':
+                continue
+            raw_data = req.get("%s://localhost:%s/wait_new_conf" % (scheme, port), verify=False)
+            print("wait_new_conf, got (raw): %s" % raw_data)
+            data = raw_data.json()
+            assert data == None
+        # -----
+
+        # -----
+        # 4/ ask if have a configuration - must not have
+        print("--- have_conf")
+        # Except Arbiter (not spare)
+        for name, port in satellite_map.items():
+            if name == 'arbiter-master':
+                continue
+            raw_data = req.get("%s://localhost:%s/have_conf" % (scheme, port), verify=False)
+            print("have_conf, got (raw): %s" % raw_data)
+            data = raw_data.json()
+            print("%s, have_conf: %s" % (name, data))
+            assert data == False, "Daemon %s should not have a conf!" % name
+
+            # raw_data = req.get("%s://localhost:%s/have_conf?magic_hash=1234567890" % (http, satellite_map[daemon]), verify=False)
+            # data = raw_data.json()
+            # print("%s, have_conf: %s" % (daemon, data))
+            # assert data == False, "Daemon %s should not accept the magic hash!" % daemon
 
         # This function will only send a SIGTERM to the arbiter daemon
         self._stop_alignak_daemons(arbiter_only=True)

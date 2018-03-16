@@ -559,7 +559,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         if not self.link_to_myself:
             self.conf.show_errors()
-            self.request_stop("Error: I cannot find my own Arbiter object (%s), I bail out. "
+            self.request_stop("Error: I cannot find my own configuration (%s), I bail out. "
                               "To solve this, please change the arbiter name parameter in "
                               "the Alignak configuration file (certainly alignak.ini) "
                               "with the value '%s'."
@@ -1851,15 +1851,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         :return: None
         """
         try:
-            # Start the daemon mode
+            # Start the daemon
             if not self.do_daemon_init_and_start():
                 self.exit_on_error(message="Daemon initialization error", exit_code=3)
-
-            # Setup our modules manager
-            self.load_modules_manager()
-
-            # Configure the logger
-            self.setup_alignak_logger()
 
             # Load monitoring configuration files
             self.load_monitoring_config_file()
@@ -1879,7 +1873,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
                 # Exiting the main loop because of a configuration reload
                 if not self.need_config_reload:
-                    # If not configuration reload, stop the arbiter daemon
+                    # If no configuration reload is required, stop the arbiter daemon
                     self.request_stop()
                 else:
                     # Loop if a configuration reload is raised while

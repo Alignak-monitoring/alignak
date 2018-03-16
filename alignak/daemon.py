@@ -679,9 +679,6 @@ class Daemon(object):
         # Flag to reload configuration
         self.need_config_reload = False
 
-        # Track the file descriptors allocated by the logger
-        self.local_log_fds = None
-
         # Increased on each loop turn
         self.loop_count = None
 
@@ -1363,7 +1360,7 @@ class Daemon(object):
         :type skip_close_fds: list
         :return: None
         """
-        logger.info("Daemonizing...")
+        self.pre_log.append(("INFO", "Daemonizing..."))
 
         if skip_close_fds is None:
             skip_close_fds = []
@@ -1425,7 +1422,7 @@ class Daemon(object):
         self.fpid.close()
         del self.fpid
         self.pid = os.getpid()
-        self.pre_log.append(("DEBUG", "We are now fully daemonized :) pid=%d" % self.pid))
+        self.pre_log.append(("INFO", "We are now fully daemonized :) pid=%d" % self.pid))
 
     @staticmethod
     def _create_manager():
@@ -1455,10 +1452,8 @@ class Daemon(object):
         self.change_to_user_group()
         self.change_to_workdir()
         self.check_parallel_run()
-        if not self.setup_communication_daemon():
-            logger.error("I could not setup my communication daemon...")
-            return False
 
+        # TODO: check if really necessary!
         # Set ownership on some default log files. It may happen that these default
         # files are owned by a privileged user account
         try:
@@ -1470,18 +1465,24 @@ class Daemon(object):
             #  pragma: no cover
             print("Could not set default log files ownership, exception: %s" % str(exp))
 
+        # If we must daemonize, let's do it!
         if self.is_daemon:
-            # Do not close the local_log file too if it's open
-            if self.local_log_fds:
-                self.daemonize(skip_close_fds=self.local_log_fds)
-            else:
-                self.daemonize()
+            self.daemonize()
         else:
             self.write_pid()
 
-        logger.info("Creating synchronization manager...")
+        # Configure the logger
+        self.setup_alignak_logger()
+
+        if not self.setup_communication_daemon():
+            logger.error("I could not setup my communication daemon...")
+            return False
+
+        # Creating synchonisation manager (inter-daemon queues...)
         self.sync_manager = self._create_manager()
-        logger.info("Created")
+
+        # Setup our modules manager
+        self.load_modules_manager()
 
         # todo: daemonize the process thanks to CherryPy plugin
         logger.info("Starting http_daemon thread..")
@@ -1501,11 +1502,10 @@ class Daemon(object):
 
         :return: True if initialization is ok, else False
         """
-        use_ssl = self.use_ssl
         ca_cert = ssl_cert = ssl_key = server_dh = None
 
         # The SSL part
-        if use_ssl:
+        if self.use_ssl:
             ssl_cert = os.path.abspath(self.server_cert)
             if not os.path.exists(ssl_cert):
                 self.exit_on_error("The configured SSL server certificate file '%s' "
@@ -1535,12 +1535,16 @@ class Daemon(object):
         # pylint: disable=E1101
         try:
             self.http_daemon = HTTPDaemon(self.host, self.port, self.http_interface,
-                                          use_ssl, ca_cert, ssl_key,
+                                          self.use_ssl, ca_cert, ssl_key,
                                           ssl_cert, server_dh, self.thread_pool_size,
                                           self.log_cherrypy)
         except PortNotFree:
             logger.error('The HTTP daemon port (%s:%d) is not free...', self.host, self.port)
-            # logger.exception('The HTTP daemon port is not free: %s', exp)
+            return False
+
+        except Exception as exp:
+            print('Setting up HTTP daemon, exception: %s', str(exp))
+            logger.exception('Setting up HTTP daemon, exception: %s', str(exp))
             return False
 
         return True

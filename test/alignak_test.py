@@ -227,7 +227,7 @@ class AlignakTest(unittest2.TestCase):
             for proc in psutil.process_iter():
                 if daemon not in proc.name():
                     continue
-                if proc.pid == self.my_pid:
+                if getattr(self, 'my_pid', None) and proc.pid == self.my_pid:
                     continue
                 print("- killing %s" % (proc.name()))
                 try:

@@ -94,7 +94,7 @@ class AlignakTest(unittest2.TestCase):
         self.my_pid = os.getpid()
 
         print "\n" + self.id()
-        print ("-" * 80)
+        print("-" * 80)
         print("Test current working directory: %s" % (os.getcwd()))
 
         # Configure Alignak logger with test configuration
@@ -105,13 +105,11 @@ class AlignakTest(unittest2.TestCase):
         self.logger_.info("Test: %s", self.id())
 
         # To make sure that no running daemon exist
+        print("Checking Alignak running daemons...")
         for daemon in ['broker', 'poller', 'reactionner', 'receiver', 'scheduler', 'arbiter']:
             for proc in psutil.process_iter():
-                if daemon not in proc.name():
-                    continue
-                if proc.pid == self.my_pid:
-                    continue
-                assert False, "*** Found a running Alignak daemon: %s" % (proc.name())
+                if 'alignak' in proc.name() and daemon in proc.name():
+                    assert False, "*** Found a running Alignak daemon: %s" % (proc.name())
 
         print("System information:")
         perfdatas = []
@@ -229,7 +227,7 @@ class AlignakTest(unittest2.TestCase):
             for proc in psutil.process_iter():
                 if daemon not in proc.name():
                     continue
-                if proc.pid == self.my_pid:
+                if getattr(self, 'my_pid', None) and proc.pid == self.my_pid:
                     continue
                 print("- killing %s" % (proc.name()))
                 try:
@@ -554,6 +552,7 @@ class AlignakTest(unittest2.TestCase):
                                                                          accept_unknown=True)
 
         print("All daemons WS: %s" % ["%s:%s" % (link.address, link.port) for link in self._arbiter.dispatcher.all_daemons_links])
+
         # Simulate the daemons HTTP interface (very simple simulation !)
         with requests_mock.mock() as mr:
             for link in self._arbiter.dispatcher.all_daemons_links:
@@ -650,8 +649,8 @@ class AlignakTest(unittest2.TestCase):
                 self._receiver = receiver
                 print("Got a default receiver: %s\n-----" % self._receiver)
 
-                for scheduler in self._receiver_daemon.schedulers.values():
-                    scheduler.my_daemon = self._receiver_daemon
+                # for scheduler in self._receiver_daemon.schedulers.values():
+                #     scheduler.my_daemon = self._receiver_daemon
 
         self.ecm_mode = 'applyer'
 

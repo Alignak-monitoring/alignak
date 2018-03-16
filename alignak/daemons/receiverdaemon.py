@@ -298,12 +298,6 @@ class Receiver(Satellite):
             if not self.do_daemon_init_and_start():
                 self.exit_on_error(message="Daemon initialization error", exit_code=3)
 
-            # Setup our modules manager
-            self.load_modules_manager()
-
-            # Configure the logger
-            self.setup_alignak_logger()
-
             #  We wait for initial conf
             self.wait_for_initial_conf()
             if not self.new_conf:
