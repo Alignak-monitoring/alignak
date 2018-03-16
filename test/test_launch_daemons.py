@@ -309,11 +309,11 @@ class TestLaunchDaemons(AlignakTest):
         assert errors
 
     def test_arbiter_i_am_not_configured(self):
-        """ Running the Alignak Arbiter with bad monitoring configuration (unknown sub directory)
+        """ Running the Alignak Arbiter with missing arbiter configuration
 
         :return:
         """
-        print("Launching arbiter with a bad arbiter configuration...")
+        print("Launching arbiter with a missing arbiter configuration...")
 
         # Update monitoring configuration file name
         files = ['/tmp/etc/alignak/alignak.ini']
@@ -368,84 +368,6 @@ class TestLaunchDaemons(AlignakTest):
         # Arbiter process must exit with a return code == 0 and no errors
         assert errors == 0
         assert ret == 0
-
-    def test_arbiter_no_daemons(self):
-        """ Run the Alignak Arbiter - some expected daemons are missing
-
-        :return:
-        """
-        # All the default configuration files are in /tmp/etc
-
-        # Update monitoring configuration file name
-        files = ['/tmp/etc/alignak/alignak.ini']
-        replacements = {
-            ';CFG=%(etcdir)s/alignak.cfg': 'CFG=%(etcdir)s/alignak.cfg',
-            # ';log_cherrypy=1': 'log_cherrypy=1'
-        }
-        self._files_update(files, replacements)
-
-        args = ["../alignak/bin/alignak_arbiter.py", "-e", "/tmp/etc/alignak/alignak.ini"]
-        arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
-
-        sleep(60)
-
-        # The arbiter will have stopped!
-
-        ret = arbiter.poll()
-        print("*** Arbiter exited with: %s" % ret)
-        assert ret == 4, "Arbiter is still running!"
-        ok = True
-        for line in iter(arbiter.stdout.readline, b''):
-            if 'WARNING:' in line:
-                ok = False
-                # Only WARNING because of missing daemons...
-                if 'that we must be related with cannot be connected' in line:
-                    ok = True
-                if 'Add failed attempt for' in line:
-                    ok = True
-                if 'as dead, too much failed attempts' in line:
-                    ok = True
-                # if 'Exception: Server not available:' in line:
-                #     ok = True
-                if 'as dead :(' in line:
-                    ok = True
-                if 'is not alive for' in line:
-                    ok = True
-                if 'ignoring repeated file: ' in line:
-                    ok = True
-                if 'directory did not exist' in line:
-                    ok = True
-                if 'Cannot call the additional groups setting with ' in line:
-                    ok = True
-                if '- satellites connection #1 is not correct; ' in line:
-                    ok = True
-                if '- satellites connection #2 is not correct; ' in line:
-                    ok = True
-                if '- satellites connection #3 is not correct; ' in line:
-                    ok = True
-                if ok:
-                    print("... " + line.rstrip())
-                else:
-                    print(">>> " + line.rstrip())
-
-                assert ok
-            if 'ERROR:' in line:
-                # Only ERROR because of configuration sending failures...
-                if 'The connection is not initialized for reactionner-master' in line:
-                    ok = True
-                assert ok
-            # if 'CRITICAL:' in line:
-            #     ok = False
-        assert ok
-        ok = True
-        for line in iter(arbiter.stderr.readline, b''):
-            print("*** " + line.rstrip())
-            if 'All the daemons connections could not be established ' \
-               'despite 3 tries! Sorry, I bail out!' not in line:
-                ok = False
-        if not ok and sys.version_info > (2, 7):
-            assert False, "stderr output!"
 
     def test_arbiter_parameters(self):
         """ Run the Alignak Arbiter with some parameters - pid file

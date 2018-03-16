@@ -67,6 +67,7 @@ import random
 
 from alignak.misc.serialization import serialize
 from alignak.util import alive_then_spare_then_deads, master_then_spare
+from alignak.objects.satellitelink import LinkError
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -226,7 +227,13 @@ class Dispatcher:
                 # continue
             # ----------
             # Force the daemon communication only if a configuration is prepared
-            result = daemon_link.update_infos(forced=(forced or self.new_to_dispatch), test=test)
+            result = False
+            try:
+                result = daemon_link.update_infos(forced=(forced or self.new_to_dispatch),
+                                                  test=test)
+            except LinkError:
+                logger.warning("Scheduler connection failed, I could not push external commands!")
+
             if result is not False:
                 if result is None:
                     # Come back later ... too recent daemon connection!
@@ -906,7 +913,12 @@ class Dispatcher:
                 continue
 
             # Send a stop request to the daemon
-            stop_ok = daemon_link.stop_request(stop_now=stop_now)
+            try:
+                stop_ok = daemon_link.stop_request(stop_now=stop_now)
+            except LinkError:
+                stop_ok = True
+                logger.warning("Daemon stop request failed, %s probably stopped!", daemon_link)
+
             all_ok = all_ok and stop_ok
 
         self.stop_request_sent = all_ok

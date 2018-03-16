@@ -665,8 +665,8 @@ class Daemon(object):
 
         # Configuration dispatch
         # when self.new_conf is not None, the arbiter sent a new configuration to manage
-        self.new_conf = None
-        self.cur_conf = None
+        self.new_conf = {}
+        self.cur_conf = {}
         # Specific Semaphore for the configuration
         self.conf_lock = threading.RLock()
 
@@ -690,7 +690,10 @@ class Daemon(object):
             self.log_loop = 'TEST_LOG_LOOP' in os.environ
 
         # Activity information log period (every activity_log_period loop, raise a log)
-        self.activity_log_period = int(os.getenv('ALIGNAK_ACTIVITY_LOG', 600))
+        try:
+            self.activity_log_period = int(os.getenv('ALIGNAK_ACTIVITY_LOG', '600'))
+        except ValueError:  # pragma: no cover, simple protection
+            self.activity_log_period = 0
 
         # Put in queue some debug output we will raise
         # when we will be daemonized
@@ -989,7 +992,7 @@ class Daemon(object):
                 logger.debug("--- %d", self.loop_count)
 
             # Maybe the arbiter pushed a new configuration...
-            if self.watch_for_new_conf(timeout=0):
+            if self.watch_for_new_conf(timeout=0.05):
                 logger.info("I got a new configuration...")
                 # Manage the new configuration
                 self.setup_new_conf()
@@ -1012,8 +1015,7 @@ class Daemon(object):
                 self.do_loop_turn()
                 statsmgr.timer('loop-turn', time.time() - _ts)
             else:
-                logger.info("+++ loop %d, did not yet received my configuration",
-                            self.loop_count)
+                logger.debug("+++ loop %d, did not yet received my configuration", self.loop_count)
 
             # Daemon load
             self.load_1_min.update_load(self.maximum_loop_duration - elapsed_time)
@@ -1058,7 +1060,7 @@ class Daemon(object):
                 logger.info("Daemon %s is living: loop #%s ;)", self.name, self.loop_count)
 
             # Maybe the arbiter pushed a new configuration...
-            if self.watch_for_new_conf(0.05):
+            if self.watch_for_new_conf(timeout=0.05):
                 logger.warning("The arbiter pushed a new configuration... ")
 
             # Loop end
@@ -1542,7 +1544,7 @@ class Daemon(object):
             logger.error('The HTTP daemon port (%s:%d) is not free...', self.host, self.port)
             return False
 
-        except Exception as exp:
+        except Exception as exp:  # pylint: disable=broad-except
             print('Setting up HTTP daemon, exception: %s', str(exp))
             logger.exception('Setting up HTTP daemon, exception: %s', str(exp))
             return False
@@ -1849,7 +1851,7 @@ class Daemon(object):
         """
         logger.debug("Watching for a new configuration, timeout: %s", timeout)
         self.make_a_pause(timeout=timeout, check_time_change=False)
-        return self.new_conf is not None
+        return any(self.new_conf)
 
     def hook_point(self, hook_name):
         """Used to call module function that may define a hook function

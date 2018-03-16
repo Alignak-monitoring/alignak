@@ -601,7 +601,7 @@ class AlignakTest(unittest2.TestCase):
                 pushed_configuration = scheduler.unit_test_pushed_configuration
                 self._scheduler_daemon.new_conf = pushed_configuration
                 self._scheduler_daemon.setup_new_conf()
-                assert self._scheduler_daemon.new_conf is None
+                assert self._scheduler_daemon.new_conf == {}
                 self._schedulers[scheduler.name] = self._scheduler_daemon.sched
 
                 # Store the last scheduler object to get used in some other functions!
@@ -624,6 +624,7 @@ class AlignakTest(unittest2.TestCase):
                 pushed_configuration = broker.unit_test_pushed_configuration
                 self._broker_daemon.new_conf = pushed_configuration
                 self._broker_daemon.setup_new_conf()
+                assert self._broker_daemon.new_conf == {}
                 print("Got a default broker daemon: %s\n-----" % self._broker_daemon)
 
             # Get my first broker link
@@ -646,6 +647,7 @@ class AlignakTest(unittest2.TestCase):
                 pushed_configuration = receiver.unit_test_pushed_configuration
                 self._receiver_daemon.new_conf = pushed_configuration
                 self._receiver_daemon.setup_new_conf()
+                assert self._receiver_daemon.new_conf == {}
                 self._receiver = receiver
                 print("Got a default receiver: %s\n-----" % self._receiver)
 

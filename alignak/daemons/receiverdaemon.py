@@ -55,6 +55,7 @@ import time
 import traceback
 import logging
 
+from alignak.objects.satellitelink import LinkError
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.satellite import Satellite
 from alignak.property import IntegerProp, StringProp
@@ -129,8 +130,8 @@ class Receiver(Satellite):
         """Receiver custom setup_new_conf method
 
         This function calls the base satellite treatment and manages the configuration needed
-        for a broker daemon:
-        - get and configure its pollers, reactionners and receivers relation
+        for a receiver daemon:
+        - get and configure its satellites
         - configure the modules
 
         :return: None
@@ -174,6 +175,32 @@ class Receiver(Satellite):
                 if not self.daemon_connection_init(satellite):
                     logger.error("Satellite connection failed: %s", satellite)
 
+    def get_external_commands_from_arbiters(self):
+        """Get external commands from our arbiters
+
+        As of now, only the arbiter are requested to provide their external commands that
+        the receiver will push to all the known schedulers.
+
+        :return: None
+        """
+        for arbiter_link_uuid in self.arbiters:
+            link = self.arbiters[arbiter_link_uuid]
+
+            if not link.active:
+                logger.debug("The arbiter '%s' is not active, it is not possible to get "
+                             "its external commands!", link.name)
+                continue
+
+            try:
+                logger.debug("Getting external commands from: %s", link.name)
+                external_commands = link.get_external_commands()
+                if external_commands:
+                    logger.debug("Got %d commands from: %s", len(external_commands), link.name)
+                for external_command in external_commands:
+                    self.add(external_command)
+            except LinkError:
+                logger.warning("Arbiter connection failed, I could not get external commands!")
+
     def push_external_commands_to_schedulers(self):
         """Send a HTTP request to the schedulers (POST /run_external_commands)
         with external command list.
@@ -199,8 +226,8 @@ class Receiver(Satellite):
                     self.schedulers[scheduler_link_uuid].pushed_commands.append(ext_cmd)
 
         # Now for all active schedulers, send the commands
-        pushed_commands = 0
-        failed_commands = 0
+        count_pushed_commands = 0
+        count_failed_commands = 0
         for scheduler_link_uuid in self.schedulers:
             link = self.schedulers[scheduler_link_uuid]
 
@@ -216,7 +243,11 @@ class Receiver(Satellite):
                 continue
 
             logger.debug("Sending %d commands to scheduler %s", len(commands), link.name)
-            sent = link.push_external_commands(commands)
+            sent = []
+            try:
+                sent = link.push_external_commands(commands)
+            except LinkError:
+                logger.warning("Scheduler connection failed, I could not push external commands!")
 
             # Whether we sent the commands or not, clean the scheduler list
             link.pushed_commands = []
@@ -224,15 +255,15 @@ class Receiver(Satellite):
             # If we didn't sent them, add the commands to the arbiter list
             if sent:
                 statsmgr.gauge('external-commands.pushed.%s' % link.name, len(commands))
-                pushed_commands = pushed_commands + len(commands)
+                count_pushed_commands = count_pushed_commands + len(commands)
             else:
-                failed_commands = failed_commands + len(commands)
+                count_failed_commands = count_failed_commands + len(commands)
                 statsmgr.gauge('external-commands.failed.%s' % link.name, len(commands))
                 # Kepp the not sent commands... for a next try
                 self.external_commands.extend(commands)
 
-        statsmgr.gauge('external-commands.pushed.all', pushed_commands)
-        statsmgr.gauge('external-commands.failed.all', failed_commands)
+        statsmgr.gauge('external-commands.pushed.all', count_pushed_commands)
+        statsmgr.gauge('external-commands.failed.all', count_failed_commands)
 
     def do_loop_turn(self):
         """Receiver daemon main loop
@@ -243,9 +274,10 @@ class Receiver(Satellite):
         # Begin to clean modules
         self.check_and_del_zombie_modules()
 
-        # Now we check if we received a new configuration - no sleep time, we will sleep later...
-        self.watch_for_new_conf(0.1)
-        if self.new_conf:
+        # Maybe the arbiter pushed a new configuration...
+        if self.watch_for_new_conf(timeout=0.05):
+            logger.info("I got a new configuration...")
+            # Manage the new configuration
             self.setup_new_conf()
 
         # Maybe external modules raised 'objects'
@@ -253,12 +285,18 @@ class Receiver(Satellite):
         _t0 = time.time()
         self.get_objects_from_from_queues()
         statsmgr.timer('core.get-objects-from-queues', time.time() - _t0)
+
+        # Get external commands from the arbiters...
+        _t0 = time.time()
+        self.get_external_commands_from_arbiters()
+        statsmgr.timer('broks.got', time.time() - _t0)
+
         statsmgr.gauge('got.external-commands', len(self.unprocessed_external_commands))
         statsmgr.gauge('got.broks', len(self.broks))
 
         _t0 = time.time()
         self.push_external_commands_to_schedulers()
-        statsmgr.timer('core.push-external-commands', time.time() - _t0)
+        statsmgr.timer('external-commands.pushed', time.time() - _t0)
 
         # Say to modules it's a new tick :)
         self.hook_point('tick')

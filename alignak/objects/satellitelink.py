@@ -982,8 +982,7 @@ class SatelliteLink(Item):
 
     @valid_connection()
     def get_actions(self, params):
-        """Send a HTTP request to the satellite (GET /ping)
-        and THEN send a HTTP request to the satellite (GET /get_checks)
+        """Send a HTTP request to the satellite (GET /get_checks)
         Get actions from satellite.
         Un-serialize data received.
 
@@ -994,6 +993,21 @@ class SatelliteLink(Item):
         """
         res = self.con.get('get_checks', params, wait='long')
         logger.debug("Got actions from %s: %s", self.name, res)
+        return unserialize(res, True)
+
+    @valid_connection()
+    def get_host(self, host_name):
+        """Send a HTTP request to the scheduler (GET /get_host)
+        Get host information from the scheduler.
+        Un-serialize data received.
+
+        :param params: the request parameters
+        :type params: str
+        :return: Actions list on success, [] on failure
+        :rtype: list
+        """
+        res = self.con.get('get_host', host_name, wait='long')
+        logger.debug("Got an host from %s: %s", self.name, res)
         return unserialize(res, True)
 
 

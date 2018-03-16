@@ -48,6 +48,7 @@
 """
 import logging
 import requests
+from requests.adapters import HTTPAdapter
 
 from alignak.misc.serialization import serialize
 
@@ -138,7 +139,17 @@ class HTTPClient(object):
             protocol = "https" if use_ssl else "http"
             uri = "%s://%s:%s/" % (protocol, self.address, self.port)
         self.uri = uri
+
         self._requests_con = requests.Session()
+        # self.session = requests.Session()
+        self._requests_con.header = {'Content-Type': 'application/json'}
+
+        # Requests HTTP adapters
+        http_adapter = HTTPAdapter(max_retries=3)
+        https_adapter = HTTPAdapter(max_retries=3)
+        self._requests_con.mount('http://', http_adapter)
+        self._requests_con.mount('https://', https_adapter)
+
         self.set_proxy(proxy)
 
     def make_uri(self, path):

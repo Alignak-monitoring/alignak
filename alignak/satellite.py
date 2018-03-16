@@ -83,7 +83,7 @@ from alignak.daemon import Daemon
 from alignak.stats import statsmgr
 from alignak.check import Check  # pylint: disable=W0611
 from alignak.objects.module import Module  # pylint: disable=W0611
-from alignak.objects.satellitelink import SatelliteLink
+from alignak.objects.satellitelink import SatelliteLink, LinkError
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -233,15 +233,20 @@ class BaseSatellite(Daemon):
             # Clean our execution context
             self.clean_previous_run()
 
+            # Check configuration is valid
+            if '_status' in self.new_conf:
+                logger.error(self.new_conf['_status'])
+                self.cur_conf = {}
+
             # Get the new configuration
             self.cur_conf = self.new_conf
             # self_conf is our own configuration from the alignak environment
             self_conf = self.cur_conf['self_conf']
 
-            logger.debug("Received a new configuration, containing:")
+            logger.info("Received a new configuration, containing:")
             for key in self.cur_conf:
                 try:
-                    logger.debug("- %s: %s", key, self.cur_conf[key])
+                    logger.info("- %s: %s", key, self.cur_conf[key])
                 except UnicodeDecodeError:
                     logger.error("- %s: %s", key, self.cur_conf[key].decode('utf8', 'ignore'))
             logger.debug("satellite self configuration part: %s", self_conf)
@@ -256,7 +261,7 @@ class BaseSatellite(Daemon):
             logger.info("My Alignak instance: %s", self.alignak_name)
 
             # This to indicate that the new configuration got managed...
-            self.new_conf = None
+            self.new_conf = {}
 
             # Set our timezone from arbiter
             use_timezone = self_conf.get('use_timezone', 'NOTSET')
@@ -268,7 +273,7 @@ class BaseSatellite(Daemon):
             # Now we create our arbiters and schedulers links
             for link_type in ['arbiters', 'schedulers']:
                 if link_type not in self.cur_conf:
-                    logger.error("[%s] Missing %s in the configuration!", self.name, link_type)
+                    logger.error("Missing %s in the configuration!", link_type)
                     continue
 
                 if link_type == 'schedulers' and self.type == 'scheduler':
@@ -781,7 +786,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         # Clean my lists
         self.broks.clear()
 
-    def do_loop_turn(self):
+    def do_loop_turn(self):  # pylint: disable=too-many-branches
         """Satellite main loop::
 
         * Check and delete zombies actions / modules
@@ -889,11 +894,17 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         # If we are passive, we do not initiate the check getting
         # and return
         if not self.passive:
-            # We send to our schedulers the results of all finished checks
-            self.manage_returns()
+            try:
+                # We send to our schedulers the results of all finished checks
+                self.manage_returns()
+            except LinkError as exp:
+                logger.warning("Scheduler connection failed, I could not send my results!")
 
-            # And we get the new actions from our schedulers
-            self.get_new_actions()
+            try:
+                # And we get the new actions from our schedulers
+                self.get_new_actions()
+            except LinkError as exp:
+                logger.warning("Scheduler connection failed, I could not get new actions!")
 
         # Get objects from our modules that are not Worker based
         _t0 = time.time()

@@ -73,7 +73,7 @@ class GenericInterface(object):
         :type stop_now: bool
         :return: None
         """
-        logger.debug("Stop now: %s", stop_now)
+        logger.info("Stop now: %s", stop_now)
 
         self.app.interrupted = (stop_now == '1')
         self.app.will_stop = True

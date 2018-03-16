@@ -587,7 +587,7 @@ class Item(AlignakObject):
 
     def get_initial_status_brok(self):
         """
-        Create initial brok
+        Create an initial status brok
 
         :return: Brok object
         :rtype: object
@@ -596,9 +596,20 @@ class Item(AlignakObject):
         self.fill_data_brok_from(data, 'full_status')
         return Brok({'type': 'initial_' + self.my_type + '_status', 'data': data})
 
+    def get_new_brok(self, name):
+        """
+        Create a new item brok
+
+        :param name: name of the new object
+        :type name: str
+        :return: Brok object
+        :rtype: object
+        """
+        return Brok({'type': 'new_' + self.my_type, 'data': {'name': name}})
+
     def get_update_status_brok(self):
         """
-        Create update brok
+        Create an update item brok
 
         :return: Brok object
         :rtype: object

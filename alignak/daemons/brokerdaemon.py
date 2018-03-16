@@ -72,7 +72,7 @@ from alignak.satellite import BaseSatellite
 from alignak.property import IntegerProp, StringProp, BoolProp
 from alignak.stats import statsmgr
 from alignak.http.broker_interface import BrokerInterface
-from alignak.objects.satellitelink import SatelliteLink
+from alignak.objects.satellitelink import SatelliteLink, LinkError
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -237,19 +237,24 @@ class Broker(BaseSatellite):
                 logger.debug("Getting broks from %s", satellite_link)
 
                 _t0 = time.time()
-                tmp_broks = satellite_link.get_broks(self.name)
-                if tmp_broks:
-                    logger.debug("Got %d Broks from %s in %s",
-                                 len(tmp_broks), satellite_link.name, time.time() - _t0)
-                    statsmgr.gauge('get-new-broks-count.%s'
-                                   % (satellite_link.name), len(tmp_broks))
-                    statsmgr.timer('get-new-broks-time.%s'
-                                   % (satellite_link.name), time.time() - _t0)
-                    for brok in tmp_broks.values():
-                        brok.instance_id = satellite_link.instance_id
+                try:
+                    tmp_broks = satellite_link.get_broks(self.name)
+                except LinkError:
+                    logger.warning("Daemon %s connection failed, I could not get the broks!",
+                                   satellite_link)
+                else:
+                    if tmp_broks:
+                        logger.debug("Got %d Broks from %s in %s",
+                                     len(tmp_broks), satellite_link.name, time.time() - _t0)
+                        statsmgr.gauge('get-new-broks-count.%s'
+                                       % (satellite_link.name), len(tmp_broks))
+                        statsmgr.timer('get-new-broks-time.%s'
+                                       % (satellite_link.name), time.time() - _t0)
+                        for brok in tmp_broks.values():
+                            brok.instance_id = satellite_link.instance_id
 
-                    # Add the broks to our global list
-                    self.external_broks.extend(tmp_broks.values())
+                        # Add the broks to our global list
+                        self.external_broks.extend(tmp_broks.values())
 
     def get_retention_data(self):  # pragma: no cover, useful?
         """Get all broks
@@ -426,14 +431,19 @@ class Broker(BaseSatellite):
             for satellite in my_satellites.values():
                 logger.info("[%s] Asking my initial broks from '%s'", self.name, satellite.name)
                 _t0 = time.time()
-                my_initial_broks = satellite.get_initial_broks(self.name)
-                statsmgr.timer('initial-broks.%s' % satellite.name, time.time() - _t0)
-                if not my_initial_broks:
-                    logger.info("No initial broks were raised, my scheduler is not yet ready...")
-                    return
-                else:
-                    self.got_initial_broks = True
-                    logger.info("Got %d initial broks from '%s'", my_initial_broks, satellite.name)
+                try:
+                    my_initial_broks = satellite.get_initial_broks(self.name)
+                    statsmgr.timer('initial-broks.%s' % satellite.name, time.time() - _t0)
+                    if not my_initial_broks:
+                        logger.info("No initial broks were raised, "
+                                    "my scheduler is not yet ready...")
+                        return
+                    else:
+                        self.got_initial_broks = True
+                        logger.info("Got %d initial broks from '%s'",
+                                    my_initial_broks, satellite.name)
+                except LinkError as exp:
+                    logger.warning("Scheduler connection failed, I could not get initial broks!")
 
         logger.debug("Begin Loop: still some old broks to manage (%d)", len(self.external_broks))
         if self.external_broks:

@@ -73,6 +73,22 @@ class SchedulerInterface(GenericInterface):
         return serialize(res, True)
 
     @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def get_host(self, host_name='None'):
+        """Get host configuration from the scheduler, used mainly by the receiver
+
+        :param host_name: searched host name
+        :type host_name: str
+        :return: serialized check/action list
+        :rtype: str
+        """
+        try:
+            host = self.app.sched.hosts.find_by_name(host_name)
+        except Exception as exp:
+            return None
+        return serialize(host, True) if host else None
+
+    @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
     def put_results(self):

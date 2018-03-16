@@ -130,8 +130,6 @@ class HTTPDaemon(object):
                 cherrypy.config.update({'server.ssl_certificate_chain': ca_cert})
                 cherrypy.log("Using SSL CA certificate: %s" % ca_cert)
 
-        cherrypy.log("Serving application: %s" % http_interface)
-
         # Mount the main application (an Alignak daemon interface)
         cherrypy.tree.mount(http_interface, '/', config)
 

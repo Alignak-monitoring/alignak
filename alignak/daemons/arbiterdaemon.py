@@ -115,6 +115,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.monitoring_config_files = []
         # My daemons...
         self.daemons_last_check = 0
+        self.daemons_last_reachable_check = 0
         self.my_daemons = {}
 
         # My report monitor interface
@@ -862,7 +863,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                          self.conf.daemons_check_period)
             return True
 
-        logger.debug("Alignak configuration daemons check")
+        logger.debug("Alignak launched daemons check")
         result = True
 
         procs = [psutil.Process()]
@@ -880,9 +881,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                                      connection.status)
                     # Reset the daemon connection if it got broked...
                     if not daemon['satellite'].con:
-                        self.daemon_connection_init(daemon['satellite'])
-                    # Set my satellite as alive :)
-                    daemon['satellite'].set_alive()
+                        if self.daemon_connection_init(daemon['satellite']):
+                            # Set my satellite as alive :)
+                            daemon['satellite'].set_alive()
                 except psutil.NoSuchProcess:
                     pass
                 except psutil.AccessDenied:
@@ -956,6 +957,35 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                             result = False
 
             logger.debug("Stopping daemons duration: %.2f seconds", time.time() - start)
+
+        return result
+
+    def daemons_reachability_check(self):
+        """Manage the list of Alignak launched daemons
+
+         Check if the daemon process is running
+
+        :return: True if all daemons are running, else False
+        """
+        # First look if it's not too early to ping
+        start = time.time()
+        if self.daemons_last_reachable_check \
+                and self.daemons_last_reachable_check + self.conf.daemons_check_period > start:
+            logger.debug("Too early to check daemons reachability, check period is %.2f seconds",
+                         self.conf.daemons_check_period)
+            return True
+
+        logger.debug("Alignak daemons reachability check")
+        result = True
+
+        _t0 = time.time()
+        self.dispatcher.check_reachable()
+        statsmgr.timer('dispatcher.check-alive', time.time() - _t0)
+
+        # Set the last check as now
+        self.daemons_last_reachable_check = start
+
+        logger.debug("Checking daemons reachability duration: %.2f seconds", time.time() - start)
 
         return result
 
@@ -1093,7 +1123,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             logger.info("My Alignak instance: %s", self.alignak_name)
 
             # This to indicate that the new configuration got managed...
-            self.new_conf = None
+            self.new_conf = {}
 
             # Get the whole monitored objects configuration
             t00 = time.time()
@@ -1101,13 +1131,18 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 received_conf_part = unserialize(whole_conf)
             except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
                 # This to indicate that the new configuration is not managed...
-                self.new_conf = "Cannot un-serialize configuration received from arbiter"
-                logger.error(self.new_conf)
+                self.new_conf = {
+                    "_status": "Cannot un-serialize configuration received from arbiter"
+                }
+                logger.error(self.new_conf['_status'])
                 logger.error("Back trace of the error:\n%s", traceback.format_exc())
                 return
             except Exception as exp:  # pylint: disable=broad-except
                 # This to indicate that the new configuration is not managed...
-                self.new_conf = "Cannot un-serialize configuration received from arbiter"
+                self.new_conf = {
+                    "_status": "Cannot un-serialize configuration received from arbiter"
+                }
+                logger.error(self.new_conf['_status'])
                 logger.error(self.new_conf)
                 self.exit_on_exception(exp, self.new_conf)
             logger.info("Monitored configuration %s received at %d. Un-serialized in %d secs",
@@ -1308,8 +1343,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 break
             else:
                 logger.warning("- satellites connection #%s is not correct; "
-                               "let's give another chance...", first_connection_try_count)
-                time.sleep(3.0)
+                               "let's give another chance after %d seconds...",
+                               first_connection_try_count,
+                               self.link_to_myself.polling_interval)
+                time.sleep(self.link_to_myself.polling_interval)
                 if first_connection_try_count >= 3:
                     self.request_stop("All the daemons connections could not be established "
                                       "despite %d tries! "
@@ -1389,8 +1426,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Make a pause to let our started daemons get ready...
         pause = max(self.conf.daemons_start_timeout, len(self.my_daemons) * 0.5)
-        logger.info("Pausing %d seconds...", pause)
-        time.sleep(pause)
+        if pause:
+            logger.info("Pausing %d seconds...", pause)
+            time.sleep(pause)
 
         # Prepare and dispatch the monitored configuration
         self.configuration_dispatch()
@@ -1461,26 +1499,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                                   exit_code=4)
 
             # Now the dispatcher job
-            _t0 = time.time()
-            self.dispatcher.check_reachable()
-            statsmgr.timer('dispatcher.check-alive', time.time() - _t0)
-
-            # _t0 = time.time()
-            # self.dispatcher.check_dispatch()
-            # statsmgr.timer('dispatcher.check-dispatch', time.time() - _t0)
-            #
-            # _t0 = time.time()
-            # self.dispatcher.check_bad_dispatch()
-            # statsmgr.timer('dispatcher.check-dispatch', time.time() - _t0)
-            #
-            # _t0 = time.time()
-            # self.dispatcher.prepare_dispatch()
-            # self.dispatcher.dispatch()
-            # statsmgr.timer('dispatcher.dispatch', time.time() - _t0)
-
-            # _t0 = time.time()
-            # self.dispatcher.check_bad_dispatch()
-            # statsmgr.timer('dispatcher.check-bad-dispatch', time.time() - _t0)
+            self.daemons_reachability_check()
 
             # Now get things from our module instances
             _t0 = time.time()
