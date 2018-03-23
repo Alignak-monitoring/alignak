@@ -34,7 +34,7 @@ the Alignak broker.
 """
 from __future__ import print_function
 import os
-import sys
+# import sys
 import json
 import time
 

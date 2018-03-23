@@ -614,7 +614,6 @@ class TestDaemonsApi(AlignakTest):
         #     data = raw_data.json()
         #     assert data is True
 
-        print("Done testing")
 
     def test_daemons_configuration(self):
         """ Running all the Alignak daemons to check their correct configuration
@@ -761,8 +760,6 @@ class TestDaemonsApi(AlignakTest):
                                params={'stop_now': True}, verify=False)
             data = raw_data.json()
             assert data is True
-
-        print("Done testing")
 
     def test_get_host(self):
         """ Running all the Alignak daemons - get host from the scheduler

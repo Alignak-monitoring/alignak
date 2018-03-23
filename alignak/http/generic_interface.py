@@ -144,13 +144,14 @@ class GenericInterface(object):
         :return: boolean indicating if the daemon has a conf
         :rtype: bool
         """
+        self.app.have_conf = getattr(self.app, 'cur_conf', None) not in [None, {}]
         if magic_hash is not None:
             # Beware, we got an str in entry, not an int
             magic_hash = int(magic_hash)
             # I've got a conf and a good one
-            return self.app.cur_conf and self.app.cur_conf.magic_hash == magic_hash
+            return self.app.have_conf and self.app.cur_conf.magic_hash == magic_hash
 
-        return getattr(self.app, 'cur_conf', None) is not None
+        return self.app.have_conf
 
     @cherrypy.expose
     @cherrypy.tools.json_in()
