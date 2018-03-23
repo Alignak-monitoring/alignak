@@ -143,13 +143,16 @@ class AlignakTest(unittest2.TestCase):
         """Test ending:
         - restore initial log level if it got changed
         """
-        # Restore the collector logger log level
-        if self.former_log_level:
-            logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
-            for handler in logger_.handlers:
-                if getattr(handler, '_name', None) == 'unit_tests':
+        # Clear Alignak unit tests log list
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for handler in logger_.handlers:
+            if getattr(handler, '_name', None) == 'unit_tests':
+                print("Log handler %s, stored %d logs" % (handler._name, len(handler.collector)))
+                handler.collector = []
+                # Restore the collector logger log level
+                if self.former_log_level:
                     handler.level = self.former_log_level
-                    break
+                break
 
     def set_debug_log(self):
         """Set the test logger at DEBUG level - useful for some tests that check debug log"""
@@ -157,11 +160,10 @@ class AlignakTest(unittest2.TestCase):
         print("set_debug_log")
         logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
         for handler in logger_.handlers:
-            print("handler: %s" % handler)
             if getattr(handler, '_name', None) == 'unit_tests':
                 self.former_log_level = handler.level
                 handler.setLevel(logging.DEBUG)
-                print("handler debug!")
+                print("Unit tests handler is set at debug!")
                 break
 
     def _files_update(self, files, replacements):
