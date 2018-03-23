@@ -191,12 +191,12 @@ class TestDispatcher(AlignakTest):
                 assert my_dispatcher.dispatch_ok is False
                 assert my_dispatcher.first_dispatch_done is False
                 assert my_dispatcher.new_to_dispatch is False
-                # Still not configured ...
-                for link in my_dispatcher.all_daemons_links:
-                    if link == my_dispatcher.arbiter_link:
-                        continue
-                    # Only for Python > 2.7, DEBUG logs ...
-                    if os.sys.version_info > (2, 7):
+                # Only for Python > 2.7, DEBUG logs ...
+                if os.sys.version_info > (2, 7):
+                    # Still not configured ...
+                    for link in my_dispatcher.all_daemons_links:
+                        if link == my_dispatcher.arbiter_link:
+                            continue
                         self.assert_any_log_match(re.escape(
                             "My (%s) fresh managed configuration: {}" % link.name
                         ))
@@ -222,12 +222,14 @@ class TestDispatcher(AlignakTest):
                 # #5 - Check reachable - a configuration is prepared,
                 # this will force the daemons communication, no need for a time warp ;)
                 my_dispatcher.check_reachable()
-                for link in my_dispatcher.all_daemons_links:
-                    if link == my_dispatcher.arbiter_link:
-                        continue
-                    self.assert_any_log_match(re.escape(
-                        "My (%s) fresh managed configuration: {}" % link.name
-                    ))
+                # Only for Python > 2.7, DEBUG logs ...
+                if os.sys.version_info > (2, 7):
+                    for link in my_dispatcher.all_daemons_links:
+                        if link == my_dispatcher.arbiter_link:
+                            continue
+                        self.assert_any_log_match(re.escape(
+                            "My (%s) fresh managed configuration: {}" % link.name
+                        ))
 
                 self.assert_any_log_match(re.escape(
                     "Dispatcher, those daemons are not configured:"))
