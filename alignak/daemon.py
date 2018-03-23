@@ -1015,7 +1015,7 @@ class Daemon(object):
                 self.do_loop_turn()
                 statsmgr.timer('loop-turn', time.time() - _ts)
             else:
-                logger.debug("+++ loop %d, did not yet received my configuration", self.loop_count)
+                logger.info("+++ loop %d, did not yet received my configuration", self.loop_count)
 
             # Daemon load
             self.load_1_min.update_load(self.maximum_loop_duration - elapsed_time)

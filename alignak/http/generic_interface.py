@@ -262,7 +262,7 @@ class GenericInterface(object):
             logger.warning("My Arbiter wants me to wait for a new configuration.")
             # Clear can occur while setting up a new conf and lead to error.
             self.app.schedulers.clear()
-            self.app.cur_conf = None
+            self.app.cur_conf = {}
 
     @cherrypy.expose
     @cherrypy.tools.json_out()

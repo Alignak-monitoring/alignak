@@ -100,7 +100,7 @@ class ArbiterInterface(GenericInterface):
         """
         with self.app.conf_lock:
             logger.warning("My master Arbiter wants me to wait for a new configuration.")
-            self.app.cur_conf = None
+            self.app.cur_conf = {}
 
     @cherrypy.expose
     @cherrypy.tools.json_out()

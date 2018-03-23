@@ -280,6 +280,9 @@ class Receiver(Satellite):
             # Manage the new configuration
             self.setup_new_conf()
 
+        if not self.cur_conf:
+            return
+
         # Maybe external modules raised 'objects'
         # we should get them
         _t0 = time.time()
