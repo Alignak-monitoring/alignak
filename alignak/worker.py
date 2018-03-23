@@ -261,7 +261,7 @@ class Worker(object):
         except (IOError, EOFError) as exp:
             logger.warning("My actions queue is no more available: %s", str(exp))
             self.interrupted = True
-        except Exception as exp:  # pylint: disable=W0703
+        except Exception as exp:  # pylint: disable=broad-except
             logger.error("Failed getting messages in actions queue: %s", str(exp))
 
         logger.debug("get_new_checks exit")
@@ -319,7 +319,7 @@ class Worker(object):
                 except (IOError, EOFError) as exp:
                     logger.warning("My returns queue is no more available: %s", str(exp))
                     # sys.exit(2)
-                except Exception as exp:  # pylint: disable=W0703
+                except Exception as exp:  # pylint: disable=broad-except
                     logger.error("Failed putting messages in returns queue: %s", str(exp))
             else:
                 logger.debug("--- not yet finished")

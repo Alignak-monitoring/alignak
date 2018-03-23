@@ -1342,7 +1342,9 @@ def parse_daemon_args(arbiter=False):
     :type arbiter: bool
     :return: args
     """
-    parser = argparse.ArgumentParser(version='%(prog)s ' + VERSION)
+    parser = argparse.ArgumentParser(version='%(prog)s ' + VERSION,
+                                     description="Alignak daemon launching",
+                                     epilog="And that's it!")
     if arbiter:
         parser.add_argument('-a', '--arbiter', action='append',
                             dest='monitoring_files',
@@ -1403,5 +1405,11 @@ def parse_daemon_args(arbiter=False):
                              'This file defines all the daemons of this Alignak '
                              'instance and their configuration. Each daemon configuration '
                              'is defined in a specifc section of this file.')
+
+    # parser.add_argument('env_file',
+    #                     help='Alignak global environment file. '
+    #                          'This file defines all the daemons of this Alignak '
+    #                          'instance and their configuration. Each daemon configuration '
+    #                          'is defined in a specifc section of this file.')
 
     return parser.parse_args()

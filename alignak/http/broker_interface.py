@@ -64,7 +64,7 @@ class BrokerInterface(GenericInterface):
                 res[inst.uuid] = {'name': inst.get_name(),
                                   'type': inst.get_types(),
                                   'queue_size': inst.to_q.qsize()}
-            except Exception:  # pylint: disable=W0703
+            except Exception:  # pylint: disable=broad-except
                 res[inst.uuid] = {'name': inst.get_name(),
                                   'type': inst.get_types(),
                                   'queue_size': 0}

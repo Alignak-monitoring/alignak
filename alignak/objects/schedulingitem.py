@@ -2661,7 +2661,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                         logger.info("Resolved BR for '%s', output: %s",
                                     self.get_full_name(), check.output)
 
-            except Exception, err:  # pylint: disable=W0703
+            except Exception, err:  # pylint: disable=broad-except
                 # Notifies the error, and return an UNKNOWN state.
                 check.output = "Error while re-evaluating business rule: %s" % err
                 logger.debug("[%s] Error while re-evaluating business rule:\n%s",

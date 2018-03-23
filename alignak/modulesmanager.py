@@ -179,7 +179,7 @@ class ModulesManager(object):
 
             # The module instance init function says if initialization is ok
             result = instance.init()
-        except Exception as exp:  # pylint: disable=W0703
+        except Exception as exp:  # pylint: disable=broad-except
             # pragma: no cover, simple protection
             self.configuration_errors.append(
                 "The module instance %s raised an exception on initialization: %s, I remove it!" %
@@ -243,7 +243,7 @@ class ModulesManager(object):
                                                         type(instance)))
                     raise AttributeError
             # pragma: no cover, simple protection
-            except Exception as exp:  # pylint: disable=W0703
+            except Exception as exp:  # pylint: disable=broad-except
                 logger.error("The module %s raised an exception on loading, I remove it!",
                              alignak_module.get_name())
                 logger.exception("Exception: %s", exp)
@@ -332,7 +332,7 @@ class ModulesManager(object):
             queue_size = 0
             try:
                 queue_size = instance.to_q.qsize()
-            except Exception:  # pylint: disable=W0703
+            except Exception:  # pylint: disable=broad-except
                 pass
             if queue_size > self.daemon.max_queue_size:
                 logger.error("The external module %s got a too high brok queue size (%s > %s)!",

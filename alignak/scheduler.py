@@ -637,7 +637,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 fun = getattr(instance, full_hook_name)
                 try:
                     fun(self)
-                # pylint: disable=W0703
+                # pylint: disable=broad-except
                 except Exception as exp:  # pragma: no cover, never happen during unit tests...
                     logger.error("The instance %s raise an exception %s."
                                  "I disable it and set it to restart it later",
@@ -1207,7 +1207,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     self.nb_actions_launched_passive += len(lst)
 
     def get_actions_from_passives_satellites(self):
-        #  pylint: disable=W0703
+        #  pylint: disable=broad-except
         """Get actions/checks results from passive poller/reactionners
 
         :return: None

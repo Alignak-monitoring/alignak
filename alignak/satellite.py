@@ -883,7 +883,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             logger.debug("Returns queue is empty")
         except (IOError, EOFError) as exp:
             logger.warning("My returns queue is no more available: %s", str(exp))
-        except Exception as exp:  # pylint: disable=W0703
+        except Exception as exp:  # pylint: disable=broad-except
             logger.error("Failed getting messages in returns queue: %s", str(exp))
             logger.error(traceback.format_exc())
 

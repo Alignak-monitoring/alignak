@@ -1011,7 +1011,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 logger.info("Getting Alignak monitored configuration objects from module '%s'",
                             instance.name)
                 got_objects = instance.get_objects()
-            except Exception as exp:  # pylint: disable=W0703
+            except Exception as exp:  # pylint: disable=broad-except
                 logger.exception("Module %s get_objects raised an exception %s. "
                                  "Log and continue to run.", instance.name, exp)
                 continue
@@ -1060,7 +1060,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 logger.info("Getting Alignak global configuration from module '%s'", instance.name)
                 cfg = instance.get_alignak_configuration()
                 alignak_cfg.update(cfg)
-            except Exception, exp:  # pylint: disable=W0703
+            except Exception, exp:  # pylint: disable=broad-except
                 logger.error("Module get_alignak_configuration %s raised an exception %s. "
                              "Log and continue to run", instance.name, str(exp))
                 output = cStringIO.StringIO()

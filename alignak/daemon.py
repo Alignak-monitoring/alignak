@@ -1728,7 +1728,7 @@ class Daemon(object):
             # print("Exception: %s" % str(exp))
             logger.exception('The HTTP daemon port is not free: %s', exp)
             raise
-        except Exception as exp:  # pylint: disable=W0703
+        except Exception as exp:  # pylint: disable=broad-except
             self.exit_on_exception(exp)
             # logger.exception('The HTTP daemon failed with the error %s, exiting', str(exp))
             # logger.critical("Back trace of the error:\n%s", traceback.format_exc())
@@ -1870,7 +1870,7 @@ class Daemon(object):
             fun = getattr(module, full_hook_name)
             try:
                 fun(self)
-            except Exception as exp:  # pylint: disable=W0703
+            except Exception as exp:  # pylint: disable=broad-except
                 logger.warning('The instance %s raised an exception %s. I disabled it,'
                                'and set it to restart later', module.name, str(exp))
                 logger.exception('Exception %s', exp)

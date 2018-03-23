@@ -84,7 +84,7 @@ class SchedulerInterface(GenericInterface):
         """
         try:
             host = self.app.sched.hosts.find_by_name(host_name)
-        except Exception as exp:
+        except Exception:  # pylint: disable=broad-except
             return None
         return serialize(host, True) if host else None
 

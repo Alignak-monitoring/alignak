@@ -100,7 +100,7 @@ def no_block_read(output):
     fcntl.fcntl(o_fd, fcntl.F_SETFL, o_fl | os.O_NONBLOCK)
     try:
         return output.read()
-    except Exception:  # pylint: disable=W0703
+    except Exception:  # pylint: disable=broad-except
         return ''
 
 
@@ -478,7 +478,7 @@ if os.name != 'nt':
             else:
                 try:
                     cmd = shlex.split(self.command.encode('utf8', 'ignore'))
-                except Exception as exp:  # pylint: disable=W0703
+                except Exception as exp:  # pylint: disable=broad-except
                     self.output = 'Not a valid shell command: ' + exp.__str__()
                     self.exit_status = 3
                     self.status = 'done'
@@ -518,7 +518,7 @@ if os.name != 'nt':
                 if exp.errno == 24 and exp.strerror == 'Too many open files':
                     return 'toomanyopenfiles'
                 return 'process_launch_failed'
-            except Exception as exp:  # pylint: disable=W0703
+            except Exception as exp:  # pylint: disable=broad-except
                 logger.error("Fail launching command: %s, force shell: %s, exception: %s",
                              self.command, force_shell, exp)
                 return 'process_launch_failed'
@@ -540,7 +540,7 @@ if os.name != 'nt':
             for file_d in [self.process.stdout, self.process.stderr]:
                 try:
                     file_d.close()
-                except Exception as exp:  # pylint: disable=W0703
+                except Exception as exp:  # pylint: disable=broad-except
                     logger.error("Exception stopping command: %s %s",
                                  self.command, exp)
 
@@ -568,7 +568,7 @@ else:  # pragma: no cover, not currently tested with Windows...
             else:
                 try:
                     cmd = shlex.split(self.command.encode('utf8', 'ignore'))
-                except Exception, exp:  # pylint: disable=W0703
+                except Exception, exp:  # pylint: disable=broad-except
                     self.output = 'Not a valid shell command: ' + exp.__str__()
                     self.exit_status = 3
                     self.status = 'done'
