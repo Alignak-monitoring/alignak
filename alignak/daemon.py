@@ -1821,7 +1821,7 @@ class Daemon(object):
         """Wait initial configuration from the arbiter.
         Basically sleep 1.0 and check if new_conf is here
 
-        :param timeout: timeout to wait from socket read
+        :param timeout: timeout to wait
         :type timeout: int
         :return: None
         """
@@ -1837,6 +1837,27 @@ class Daemon(object):
             statsmgr.timer('initial-configuration', time.time() - _ts)
         else:
             logger.info("Interrupted before getting the initial configuration")
+
+    def wait_for_new_conf(self, timeout=1.0):
+        """Wait for a new configuration from the arbiter.
+        Basically the same as waiting for an initial configuration (wait_for_initial_conf)
+
+        :param timeout: timeout to wait
+        :type timeout: int
+        :return: None
+        """
+        logger.info("Waiting for a new configuration")
+        # Arbiter do not already set our have_conf param
+        _ts = time.time()
+        while not self.new_conf and not self.interrupted:
+            # Make a pause and check if the system time changed
+            _, _ = self.make_a_pause(timeout, check_time_change=True)
+
+        if not self.interrupted:
+            logger.info("Got the new configuration, waited for: %.2f", time.time() - _ts)
+            statsmgr.timer('new-configuration', time.time() - _ts)
+        else:
+            logger.info("Interrupted before getting the new configuration")
 
     def watch_for_new_conf(self, timeout=0):
         """Check if a new configuration was sent to the daemon

@@ -45,10 +45,11 @@ from termcolor import cprint
 
 from alignak.brok import Brok
 
-if sys.version_info < (2, 7):
-    from alignak.misc.dictconfig import dictConfig as logger_dictConfig
-else:
-    from logging.config import dictConfig as logger_dictConfig
+from alignak.misc.dictconfig import dictConfig as logger_dictConfig
+# if sys.version_info < (2, 7):
+#     from alignak.misc.dictconfig import dictConfig as logger_dictConfig
+# else:
+#     from logging.config import dictConfig as logger_dictConfig
 
 # Default values for root logger
 ALIGNAK_LOGGER_NAME = 'alignak'
