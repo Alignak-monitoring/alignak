@@ -165,6 +165,13 @@ class AlignakTest(unittest2.TestCase):
                 handler.setLevel(logging.DEBUG)
                 print("Unit tests handler is set at debug!")
                 break
+        # Only for Python < 2.7, DEBUG logs ...
+        if os.sys.version_info < (2, 7):
+            # Add collector for test purpose.
+            collector_h = CollectorHandler()
+            collector_h.setFormatter(Formatter('[%(created)i] %(levelname)s: [%(name)s] %(message)s'))
+            collector_h.setLevel(logging.DEBUG)
+            logger_.addHandler(collector_h)
 
     def _files_update(self, files, replacements):
         """Update files content with the defined replacements
