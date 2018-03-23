@@ -366,7 +366,7 @@ class Worker(object):
             self.do_work(actions_queue, returns_queue)
             logger.info("[%s] (pid=%d) stopped", self.get_id(), os.getpid())
         # Catch any exception, try to print it and exit anyway
-        except Exception:
+        except Exception:  # pragma: no cover, this should never happen indeed ;)
             output = cStringIO.StringIO()
             traceback.print_exc(file=output)
             logger.error("[%s] exit with an unmanaged exception : %s",

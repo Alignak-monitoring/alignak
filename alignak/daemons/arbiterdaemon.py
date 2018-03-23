@@ -1915,7 +1915,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                             logger.info("Pausing %d seconds...", pause)
                             time.sleep(pause)
 
-        except Exception as exp:
+        except Exception as exp:  # pragma: no cover, this should never happen indeed ;)
             # Only a master arbiter can stop the daemons
             if self.is_master:
                 # Stop the daemons

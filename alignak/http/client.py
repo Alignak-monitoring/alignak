@@ -212,8 +212,8 @@ class HTTPClient(object):
             raise HTTPClientTimeoutException(timeout, uri)
         except requests.ConnectionError as exp:
             raise HTTPClientConnectionException(uri, exp.args[0])
-        except Exception as err:
-            raise HTTPClientException('Request error to %s: %s' % (uri, err))
+        except Exception as exp:
+            raise HTTPClientException('Request error to %s: %s' % (uri, exp))
 
     def post(self, path, args, wait='short'):
         """Do a POST HTTP request
@@ -242,8 +242,8 @@ class HTTPClient(object):
             raise HTTPClientTimeoutException(timeout, uri)
         except requests.ConnectionError as exp:
             raise HTTPClientConnectionException(uri, exp.args[0])
-        except Exception as err:
-            raise HTTPClientException('Request error to %s: %s' % (uri, err))
+        except Exception as exp:
+            raise HTTPClientException('Request error to %s: %s' % (uri, exp))
 
     def put(self, path, args, wait='short'):  # pragma: no cover, looks never used!
         # todo: remove this because it looks never used anywhere...
@@ -271,5 +271,5 @@ class HTTPClient(object):
             raise HTTPClientTimeoutException(timeout, uri)
         except requests.ConnectionError as exp:
             raise HTTPClientConnectionException(uri, exp.args[0])
-        except Exception as err:
-            raise HTTPClientException('Request error to %s: %s' % (uri, err))
+        except Exception as exp:
+            raise HTTPClientException('Request error to %s: %s' % (uri, exp))

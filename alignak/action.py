@@ -568,7 +568,7 @@ else:  # pragma: no cover, not currently tested with Windows...
             else:
                 try:
                     cmd = shlex.split(self.command.encode('utf8', 'ignore'))
-                except Exception, exp:  # pylint: disable=broad-except
+                except Exception as exp:  # pylint: disable=broad-except
                     self.output = 'Not a valid shell command: ' + exp.__str__()
                     self.exit_status = 3
                     self.status = 'done'

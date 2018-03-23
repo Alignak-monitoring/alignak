@@ -547,6 +547,6 @@ class Alignak(BaseSatellite):
             self.sched.after_run()
 
             self.request_stop()
-        except Exception:
+        except Exception:  # pragma: no cover, this should never happen indeed ;)
             self.exit_on_exception(traceback.format_exc())
             raise

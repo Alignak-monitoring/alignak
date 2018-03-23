@@ -195,9 +195,11 @@ class TestDispatcher(AlignakTest):
                 for link in my_dispatcher.all_daemons_links:
                     if link == my_dispatcher.arbiter_link:
                         continue
-                    self.assert_any_log_match(re.escape(
-                        "My (%s) fresh managed configuration: {}" % link.name
-                    ))
+                    # Only for Python > 2.7, DEBUG logs ...
+                    if os.sys.version_info > (2, 7):
+                        self.assert_any_log_match(re.escape(
+                            "My (%s) fresh managed configuration: {}" % link.name
+                        ))
 
                 # #4 - Prepare dispatching
                 assert my_dispatcher.new_to_dispatch is False
