@@ -175,6 +175,9 @@ class Receiver(Satellite):
                 if not self.daemon_connection_init(satellite):
                     logger.error("Satellite connection failed: %s", satellite)
 
+        # Now I have a configuration!
+        self.have_conf = True
+
     def get_external_commands_from_arbiters(self):
         """Get external commands from our arbiters
 

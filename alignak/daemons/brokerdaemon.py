@@ -394,6 +394,9 @@ class Broker(BaseSatellite):
                     if not self.daemon_connection_init(satellite):
                         logger.error("Satellite connection failed: %s", satellite)
 
+        # Now I have a configuration!
+        self.have_conf = True
+
     def clean_previous_run(self):
         """Clean all (when we received new conf)
 

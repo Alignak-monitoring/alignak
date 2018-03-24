@@ -476,6 +476,9 @@ class Alignak(BaseSatellite):
                 logger.info("Loaded: %s", self.sched.pushed_conf)
                 self.sched.start_scheduling()
 
+        # Now I have a configuration!
+        self.have_conf = True
+
     def clean_previous_run(self):
         """Clean variables from previous configuration
 

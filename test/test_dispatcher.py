@@ -403,13 +403,15 @@ class TestDispatcher(AlignakTest):
                     print("Check reachable response")
                     self.clear_logs()
                     my_dispatcher.check_reachable()
-                    for link in my_dispatcher.all_daemons_links:
-                        if link == my_dispatcher.arbiter_link:
-                            continue
-                        self.assert_any_log_match(re.escape(
-                            "My (%s) fresh managed configuration: %s"
-                            % (link.name, link.cfg_managed)
-                        ))
+                    # Only for Python > 2.7, DEBUG logs ...
+                    if os.sys.version_info > (2, 7):
+                        for link in my_dispatcher.all_daemons_links:
+                            if link == my_dispatcher.arbiter_link:
+                                continue
+                            self.assert_any_log_match(re.escape(
+                                "My (%s) fresh managed configuration: %s"
+                                % (link.name, link.cfg_managed)
+                            ))
 
     def test_bad_init(self):
         """ Test that:

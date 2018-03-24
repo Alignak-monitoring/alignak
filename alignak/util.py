@@ -165,7 +165,7 @@ def split_semicolon(line, maxsplit=None):
     return split_line
 
 
-def jsonify_r(obj):
+def jsonify_r(obj):  # pragma: no cover, not for unit tests...
     """Convert an object into json (recursively on attribute)
 
     :param obj: obj to jsonify
@@ -243,20 +243,6 @@ def get_end_of_day(year, month_id, day):
     end_time = (year, month_id, day, 23, 59, 59, 0, 0, -1)
     end_time_epoch = time.mktime(end_time)
     return end_time_epoch
-
-
-def print_date(timestamp):
-    """Get date (local) in asc format from timestamp
-
-    example : 'Thu Jan  1 01:00:00 1970' (for timestamp=0 in a EUW server)
-
-    :param timestamp: timestamp
-    :type timestamp; int
-    :return: formatted time
-    :rtype: int
-    TODO: Missing timezone
-    """
-    return time.asctime(time.localtime(timestamp))
 
 
 def get_day(timestamp):
@@ -669,21 +655,6 @@ def to_svc_hst_distinct_lists(ref, tab):  # pragma: no cover, to be deprectaed?
     return res
 
 
-def get_obj_name(obj):
-    """Get object name (call get_name) if not a string
-
-    :param obj: obj we want the name
-    :type obj: object
-    :return: object name
-    :rtype: str
-    """
-    # Maybe we do not have a real object but already a string. If so
-    # return the string
-    if isinstance(obj, basestring):
-        return obj
-    return obj.get_name()
-
-
 def get_obj_name_two_args_and_void(obj, value):  # pylint: disable=W0613
     """Get value name (call get_name) if not a string
 
@@ -698,20 +669,6 @@ def get_obj_name_two_args_and_void(obj, value):  # pylint: disable=W0613
         return value.get_name()
     except AttributeError:
         return ''
-
-
-def get_obj_full_name(obj):
-    """Wrapper to call obj.get_full_name or obj.get_name
-
-    :param obj: object name
-    :type obj: object
-    :return: object name
-    :rtype: str
-    """
-    try:
-        return obj.get_full_name()
-    except AttributeError:
-        return obj.get_name()
 
 
 def get_customs_keys(dic):  # pragma: no cover, to be deprectaed?

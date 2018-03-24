@@ -435,34 +435,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         """
         return self.hostgroups
 
-    def get_host_tags(self):
-        """Accessor to tags attribute
-
-        :return: tag list of host
-        :rtype: list
-        """
-        return self.tags
-
-    # def get_realm_name(self):
-    #     """Accessor to realm attribute
-    #     :return: realm object of host
-    #     :rtype: alignak.objects.realm.Realm
-    #     """
-    #     return self.realm_name
-    #
-    def is_linked_with_host(self, other):
-        """Check if other is in act_depend_of host attribute
-
-        :param other: other host to search
-        :type other: alignak.objects.host.Host
-        :return: True if other in act_depend_of list, otherwise False
-        :rtype: bool
-        """
-        for (host, _, _, _) in self.act_depend_of:
-            if host == other:
-                return True
-        return False
-
     def add_service_link(self, service):
         """Add a service to the service list of this host
 
@@ -908,34 +880,34 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         if need_stalk:
             logger.info("Stalking %s: %s", self.get_name(), self.output)
 
-    def get_data_for_checks(self):
-        """Get data for a check
-
-        :return: list containing a single host (this one)
-        :rtype: list
-        """
-        return [self]
-
-    def get_data_for_event_handler(self):
-        """Get data for an event handler
-
-        :return: list containing a single host (this one)
-        :rtype: list
-        """
-        return [self]
-
-    def get_data_for_notifications(self, contact, notif):
-        """Get data for a notification
-
-        :param contact: The contact to return
-        :type contact:
-        :param notif: the notification to return
-        :type notif:
-        :return: list containing a the host and the given parameters
-        :rtype: list
-        """
-        return [self, contact, notif]
-
+    # def get_data_for_checks(self):
+    #     """Get data for a check
+    #
+    #     :return: list containing a single host (this one)
+    #     :rtype: list
+    #     """
+    #     return [self]
+    #
+    # def get_data_for_event_handler(self):
+    #     """Get data for an event handler
+    #
+    #     :return: list containing a single host (this one)
+    #     :rtype: list
+    #     """
+    #     return [self]
+    #
+    # def get_data_for_notifications(self, contact, notif):
+    #     """Get data for a notification
+    #
+    #     :param contact: The contact to return
+    #     :type contact:
+    #     :param notif: the notification to return
+    #     :type notif:
+    #     :return: list containing a the host and the given parameters
+    #     :rtype: list
+    #     """
+    #     return [self, contact, notif]
+    #
     def notification_is_blocked_by_contact(self, notifways, timeperiods, notif, contact):
         """Check if the notification is blocked by this contact.
 

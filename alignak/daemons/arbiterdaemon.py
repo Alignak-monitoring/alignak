@@ -228,6 +228,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         :rtype: dict
         """
         res = {}
+        # Todo: improve this for an arbiter spare
         # for arbiter_link in self.conf.arbiters:
         #     if arbiter_link == self.link_to_myself:
         #         # Not myself ;)
@@ -735,6 +736,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Display found warnings and errors
         self.conf.show_errors()
 
+        # Now I have a configuration!
+        self.have_conf = True
         self.loading_configuration = False
 
     def request_stop(self, message='', exit_code=0):
@@ -1094,10 +1097,15 @@ class Arbiter(Daemon):  # pylint: disable=R0902
     def setup_new_conf(self):
         """ Setup a new configuration received from a Master arbiter.
 
-        Todo: perharps we should not accept the configuration or raise an error if we do not
+        TODO : test this!
+
+        TODO: perharps we should not accept the configuration or raise an error if we do not
         find our own configuration data in the data. Thus this should never happen...
         :return: None
         """
+        # Execute the base class treatment...
+        super(Arbiter, self).setup_new_conf()
+
         with self.conf_lock:
             logger.info("I received a new configuration from my master")
 
@@ -1208,6 +1216,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             #     self.link_to_myself.spare = True
             #     # Set myself as alive ;)
             #     self.link_to_myself.set_alive()
+
+        # Now I have a configuration!
+        self.have_conf = True
 
     def wait_for_master_death(self):
         """Wait for a master timeout and take the lead if necessary

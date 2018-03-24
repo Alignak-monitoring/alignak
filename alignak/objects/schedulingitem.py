@@ -2942,33 +2942,33 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def get_data_for_checks(self):  # pragma: no cover, base function
-        """Get data for a check
-
-        :return: list containing the service and the linked host
-        :rtype: list
-        """
-        pass
-
-    def get_data_for_event_handler(self):  # pragma: no cover, base function
-        """Get data for an event handler
-
-        :return: list containing a single item (this one)
-        :rtype: list
-        """
-        pass
-
-    def get_data_for_notifications(self, contact, notif):  # pragma: no cover, base function
-        """Get data for a notification
-
-        :param contact: The contact to return
-        :type contact:
-        :param notif: the notification to return
-        :type notif:
-        :return: list
-        :rtype: list
-        """
-        pass
+    # def get_data_for_checks(self):  # pragma: no cover, base function
+    #     """Get data for a check
+    #
+    #     :return: list containing the service and the linked host
+    #     :rtype: list
+    #     """
+    #     pass
+    #
+    # def get_data_for_event_handler(self):  # pragma: no cover, base function
+    #     """Get data for an event handler
+    #
+    #     :return: list containing a single item (this one)
+    #     :rtype: list
+    #     """
+    #     pass
+    #
+    # def get_data_for_notifications(self, contact, notif):  # pragma: no cover, base function
+    #     """Get data for a notification
+    #
+    #     :param contact: The contact to return
+    #     :type contact:
+    #     :param notif: the notification to return
+    #     :type notif:
+    #     :return: list
+    #     :rtype: list
+    #     """
+    #     pass
 
     def set_impact_state(self):
         """We just go an impact, so we go unreachable

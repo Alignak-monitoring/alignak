@@ -228,6 +228,9 @@ class BaseSatellite(Daemon):
         :return: None
         """
         with self.conf_lock:
+            # No more configuration now!
+            self.have_conf = False
+
             logger.info("Received a new configuration (arbiters / schedulers)")
 
             # Clean our execution context
@@ -1012,6 +1015,12 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 logger.info("- : %s/%s", satellite.type, satellite.name)
                 if not self.daemon_connection_init(satellite):
                     logger.error("Satellite connection failed: %s", satellite)
+
+            # Now I have a configuration!
+            self.have_conf = False
+
+        # Now I have a configuration!
+        self.have_conf = True
 
     def get_daemon_stats(self, details=False):
         """Increase the stats provided by the Daemon base class

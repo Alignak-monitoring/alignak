@@ -929,33 +929,33 @@ class Service(SchedulingItem):
         if need_stalk:
             logger.info("Stalking %s: %s", self.get_name(), check.output)
 
-    def get_data_for_checks(self):
-        """Get data for a check
-
-        :return: list containing the service and the linked host
-        :rtype: list
-        """
-        return [self.host, self]
-
-    def get_data_for_event_handler(self):
-        """Get data for an event handler
-
-        :return: list containing the service and the linked host
-        :rtype: list
-        """
-        return [self.host, self]
-
-    def get_data_for_notifications(self, contact, notif):
-        """Get data for a notification
-
-        :param contact: The contact to return
-        :type contact:
-        :param notif: the notification to return
-        :type notif:
-        :return: list containing the service, the host and the given parameters
-        :rtype: list
-        """
-        return [self.host, self, contact, notif]
+    # def get_data_for_checks(self):
+    #     """Get data for a check
+    #
+    #     :return: list containing the service and the linked host
+    #     :rtype: list
+    #     """
+    #     return [self.host, self]
+    #
+    # def get_data_for_event_handler(self):
+    #     """Get data for an event handler
+    #
+    #     :return: list containing the service and the linked host
+    #     :rtype: list
+    #     """
+    #     return [self.host, self]
+    #
+    # def get_data_for_notifications(self, contact, notif):
+    #     """Get data for a notification
+    #
+    #     :param contact: The contact to return
+    #     :type contact:
+    #     :param notif: the notification to return
+    #     :type notif:
+    #     :return: list containing the service, the host and the given parameters
+    #     :rtype: list
+    #     """
+    #     return [self.host, self, contact, notif]
 
     def notification_is_blocked_by_contact(self, notifways, timeperiods, notif, contact):
         """Check if the notification is blocked by this contact.

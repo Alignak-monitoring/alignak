@@ -2770,7 +2770,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # Now serialize the whole configuration, for sending to spare arbiters
             self.spare_arbiter_conf = serialize(self)
 
-    def dump(self, dump_file=None):
+    def dump(self, dump_file=None):  # pragma: no cover, not for unit tests...
         """Dump configuration to a file in a JSON format
 
         :param dump_file: the file to dump

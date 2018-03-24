@@ -614,7 +614,6 @@ class TestDaemonsApi(AlignakTest):
         #     data = raw_data.json()
         #     assert data is True
 
-
     def test_daemons_configuration(self):
         """ Running all the Alignak daemons to check their correct configuration
 
