@@ -246,10 +246,10 @@ class BaseSatellite(Daemon):
             # self_conf is our own configuration from the alignak environment
             self_conf = self.cur_conf['self_conf']
 
-            logger.info("Received a new configuration, containing:")
+            logger.debug("Received a new configuration, containing:")
             for key in self.cur_conf:
                 try:
-                    logger.info("- %s: %s", key, self.cur_conf[key])
+                    logger.debug("- %s: %s", key, self.cur_conf[key])
                 except UnicodeDecodeError:
                     logger.error("- %s: %s", key, self.cur_conf[key].decode('utf8', 'ignore'))
             logger.debug("satellite self configuration part: %s", self_conf)
@@ -733,9 +733,12 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         :return: None
         TODO: Use a decorator
         """
-        _t0 = time.time()
-        self.do_get_new_actions()
-        statsmgr.timer('core.get-new-actions', time.time() - _t0)
+        try:
+            _t0 = time.time()
+            self.do_get_new_actions()
+            statsmgr.timer('core.get-new-actions', time.time() - _t0)
+        except RuntimeError:
+            logger.error("Exception like issue #1007")
 
     def do_get_new_actions(self):
         """Get new actions from schedulers
