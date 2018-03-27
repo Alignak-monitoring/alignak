@@ -11,7 +11,8 @@ ordereddict==1.1
 # Use py.test as test-runner
 pytest<3.3.0; python_version < '2.7'
 pytest; python_version >= '2.7'
-pytest-cov; python_version >= '2.7'
+#pytest-cov; python_version >= '2.7'
+pytest-cov
 
 # Let coverage use the most recent version
 coverage
