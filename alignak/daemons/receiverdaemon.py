@@ -199,6 +199,9 @@ class Receiver(Satellite):
                 external_commands = link.get_external_commands()
                 if external_commands:
                     logger.debug("Got %d commands from: %s", len(external_commands), link.name)
+                else:
+                    # Simple protection against None value
+                    external_commands = []
                 for external_command in external_commands:
                     self.add(external_command)
             except LinkError:

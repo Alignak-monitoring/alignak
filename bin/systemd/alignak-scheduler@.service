@@ -1,0 +1,28 @@
+[Unit]
+Description=Alignak scheduler %I daemon instance
+PartOf=alignak.service
+
+[Service]
+# Environment variables
+Environment=ALIGNAKDAEMONS=/applis/Smoove/smoove/etc/alignak/daemons
+
+Type=forking
+
+# Execution
+ExecStartPre=/bin/mkdir -p /usr/var/log/alignak
+ExecStartPre=/bin/chown alignak:alignak /usr/var/log/alignak
+ExecStartPre=/bin/mkdir -p /usr/var/run/alignak
+ExecStartPre=/bin/chown alignak:alignak /usr/var/run/alignak
+
+# PID file as declared in daemon ini configuration file
+PIDFile=/usr/var/run/alignak/scheduler-%i.pid
+
+ExecStartPre=/bin/echo Alignak starting scheduler %i - /usr/bin/alignak-scheduler -d -c ${ALIGNAKDAEMONS}/scheduler-%i.ini
+ExecStart=/usr/bin/alignak-scheduler -n scheduler-%i -d -c ${ALIGNAKDAEMONS}/scheduler-%i.ini
+
+KillSignal=SIGINT
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=alignak.service
+

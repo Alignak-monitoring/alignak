@@ -29,7 +29,11 @@ services:
 install:
   # Remove python warnings
   - unset PYTHONWARNINGS
+  - sudo apt-get install -y gdb  # gdb debugger
   - ./test/setup_test.sh
+
+before_script:
+  - ulimit -c unlimited -S  # enable core dumps
 
 # command to run tests
 script:
@@ -108,6 +112,11 @@ script:
       # codecov
       bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
     fi
+
+after_failure:
+  - COREFILE=$(find . -maxdepth 1 -name "core*" | head -n 1) # find core file
+  - if [[ -f "$COREFILE" ]]; then gdb -c "$COREFILE" example -ex "thread apply all bt" -ex "set pagination 0" -batch; fi
+
 
 after_success:
   - |

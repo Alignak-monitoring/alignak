@@ -1,0 +1,97 @@
+#!/bin/sh
+
+# Configuration settings for alignak in /etc/rc.conf:
+# $FreeBSD$
+#
+# PROVIDE: alignak
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+#
+# alignak_enable (bool):
+#   Default value: "NO"
+#   Flag that determines whether Alignak is enabled.
+#
+# alignak_prefix (string):
+#   Default value: "/usr/local"
+#   Alignak default installation prefix
+#
+# alignak_configuration (string):
+#   Default value: "/usr/local/etc/alignak/alignak.ini"
+#   Alignak configuration file name
+#
+# alignak_daemon (bool):
+#   Default value: "YES"
+#   Start in daemon mode
+#
+# alignak_replace (bool):
+#   Default value: "YES"
+#   Start in replace mode - replaces an existing daemon if a stale pid file exists
+#
+# alignak_log_file (string):
+#   Default value: "${alignak_prefix}/var/log/${name}/${name}.log"
+#   Log file name.
+#
+# alignak_pid_file (string):
+#   Default value: "${alignak_prefix}/var/run/${name}/${name}.pid"
+#   PID file name.
+#
+# alignak_flags (string):
+#   Default value: ""
+#   Extra parameters to be provided to the started script
+#
+
+. /etc/rc.subr
+
+name="alignak"
+rcvar="alignak_enable"
+
+load_rc_config "${name}"
+
+: ${alignak_enable="NO"}
+: ${alignak_prefix="/usr/local"}
+: ${alignak_configuration="${alignak_prefix}/etc/alignak/alignak.ini"}
+: ${alignak_daemon="YES"}
+: ${alignak_replace="YES"}
+: ${alignak_flags=""}
+
+if checkyesno alignak_daemon; then
+  ${alignak_flags="--environment ${alignak_flags}"}
+  alignak_log_options="--logger file:${alignak_log_file}"
+fi
+
+if checkyesno alignak_metrics; then
+  alignak_metrics_options="--carbon ${alignak_carbon}"
+fi
+
+command="/usr/local/bin/alignak-arbiter"
+command_args="--master --daemonize /dev/null --wsgi-file ${alignak_wsgi} --pidfile ${alignak_pid_file} --http ${alignak_host}:${alignak_port} --processes ${alignak_processes} --uid ${alignak_user} --gid ${alignak_group} ${alignak_log_options} ${alignak_metrics_options}"
+
+stop_cmd="${name}_stop"
+start_cmd="${name}_start"
+start_precmd="${name}_precmd"
+
+required_files="${alignak_wsgi}"
+
+alignak_precmd()
+{
+    /usr/bin/install -d -o ${alignak_user} -g ${alignak_group} -m 755 ${alignak_prefix}/var/log/alignak
+    /usr/bin/install -d -o ${alignak_user} -g ${alignak_group} -m 755 ${alignak_prefix}/var/run/alignak
+}
+
+alignak_start()
+{
+    echo "Starting ${name}..."
+    /usr/local/bin/uwsgi ${command_args}
+    echo "Started"
+}
+
+alignak_stop()
+{
+    echo "Stopping ${name}..."
+    pkill -2 -F ${alignak_pid_file}
+    echo "Stopped"
+}
+
+[ -z "${alignak_enable}" ] && alignak_enable="NO"
+
+run_rc_command "$1"

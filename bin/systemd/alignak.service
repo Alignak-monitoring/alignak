@@ -1,0 +1,18 @@
+[Unit]
+Description=Alignak daemons instance
+After=network.target
+# Single realm example
+Wants=alignak-broker@master.service alignak-poller@master.service alignak-reactionner@master.service alignak-receiver@master.service alignak-scheduler@master.service alignak-arbiter@master.service
+# Separate two realms (All and Second) example
+# Wants=alignak-broker@master.service alignak-broker@second.service alignak-poller@master.service alignak-poller@second.service alignak-reactionner@master.service alignak-receiver@master.service alignak-scheduler@master.service alignak-scheduler@second.service alignak-arbiter@master.service
+
+[Service]
+# Execution
+ExecStartPre=/bin/mkdir -p /usr/var/log/alignak
+ExecStartPre=/bin/chown alignak:alignak /usr/var/log/alignak
+ExecStartPre=/bin/mkdir -p /usr/var/run/alignak
+ExecStartPre=/bin/chown alignak:alignak /usr/var/run/alignak
+ExecStart=/bin/echo Starting Alignak daemons...
+
+[Install]
+WantedBy=multi-user.target

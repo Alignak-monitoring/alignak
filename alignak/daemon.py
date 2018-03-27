@@ -2010,6 +2010,7 @@ class Daemon(object):
         if message:
             logger.error("-----")
             logger.error("Error message: %s", message)
+            print("Error message: %s", message)
         logger.error("-----")
         logger.error("You can get help at https://github.com/Alignak-monitoring/alignak")
         logger.error("If you think this is a bug, create a new issue including as much "

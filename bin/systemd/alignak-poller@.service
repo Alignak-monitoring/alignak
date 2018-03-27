@@ -1,0 +1,32 @@
+[Unit]
+Description=Alignak poller %I daemon instance
+PartOf=alignak.service
+
+[Service]
+# Environment variables
+Environment=ALIGNAK_DAEMON_TYPE=poller
+Environment=ALIGNAK_VERSION=1.0.0
+Environment=ALIGNAKCFG=/applis/Smoove/smoove/etc/alignak/alignak.cfg
+Environment=ALIGNAKDAEMONS=/applis/Smoove/smoove/etc/alignak/daemons
+
+Type=forking
+
+# Execution
+ExecStartPre=/bin/mkdir -p /usr/var/log/alignak
+ExecStartPre=/bin/chown alignak:alignak /usr/var/log/alignak
+ExecStartPre=/bin/mkdir -p /usr/var/run/alignak
+ExecStartPre=/bin/chown alignak:alignak /usr/var/run/alignak
+
+# PID file as declared in daemon ini configuration file
+#PIDFile=/var/run/${ALIGNAK_DAEMON_TYPE}-%i.pid
+PIDFile=/usr/var/run/alignak/poller-%i.pid
+
+ExecStartPre=/bin/echo Alignak $ALIGNAK_VERSION - starting $ALIGNAK_DAEMON_TYPE %i - /usr/bin/alignak-poller -d -c ${ALIGNAKDAEMONS}/poller-%i.ini
+ExecStart=/usr/bin/alignak-poller -n poller-%i -d -c ${ALIGNAKDAEMONS}/poller-%i.ini
+
+KillSignal=SIGINT
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=alignak.service
+
