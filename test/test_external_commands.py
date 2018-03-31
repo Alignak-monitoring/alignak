@@ -59,7 +59,7 @@ from freezegun import freeze_time
 from alignak_test import AlignakTest
 from alignak_test import ExternalCommandManager
 from alignak.misc.common import DICT_MODATTR
-from alignak.misc.serialization import unserialize
+from alignak.misc.serialization import serialize, unserialize
 from alignak.external_command import ExternalCommand
 
 
@@ -81,6 +81,33 @@ class TestExternalCommands(AlignakTest):
 
         # Set / reset as default applyer for external commands
         self.ecm_mode = 'applyer'
+
+    def test_basic_external_command(self):
+        """ Basic tests for the external command
+        :return:
+        """
+        # Some external commands in a list
+        external_commands = []
+        excmd = ExternalCommand('[%d] ACKNOWLEDGE_HOST_PROBLEM;test_host_fred;2;1;1;admin;Acknowledge requested from WebUI' % time.time())
+        external_commands.append(excmd)
+        excmd = ExternalCommand('[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_1;unknownservice;'
+                                '1;Service is WARNING|rtt=9999;5;10;0;10000' % time.time())
+        external_commands.append(excmd)
+
+        # Serialize to send to another daemon
+        print("Commands: %s" % external_commands)
+        for cmd in external_commands:
+            print("- %s" % cmd.__dict__)
+        res = serialize(external_commands, True)
+        print("Serialized: %s" % res)
+
+        # Unserialize when received by a daemon
+        result = unserialize(res, True)
+        print("Unserialized: %s" % result)
+        for cmd in result:
+            print("- %s" % cmd.__dict__)
+            assert isinstance(cmd, ExternalCommand)
+            assert cmd.__class__.my_type == "externalcommand"
 
     def test__command_syntax_receiver(self):
         self.accept_passive_unknown_check_results = True

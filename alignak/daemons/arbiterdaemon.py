@@ -211,8 +211,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         if isinstance(elt, Brok):
             self.broks[elt.uuid] = elt
             statsmgr.counter('broks.got', 1)
-        elif isinstance(elt, ExternalCommand):  # pragma: no cover, useful?
-            # todo: does the arbiter will still manage external commands? It is the receiver job!
+        elif isinstance(elt, ExternalCommand):
             self.external_commands.append(elt)
             statsmgr.counter('external-commands.got', 1)
         else:  # pragma: no cover, simple dev alerting
@@ -740,6 +739,108 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.have_conf = True
         self.loading_configuration = False
 
+    def load_modules_configuration_objects(self, raw_objects):  # pragma: no cover,
+        # not yet with unit tests.
+        """Load configuration objects from arbiter modules
+        If module implements get_objects arbiter will call it and add create
+        objects
+
+        :param raw_objects: raw objects we got from reading config files
+        :type raw_objects: dict
+        :return: None
+        """
+        # Now we ask for configuration modules if they
+        # got items for us
+        for instance in self.modules_manager.instances:
+            logger.debug("Getting objects from the module: %s", instance.name)
+            if not hasattr(instance, 'get_objects'):
+                logger.debug("The module '%s' do not provide any objects.", instance.name)
+                return
+
+            try:
+                logger.info("Getting Alignak monitored configuration objects from module '%s'",
+                            instance.name)
+                got_objects = instance.get_objects()
+            except Exception as exp:  # pylint: disable=broad-except
+                logger.exception("Module %s get_objects raised an exception %s. "
+                                 "Log and continue to run.", instance.name, exp)
+                continue
+
+            if not got_objects:
+                logger.warning("The module '%s' did not provided any objects.", instance.name)
+                return
+
+            types_creations = self.conf.types_creations
+            for o_type in types_creations:
+                (_, _, prop, _, _) = types_creations[o_type]
+                if prop in ['arbiters', 'brokers', 'schedulers',
+                            'pollers', 'reactionners', 'receivers', 'modules']:
+                    continue
+                if prop not in got_objects:
+                    logger.warning("Did not get any '%s' objects from %s", prop, instance.name)
+                    continue
+                for obj in got_objects[prop]:
+                    # test if raw_objects[k] are already set - if not, add empty array
+                    if o_type not in raw_objects:
+                        raw_objects[o_type] = []
+                    # Update the imported_from property if the module did not set
+                    if 'imported_from' not in obj:
+                        obj['imported_from'] = 'module:%s' % instance.name
+                    # Append to the raw objects
+                    raw_objects[o_type].append(obj)
+                logger.debug("Added %i %s objects from %s",
+                             len(got_objects[prop]), o_type, instance.name)
+
+    def load_modules_alignak_configuration(self):  # pragma: no cover, not yet with unit tests.
+        """Load Alignak configuration from the arbiter modules
+        If module implements get_alignak_configuration, call this function
+
+        :param raw_objects: raw objects we got from reading config files
+        :type raw_objects: dict
+        :return: None
+        """
+        alignak_cfg = {}
+        # Ask configured modules if they got configuration for us
+        for instance in self.modules_manager.instances:
+            if not hasattr(instance, 'get_alignak_configuration'):
+                return
+
+            _t0 = time.time()
+            try:
+                logger.info("Getting Alignak global configuration from module '%s'", instance.name)
+                cfg = instance.get_alignak_configuration()
+                alignak_cfg.update(cfg)
+            except Exception, exp:  # pylint: disable=broad-except
+                logger.error("Module get_alignak_configuration %s raised an exception %s. "
+                             "Log and continue to run", instance.name, str(exp))
+                output = cStringIO.StringIO()
+                traceback.print_exc(file=output)
+                logger.error("Back trace of this remove: %s", output.getvalue())
+                output.close()
+                continue
+            statsmgr.timer('core.hook.get_alignak_configuration', time.time() - _t0)
+
+        params = []
+        if alignak_cfg:
+            logger.info("Got Alignak global configuration:")
+            for key, value in sorted(alignak_cfg.iteritems()):
+                logger.info("- %s = %s", key, value)
+                # properties starting with an _ character are "transformed" to macro variables
+                if key.startswith('_'):
+                    key = '$' + key[1:].upper()
+                # properties valued as None are filtered
+                if value is None:
+                    continue
+                # properties valued as None string are filtered
+                if value == 'None':
+                    continue
+                # properties valued as empty strings are filtered
+                if value == '':
+                    continue
+                # set properties as legacy Shinken configuration files
+                params.append("%s=%s" % (key, value))
+            self.conf.load_params(params)
+
     def request_stop(self, message='', exit_code=0):
         """Stop the Arbiter daemon
 
@@ -991,108 +1092,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         logger.debug("Checking daemons reachability duration: %.2f seconds", time.time() - start)
 
         return result
-
-    def load_modules_configuration_objects(self, raw_objects):  # pragma: no cover,
-        # not yet with unit tests.
-        """Load configuration objects from arbiter modules
-        If module implements get_objects arbiter will call it and add create
-        objects
-
-        :param raw_objects: raw objects we got from reading config files
-        :type raw_objects: dict
-        :return: None
-        """
-        # Now we ask for configuration modules if they
-        # got items for us
-        for instance in self.modules_manager.instances:
-            logger.debug("Getting objects from the module: %s", instance.name)
-            if not hasattr(instance, 'get_objects'):
-                logger.debug("The module '%s' do not provide any objects.", instance.name)
-                return
-
-            try:
-                logger.info("Getting Alignak monitored configuration objects from module '%s'",
-                            instance.name)
-                got_objects = instance.get_objects()
-            except Exception as exp:  # pylint: disable=broad-except
-                logger.exception("Module %s get_objects raised an exception %s. "
-                                 "Log and continue to run.", instance.name, exp)
-                continue
-
-            if not got_objects:
-                logger.warning("The module '%s' did not provided any objects.", instance.name)
-                return
-
-            types_creations = self.conf.types_creations
-            for o_type in types_creations:
-                (_, _, prop, _, _) = types_creations[o_type]
-                if prop in ['arbiters', 'brokers', 'schedulers',
-                            'pollers', 'reactionners', 'receivers', 'modules']:
-                    continue
-                if prop not in got_objects:
-                    logger.warning("Did not get any '%s' objects from %s", prop, instance.name)
-                    continue
-                for obj in got_objects[prop]:
-                    # test if raw_objects[k] are already set - if not, add empty array
-                    if o_type not in raw_objects:
-                        raw_objects[o_type] = []
-                    # Update the imported_from property if the module did not set
-                    if 'imported_from' not in obj:
-                        obj['imported_from'] = 'module:%s' % instance.name
-                    # Append to the raw objects
-                    raw_objects[o_type].append(obj)
-                logger.debug("Added %i %s objects from %s",
-                             len(got_objects[prop]), o_type, instance.name)
-
-    def load_modules_alignak_configuration(self):  # pragma: no cover, not yet with unit tests.
-        """Load Alignak configuration from the arbiter modules
-        If module implements get_alignak_configuration, call this function
-
-        :param raw_objects: raw objects we got from reading config files
-        :type raw_objects: dict
-        :return: None
-        """
-        alignak_cfg = {}
-        # Ask configured modules if they got configuration for us
-        for instance in self.modules_manager.instances:
-            if not hasattr(instance, 'get_alignak_configuration'):
-                return
-
-            _t0 = time.time()
-            try:
-                logger.info("Getting Alignak global configuration from module '%s'", instance.name)
-                cfg = instance.get_alignak_configuration()
-                alignak_cfg.update(cfg)
-            except Exception, exp:  # pylint: disable=broad-except
-                logger.error("Module get_alignak_configuration %s raised an exception %s. "
-                             "Log and continue to run", instance.name, str(exp))
-                output = cStringIO.StringIO()
-                traceback.print_exc(file=output)
-                logger.error("Back trace of this remove: %s", output.getvalue())
-                output.close()
-                continue
-            statsmgr.timer('core.hook.get_alignak_configuration', time.time() - _t0)
-
-        params = []
-        if alignak_cfg:
-            logger.info("Got Alignak global configuration:")
-            for key, value in sorted(alignak_cfg.iteritems()):
-                logger.info("- %s = %s", key, value)
-                # properties starting with an _ character are "transformed" to macro variables
-                if key.startswith('_'):
-                    key = '$' + key[1:].upper()
-                # properties valued as None are filtered
-                if value is None:
-                    continue
-                # properties valued as None string are filtered
-                if value == 'None':
-                    continue
-                # properties valued as empty strings are filtered
-                if value == '':
-                    continue
-                # set properties as legacy Shinken configuration files
-                params.append("%s=%s" % (key, value))
-            self.conf.load_params(params)
 
     def setup_new_conf(self):
         """ Setup a new configuration received from a Master arbiter.
@@ -1616,20 +1615,21 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         res.update({
             'name': self.link_to_myself.get_name() if self.link_to_myself else self.name,
             'type': self.type,
-            'monitoring_objects': {},
             'daemons_states': {}
         })
 
-        for _, _, strclss, _, _ in self.conf.types_creations.values():
-            if strclss in ['hostescalations', 'serviceescalations']:
-                logger.debug("Ignoring count for '%s'...", strclss)
-                continue
+        if details:
+            res['monitoring_objects'] = {}
 
-            objects_list = getattr(self.conf, strclss, [])
-            res['monitoring_objects'][strclss] = {
-                'count': len(objects_list)
-            }
-            if details:
+            for _, _, strclss, _, _ in self.conf.types_creations.values():
+                if strclss in ['hostescalations', 'serviceescalations']:
+                    logger.debug("Ignoring count for '%s'...", strclss)
+                    continue
+
+                objects_list = getattr(self.conf, strclss, [])
+                res['monitoring_objects'][strclss] = {
+                    'count': len(objects_list)
+                }
                 res['monitoring_objects'][strclss].update({'items': []})
 
                 try:

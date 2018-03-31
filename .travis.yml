@@ -10,7 +10,7 @@ env:
   - TEST_SUITE=virtualenv
 
 matrix:
-  fast_finish: true
+#  fast_finish: true
   allow_failures:
     - python: "2.6"
   exclude:
@@ -21,19 +21,19 @@ matrix:
   - python: "2.6"
     env: TEST_SUITE=virtualenv
 
-services:
-  - mongodb
+#services:
+#  - mongodb
 
 # command to install dependencies
 # some are only used for travis/coveralls so we are installing them here only
 install:
   # Remove python warnings
   - unset PYTHONWARNINGS
-  - sudo apt-get install -y gdb  # gdb debugger
+#  - sudo apt-get install -y gdb  # gdb debugger
   - ./test/setup_test.sh
 
-before_script:
-  - ulimit -c unlimited -S  # enable core dumps
+#before_script:
+#  - ulimit -c unlimited -S  # enable core dumps
 
 # command to run tests
 script:

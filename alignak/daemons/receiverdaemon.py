@@ -114,6 +114,14 @@ class Receiver(Satellite):
         :type elt: object
         :return: None
         """
+        # todo: fix this ... external commands are returned as a dictionary!!!
+        if isinstance(elt, dict) and 'my_type' in elt and elt['my_type'] == "externalcommand":
+            logger.info("Queuing an external command: %s", elt)
+            cmd = ExternalCommand(elt['cmd_line'], elt['creation_timestamp'])
+            self.unprocessed_external_commands.append(cmd)
+            statsmgr.counter('external-commands.added', 1)
+            return
+
         cls_type = elt.__class__.my_type
         if cls_type == 'brok':  # pragma: no cover, seems not to be used anywhere!
             # We tag the broks with our instance_id
@@ -206,6 +214,9 @@ class Receiver(Satellite):
                     self.add(external_command)
             except LinkError:
                 logger.warning("Arbiter connection failed, I could not get external commands!")
+            except Exception as exp:  # pylint: disable=broad-except
+                logger.error("Arbiter connection failed, I could not get external commands!")
+                logger.exception("Exception: %s", exp)
 
     def push_external_commands_to_schedulers(self):
         """Send a HTTP request to the schedulers (POST /run_external_commands)

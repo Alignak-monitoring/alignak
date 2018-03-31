@@ -88,7 +88,7 @@ class GenericInterface(object):
         :return: start timestamp
         :rtype: float
         """
-        return self.start_time
+        return {"start_time": self.start_time}
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -276,8 +276,9 @@ class GenericInterface(object):
         """
         res = []
         with self.app.external_commands_lock:
-            cmds = self.app.get_external_commands()
-            res = serialize(cmds, True)
+            for cmd in self.app.get_external_commands():
+                res.append(cmd.serialize())
+            # res = serialize(self.app.get_external_commands())
         return res
 
     @cherrypy.expose

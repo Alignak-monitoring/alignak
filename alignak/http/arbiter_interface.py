@@ -24,6 +24,7 @@ import json
 import cherrypy
 
 from alignak.http.generic_interface import GenericInterface
+from alignak.external_command import ExternalCommand
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -59,7 +60,8 @@ class ArbiterInterface(GenericInterface):
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
     def push_configuration(self, pushed_configuration=None):
-        """HTTP POST to the arbiter with the new conf (master send to slave)
+        """HTTP POST to the arbiter with the new configuration (master arbiter sends
+        its configuration to the spare arbiter)
 
         :param conf: serialized new configuration
         :type conf:
@@ -73,8 +75,8 @@ class ArbiterInterface(GenericInterface):
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def do_not_run(self):
-        """Master tells to slave to not run (HTTP GET)
-        Master will ignore this call
+        """Master tells to its spare to not run (HTTP GET)
+        A master arbiter will ignore this request
 
         :return: None
         """
@@ -104,7 +106,7 @@ class ArbiterInterface(GenericInterface):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_satellite_list(self, daemon_type=''):
+    def get_satellites_list(self, daemon_type=''):
         """Get the satellite names sorted by type (HTTP GET)
 
         :param daemon_type: daemon type to filter
@@ -188,3 +190,20 @@ class ArbiterInterface(GenericInterface):
         :rtype: list
         """
         return {'message': "Deprecated in favor of the get_stats endpoint."}
+
+    @cherrypy.expose
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def push_external_command(self, command=None):
+        """HTTP POST to the arbiter with the new configuration (master arbiter sends
+        its configuration to the spare arbiter)
+
+        :param conf: serialized new configuration
+        :type conf:
+        :return: None
+        """
+        if command is None:
+            data = cherrypy.request.json
+            command = data['command']
+        self.app.add(ExternalCommand(command))
+        return True

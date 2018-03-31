@@ -44,6 +44,8 @@ def serialize(obj, no_dump=False):
        'content' : obj.serialize()}
     :rtype: dict | str
     """
+    # print("Serialize (%s): %s" % (no_dump, obj))
+
     if hasattr(obj, "serialize") and callable(obj.serialize):
         o_dict = {
             '__sys_python_module__': "%s.%s" % (obj.__class__.__module__, obj.__class__.__name__),
@@ -88,7 +90,7 @@ def unserialize(j_obj, no_load=False):
     """
     if not j_obj:
         return j_obj
-    # print("Unserialize: %s" % j_obj)
+    # print("Unserialize (%s): %s" % (no_load, j_obj))
 
     if no_load:
         data = j_obj
@@ -98,6 +100,10 @@ def unserialize(j_obj, no_load=False):
     if isinstance(data, dict):
         if '__sys_python_module__' in data:
             cls = get_alignak_class(data['__sys_python_module__'])
+            # Awful hack for external commands ... need to be refactored!
+            if data['__sys_python_module__'] in ['alignak.external_command.ExternalCommand']:
+                return cls(data['content']['cmd_line'], data['content']['creation_timestamp'])
+
             return cls(data['content'], parsing=False)
 
         data_dict = {}
@@ -143,9 +149,11 @@ def get_alignak_class(python_path):
                                           "Module does not have this attribute. "
                                           "Alignak versions may mismatch" % (a_class, a_module))
 
-    if not isinstance(getattr(pymodule, a_class), type):  # pragma: no cover - should never happen!
-        raise AlignakClassLookupException("Can't recreate object %s in %s module. "
-                                          "This type is not a class" % (a_class, a_module))
+    # Awful hack for external commands ... need to be refactored!
+    if a_class not in ['ExternalCommand']:
+        if not isinstance(getattr(pymodule, a_class), type):  # pragma: no cover - protection
+            raise AlignakClassLookupException("Can't recreate object %s in %s module. "
+                                              "This type is not a class" % (a_class, a_module))
 
     return getattr(pymodule, a_class)
 

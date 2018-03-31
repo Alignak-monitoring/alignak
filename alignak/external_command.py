@@ -95,6 +95,18 @@ class ExternalCommand:  # pylint: disable=R0903
             pass
         self.creation_timestamp = timestamp or time.time()
 
+    def serialize(self):
+        """This function serializes into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
+
+        Here we directly return all attributes
+
+        :return: json representation of a Brok
+        :rtype: dict
+        """
+        return {"my_type": self.my_type, "cmd_line": self.cmd_line,
+                "creation_timestamp": self.creation_timestamp}
+
 
 class ExternalCommandManager:
     """ExternalCommandManager manages all external commands sent to Alignak.
