@@ -327,7 +327,7 @@ class Daemon(object):
         'max_queue_size':
             IntegerProp(default=0),
         'thread_pool_size':
-            IntegerProp(default=8),
+            IntegerProp(default=32),
         'debug':
             BoolProp(default=False),
         'debug_file':
@@ -1540,6 +1540,8 @@ class Daemon(object):
         # Let's create the HTTPDaemon, it will be started later
         # pylint: disable=E1101
         try:
+            logger.info('Setting up HTTP daemon (%s:%d), %d threads',
+                        self.host, self.port, self.thread_pool_size)
             self.http_daemon = HTTPDaemon(self.host, self.port, self.http_interface,
                                           self.use_ssl, ca_cert, ssl_key,
                                           ssl_cert, server_dh, self.thread_pool_size,
