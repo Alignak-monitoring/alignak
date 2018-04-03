@@ -118,6 +118,9 @@ class Dispatcher:
         self.brokers = []
         self.receivers = []
 
+        # List the satellites that are not configured
+        self.not_configured = []
+
         # Direct pointer to important elements for us
         self.arbiter_link = arbiter_link
         self.alignak_conf = conf
@@ -207,7 +210,7 @@ class Dispatcher:
         :return: True if all daemons are reachable
         """
         all_ok = True
-        not_configured = []
+        self.not_configured = []
         for daemon_link in self.all_daemons_links:
             if daemon_link == self.arbiter_link:
                 # I exclude myself from the polling, sure I am reachable ;)
@@ -245,7 +248,7 @@ class Dispatcher:
                                  daemon_link.type, daemon_link.name, daemon_link.cfg_managed)
                     if not self.first_dispatch_done:
                         # I just (re)started the arbiter
-                        not_configured.append(daemon_link)
+                        self.not_configured.append(daemon_link)
                 else:
                     # No managed configuration - a new dispatching is necessary but only
                     # if we already dispatched a configuration
@@ -253,19 +256,30 @@ class Dispatcher:
                     logger.info("The %s %s do not have a configuration",
                                 daemon_link.type, daemon_link.name)
                     # the daemon is not yet configured
-                    not_configured.append(daemon_link)
+                    self.not_configured.append(daemon_link)
                     # # Ask to wait for a new configuration
                     # daemon_link.wait_new_conf()
                     daemon_link.configuration_sent = False
             else:
                 # Got a timeout !
-                not_configured.append(daemon_link)
+                self.not_configured.append(daemon_link)
 
-        if not_configured and self.new_to_dispatch and not self.first_dispatch_done:
+        if self.not_configured and self.new_to_dispatch and not self.first_dispatch_done:
             logger.info("Dispatcher, those daemons are not configured: %s, "
                         "and a configuration is ready to dispatch, run the dispatching...",
-                        ','.join(d.name for d in not_configured))
+                        ','.join(d.name for d in self.not_configured))
             self.dispatch_ok = False
+            self.dispatch(test=test)
+
+        elif self.not_configured and self.first_dispatch_done:
+            logger.info("Dispatcher, those daemons are not configured: %s, "
+                        "and a configuration has yet been dispatched dispatch, "
+                        "a new dispatch is required...",
+                        ','.join(d.name for d in self.not_configured))
+            self.dispatch_ok = False
+            # Avoid exception because dispatch is not accepted!
+            self.new_to_dispatch = True
+            self.first_dispatch_done = False
             self.dispatch(test=test)
 
         return all_ok
@@ -794,10 +808,12 @@ class Dispatcher:
         :return: None
         """
         if not self.new_to_dispatch:
+            logger.info("1")
             raise DispatcherError("Dispatcher cannot dispatch, "
                                   "because no configuration is prepared!")
 
         if self.first_dispatch_done:
+            logger.info("2")
             raise DispatcherError("Dispatcher cannot dispatch, "
                                   "because the configuration is still dispatched!")
 
@@ -920,6 +936,8 @@ class Dispatcher:
                 logger.warning("Daemon stop request failed, %s probably stopped!", daemon_link)
 
             all_ok = all_ok and stop_ok
+
+            daemon_link.stopping = True
 
         self.stop_request_sent = all_ok
         return self.stop_request_sent

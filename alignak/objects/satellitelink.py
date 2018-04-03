@@ -189,6 +189,9 @@ class SatelliteLink(Item):
         'have_conf':    # The daemon has received a configuration
             BoolProp(default=False, fill_brok=['full_status']),
 
+        'stopping':     # The daemon is requested to stop
+            BoolProp(default=False, fill_brok=['full_status']),
+
         'running_id':   # The running identifier of my related daemon
             FloatProp(default=0, fill_brok=['full_status']),
 
@@ -551,13 +554,22 @@ class SatelliteLink(Item):
         # Don't need to warn again and again if the satellite is already dead
         # Only warn when it is alive
         if self.alive:
-            logger.warning("Add failed attempt for %s (%d/%d) - %s",
-                           self.name, self.attempt, self.max_check_attempts, reason)
+            if not self.stopping:
+                logger.warning("Add failed attempt for %s (%d/%d) - %s",
+                               self.name, self.attempt, self.max_check_attempts, reason)
+            else:
+                logger.info("Stopping... failed attempt for %s (%d/%d) - also probably stopping",
+                            self.name, self.attempt, self.max_check_attempts)
 
         # If we reached the maximum attempts, set the daemon as dead
         if self.attempt >= self.max_check_attempts:
-            logger.warning("Set %s as dead, too much failed attempts (%d), last problem is: %s",
-                           self.name, self.max_check_attempts, reason)
+            if not self.stopping:
+                logger.warning("Set %s as dead, too much failed attempts (%d), last problem is: %s",
+                               self.name, self.max_check_attempts, reason)
+            else:
+                logger.info("Stopping... set %s as dead, too much failed attempts (%d)",
+                            self.name, self.max_check_attempts)
+
             self.set_dead()
 
     def valid_connection(*outer_args, **outer_kwargs):
@@ -599,8 +611,12 @@ class SatelliteLink(Item):
                 except HTTPClientConnectionException as exp:
                     # A Connection error is raised when the daemon connection cannot be established
                     # No way with the configuration parameters!
-                    logger.warning("A daemon (%s/%s) that we must be related with "
-                                   "cannot be connected: %s", link.type, link.name, exp)
+                    if not link.stopping:
+                        logger.warning("A daemon (%s/%s) that we must be related with "
+                                       "cannot be connected: %s", link.type, link.name, exp)
+                    else:
+                        logger.info("Stopping... daemon (%s/%s) cannot be connected. "
+                                    "It is also probably stopping.", link.type, link.name)
                     link.set_dead()
                 except (LinkError, HTTPClientTimeoutException) as exp:
                     link.add_failed_check_attempt("Connection timeout "

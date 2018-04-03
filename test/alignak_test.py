@@ -199,6 +199,7 @@ class AlignakTest(unittest2.TestCase):
                 if arbiter_only and name not in ['arbiter-master']:
                     continue
                 if proc.pid == self.my_pid:
+                    print("- do not kill myself!")
                     continue
                 print("Asking %s (pid=%d) to end..." % (name, proc.pid))
                 try:

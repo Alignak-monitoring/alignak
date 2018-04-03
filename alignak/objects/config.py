@@ -704,6 +704,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'daemons_initial_port':
             IntegerProp(default=7800),
 
+        # Kill launched daemons on communication failure
+        'daemons_failure_kill':
+            BoolProp(default=True),
+
         'daemons_check_period':
             IntegerProp(default=5),
 

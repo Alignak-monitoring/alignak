@@ -993,6 +993,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 except psutil.AccessDenied:
                     # Probably stopping...
                     if not self.will_stop and proc == daemon['process']:
+                        logger.warning("Daemon %s/%s is not running!",
+                                       daemon['satellite'].type, daemon['satellite'].name)
                         logger.debug("Access denied - Process %s is %s", proc.name(), proc.status())
                         if not self.start_daemon(daemon['satellite']):
                             # Set my satellite as dead :(
@@ -1001,6 +1003,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                         else:
                             logger.info("I restarted %s/%s",
                                         daemon['satellite'].type, daemon['satellite'].name)
+                            logger.info("Pausing %.2f seconds...", 0.5)
+                            time.sleep(0.5)
                     else:
                         logger.info("Child process %s is %s", proc.name(), proc.status())
 
@@ -1080,10 +1084,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             return True
 
         logger.debug("Alignak daemons reachability check")
-        result = True
 
         _t0 = time.time()
-        self.dispatcher.check_reachable()
+        result = self.dispatcher.check_reachable()
         statsmgr.timer('dispatcher.check-alive', time.time() - _t0)
 
         # Set the last check as now
@@ -1320,61 +1323,62 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         else:
             Daemon.manage_signal(self, sig, frame)
 
-    def configuration_dispatch(self):
+    def configuration_dispatch(self, not_configured=None):
         """Monitored configuration preparation and dispatch
 
         :return: None
         """
-        self.dispatcher = Dispatcher(self.conf, self.link_to_myself)
-        # I set my own dispatched configuration as the provided one...
-        # because I will not push a configuration to myself :)
-        self.cur_conf = self.conf
+        if not not_configured:
+            self.dispatcher = Dispatcher(self.conf, self.link_to_myself)
+            # I set my own dispatched configuration as the provided one...
+            # because I will not push a configuration to myself :)
+            self.cur_conf = self.conf
 
-        # Loop for the first configuration dispatching, if the first dispatch fails, bail out!
-        # Without a correct configuration, Alignak daemons will not run correctly
-        first_connection_try_count = 0
-        logger.info("Connecting to my satellites...")
-        while True:
-            first_connection_try_count += 1
+            # Loop for the first configuration dispatching, if the first dispatch fails, bail out!
+            # Without a correct configuration, Alignak daemons will not run correctly
+            first_connection_try_count = 0
+            logger.info("Connecting to my satellites...")
+            while True:
+                first_connection_try_count += 1
 
-            # Initialize connection with all our satellites
-            self.all_connected = True
-            for satellite in self.dispatcher.all_daemons_links:
-                if satellite == self.link_to_myself:
-                    continue
-                if not satellite.active:
-                    continue
-                connected = self.daemon_connection_init(satellite, set_wait_new_conf=True)
-                logger.debug("  %s is %s", satellite, connected)
-                self.all_connected = self.all_connected and connected
+                # Initialize connection with all our satellites
+                self.all_connected = True
+                for satellite in self.dispatcher.all_daemons_links:
+                    if satellite == self.link_to_myself:
+                        continue
+                    if not satellite.active:
+                        continue
+                    connected = self.daemon_connection_init(satellite, set_wait_new_conf=True)
+                    logger.debug("  %s is %s", satellite, connected)
+                    self.all_connected = self.all_connected and connected
 
-            if self.all_connected:
-                logger.info("- satellites connection #%s is ok", first_connection_try_count)
-                break
-            else:
-                logger.warning("- satellites connection #%s is not correct; "
-                               "let's give another chance after %d seconds...",
-                               first_connection_try_count,
-                               self.link_to_myself.polling_interval)
-                time.sleep(self.link_to_myself.polling_interval)
-                if first_connection_try_count >= 3:
-                    self.request_stop("All the daemons connections could not be established "
-                                      "despite %d tries! "
-                                      "Sorry, I bail out!" % first_connection_try_count,
-                                      exit_code=4)
+                if self.all_connected:
+                    logger.info("- satellites connection #%s is ok", first_connection_try_count)
+                    break
+                else:
+                    logger.warning("- satellites connection #%s is not correct; "
+                                   "let's give another chance after %d seconds...",
+                                   first_connection_try_count,
+                                   self.link_to_myself.polling_interval)
+                    time.sleep(self.link_to_myself.polling_interval)
+                    if first_connection_try_count >= 3:
+                        self.request_stop("All the daemons connections could not be established "
+                                          "despite %d tries! "
+                                          "Sorry, I bail out!" % first_connection_try_count,
+                                          exit_code=4)
 
-        # Now I have a connection with all the daemons I need to contact them,
-        # check they are alive and ready to run
-        _t0 = time.time()
-        self.all_connected = self.dispatcher.check_reachable()
-        statsmgr.timer('dispatcher.check-alive', time.time() - _t0)
+            # Now I have a connection with all the daemons I need to contact them,
+            # check they are alive and ready to run
+            _t0 = time.time()
+            self.all_connected = self.dispatcher.check_reachable()
+            statsmgr.timer('dispatcher.check-alive', time.time() - _t0)
 
-        _t0 = time.time()
-        # Preparing the configuration for dispatching
-        logger.info("Preparing the configuration for dispatching...")
-        self.dispatcher.prepare_dispatch()
-        statsmgr.timer('dispatcher.prepare-dispatch', time.time() - _t0)
-        logger.info("- configuration is ready to dispatch")
+            _t0 = time.time()
+            # Preparing the configuration for dispatching
+            logger.info("Preparing the configuration for dispatching...")
+            self.dispatcher.prepare_dispatch()
+            statsmgr.timer('dispatcher.prepare-dispatch', time.time() - _t0)
+            logger.info("- configuration is ready to dispatch")
 
         # Loop for the first configuration dispatching, if the first dispatch fails, bail out!
         # Without a correct configuration, Alignak daemons will not run correctly
@@ -1437,7 +1441,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Make a pause to let our started daemons get ready...
         pause = max(self.conf.daemons_start_timeout, len(self.my_daemons) * 0.5)
         if pause:
-            logger.info("Pausing %d seconds...", pause)
+            logger.info("Pausing %.2f seconds...", pause)
             time.sleep(pause)
 
         # Prepare and dispatch the monitored configuration
@@ -1505,11 +1509,19 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
             # Check that my daemons are alive
             if not self.daemons_check():
-                self.request_stop(message="Some Alignak daemons cannot be checked.",
-                                  exit_code=4)
+                if self.conf.daemons_failure_kill:
+                    self.request_stop(message="Some Alignak daemons cannot be checked.",
+                                      exit_code=4)
+                else:
+                    logger.warning("Should have killed my children if "
+                                   "'daemons_failure_kill' were set!")
 
-            # Now the dispatcher job
-            self.daemons_reachability_check()
+            # Now the dispatcher job - check if all daemons are reachable and have a configuration
+            if not self.daemons_reachability_check():
+                logger.warning("A new configuration dispatch is required!")
+
+                # Prepare and dispatch the monitored configuration
+                self.configuration_dispatch(self.dispatcher.not_configured)
 
             # Now get things from our module instances
             _t0 = time.time()
@@ -1923,7 +1935,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                         # Make a pause to let our satellites get ready...
                         pause = self.conf.daemons_new_conf_timeout
                         if pause:
-                            logger.info("Pausing %d seconds...", pause)
+                            logger.info("Pausing %.2f seconds...", pause)
                             time.sleep(pause)
 
         except Exception as exp:  # pragma: no cover, this should never happen indeed ;)

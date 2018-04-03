@@ -84,7 +84,7 @@ class TestLaunchArbiter(AlignakTest):
 
     def _ping_daemons(self, daemon_names=None):
         # -----
-        print("Pinging the daemons: %s" % daemon_names)
+        print("Pinging the daemons: %s" % (daemon_names if daemon_names else 'All'))
         satellite_map = {
             'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
             'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
@@ -114,7 +114,6 @@ class TestLaunchArbiter(AlignakTest):
             print("- response = %s" % data)
         # -----
 
-    # @pytest.mark.skip("Skip for core dumped on Travis")
     def test_arbiter_no_daemons(self):
         """ Run the Alignak Arbiter - all the expected daemons are missing
 
@@ -143,8 +142,8 @@ class TestLaunchArbiter(AlignakTest):
         self._files_update(files, replacements)
 
         args = ["../alignak/bin/alignak_arbiter.py", "-e", "/tmp/etc/alignak/alignak.ini"]
-        arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
+        self.procs = {'arbiter-master': subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)}
+        print("%s launched (pid=%d)" % ('arbiter', self.procs['arbiter-master'].pid))
 
         # Sleep some few seconds because of the time needed to start the processes,
         # poll them and declare as faulty !
@@ -152,11 +151,11 @@ class TestLaunchArbiter(AlignakTest):
 
         # The arbiter will have stopped!
 
-        ret = arbiter.poll()
+        ret = self.procs['arbiter-master'].poll()
         print("*** Arbiter exited with: %s" % ret)
         assert ret == 4
         ok = True
-        for line in iter(arbiter.stdout.readline, b''):
+        for line in iter(self.procs['arbiter-master'].stdout.readline, b''):
             if 'WARNING:' in line:
                 ok = False
                 # Only WARNING because of missing daemons...
@@ -199,7 +198,7 @@ class TestLaunchArbiter(AlignakTest):
             #     ok = False
         assert ok
         ok = True
-        for line in iter(arbiter.stderr.readline, b''):
+        for line in iter(self.procs['arbiter-master'].stderr.readline, b''):
             print("*** " + line.rstrip())
             if 'All the daemons connections could not be established ' \
                'despite 3 tries! Sorry, I bail out!' not in line:
@@ -207,9 +206,8 @@ class TestLaunchArbiter(AlignakTest):
         if not ok and sys.version_info > (2, 7):
             assert False, "stderr output!"
 
-    @pytest.mark.skip("Skip for core dumped on Travis")
-    def test_arbiter_daemons(self):
-        """ Run the Alignak Arbiter - all the expected daemons are started by the arbiter
+    def test_arbiter_no_daemons_no_stop(self):
+        """ Run the Alignak Arbiter - all the expected daemons are missing
 
         :return:
         """
@@ -219,7 +217,102 @@ class TestLaunchArbiter(AlignakTest):
         files = ['/tmp/etc/alignak/alignak.ini']
         replacements = {
             ';CFG=%(etcdir)s/alignak.cfg': 'CFG=%(etcdir)s/alignak.cfg',
-            # ';log_cherrypy=1': 'log_cherrypy=1',
+            # ';log_cherrypy=1': 'log_cherrypy=1'
+
+            'polling_interval=5': 'polling_interval=1',
+            # Do not kill/exit on communication failure
+            ';daemons_failure_kill=1' : 'daemons_failure_kill=0',
+            'daemons_check_period=5': '',
+            'daemons_stop_timeout=10': 'daemons_stop_timeout=5',
+            ';daemons_start_timeout=0': 'daemons_start_timeout=0',
+            ';daemons_dispatch_timeout=0': 'daemons_dispatch_timeout=0',
+
+            'user=alignak': ';user=alignak',
+            'group=alignak': ';group=alignak',
+            #
+            # ';alignak_launched=1': 'alignak_launched=1',
+            # ';is_daemon=1': 'is_daemon=0'
+        }
+        self._files_update(files, replacements)
+
+        args = ["../alignak/bin/alignak_arbiter.py", "-e", "/tmp/etc/alignak/alignak.ini"]
+        self.procs = {'arbiter-master': subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)}
+        print("%s launched (pid=%d)" % ('arbiter', self.procs['arbiter-master'].pid))
+
+        # Sleep some few seconds because of the time needed to start the processes,
+        # poll them and declare as faulty !
+        sleep(30)
+
+        # The arbiter will have stopped!
+
+        ret = self.procs['arbiter-master'].poll()
+        print("*** Arbiter exited with: %s" % ret)
+        assert ret == 4
+        ok = True
+        for line in iter(self.procs['arbiter-master'].stdout.readline, b''):
+            if 'WARNING:' in line:
+                ok = False
+                # Only WARNING because of missing daemons...
+                if 'that we must be related with cannot be connected' in line:
+                    ok = True
+                if 'Add failed attempt for' in line:
+                    ok = True
+                if 'as dead, too much failed attempts' in line:
+                    ok = True
+                # if 'Exception: Server not available:' in line:
+                #     ok = True
+                if 'as dead :(' in line:
+                    ok = True
+                if 'is not alive for' in line:
+                    ok = True
+                if 'ignoring repeated file: ' in line:
+                    ok = True
+                if 'directory did not exist' in line:
+                    ok = True
+                if 'Cannot call the additional groups setting with ' in line:
+                    ok = True
+                if '- satellites connection #1 is not correct; ' in line:
+                    ok = True
+                if '- satellites connection #2 is not correct; ' in line:
+                    ok = True
+                if '- satellites connection #3 is not correct; ' in line:
+                    ok = True
+                if ok:
+                    print("... " + line.rstrip())
+                else:
+                    print(">>> " + line.rstrip())
+
+                assert ok
+            if 'ERROR:' in line:
+                # Only ERROR because of configuration sending failures...
+                if 'The connection is not initialized for reactionner-master' in line:
+                    ok = True
+                assert ok
+                # if 'CRITICAL:' in line:
+                #     ok = False
+        assert ok
+        ok = True
+        for line in iter(self.procs['arbiter-master'].stderr.readline, b''):
+            print("*** " + line.rstrip())
+            if 'All the daemons connections could not be established ' \
+               'despite 3 tries! Sorry, I bail out!' not in line:
+                ok = False
+        if not ok and sys.version_info > (2, 7):
+            assert False, "stderr output!"
+
+    def test_arbiter_daemons(self):
+        """ Run the Alignak Arbiter - all the expected daemons are started by the arbiter
+        and then the arbiter exits
+
+        :return:
+        """
+        # All the default configuration files are in /tmp/etc
+
+        # Update monitoring configuration file name
+        files = ['/tmp/etc/alignak/alignak.ini']
+        replacements = {
+            ';CFG=%(etcdir)s/alignak.cfg': 'CFG=%(etcdir)s/alignak.cfg',
+            ';log_cherrypy=1': 'log_cherrypy=1',
 
             'polling_interval=5': 'polling_interval=1',
             'daemons_check_period=5': 'daemons_check_period=2',
@@ -231,56 +324,112 @@ class TestLaunchArbiter(AlignakTest):
             'group=alignak': ';group=alignak',
             #
             ';alignak_launched=1': 'alignak_launched=1',
-            ';is_daemon=1': 'is_daemon=0'
+            # ';is_daemon=1': 'is_daemon=0'
         }
         self._files_update(files, replacements)
 
         args = ["../alignak/bin/alignak_arbiter.py", "-e", "/tmp/etc/alignak/alignak.ini"]
-        arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
+        # self.procs = {'arbiter-master': subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)}
+        fnull = open(os.devnull, 'w')
+        self.procs = {'arbiter-master': subprocess.Popen(args, stdout=fnull, stderr=fnull)}
+        print("%s launched (pid=%d)" % ('arbiter', self.procs['arbiter-master'].pid))
 
         # Sleep some few seconds because of the time needed to start the processes,
         # poll them and declare as faulty !
         sleep(10)
 
         # The arbiter will NOT have stopped! It is still running
-        ret = arbiter.poll()
+        ret = self.procs['arbiter-master'].poll()
         assert ret is None
         print("Started...")
 
-        # self._ping_daemons()
-        # sleep(2)
-        #
-        # self._ping_daemons()
-        # sleep(2)
-        #
-        # self._ping_daemons()
-        # sleep(2)
+        self._ping_daemons()
+
+        # Sleep some few seconds to let the arbiter ping the daemons by itself
+        sleep(30)
+
+        self._ping_daemons()
+
+        # This function will only send a SIGTERM to the arbiter daemon
+        # self._stop_daemons(['arbiter'])
+        self._stop_alignak_daemons(arbiter_only=True)
+
+    # @pytest.mark.skip("Skip for core dumped on Travis")
+    def test_arbiter_daemons_kill_one_daemon(self):
+        """ Run the Alignak Arbiter - all the expected daemons are started by the arbiter
+        and then a daemon is killed ... the arbiter kills all the remaining daemons
+        after a while and then stops
+
+        :return:
+        """
+        # All the default configuration files are in /tmp/etc
+
+        # Update monitoring configuration file name
+        # Update monitoring configuration file name
+        files = ['/tmp/etc/alignak/alignak.ini']
+        replacements = {
+            ';CFG=%(etcdir)s/alignak.cfg': 'CFG=%(etcdir)s/alignak.cfg',
+            ';log_cherrypy=1': 'log_cherrypy=1',
+
+            'polling_interval=5': 'polling_interval=1',
+            'daemons_check_period=5': 'daemons_check_period=2',
+            'daemons_stop_timeout=10': 'daemons_stop_timeout=5',
+            ';daemons_start_timeout=0': 'daemons_start_timeout=0',
+            ';daemons_dispatch_timeout=0': 'daemons_dispatch_timeout=0',
+
+            'user=alignak': ';user=alignak',
+            'group=alignak': ';group=alignak',
+            #
+            ';alignak_launched=1': 'alignak_launched=1',
+            # ';is_daemon=1': 'is_daemon=0'
+        }
+        self._files_update(files, replacements)
+
+        args = ["../alignak/bin/alignak_arbiter.py", "-e", "/tmp/etc/alignak/alignak.ini"]
+        # self.procs = {'arbiter-master': subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)}
+        fnull = open(os.devnull, 'w')
+        self.procs = {'arbiter-master': subprocess.Popen(args, stdout=fnull, stderr=fnull)}
+        print("%s launched (pid=%d)" % ('arbiter', self.procs['arbiter-master'].pid))
+
+        # Sleep some few seconds because of the time needed to start the processes,
+        # poll them and declare as faulty !
+        sleep(15)
+
+        # The arbiter will NOT have stopped! It is still running
+        ret = self.procs['arbiter-master'].poll()
+        assert ret is None
+        print("Started...")
+
+        self._ping_daemons()
+        sleep(2)
 
         print("Killing one daemon process...")
-        # self._stop_daemons(['receiver'])
-        for daemon in ['receiver']:
-            for proc in psutil.process_iter():
-                if daemon not in proc.name():
-                    continue
-                if getattr(self, 'my_pid', None) and proc.pid == self.my_pid:
-                    continue
-                print("- killing %s" % (proc.name()))
+        self._stop_daemons(['receiver'])
+        self._ping_daemons()
+        sleep(2)
 
-                try:
-                    daemon_process = psutil.Process(proc.pid)
-                except psutil.NoSuchProcess:
-                    print("not existing!")
-                    continue
-
-                os.kill(proc.pid, signal.SIGKILL)
-                time.sleep(2)
-                # daemon_process.terminate()
-                try:
-                    daemon_process.wait(10)
-                except psutil.TimeoutExpired:
-                    print("***** timeout 10 seconds, force-killing the daemon...")
-                    daemon_process.kill()
+        # for daemon in ['receiver']:
+        #     for proc in psutil.process_iter():
+        #         if daemon not in proc.name():
+        #             continue
+        #         if getattr(self, 'my_pid', None) and proc.pid == self.my_pid:
+        #             continue
+        #         print("- killing %s" % (proc.name()))
+        #
+        #         try:
+        #             daemon_process = psutil.Process(proc.pid)
+        #         except psutil.NoSuchProcess:
+        #             print("not existing!")
+        #             continue
+        #
+        #         os.kill(proc.pid, signal.SIGKILL)
+        #         time.sleep(2)
+        #         # daemon_process.terminate()
+        #         try:
+        #             daemon_process.wait(10)
+        #         except psutil.TimeoutExpired:
+        #             print("***** timeout 10 seconds, force-killing the daemon...")
+        #             daemon_process.kill()
 
         # self._ping_daemons()
         # sleep(2)
