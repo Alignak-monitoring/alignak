@@ -27,10 +27,6 @@
 #   Default value: "YES"
 #   Start in replace mode - replaces an existing daemon if a stale pid file exists
 #
-# alignak_log_file (string):
-#   Default value: "${alignak_prefix}/var/log/${name}/${name}.log"
-#   Log file name.
-#
 # alignak_pid_file (string):
 #   Default value: "${alignak_prefix}/var/run/${name}/${name}.pid"
 #   PID file name.
@@ -38,6 +34,21 @@
 # alignak_flags (string):
 #   Default value: ""
 #   Extra parameters to be provided to the started script
+#
+# alignak_name (string):
+#   Default value: ""
+#   Alignak instance name
+#   Default is empty to get this parameter in the configuration file
+#
+# alignak_host (string):
+#   Default value: ""
+#   Interface listened to by the Alignak arbiter.
+#   Default is empty to get this parameter in the configuration file
+#
+# alignak_port (integer):
+#   Default value:
+#   Port listened to by the Alignak arbiter.
+#   Default is empty to get this parameter in the configuration file
 #
 
 . /etc/rc.subr
@@ -52,19 +63,33 @@ load_rc_config "${name}"
 : ${alignak_configuration="${alignak_prefix}/etc/alignak/alignak.ini"}
 : ${alignak_daemon="YES"}
 : ${alignak_replace="YES"}
+: ${alignak_name=""}
+: ${alignak_host=""}
+: ${alignak_port=""}
 : ${alignak_flags=""}
 
 if checkyesno alignak_daemon; then
-  ${alignak_flags="--environment ${alignak_flags}"}
-  alignak_log_options="--logger file:${alignak_log_file}"
+  ${alignak_flags="${alignak_flags} --daemon"}
 fi
 
-if checkyesno alignak_metrics; then
-  alignak_metrics_options="--carbon ${alignak_carbon}"
+if checkyesno alignak_daemon; then
+  ${alignak_flags="${alignak_flags} --replace"}
+fi
+
+if [ ! -z "$alignak_name" ]; then
+  ${alignak_flags="${alignak_flags} --alignak-name ${alignak_name}"}
+fi
+
+if [ ! -z "$alignak_host" ]; then
+  ${alignak_flags="${alignak_flags} --host ${alignak_host}"}
+fi
+
+if [ ! -z "$alignak_port" ]; then
+  ${alignak_flags="${alignak_flags} --port ${alignak_port}"}
 fi
 
 command="/usr/local/bin/alignak-arbiter"
-command_args="--master --daemonize /dev/null --wsgi-file ${alignak_wsgi} --pidfile ${alignak_pid_file} --http ${alignak_host}:${alignak_port} --processes ${alignak_processes} --uid ${alignak_user} --gid ${alignak_group} ${alignak_log_options} ${alignak_metrics_options}"
+command_args=="--environment ${alignak_configuration} ${alignak_flags}"}
 
 stop_cmd="${name}_stop"
 start_cmd="${name}_start"
@@ -81,7 +106,7 @@ alignak_precmd()
 alignak_start()
 {
     echo "Starting ${name}..."
-    /usr/local/bin/uwsgi ${command_args}
+    ${command} ${command_args}
     echo "Started"
 }
 

@@ -232,7 +232,7 @@ class Dispatcher:
                 result = daemon_link.update_infos(forced=(forced or self.new_to_dispatch),
                                                   test=test)
             except LinkError:
-                logger.warning("Scheduler connection failed, I could not push external commands!")
+                logger.warning("Daemon connection failed, I could not get fresh information.")
 
             if result is not False:
                 if result is None:
