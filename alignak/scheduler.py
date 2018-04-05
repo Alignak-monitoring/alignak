@@ -2252,6 +2252,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # raise AttributeError("Item with id %s not found" % object_id)  # pragma: no cover,
         logger.error("Item with id %s not found", object_id)  # pragma: no cover,
+        return None
         # simple protection this should never happen
 
     def before_run(self):
