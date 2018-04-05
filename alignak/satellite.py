@@ -475,7 +475,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         :type module_name: str
         :return: None
         """
-        logger.info("[%s] Allocating new '%s' worker...", self.name, module_name)
+        logger.info("Allocating new '%s' worker...", module_name)
 
         # If we are in the fork module, we do not specify a target
         target = None
@@ -513,26 +513,26 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         # Ok, all is good. Start it!
         worker.start()
 
-        logger.info("[%s] Started '%s' worker: %s (pid=%d)",
-                    self.name, module_name, worker.get_id(), worker.get_pid())
+        logger.info("Started '%s' worker: %s (pid=%d)",
+                    module_name, worker.get_id(), worker.get_pid())
 
     def do_stop_workers(self):
         """Stop all workers
 
         :return: None
         """
-        logger.info("[%s] Stopping all workers (%d)", self.name, len(self.workers))
+        logger.info("Stopping all workers (%d)", len(self.workers))
         for worker in self.workers.values():
             try:
-                logger.info("[%s] - stopping '%s'", self.name, worker.get_id())
+                logger.info(" - stopping '%s'", worker.get_id())
                 worker.terminate()
                 worker.join(timeout=1)
-                logger.info("[%s] - stopped", self.name)
+                logger.info("stopped")
             # A already dead worker or in a worker
             except (AttributeError, AssertionError):
                 pass
             except Exception as exp:  # pylint: disable=broad-except
-                logger.error("[%s] exception: %s", self.name, str(exp))
+                logger.error("exception: %s", str(exp))
 
     def do_stop(self):
         """Stop my workers and stop
@@ -595,8 +595,8 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             logger.debug("[%s] checking if worker %s (pid=%d) is alive",
                          self.name, worker.get_id(), worker.get_pid())
             if not self.interrupted and not worker.is_alive():
-                logger.warning("[%s] The worker %s (pid=%d) went down unexpectedly!",
-                               self.name, worker.get_id(), worker.get_pid())
+                logger.warning("The worker %s (pid=%d) went down unexpectedly!",
+                               worker.get_id(), worker.get_pid())
                 # Terminate immediately
                 worker.terminate()
                 worker.join(timeout=1)

@@ -967,19 +967,17 @@ class Daemon(object):
             self.start_time = time.time()
 
         # For the pause duration
-        logger.info("[%s] pause duration: %.2f",
-                    self.name, self.pause_duration)
+        logger.info("pause duration: %.2f", self.pause_duration)
 
         # For the maximum expected loop duration
-        logger.info("[%s] maximum expected loop duration: %.2f",
-                    self.name, self.maximum_loop_duration)
+        logger.info("maximum expected loop duration: %.2f", self.maximum_loop_duration)
 
         # Treatments before starting the main loop...
         self.do_before_loop()
 
         elapsed_time = 0
 
-        logger.info("[%s] starting main loop: %.2f", self.name, self.start_time)
+        logger.info("starting main loop: %.2f", self.start_time)
         while not self.interrupted:
             loop_start_ts = time.time()
 

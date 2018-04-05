@@ -750,7 +750,7 @@ class SatelliteLink(Item):
             return True
 
         # This sould never happen! Except is the source code got modified!
-        logger.warning("[%s] I responded '%s' to ping! WTF is it?", self.name, res)
+        logger.warning("I responded '%s' to ping! WTF is it?", res)
         self.add_failed_check_attempt('ping / NOT pong')
         # Return True anyway... someone answered!
         return True

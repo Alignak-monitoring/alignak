@@ -312,7 +312,7 @@ class Broker(BaseSatellite):
             # Now we create our pollers, reactionners and receivers
             for link_type in ['pollers', 'reactionners', 'receivers']:
                 if link_type not in self.cur_conf['satellites']:
-                    logger.error("[%s] No %s in the configuration!", self.name, link_type)
+                    logger.error("No %s in the configuration!", link_type)
                     continue
 
                 my_satellites = getattr(self, link_type, {})
@@ -432,7 +432,7 @@ class Broker(BaseSatellite):
             # Asking initial broks from my schedulers
             my_satellites = self.get_links_of_type(s_type='scheduler')
             for satellite in my_satellites.values():
-                logger.info("[%s] Asking my initial broks from '%s'", self.name, satellite.name)
+                logger.info("Asking my initial broks from '%s'", satellite.name)
                 _t0 = time.time()
                 try:
                     my_initial_broks = satellite.get_initial_broks(self.name)

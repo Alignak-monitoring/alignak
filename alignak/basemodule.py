@@ -234,7 +234,7 @@ class BaseModule(object):
         try:
             self._main()
         except Exception as exp:
-            logger.exception('[%s] %s', self.name, traceback.format_exc())
+            logger.exception('%s', traceback.format_exc())
             raise Exception(exp)
 
     def start(self, http_daemon=None):  # pylint: disable=W0613
@@ -436,7 +436,7 @@ class BaseModule(object):
             pass
             # logger.warning('[%s] EOF exception: %s', self.name, traceback.format_exc())
         except Exception as exp:  # pylint: disable=broad-except
-            logger.exception('[%s] main function exception: %s', self.name, exp)
+            logger.exception('main function exception: %s', exp)
 
         self.do_stop()
 

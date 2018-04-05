@@ -1631,8 +1631,8 @@ class Scheduler(object):  # pylint: disable=R0902
         # Send the initial broks to our modules
         self.send_broks_to_modules()
 
-        logger.info("[%s] Created %d initial broks for %s",
-                    self.name, final_broks_count - initial_broks_count, broker_name)
+        logger.info("Created %d initial broks for %s",
+                    final_broks_count - initial_broks_count, broker_name)
         return final_broks_count - initial_broks_count
 
     def initial_program_status(self):
