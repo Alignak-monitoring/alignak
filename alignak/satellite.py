@@ -75,6 +75,7 @@ import threading
 from alignak.http.generic_interface import GenericInterface
 
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
+from alignak.property import IntegerProp, ListProp
 
 from alignak.message import Message
 from alignak.worker import Worker
@@ -367,6 +368,22 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
     do_actions = False
     my_type = ''
 
+    properties = BaseSatellite.properties.copy()
+    properties.update({
+        'min_workers':
+            IntegerProp(default=1, fill_brok=['full_status'], to_send=True),
+        'max_workers':
+            IntegerProp(default=30, fill_brok=['full_status'], to_send=True),
+        'processes_by_worker':
+            IntegerProp(default=256, fill_brok=['full_status'], to_send=True),
+        'worker_polling_interval':
+            IntegerProp(default=1, to_send=True),
+        'poller_tags':
+            ListProp(default=['None'], to_send=True),
+        'reactionner_tags':
+            ListProp(default=['None'], to_send=True),
+    })
+
     def __init__(self, name, **kwargs):
 
         super(Satellite, self).__init__(name, **kwargs)
@@ -375,6 +392,10 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         self.broks = {}
 
         self.workers = {}   # dict of active workers
+        self.min_workers = 1
+        self.max_workers = 30
+        self.worker_polling_interval = 1
+        self.processes_by_worker = 256
 
         # Init stats like Load for workers
         self.wait_ratio = Load(initial_value=1)
@@ -962,15 +983,15 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # ------------------
             # For the worker daemons...
             # ------------------
-            # Now the limit part, 0 mean: number of cpu of this machine :)
+            # Now the limit part, 0 means the number of cpu of this machine :)
             # if not available, use 4 (modern hardware)
-            self.max_workers = self_conf.get('max_workers', 0)
+            # self.max_workers = self_conf.get('max_workers', 0)
             if self.max_workers == 0:
                 try:
                     self.max_workers = cpu_count()
                 except NotImplementedError:  # pragma: no cover, simple protection
                     self.max_workers = 4
-            self.min_workers = self_conf.get('min_workers', 0)
+            # self.min_workers = self_conf.get('min_workers', 0)
             if self.min_workers == 0:
                 try:
                     self.min_workers = cpu_count()
@@ -979,8 +1000,8 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             logger.info("Using minimum %d workers, maximum %d workers",
                         self.min_workers, self.max_workers)
 
-            self.processes_by_worker = self_conf.get('processes_by_worker', 1)
-            self.worker_polling_interval = self_conf.get('worker_polling_interval', 1)
+            # self.processes_by_worker = self_conf.get('processes_by_worker', 1)
+            # self.worker_polling_interval = self_conf.get('worker_polling_interval', 1)
             self.timeout = self.worker_polling_interval
 
             # Now set tags

@@ -63,14 +63,14 @@ class PollerLink(SatelliteLink):
             StringProp(default='', fill_brok=['full_status']),
         'port':
             IntegerProp(default=7771, fill_brok=['full_status'], to_send=True),
-        'min_workers':
-            IntegerProp(default=0, fill_brok=['full_status'], to_send=True),
-        'max_workers':
-            IntegerProp(default=30, fill_brok=['full_status'], to_send=True),
-        'processes_by_worker':
-            IntegerProp(default=256, fill_brok=['full_status'], to_send=True),
-        'worker_polling_interval':
-            IntegerProp(default=1, to_send=True),
+        # 'min_workers':
+        #     IntegerProp(default=0, fill_brok=['full_status'], to_send=True),
+        # 'max_workers':
+        #     IntegerProp(default=30, fill_brok=['full_status'], to_send=True),
+        # 'processes_by_worker':
+        #     IntegerProp(default=256, fill_brok=['full_status'], to_send=True),
+        # 'worker_polling_interval':
+        #     IntegerProp(default=1, to_send=True),
         'poller_tags':
             ListProp(default=['None'], to_send=True),
     })
