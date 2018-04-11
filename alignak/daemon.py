@@ -2013,15 +2013,14 @@ class Daemon(object):
         :type message: str
         :return: None
         """
-        logger.error("I got an unrecoverable error. I have to exit.")
+        log = "I got an unrecoverable error. I have to exit."
         if message:
-            logger.error("-----")
-            logger.error("Error message: %s", message)
+            log += "\n-----\nError message: %s" % message
             print("Error message: %s" % message)
-        logger.error("-----")
-        logger.error("You can get help at https://github.com/Alignak-monitoring/alignak")
-        logger.error("If you think this is a bug, create a new issue including as much "
-                     "details as possible (version, configuration,...)")
+        log += "-----\n"
+        log += "You can get help at https://github.com/Alignak-monitoring/alignak\n"
+        log += "If you think this is a bug, create a new issue including as much " \
+               "details as possible (version, configuration,...)"
         if exit_code is not None:
             exit(exit_code)
 
@@ -2038,9 +2037,8 @@ class Daemon(object):
         """
         self.exit_on_error(message=message, exit_code=None)
 
-        logger.critical("-----")
-        logger.critical("Exception: %s", str(raised_exception))
-        logger.critical("Back trace of the error:\n%s", traceback.format_exc())
+        logger.critical("-----\nException: %s\nBack trace of the error:\n%s",
+                        str(raised_exception), traceback.format_exc())
 
         exit(exit_code)
 
