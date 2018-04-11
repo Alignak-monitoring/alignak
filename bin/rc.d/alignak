@@ -100,6 +100,7 @@ required_files="${alignak_wsgi}"
 alignak_precmd()
 {
     /usr/bin/install -d -o ${alignak_user} -g ${alignak_group} -m 755 ${alignak_prefix}/var/log/alignak
+    /usr/bin/install -d -o ${alignak_user} -g ${alignak_group} -m 755 ${alignak_prefix}/var/log/alignak/monitoring-log
     /usr/bin/install -d -o ${alignak_user} -g ${alignak_group} -m 755 ${alignak_prefix}/var/run/alignak
 }
 

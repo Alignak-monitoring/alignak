@@ -609,11 +609,18 @@ class Daemon(object):
             print("Daemon '%s' is started with an overridden log file: %s"
                   % (self.name, self.log_filename))
 
-            self.check_dir(os.path.dirname(self.log_filename))
-        else:
+        # Check the log directory (and create if it does not exist)
+        self.check_dir(os.path.dirname(self.log_filename))
+
+        # Specific monitoring log directory
+        self.check_dir(os.path.join(os.path.dirname(self.log_filename), 'monitoring-log'))
+
+        if 'log_filename' not in kwargs or not kwargs['log_filename']:
             # Log file name is not overridden, the logger will use the configured default one
             if self.log_cherrypy:
                 self.log_cherrypy = self.log_filename
+                print("Daemon '%s' is started with CherryPy log enabled: %s"
+                      % (self.name, self.log_cherrypy))
             else:
                 self.log_cherrypy = None
             self.log_filename = ''
@@ -2010,7 +2017,7 @@ class Daemon(object):
         if message:
             logger.error("-----")
             logger.error("Error message: %s", message)
-            print("Error message: %s", message)
+            print("Error message: %s" % message)
         logger.error("-----")
         logger.error("You can get help at https://github.com/Alignak-monitoring/alignak")
         logger.error("If you think this is a bug, create a new issue including as much "
