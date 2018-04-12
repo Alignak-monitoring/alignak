@@ -98,6 +98,9 @@ class HTTPDaemon(object):
         # cherrypy.config.update({'environment': 'embedded'})
 
         # Configure HTTP server
+        # Available parameters (see https://github.com/cherrypy/cherrypy/
+        # blob/master/cherrypy/_cpserver.py) for more information if needed.
+        # - socket_queue_size
         cherrypy.config.update({'engine.autoreload.on': False,
                                 'server.thread_pool': thread_pool_size,
                                 'server.socket_host': self.host,
@@ -118,6 +121,18 @@ class HTTPDaemon(object):
 
         if use_ssl:
             # Configure SSL server certificate and private key
+            # Parameters:
+            # ssl_context = None
+            #   When using PyOpenSSL, an instance of SSL.Context.
+            # ssl_certificate = None
+            #   The filename of the SSL certificate to use.
+            # ssl_certificate_chain = None
+            #   When using PyOpenSSL, the certificate chain to pass to
+            # Context.load_verify_locations.
+            # ssl_private_key = None
+            #   The filename of the private key to use with SSL.  
+            # ssl_ciphers = None
+            # The ciphers list of SSL.
             cherrypy.config.update({'server.ssl_certificate': ssl_cert,
                                     'server.ssl_private_key': ssl_key})
             cherrypy.log("Using PyOpenSSL: %s" % (PYOPENSSL))

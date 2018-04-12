@@ -369,6 +369,9 @@ class Daemon(object):
         'statsd_prefix':
             StringProp(default='alignak'),
         'statsd_enabled':
+            BoolProp(default=False),
+        # use Graphite/carbon connection instead of StatsD
+        'graphite_enabled':
             BoolProp(default=False)
     }
 
@@ -652,9 +655,14 @@ class Daemon(object):
                   % (self.name, self.daemon_monitoring_period))
 
         # Configure our Stats manager
-        statsmgr.register(self.name, self.type,
-                          statsd_host=self.statsd_host, statsd_port=self.statsd_port,
-                          statsd_prefix=self.statsd_prefix, statsd_enabled=self.statsd_enabled)
+        if not self.graphite_enabled:
+            statsmgr.register(self.name, self.type,
+                              statsd_host=self.statsd_host, statsd_port=self.statsd_port,
+                              statsd_prefix=self.statsd_prefix, statsd_enabled=self.statsd_enabled)
+        else:
+            statsmgr.connect(self.name, self.type,
+                             host=self.statsd_host, port=self.statsd_port,
+                             prefix=self.statsd_prefix, enabled=True)
 
         # Track time
         now = time.time()
@@ -1291,7 +1299,7 @@ class Daemon(object):
             return
 
         try:
-            logger.debug("Truing to kill the former existing process: '%s'", pid)
+            logger.debug("Testing if the process is running: '%s'", pid)
             os.kill(pid, 0)
         except OSError:
             # consider any exception as a stale pid file.
@@ -1299,7 +1307,7 @@ class Daemon(object):
             #  * PermissionError when a process with same pid exists but is executed by another user
             #  * ProcessLookupError: [Errno 3] No such process
             self.pre_log.append(("DEBUG", "No former instance to replace"))
-            logger.info("A stale pid file exists, reusing it")
+            logger.info("A stale pid file exists, reusing the same file")
             return
 
         if not self.do_replace:
@@ -1358,6 +1366,7 @@ class Daemon(object):
                 logger.debug("Do not close fd: %s", file_d)
                 continue
             try:
+                self.pre_log.append(("WARNING", "Closed FD: %s" % file_d))
                 os.close(file_d)
             except OSError:  # ERROR, fd wasn't open to begin with (ignored)
                 pass

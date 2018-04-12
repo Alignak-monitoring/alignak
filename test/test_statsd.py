@@ -50,6 +50,7 @@ class FakeStatsdServer(threading.Thread):
             self.port = sock.getsockname()[1]
         sock.listen(0)
         self.running = True
+        print("Starting fake StatsD server on %d", port)
         self.start()
 
     def stop(self):
@@ -72,7 +73,48 @@ class FakeStatsdServer(threading.Thread):
 
     def handle_connection(self, sock):
         data = sock.recv(4096)
-        print("Received: %s", data)
+        print("Fake StatsD received: %s", data)
+        sock.close()
+
+
+class FakeCarbonServer(threading.Thread):
+    def __init__(self, port=0):
+        super(FakeCarbonServer, self).__init__()
+        self.setDaemon(True)
+        self.port = port
+        self.cli_socks = []  # will retain the client socks here
+        sock = self.sock = socket.socket()
+        sock.settimeout(1)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        sock.bind(('127.0.0.1', port))
+        if not port:
+            self.port = sock.getsockname()[1]
+        sock.listen(0)
+        self.running = True
+        print("Starting fake carbon server on %d", port)
+        self.start()
+
+    def stop(self):
+        self.running = False
+        self.sock.close()
+
+    def run(self):
+        while self.running:
+            try:
+                sock, addr = self.sock.accept()
+            except socket.error as err:
+                pass
+            else:
+                # so that we won't block indefinitely in handle_connection
+                # in case the client doesn't send anything :
+                sock.settimeout(3)
+                self.cli_socks.append(sock)
+                self.handle_connection(sock)
+                self.cli_socks.remove(sock)
+
+    def handle_connection(self, sock):
+        data = sock.recv(4096)
+        print("Fake carbon received: %s", data)
         sock.close()
 
 
@@ -90,11 +132,11 @@ class TestStatsD(AlignakTest):
         # Create our own stats manager...
         # do not use the global object to restart with a fresh one on each test
         self.statsmgr = Stats()
-        self.fake_server = FakeStatsdServer(port=8125)
+        self.fake_statsd = FakeStatsdServer(port=8125)
 
     def tearDown(self):
-        self.fake_server.stop()
-        self.fake_server.join()
+        self.fake_statsd.stop()
+        self.fake_statsd.join()
 
     def test_statsmgr(self):
         """ Stats manager exists
@@ -543,6 +585,493 @@ class TestStatsD(AlignakTest):
                                      'metric': 'alignak.arbiter-master.test',
                                      'value': 12, 'uom': 'g'
                                  }}
+
+
+class TestCarbon(AlignakTest):
+    """
+    This class test the StatsD interface
+    """
+    def setUp(self):
+        super(TestCarbon, self).setUp()
+
+        # Log at DEBUG level
+        self.set_debug_log()
+        self.clear_logs()
+
+        # Create our own stats manager...
+        # do not use the global object to restart with a fresh one on each test
+        self.statsmgr = Stats()
+        self.fake_carbon = FakeCarbonServer(port=2003)
+
+    def tearDown(self):
+        self.fake_carbon.stop()
+        self.fake_carbon.join()
+
+    def test_statsmgr(self):
+        """ Stats manager exists
+        :return:
+        """
+        assert 'statsmgr' in globals()
+
+    def test_statsmgr_register_disabled(self):
+        """ Stats manager is registered as disabled
+        :return:
+        """
+        # Register stats manager as disabled
+        assert not self.statsmgr.connect('arbiter-master', 'arbiter',
+                                         host='localhost', port=2003,
+                                         prefix='alignak', enabled=False)
+        assert self.statsmgr.statsd_enabled is False
+        assert self.statsmgr.broks_enabled is False
+        assert self.statsmgr.statsd_sock is None
+        assert self.statsmgr.metrics_count == 0
+
+    def test_statsmgr_register_disabled_broks(self):
+        """ Stats manager is registered as disabled, but broks are enabled
+        :return:
+        """
+        # Register stats manager as disabled
+        assert not self.statsmgr.connect('arbiter-master', 'arbiter',
+                                         host='localhost', port=2003,
+                                         prefix='alignak', enabled=False,
+                                         broks_enabled=True)
+        assert self.statsmgr.statsd_enabled is False
+        assert self.statsmgr.broks_enabled is True
+        assert self.statsmgr.statsd_sock is None
+        assert self.statsmgr.statsd_addr is None
+        assert self.statsmgr.metrics_count == 0
+
+    def test_statsmgr_register_enabled(self):
+        """ Stats manager is registered as enabled
+        :return:
+        """
+        # Register stats manager as enabled
+        assert self.statsmgr.statsd_sock is None
+        assert self.statsmgr.statsd_addr is None
+        assert self.statsmgr.connect('arbiter-master', 'arbiter',
+                                     host='localhost', port=2003,
+                                     prefix='alignak', enabled=True)
+        assert self.statsmgr.statsd_enabled is True
+        assert self.statsmgr.broks_enabled is False
+        assert self.statsmgr.carbon is not None
+        assert self.statsmgr.metrics_count == 0
+
+        index = 0
+        # Only for Python > 2.7, DEBUG logs ...
+        if os.sys.version_info > (2, 7):
+            index = 1
+            self.assert_log_match(re.escape(
+                'Graphite/carbon configuration for arbiter-master - localhost:2003, '
+                'prefix: alignak, enabled: True, broks: False, file: None'
+            ), 0)
+
+        self.assert_log_match(re.escape(
+            'Sending arbiter-master daemon statistics '
+            'to: localhost:2003, prefix: alignak'
+        ), index)
+
+    def test_statsmgr_register_enabled_broks(self):
+        """ Stats manager is registered as enabled and broks are enabled
+        :return:
+        """
+        # Register stats manager as enabled
+        assert self.statsmgr.statsd_sock is None
+        assert self.statsmgr.statsd_addr is None
+        assert self.statsmgr.connect('arbiter-master', 'arbiter',
+                                     host='localhost', port=2003, prefix='alignak', enabled=True,
+                                     broks_enabled=True)
+        assert self.statsmgr.statsd_enabled is True
+        assert self.statsmgr.broks_enabled is True
+        assert self.statsmgr.carbon is not None
+        assert self.statsmgr.metrics_count == 0
+
+        index = 0
+        # Only for Python > 2.7, DEBUG logs ...
+        if os.sys.version_info > (2, 7):
+            index = 1
+            self.assert_log_match(re.escape(
+                'Graphite/carbon configuration for arbiter-master - localhost:2003, '
+                'prefix: alignak, enabled: True, broks: True, file: None'
+            ), 0)
+
+        self.assert_log_match(re.escape(
+            'Sending arbiter-master daemon statistics '
+            'to: localhost:2003, prefix: alignak'
+        ), index)
+
+    def test_statsmgr_connect(self):
+        """ Test connection in disabled mode
+        :return:
+        """
+        # Register stats manager as disabled
+        assert not self.statsmgr.connect('arbiter-master', 'arbiter',
+                                         host='localhost', port=2003,
+                                         prefix='alignak', enabled=False)
+
+        # Connect to StatsD server
+        assert self.statsmgr.statsd_sock is None
+        assert self.statsmgr.statsd_addr is None
+        # This method is not usually called directly, but it must refuse the connection
+        # if it not enabled
+        assert not self.statsmgr.load_statsd()
+        assert self.statsmgr.statsd_sock is None
+        assert self.statsmgr.statsd_addr is None
+        assert self.statsmgr.metrics_count == 0
+
+    def test_statsmgr_connect_port_error(self):
+        """ Test connection with a bad port
+        :return:
+        """
+        # Register stats manager as enabled (another port than the default one)
+        assert self.statsmgr.connect('arbiter-master', 'arbiter',
+                                     host='localhost', port=8888,
+                                     prefix='alignak', enabled=True)
+        index = 0
+        # Only for Python > 2.7, DEBUG logs ...
+        if os.sys.version_info > (2, 7):
+            index = 1
+        self.assert_log_match(re.escape(
+            'Sending arbiter-master daemon statistics '
+            'to: localhost:8888, prefix: alignak'
+        ), index)
+        index += 1
+        self.assert_log_match(re.escape(
+            'Alignak internal statistics will be sent to Graphite.'
+        ), index)
+        index += 1
+
+    def test_statsmgr_timer(self):
+        """ Test sending data for a timer
+        :return:
+        """
+        # Register stats manager as enabled
+        self.statsmgr.connect('arbiter-master', 'arbiter',
+                              host='localhost', port=2003, prefix='alignak', enabled=True,
+                              broks_enabled=True)
+        assert self.statsmgr.metrics_count == 0
+
+        index = 0
+        # Only for Python > 2.7, DEBUG logs ...
+        if os.sys.version_info > (2, 7):
+            index = 1
+        self.show_logs()
+        self.assert_log_match(re.escape(
+            'Sending arbiter-master daemon statistics to: localhost:2003, prefix: alignak'
+        ), index)
+        index += 1
+        self.assert_log_match(re.escape(
+            'Alignak internal statistics will be sent to Graphite.'
+        ), index)
+        index += 1
+
+        assert self.statsmgr.stats == {}
+
+        # Create a metric statistic
+        brok = self.statsmgr.timer('test', 0)
+        assert len(self.statsmgr.stats) == 1
+        # One more inner metric
+        assert self.statsmgr.metrics_count == 1
+
+        # Get min, max, count and sum
+        assert self.statsmgr.stats['test'] == (0, 0, 1, 0)
+        # self.assert_log_match(re.escape(
+        #     'Sending data: alignak.arbiter-master.test:0|ms'
+        # ), 3)
+        # Prepare brok and remove specific brok properties (for test purpose only...
+        brok.prepare()
+        brok.__dict__.pop('creation_time')
+        brok.__dict__.pop('instance_id')
+        brok.__dict__.pop('prepared')
+        brok.__dict__.pop('uuid')
+        assert brok.__dict__ == {'type': 'alignak_stat',
+                                 'data': {
+                                     'type': 'timer',
+                                     'metric': 'alignak.arbiter-master.test',
+                                     'value': 0, 'uom': 'ms'
+                                 }}
+
+        # Increment
+        brok = self.statsmgr.timer('test', 1)
+        assert len(self.statsmgr.stats) == 1
+        # One more inner metric
+        assert self.statsmgr.metrics_count == 2
+
+        # Get min, max, count (incremented) and sum
+        assert self.statsmgr.stats['test'] == (0, 1, 2, 1)
+        # self.assert_log_match(re.escape(
+        #     'Sending data: alignak.arbiter-master.test:1000|ms'
+        # ), 4)
+        # Prepare brok and remove specific brok properties (for test purpose only...
+        brok.prepare()
+        brok.__dict__.pop('creation_time')
+        brok.__dict__.pop('instance_id')
+        brok.__dict__.pop('prepared')
+        brok.__dict__.pop('uuid')
+        assert brok.__dict__ == {'type': 'alignak_stat',
+                                 'data': {
+                                     'type': 'timer',
+                                     'metric': 'alignak.arbiter-master.test',
+                                     'value': 1000, 'uom': 'ms'
+                                 }}
+
+        # Increment - the function is called 'incr' but it does not increment, it sets the value!
+        brok = self.statsmgr.timer('test', 12)
+        assert len(self.statsmgr.stats) == 1
+        # One more inner metric
+        assert self.statsmgr.metrics_count == 3
+
+        # Get min, max, count (incremented) and sum (increased)
+        assert self.statsmgr.stats['test'] == (0, 12, 3, 13)
+        # self.assert_log_match(re.escape(
+        #     'Sending data: alignak.arbiter-master.test:1000|ms'
+        # ), 5)
+        # Prepare brok and remove specific brok properties (for test purpose only...
+        brok.prepare()
+        brok.__dict__.pop('creation_time')
+        brok.__dict__.pop('instance_id')
+        brok.__dict__.pop('prepared')
+        brok.__dict__.pop('uuid')
+        assert brok.__dict__ == {'type': 'alignak_stat',
+                                 'data': {
+                                     'type': 'timer',
+                                     'metric': 'alignak.arbiter-master.test',
+                                     'value': 12000, 'uom': 'ms'
+                                 }}
+
+    def test_statsmgr_counter(self):
+        """ Test sending data for a counter
+        :return:
+        """
+        # Register stats manager as enabled
+        self.statsmgr.connect('broker-master', 'broker',
+                              host='localhost', port=2003, prefix='alignak', enabled=True,
+                              broks_enabled=True)
+        index = 0
+        # Only for Python > 2.7, DEBUG logs ...
+        if os.sys.version_info > (2, 7):
+            index = 1
+        self.show_logs()
+        self.assert_log_match(re.escape(
+            'Sending broker-master daemon statistics to: localhost:2003, prefix: alignak'
+        ), index)
+        index += 1
+        self.assert_log_match(re.escape(
+            'Alignak internal statistics will be sent to Graphite.'
+        ), index)
+        index += 1
+
+        assert self.statsmgr.stats == {}
+
+        # Create a metric statistic
+        brok = self.statsmgr.counter('test', 0)
+        assert len(self.statsmgr.stats) == 1
+        # One more inner metric
+        assert self.statsmgr.metrics_count == 1
+
+        # Get min, max, count and sum
+        assert self.statsmgr.stats['test'] == (0, 0, 1, 0)
+        # self.assert_log_match(re.escape(
+        #     'Sending data: alignak.arbiter-master.test:0|ms'
+        # ), 3)
+        # Prepare brok and remove specific brok properties (for test purpose only...
+        brok.prepare()
+        brok.__dict__.pop('creation_time')
+        brok.__dict__.pop('instance_id')
+        brok.__dict__.pop('prepared')
+        brok.__dict__.pop('uuid')
+        assert brok.__dict__ == {'type': 'alignak_stat',
+                                 'data': {
+                                     'type': 'counter',
+                                     'metric': 'alignak.broker-master.test',
+                                     'value': 0, 'uom': 'c'
+                                 }}
+
+        # Increment
+        brok = self.statsmgr.counter('test', 1)
+        assert len(self.statsmgr.stats) == 1
+        # One more inner metric
+        assert self.statsmgr.metrics_count == 2
+
+        # Get min, max, count (incremented) and sum
+        assert self.statsmgr.stats['test'] == (0, 1, 2, 1)
+        # self.assert_log_match(re.escape(
+        #     'Sending data: alignak.arbiter-master.test:1000|ms'
+        # ), 4)
+        # Prepare brok and remove specific brok properties (for test purpose only...
+        brok.prepare()
+        brok.__dict__.pop('creation_time')
+        brok.__dict__.pop('instance_id')
+        brok.__dict__.pop('prepared')
+        brok.__dict__.pop('uuid')
+        assert brok.__dict__ == {'type': 'alignak_stat',
+                                 'data': {
+                                     'type': 'counter',
+                                     'metric': 'alignak.broker-master.test',
+                                     'value': 1, 'uom': 'c'
+                                 }}
+
+        # Increment - the function is called 'incr' but it does not increment, it sets the value!
+        brok = self.statsmgr.counter('test', 12)
+        assert len(self.statsmgr.stats) == 1
+        # Get min, max, count (incremented) and sum (increased)
+        assert self.statsmgr.stats['test'] == (0, 12, 3, 13)
+        # self.assert_log_match(re.escape(
+        #     'Sending data: alignak.arbiter-master.test:1000|ms'
+        # ), 5)
+        # Prepare brok and remove specific brok properties (for test purpose only...
+        brok.prepare()
+        brok.__dict__.pop('creation_time')
+        brok.__dict__.pop('instance_id')
+        brok.__dict__.pop('prepared')
+        brok.__dict__.pop('uuid')
+        assert brok.__dict__ == {'type': 'alignak_stat',
+                                 'data': {
+                                     'type': 'counter',
+                                     'metric': 'alignak.broker-master.test',
+                                     'value': 12, 'uom': 'c'
+                                 }}
+
+    def test_statsmgr_gauge(self):
+        """ Test sending data for a gauge
+        :return:
+        """
+        # Register stats manager as enabled
+        self.statsmgr.connect('arbiter-master', 'arbiter',
+                              host='localhost', port=2003, prefix='alignak', enabled=True,
+                              broks_enabled=True)
+        index = 0
+        # Only for Python > 2.7, DEBUG logs ...
+        if os.sys.version_info > (2, 7):
+            index = 1
+        self.show_logs()
+        self.assert_log_match(re.escape(
+            'Sending arbiter-master daemon statistics to: localhost:2003, prefix: alignak'
+        ), index)
+        index += 1
+        self.assert_log_match(re.escape(
+            'Alignak internal statistics will be sent to Graphite.'
+        ), index)
+        index += 1
+
+        assert self.statsmgr.stats == {}
+
+        # Create a metric statistic
+        brok = self.statsmgr.gauge('test', 0)
+        assert len(self.statsmgr.stats) == 1
+        # One more inner metric
+        assert self.statsmgr.metrics_count == 1
+
+        # Get min, max, count and sum
+        assert self.statsmgr.stats['test'] == (0, 0, 1, 0)
+        # self.assert_log_match(re.escape(
+        #     'Sending data: alignak.arbiter-master.test:0|ms'
+        # ), 3)
+        # Prepare brok and remove specific brok properties (for test purpose only...
+        brok.prepare()
+        brok.__dict__.pop('creation_time')
+        brok.__dict__.pop('instance_id')
+        brok.__dict__.pop('prepared')
+        brok.__dict__.pop('uuid')
+        assert brok.__dict__ == {'type': 'alignak_stat',
+                                 'data': {
+                                     'type': 'gauge',
+                                     'metric': 'alignak.arbiter-master.test',
+                                     'value': 0, 'uom': 'g'
+                                 }}
+
+        # Increment
+        brok = self.statsmgr.gauge('test', 1)
+        assert len(self.statsmgr.stats) == 1
+        # One more inner metric
+        assert self.statsmgr.metrics_count == 2
+
+        # Get min, max, count (incremented) and sum
+        assert self.statsmgr.stats['test'] == (0, 1, 2, 1)
+        # self.assert_log_match(re.escape(
+        #     'Sending data: alignak.arbiter-master.test:1000|ms'
+        # ), 4)
+        # Prepare brok and remove specific brok properties (for test purpose only...
+        brok.prepare()
+        brok.__dict__.pop('creation_time')
+        brok.__dict__.pop('instance_id')
+        brok.__dict__.pop('prepared')
+        brok.__dict__.pop('uuid')
+        assert brok.__dict__ == {'type': 'alignak_stat',
+                                 'data': {
+                                     'type': 'gauge',
+                                     'metric': 'alignak.arbiter-master.test',
+                                     'value': 1, 'uom': 'g'
+                                 }}
+
+        # Increment - the function is called 'incr' but it does not increment, it sets the value!
+        brok = self.statsmgr.gauge('test', 12)
+        assert len(self.statsmgr.stats) == 1
+        # One more inner metric
+        assert self.statsmgr.metrics_count == 3
+
+        # Get min, max, count (incremented) and sum (increased)
+        assert self.statsmgr.stats['test'] == (0, 12, 3, 13)
+        # self.assert_log_match(re.escape(
+        #     'Sending data: alignak.arbiter-master.test:1000|ms'
+        # ), 5)
+        # Prepare brok and remove specific brok properties (for test purpose only...
+        brok.prepare()
+        brok.__dict__.pop('creation_time')
+        brok.__dict__.pop('instance_id')
+        brok.__dict__.pop('prepared')
+        brok.__dict__.pop('uuid')
+        assert brok.__dict__ == {'type': 'alignak_stat',
+                                 'data': {
+                                     'type': 'gauge',
+                                     'metric': 'alignak.arbiter-master.test',
+                                     'value': 12, 'uom': 'g'
+                                 }}
+
+    def test_statsmgr_flush(self):
+        """ Test sending several data at once to a Graphite server
+
+        The stats manager do not send the metrics when it is configured for Graphite. It is needed
+        to call the flush method periodically to send the stored metrics.
+
+        :return:
+        """
+        # Register stats manager as enabled
+        self.statsmgr.connect('arbiter-master', 'arbiter',
+                              host='localhost', port=2003, prefix='alignak', enabled=True)
+        assert self.statsmgr.metrics_count == 0
+        assert self.statsmgr.stats == {}
+        self.clear_logs()
+
+        # Flush but no metrics exist
+        assert self.statsmgr.flush()
+
+        index = 0
+        # Only for Python > 2.7, DEBUG logs ...
+        if os.sys.version_info > (2, 7):
+            index = 1
+            self.assert_log_match(re.escape(
+                'Flushing - no metrics to send'
+            ), 0)
+        self.clear_logs()
+
+        # Create a timer metric
+        self.statsmgr.timer('my_timer', 0)
+        self.statsmgr.timer('my_timer', 1)
+        self.statsmgr.timer('my_timer', 12)
+
+        self.statsmgr.counter('my_counter', 3)
+
+        self.statsmgr.gauge('my_gauge', 125)
+
+        # 5 metrics stored
+        assert self.statsmgr.metrics_count == 5
+
+        assert self.statsmgr.flush()
+
+        index = 0
+        self.assert_log_match(re.escape(
+            'Flushing 5 metrics to Graphite/carbon'
+        ), index)
 
 
 class TestStatsFile(AlignakTest):
