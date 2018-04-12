@@ -561,15 +561,15 @@ class Broker(BaseSatellite):
 
             #  We wait for initial conf
             self.wait_for_initial_conf()
-            if not self.new_conf:
-                return
-            self.setup_new_conf()
+            if self.new_conf:
+                # Setup the received configuration
+                self.setup_new_conf()
 
-            # Restore retention data
-            self.hook_point('load_retention')
+                # Restore retention data
+                self.hook_point('load_retention')
 
-            # Now the main loop
-            self.do_main_loop()
+                # Now the main loop
+                self.do_main_loop()
 
             self.request_stop()
         except Exception:  # pragma: no cover, this should never happen indeed ;)

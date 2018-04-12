@@ -126,6 +126,7 @@ import errno
 import sys
 import time
 import json
+import resource
 import socket
 import signal
 from copy import copy
@@ -212,7 +213,14 @@ logger = logging.getLogger(__name__)  # pylint: disable=C0103
 # The standard I/O file descriptors are redirected to /dev/null by default.
 REDIRECT_TO = getattr(os, "devnull", "/dev/null")
 
-UMASK = 027
+# Recommended (default) umask for a daemonized process is 0. Former Alignak one was 027...
+# UMASK = 027
+UMASK = 0
+
+# This default value is used to declare the properties that are Path properties
+# During the daemon initialization, this value is replaced with the real daemon working directory
+# and it will be overloaded with the value defined in the daemon configuration or launch parameters
+DEFAULT_WORK_DIR = '/'
 
 
 class EnvironmentFile(Exception):
@@ -220,12 +228,6 @@ class EnvironmentFile(Exception):
 
     def __init__(self, msg):
         Exception.__init__(self, msg)
-
-
-# This default value is used to declare the properties that are Path properties
-# During the daemon initialization, this value is replaced with the real daemon working directory
-# and it will be overloaded with the value defined in the daemon configuration or launch parameters
-DEFAULT_WORK_DIR = './'
 
 
 # pylint: disable=R0902
@@ -332,8 +334,6 @@ class Daemon(object):
             BoolProp(default=False),
         'debug_file':
             StringProp(default=None),
-        'debug_output':
-            ListProp(default=[]),
         'monitoring_config_files':
             ListProp(default=[]),
 
@@ -543,8 +543,8 @@ class Daemon(object):
             self.do_replace = BoolProp().pythonize(kwargs['do_replace'])
         if 'debug' in kwargs:
             self.debug = BoolProp().pythonize(kwargs['debug'])
-        if 'debug_file' in kwargs and kwargs['debug_file']:
-            self.debug_file = PathProp().pythonize(kwargs['debug_file'])
+        # if 'debug_file' in kwargs and kwargs['debug_file']:
+        #     self.debug_file = PathProp().pythonize(kwargs['debug_file'])
 
         if 'host' in kwargs and kwargs['host']:
             self.host = StringProp().pythonize(kwargs['host'])
@@ -713,10 +713,6 @@ class Daemon(object):
         except ValueError:  # pragma: no cover, simple protection
             self.activity_log_period = 0
 
-        # Put in queue some debug output we will raise
-        # when we will be daemonized
-        self.debug_output = []
-
         # Daemon load 1 minute
         self.load_1_min = Load(initial_value=1)
 
@@ -724,7 +720,6 @@ class Daemon(object):
         # and are really forked
         self.sync_manager = None
 
-        os.umask(UMASK)
         self.set_signal_handler()
 
     def __repr__(self):  # pragma: no cover
@@ -1329,120 +1324,95 @@ class Daemon(object):
         # because the previous instance should have deleted it!!
         self.__open_pidfile(write=True)
 
-    def write_pid(self, pid=None):
+    def write_pid(self, pid):
         """ Write pid to the pid file
 
         :param pid: pid of the process
         :type pid: None | int
         :return: None
         """
-        if pid is None:
-            self.pid = os.getpid()
         self.fpid.seek(0)
         self.fpid.truncate()
-        self.fpid.write("%d" % (self.pid))
+        self.fpid.write("%d" % pid)
         self.fpid.close()
         del self.fpid  # no longer needed
 
-    @staticmethod
-    def close_fds(skip_close_fds):  # pragma: no cover, not with unit tests...
+    def close_fds(self, skip_close_fds):  # pragma: no cover, not with unit tests...
         """Close all the process file descriptors.
         Skip the descriptors present in the skip_close_fds list
 
-        :param skip_close_fds: list of fd to skip
+        :param skip_close_fds: list of file descriptor to preserve from closing
         :type skip_close_fds: list
         :return: None
         """
         # First we manage the file descriptor, because debug file can be
         # relative to pwd
-        import resource
-        maxfd = resource.getrlimit(resource.RLIMIT_NOFILE)[1]
-        if maxfd == resource.RLIM_INFINITY:
-            maxfd = 1024
+        max_fds = resource.getrlimit(resource.RLIMIT_NOFILE)[1]
+        if max_fds == resource.RLIM_INFINITY:
+            max_fds = 1024
+        self.pre_log.append(("DEBUG", "Maximum file descriptors: %d" % max_fds))
 
         # Iterate through and close all file descriptors.
-        for file_d in range(0, maxfd):
+        for file_d in range(0, max_fds):
             if file_d in skip_close_fds:
-                logger.debug("Do not close fd: %s", file_d)
+                self.pre_log.append(("INFO", "Do not close fd: %s" % file_d))
                 continue
             try:
-                self.pre_log.append(("WARNING", "Closed FD: %s" % file_d))
                 os.close(file_d)
             except OSError:  # ERROR, fd wasn't open to begin with (ignored)
                 pass
 
-    def daemonize(self, skip_close_fds=None):  # pragma: no cover, not for unit tests...
+    def daemonize(self):  # pragma: no cover, not for unit tests...
         """Go in "daemon" mode: close unused fds, redirect stdout/err,
         chdir, umask, fork-setsid-fork-writepid
         Do the double fork to properly go daemon
 
-        :param skip_close_fds: list of fd to keep open
-        :type skip_close_fds: list
+        This is 'almost' as recommended by PEP3143 but it would be better to rewrite this
+        daemonization thanks to the python-daemon library!
+
         :return: None
         """
         self.pre_log.append(("INFO", "Daemonizing..."))
+        print("Daemonizing %s..." % self.name)
 
-        if skip_close_fds is None:
-            skip_close_fds = []
+        # Set umask
+        os.umask(UMASK)
 
-        self.pre_log.append(("DEBUG", "Redirecting stdout and stderr as necessary."))
-        if self.debug and self.debug_file:
-            fdtemp = os.open(self.debug_file, os.O_CREAT | os.O_WRONLY | os.O_TRUNC)
-        else:
-            fdtemp = os.open(REDIRECT_TO, os.O_RDWR)
+        # Close all file descriptors except the one we need
+        self.pre_log.append(("DEBUG", "Closing file descriptors..."))
+        preserved_fds = [1, 2, self.fpid.fileno()]
+        if self.debug:
+            # Do not close stdout nor stderr
+            preserved_fds.extend([1, 2])
+        self.close_fds(preserved_fds)
 
-        # We close all fd but what we need:
-        self.close_fds(skip_close_fds + [self.fpid.fileno(), fdtemp])
-
-        os.dup2(fdtemp, 1)  # standard output (1)
-        os.dup2(fdtemp, 2)  # standard error (2)
-
-        # Now the fork/setsid/fork..
-        try:
-            pid = os.fork()
-        except OSError, err:
-            raise Exception("%s [%d]" % (err.strerror, err.errno))
-
-        if pid != 0:
-            # In the father: we check if our child exit correctly
-            # it has to write the pid of our future little child..
-            def do_exit(sig, frame):  # pylint: disable=W0613
-                """Exit handler if wait too long during fork
-
-                :param sig: signal
-                :param frame: current frame
-                :return: None
+        # Now the double fork magic (fork/setsid/fork)
+        def fork_then_exit_parent(level, error_message):
+            """ Fork a child process, then exit the parent process.
+                :param error_message: Message for the exception in case of a
+                    detach failure.
+                :return: ``None``.
+                :raise Exception: If the fork fails.
                 """
-                logger.error("Timeout waiting child while it should have quickly returned ;"
-                             "something weird happened")
-                os.kill(pid, 9)
-                sys.exit(1)
-            # wait the child process to check its return status:
-            signal.signal(signal.SIGALRM, do_exit)
-            signal.alarm(3)  # forking & writing a pid in a file should be rather quick..
-            # if it's not then something wrong can already be on the way so let's wait max
-            # 3 secs here.
-            pid, status = os.waitpid(pid, 0)
-            if status != 0:
-                logger.error("Something weird happened with/during second fork: status= %s", status)
-            os._exit(status != 0)
+            try:
+                pid = os.fork()
+                if pid > 0:
+                    if level == 2:
+                        # When forking the grandchild, write our own pid
+                        self.write_pid(pid)
+                    os._exit(0)
+            except OSError as exc:
+                raise Exception("Fork error: %s [%d], exception: %s"
+                                % (error_message, str(exc), exc.errno))
 
-        # halfway to daemonize..
+        fork_then_exit_parent(level=1, error_message="Failed first fork")
         os.setsid()
-        try:
-            pid = os.fork()
-        except OSError as err:
-            raise Exception("%s [%d]" % (err.strerror, err.errno))
-        if pid != 0:
-            # we are the last step and the real daemon is actually correctly created at least.
-            # we have still the last responsibility to write the pid of the daemon itself.
-            self.write_pid(pid)
-            os._exit(0)
+        fork_then_exit_parent(level=2, error_message="Failed second fork")
 
-        self.fpid.close()
-        del self.fpid
         self.pid = os.getpid()
         self.pre_log.append(("INFO", "We are now fully daemonized :) pid=%d" % self.pid))
+
+        return True
 
     @staticmethod
     def _create_manager():
@@ -1469,11 +1439,26 @@ class Daemon(object):
         if set_proc_title:
             self.set_proctitle(self.name)
 
+        # Change to configured user/group account
         self.change_to_user_group()
+
+        # Change the working directory
         self.change_to_workdir()
+
+        # Check if I am still running
         self.check_parallel_run()
 
+        # If we must daemonize, let's do it!
+        if self.is_daemon:
+            if not self.daemonize():
+                logger.error("I could not daemonize myself :(")
+                return False
+        else:
+            # Else, I set my own pid as the reference one
+            self.write_pid(os.getpid())
+
         # TODO: check if really necessary!
+        # -------
         # Set ownership on some default log files. It may happen that these default
         # files are owned by a privileged user account
         try:
@@ -1485,17 +1470,12 @@ class Daemon(object):
             #  pragma: no cover
             print("Could not set default log files ownership, exception: %s" % str(exp))
 
-        # If we must daemonize, let's do it!
-        if self.is_daemon:
-            self.daemonize()
-        else:
-            self.write_pid()
-
-        # Configure the logger
+        # Configure the daemon logger
         self.setup_alignak_logger()
 
+        # Setup the Web Services daemon
         if not self.setup_communication_daemon():
-            logger.error("I could not setup my communication daemon...")
+            logger.error("I could not setup my communication daemon :(")
             return False
 
         # Creating synchonisation manager (inter-daemon queues...)
@@ -1504,14 +1484,15 @@ class Daemon(object):
         # Setup our modules manager
         self.load_modules_manager()
 
-        # todo: daemonize the process thanks to CherryPy plugin
+        # Start the CherryPy server through a detached thread
         logger.info("Starting http_daemon thread..")
         # pylint: disable=bad-thread-instantiation
         self.http_thread = threading.Thread(target=self.http_daemon_thread,
-                                            name='http_thread_%s' % self.name)
+                                            name='%s-http_thread' % self.name)
+        # Setting the thread as a daemon allows to Ctrl+C to kill the main daemon
         self.http_thread.daemon = True
         self.http_thread.start()
-        time.sleep(1)
+        # time.sleep(1)
         logger.info("HTTP daemon thread started")
 
         return True
@@ -1736,23 +1717,23 @@ class Daemon(object):
     def http_daemon_thread(self):
         """Main function of the http daemon thread will loop forever unless we stop the root daemon
 
+        The main thing is to have a pool of X concurrent requests for the http_daemon,
+        so "no_lock" calls can always be directly answer without having a "locked" version to
+        finish. This is achieved thanks to the CherryPy thread pool.
+
+        This function is threaded to be detached from the main process as such it will not block
+        the process main loop..
         :return: None
         """
         logger.debug("HTTP thread running")
-        # The main thing is to have a pool of X concurrent requests for the http_daemon,
-        # so "no_lock" calls can always be directly answer without having a "locked" version to
-        # finish
         try:
+            # This function is a blocking function serving HTTP protocol
             self.http_daemon.run()
         except PortNotFree as exp:
-            # print("Exception: %s" % str(exp))
             logger.exception('The HTTP daemon port is not free: %s', exp)
             raise
         except Exception as exp:  # pylint: disable=broad-except
             self.exit_on_exception(exp)
-            # logger.exception('The HTTP daemon failed with the error %s, exiting', str(exp))
-            # logger.critical("Back trace of the error:\n%s", traceback.format_exc())
-            # raise
         logger.debug("HTTP thread exiting")
 
     def make_a_pause(self, timeout=0.0001, check_time_change=True):

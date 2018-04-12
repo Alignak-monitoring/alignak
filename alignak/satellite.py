@@ -1075,15 +1075,15 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
             # We wait for initial conf
             self.wait_for_initial_conf()
-            if not self.new_conf:  # we must have either big problem or was requested to shutdown
-                return
-            self.setup_new_conf()
+            if self.new_conf:
+                # Setup the received configuration
+                self.setup_new_conf()
 
-            # Allocate Mortal Threads
-            self.adjust_worker_number_by_load()
+                # Allocate Mortal Threads
+                self.adjust_worker_number_by_load()
 
-            # Now main loop
-            self.do_main_loop()
+                # Now main loop
+                self.do_main_loop()
 
             self.request_stop()
         except Exception:  # pragma: no cover, this should never happen indeed ;)

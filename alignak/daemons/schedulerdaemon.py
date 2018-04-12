@@ -539,15 +539,15 @@ class Alignak(BaseSatellite):
 
             #  We wait for initial conf
             self.wait_for_initial_conf()
-            if not self.new_conf:
-                return
-            self.setup_new_conf()
+            if self.new_conf:
+                # Setup the received configuration
+                self.setup_new_conf()
 
-            # Now the main loop
-            self.do_main_loop()
+                # Now the main loop
+                self.do_main_loop()
 
-            # On main loop exit, call the scheduler after run process
-            self.sched.after_run()
+                # On main loop exit, call the scheduler after run process
+                self.sched.after_run()
 
             self.request_stop()
         except Exception:  # pragma: no cover, this should never happen indeed ;)

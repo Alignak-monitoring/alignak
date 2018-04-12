@@ -141,7 +141,9 @@ class TestDaemonsApi(AlignakTest):
             '%(_dist)s/var/log/alignak': cfg_folder,
 
             ';CFG=%(etcdir)s/alignak.cfg': 'CFG=%s/alignak.cfg' % cfg_folder,
+
             # ';log_cherrypy=1': 'log_cherrypy=1',
+            ';thread_pool_size=32': 'thread_pool_size=2',
 
             'polling_interval=5': '',
             'daemons_check_period=5': '',

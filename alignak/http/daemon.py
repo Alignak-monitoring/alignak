@@ -79,7 +79,7 @@ class HTTPDaemon(object):
         self.use_ssl = use_ssl
 
         self.uri = '%s://%s:%s' % ('https' if self.use_ssl else 'http', self.host, self.port)
-        logger.info("Configured HTTP server on %s", self.uri)
+        logger.info("Configured HTTP server on %s, %d threads", self.uri, thread_pool_size)
 
         # This application config overrides the default processors
         # so we put them back in case we need them
