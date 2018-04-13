@@ -130,7 +130,7 @@ class HTTPDaemon(object):
             #   When using PyOpenSSL, the certificate chain to pass to
             # Context.load_verify_locations.
             # ssl_private_key = None
-            #   The filename of the private key to use with SSL.  
+            #   The filename of the private key to use with SSL.
             # ssl_ciphers = None
             # The ciphers list of SSL.
             cherrypy.config.update({'server.ssl_certificate': ssl_cert,

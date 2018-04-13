@@ -51,7 +51,7 @@ script:
       # Static code analysis
       # -- pycodestyle (former pep8)
       # Exclude the dictconfig.py vendor file
-      travis_wait 60 pycodestyle --max-line-length=100 --exclude='*.pyc,alignak/misc/dictconfig.py' alignak/* || travis_terminate 1;
+      travis_wait 60 pycodestyle --max-line-length=100 --exclude='*.pyc,alignak/misc/dictconfig.py,alignak/misc/carboniface.py' alignak/* || travis_terminate 1;
       # -- pylint
       unset PYTHONWARNINGS
       travis_wait 60 pylint --rcfile=.pylintrc -r no alignak || travis_terminate 1;

@@ -370,7 +370,7 @@ class Daemon(object):
             StringProp(default='alignak'),
         'statsd_enabled':
             BoolProp(default=False),
-        # use Graphite/carbon connection instead of StatsD
+        # Use Graphite/carbon connection instead of StatsD
         'graphite_enabled':
             BoolProp(default=False)
     }
@@ -437,8 +437,8 @@ class Daemon(object):
             self.env_filename = kwargs['env_file']
             if self.env_filename != os.path.abspath(self.env_filename):
                 self.env_filename = os.path.abspath(self.env_filename)
-            print("Daemon '%s' is started with an environment file: %s"
-                  % (self.name, self.env_filename))
+            # print("Daemon '%s' is started with an environment file: %s"
+            #       % (self.name, self.env_filename))
             self.pre_log.append(("DEBUG",
                                  "Daemon '%s' is started with an environment file: %s"
                                  % (self.name, self.env_filename)))
@@ -587,8 +587,8 @@ class Daemon(object):
                                                          self.logger_configuration)
             else:
                 self.logger_configuration = os.path.abspath(self.logger_configuration)
-        print("Daemon '%s' logger configuration file: %s"
-              % (self.name, self.logger_configuration))
+        # print("Daemon '%s' logger configuration file: %s"
+        #       % (self.name, self.logger_configuration))
 
         # Make my paths properties be absolute paths
         for prop, entry in my_properties.items():
@@ -637,8 +637,7 @@ class Daemon(object):
             # Make it an absolute path file in the pid directory
             if self.pid_filename != os.path.abspath(self.pid_filename):
                 self.pid_filename = os.path.abspath(os.path.join(self.workdir, self.pid_filename))
-            print("Daemon '%s' is started with an overridden pid file: %s"
-                  % (self.name, self.pid_filename))
+        print("Daemon '%s' pid file: %s" % (self.name, self.pid_filename))
 
         # Self daemon monitoring (cpu, memory)
         self.daemon_monitoring = False

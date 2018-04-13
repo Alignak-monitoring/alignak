@@ -118,9 +118,6 @@ class TestDaemonsApi(AlignakTest):
 
         :return:
         """
-        req = requests.Session()
-
-
         print("Clean former run...")
         cfg_folder = os.path.abspath('./run/test_launch_daemons')
         if os.path.exists(cfg_folder):
@@ -141,9 +138,7 @@ class TestDaemonsApi(AlignakTest):
             '%(_dist)s/var/log/alignak': cfg_folder,
 
             ';CFG=%(etcdir)s/alignak.cfg': 'CFG=%s/alignak.cfg' % cfg_folder,
-
             # ';log_cherrypy=1': 'log_cherrypy=1',
-            ';thread_pool_size=32': 'thread_pool_size=2',
 
             'polling_interval=5': '',
             'daemons_check_period=5': '',
@@ -157,31 +152,6 @@ class TestDaemonsApi(AlignakTest):
             ';alignak_launched=1': 'alignak_launched=1',
             ';is_daemon=1': 'is_daemon=0'
         }
-        self._files_update(files, replacements)
-
-        if ssl:
-            if os.path.exists('/%s/certs' % cfg_folder):
-                shutil.rmtree('/%s/certs' % cfg_folder)
-            shutil.copytree('./cfg/ssl', '/%s/certs' % cfg_folder)
-            # Set daemons configuration to use SSL
-            replacements.update({
-                'use_ssl=0': 'use_ssl=1',
-
-                ';address=127.0.0.1': 'address=localhost',
-
-                # Fresh test built keys
-                ';server_cert=%(etcdir)s/certs/server.crt':
-                    'server_cert=%(etcdir)s/certs/server.crt',          # Uncommented
-                ';server_key=%(etcdir)s/certs/server.key':
-                    'server_key=%(etcdir)s/certs/server.key',           # Uncommented
-                ';server_dh=%(etcdir)s/certs/server.pem':
-                    ';server_dh=%(etcdir)s/certs/server-dh.pem',        # Unchanged
-                ';ca_cert=%(etcdir)s/certs/ca.pem':
-                    ';ca_cert=%(etcdir)s/certs/server-ca.pem',          # Unchanged
-
-                # Not used!
-                # '#hard_ssl_name_check=0': 'hard_ssl_name_check=0',
-            })
         self._files_update(files, replacements)
 
         satellite_map = {
@@ -198,6 +168,8 @@ class TestDaemonsApi(AlignakTest):
         scheme = 'http'
         if ssl:
             scheme = 'https'
+
+        req = requests.Session()
 
         # -----
         print("Testing ping")

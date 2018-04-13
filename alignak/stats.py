@@ -411,7 +411,7 @@ class Stats(object):
                 self.my_metrics = []
             else:
                 raise
-        except:  # pylint: disable=W0702
+        except Exception:  # pylint: disable=W0702
             logger.warning("Failed sending metrics to Graphite/carbon. Inner stored metric: %d",
                            self.metrics_count)
             return False
