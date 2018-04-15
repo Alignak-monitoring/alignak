@@ -813,12 +813,13 @@ class Daemon(object):
         # todo: daemonize the process thanks to CherryPy plugin
         if self.http_daemon:
             logger.info("Shutting down HTTP daemon...")
-            self.http_daemon.stop()
+            if self.http_daemon.cherrypy_thread:
+                self.http_daemon.stop()
             self.http_daemon = None
 
         # todo: daemonize the process thanks to CherryPy plugin
         if self.http_thread:
-            logger.debug("Checking HTTP thread...")
+            logger.info("Checking HTTP thread...")
             # Let a few seconds to exit
             self.http_thread.join(timeout=3)
             if self.http_thread.is_alive():  # pragma: no cover, should never happen...

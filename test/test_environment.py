@@ -23,12 +23,16 @@
 This file contains the test for the Alignak configuration checks
 """
 import os
+import sys
 import re
 import time
 import unittest2
 from alignak_test import AlignakTest
 import pytest
-from collections import OrderedDict
+if sys.version_info >= (2, 7):
+    from collections import OrderedDict
+else:
+    from ordereddict import OrderedDict
 
 # from ConfigParser import ParsingError, InterpolationMissingOptionError
 from alignak.bin.alignak_environment import AlignakConfigParser
@@ -95,7 +99,23 @@ class TestEnvironment(AlignakTest):
         :return: None
         """
         # Default shipped configuration file
-        configuration_file = os.path.join('./cfg/environment', 'alignak_ok.ini')
+        configuration_file = os.path.join('../etc', 'alignak.ini')
+
+        # Get Alignak environment
+        args = {'<cfg_file>': configuration_file, '--verbose': True}
+        self.alignak_env = AlignakConfigParser(args)
+        assert self.alignak_env.parse()
+
+
+    def test_config_several_files_ok(self):
+        """ Default shipped configuration has no loading problems ...
+
+        :return: None
+        """
+        cwd = os.getcwd()
+
+        # Default shipped configuration file
+        configuration_file = os.path.join('./cfg/environment/several_files', 'alignak_ok.ini')
 
         # Get Alignak environment
         args = {'<cfg_file>': configuration_file, '--verbose': True}
@@ -117,7 +137,7 @@ class TestEnvironment(AlignakTest):
             '_dist_etc': '/tmp/etc/alignak',
             'config_name': 'Alignak global configuration',
             'extra_config_name': 'extra',
-            'imported_from': '/home/alignak/alignak/test/cfg/environment/alignak_ok.ini',
+            'imported_from': os.path.join(cwd, 'cfg/environment/several_files/alignak_ok.ini'),
             'type': 'arbiter',
             'name': 'arbiter-master',
             'modules': 'web-services'
@@ -129,7 +149,7 @@ class TestEnvironment(AlignakTest):
                 '_dist_etc': '/tmp/etc/alignak',
                 'config_name': 'Alignak global configuration',
                 'extra_config_name': 'extra',
-                'imported_from': '/home/alignak/alignak/test/cfg/environment/alignak_ok.ini',
+                'imported_from': os.path.join(cwd, 'cfg/environment/several_files/alignak_ok.ini'),
                 'type': 'arbiter',
                 'name': 'arbiter-spare'
             },
@@ -138,7 +158,7 @@ class TestEnvironment(AlignakTest):
                 '_dist_etc': '/tmp/etc/alignak',
                 'config_name': 'Alignak global configuration',
                 'extra_config_name': 'extra',
-                'imported_from': '/home/alignak/alignak/test/cfg/environment/alignak_ok.ini',
+                'imported_from': os.path.join(cwd, 'cfg/environment/several_files/alignak_ok.ini'),
                 'type': 'poller',
                 'name': 'poller-master'
             }
@@ -152,7 +172,7 @@ class TestEnvironment(AlignakTest):
             '_dist_etc': '/tmp/etc/alignak',
             'config_name': 'Alignak global configuration',
             'extra_config_name': 'extra',
-            'imported_from': '/home/alignak/alignak/test/cfg/environment/alignak_ok.ini',
+            'imported_from': os.path.join(cwd, 'cfg/environment/several_files/alignak_ok.ini'),
             'python_name': 'alignak_module_ws',
             'type': 'web-services',
             'name': 'web-services',

@@ -194,7 +194,7 @@ class AlignakConfigParser(object):
         # Read and parse the found configuration files
         self.config = ConfigParser.ConfigParser()
         try:
-            files = self.config.read(self.cfg_files)
+            self.config.read(self.cfg_files)
             if self.config._sections == {}:
                 print("* bad formatted configuration file: %s " % self.configuration_file)
                 if self.embedded:

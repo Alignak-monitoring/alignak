@@ -3063,10 +3063,10 @@ class ExternalCommandManager:
 
         # Maybe the check is just too old, if so, bail out!
         if self.current_timestamp < host.last_chk:
-            logger.warning('%s > Passive host check is too old (%.2f seconds). '
-                           'Ignoring, check output: %s',
-                           host.get_full_name(), self.current_timestamp < host.last_chk,
-                           plugin_output)
+            logger.debug('%s > Passive host check is too old (%.2f seconds). '
+                         'Ignoring, check output: %s',
+                         host.get_full_name(), self.current_timestamp < host.last_chk,
+                         plugin_output)
             return
 
         chk = host.launch_check(now, self.hosts, self.services, self.timeperiods,
@@ -3149,10 +3149,10 @@ class ExternalCommandManager:
 
         # Maybe the check is just too old, if so, bail out!
         if self.current_timestamp < service.last_chk:
-            logger.warning('%s > Passive service check is too old (%d seconds). '
-                           'Ignoring, check output: %s',
-                           service.get_full_name(), self.current_timestamp < service.last_chk,
-                           plugin_output)
+            logger.debug('%s > Passive service check is too old (%d seconds). '
+                         'Ignoring, check output: %s',
+                         service.get_full_name(), self.current_timestamp < service.last_chk,
+                         plugin_output)
             return
 
         # Create a check object from the external command

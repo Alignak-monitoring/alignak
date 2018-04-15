@@ -1311,7 +1311,13 @@ class Scheduler(object):  # pylint: disable=R0902
         if self.pushed_conf.retention_update_interval == 0 and not forced:
             return
 
+        _t0 = time.time()
         self.hook_point('save_retention')
+
+        brok = make_monitoring_log('INFO', 'RETENTION SAVE: %s' % self.name)
+        if self.pushed_conf.monitoring_log_broks:
+            self.add(brok)
+        logger.info('Retention data saved: %.2f', time.time() - _t0)
 
     def retention_load(self):
         """Call hook point 'load_retention'.
@@ -1319,7 +1325,13 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
+        _t0 = time.time()
         self.hook_point('load_retention')
+
+        brok = make_monitoring_log('INFO', 'RETENTION LOAD: %s' % self.name)
+        if self.pushed_conf.monitoring_log_broks:
+            self.add(brok)
+        logger.info('Retention data loaded: %.2f', time.time() - _t0)
 
     def get_retention_data(self):  # pylint: disable=R0912,too-many-statements
         """Get all host and service data in order to store it after
@@ -1328,9 +1340,6 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: dict containing host and service data
         :rtype: dict
         """
-        brok = make_monitoring_log('INFO', 'RETENTION SAVE: %s' % self.name)
-        if self.pushed_conf.monitoring_log_broks:
-            self.add(brok)
         # We create an all_data dict with list of useful retention data dicts
         # of our hosts and services
         all_data = {'hosts': {}, 'services': {}}
@@ -1464,10 +1473,6 @@ class Scheduler(object):  # pylint: disable=R0902
         :type data: dict
         :return: None
         """
-        brok = make_monitoring_log('INFO', 'RETENTION LOAD: %s' % self.name)
-        if self.pushed_conf.monitoring_log_broks:
-            self.add(brok)
-
         ret_hosts = data['hosts']
         for ret_h_name in ret_hosts:
             # We take the dict of our value to load

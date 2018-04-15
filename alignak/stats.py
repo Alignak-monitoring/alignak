@@ -188,13 +188,15 @@ Alignak daemons statistics dictionary:
 """
 
 import os
+import sys
 import time
 import datetime
 import socket
 import logging
 
 from alignak.brok import Brok
-from alignak.misc.carboniface import CarbonIface
+if sys.version_info >= (2, 7):
+    from alignak.misc.carboniface import CarbonIface
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -252,6 +254,10 @@ class Stats(object):
 
     @property
     def metrics_count(self):
+        """
+        Number of internal stored metrics
+        :return:
+        """
         return len(self.my_metrics)
 
     def __repr__(self):  # pragma: no cover
@@ -410,8 +416,10 @@ class Stats(object):
             if self.carbon.send_data():
                 self.my_metrics = []
             else:
-                raise
-        except Exception:  # pylint: disable=W0702
+                logger.warning("Failed sending metrics to Graphite/carbon. Inner stored metric: %d",
+                               self.metrics_count)
+                return False
+        except Exception:  # pylint: disable=broad-except
             logger.warning("Failed sending metrics to Graphite/carbon. Inner stored metric: %d",
                            self.metrics_count)
             return False

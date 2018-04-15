@@ -194,16 +194,17 @@ class TestRetention(AlignakTest):
         assert set([self._scheduler.contacts.find_by_name("test_contact").uuid]) == \
                          hostn.notified_contacts
 
-        # Retention load monitoring log
-        # We got 'monitoring_log' broks for logging to the monitoring logs...
-        monitoring_logs = []
-        for brok in self._main_broker.broks.values():
-            if brok.type == 'monitoring_log':
-                data = unserialize(brok.data)
-                monitoring_logs.append((data['level'], data['message']))
-
-        expected_logs = [
-            (u'info', u'RETENTION LOAD: scheduler-master scheduler')
-        ]
-        for log_level, log_message in expected_logs:
-            assert (log_level, log_message) in monitoring_logs
+        # No brok for monitoring logs...
+        # # Retention load monitoring log
+        # # We got 'monitoring_log' broks for logging to the monitoring logs...
+        # monitoring_logs = []
+        # for brok in self._main_broker.broks.values():
+        #     if brok.type == 'monitoring_log':
+        #         data = unserialize(brok.data)
+        #         monitoring_logs.append((data['level'], data['message']))
+        #
+        # expected_logs = [
+        #     (u'info', u'RETENTION LOAD: scheduler-master scheduler')
+        # ]
+        # for log_level, log_message in expected_logs:
+        #     assert (log_level, log_message) in monitoring_logs
