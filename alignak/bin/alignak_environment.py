@@ -22,8 +22,8 @@
 alignak-environment command line interface::
 
     Usage:
-        alignak-environment [-h]
-        alignak-environment [-v] <cfg_file>
+        alignak-environment [-h|--help]
+        alignak-environment [-v|--verbose] <cfg_file>
 
     Options:
         -h, --help          Show this usage screen.
@@ -34,15 +34,32 @@ alignak-environment command line interface::
         variables defined in this file as Linux/Unix shell export variables.
 
         As an example for a file as the default ./etc/alignak.ini, the script will output:
-            export ALIGNAK_VERSION=1.0.0
-            export ALIGNAK_CONFIGURATION_DIST_BIN=../alignak/bin
-            export ALIGNAK_CONFIGURATION_DIST_ETC=../etc
-            export ALIGNAK_CONFIGURATION_DIST_VAR=/tmp
-            export ALIGNAK_CONFIGURATION_DIST_RUN=/tmp
-            export ALIGNAK_CONFIGURATION_DIST_LOG=/tmp
+            export ALIGNAK_CONFIGURATION_DIST=/usr/local/
+            export ALIGNAK_CONFIGURATION_DIST_BIN=/usr/local//bin
+            export ALIGNAK_CONFIGURATION_DIST_ETC=/usr/local//etc/alignak
+            export ALIGNAK_CONFIGURATION_DIST_VAR=/usr/local//var/lib/alignak
+            export ALIGNAK_CONFIGURATION_DIST_RUN=/usr/local//var/run/alignak
+            export ALIGNAK_CONFIGURATION_DIST_LOG=/usr/local//var/log/alignak
+            export ALIGNAK_CONFIGURATION_CONFIG_NAME='Alignak global configuration'
+            export ALIGNAK_CONFIGURATION_ALIGNAK_NAME='My Alignak'
             export ALIGNAK_CONFIGURATION_USER=alignak
             export ALIGNAK_CONFIGURATION_GROUP=alignak
             ...
+            export DAEMON_ARBITER_MASTER_DIST=/usr/local/
+            export DAEMON_ARBITER_MASTER_DIST_BIN=/usr/local//bin
+            export DAEMON_ARBITER_MASTER_DIST_ETC=/usr/local//etc/alignak
+            export DAEMON_ARBITER_MASTER_DIST_VAR=/usr/local//var/lib/alignak
+            export DAEMON_ARBITER_MASTER_DIST_RUN=/usr/local//var/run/alignak
+            export DAEMON_ARBITER_MASTER_DIST_LOG=/usr/local//var/log/alignak
+            export DAEMON_ARBITER_MASTER_CONFIG_NAME='Alignak global configuration'
+            export DAEMON_ARBITER_MASTER_ALIGNAK_NAME='My Alignak'
+            export DAEMON_ARBITER_MASTER_USER=alignak
+            export DAEMON_ARBITER_MASTER_GROUP=alignak
+            ...
+            export DAEMON_SCHEDULER_MASTER_DIST=/usr/local/
+            export DAEMON_SCHEDULER_MASTER_DIST_BIN=/usr/local//bin
+            ...
+            export ALIGNAK_VERSION=1.0.0
 
         The export directives consider that shell variables must only contain [A-Za-z0-9_]
         in their name. All non alphanumeric characters are replaced with an underscore.
@@ -51,7 +68,8 @@ alignak-environment command line interface::
         NOTE: this script manages the full Ini file format used by the Python ConfigParser:
         default section, variables interpolation
 
-        NOTE: this script also adds the current Alignak version
+        NOTE: this script also adds the current Alignak version to the content of the
+        configuration file
 
     Use cases:
         Displays this usage screen
@@ -94,6 +112,18 @@ class AlignakConfigParser(object):
     """
 
     def __init__(self, args=None):
+        """
+        Setup the configuration parser
+
+        When used without args, it is considered as called by the Alignak daemon creation
+        and the command line parser is not invoked.
+
+        If called without args, it is considered as called from the command line and all the
+         configuration file variables are output to the console with an 'export VARIABLE=value'
+         format to be sourced to declare shell environment variables.
+
+        :param args:
+        """
         # Alignak version as a property
         self.alignak_version = __version__
 
@@ -139,21 +169,38 @@ class AlignakConfigParser(object):
 
     def parse(self):
         """
-        Parse the Alignak configuration file
+        Check if some extra configuration files are existing in an `alignak.d` sub directory
+        near the found configuration file.
+
+        Parse the Alignak configuration file(s)
 
         Exit the script if some errors are encountered.
 
         :return: True/False
         """
-        self.config = ConfigParser.ConfigParser()
-        self.config.read(self.configuration_file)
-        if self.config._sections == {}:
-            print("* bad formatted configuration file: %s " % self.configuration_file)
-            if self.embedded:
-                raise ValueError
-            sys.exit(2)
+        # Search if some ini files existe in an alignak.d sub-directory
+        sub_directory = 'alignak.d'
+        dir_name = os.path.dirname(self.configuration_file)
+        dir_name = os.path.join(dir_name, sub_directory)
+        self.cfg_files = [self.configuration_file]
+        if os.path.exists(dir_name):
+            # Now walk for it.
+            for root, _, walk_files in os.walk(dir_name, followlinks=True):
+                for found_file in walk_files:
+                    if not re.search(r"\.ini$", found_file):
+                        continue
+                    self.cfg_files.append(os.path.join(root, found_file))
 
+        # Read and parse the found configuration files
+        self.config = ConfigParser.ConfigParser()
         try:
+            files = self.config.read(self.cfg_files)
+            if self.config._sections == {}:
+                print("* bad formatted configuration file: %s " % self.configuration_file)
+                if self.embedded:
+                    raise ValueError
+                sys.exit(2)
+
             for section in self.config.sections():
                 if self.verbose:
                     print("- section: %s" % section)

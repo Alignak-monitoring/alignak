@@ -439,7 +439,7 @@ class Daemon(object):
                 self.env_filename = os.path.abspath(self.env_filename)
             # print("Daemon '%s' is started with an environment file: %s"
             #       % (self.name, self.env_filename))
-            self.pre_log.append(("DEBUG",
+            self.pre_log.append(("INFO",
                                  "Daemon '%s' is started with an environment file: %s"
                                  % (self.name, self.env_filename)))
 
