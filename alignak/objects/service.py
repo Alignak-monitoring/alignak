@@ -639,8 +639,8 @@ class Service(SchedulingItem):
         )
         self.broks.append(brok)
 
-        if 'TEST_LOG_ALERTS' in os.environ:
-            if os.environ['TEST_LOG_ALERTS'] == 'WARNING':
+        if 'ALIGNAK_LOG_ALERTS' in os.environ:
+            if os.environ['ALIGNAK_LOG_ALERTS'] == 'WARNING':
                 logger.warning('SERVICE ALERT: %s;%s;%s;%s;%d;%s', self.host_name, self.get_name(),
                                self.state, self.state_type, self.attempt, self.output)
             else:
@@ -705,8 +705,8 @@ class Service(SchedulingItem):
         )
         self.broks.append(brok)
 
-        if 'TEST_LOG_NOTIFICATIONS' in os.environ:
-            if os.environ['TEST_LOG_NOTIFICATIONS'] == 'WARNING':
+        if 'ALIGNAK_LOG_NOTIFICATIONS' in os.environ:
+            if os.environ['ALIGNAK_LOG_NOTIFICATIONS'] == 'WARNING':
                 logger.warning("SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s", contact.get_name(),
                                host_ref.get_name(), self.get_name(), state,
                                command.get_name(), self.output)

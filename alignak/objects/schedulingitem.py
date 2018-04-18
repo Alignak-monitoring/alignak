@@ -1560,8 +1560,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if not chk.freshness_expiry_check:
             self.freshness_expired = False
 
-        if 'TEST_LOG_ACTIONS' in os.environ:
-            if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+        if 'ALIGNAK_LOG_ACTIONS' in os.environ:
+            if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                 logger.warning("Got check result: %d for '%s'",
                                chk.exit_status, self.get_full_name())
             else:
@@ -2653,8 +2653,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 state = self.business_rule.get_state(hosts, services)
                 check.output = self.get_business_rule_output(hosts, services,
                                                              macromodulations, timeperiods)
-                if 'TEST_LOG_ACTIONS' in os.environ:
-                    if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+                if 'ALIGNAK_LOG_ACTIONS' in os.environ:
+                    if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                         logger.warning("Resolved BR for '%s', output: %s",
                                        self.get_full_name(), check.output)
                     else:
@@ -2672,8 +2672,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             state = 0
             check.execution_time = 0
             check.output = 'Host assumed to be UP'
-            if 'TEST_LOG_ACTIONS' in os.environ:
-                if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+            if 'ALIGNAK_LOG_ACTIONS' in os.environ:
+                if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                     logger.warning("Set host %s as UP (internal check)", self.get_full_name())
                 else:
                     logger.info("Set host %s as UP (internal check)", self.get_full_name())
@@ -2683,8 +2683,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             state = self.state_id
             check.execution_time = 0
             check.output = self.output
-            if 'TEST_LOG_ACTIONS' in os.environ:
-                if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+            if 'ALIGNAK_LOG_ACTIONS' in os.environ:
+                if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                     logger.warning("Echo the current state (%s - %d) for %s ",
                                    self.state, self.state_id, self.get_full_name())
                 else:

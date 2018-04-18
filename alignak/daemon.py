@@ -703,8 +703,8 @@ class Daemon(object):
         self.start_time = None
 
         # Log loop turns if environment variable is set
-        if 'TEST_LOG_LOOP' in os.environ:
-            self.log_loop = 'TEST_LOG_LOOP' in os.environ
+        if 'ALIGNAK_LOGLOOP' in os.environ:
+            self.log_loop = 'ALIGNAK_LOGLOOP' in os.environ
 
         # Activity information log period (every activity_log_period loop, raise a log)
         try:

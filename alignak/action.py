@@ -160,7 +160,7 @@ class ActionBase(AlignakObject):
             self.creation_time = time.time()
         # Set actions log only if not provided
         if not params or 'log_actions' not in params:
-            self.log_actions = 'TEST_LOG_ACTIONS' in os.environ
+            self.log_actions = 'ALIGNAK_LOG_ACTIONS' in os.environ
 
         # Fill default parameters
         self.fill_default()
@@ -213,7 +213,7 @@ class ActionBase(AlignakObject):
 
         logger.debug("Launch command: '%s', ref: %s", self.command, self.ref)
         if self.log_actions:
-            if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+            if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                 logger.warning("Launch command: '%s'", self.command)
             else:
                 logger.info("Launch command: '%s'", self.command)
@@ -276,7 +276,7 @@ class ActionBase(AlignakObject):
         logger.debug("Command result for '%s': %d, %s",
                      self.command, self.exit_status, self.output)
         if self.log_actions:
-            if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+            if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                 logger.warning("Check result for '%s': %d, %s",
                                self.command, self.exit_status, self.output)
                 if self.perf_data:
@@ -330,7 +330,7 @@ class ActionBase(AlignakObject):
                 self.u_time = n_child_utime - child_utime
                 self.s_time = n_child_stime - child_stime
                 if self.log_actions:
-                    if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+                    if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                         logger.warning("Action '%s' exited on timeout (%d s)",
                                        self.command, self.timeout)
                     else:
@@ -353,7 +353,7 @@ class ActionBase(AlignakObject):
 
         self.exit_status = self.process.returncode
         if self.log_actions:
-            if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+            if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                 logger.warning("Action '%s' exited with return code %d",
                                self.command, self.exit_status)
             else:

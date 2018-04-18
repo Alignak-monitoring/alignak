@@ -59,8 +59,11 @@ len(host.services)
 
 import re
 import time
+import logging
 
 from alignak.borg import Borg
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class MacroResolver(Borg):
@@ -337,16 +340,19 @@ class MacroResolver(Borg):
                     # Beware : only cut the first _HOST or _SERVICE or _CONTACT value,
                     # so the macro name can have it on it..
                     macro_name = re.split('_' + cls_type, macro, 1)[1].upper()
+                    logger.debug(" ->: %s - %s", cls_type, macro_name)
                     # Ok, we've got the macro like MAC_ADDRESS for _HOSTMAC_ADDRESS
                     # Now we get the element in data that have the type HOST
                     # and we check if it got the custom value
                     for elt in data:
                         if not elt or elt.__class__.my_type.upper() != cls_type:
                             continue
+                        logger.debug("   : for %s: %s", elt, elt.customs)
                         if not getattr(elt, 'customs'):
                             continue
                         if '_' + macro_name in elt.customs:
                             macros[macro]['val'] = elt.customs['_' + macro_name]
+                        logger.debug("   : macro %s = %s", macro, macros[macro]['val'])
                         # Then look on the macromodulations, in reverse order, so
                         # the last to set, will be the first to have. (yes, don't want to play
                         # with break and such things sorry...)
@@ -383,13 +389,15 @@ class MacroResolver(Borg):
 
         :param com: check / event handler or command call object
         :type com: object
-        :param data: objects list, use to look for a specific macro
+        :param data: objects list, used to search for a specific macro (custom or object related)
         :type data:
         :return: command line with '$MACRO$' replaced with values
         :rtype: str
         """
-        c_line = com.command.command_line
-        return self.resolve_simple_macros_in_string(c_line, data, macromodulations, timeperiods,
+        logger.debug("Resolving: macros in: %s, arguments: %s",
+                     com.command.command_line, com.args)
+        return self.resolve_simple_macros_in_string(com.command.command_line, data,
+                                                    macromodulations, timeperiods,
                                                     args=com.args)
 
     @staticmethod
