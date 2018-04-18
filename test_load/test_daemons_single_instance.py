@@ -38,7 +38,7 @@ class TestDaemonsSingleInstance(AlignakTest):
 
         # Set an environment variable to activate the logging of checks execution
         # With this the pollers/schedulers will raise INFO logs about the checks execution
-        os.environ['TEST_LOG_ACTIONS'] = 'INFO'
+        os.environ['ALIGNAK_LOG_ACTIONS'] = 'INFO'
 
         # Alignak daemons monitoring everay 3 seconds
         os.environ['ALIGNAK_DAEMONS_MONITORING'] = '3'
@@ -47,11 +47,11 @@ class TestDaemonsSingleInstance(AlignakTest):
         os.environ['ALIGNAK_SYSTEM_MONITORING'] = '5'
 
         # Log daemons loop turn
-        os.environ['TEST_LOG_LOOP'] = 'INFO'
+        os.environ['ALIGNAK_LOG_LOOP'] = 'INFO'
 
         # Alignak logs alerts and notifications
-        os.environ['TEST_LOG_ALERTS'] = 'INFO'
-        os.environ['TEST_LOG_NOTIFICATIONS'] = 'WARNING'
+        os.environ['ALIGNAK_LOG_ALERTS'] = 'INFO'
+        os.environ['ALIGNAK_LOG_NOTIFICATIONS'] = 'WARNING'
 
         # Alignak do not run plugins but only simulate
         # os.environ['TEST_FAKE_ACTION'] = 'Yes'

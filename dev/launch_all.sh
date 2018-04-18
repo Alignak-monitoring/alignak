@@ -35,11 +35,11 @@ DIR="$(cd $(dirname "$0"); pwd)"
 #echo "#       export REQUESTS_CA_BUNDLE"
 #echo "# -----------------------------------------------------------------------------"
 
-#TEST_LOG_ACTIONS=1
-#export TEST_LOG_ACTIONS
+#ALIGNAK_LOG_ACTIONS=1
+#export ALIGNAK_LOG_ACTIONS
 #echo "# -----------------------------------------------------------------------------"
-#echo "# Info: TEST_LOG_ACTIONS=$TEST_LOG_ACTIONS"
-#echo "#       export TEST_LOG_ACTIONS"
+#echo "# Info: ALIGNAK_LOG_ACTIONS=$ALIGNAK_LOG_ACTIONS"
+#echo "#       export ALIGNAK_LOG_ACTIONS"
 #echo "# -----------------------------------------------------------------------------"
 
 "$DIR"/launch_scheduler.sh $@

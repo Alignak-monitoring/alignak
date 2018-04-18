@@ -38,7 +38,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         # Set an environment variable to activate the logging of checks execution
         # With this the pollers/schedulers will raise INFO logs about the checks execution
-        os.environ['TEST_LOG_ACTIONS'] = 'WARNING'
+        os.environ['ALIGNAK_LOG_ACTIONS'] = 'WARNING'
 
         # Set an environment variable to change the default period of activity log (every 60 loops)
         os.environ['ALIGNAK_ACTIVITY_LOG'] = '60'
@@ -50,7 +50,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         os.environ['ALIGNAK_SYSTEM_MONITORING'] = '5'
 
         # Log daemons loop turn
-        os.environ['TEST_LOG_LOOP'] = 'INFO'
+        os.environ['ALIGNAK_LOG_LOOP'] = 'INFO'
 
     def tearDown(self):
         print("Test terminated!")
