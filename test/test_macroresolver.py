@@ -715,6 +715,9 @@ class MacroResolverTester(object):
         assert hst.customs is not []
         assert '_CUSTOM1' in hst.customs
         assert '_CUSTOM2' in hst.customs
+        # Force declare an integer customs variable
+        hst.customs['_CUSTOM3'] = 10
+        print(hst.customs)
         data = [hst]
 
         # Parse custom macro to get host custom variables based upon a fixed value
@@ -730,6 +733,14 @@ class MacroResolverTester(object):
         cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._scheduler.macromodulations, self._scheduler.timeperiods)
         assert 'plugins/nothing test_macro_host' == com
+
+        # Parse custom macro to get host custom variables based upon another macro
+        # host has a custom variable defined as _custom2 = $HOSTNAME$
+        dummy_call = "special_macro!$_HOSTCUSTOM3$"
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self._scheduler.macromodulations, self._scheduler.timeperiods)
+        print("Command: %s" % com)
+        assert 'plugins/nothing 10' == com
 
     def test_service_custom_macros(self):
         """

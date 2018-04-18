@@ -1317,7 +1317,7 @@ class Scheduler(object):  # pylint: disable=R0902
         brok = make_monitoring_log('INFO', 'RETENTION SAVE: %s' % self.name)
         if self.pushed_conf.monitoring_log_broks:
             self.add(brok)
-        logger.info('Retention data saved: %.2f', time.time() - _t0)
+        logger.info('Retention data saved: %.2f seconds', time.time() - _t0)
 
     def retention_load(self):
         """Call hook point 'load_retention'.
@@ -1331,7 +1331,7 @@ class Scheduler(object):  # pylint: disable=R0902
         brok = make_monitoring_log('INFO', 'RETENTION LOAD: %s' % self.name)
         if self.pushed_conf.monitoring_log_broks:
             self.add(brok)
-        logger.info('Retention data loaded: %.2f', time.time() - _t0)
+        logger.info('Retention data loaded: %.2f seconds', time.time() - _t0)
 
     def get_retention_data(self):  # pylint: disable=R0912,too-many-statements
         """Get all host and service data in order to store it after

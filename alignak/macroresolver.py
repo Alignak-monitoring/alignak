@@ -364,7 +364,7 @@ class MacroResolver(Borg):
 
             # We resolved all we can, now replace the macros in the command call
             for macro in macros:
-                c_line = c_line.replace('$' + macro + '$', macros[macro]['val'])
+                c_line = c_line.replace('$' + macro + '$', "%s" % (macros[macro]['val']))
 
             # A $$ means we want a $, it's not a macro!
             # We replace $$ by a big dirty thing to be sure to not misinterpret it
