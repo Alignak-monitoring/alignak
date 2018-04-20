@@ -190,6 +190,7 @@ class AlignakConfigParser(object):
                     if not re.search(r"\.ini$", found_file):
                         continue
                     self.cfg_files.append(os.path.join(root, found_file))
+        print("Loading configuration files: %s " % self.cfg_files)
 
         # Read and parse the found configuration files
         self.config = ConfigParser.ConfigParser()

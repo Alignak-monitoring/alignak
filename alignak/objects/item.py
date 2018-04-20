@@ -174,8 +174,8 @@ class Item(AlignakObject):
                         # For #972, a debug log is enough for such an information,
                         # a configuration warning is too much
                         val = "%s" % macro
-                        logger.warning("%s, set the no-string macro property '%s' as '%s'",
-                                       self.get_full_name(), key, val)
+                        logger.debug("%s, set the no-string macro property '%s' as '%s'",
+                                     self.get_full_name(), key, val)
                     # After this a macro is always containing a string value!
                 else:
                     logger.debug("Guessing the property '%s' type because it "

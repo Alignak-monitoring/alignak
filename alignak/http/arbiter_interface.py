@@ -49,12 +49,50 @@ class ArbiterInterface(GenericInterface):
                            "I am not the Master, ignore and continue to run.")
             return False
 
-        logger.info("I received a request to reload the monitored configuration.")
+        logger.warning("I received a request to reload the monitored configuration.")
         if self.app.loading_configuration:
-            logger.info("I am still reloading the monitored configuration ;)")
+            logger.warning("I am still reloading the monitored configuration ;)")
 
         self.app.need_config_reload = True
         return True
+
+    @cherrypy.expose
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def backend_notification(self, event, parameters):
+        """The Alignak backend raises an event to the Alignak arbiter
+        -----
+        Possible events are:
+        - creation, for a realm or an host creation
+        - deletion, for a realm or an host deletion
+
+        Calls the reload configuration function if event is creation or deletion
+
+        Else, nothing for the moment!
+
+        :return: True if configuration reload is accepted
+        """
+        # request_parameters = cherrypy.request.json
+        # event = request_parameters.get('event', event)
+        # parameters = request_parameters.get('parameters', parameters)
+        logger.warning("I got a backend notification: %s / %s", event, parameters)
+
+        # For a configuration reload event...
+        if event in ['creation', 'deletion']:
+            # If I'm the master, ignore the command and raise a log
+            if not self.app.is_master:
+                logger.warning("I received a request to reload the monitored configuration. "
+                               "I am not the Master, ignore and continue to run.")
+                return False
+
+            logger.warning("I received a request to reload the monitored configuration.")
+            if self.app.loading_configuration:
+                logger.warning("I am still reloading the monitored configuration ;)")
+
+            self.app.need_config_reload = True
+            return True
+
+        return False
 
     @cherrypy.expose
     @cherrypy.tools.json_in()
