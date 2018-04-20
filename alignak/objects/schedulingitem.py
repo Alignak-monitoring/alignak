@@ -1568,6 +1568,21 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 logger.info("Got check result: %d for '%s'",
                             chk.exit_status, self.get_full_name())
 
+        # Protect against bad type output
+        # if str, go in unicode
+        if isinstance(chk.output, str):
+            chk.output = chk.output.decode('utf8', 'ignore')
+            chk.long_output = chk.long_output.decode('utf8', 'ignore')
+
+        if isinstance(chk.perf_data, str):
+            chk.perf_data = chk.perf_data.decode('utf8', 'ignore')
+
+        if os.getenv('ALIGNAK_LOG_CHECKS', None):
+            level = ['info', 'warning', 'error', 'critical'][min(chk.exit_status, 3)]
+            func = getattr(logger, level)
+            func("Check result for '%s', exit: %d, output: %s",
+                 self.get_full_name(), chk.exit_status, chk.output)
+
         # ============ MANAGE THE CHECK ============ #
         # Not OK, waitconsume and have dependencies, put this check in waitdep, create if
         # necessary the check of dependent items and nothing else ;)
@@ -1585,15 +1600,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 chk.depend_on.append(check_uuid)
             # we must wait dependent check checked and consumed
             return deps_checks['new']
-
-        # Protect against bad type output
-        # if str, go in unicode
-        if isinstance(chk.output, str):
-            chk.output = chk.output.decode('utf8', 'ignore')
-            chk.long_output = chk.long_output.decode('utf8', 'ignore')
-
-        if isinstance(chk.perf_data, str):
-            chk.perf_data = chk.perf_data.decode('utf8', 'ignore')
 
         # We check for stalking if necessary
         # so if check is here
