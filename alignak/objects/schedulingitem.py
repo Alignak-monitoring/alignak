@@ -1171,6 +1171,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         cls = self.__class__
         # if no active check and no force, no check
         if (not self.active_checks_enabled or not cls.execute_checks) and not force:
+            logger.debug("No check for %s", self.get_full_name())
             return None
 
         now = time.time()
@@ -2305,10 +2306,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # the check is being forced, so we just replace next_chk time by now
         if force and self.in_checking:
-            now = time.time()
-            c_in_progress = checks[self.checks_in_progress[0]]
-            c_in_progress.t_to_go = now
-            return c_in_progress
+            try:
+                now = time.time()
+                c_in_progress = checks[self.checks_in_progress[0]]
+                c_in_progress.t_to_go = now
+                return c_in_progress
+            except KeyError:
+                pass
 
         # If I'm already in checking, Why launch a new check?
         # If ref_check_id is not None , this is a dependency_ check

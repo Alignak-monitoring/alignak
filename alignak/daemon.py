@@ -1380,7 +1380,9 @@ class Daemon(object):
 
         # Close all file descriptors except the one we need
         self.pre_log.append(("DEBUG", "Closing file descriptors..."))
-        preserved_fds = [1, 2, self.fpid.fileno()]
+        preserved_fds = [self.fpid.fileno()]
+        if os.getenv('ALIGNAK_KEEP_STDOUT', None):
+            preserved_fds = [1, 2, self.fpid.fileno()]
         if self.debug:
             # Do not close stdout nor stderr
             preserved_fds.extend([1, 2])

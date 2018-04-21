@@ -70,7 +70,7 @@ class ArbiterInterface(GenericInterface):
 
         Else, nothing for the moment!
 
-        :return: True if configuration reload is accepted
+        :return: True / False if configuration reload is accepted or not
         """
         # request_parameters = cherrypy.request.json
         # event = request_parameters.get('event', event)
