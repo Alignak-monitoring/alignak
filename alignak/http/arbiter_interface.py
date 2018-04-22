@@ -77,10 +77,10 @@ class ArbiterInterface(GenericInterface):
         # parameters = request_parameters.get('parameters', parameters)
         if event is None:
             data = cherrypy.request.json
-            event = data['event']
+            event = data.get('event', None)
         if parameters is None:
             data = cherrypy.request.json
-            parameters = data['parameters']
+            parameters = data.get('parameters', None)
 
         logger.warning("I got a backend notification: %s / %s", event, parameters)
 
@@ -88,18 +88,75 @@ class ArbiterInterface(GenericInterface):
         if event in ['creation', 'deletion']:
             # If I'm the master, ignore the command and raise a log
             if not self.app.is_master:
-                logger.warning("I received a request to reload the monitored configuration. "
-                               "I am not the Master, ignore and continue to run.")
-                return False
+                message = "I received a request to reload the monitored configuration. " \
+                          "I am not the Master arbiter, I ignore and continue to run."
+                logger.warning(message)
+                return {'_status': 'ERR', '_message': message}
 
-            logger.warning("I received a request to reload the monitored configuration.")
+            message = "I received a request to reload the monitored configuration."
             if self.app.loading_configuration:
-                logger.warning("I am still reloading the monitored configuration ;)")
+                message += "I am still reloading the monitored configuration ;)"
+            logger.warning(message)
 
             self.app.need_config_reload = True
-            return True
+            return {'_status': 'OK', '_message': message}
 
-        return False
+        return {'_status': 'OK', '_message': "No action to do"}
+
+    @cherrypy.expose
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def command(self):
+        """ Request to execute an external command
+        :return:
+        """
+        if cherrypy.request.method != "POST":
+            return {'_status': 'ERR', '_message': 'You must only POST on this endpoint.'}
+
+        if cherrypy.request and not cherrypy.request.json:
+            return {'_status': 'ERR', '_message': 'You must POST parameters on this endpoint.'}
+
+        logger.debug("Post /command: %s", cherrypy.request.params)
+        command = cherrypy.request.json.get('command', None)
+        timestamp = cherrypy.request.json.get('timestamp', None)
+        element = cherrypy.request.json.get('element', None)
+        host = cherrypy.request.json.get('host', None)
+        service = cherrypy.request.json.get('service', None)
+        user = cherrypy.request.json.get('user', None)
+        parameters = cherrypy.request.json.get('parameters', None)
+
+        if not command:
+            return {'_status': 'ERR', '_message': 'Missing command parameter'}
+
+        command_line = command.upper()
+        if timestamp:
+            try:
+                timestamp = int(timestamp)
+            except ValueError:
+                return {'_status': 'ERR', '_message': 'Timestamp must be an integer value'}
+            command_line = '[%d] %s' % (timestamp, command_line)
+
+        if host or service or user:
+            if host:
+                command_line = '%s;%s' % (command_line, host)
+            if service:
+                command_line = '%s;%s' % (command_line, service)
+            if user:
+                command_line = '%s;%s' % (command_line, user)
+        elif element:
+            if '/' in element:
+                # Replace only the first /
+                element = element.replace('/', ';', 1)
+            command_line = '%s;%s' % (command_line, element)
+
+        if parameters:
+            command_line = '%s;%s' % (command_line, parameters)
+
+        # Add a command to get managed
+        logger.debug("Got an external command: %s", command_line)
+        self.app.add(ExternalCommand(command_line))
+
+        return {'_status': 'OK', '_message': "Got command: %s" % command_line}
 
     @cherrypy.expose
     @cherrypy.tools.json_in()

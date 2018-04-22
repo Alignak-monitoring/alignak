@@ -195,6 +195,22 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
         logger_dictConfig(config)
 
 
+def set_log_level(log_level=logging.INFO):
+    """Set the Alignak logger log level. This is mainly used for the arbiter veiry odde to
+    set the log level at INFO level whatever the configured log level is set.
+
+    :param log_level: log level
+    :return: n/a
+    """
+    """Set the test logger at DEBUG level - useful for some tests that check debug log"""
+    # Change the collector logger log level
+    print("set_debug_log")
+    logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+    logger.setLevel(log_level)
+    for handler in logger_.handlers:
+        handler.setLevel(log_level)
+
+
 def get_logger_fds(logger_):
     """
     Get the file descriptors used by the logger

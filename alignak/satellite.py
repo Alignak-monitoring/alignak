@@ -330,7 +330,6 @@ class BaseSatellite(Daemon):
                                        new_link.name, overriding)
 
             # For each scheduler, we received its managed hosts list
-            # Note that this may be included in the base class because
             self.hosts_schedulers = {}
             for link_uuid in self.schedulers:
                 # We received the hosts names for each scheduler

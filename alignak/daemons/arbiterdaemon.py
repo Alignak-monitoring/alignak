@@ -72,7 +72,7 @@ import threading
 
 import psutil
 
-from alignak.log import make_monitoring_log
+from alignak.log import make_monitoring_log, set_log_level
 from alignak.misc.common import SIGNALS_TO_NAMES_DICT
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.config import Config
@@ -383,8 +383,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         if self.verify_only:
             # Force the global logger at INFO level
-            alignak_logger = logging.getLogger("alignak")
-            alignak_logger.setLevel(logging.INFO if not self.debug else logging.DEBUG)
+            set_log_level(logging.INFO if not self.debug else logging.DEBUG)
             logger.info("-----")
             logger.info("Arbiter is in configuration check mode")
             logger.info("-----")
