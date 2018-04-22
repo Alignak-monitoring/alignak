@@ -59,7 +59,7 @@ class ArbiterInterface(GenericInterface):
     @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
-    def backend_notification(self, event, parameters):
+    def backend_notification(self, event=None, parameters=None):
         """The Alignak backend raises an event to the Alignak arbiter
         -----
         Possible events are:
@@ -75,6 +75,13 @@ class ArbiterInterface(GenericInterface):
         # request_parameters = cherrypy.request.json
         # event = request_parameters.get('event', event)
         # parameters = request_parameters.get('parameters', parameters)
+        if event is None:
+            data = cherrypy.request.json
+            event = data['event']
+        if parameters is None:
+            data = cherrypy.request.json
+            parameters = data['parameters']
+
         logger.warning("I got a backend notification: %s / %s", event, parameters)
 
         # For a configuration reload event...

@@ -108,7 +108,6 @@ class CarbonIface(object):
         payload = pickle.dumps(data)
         header = struct.pack("!L", len(payload))
         message = header + payload
-        print("Message: %s" % message)
         s.settimeout(1)
         s.connect((self.host, self.port))
         try:

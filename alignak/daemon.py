@@ -638,6 +638,8 @@ class Daemon(object):
             if self.pid_filename != os.path.abspath(self.pid_filename):
                 self.pid_filename = os.path.abspath(os.path.join(self.workdir, self.pid_filename))
         print("Daemon '%s' pid file: %s" % (self.name, self.pid_filename))
+        self.pre_log.append(("INFO",
+                             "Daemon '%s' pid file: %s" % (self.name, self.pid_filename)))
 
         # Self daemon monitoring (cpu, memory)
         self.daemon_monitoring = False
@@ -843,7 +845,8 @@ class Daemon(object):
                 logger.error(message)
             logger.error("Sorry, I bail out, exit code: %d", exit_code)
         else:
-            logger.info(message)
+            if message:
+                logger.info(message)
 
         _ts = time.time()
         self.unlink()
@@ -1487,7 +1490,7 @@ class Daemon(object):
         self.load_modules_manager()
 
         # Start the CherryPy server through a detached thread
-        logger.info("Starting http_daemon thread..")
+        logger.info("Starting http_daemon thread")
         # pylint: disable=bad-thread-instantiation
         self.http_thread = threading.Thread(target=self.http_daemon_thread,
                                             name='%s-http_thread' % self.name)

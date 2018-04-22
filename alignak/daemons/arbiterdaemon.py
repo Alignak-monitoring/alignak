@@ -72,6 +72,7 @@ import threading
 
 import psutil
 
+from alignak.log import make_monitoring_log
 from alignak.misc.common import SIGNALS_TO_NAMES_DICT
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.config import Config
@@ -1929,6 +1930,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                         _ts = time.time()
                         logger.warning('--- Reloading configuration...')
                         self.load_monitoring_config_file()
+                        brok = make_monitoring_log('info', 'CONFIGURATION RELOAD')
+                        if self.conf.monitoring_log_broks:
+                            self.add(brok)
                         logger.warning('--- Configuration reloaded, %.2f seconds',
                                        time.time() - _ts)
 

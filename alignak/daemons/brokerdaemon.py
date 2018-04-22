@@ -366,7 +366,6 @@ class Broker(BaseSatellite):
                                  'received from arbiter: %s', exp)
                 if self.modules:
                     logger.info("I received some modules configuration: %s", self.modules)
-                    print("I received some modules configuration: %s", self.modules[0].__dict__)
                     self.have_modules = True
 
                     # Ok now start, or restart them!
