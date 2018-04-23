@@ -202,7 +202,6 @@ def set_log_level(log_level=logging.INFO):
     :param log_level: log level
     :return: n/a
     """
-    """Set the test logger at DEBUG level - useful for some tests that check debug log"""
     # Change the collector logger log level
     print("set_debug_log")
     logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)

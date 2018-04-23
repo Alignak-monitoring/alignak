@@ -412,16 +412,17 @@ class Stats(object):
             return True
 
         try:
-            logger.info("Flushing %d metrics to Graphite/carbon", self.metrics_count)
+            logger.debug("Flushing %d metrics to Graphite/carbon", self.metrics_count)
             if self.carbon.send_data():
                 self.my_metrics = []
             else:
                 logger.warning("Failed sending metrics to Graphite/carbon. Inner stored metric: %d",
                                self.metrics_count)
                 return False
-        except Exception:  # pylint: disable=broad-except
+        except Exception as exp:  # pylint: disable=broad-except
             logger.warning("Failed sending metrics to Graphite/carbon. Inner stored metric: %d",
                            self.metrics_count)
+            logger.warning("Exception: %s", str(exp))
             return False
         return True
 
@@ -434,7 +435,7 @@ class Stats(object):
         """
         # Manage Graphite part
         if self.statsd_enabled and self.carbon:
-            self.my_metrics.append(('.'.join([self.statsd_prefix, metric]),
+            self.my_metrics.append(('.'.join([self.statsd_prefix, self.name, metric]),
                                     (int(time.time()), value)))
             if self.metrics_count >= self.metrics_flush_count:
                 self.carbon.add_data_list(self.my_metrics)

@@ -756,7 +756,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         try:
             _t0 = time.time()
             self.do_get_new_actions()
-            statsmgr.timer('core.get-new-actions', time.time() - _t0)
+            statsmgr.timer('actions.got.time', time.time() - _t0)
         except RuntimeError:
             logger.error("Exception like issue #1007")
 
@@ -797,8 +797,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 self.add_actions(actions, scheduler_link)
                 logger.debug("Got %d actions from %s in %s",
                              len(actions), scheduler_link.name, time.time() - _t0)
-            statsmgr.gauge('get-new-actions-count.%s' % (scheduler_link.name), len(actions))
-            statsmgr.timer('get-new-actions-time.%s' % (scheduler_link.name), time.time() - _t0)
+            statsmgr.gauge('actions.added.count.%s' % (scheduler_link.name), len(actions))
 
     def clean_previous_run(self):
         """Clean variables from previous configuration,
@@ -844,9 +843,9 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                         logger.debug("[%s][%s][%s] actions queued: %d, results queued: %d",
                                      sched.name, mod, worker_id, actions_count, results_count)
                         # Update the statistics
-                        statsmgr.gauge('core.worker-%s.actions-queue-size' % worker_id,
+                        statsmgr.gauge('worker.%s.actions-queue-size' % worker_id,
                                        actions_count)
-                        statsmgr.gauge('core.worker-%s.results-queue-size' % worker_id,
+                        statsmgr.gauge('worker.%s.results-queue-size' % worker_id,
                                        results_count)
                     except (IOError, EOFError):
                         pass
@@ -933,13 +932,11 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 logger.warning("Scheduler connection failed, I could not get new actions!")
 
         # Get objects from our modules that are not Worker based
-        _t0 = time.time()
         if self.log_loop:
             logger.debug("[%s] get objects from queues", self.name)
         self.get_objects_from_from_queues()
-        statsmgr.timer('core.get-objects-from-queues', time.time() - _t0)
-        statsmgr.gauge('got.external-commands', len(self.external_commands))
-        statsmgr.gauge('got.broks', len(self.broks))
+        statsmgr.gauge('external-commands.count', len(self.external_commands))
+        statsmgr.gauge('broks.count', len(self.broks))
 
     def do_post_daemon_init(self):
         """Do this satellite (poller or reactionner) post "daemonize" init

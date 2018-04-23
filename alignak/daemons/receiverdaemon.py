@@ -306,14 +306,12 @@ class Receiver(Satellite):
         # Get external commands from the arbiters...
         _t0 = time.time()
         self.get_external_commands_from_arbiters()
-        statsmgr.timer('broks.got', time.time() - _t0)
-
-        statsmgr.gauge('got.external-commands', len(self.unprocessed_external_commands))
-        statsmgr.gauge('got.broks', len(self.broks))
+        statsmgr.timer('external-commands.got.time', time.time() - _t0)
+        statsmgr.gauge('external-commands.got.count', len(self.unprocessed_external_commands))
 
         _t0 = time.time()
         self.push_external_commands_to_schedulers()
-        statsmgr.timer('external-commands.pushed', time.time() - _t0)
+        statsmgr.timer('external-commands.pushed.time', time.time() - _t0)
 
         # Say to modules it's a new tick :)
         self.hook_point('tick')

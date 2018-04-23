@@ -153,7 +153,7 @@ class ArbiterInterface(GenericInterface):
             command_line = '%s;%s' % (command_line, parameters)
 
         # Add a command to get managed
-        logger.debug("Got an external command: %s", command_line)
+        logger.warning("Got an external command: %s", command_line)
         self.app.add(ExternalCommand(command_line))
 
         return {'_status': 'OK', '_message': "Got command: %s" % command_line}

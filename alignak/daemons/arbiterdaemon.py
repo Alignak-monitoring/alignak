@@ -211,10 +211,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """
         if isinstance(elt, Brok):
             self.broks[elt.uuid] = elt
-            statsmgr.counter('broks.got', 1)
+            statsmgr.counter('broks.added', 1)
         elif isinstance(elt, ExternalCommand):
             self.external_commands.append(elt)
-            statsmgr.counter('external-commands.got', 1)
+            statsmgr.counter('external-commands.added', 1)
         else:  # pragma: no cover, simple dev alerting
             logger.error('Do not manage object type %s (%s)', type(elt), elt)
 
@@ -818,7 +818,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 logger.error("Back trace of this remove: %s", output.getvalue())
                 output.close()
                 continue
-            statsmgr.timer('core.hook.get_alignak_configuration', time.time() - _t0)
+            statsmgr.timer('hook.get_alignak_configuration', time.time() - _t0)
 
         params = []
         if alignak_cfg:
@@ -1532,7 +1532,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             # # Maybe our satellites raised new broks. Reap them...
             # _t0 = time.time()
             # self.get_broks_from_satellites()
-            # statsmgr.timer('broks.got', time.time() - _t0)
+            # statsmgr.timer('broks.got.time', time.time() - _t0)
             #
             # # Maybe our satellites raised new external commands. Reap them...
             # _t0 = time.time()
@@ -1542,7 +1542,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             # # One broker is responsible for our broks, we give him our broks
             # _t0 = time.time()
             # self.push_broks_to_broker()
-            # statsmgr.timer('broks.pushed', time.time() - _t0)
+            # statsmgr.timer('broks.pushed.time', time.time() - _t0)
             #
             # # We push our external commands to our schedulers...
             # _t0 = time.time()
@@ -1675,6 +1675,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                              'brokers', 'receivers', 'pollers'):
                 counters["dispatcher.%s" % sat_type] = len(getattr(self.dispatcher, sat_type))
 
+        # To be refactored
         metrics = res['metrics']
         metrics.append('%s.%s.external-commands.queue %d %d'
                        % (self.type, self.name, len(self.external_commands), now))

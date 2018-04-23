@@ -67,6 +67,7 @@ load_rc_config "${name}"
 : ${alignak_host=""}
 : ${alignak_port=""}
 : ${alignak_flags=""}
+: ${alignak_pidfile="${alignak_prefix}/var/run/${name}/${name}.pid"}
 
 if checkyesno alignak_daemon; then
   ${alignak_flags="${alignak_flags} --daemon"}
@@ -106,16 +107,29 @@ alignak_precmd()
 
 alignak_start()
 {
-    echo "Starting ${name}..."
+#    /usr/sbin/daemon -P ${pidfile} -r -f -u ${alignak_user} ${command} ${command_args}
+    info "Starting ${name}..."
     ${command} ${command_args}
-    echo "Started"
+    info "Started"
 }
 
 alignak_stop()
 {
-    echo "Stopping ${name}..."
-    pkill -2 -F ${alignak_pid_file}
-    echo "Stopped"
+    if [ -e "${pidfile}" ]; then
+        echo "Stopping ${name}..."
+        kill -s TERM `cat ${pidfile}`
+        echo "Stopped"
+    else
+        echo "${name} is not running"
+    fi
+}
+
+alignak_status() {
+    if [ -e "${pidfile}" ]; then
+        echo "${name} is running as pid `cat ${pidfile}`"
+    else
+        echo "${name} is not running"
+    fi
 }
 
 [ -z "${alignak_enable}" ] && alignak_enable="NO"

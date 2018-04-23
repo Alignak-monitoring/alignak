@@ -435,7 +435,7 @@ class Broker(BaseSatellite):
                 _t0 = time.time()
                 try:
                     my_initial_broks = satellite.get_initial_broks(self.name)
-                    statsmgr.timer('initial-broks.%s' % satellite.name, time.time() - _t0)
+                    statsmgr.timer('broks.initial.%s.time' % satellite.name, time.time() - _t0)
                     if not my_initial_broks:
                         logger.info("No initial broks were raised, "
                                     "my scheduler is not yet ready...")
@@ -444,6 +444,7 @@ class Broker(BaseSatellite):
                         self.got_initial_broks = True
                         logger.info("Got %d initial broks from '%s'",
                                     my_initial_broks, satellite.name)
+                        statsmgr.gauge('broks.initial.%s.count' % satellite.name, my_initial_broks)
                 except LinkError as exp:
                     logger.warning("Scheduler connection failed, I could not get initial broks!")
 
@@ -515,8 +516,8 @@ class Broker(BaseSatellite):
 
         # Maybe our external modules raised 'objects', so get them
         if self.get_objects_from_from_queues():
-            statsmgr.gauge('got.external-commands', len(self.external_commands))
-            statsmgr.gauge('got.broks', len(self.external_broks))
+            statsmgr.gauge('external-commands.got.count', len(self.external_commands))
+            statsmgr.gauge('broks.got.count', len(self.external_broks))
 
     def get_daemon_stats(self, details=False):
         """Increase the stats provided by the Daemon base class
@@ -538,6 +539,7 @@ class Broker(BaseSatellite):
         counters['reactionners'] = len(self.reactionners)
         counters['receivers'] = len(self.receivers)
 
+        # To be refactored
         metrics = res['metrics']
         metrics.append('%s.%s.external-broks.queue %d %d'
                        % (self.type, self.name, len(self.external_broks), now))

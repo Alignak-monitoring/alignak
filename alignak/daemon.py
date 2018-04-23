@@ -848,10 +848,8 @@ class Daemon(object):
             if message:
                 logger.info(message)
 
-        _ts = time.time()
         self.unlink()
         self.do_stop()
-        statsmgr.timer('stop-delay', time.time() - _ts)
 
         logger.info("Stopped %s.", self.name)
         sys.exit(exit_code)
@@ -926,7 +924,6 @@ class Daemon(object):
 
         # Get the connection running identifier - first client / server communication
         logger.debug("[%s] Getting running identifier for '%s'", self.name, s_link.name)
-        _t0 = time.time()
         # Assume the daemon should be alive and reachable
         # because we are initializing the connection...
         s_link.alive = True
@@ -940,7 +937,6 @@ class Daemon(object):
                     s_link.wait_new_conf()
                 break
             time.sleep(0.3)
-        statsmgr.timer('con-initialization.%s' % s_link.name, time.time() - _t0)
 
         return got_a_running_id
 
@@ -1034,7 +1030,7 @@ class Daemon(object):
             # Daemon load
             # TODO this measurement needs to be made reliable (check and adapt if needed)
             self.load_1_min.update_load(self.maximum_loop_duration - elapsed_time)
-            statsmgr.gauge('load_1_min', self.load_1_min.get_load())
+            statsmgr.gauge('load.1_min', self.load_1_min.get_load())
             if self.log_loop:
                 logger.debug("+++ %d, load: %s", self.loop_count, self.load_1_min.load)
 
@@ -1043,29 +1039,29 @@ class Daemon(object):
                 my_process = psutil.Process()
                 with my_process.oneshot():
                     perfdatas.append("num_threads=%d" % my_process.num_threads())
-                    statsmgr.counter("num_threads", my_process.num_threads())
+                    statsmgr.counter("system.num_threads", my_process.num_threads())
                     # perfdatas.append("num_ctx_switches=%d" % my_process.num_ctx_switches())
                     perfdatas.append("num_fds=%d" % my_process.num_fds())
-                    statsmgr.counter("num_fds", my_process.num_fds())
+                    statsmgr.counter("system.num_fds", my_process.num_fds())
                     # perfdatas.append("num_handles=%d" % my_process.num_handles())
                     perfdatas.append("create_time=%d" % my_process.create_time())
                     perfdatas.append("cpu_num=%d" % my_process.cpu_num())
-                    statsmgr.counter("cpu_num", my_process.cpu_num())
+                    statsmgr.counter("system.cpu_num", my_process.cpu_num())
                     perfdatas.append("cpu_usable=%d" % len(my_process.cpu_affinity()))
-                    statsmgr.counter("cpu_usable", len(my_process.cpu_affinity()))
+                    statsmgr.counter("system.cpu_usable", len(my_process.cpu_affinity()))
                     perfdatas.append("cpu_percent=%.2f%%" % my_process.cpu_percent())
-                    statsmgr.counter("cpu_percent", my_process.cpu_percent())
+                    statsmgr.counter("system.cpu_percent", my_process.cpu_percent())
 
                     cpu_times_percent = my_process.cpu_times()
                     for key in cpu_times_percent._fields:
                         perfdatas.append("cpu_%s_time=%.2fs" % (key,
                                                                 getattr(cpu_times_percent, key)))
-                        statsmgr.counter("cpu_%s_time" % key, getattr(cpu_times_percent, key))
+                        statsmgr.counter("system.cpu_%s_time" % key, getattr(cpu_times_percent, key))
 
                     memory = my_process.memory_full_info()
                     for key in memory._fields:
                         perfdatas.append("mem_%s=%db" % (key, getattr(memory, key)))
-                        statsmgr.counter("mem_%s" % key, getattr(memory, key))
+                        statsmgr.counter("system.mem_%s" % key, getattr(memory, key))
 
                     logger.debug("Daemon %s (%s), pid=%s, ppid=%s, status=%s, cpu/memory|%s",
                                  self.name, my_process.name(), my_process.pid, my_process.ppid(),
@@ -1110,9 +1106,8 @@ class Daemon(object):
             if self.log_loop:
                 logger.debug("Elapsed time, current loop: %.2f, from start: %.2f (%d loops)",
                              loop_duration, elapsed_time, self.loop_count)
-            statsmgr.gauge('loop.count', self.loop_count)
-            statsmgr.timer('loop.duration', loop_duration)
-            statsmgr.timer('run.duration', elapsed_time)
+            statsmgr.gauge('loop-count', self.loop_count)
+            statsmgr.timer('run-duration', elapsed_time)
 
             # Maybe someone said we will stop...
             if self.will_stop:
@@ -1161,7 +1156,8 @@ class Daemon(object):
         if self.modules_manager.configuration_warnings:  # pragma: no cover, not tested
             for msg in self.modules_manager.configuration_warning:
                 logger.warning(msg)
-        statsmgr.timer('modules-loading', time.time() - _ts)
+        statsmgr.gauge('modules.count', len(modules))
+        statsmgr.timer('modules.load-time', time.time() - _ts)
 
     def add(self, elt):
         """ Abstract method for adding brok
@@ -1840,7 +1836,7 @@ class Daemon(object):
 
         if not self.interrupted:
             logger.info("Got initial configuration, waited for: %.2f", time.time() - _ts)
-            statsmgr.timer('initial-configuration', time.time() - _ts)
+            statsmgr.timer('configuration.initial', time.time() - _ts)
         else:
             logger.info("Interrupted before getting the initial configuration")
 
@@ -1861,7 +1857,7 @@ class Daemon(object):
 
         if not self.interrupted:
             logger.info("Got the new configuration, waited for: %.2f", time.time() - _ts)
-            statsmgr.timer('new-configuration', time.time() - _ts)
+            statsmgr.timer('configuration.new', time.time() - _ts)
         else:
             logger.info("Interrupted before getting the new configuration")
 
@@ -1903,7 +1899,7 @@ class Daemon(object):
                 logger.exception('Exception %s', exp)
                 self.modules_manager.set_to_restart(module)
             else:
-                statsmgr.timer('core.hook.%s.%s' % (module.name, hook_name), time.time() - _ts)
+                statsmgr.timer('hook.%s.%s' % (module.name, hook_name), time.time() - _ts)
 
     def get_retention_data(self):  # pylint: disable=R0201
         """Basic function to get retention data,
@@ -2043,6 +2039,7 @@ class Daemon(object):
         :return: True if we got something in the queue, False otherwise.
         :rtype: bool
         """
+        _t0 = time.time()
         had_some_objects = False
         for module in self.modules_manager.get_external_instances():
             queue = module.from_q
@@ -2051,7 +2048,7 @@ class Daemon(object):
             while True:
                 queue_size = queue.qsize()
                 if queue_size:
-                    statsmgr.gauge('queue.from.%s.size' % module.get_name(), queue_size)
+                    statsmgr.gauge('queues.from.%s.count' % module.get_name(), queue_size)
                 try:
                     obj = queue.get_nowait()
                 except Full:
@@ -2066,6 +2063,7 @@ class Daemon(object):
                 else:
                     had_some_objects = True
                     self.add(obj)
+        statsmgr.timer('queues.time', time.time() - _t0)
 
         return had_some_objects
 
