@@ -195,8 +195,7 @@ class TestStatsD(AlignakTest):
             ), 0)
 
         self.assert_log_match(re.escape(
-            'Sending arbiter-master daemon statistics '
-            'to: localhost:8125, prefix: alignak'
+            'Sending arbiter-master statistics to: localhost:8125, prefix: alignak'
         ), index)
         index += 1
         self.assert_log_match(re.escape(
@@ -234,8 +233,7 @@ class TestStatsD(AlignakTest):
             ), 0)
 
         self.assert_log_match(re.escape(
-            'Sending arbiter-master daemon statistics '
-            'to: localhost:8125, prefix: alignak'
+            'Sending arbiter-master statistics to: localhost:8125, prefix: alignak'
         ), index)
         index += 1
         self.assert_log_match(re.escape(
@@ -278,8 +276,7 @@ class TestStatsD(AlignakTest):
         if os.sys.version_info > (2, 7):
             index = 1
         self.assert_log_match(re.escape(
-            'Sending arbiter-master daemon statistics '
-            'to: localhost:8888, prefix: alignak'
+            'Sending arbiter-master statistics to: localhost:8888, prefix: alignak'
         ), index)
         index += 1
         self.assert_log_match(re.escape(
@@ -313,7 +310,7 @@ class TestStatsD(AlignakTest):
             index = 1
         self.show_logs()
         self.assert_log_match(re.escape(
-            'Sending arbiter-master daemon statistics to: localhost:8125, prefix: alignak'
+            'Sending arbiter-master statistics to: localhost:8125, prefix: alignak'
         ), index)
         index += 1
         self.assert_log_match(re.escape(
@@ -409,7 +406,7 @@ class TestStatsD(AlignakTest):
             index = 1
         self.show_logs()
         self.assert_log_match(re.escape(
-            'Sending broker-master daemon statistics to: localhost:8125, prefix: alignak'
+            'Sending broker-master statistics to: localhost:8125, prefix: alignak'
         ), index)
         index += 1
         self.assert_log_match(re.escape(
@@ -505,7 +502,7 @@ class TestStatsD(AlignakTest):
             index = 1
         self.show_logs()
         self.assert_log_match(re.escape(
-            'Sending arbiter-master daemon statistics to: localhost:8125, prefix: alignak'
+            'Sending arbiter-master statistics to: localhost:8125, prefix: alignak'
         ), index)
         index += 1
         self.assert_log_match(re.escape(
@@ -667,8 +664,7 @@ if os.sys.version_info > (2, 7):
                 ), 0)
 
             self.assert_log_match(re.escape(
-                'Sending arbiter-master daemon statistics '
-                'to: localhost:2003, prefix: alignak'
+                'Sending arbiter-master statistics to: localhost:2003, prefix: alignak'
             ), index)
 
         def test_statsmgr_register_enabled_broks(self):
@@ -696,8 +692,7 @@ if os.sys.version_info > (2, 7):
                 ), 0)
 
             self.assert_log_match(re.escape(
-                'Sending arbiter-master daemon statistics '
-                'to: localhost:2003, prefix: alignak'
+                'Sending arbiter-master statistics to: localhost:2003, prefix: alignak'
             ), index)
 
         def test_statsmgr_connect(self):
@@ -732,8 +727,7 @@ if os.sys.version_info > (2, 7):
             if os.sys.version_info > (2, 7):
                 index = 1
             self.assert_log_match(re.escape(
-                'Sending arbiter-master daemon statistics '
-                'to: localhost:8888, prefix: alignak'
+                'Sending arbiter-master statistics to: localhost:8888, prefix: alignak'
             ), index)
             index += 1
             self.assert_log_match(re.escape(
@@ -757,7 +751,7 @@ if os.sys.version_info > (2, 7):
                 index = 1
             self.show_logs()
             self.assert_log_match(re.escape(
-                'Sending arbiter-master daemon statistics to: localhost:2003, prefix: alignak'
+                'Sending arbiter-master statistics to: localhost:2003, prefix: alignak'
             ), index)
             index += 1
             self.assert_log_match(re.escape(
@@ -853,7 +847,7 @@ if os.sys.version_info > (2, 7):
                 index = 1
             self.show_logs()
             self.assert_log_match(re.escape(
-                'Sending broker-master daemon statistics to: localhost:2003, prefix: alignak'
+                'Sending broker-master statistics to: localhost:2003, prefix: alignak'
             ), index)
             index += 1
             self.assert_log_match(re.escape(
@@ -946,7 +940,7 @@ if os.sys.version_info > (2, 7):
                 index = 1
             self.show_logs()
             self.assert_log_match(re.escape(
-                'Sending arbiter-master daemon statistics to: localhost:2003, prefix: alignak'
+                'Sending arbiter-master statistics to: localhost:2003, prefix: alignak'
             ), index)
             index += 1
             self.assert_log_match(re.escape(
@@ -1192,7 +1186,7 @@ class TestStatsFile(AlignakTest):
             index = 1
         self.show_logs()
         self.assert_log_match(re.escape(
-            'Sending arbiter-master daemon statistics to: localhost:8125, prefix: alignak'
+            'Sending arbiter-master statistics to: localhost:8125, prefix: alignak'
         ), index)
         index += 1
         self.assert_log_match(re.escape(

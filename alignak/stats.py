@@ -305,7 +305,7 @@ class Stats(object):
                      self.stats_file)
 
         if self.statsd_enabled and self.statsd_host is not None and self.statsd_host != 'None':
-            logger.info("Sending %s daemon statistics to: %s:%s, prefix: %s",
+            logger.info("Sending %s statistics to: %s:%s, prefix: %s",
                         self.name, self.statsd_host, self.statsd_port, self.statsd_prefix)
             if self.load_statsd():
                 logger.info('Alignak internal statistics are sent to StatsD.')
@@ -332,22 +332,28 @@ class Stats(object):
         :return: True if socket got created else False and an exception log is raised
         """
         if not self.statsd_enabled:
-            logger.warning('StatsD is not enabled, connection is not allowed')
+            logger.info('Stats reporting is not enabled, connection is not allowed')
             return False
 
-        try:
-            logger.info('Trying to contact StatsD server...')
-            self.statsd_addr = (socket.gethostbyname(self.statsd_host), self.statsd_port)
-            self.statsd_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        except (socket.error, socket.gaierror) as exp:
-            logger.warning('Cannot create StatsD socket: %s', exp)
-            return False
-        except Exception as exp:  # pylint: disable=broad-except
-            logger.exception('Cannot create StatsD socket (other): %s', exp)
-            return False
+        if self.statsd_enabled and self.carbon:
+            self.my_metrics.append(('.'.join([self.statsd_prefix, self.name, 'connection-test']),
+                                    (int(time.time()), int(time.time()))))
+            self.carbon.add_data_list(self.my_metrics)
+            self.flush(log=True)
+        else:
+            try:
+                logger.info('Trying to contact StatsD server...')
+                self.statsd_addr = (socket.gethostbyname(self.statsd_host), self.statsd_port)
+                self.statsd_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            except (socket.error, socket.gaierror) as exp:
+                logger.warning('Cannot create StatsD socket: %s', exp)
+                return False
+            except Exception as exp:  # pylint: disable=broad-except
+                logger.exception('Cannot create StatsD socket (other): %s', exp)
+                return False
 
-        logger.info('StatsD server contacted')
-        return True
+            logger.info('StatsD server contacted')
+            return True
 
     def connect(self, name, _type, host='localhost', port=2003,
                 prefix='alignak', enabled=False, broks_enabled=False):
@@ -392,7 +398,7 @@ class Stats(object):
                      self.stats_file)
 
         if self.statsd_enabled and self.statsd_host is not None and self.statsd_host != 'None':
-            logger.info("Sending %s daemon statistics to: %s:%s, prefix: %s",
+            logger.info("Sending %s statistics to: %s:%s, prefix: %s",
                         self.name, self.statsd_host, self.statsd_port, self.statsd_prefix)
 
             self.carbon = CarbonIface(self.statsd_host, self.statsd_port)
@@ -400,10 +406,10 @@ class Stats(object):
 
         return self.statsd_enabled
 
-    def flush(self):
+    def flush(self, log=False):
         """Send inner stored metrics to the defined Graphite
 
-        Returns False if the sending failed
+        Returns False if the sending failed with a warning log if log parameter is set
 
         :return: bool
         """
@@ -416,8 +422,9 @@ class Stats(object):
             if self.carbon.send_data():
                 self.my_metrics = []
             else:
-                logger.warning("Failed sending metrics to Graphite/carbon. Inner stored metric: %d",
-                               self.metrics_count)
+                if log:
+                    logger.warning("Failed sending metrics to Graphite/carbon. "
+                                   "Inner stored metric: %d", self.metrics_count)
                 return False
         except Exception as exp:  # pylint: disable=broad-except
             logger.warning("Failed sending metrics to Graphite/carbon. Inner stored metric: %d",

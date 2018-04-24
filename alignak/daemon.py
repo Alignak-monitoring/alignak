@@ -1056,7 +1056,8 @@ class Daemon(object):
                     for key in cpu_times_percent._fields:
                         perfdatas.append("cpu_%s_time=%.2fs" % (key,
                                                                 getattr(cpu_times_percent, key)))
-                        statsmgr.counter("system.cpu_%s_time" % key, getattr(cpu_times_percent, key))
+                        statsmgr.counter("system.cpu_%s_time" % key,
+                                         getattr(cpu_times_percent, key))
 
                     memory = my_process.memory_full_info()
                     for key in memory._fields:
