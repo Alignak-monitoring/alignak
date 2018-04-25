@@ -19,7 +19,7 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 #
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 from collections import namedtuple
 from alignak.util import alive_then_spare_then_deads, average_percentile
 
@@ -48,7 +48,7 @@ class TestUtils(AlignakTest):
                              SmallSat(alive=True, spare=True),
                              SmallSat(alive=True, spare=True)]
 
-        sat_list.sort(alive_then_spare_then_deads)
+        sat_list = alive_then_spare_then_deads(sat_list)
 
         assert sat_list[:5] == expected_sat_list, \
                "Function alive_then_spare_then_deads does not sort as exepcted!"
@@ -63,7 +63,7 @@ class TestUtils(AlignakTest):
 
         my_values = [10, 8, 9, 7, 3, 11, 7, 13, 9, 10]
         lat_avg, lat_min, lat_max = average_percentile(my_values)
-        print("result: %.2f, %.2f, %.2f" % (lat_min, lat_avg, lat_max))
+        print(("result: %.2f, %.2f, %.2f" % (lat_min, lat_avg, lat_max)))
         assert 8.7 == lat_avg, 'Average'
         assert 4.8 == lat_min, 'Minimum'
         assert 12.1 == lat_max, 'Maximum'

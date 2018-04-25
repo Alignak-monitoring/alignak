@@ -24,7 +24,7 @@ This file test retention
 
 import time
 import json
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 from alignak.misc.serialization import unserialize
 
@@ -80,11 +80,11 @@ class TestRetention(AlignakTest):
 
         commentsh = []
         ack_comment_uuid = ''
-        for comm_uuid, comment in host.comments.iteritems():
+        for comm_uuid, comment in host.comments.items():
             commentsh.append(comment.comment)
 
         commentss = []
-        for comm_uuid, comment in svc.comments.iteritems():
+        for comm_uuid, comment in svc.comments.items():
             commentss.append(comment.comment)
             if comment.entry_type == 4:
                 ack_comment_uuid = comment.uuid
@@ -161,11 +161,11 @@ class TestRetention(AlignakTest):
 
         # check downtimes (only for host and not for service)
         assert list(host.downtimes) == list(hostn.downtimes)
-        for down_uuid, downtime in hostn.downtimes.iteritems():
+        for down_uuid, downtime in hostn.downtimes.items():
             assert 'My downtime' == downtime.comment
 
         # check notifications
-        for notif_uuid, notification in hostn.notifications_in_progress.iteritems():
+        for notif_uuid, notification in hostn.notifications_in_progress.items():
             assert host.notifications_in_progress[notif_uuid].command == \
                              notification.command
             assert host.notifications_in_progress[notif_uuid].t_to_go == \
@@ -176,7 +176,7 @@ class TestRetention(AlignakTest):
         # check comments for host
         assert len(host.comments) == len(hostn.comments)
         commentshn = []
-        for comm_uuid, comment in hostn.comments.iteritems():
+        for comm_uuid, comment in hostn.comments.items():
             commentshn.append(comment.comment)
         # Compare sorted comments because dictionairies are not ordered
         assert sorted(commentsh) == sorted(commentshn)
@@ -184,7 +184,7 @@ class TestRetention(AlignakTest):
         # check comments for service
         assert len(svc.comments) == len(svcn.comments)
         commentssn = []
-        for comm_uuid, comment in svcn.comments.iteritems():
+        for comm_uuid, comment in svcn.comments.items():
             commentssn.append(comment.comment)
         assert commentss == commentssn
 

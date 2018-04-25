@@ -109,7 +109,7 @@ Alignak daemons statistics dictionary:
     - scheduler checks (gauge)
         - checks.total
         - checks.scheduled
-        - checks.inpoller
+        - checks.in_poller
         - checks.zombie
         - actions.notifications
 
@@ -198,10 +198,11 @@ from alignak.brok import Brok
 if sys.version_info >= (2, 7):
     from alignak.misc.carboniface import CarbonIface
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Stats(object):
+    # pylint: disable=too-many-instance-attributes
     """Stats class to export data into a statsd format
 
     This class allows to send metrics to a StatsD server using UDP datagrams.
@@ -261,8 +262,8 @@ class Stats(object):
         return len(self.my_metrics)
 
     def __repr__(self):  # pragma: no cover
-        return '<StatsD report to %r/%r, enabled: %r />' \
-               % (self.host, self.port, self.statsd_enabled)
+        return '<StatsD report to %r:%r, enabled: %r />' \
+               % (self.statsd_host, self.statsd_port, self.statsd_enabled)
     __str__ = __repr__
 
     def register(self, name, _type, statsd_host='localhost', statsd_port=8125,
@@ -343,7 +344,8 @@ class Stats(object):
         else:
             try:
                 logger.info('Trying to contact StatsD server...')
-                self.statsd_addr = (socket.gethostbyname(self.statsd_host), self.statsd_port)
+                self.statsd_addr = (socket.gethostbyname(self.statsd_host.encode('utf-8')),
+                                    self.statsd_port)
                 self.statsd_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             except (socket.error, socket.gaierror) as exp:
                 logger.warning('Cannot create StatsD socket: %s', exp)
@@ -456,7 +458,7 @@ class Stats(object):
         :param key: timer to update
         :type key: str
         :param value: time value (in seconds)
-        :type value: int
+        :type value: float
         :return: An alignak_stat brok if broks are enabled else None
         """
         _min, _max, count, _sum = self.stats.get(key, (None, None, 0, 0))
@@ -472,6 +474,7 @@ class Stats(object):
         if self.statsd_enabled and self.statsd_sock:
             # beware, we are sending ms here, timer is in seconds
             packet = '%s.%s.%s:%d|ms' % (self.statsd_prefix, self.name, key, value * 1000)
+            packet = packet.encode('utf-8')
             # Do not log because it is spamming the log file, but leave this code in place
             # for it may be restored easily if more tests are necessary... ;)
             # logger.info("Sending data: %s", packet)
@@ -509,11 +512,12 @@ class Stats(object):
         if self.broks_enabled:
             logger.debug("alignak stat brok: %s = %s", key, value)
             return Brok({'type': 'alignak_stat',
-                         'data': {'type': 'timer',
-                                  'metric': '%s.%s.%s' % (self.statsd_prefix, self.name, key),
-                                  'value': value * 1000,
-                                  'uom': 'ms'
-                                  }})
+                         'data': {
+                             'type': 'timer',
+                             'metric': '%s.%s.%s' % (self.statsd_prefix, self.name, key),
+                             'value': value * 1000,
+                             'uom': 'ms'
+                         }})
 
         return None
 
@@ -525,7 +529,7 @@ class Stats(object):
         :param key: counter to update
         :type key: str
         :param value: counter value
-        :type value: int
+        :type value: float
         :return: An alignak_stat brok if broks are enabled else None
         """
         _min, _max, count, _sum = self.stats.get(key, (None, None, 0, 0))
@@ -541,6 +545,7 @@ class Stats(object):
         if self.statsd_enabled and self.statsd_sock:
             # beware, we are sending ms here, timer is in seconds
             packet = '%s.%s.%s:%d|c' % (self.statsd_prefix, self.name, key, value)
+            packet = packet.encode('utf-8')
             # Do not log because it is spamming the log file, but leave this code in place
             # for it may be restored easily if more tests are necessary... ;)
             # logger.info("Sending data: %s", packet)
@@ -577,11 +582,12 @@ class Stats(object):
         if self.broks_enabled:
             logger.debug("alignak stat brok: %s = %s", key, value)
             return Brok({'type': 'alignak_stat',
-                         'data': {'type': 'counter',
-                                  'metric': '%s.%s.%s' % (self.statsd_prefix, self.name, key),
-                                  'value': value,
-                                  'uom': 'c'
-                                  }})
+                         'data': {
+                             'type': 'counter',
+                             'metric': '%s.%s.%s' % (self.statsd_prefix, self.name, key),
+                             'value': value,
+                             'uom': 'c'
+                         }})
 
         return None
 
@@ -593,7 +599,7 @@ class Stats(object):
         :param key: gauge to update
         :type key: str
         :param value: counter value
-        :type value: int
+        :type value: float
         :return: An alignak_stat brok if broks are enabled else None
         """
         _min, _max, count, _sum = self.stats.get(key, (None, None, 0, 0))
@@ -609,6 +615,7 @@ class Stats(object):
         if self.statsd_enabled and self.statsd_sock:
             # beware, we are sending ms here, timer is in seconds
             packet = '%s.%s.%s:%d|g' % (self.statsd_prefix, self.name, key, value)
+            packet = packet.encode('utf-8')
             # Do not log because it is spamming the log file, but leave this code in place
             # for it may be restored easily if more tests are necessary... ;)
             # logger.info("Sending data: %s", packet)
@@ -645,14 +652,15 @@ class Stats(object):
         if self.broks_enabled:
             logger.debug("alignak stat brok: %s = %s", key, value)
             return Brok({'type': 'alignak_stat',
-                         'data': {'type': 'gauge',
-                                  'metric': '%s.%s.%s' % (self.statsd_prefix, self.name, key),
-                                  'value': value,
-                                  'uom': 'g'
-                                  }})
+                         'data': {
+                             'type': 'gauge',
+                             'metric': '%s.%s.%s' % (self.statsd_prefix, self.name, key),
+                             'value': value,
+                             'uom': 'g'
+                         }})
 
         return None
 
 
-# pylint: disable=C0103
+# pylint: disable=invalid-name
 statsmgr = Stats()

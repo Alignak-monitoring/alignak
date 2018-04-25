@@ -48,7 +48,7 @@
 This file is used to test result modulations
 """
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestResultModulation(AlignakTest):

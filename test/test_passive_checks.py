@@ -23,7 +23,7 @@ This file test passive checks
 """
 
 import time
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestPassiveChecks(AlignakTest):
@@ -68,22 +68,22 @@ class TestPassiveChecks(AlignakTest):
         self.setup_with_file('cfg/cfg_passive_checks.cfg')
         assert self.conf_is_correct
 
-        assert self._arbiter.conf.host_freshness_check_interval == 1200
+        assert self._arbiter.conf.host_freshness_check_interval == 60
 
         for h in self._scheduler.hosts:
-            print("Host %s: freshness check: %s (%d s), state: %s/%s, last state update: %s"
+            print(("Host %s: freshness check: %s (%d s), state: %s/%s, last state update: %s"
                   % (h.get_name(), h.check_freshness, h.freshness_threshold,
-                     h.state_type, h.state, h.last_state_update))
+                     h.state_type, h.state, h.last_state_update)))
 
         # Check freshness on each scheduler tick
         self._scheduler.update_recurrent_works_tick({'tick_check_freshness': 1})
 
         print("Global passive checks parameters:")
-        print(" - accept_passive_host_checks: %s"
-              % self._arbiter.conf.accept_passive_host_checks)
+        print((" - accept_passive_host_checks: %s"
+              % self._arbiter.conf.accept_passive_host_checks))
         assert self._arbiter.conf.accept_passive_host_checks is True
-        print(" - accept_passive_service_checks: %s"
-              % self._arbiter.conf.accept_passive_service_checks)
+        print((" - accept_passive_service_checks: %s"
+              % self._arbiter.conf.accept_passive_service_checks))
         assert self._arbiter.conf.accept_passive_service_checks is True
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -98,10 +98,10 @@ class TestPassiveChecks(AlignakTest):
         host_f = self._scheduler.hosts.find_by_name("test_host_F")
 
         assert "d" == host_a.freshness_state
-        assert 3600 == host_a.freshness_threshold
+        assert 2400 == host_a.freshness_threshold
         # Even if u is set in the configuration file, get "x"
         assert "x" == host_b.freshness_state
-        assert 3600 == host_b.freshness_threshold
+        assert 1800 == host_b.freshness_threshold
         assert "o" == host_c.freshness_state
         assert 3600 == host_c.freshness_threshold
         # New "x" value defined for this host
@@ -112,7 +112,7 @@ class TestPassiveChecks(AlignakTest):
         assert 3600 == host_e.freshness_threshold
         # "x" as default value - 1200 as default freshness threshold (global conf parameter)
         assert "x" == host_f.freshness_state
-        assert 1200 == host_f.freshness_threshold
+        assert 60 == host_f.freshness_threshold
 
         svc0 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_0")
         svc1 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_1")
@@ -299,6 +299,7 @@ class TestPassiveChecks(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_passive_checks.cfg')
+        self.show_configuration_logs()
         assert self.conf_is_correct
 
         # Check freshness on each scheduler tick
@@ -307,12 +308,14 @@ class TestPassiveChecks(AlignakTest):
         host_f = self._scheduler.hosts.find_by_name("test_host_F")
 
         assert "x" == host_f.freshness_state
-        assert 1200 == host_f.freshness_threshold
+        # Not defined, so default value (0) that is replaced with the global host_freshness_check_interval
+        assert 60 == host_f.freshness_threshold
 
         svc6 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_F", "test_svc_6")
 
         assert "x" == svc6.freshness_state
-        assert 1200 == svc6.freshness_threshold
+        # Not defined, so default value - default is 0 for no freshness check!
+        assert 60 == svc6.freshness_threshold
 
     def test_freshness_expiration_repeat_host(self):
         """ We test the running property freshness_expired to know if we are in
@@ -324,23 +327,24 @@ class TestPassiveChecks(AlignakTest):
         self.clear_logs()
         assert self.conf_is_correct
 
-        assert self._arbiter.conf.host_freshness_check_interval == 1200
+        assert self._arbiter.conf.host_freshness_check_interval == 60
 
         # Check freshness on each scheduler tick
         self._scheduler.update_recurrent_works_tick({'tick_check_freshness': 1})
 
         for h in self._scheduler.hosts:
-            print("Host %s: freshness check: %s (%d s), state: %s/%s, last state update: %s"
-                  % (h.get_name(), h.check_freshness, h.freshness_threshold, h.state_type, h.state, h.last_state_update))
+            print(("Host %s: freshness check: %s (%d s), state: %s/%s, last state update: %s"
+                  % (h.get_name(), h.check_freshness, h.freshness_threshold, h.state_type, h.state, h.last_state_update)))
         host_f = self._scheduler.hosts.find_by_name("test_host_F")
-        print("Host F: state: %s/%s, last state update: %s" % (host_f.state_type, host_f.state, host_f.last_state_update))
+        print(("Host F: state: %s/%s, last state update: %s" % (host_f.state_type, host_f.state, host_f.last_state_update)))
         print(host_f)
 
         host_b = self._scheduler.hosts.find_by_name("test_host_B")
-        print("Host B: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update))
+        print(("Host B: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update)))
+        print(host_b)
 
         assert "x" == host_b.freshness_state
-        assert 3600 == host_b.freshness_threshold
+        assert 1800 == host_b.freshness_threshold
         # Check attempts
         assert 0 == host_b.attempt
         assert 5 == host_b.max_check_attempts
@@ -352,10 +356,10 @@ class TestPassiveChecks(AlignakTest):
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.event_handler_enabled = False
-        print("Host: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update))
+        print(("Host: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update)))
 
         assert 0 == self.manage_freshness_check(1)
-        print("Host: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update))
+        print(("Host: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update)))
         # We are still ok...
         assert "UP" == host_b.state
         assert "HARD" == host_b.state_type
@@ -365,7 +369,7 @@ class TestPassiveChecks(AlignakTest):
 
         checks_count = self.manage_freshness_check(1)
         assert 1 == checks_count
-        print("Host: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update))
+        print(("Host: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update)))
         assert "UNREACHABLE" == host_b.state
         assert "SOFT" == host_b.state_type
         assert False == host_b.freshness_expired
@@ -373,7 +377,7 @@ class TestPassiveChecks(AlignakTest):
 
         time.sleep(1)
         assert 1 == self.manage_freshness_check(1)
-        print("Host: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update))
+        print(("Host: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update)))
         assert "UNREACHABLE" == host_b.state
         assert "SOFT" == host_b.state_type
         assert False == host_b.freshness_expired
@@ -381,7 +385,7 @@ class TestPassiveChecks(AlignakTest):
 
         time.sleep(1)
         assert 1 == self.manage_freshness_check(1)
-        print("Host: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update))
+        print(("Host: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update)))
         assert "UNREACHABLE" == host_b.state
         assert "SOFT" == host_b.state_type
         assert False == host_b.freshness_expired
@@ -389,7 +393,7 @@ class TestPassiveChecks(AlignakTest):
 
         time.sleep(1)
         assert 1 == self.manage_freshness_check(1)
-        print("Host: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update))
+        print(("Host: state: %s/%s, last state update: %s" % (host_b.state_type, host_b.state, host_b.last_state_update)))
         assert "UNREACHABLE" == host_b.state
         assert "SOFT" == host_b.state_type
         assert False == host_b.freshness_expired
@@ -455,19 +459,19 @@ class TestPassiveChecks(AlignakTest):
         self.clear_logs()
         assert self.conf_is_correct
 
-        assert self._arbiter.conf.host_freshness_check_interval == 1200
+        assert self._arbiter.conf.host_freshness_check_interval == 60
 
         # Check freshness on each scheduler tick
         self._scheduler.update_recurrent_works_tick({'tick_check_freshness': 1})
 
         for h in self._scheduler.hosts:
-            print("Host %s: freshness check: %s (%d s), state: %s/%s, last state update: %s"
-                  % (h.get_name(), h.check_freshness, h.freshness_threshold, h.state_type, h.state, h.last_state_update))
+            print(("Host %s: freshness check: %s (%d s), state: %s/%s, last state update: %s"
+                  % (h.get_name(), h.check_freshness, h.freshness_threshold, h.state_type, h.state, h.last_state_update)))
         host_f = self._scheduler.hosts.find_by_name("test_host_F")
-        print("Host F: state: %s/%s, last state update: %s" % (host_f.state_type, host_f.state, host_f.last_state_update))
+        print(("Host F: state: %s/%s, last state update: %s" % (host_f.state_type, host_f.state, host_f.last_state_update)))
 
         assert "x" == host_f.freshness_state
-        assert 1200 == host_f.freshness_threshold
+        assert 60 == host_f.freshness_threshold
         # Check attempts
         assert 0 == host_f.attempt
         assert 3 == host_f.max_check_attempts
@@ -477,7 +481,7 @@ class TestPassiveChecks(AlignakTest):
         host_f.__class__.additional_freshness_latency = 1
 
         assert 0 == self.manage_freshness_check(1)
-        print("Host: state: %s/%s, last state update: %s" % (host_f.state_type, host_f.state, host_f.last_state_update))
+        print(("Host: state: %s/%s, last state update: %s" % (host_f.state_type, host_f.state, host_f.last_state_update)))
         # We are still ok...
         assert "UP" == host_f.state
         assert "HARD" == host_f.state_type
@@ -487,7 +491,7 @@ class TestPassiveChecks(AlignakTest):
 
         checks_count = self.manage_freshness_check(1)
         assert 1 == checks_count
-        print("Host: state: %s/%s, last state update: %s" % (host_f.state_type, host_f.state, host_f.last_state_update))
+        print(("Host: state: %s/%s, last state update: %s" % (host_f.state_type, host_f.state, host_f.last_state_update)))
         assert "UNREACHABLE" == host_f.state
         assert "SOFT" == host_f.state_type
         assert False == host_f.freshness_expired
@@ -495,7 +499,7 @@ class TestPassiveChecks(AlignakTest):
 
         time.sleep(1)
         assert 1 == self.manage_freshness_check(1)
-        print("Host: state: %s/%s, last state update: %s" % (host_f.state_type, host_f.state, host_f.last_state_update))
+        print(("Host: state: %s/%s, last state update: %s" % (host_f.state_type, host_f.state, host_f.last_state_update)))
         assert "UNREACHABLE" == host_f.state
         assert "SOFT" == host_f.state_type
         assert False == host_f.freshness_expired
@@ -503,7 +507,7 @@ class TestPassiveChecks(AlignakTest):
 
         time.sleep(1)
         assert 1 == self.manage_freshness_check(1)
-        print("Host: state: %s/%s, last state update: %s" % (host_f.state_type, host_f.state, host_f.last_state_update))
+        print(("Host: state: %s/%s, last state update: %s" % (host_f.state_type, host_f.state, host_f.last_state_update)))
         assert "UNREACHABLE" == host_f.state
         assert "HARD" == host_f.state_type
         assert True == host_f.freshness_expired
@@ -586,28 +590,29 @@ class TestPassiveChecks(AlignakTest):
         self.clear_logs()
         assert self.conf_is_correct
 
-        assert self._arbiter.conf.host_freshness_check_interval == 1200
+        assert self._arbiter.conf.service_freshness_check_interval == 60
+        assert self._arbiter.conf.host_freshness_check_interval == 60
 
         # Check freshness on each scheduler tick
         self._scheduler.update_recurrent_works_tick({'tick_check_freshness': 1})
 
         for h in self._scheduler.hosts:
-            print("Host %s: freshness check: %s (%d s), state: %s/%s, last state update: %s"
-                  % (h.get_name(), h.check_freshness, h.freshness_threshold, h.state_type, h.state, h.last_state_update))
+            print(("Host %s: freshness check: %s (%d s), state: %s/%s, last state update: %s"
+                  % (h.get_name(), h.check_freshness, h.freshness_threshold, h.state_type, h.state, h.last_state_update)))
         host_f = self._scheduler.hosts.find_by_name("test_host_F")
         svc_f = None
-        print("Host F: state: %s/%s, last state update: %s" % (host_f.state_type, host_f.state, host_f.last_state_update))
+        print(("Host F: state: %s/%s, last state update: %s" % (host_f.state_type, host_f.state, host_f.last_state_update)))
         for s in host_f.services:
             s = self._scheduler.services[s]
             if s.get_name() == svc_description:
-                print("Service %s: freshness check: %s (%d s), state: %s/%s, last state update: %s"
-                      % (s.get_name(), s.check_freshness, s.freshness_threshold, s.state_type, s.state, s.last_state_update))
+                print(("Service %s: freshness check: %s (%d s), state: %s/%s, last state update: %s"
+                      % (s.get_name(), s.check_freshness, s.freshness_threshold, s.state_type, s.state, s.last_state_update)))
                 svc_f = s
                 break
         assert svc_f is not None
 
         assert "x" == svc_f.freshness_state
-        assert 1200 == svc_f.freshness_threshold
+        assert 60 == svc_f.freshness_threshold
         # Check attempts
         assert 0 == svc_f.attempt
         assert count == svc_f.max_check_attempts
@@ -621,14 +626,14 @@ class TestPassiveChecks(AlignakTest):
                     if not self._scheduler.hosts[s.host].freshness_expired and
                     s.check_freshness and not s.freshness_expired and
                     s.passive_checks_enabled and not s.active_checks_enabled]
-        print("Freshness expired services: %d" % len(services))
+        print(("Freshness expired services: %d" % len(services)))
         # Some potential services to check for freshness
         services_count = len(services)
 
         assert 0 == self.manage_freshness_check(1)
-        print("Service %s: state: %s/%s, last state update: %s, attempt: %d / %d"
+        print(("Service %s: state: %s/%s, last state update: %s, attempt: %d / %d"
               % (svc_description, svc_f.state_type, svc_f.state, svc_f.last_state_update,
-                 svc_f.attempt, svc_f.max_check_attempts))
+                 svc_f.attempt, svc_f.max_check_attempts)))
         # We are still ok...
         assert "OK" == svc_f.state
         assert "HARD" == svc_f.state_type
@@ -638,9 +643,9 @@ class TestPassiveChecks(AlignakTest):
 
         for idx in range(1, count):
             assert 1 == self.manage_freshness_check()
-            print("Attempt %d: state: %s/%s, last state update: %s, attempt: %d / %d"
+            print(("Attempt %d: state: %s/%s, last state update: %s, attempt: %d / %d"
                   % (idx, svc_f.state_type, svc_f.state, svc_f.last_state_update,
-                     svc_f.attempt, svc_f.max_check_attempts))
+                     svc_f.attempt, svc_f.max_check_attempts)))
             assert "UNREACHABLE" == svc_f.state
             assert "SOFT" == svc_f.state_type
             assert False == svc_f.freshness_expired
@@ -652,9 +657,9 @@ class TestPassiveChecks(AlignakTest):
 
         # Last check loop must raise a freshness expired and max attempts is reached !
         assert 1 == self.manage_freshness_check()
-        print("Last attempt: state: %s/%s, last state update: %s, attempt: %d / %d"
+        print(("Last attempt: state: %s/%s, last state update: %s, attempt: %d / %d"
               % (svc_f.state_type, svc_f.state, svc_f.last_state_update,
-                 svc_f.attempt, svc_f.max_check_attempts))
+                 svc_f.attempt, svc_f.max_check_attempts)))
         assert "UNREACHABLE" == svc_f.state
         assert "HARD" == svc_f.state_type
         assert True == svc_f.is_max_attempts()
@@ -681,7 +686,7 @@ class TestPassiveChecks(AlignakTest):
                     if not self._scheduler.hosts[s.host].freshness_expired and
                     s.check_freshness and not s.freshness_expired and
                     s.passive_checks_enabled and not s.active_checks_enabled]
-        print("Freshness expired services: %d" % len(services))
+        print(("Freshness expired services: %d" % len(services)))
         # One less service to check now !
         assert len(services) == services_count - 1
 

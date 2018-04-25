@@ -48,7 +48,7 @@
 #
 
 import time
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestBusinesscorrelNotifications(AlignakTest):
@@ -98,10 +98,9 @@ class TestBusinesscorrelNotifications(AlignakTest):
         timeperiod = self._scheduler.timeperiods[svc_cor.notification_period]
 
         # Notification is not blocked because all is ok
-        assert False is svc_cor.notification_is_blocked_by_item(timeperiod,
-                                                                self._scheduler.hosts,
-                                                                self._scheduler.services,
-                                                                'PROBLEM')
+        assert False is svc_cor.is_blocking_notifications(timeperiod, self._scheduler.hosts,
+                                                          self._scheduler.services, 'PROBLEM',
+                                                          time.time())
 
     def test_bprule_smart_notifications_ack(self):
         """Smart notifications for BP rules"""
@@ -128,8 +127,9 @@ class TestBusinesscorrelNotifications(AlignakTest):
 
         timeperiod = self._scheduler.timeperiods[svc_cor.notification_period]
         # Notification is not blocked
-        assert False is svc_cor.notification_is_blocked_by_item(timeperiod, self._scheduler.hosts,
-                                                                self._scheduler.services, 'PROBLEM')
+        assert False is svc_cor.is_blocking_notifications(timeperiod, self._scheduler.hosts,
+                                                          self._scheduler.services, 'PROBLEM',
+                                                          time.time())
 
         now = time.time()
         cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_02;srv2;2;1;1;lausser;blablub" % (now)
@@ -140,10 +140,9 @@ class TestBusinesscorrelNotifications(AlignakTest):
         self.scheduler_loop(1, [[svc_cor, None, None]])
 
         # Notification is blocked because service is acknowledged
-        assert True is svc_cor.notification_is_blocked_by_item(timeperiod,
-                                                               self._scheduler.hosts,
-                                                               self._scheduler.services,
-                                                               'PROBLEM')
+        assert True is svc_cor.is_blocking_notifications(timeperiod, self._scheduler.hosts,
+                                                         self._scheduler.services, 'PROBLEM',
+                                                         time.time())
 
     def test_bprule_smart_notifications_svc_ack_downtime(self):
         """Smart notifications for BP rules - ack / downtime"""
@@ -169,10 +168,9 @@ class TestBusinesscorrelNotifications(AlignakTest):
                                                             self._scheduler.services)
         timeperiod = self._scheduler.timeperiods[svc_cor.notification_period]
         host = self._scheduler.hosts[svc_cor.host]
-        assert False is svc_cor.notification_is_blocked_by_item(timeperiod,
-                                                                self._scheduler.hosts,
-                                                                self._scheduler.services,
-                                                                'PROBLEM')
+        assert False is svc_cor.is_blocking_notifications(timeperiod, self._scheduler.hosts,
+                                                          self._scheduler.services, 'PROBLEM',
+                                                          time.time())
 
         duration = 600
         now = time.time()
@@ -186,10 +184,9 @@ class TestBusinesscorrelNotifications(AlignakTest):
         self.scheduler_loop(1, [[svc_cor, None, None]])
         assert svc2.scheduled_downtime_depth > 0
 
-        assert False is svc_cor.notification_is_blocked_by_item(timeperiod,
-                                                                self._scheduler.hosts,
-                                                                self._scheduler.services,
-                                                                'PROBLEM')
+        assert False is svc_cor.is_blocking_notifications(timeperiod, self._scheduler.hosts,
+                                                          self._scheduler.services, 'PROBLEM',
+                                                          time.time())
 
         # BR downtime is managed as an ack...
         svc_cor.business_rule_downtime_as_ack = True
@@ -198,10 +195,9 @@ class TestBusinesscorrelNotifications(AlignakTest):
         self.scheduler_loop(1, [[svc_cor, None, None]])
 
         # ...s notifiction is blocked
-        assert True is svc_cor.notification_is_blocked_by_item(timeperiod,
-                                                               self._scheduler.hosts,
-                                                               self._scheduler.services,
-                                                               'PROBLEM')
+        assert True is svc_cor.is_blocking_notifications(timeperiod, self._scheduler.hosts,
+                                                         self._scheduler.services, 'PROBLEM',
+                                                         time.time())
 
     def test_bprule_smart_notifications_hst_ack_downtime(self):
         svc_cor = self._scheduler.services.find_srv_by_name_and_hostname("dummy", "bp_rule_smart_notif")
@@ -227,10 +223,9 @@ class TestBusinesscorrelNotifications(AlignakTest):
                                                     self._scheduler.services)
         timeperiod = self._scheduler.timeperiods[svc_cor.notification_period]
         host = self._scheduler.hosts[svc_cor.host]
-        assert False is svc_cor.notification_is_blocked_by_item(timeperiod,
-                                                                self._scheduler.hosts,
-                                                                self._scheduler.services,
-                                                                'PROBLEM')
+        assert False is svc_cor.is_blocking_notifications(timeperiod, self._scheduler.hosts,
+                                                          self._scheduler.services, 'PROBLEM',
+                                                          time.time())
 
         duration = 600
         now = time.time()
@@ -246,10 +241,9 @@ class TestBusinesscorrelNotifications(AlignakTest):
 
         # Notification is blocked because the downtime also set an acknowledge
         svc_cor.business_rule_downtime_as_ack = True
-        assert True is svc_cor.notification_is_blocked_by_item(timeperiod,
-                                                               self._scheduler.hosts,
-                                                               self._scheduler.services,
-                                                               'PROBLEM')
+        assert True is svc_cor.is_blocking_notifications(timeperiod, self._scheduler.hosts,
+                                                         self._scheduler.services, 'PROBLEM',
+                                                         time.time())
 
     def test_bprule_child_notification_options(self):
         """BR child notification options"""

@@ -1,18 +1,18 @@
 {
     "version": 1,
-    "disable_existing_loggers": true,
+    "disable_existing_loggers": false,
     "formatters": {
-        "unit_tests": {
-            "format": "[%(asctime)s] %(levelname)s: [%(daemon)s.%(name)s] %(message)s"
-        ,"datefmt": "%Y-%m-%d %H:%M:%S"
-        },
         "alignak": {
-            "format": "[%(asctime)s] %(levelname)s: [%(daemon)s.%(name)s] %(message)s"
-        ,"datefmt": "%Y-%m-%d %H:%M:%S"
+            "format": "[%(asctime)s] %(levelname)s: [%(daemon)s.%(name)s] %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S"
         },
         "monitoring-log": {
-            "format": "[%(asctime)s] ML-%(levelname)s: %(message)s"
-        ,"datefmt": "%Y-%m-%d %H:%M:%S"
+            "format": "[%(asctime)s] %(levelname)s: %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S"
+        },
+        "unit_tests": {
+            "format": "[%(asctime)s] %(levelname)s: [%(daemon)s.%(name)s] %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S"
         }
     },
 
@@ -41,18 +41,16 @@
             "filename": "%(logdir)s/%(daemon)s.log",
             "when": "midnight",
             "interval": 1,
-            "backupCount": 7,
-            "encoding": "utf8"
+            "backupCount": 7
         },
         "monitoring_logs": {
             "class": "logging.handlers.TimedRotatingFileHandler",
             "level": "INFO",
             "formatter": "monitoring-log",
-            "filename": "%(logdir)s/monitoring-logs.log",
+            "filename": "%(logdir)s/monitoring-log/monitoring-logs.log",
             "when": "midnight",
             "interval": 1,
-            "backupCount": 365,
-            "encoding": "utf8"
+            "backupCount": 365
         }
     },
 

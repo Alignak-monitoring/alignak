@@ -221,7 +221,7 @@ class ComplexExpressionFactory(object):
                 # that should not be good in fact !
                 if stacked_par == 1 and tmp != '':
                     # TODO : real error
-                    print "ERROR : bad expression near", tmp
+                    print("ERROR : bad expression near", tmp)
                     continue
 
                 # If we are already in a par, add this (
@@ -234,7 +234,7 @@ class ComplexExpressionFactory(object):
 
                 if stacked_par < 0:
                     # TODO : real error
-                    print "Error : bad expression near", tmp, "too much ')'"
+                    print("Error : bad expression near", tmp, "too much ')'")
                     continue
 
                 if stacked_par == 0:
@@ -273,7 +273,7 @@ class ComplexExpressionFactory(object):
         pattern = pattern.strip()
 
         if pattern == '*':
-            obj = [h.host_name for h in self.all_elements.items.values()
+            obj = [h.host_name for h in list(self.all_elements.items.values())
                    if getattr(h, 'host_name', '') != '' and not h.is_tpl()]
             return obj, error
 
@@ -292,7 +292,7 @@ class ComplexExpressionFactory(object):
 
             # Maybe the hostgroup memebrs is '*', if so expand with all hosts
             if '*' in elts:
-                elts.extend([h.host_name for h in self.all_elements.items.values()
+                elts.extend([h.host_name for h in list(self.all_elements.items.values())
                              if getattr(h, 'host_name', '') != '' and not h.is_tpl()])
                 # And remove this strange hostname too :)
                 elts.remove('*')

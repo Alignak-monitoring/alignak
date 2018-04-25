@@ -53,7 +53,7 @@ Test Alignak modules manager
 
 import re
 import time
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 from alignak.modulesmanager import ModulesManager
 from alignak.objects.module import Module
 import pytest
@@ -65,6 +65,7 @@ class TestModules(AlignakTest):
     """
     def setUp(self):
         super(TestModules, self).setUp()
+        self.set_unit_tests_logger_level('INFO')
 
     def test_module_loading(self):
         """ Test arbiter, broker, ... detecting configured modules
@@ -107,23 +108,20 @@ class TestModules(AlignakTest):
         modules = [m.name for m in self._scheduler_daemon.modules]
         assert modules == ['Example']
 
+        self.show_logs()
+
         # Loading module logs
         self.assert_any_log_match(re.escape(
-            "Importing Python module 'alignak_module_example' for Example..."
+            u"Importing Python module 'alignak_module_example' for Example..."
         ))
         self.assert_any_log_match(re.escape(
-            "Module properties: {'daemons': ['arbiter', 'broker', 'scheduler', 'poller', "
-            "'receiver', 'reactionner'], 'phases': ['configuration', 'late_configuration', "
-            "'running', 'retention'], 'type': 'example', 'external': True}"
+            u"Imported 'alignak_module_example' for Example"
         ))
         self.assert_any_log_match(re.escape(
-            "Imported 'alignak_module_example' for Example"
+            u"Give an instance of alignak_module_example for alias: Example"
         ))
         self.assert_any_log_match(re.escape(
-            "Give an instance of alignak_module_example for alias: Example"
-        ))
-        self.assert_any_log_match(re.escape(
-            "I correctly loaded my modules: [Example]"
+            u"I correctly loaded my modules: [Example]"
         ))
 
     def test_arbiter_configuration_module(self):
@@ -288,11 +286,6 @@ class TestModules(AlignakTest):
             "Importing Python module 'alignak_module_example' for mod-example..."
         ))
         self.assert_any_log_match(re.escape(
-            "Module properties: {'daemons': ['arbiter', 'broker', 'scheduler', 'poller', "
-            "'receiver', 'reactionner'], 'phases': ['configuration', 'late_configuration', "
-            "'running', 'retention'], 'type': 'example', 'external': True}"
-        ))
-        self.assert_any_log_match(re.escape(
             "Imported 'alignak_module_example' for mod-example"
         ))
         self.assert_any_log_match(re.escape(
@@ -430,21 +423,18 @@ class TestModules(AlignakTest):
         self._broker_daemon.sync_manager = None
         # Create the modules manager for a daemon type
         self.modules_manager = ModulesManager(self._broker_daemon)
-        print("Modules: %s" % self._broker_daemon.modules)
+        print(("Modules: %s" % self._broker_daemon.modules))
 
         # Load an initialize the modules:
         #  - load python module
         #  - get module properties and instances
         assert self.modules_manager.load_and_init([mod, mod2])
-        print("I correctly loaded my modules: [%s]" % ','.join([inst.name for inst in
-                                                                self.modules_manager.instances]))
+        print(("I correctly loaded my modules: [%s]" % ','.join([inst.name for inst in
+                                                                self.modules_manager.instances])))
         self.show_logs()
 
         self.assert_any_log_match(re.escape(
             "Importing Python module 'alignak_module_example' for mod-example..."
-        ))
-        self.assert_any_log_match(re.escape(
-            "Module properties: {'daemons': ['arbiter', 'broker', 'scheduler', 'poller', 'receiver', 'reactionner'], 'phases': ['configuration', 'late_configuration', 'running', 'retention'], 'type': 'example', 'external': True}"
         ))
         self.assert_any_log_match(re.escape(
             "Imported 'alignak_module_example' for mod-example"
@@ -454,9 +444,6 @@ class TestModules(AlignakTest):
         ))
         self.assert_any_log_match(re.escape(
             "Importing Python module 'alignak_module_example' for mod-example-2..."
-        ))
-        self.assert_any_log_match(re.escape(
-            "Module properties: {'daemons': ['arbiter', 'broker', 'scheduler', 'poller', 'receiver', 'reactionner'], 'phases': ['configuration', 'late_configuration', 'running', 'retention'], 'type': 'example', 'external': True}"
         ))
         self.assert_any_log_match(re.escape(
             "Imported 'alignak_module_example' for mod-example-2"

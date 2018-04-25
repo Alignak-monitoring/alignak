@@ -23,7 +23,7 @@ This file test the acknowledge and downtime broks
 """
 
 import time
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 from alignak.misc.serialization import unserialize
 
 
@@ -66,8 +66,8 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_ack_raise = []
         brok_ack_expire = []
-        for brok in self._main_broker.broks.values():
-            print("Brok: %s" % brok)
+        for brok in list(self._main_broker.broks.values()):
+            print(("Brok: %s" % brok))
             if brok.type == 'acknowledge_raise':
                 brok_ack_raise.append(brok)
             elif brok.type == 'acknowledge_expire':
@@ -86,7 +86,7 @@ class TestBrokAckDowntime(AlignakTest):
         self.scheduler_loop(2, [[host, 0, 'UP'], [svc, 0, 'OK']])
         brok_ack_raise = []
         brok_ack_expire = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'acknowledge_raise':
                 brok_ack_raise.append(brok)
             elif brok.type == 'acknowledge_expire':
@@ -117,8 +117,8 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_ack_raise = []
         brok_ack_expire = []
-        for brok in self._main_broker.broks.values():
-            print("Brok: %s" % brok)
+        for brok in list(self._main_broker.broks.values()):
+            print(("Brok: %s" % brok))
             if brok.type == 'acknowledge_raise':
                 brok_ack_raise.append(brok)
             elif brok.type == 'acknowledge_expire':
@@ -164,10 +164,10 @@ class TestBrokAckDowntime(AlignakTest):
         self.scheduler_loop(3, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
 
         brok_ack = []
-        for brok in self._main_broker.broks.values():
-            print("Brok: %s" % brok)
+        for brok in list(self._main_broker.broks.values()):
+            print(("Brok: %s" % brok))
             if brok.type == 'acknowledge_raise':
-                print("Brok: %s" % brok)
+                print(("Brok: %s" % brok))
                 brok_ack.append(brok)
 
         # Got one brok for the host ack and one brok for the service ack
@@ -198,7 +198,7 @@ class TestBrokAckDowntime(AlignakTest):
         self.scheduler_loop(2, [[host, 0, 'UP'], [svc, 0, 'OK']])
         brok_ack_raise = []
         brok_ack_expire = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'acknowledge_raise':
                 brok_ack_raise.append(brok)
             elif brok.type == 'acknowledge_expire':
@@ -245,8 +245,8 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_ack_raise = []
         brok_ack_expire = []
-        for brok in self._main_broker.broks.values():
-            print("Brok: %s" % brok)
+        for brok in list(self._main_broker.broks.values()):
+            print(("Brok: %s" % brok))
             if brok.type == 'acknowledge_raise':
                 brok_ack_raise.append(brok)
             elif brok.type == 'acknowledge_expire':
@@ -296,7 +296,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -317,7 +317,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -368,7 +368,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -388,7 +388,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -437,7 +437,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -450,7 +450,7 @@ class TestBrokAckDowntime(AlignakTest):
         self._main_broker.broks = {}
         self.scheduler_loop(3, [[host, 0, 'UP'], [svc, 2, 'CRITICAL']])
 
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -489,7 +489,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -507,7 +507,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -546,7 +546,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -564,7 +564,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':

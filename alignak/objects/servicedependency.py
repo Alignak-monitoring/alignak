@@ -59,7 +59,7 @@ from alignak.property import BoolProp, StringProp, ListProp
 
 from .item import Item, Items
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Servicedependency(Item):
@@ -81,17 +81,28 @@ class Servicedependency(Item):
 
     properties = Item.properties.copy()
     properties.update({
-        'dependent_host_name':           StringProp(),
-        'dependent_hostgroup_name':      StringProp(default=''),
-        'dependent_service_description': StringProp(),
-        'host_name':                     StringProp(),
-        'hostgroup_name':                StringProp(default=''),
-        'service_description':           StringProp(),
-        'inherits_parent':               BoolProp(default=False),
-        'execution_failure_criteria':    ListProp(default=['n'], split_on_coma=True),
-        'notification_failure_criteria': ListProp(default=['n'], split_on_coma=True),
-        'dependency_period':             StringProp(default=''),
-        'explode_hostgroup':             BoolProp(default=False)
+        'dependent_host_name':
+            StringProp(),
+        'dependent_hostgroup_name':
+            StringProp(default=''),
+        'dependent_service_description':
+            StringProp(),
+        'host_name':
+            StringProp(),
+        'hostgroup_name':
+            StringProp(default=''),
+        'service_description':
+            StringProp(),
+        'inherits_parent':
+            BoolProp(default=False),
+        'execution_failure_criteria':
+            ListProp(default=['n'], split_on_comma=True),
+        'notification_failure_criteria':
+            ListProp(default=['n'], split_on_comma=True),
+        'dependency_period':
+            StringProp(default=''),
+        'explode_hostgroup':
+            BoolProp(default=False)
     })
 
     def get_name(self):
@@ -155,6 +166,7 @@ class Servicedependencies(Items):
         self.add_item(servicedep)
 
     def explode_hostgroup(self, svc_dep, hostgroups):
+        # pylint: disable=too-many-locals
         """Explode a service dependency for each member of hostgroup
 
         :param svc_dep: service dependency to explode
@@ -192,6 +204,7 @@ class Servicedependencies(Items):
                         self.add_item(new_sd)
 
     def explode(self, hostgroups):
+        # pylint: disable=too-many-locals, too-many-branches
         """Explode all service dependency for each member of hostgroups
         Each member of dependent hostgroup or hostgroup in dependency have to get a copy of
         service dependencies (quite complex to parse)
@@ -206,7 +219,7 @@ class Servicedependencies(Items):
 
         # Then for every host create a copy of the service with just the host
         # because we are adding services, we can't just loop in it
-        servicedeps = self.items.keys()
+        servicedeps = list(self.items.keys())
         for s_id in servicedeps:
             servicedep = self.items[s_id]
 
@@ -216,7 +229,7 @@ class Servicedependencies(Items):
             # is defined
             if bool(getattr(servicedep, 'explode_hostgroup', 0)) or \
                     (hasattr(servicedep, 'hostgroup_name') and
-                        not hasattr(servicedep, 'dependent_hostgroup_name')):
+                     not hasattr(servicedep, 'dependent_hostgroup_name')):
                 self.explode_hostgroup(servicedep, hostgroups)
                 srvdep_to_remove.append(s_id)
                 continue
@@ -380,7 +393,7 @@ class Servicedependencies(Items):
                     servicedep.dependency_period = timeperiod.uuid
                 else:
                     servicedep.dependency_period = ''
-            except AttributeError, exp:
+            except AttributeError as exp:
                 logger.error("[servicedependency] fail to linkify by timeperiods: %s", exp)
 
     def linkify_s_by_sd(self, services):

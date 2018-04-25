@@ -58,7 +58,7 @@ class PollerLink(SatelliteLink):
     properties = SatelliteLink.properties.copy()
     properties.update({
         'type':
-            StringProp(default='poller', fill_brok=['full_status'], to_send=True),
+            StringProp(default=u'poller', fill_brok=['full_status'], to_send=True),
         'poller_name':
             StringProp(default='', fill_brok=['full_status']),
         'port':

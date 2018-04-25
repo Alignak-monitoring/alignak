@@ -90,11 +90,11 @@ class Escalation(Item):
         'escalation_period':
             StringProp(default=''),
         'escalation_options':
-            ListProp(default=['d', 'x', 'r', 'w', 'c'], split_on_coma=True),
+            ListProp(default=['d', 'x', 'r', 'w', 'c'], split_on_comma=True),
         'contacts':
-            ListProp(default=[], split_on_coma=True),
+            ListProp(default=[], split_on_comma=True),
         'contact_groups':
-            ListProp(default=[], split_on_coma=True),
+            ListProp(default=[], split_on_comma=True),
     })
 
     running_properties = Item.running_properties.copy()
@@ -125,6 +125,7 @@ class Escalation(Item):
         return self.escalation_name
 
     def is_eligible(self, timestamp, status, notif_number, in_notif_time, interval, escal_period):
+        # pylint: disable=too-many-return-statements
         """Check if the escalation is eligible (notification is escalated or not)
 
         Escalation is NOT eligible in ONE of the following condition is fulfilled::
@@ -149,10 +150,10 @@ class Escalation(Item):
         :return: True if no condition has been fulfilled, otherwise False
         :rtype: bool
         """
-        small_states = {
-            'WARNING': 'w', 'UNKNOWN': 'u', 'CRITICAL': 'c',
-            'RECOVERY': 'r', 'FLAPPING': 'f', 'DOWNTIME': 's',
-            'DOWN': 'd', 'UNREACHABLE': 'x', 'OK': 'o', 'UP': 'o'
+        short_states = {
+            u'WARNING': 'w', u'UNKNOWN': 'u', u'CRITICAL': 'c',
+            u'RECOVERY': 'r', u'FLAPPING': 'f', u'DOWNTIME': 's',
+            u'DOWN': 'd', u'UNREACHABLE': 'x', u'OK': 'o', u'UP': 'o'
         }
 
         # If we are not time based, we check notification numbers:
@@ -176,7 +177,7 @@ class Escalation(Item):
                 return False
 
         # If our status is not good, we bail out too
-        if status in small_states and small_states[status] not in self.escalation_options:
+        if status in short_states and short_states[status] not in self.escalation_options:
             return False
 
         # Maybe the time is not in our escalation_period
@@ -201,9 +202,9 @@ class Escalation(Item):
         :return: timestamp for next notification or None
         :rtype: int | None
         """
-        small_states = {'WARNING': 'w', 'UNKNOWN': 'u', 'CRITICAL': 'c',
-                        'RECOVERY': 'r', 'FLAPPING': 'f', 'DOWNTIME': 's',
-                        'DOWN': 'd', 'UNREACHABLE': 'u', 'OK': 'o', 'UP': 'o'}
+        small_states = {u'WARNING': 'w', u'UNKNOWN': 'u', u'CRITICAL': 'c',
+                        u'RECOVERY': 'r', u'FLAPPING': 'f', u'DOWNTIME': 's',
+                        u'DOWN': 'd', u'UNREACHABLE': 'u', u'OK': 'o', u'UP': 'o'}
 
         # If we are not time based, we bail out!
         if not self.time_based:
@@ -359,8 +360,8 @@ class Escalations(Items):
         for escal in self:
             # If no host, no hope of having a service
             if (not hasattr(escal, 'host_name') or escal.host_name.strip() == '' or
-                    (hasattr(escal, 'service_description') and
-                        escal.service_description.strip() != '')):
+                    (hasattr(escal, 'service_description')
+                     and escal.service_description.strip() != '')):
                 continue
             # I must be NOT a escalation on for service
             for hname in strip_and_uniq(escal.host_name.split(',')):

@@ -60,10 +60,13 @@ len(host.services)
 import re
 import time
 import logging
+import collections
+
+from six import string_types
 
 from alignak.borg import Borg
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class MacroResolver(Borg):
@@ -188,7 +191,9 @@ class MacroResolver(Borg):
         return macros
 
     def _get_value_from_element(self, elt, prop):
-        """Get value from a element's property
+        # pylint: disable=too-many-return-statements
+        """Get value from an element's property.
+
         the property may be a function to call.
 
         If the property is not resolved (because not implemented), this function will return 'n/a'
@@ -200,27 +205,32 @@ class MacroResolver(Borg):
         :return: getattr(elt, prop) or getattr(elt, prop)() (call)
         :rtype: str
         """
+        args = None
+        # We have args to provide to the function
+        if isinstance(prop, tuple):
+            prop, args = prop
+        value = getattr(elt, prop, None)
+        if value is None:
+            return 'n/a'
+
         try:
-            args = None
-            # We have args to provide to the function
-            if isinstance(prop, tuple):
-                prop, args = prop
-            value = getattr(elt, prop)
-            if callable(value):
-                # Case where we need args to the function
-                # ex : HOSTGROUPNAME (we need hostgroups)
-                # ex : SHORTSTATUS (we need hosts and services if bp_rule)
-                if args:
-                    real_args = []
-                    for arg in args:
-                        real_args.append(getattr(self, arg, None))
-                    return unicode(value(*real_args))
+            # If the macro is not set as a function to call
+            if not isinstance(value, collections.Callable):
+                return value
 
-                return unicode(value())
+            # Case of a function call with no arguments
+            if not args:
+                return value()
 
-            return unicode(value)
+            # Case where we need args to the function
+            # ex : HOSTGROUPNAME (we need hostgroups)
+            # ex : SHORTSTATUS (we need hosts and services if bp_rule)
+            real_args = []
+            for arg in args:
+                real_args.append(getattr(self, arg, None))
+            return value(*real_args)
         except AttributeError:
-            # Todo: there is too much macros that are not resolved that this log is spamming :/
+            # Todo: there are many unresolved macros and this log is spamming :/
             # # Raise a warning and return a strange value when macro cannot be resolved
             # warnings.warn(
             #     'Error when getting the property value for a macro: %s',
@@ -228,8 +238,8 @@ class MacroResolver(Borg):
             # Return a strange value when macro cannot be resolved
             return 'n/a'
         except UnicodeError:
-            if isinstance(value, str):
-                return unicode(value, 'utf8', errors='ignore')
+            if isinstance(value, string_types):
+                return str(value, 'utf8', errors='ignore')
 
             return 'n/a'
 
@@ -242,6 +252,14 @@ class MacroResolver(Borg):
         :return: chain cleaned
         :rtype: str
         """
+        try:
+            chain = chain.decode('utf8', 'replace')
+        except UnicodeEncodeError:
+            # If it is still encoded correctly, ignore...
+            pass
+        except AttributeError:
+            # Python 3 will raise an exception because the line is still unicode
+            pass
         for char in self.illegal_macro_output_chars:
             chain = chain.replace(char, '')
         return chain
@@ -280,6 +298,7 @@ class MacroResolver(Borg):
 
     def resolve_simple_macros_in_string(self, c_line, data, macromodulations, timeperiods,
                                         args=None):
+        # pylint: disable=too-many-locals, too-many-branches, too-many-nested-blocks
         """Replace macro in the command line with the real value
 
         :param c_line: command line to modify
@@ -475,6 +494,7 @@ class MacroResolver(Borg):
         return ''
 
     def _resolve_ondemand(self, macro, data):
+        # pylint: disable=too-many-locals
         """Get on demand macro value
 
         If the macro cannot be resolved, this function will return 'n/a' rather than
@@ -627,7 +647,7 @@ class MacroResolver(Borg):
         :return: number of hosts
         :rtype: int
         """
-        return self._tot_hosts_by_state('UP')
+        return self._tot_hosts_by_state(u'UP')
 
     def _get_total_hosts_down(self):
         """
@@ -636,7 +656,7 @@ class MacroResolver(Borg):
         :return: number of hosts
         :rtype: int
         """
-        return self._tot_hosts_by_state('DOWN')
+        return self._tot_hosts_by_state(u'DOWN')
 
     def _get_total_hosts_down_unhandled(self):
         """
@@ -645,7 +665,7 @@ class MacroResolver(Borg):
         :return: Number of hosts down and not handled
         :rtype: int
         """
-        return self._tot_unhandled_hosts_by_state('DOWN')
+        return self._tot_unhandled_hosts_by_state(u'DOWN')
 
     def _get_total_hosts_unreachable(self):
         """
@@ -654,7 +674,7 @@ class MacroResolver(Borg):
         :return: number of hosts
         :rtype: int
         """
-        return self._tot_hosts_by_state('UNREACHABLE')
+        return self._tot_hosts_by_state(u'UNREACHABLE')
 
     def _get_total_hosts_unreachable_unhandled(self):
         """
@@ -663,7 +683,7 @@ class MacroResolver(Borg):
         :return: Number of hosts unreachable and not handled
         :rtype: int
         """
-        return self._tot_unhandled_hosts_by_state('UNREACHABLE')
+        return self._tot_unhandled_hosts_by_state(u'UNREACHABLE')
 
     def _get_total_host_problems(self):
         """Get the number of hosts that are a problem
@@ -711,7 +731,7 @@ class MacroResolver(Borg):
         :return: number of services
         :rtype: int
         """
-        return self._tot_services_by_state('OK')
+        return self._tot_services_by_state(u'OK')
 
     def _get_total_services_warning(self):
         """
@@ -720,7 +740,7 @@ class MacroResolver(Borg):
         :return: number of services
         :rtype: int
         """
-        return self._tot_services_by_state('WARNING')
+        return self._tot_services_by_state(u'WARNING')
 
     def _get_total_services_critical(self):
         """
@@ -729,7 +749,7 @@ class MacroResolver(Borg):
         :return: number of services
         :rtype: int
         """
-        return self._tot_services_by_state('CRITICAL')
+        return self._tot_services_by_state(u'CRITICAL')
 
     def _get_total_services_unknown(self):
         """
@@ -738,7 +758,7 @@ class MacroResolver(Borg):
         :return: number of services
         :rtype: int
         """
-        return self._tot_services_by_state('UNKNOWN')
+        return self._tot_services_by_state(u'UNKNOWN')
 
     def _get_total_services_warning_unhandled(self):
         """
@@ -747,7 +767,7 @@ class MacroResolver(Borg):
         :return: Number of services warning and not handled
         :rtype: int
         """
-        return self._tot_unhandled_services_by_state('WARNING')
+        return self._tot_unhandled_services_by_state(u'WARNING')
 
     def _get_total_services_critical_unhandled(self):
         """
@@ -756,7 +776,7 @@ class MacroResolver(Borg):
         :return: Number of services critical and not handled
         :rtype: int
         """
-        return self._tot_unhandled_services_by_state('CRITICAL')
+        return self._tot_unhandled_services_by_state(u'CRITICAL')
 
     def _get_total_services_unknown_unhandled(self):
         """
@@ -765,7 +785,7 @@ class MacroResolver(Borg):
         :return: Number of services unknown and not handled
         :rtype: int
         """
-        return self._tot_unhandled_services_by_state('UNKNOWN')
+        return self._tot_unhandled_services_by_state(u'UNKNOWN')
 
     def _get_total_service_problems(self):
         """Get the number of services that are a problem

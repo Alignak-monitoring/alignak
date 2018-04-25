@@ -49,7 +49,7 @@
 # This file is used to test reading and processing of config files
 #
 
-from alignak_test import *
+from .alignak_test import *
 from alignak.macroresolver import MacroResolver
 from alignak.commandcall import CommandCall
 
@@ -376,20 +376,31 @@ class MacroResolverTester(object):
         mr = self.get_mr()
         (svc, hst) = self.get_hst_svc()
         data = [hst, svc]
+
         hst.state = 'UP'
-        hst.output = u'Père Noël'
+        hst.output = u"На берегу пустынных волн"
+        dummy_call = "special_macro!$HOSTOUTPUT$"
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        com = mr.resolve_command(cc, data, self._scheduler.macromodulations, self._scheduler.timeperiods)
+        # Output is correctly restitued
+        assert u'plugins/nothing На берегу пустынных волн' == com
+
+
+        hst.state = 'UP'
+        hst.output = 'Père Noël'
         dummy_call = "special_macro!$HOSTOUTPUT$"
         cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._scheduler.macromodulations, self._scheduler.timeperiods)
         # Output is correctly restitued
         assert u'plugins/nothing Père Noël' == com
 
+        hst.state = 'UP'
         hst.output = 'Père Noël'
         dummy_call = "special_macro!$HOSTOUTPUT$"
         cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._scheduler.macromodulations, self._scheduler.timeperiods)
         # Output is correctly restitued
-        assert u'plugins/nothing P\xe8re No\xebl' == com
+        assert u'plugins/nothing Père Noël' == com
 
     def test_illegal_macro_output_chars(self):
         """ Check output macros are cleaned from illegal macro characters
@@ -402,7 +413,7 @@ class MacroResolverTester(object):
         data = [hst, svc]
         illegal_macro_output_chars = \
             self._scheduler.pushed_conf.illegal_macro_output_chars
-        print "Illegal macros caracters:", illegal_macro_output_chars
+        print("Illegal macros caracters:", illegal_macro_output_chars)
         hst.output = 'fake output'
         dummy_call = "special_macro!$HOSTOUTPUT$"
 
@@ -410,7 +421,7 @@ class MacroResolverTester(object):
             hst.output = 'fake output' + c
             cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
             com = mr.resolve_command(cc, data, self._scheduler.macromodulations, self._scheduler.timeperiods)
-            print com
+            print(com)
             assert 'plugins/nothing fake output' == com
 
     def test_env_macros(self):
@@ -422,7 +433,7 @@ class MacroResolverTester(object):
         env = mr.get_env_macros(data)
         assert env != {}
         assert 'test_host_0' == env['NAGIOS_HOSTNAME']
-        assert '0.0' == env['NAGIOS_SERVICEPERCENTCHANGE']
+        assert 0.0 == env['NAGIOS_SERVICEPERCENTCHANGE']
         assert 'custvalue' == env['NAGIOS__SERVICECUSTNAME']
         assert 'gnulinux' == env['NAGIOS__HOSTOSTYPE']
         assert 'NAGIOS_USER1' not in env
@@ -717,7 +728,7 @@ class MacroResolverTester(object):
         assert '_CUSTOM2' in hst.customs
         # Force declare an integer customs variable
         hst.customs['_CUSTOM3'] = 10
-        print(hst.customs)
+        print((hst.customs))
         data = [hst]
 
         # Parse custom macro to get host custom variables based upon a fixed value
@@ -739,7 +750,7 @@ class MacroResolverTester(object):
         dummy_call = "special_macro!$_HOSTCUSTOM3$"
         cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
         com = mr.resolve_command(cc, data, self._scheduler.macromodulations, self._scheduler.timeperiods)
-        print("Command: %s" % com)
+        print(("Command: %s" % com))
         assert 'plugins/nothing 10' == com
 
     def test_service_custom_macros(self):

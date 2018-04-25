@@ -3,12 +3,12 @@
     "disable_existing_loggers": false,
     "formatters": {
         "alignak": {
-            "format": "[%(asctime)s] %(levelname)s: [%(daemon)s.%(name)s] %(message)s"
-        ,"datefmt": "%Y-%m-%d %H:%M:%S"
+            "format": "[%(asctime)s] %(levelname)s: [%(daemon)s.%(name)s] %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S"
         },
         "monitoring-log": {
-            "format": "[%(asctime)s] %(levelname)s: %(message)s"
-        ,"datefmt": "%Y-%m-%d %H:%M:%S"
+            "format": "[%(asctime)s] %(levelname)s: %(message)s",
+            "datefmt": "%Y-%m-%d %H:%M:%S"
         }
     },
 
@@ -37,8 +37,7 @@
             "filename": "%(logdir)s/%(daemon)s.log",
             "when": "midnight",
             "interval": 1,
-            "backupCount": 7,
-            "encoding": "utf8"
+            "backupCount": 7
         },
         "monitoring_logs": {
             "class": "logging.handlers.TimedRotatingFileHandler",
@@ -47,15 +46,14 @@
             "filename": "%(logdir)s/monitoring-log/monitoring-logs.log",
             "when": "midnight",
             "interval": 1,
-            "backupCount": 365,
-            "encoding": "utf8"
+            "backupCount": 365
         }
     },
 
     "loggers": {
         "alignak": {
             "level": "INFO",
-            "handlers": ["unit_tests", "color_console", "daemons"],
+            "handlers": ["color_console", "daemons"],
             "propagate": "no"
         },
         "monitoring-log": {

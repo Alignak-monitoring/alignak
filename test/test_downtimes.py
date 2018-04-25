@@ -53,7 +53,7 @@ import time
 from alignak.misc.serialization import unserialize
 from alignak.downtime import Downtime
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 class TestDowntime(AlignakTest):
     """
@@ -107,8 +107,7 @@ class TestDowntime(AlignakTest):
             'is_in_effect': False,
             'activate_me': [],
 
-            # Not defined but it would be better if it was
-            # 'comment_id': '',
+            'comment_id': '',
 
             'entry_time': downtime.entry_time,
             'real_end_time': downtime.end_time,
@@ -156,7 +155,7 @@ class TestDowntime(AlignakTest):
         self.external_command_loop()
         # A downtime exist for the service
         assert len(svc.downtimes) == 1
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
         assert downtime.comment == "downtime comment"
         assert downtime.author == "downtime author"
         assert downtime.start_time == now
@@ -198,7 +197,7 @@ class TestDowntime(AlignakTest):
         assert 1 == len(svc.downtimes)
         # The service is currently in a downtime period
         assert svc.in_scheduled_downtime
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
 
         assert downtime.fixed
         assert downtime.is_in_effect
@@ -217,7 +216,7 @@ class TestDowntime(AlignakTest):
         assert 1 == len(svc.downtimes)
         # The service is still in a downtime period
         assert svc.in_scheduled_downtime
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
         assert downtime.fixed
         assert downtime.is_in_effect
         assert not downtime.can_be_deleted
@@ -244,7 +243,7 @@ class TestDowntime(AlignakTest):
         assert 1 == len(svc.downtimes)
         # The service is still in a downtime period
         assert svc.in_scheduled_downtime
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
         assert downtime.fixed
         assert downtime.is_in_effect
         assert not downtime.can_be_deleted
@@ -308,35 +307,35 @@ class TestDowntime(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._main_broker.broks.itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(iter(self._main_broker.broks.values()), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
 
-        print("Monitoring logs: %s" % monitoring_logs)
+        print(("Monitoring logs: %s" % monitoring_logs))
         expected_logs = [
-            (u'info', u'EXTERNAL COMMAND: [%s] SCHEDULE_SVC_DOWNTIME;test_host_0;'
-                      u'test_ok_0;%s;%s;1;0;%s;downtime author;downtime comment' % (
+            ('info', 'EXTERNAL COMMAND: [%s] SCHEDULE_SVC_DOWNTIME;test_host_0;'
+                      'test_ok_0;%s;%s;1;0;%s;downtime author;downtime comment' % (
                 now, now, now + duration, duration)),
-            (u'info', u'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STARTED; '
-                      u'Service has entered a period of scheduled downtime'),
-            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      u'DOWNTIMESTART (OK);notify-service;OK'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;CRITICAL'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;BAD'),
-            (u'info', u'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STOPPED; '
-                      u'Service has exited from a period of scheduled downtime'),
-            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      u'DOWNTIMEEND (CRITICAL);notify-service;BAD'),
-            (u'error', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                       u'CRITICAL;notify-service;BAD'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;OK'),
-            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;'
-                      u'notify-service;OK'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;BAD'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;BAD'),
-            (u'error', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                       u'CRITICAL;notify-service;BAD')
+            ('info', 'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STARTED; '
+                      'Service has entered a period of scheduled downtime'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      'DOWNTIMESTART (OK);notify-service;OK'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;CRITICAL'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;BAD'),
+            ('info', 'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STOPPED; '
+                      'Service has exited from a period of scheduled downtime'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      'DOWNTIMEEND (CRITICAL);notify-service;BAD'),
+            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                       'CRITICAL;notify-service;BAD'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;OK'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;'
+                      'notify-service;OK'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;BAD'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;BAD'),
+            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                       'CRITICAL;notify-service;BAD')
         ]
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_logs
@@ -373,7 +372,7 @@ class TestDowntime(AlignakTest):
         self.external_command_loop()
         # A downtime exist for the service
         assert len(svc.downtimes) == 1
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
         assert downtime.comment == "downtime comment"
         assert downtime.author == "downtime author"
         assert downtime.start_time == now
@@ -406,7 +405,7 @@ class TestDowntime(AlignakTest):
         assert "OK" == svc.state
         assert 1 == len(svc.downtimes)
         assert not svc.in_scheduled_downtime
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
         assert not downtime.fixed
         assert not downtime.is_in_effect
         assert not downtime.can_be_deleted
@@ -424,7 +423,7 @@ class TestDowntime(AlignakTest):
         assert "SOFT" == svc.state_type
         assert "CRITICAL" == svc.state
         assert 1 == len(svc.downtimes)
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
         assert not svc.in_scheduled_downtime
         assert not downtime.fixed
         assert not downtime.is_in_effect
@@ -444,7 +443,7 @@ class TestDowntime(AlignakTest):
         assert "CRITICAL" == svc.state
         time.sleep(1)
         assert 1 == len(svc.downtimes)
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
         assert svc.in_scheduled_downtime
         assert not downtime.fixed
         assert downtime.is_in_effect
@@ -509,31 +508,31 @@ class TestDowntime(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._main_broker.broks.itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(iter(self._main_broker.broks.values()), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
 
-        print("Monitoring logs: %s" % monitoring_logs)
+        print(("Monitoring logs: %s" % monitoring_logs))
         expected_logs = [
-            (u'info', u'EXTERNAL COMMAND: [%s] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;'
-                      u'%s;%s;0;0;%s;downtime author;downtime comment' % (
+            ('info', 'EXTERNAL COMMAND: [%s] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;'
+                      '%s;%s;0;0;%s;downtime author;downtime comment' % (
                 now, now, now + 3600, duration)),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;BAD'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;BAD'),
-            (u'info', u'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STARTED; '
-                      u'Service has entered a period of scheduled downtime'),
-            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      u'DOWNTIMESTART (CRITICAL);notify-service;BAD'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;OK'),
-            (u'info', u'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STOPPED; '
-                      u'Service has exited from a period of scheduled downtime'),
-            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      u'DOWNTIMEEND (OK);notify-service;OK'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;BAD'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;BAD'),
-            (u'error', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                       u'CRITICAL;notify-service;BAD')
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;BAD'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;BAD'),
+            ('info', 'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STARTED; '
+                      'Service has entered a period of scheduled downtime'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      'DOWNTIMESTART (CRITICAL);notify-service;BAD'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;OK'),
+            ('info', 'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STOPPED; '
+                      'Service has exited from a period of scheduled downtime'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      'DOWNTIMEEND (OK);notify-service;OK'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;BAD'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;BAD'),
+            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                       'CRITICAL;notify-service;BAD')
         ]
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_logs
@@ -570,7 +569,7 @@ class TestDowntime(AlignakTest):
         self.external_command_loop()
         # A downtime exist for the host
         assert len(host.downtimes) == 1
-        downtime = host.downtimes.values()[0]
+        downtime = list(host.downtimes.values())[0]
         assert downtime.comment == "downtime comment"
         assert downtime.author == "downtime author"
         assert downtime.start_time == now
@@ -610,7 +609,7 @@ class TestDowntime(AlignakTest):
 
         # The downtime still exist in our host
         assert 1 == len(host.downtimes)
-        downtime = host.downtimes.values()[0]
+        downtime = list(host.downtimes.values())[0]
         # The host is currently in a downtime period
         assert host.in_scheduled_downtime
         assert downtime.fixed
@@ -628,7 +627,7 @@ class TestDowntime(AlignakTest):
         self.assert_actions_count(1)
 
         assert 1 == len(host.downtimes)
-        downtime = host.downtimes.values()[0]
+        downtime = list(host.downtimes.values())[0]
         # The host is still in a downtime period
         assert host.in_scheduled_downtime
         assert downtime.fixed
@@ -654,7 +653,7 @@ class TestDowntime(AlignakTest):
         self.assert_actions_match(1, 'scheduled', 'status')
 
         assert 1 == len(host.downtimes)
-        downtime = host.downtimes.values()[0]
+        downtime = list(host.downtimes.values())[0]
         # The service is still in a downtime period
         assert host.in_scheduled_downtime
         assert downtime.fixed
@@ -719,34 +718,34 @@ class TestDowntime(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._main_broker.broks.values(), key=lambda x: x.creation_time):
+        for brok in sorted(list(self._main_broker.broks.values()), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
 
-        print("Monitoring logs: %s" % monitoring_logs)
+        print(("Monitoring logs: %s" % monitoring_logs))
         expected_logs = [
-            (u'info', u'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;;%s;'
-                      u'downtime author;downtime comment' % (
+            ('info', 'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;;%s;'
+                      'downtime author;downtime comment' % (
                 now, now, now + duration, duration)),
-            (u'info', u'HOST DOWNTIME ALERT: test_host_0;STARTED; '
-                      u'Host has entered a period of scheduled downtime'),
-            (u'info', u'HOST NOTIFICATION: test_contact;test_host_0;'
-                      u'DOWNTIMESTART (UP);notify-host;UP'),
-            (u'error', u'HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN'),
-            (u'error', u'HOST ALERT: test_host_0;DOWN;SOFT;2;DOWN'),
-            (u'error', u'HOST ALERT: test_host_0;DOWN;HARD;3;DOWN'),
-            (u'info', u'HOST DOWNTIME ALERT: test_host_0;STOPPED; '
-                      u'Host has exited from a period of scheduled downtime'),
-            (u'info', u'HOST NOTIFICATION: test_contact;test_host_0;'
-                      u'DOWNTIMEEND (DOWN);notify-host;DOWN'),
-            (u'error', u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;DOWN'),
-            (u'info', u'HOST ALERT: test_host_0;UP;HARD;3;UP'),
-            (u'info', u'HOST NOTIFICATION: test_contact;test_host_0;UP;notify-host;UP'),
-            (u'error', u'HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN'),
-            (u'error', u'HOST ALERT: test_host_0;DOWN;SOFT;2;DOWN'),
-            (u'error', u'HOST ALERT: test_host_0;DOWN;HARD;3;DOWN'),
-            (u'error', u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;DOWN')
+            ('info', 'HOST DOWNTIME ALERT: test_host_0;STARTED; '
+                      'Host has entered a period of scheduled downtime'),
+            ('info', 'HOST NOTIFICATION: test_contact;test_host_0;'
+                      'DOWNTIMESTART (UP);notify-host;UP'),
+            ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN'),
+            ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;2;DOWN'),
+            ('error', 'HOST ALERT: test_host_0;DOWN;HARD;3;DOWN'),
+            ('info', 'HOST DOWNTIME ALERT: test_host_0;STOPPED; '
+                      'Host has exited from a period of scheduled downtime'),
+            ('info', 'HOST NOTIFICATION: test_contact;test_host_0;'
+                      'DOWNTIMEEND (DOWN);notify-host;DOWN'),
+            ('error', 'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;DOWN'),
+            ('info', 'HOST ALERT: test_host_0;UP;HARD;3;UP'),
+            ('info', 'HOST NOTIFICATION: test_contact;test_host_0;UP;notify-host;UP'),
+            ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN'),
+            ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;2;DOWN'),
+            ('error', 'HOST ALERT: test_host_0;DOWN;HARD;3;DOWN'),
+            ('error', 'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;DOWN')
         ]
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_logs
@@ -794,7 +793,7 @@ class TestDowntime(AlignakTest):
         self.external_command_loop()
         # A downtime exist for the host
         assert len(host.downtimes) == 1
-        downtime = host.downtimes.values()[0]
+        downtime = list(host.downtimes.values())[0]
         assert downtime.comment == "downtime comment"
         assert downtime.author == "downtime author"
         assert downtime.start_time == now
@@ -901,26 +900,26 @@ class TestDowntime(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._main_broker.broks.itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(iter(self._main_broker.broks.values()), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
 
-        print("Monitoring logs: %s" % monitoring_logs)
+        print(("Monitoring logs: %s" % monitoring_logs))
         expected_logs = [
-            (u'info', u'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;'
-                      u'%s;%s;1;;%s;downtime author;downtime comment' % (
+            ('info', 'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;'
+                      '%s;%s;1;;%s;downtime author;downtime comment' % (
                 now, now, now + duration, duration)),
-            (u'info', u'HOST DOWNTIME ALERT: test_host_0;STARTED; '
-                      u'Host has entered a period of scheduled downtime'),
-            (u'info', u'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (UP);notify-host;UP'),
-            (u'error', u'HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN'),
-            (u'error', u'HOST ALERT: test_host_0;DOWN;SOFT;2;DOWN'),
-            (u'error', u'HOST ALERT: test_host_0;DOWN;HARD;3;DOWN'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;CRITICAL'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;CRITICAL'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;OK'),
-            (u'info', u'HOST ALERT: test_host_0;UP;HARD;3;UP')
+            ('info', 'HOST DOWNTIME ALERT: test_host_0;STARTED; '
+                      'Host has entered a period of scheduled downtime'),
+            ('info', 'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (UP);notify-host;UP'),
+            ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN'),
+            ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;2;DOWN'),
+            ('error', 'HOST ALERT: test_host_0;DOWN;HARD;3;DOWN'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;CRITICAL'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;CRITICAL'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;OK'),
+            ('info', 'HOST ALERT: test_host_0;UP;HARD;3;UP')
         ]
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_logs

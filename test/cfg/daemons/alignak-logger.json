@@ -32,8 +32,7 @@
             "filename": "%(logdir)s/%(daemon)s.log",
             "when": "midnight",
             "interval": 1,
-            "backupCount": 7,
-            "encoding": "utf8"
+            "backupCount": 7
         },
         "monitoring_logs": {
             "class": "logging.handlers.TimedRotatingFileHandler",
@@ -42,8 +41,7 @@
             "filename": "%(logdir)s/monitoring-logs.log",
             "when": "midnight",
             "interval": 1,
-            "backupCount": 365,
-            "encoding": "utf8"
+            "backupCount": 365
         }
     },
 

@@ -76,7 +76,7 @@ import random
 import tempfile
 import uuid
 import logging
-from StringIO import StringIO
+from io import StringIO
 import json
 
 from alignak.misc.serialization import serialize
@@ -108,7 +108,7 @@ from alignak.objects.hostextinfo import HostExtInfo, HostsExtInfo
 from alignak.objects.serviceextinfo import ServiceExtInfo, ServicesExtInfo
 # from alignak.objects.trigger import Trigger, Triggers
 # from alignak.objects.pack import Packs
-from alignak.util import split_semicolon, sort_by_number_values
+from alignak.util import split_semicolon
 from alignak.objects.arbiterlink import ArbiterLink, ArbiterLinks
 from alignak.objects.schedulerlink import SchedulerLink, SchedulerLinks
 from alignak.objects.reactionnerlink import ReactionnerLink, ReactionnerLinks
@@ -121,13 +121,13 @@ from alignak.property import (UnusedProp, BoolProp, IntegerProp, CharProp,
 from alignak.util import jsonify_r
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
-NO_LONGER_USED = ('This parameter is not longer take from the main file, but must be defined '
+NO_LONGER_USED = (u'This parameter is not longer take from the main file, but must be defined '
                   'in the status_dat broker module instead. But Alignak will create you one '
                   'if there are no present and use this parameter in it, so no worry.')
-NOT_INTERESTING = 'We do not think such an option is interesting to manage.'
-NOT_MANAGED = ('This Nagios legacy parameter is not managed by Alignak. Ignoring...')
+NOT_INTERESTING = u'We do not think such an option is interesting to manage.'
+NOT_MANAGED = (u'This Nagios legacy parameter is not managed by Alignak. Ignoring...')
 
 
 class Config(Item):  # pylint: disable=R0904,R0902
@@ -167,13 +167,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # Alignak instance name is set as the arbiter name
         # if it is not defined in the configuration file
         'alignak_name':
-            StringProp(default=''),
+            StringProp(default=u''),
 
         # Configuration identification - instance id and name
         'instance_id':
-            StringProp(default=''),
+            StringProp(default=u''),
         'config_name':
-            StringProp(default='Main configuration'),
+            StringProp(default=u'Main configuration'),
 
         'program_start':
             IntegerProp(default=0, fill_brok=['program_status']),
@@ -220,14 +220,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Used for the MAINCONFIGFILE macro
         'main_config_file':
-            StringProp(default='/usr/local/etc/alignak/alignak.ini'),
+            StringProp(default=u'/usr/local/etc/alignak/alignak.ini'),
 
         'config_base_dir':
-            StringProp(default=''),  # will be set when we will load a file
+            StringProp(default=u''),  # will be set when we will load a file
 
-        # Triggers directory
-        'triggers_dir':
-            UnusedProp(text=NOT_MANAGED),
+        # # Triggers directory
+        # 'triggers_dir':
+        #     UnusedProp(text=NOT_MANAGED),
 
         # Packs directory
         'packs_dir':
@@ -301,15 +301,15 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'check_external_commands':
             BoolProp(default=True),
         'command_check_interval':
-            UnusedProp(text='another value than look always the file is useless, so we fix it.'),
+            UnusedProp(text=u'another value than look always the file is useless, so we fix it.'),
         'command_file':
-            StringProp(default=''),
+            StringProp(default=u''),
         'external_command_buffer_slots':
-            UnusedProp(text='We do not limit the external command slot.'),
+            UnusedProp(text=u'We do not limit the external command slot.'),
 
         # Application updates checks
         'check_for_updates':
-            UnusedProp(text='network administrators will never allow such communication between '
+            UnusedProp(text=u'network administrators will never allow such communication between '
                             'server and the external world. Use your distribution packet manager '
                             'to know if updates are available or go to the '
                             'http://www.github.com/Alignak-monitoring/alignak website instead.'),
@@ -319,11 +319,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Inner status.dat self created module parameters
         'retain_state_information':
-            UnusedProp(text='sorry, retain state information will not be implemented '
+            UnusedProp(text=u'sorry, retain state information will not be implemented '
                             'because it is useless.'),
 
         'state_retention_file':
-            StringProp(default=''),
+            StringProp(default=u''),
 
         'retention_update_interval':
             IntegerProp(default=60),
@@ -407,37 +407,37 @@ class Config(Item):  # pylint: disable=R0904,R0902
                        class_inherit=[(Service, 'global_event_handler')]),
 
         'sleep_time':
-            UnusedProp(text='this deprecated option is useless in the alignak way of doing.'),
+            UnusedProp(text=u'this deprecated option is useless in the alignak way of doing.'),
 
         'service_inter_check_delay_method':
-            UnusedProp(text='This option is useless in the Alignak scheduling. '
+            UnusedProp(text=u'This option is useless in the Alignak scheduling. '
                             'The only way is the smart way.'),
 
         'max_service_check_spread':
             IntegerProp(default=30, class_inherit=[(Service, 'max_check_spread')]),
 
         'service_interleave_factor':
-            UnusedProp(text='This option is useless in the Alignak scheduling '
+            UnusedProp(text=u'This option is useless in the Alignak scheduling '
                             'because it use a random distribution for initial checks.'),
 
         'max_concurrent_checks':
-            UnusedProp(text='Limiting the max concurrent checks is not helpful '
+            UnusedProp(text=u'Limiting the max concurrent checks is not helpful '
                             'to got a good running monitoring server.'),
 
         'check_result_reaper_frequency':
-            UnusedProp(text='Alignak do not use reaper process.'),
+            UnusedProp(text=u'Alignak do not use reaper process.'),
 
         'max_check_result_reaper_time':
-            UnusedProp(text='Alignak do not use reaper process.'),
+            UnusedProp(text=u'Alignak do not use reaper process.'),
 
         'check_result_path':
-            UnusedProp(text='Alignak use in memory returns, not check results on flat file.'),
+            UnusedProp(text=u'Alignak use in memory returns, not check results on flat file.'),
 
         'max_check_result_file_age':
-            UnusedProp(text='Alignak do not use flat file check resultfiles.'),
+            UnusedProp(text=u'Alignak do not use flat file check resultfiles.'),
 
         'host_inter_check_delay_method':
-            UnusedProp(text='This option is unused in the Alignak scheduling because distribution '
+            UnusedProp(text=u'This option is unused in the Alignak scheduling because distribution '
                             'of the initial check is a random one.'),
 
         'max_host_check_spread':
@@ -457,12 +457,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
             IntegerProp(managed=False, default=180),
 
         'translate_passive_host_checks':
-            UnusedProp(text='Alignak passive checks management makes this parameter unuseful.'),
-            # BoolProp(managed=False, default=True),
+            UnusedProp(text=u'Alignak passive checks management makes this parameter unuseful.'),
 
         'passive_host_checks_are_soft':
-            UnusedProp(text='Alignak passive checks management makes this parameter unuseful.'),
-            # BoolProp(managed=False, default=True),
+            UnusedProp(text=u'Alignak passive checks management makes this parameter unuseful.'),
 
         # Todo: not used anywhere in the source code
         'enable_predictive_host_dependency_checks':
@@ -483,14 +481,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
             IntegerProp(default=0, class_inherit=[(Service, 'cached_check_horizon')]),
 
         'use_large_installation_tweaks':
-            UnusedProp(text='this option is deprecated because in alignak it is just an alias '
+            UnusedProp(text=u'this option is deprecated because in alignak it is just an alias '
                             'for enable_environment_macros=False'),
 
         'free_child_process_memory':
-            UnusedProp(text='this option is automatic in Python processes'),
+            UnusedProp(text=u'this option is automatic in Python processes'),
 
         'child_processes_fork_twice':
-            UnusedProp(text='fork twice is not used.'),
+            UnusedProp(text=u'fork twice is not used.'),
 
         'enable_environment_macros':
             BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
@@ -598,14 +596,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
             BoolProp(default=True, class_inherit=[(Service, 'global_check_freshness')]),
 
         'service_freshness_check_interval':
-            IntegerProp(default=3600),
+            IntegerProp(default=60),
 
         'check_host_freshness':
             BoolProp(default=True, class_inherit=[(Host, 'global_check_freshness')]),
 
         'host_freshness_check_interval':
-            IntegerProp(default=3600, class_inherit=[(Host, 'freshness_threshold'),
-                                                     (Service, 'freshness_threshold')]),
+            IntegerProp(default=60),
 
         'additional_freshness_latency':
             IntegerProp(default=15, class_inherit=[(Host, None), (Service, None)]),
@@ -643,13 +640,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
             BoolProp(managed=False, default=None),
 
         'admin_email':
-            UnusedProp(text='sorry, not yet implemented.'),
+            UnusedProp(text=u'sorry, not yet implemented.'),
 
         'admin_pager':
-            UnusedProp(text='sorry, not yet implemented.'),
+            UnusedProp(text=u'sorry, not yet implemented.'),
 
         'event_broker_options':
-            UnusedProp(text='event broker are replaced by modules '
+            UnusedProp(text=u'event broker are replaced by modules '
                             'with a real configuration template.'),
         'broker_module':
             StringProp(default=''),
@@ -668,7 +665,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             UnusedProp(text=None),
 
         'modified_attributes':
-            IntegerProp(default=0L),
+            IntegerProp(default=0),
 
         'daemon_thread_pool_size':
             IntegerProp(default=8),
@@ -721,28 +718,27 @@ class Config(Item):  # pylint: disable=R0904,R0902
             IntegerProp(default=5),
 
         'daemons_stop_timeout':
-            IntegerProp(default=30)
+            IntegerProp(default=15)
     }
 
     macros = {
-        'PREFIX':               '',
-        'ALIGNAK':              'alignak_name',
-        'MAINCONFIGFILE':       'main_config_file',
-        'STATUSDATAFILE':       '',
-        'COMMENTDATAFILE':      '',
-        'DOWNTIMEDATAFILE':     '',
-        'RETENTIONDATAFILE':    '',
-        'OBJECTCACHEFILE':      '',
-        'TEMPFILE':             '',
-        'TEMPPATH':             '',
-        'LOGFILE':              '',
-        'RESOURCEFILE':         '',
-        'COMMANDFILE':          'command_file',
-        'HOSTPERFDATAFILE':     '',
-        'SERVICEPERFDATAFILE':  '',
-        'ADMINEMAIL':           '',
-        'ADMINPAGER':           ''
-        # 'USERn': '$USERn$' # Add at run time
+        'PREFIX': '',
+        'ALIGNAK': 'alignak_name',
+        'MAINCONFIGFILE': 'main_config_file',
+        'STATUSDATAFILE': '',
+        'COMMENTDATAFILE': '',
+        'DOWNTIMEDATAFILE': '',
+        'RETENTIONDATAFILE': '',
+        'OBJECTCACHEFILE': '',
+        'TEMPFILE': '',
+        'TEMPPATH': '',
+        'LOGFILE': '',
+        'RESOURCEFILE': '',
+        'COMMANDFILE': 'command_file',
+        'HOSTPERFDATAFILE': '',
+        'SERVICEPERFDATAFILE': '',
+        'ADMINEMAIL': '',
+        'ADMINPAGER': ''
     }
 
     # To create dict of objects from the raw objects got from files or backend
@@ -841,7 +837,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         if parsing:
             # Create a new configuration identifier
-            self.instance_id = '%s_%d' % (self.__class__.__name__, self.__class__._next_id)
+            self.instance_id = u'%s_%d' % (self.__class__.__name__, self.__class__._next_id)
             self.__class__._next_id += 1
         elif 'instance_id' not in params:
             logger.error("When not parsing a configuration, an instance_id "
@@ -859,7 +855,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 # And remove prop, to prevent from being overridden
                 del params[prop]
 
-        for _, clss, strclss, _, _ in self.types_creations.values():
+        for _, clss, strclss, _, _ in list(self.types_creations.values()):
             if strclss in params and isinstance(params[strclss], dict):
                 setattr(self, strclss, clss(params[strclss], parsing=parsing))
                 del params[strclss]
@@ -992,7 +988,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
         return res
 
     def read_config(self, files):
-        # pylint: disable=too-many-nested-blocks,too-many-statements,too-many-branches
+        # pylint: disable=too-many-nested-blocks,too-many-statements
+        # pylint: disable=too-many-branches, too-many-locals
         """Read and parse main configuration files
         (specified with -c option to the Arbiter)
         and put them into a StringIO object
@@ -1002,12 +999,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :return: a buffer containing all files
         :rtype: str
         """
-        # just a first pass to get the cfg_file and all files in a buf
-        res = StringIO()
+        # Universal newline mode (all new lines are managed internally)
+        res = StringIO(u"# Configuration files buffer", newline=None)
 
-        # Make sure the configuration files are not repeated...
         if not self.read_config_silent and files:
             logger.info("Reading the configuration files...")
+
+        # A first pass to get all the configuration files in a buffer
         for c_file in files:
             # Make sure the configuration files are not repeated...
             if os.path.abspath(c_file) in self.my_cfg_files:
@@ -1015,10 +1013,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 continue
             self.my_cfg_files.append(os.path.abspath(c_file))
 
-            # We add a \n (or \r\n) to be sure config files are separated
-            # if the previous does not finish with a line return
-            res.write(os.linesep)
-            res.write('# IMPORTEDFROM=%s' % (c_file) + os.linesep)
+            # File header
+            res.write(u"\n")
+            res.write(u"# imported_from=%s" % c_file)
+            res.write(u"\n")
+
             if not self.read_config_silent:
                 logger.info("- opening '%s' configuration file", c_file)
             try:
@@ -1026,34 +1025,40 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 file_d = open(c_file, 'rU')
                 buf = file_d.readlines()
                 file_d.close()
+
                 # Update macro used properties
                 self.config_base_dir = os.path.dirname(c_file)
                 self.main_config_file = os.path.abspath(c_file)
-            except IOError, exp:
-                self.add_error("cannot open main file '%s' for reading: %s"
-                               % (c_file, exp))
+            except IOError as exp:
+                self.add_error("cannot open main file '%s' for reading: %s" % (c_file, exp))
                 continue
 
             for line in buf:
-                line = line.decode('utf8', 'replace')
-                res.write(line)
-                if line.endswith('\n'):
-                    line = line[:-1]
+                try:
+                    line = line.decode('utf8', 'replace')
+                except AttributeError:
+                    # Python 3 will raise an exception because the line is still unicode
+                    pass
+
                 line = line.strip()
-                if re.search("^cfg_file", line) or re.search("^resource_file", line):
+                res.write(line)
+                res.write(u"\n")
+
+                if (re.search("^cfg_file", line) or re.search("^resource_file", line)) \
+                        and '=' in line:
                     elts = line.split('=', 1)
                     if os.path.isabs(elts[1]):
                         cfg_file_name = elts[1]
                     else:
                         cfg_file_name = os.path.join(self.config_base_dir, elts[1])
                     cfg_file_name = cfg_file_name.strip()
+                    cfg_file_name = os.path.abspath(cfg_file_name)
 
                     # Make sure the configuration files are not repeated...
-                    if os.path.abspath(cfg_file_name) in self.my_cfg_files:
-                        logger.warning("- ignoring repeated file: %s",
-                                       os.path.abspath(cfg_file_name))
+                    if cfg_file_name in self.my_cfg_files:
+                        logger.warning("- ignoring repeated file: %s", cfg_file_name)
                     else:
-                        self.my_cfg_files.append(os.path.abspath(cfg_file_name))
+                        self.my_cfg_files.append(cfg_file_name)
 
                         if not self.read_config_silent:
                             logger.info("  reading: %s", cfg_file_name)
@@ -1061,16 +1066,25 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         try:
                             # Read the file content to the buffer
                             file_d = open(cfg_file_name, 'rU')
-                            res.write(os.linesep + '# IMPORTEDFROM=%s' %
-                                      (cfg_file_name + os.linesep))
-                            res.write(file_d.read().decode('utf8', 'replace'))
-                            # Be sure to add a line return so we won't mix files
-                            res.write(os.linesep)
+
+                            # File header
+                            res.write(u"\n")
+                            res.write(u"# imported_from=%s" % cfg_file_name)
+                            res.write(u"\n")
+
+                            content = file_d.read()
+                            try:
+                                content = content.decode('utf8', 'replace')
+                            except AttributeError:
+                                # Python 3 will raise an exception
+                                pass
+                            res.write(content)
+                            res.write(u"\n")
                             file_d.close()
-                        except IOError, exp:
-                            self.add_error("cannot open file '%s' for reading: %s"
+                        except IOError as exp:
+                            self.add_error(u"cannot open file '%s' for reading: %s"
                                            % (cfg_file_name, exp))
-                elif re.search("^cfg_dir", line):
+                elif re.search("^cfg_dir", line) and '=' in line:
                     elts = line.split('=', 1)
                     if os.path.isabs(elts[1]):
                         cfg_dir_name = elts[1]
@@ -1078,8 +1092,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         cfg_dir_name = os.path.join(self.config_base_dir, elts[1])
                     # Ok, look if it's really a directory
                     if not os.path.isdir(cfg_dir_name):
-                        self.add_error("cannot open directory '%s' for reading" %
-                                       (cfg_dir_name))
+                        self.add_error(u"cannot open directory '%s' for reading" % cfg_dir_name)
+                        continue
 
                     # Now walk for it.
                     for root, _, walk_files in os.walk(cfg_dir_name, followlinks=True):
@@ -1090,31 +1104,41 @@ class Config(Item):  # pylint: disable=R0904,R0902
                             cfg_file_name = os.path.join(root, found_file)
                             # Make sure the configuration files are not repeated...
                             if os.path.abspath(cfg_file_name) in self.my_cfg_files:
-                                logger.warning("- ignoring repeated file: %s",
-                                               os.path.abspath(cfg_file_name))
+                                logger.warning("- ignoring repeated file: %s", cfg_file_name)
                             else:
-                                self.my_cfg_files.append(os.path.abspath(cfg_file_name))
+                                self.my_cfg_files.append(cfg_file_name)
 
                                 if not self.read_config_silent:
                                     logger.info("  reading: %s", cfg_file_name)
+
                                 try:
                                     # Read the file content to the buffer
                                     file_d = open(cfg_file_name, 'rU')
-                                    res.write(os.linesep + '# IMPORTEDFROM=%s' %
-                                              (cfg_file_name + os.linesep))
-                                    res.write(file_d.read().decode('utf8', 'replace'))
-                                    # Be sure to separate files data
-                                    res.write(os.linesep)
+
+                                    # File header
+                                    res.write(u"\n")
+                                    res.write(u"# imported_from=%s" % cfg_file_name)
+                                    res.write(u"\n")
+
+                                    content = file_d.read()
+                                    try:
+                                        content = content.decode('utf8', 'replace')
+                                    except AttributeError:
+                                        # Python 3 will raise an exception
+                                        pass
+                                    res.write(content)
+                                    res.write(u"\n")
                                     file_d.close()
-                                except IOError as exp:  # pragma: no cover, simple protection
-                                    self.add_error("cannot open file '%s' for reading: %s"
-                                                   % (os.path.join(root, c_file), exp))
+                                except IOError as exp:
+                                    self.add_error(u"cannot open file '%s' for reading: %s"
+                                                   % (cfg_file_name, exp))
 
         config = res.getvalue()
         res.close()
         return config
 
-    def read_config_buf(self, buf):  # pylint: disable=R0912
+    def read_config_buf(self, buf):
+        # pylint: disable=too-many-locals, too-many-branches
         """The config buffer (previously returned by Config.read_config())
 
         :param buf: buffer containing all data from config files
@@ -1136,6 +1160,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         """
         if not self.read_config_silent and buf:
             logger.info("Parsing the configuration files...")
+
         params = []
         objectscfg = {}
         for o_type in self.__class__.configuration_types:
@@ -1151,10 +1176,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
         line_nb = 0  # Keep the line number for the file path
         filefrom = ''
         for line in lines:
-            if line.startswith("# IMPORTEDFROM="):
+            if line.startswith("# imported_from="):
                 filefrom = line.split('=')[1]
                 line_nb = 0  # reset the line number too
+                if not self.read_config_silent:
+                    logger.debug("#####\n# file: %s", filefrom)
                 continue
+            if not self.read_config_silent:
+                logger.debug("- %d: %s", line_nb, line)
 
             line_nb += 1
             # Remove comments
@@ -1173,6 +1202,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 line = tmp_line + line
                 tmp_line = ''
                 continuation_line = False
+
             # } alone in a line means stop the object reading
             if re.search(r"^\s*}\s*$", line) is not None:
                 in_define = False
@@ -1210,14 +1240,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 else:
                     params.append(line)
 
-        # todo: this looks unuseful...
         # Maybe the type of the last element is unknown, declare it
         if tmp_type not in objectscfg:
             objectscfg[tmp_type] = []
-
         objectscfg[tmp_type].append(tmp)
         objects = {}
 
+        # Check and load the parameters
         self.load_params(params)
         # And then update our MACRO dict
         self.fill_resource_macros_names_macros()
@@ -1372,21 +1401,22 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :type prop: str
         :return: None
         """
-        if hasattr(self, prop):
-            command = getattr(self, prop).strip()
-            if command != '':
-                if hasattr(self, 'poller_tag'):
-                    data = {"commands": commands, "call": command, "poller_tag": self.poller_tag}
-                    cmdcall = CommandCall(data)
-                elif hasattr(self, 'reactionner_tag'):
-                    data = {"commands": commands, "call": command,
-                            "reactionner_tag": self.reactionner_tag}
-                    cmdcall = CommandCall(data)
-                else:
-                    cmdcall = CommandCall({"commands": commands, "call": command})
-                setattr(self, prop, cmdcall)
-            else:
-                setattr(self, prop, None)
+
+        if not hasattr(self, prop):
+            return
+
+        command = getattr(self, prop).strip()
+        if not command:
+            setattr(self, prop, None)
+            return
+
+        data = {"commands": commands, "call": command}
+        if hasattr(self, 'poller_tag'):
+            data.update({"poller_tag": self.poller_tag})
+        if hasattr(self, 'reactionner_tag'):
+            data.update({"reactionner_tag": self.reactionner_tag})
+
+        setattr(self, prop, CommandCall(data))
 
     def linkify(self):
         """ Make 'links' between elements, like a host got a services list
@@ -1495,7 +1525,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         """
         properties = self.__class__.properties
         unmanaged = []
-        for prop, entry in properties.items():
+        for prop, entry in list(properties.items()):
             if not entry.managed and hasattr(self, prop):
                 if entry.help:
                     line = "%s: %s" % (prop, entry.help)
@@ -1616,27 +1646,31 @@ class Config(Item):  # pylint: disable=R0904,R0902
         types_creations = self.__class__.types_creations
         for o_type in types_creations:
             (_, _, inner_property, _, _) = types_creations[o_type]
-            # Not yet for the daemons links
+            # Not yet for the realms and daemons links
             if inner_property in ['realms', 'arbiters', 'schedulers', 'reactionners',
                                   'pollers', 'brokers', 'receivers']:
                 continue
             logger.debug("  . for %s", inner_property,)
             inner_object = getattr(self, inner_property, None)
-            if inner_object:
-                inner_object.fill_default()
-            else:
+            if inner_object is None:
                 logger.debug("No %s to fill with default values", inner_property)
+                continue
+            inner_object.fill_default()
 
         # We have all monitored elements, we can create a default realm if none is defined
-        self.fill_default_realm()
-        self.realms.fill_default()
+        if getattr(self, 'realms', None) is not None:
+            self.fill_default_realm()
+            self.realms.fill_default()
 
-        # Then we create missing satellites, so no other satellites will be created after
-        self.fill_default_satellites()
+            # Then we create missing satellites, so no other satellites will be created after
+            self.fill_default_satellites()
 
         types_creations = self.__class__.types_creations
         for o_type in types_creations:
             (_, _, inner_property, _, _) = types_creations[o_type]
+            if getattr(self, inner_property, None) is None:
+                logger.debug("No %s to fill with default values", inner_property)
+                continue
             # Only for the daemons links
             if inner_property in ['schedulers', 'reactionners', 'pollers', 'brokers', 'receivers']:
                 logger.debug("  . for %s", inner_property,)
@@ -1667,7 +1701,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         if not self.realms:
             # Create a default realm so all hosts without realm will be link with it
             default = Realm({
-                'realm_name': 'All', 'alias': 'Self created default realm', 'default': '1'
+                'realm_name': u'All', 'alias': u'Self created default realm', 'default': '1'
             })
             self.realms = Realms([default])
             logger.warning("No realms defined, I am adding one as %s", default.get_name())
@@ -1684,10 +1718,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
                    self.brokers, self.reactionners, self.receivers]
         for daemons_list in daemons:
             if not daemons_list:
-                logger.info("- %ss: None", daemons_list.inner_class.my_type)
+                logger.debug("- %ss: None", daemons_list.inner_class.my_type)
             else:
-                logger.info("- %ss: %s", daemons_list.inner_class.my_type,
-                            ','.join([daemon.get_name() for daemon in daemons_list]))
+                logger.debug("- %ss: %s", daemons_list.inner_class.my_type,
+                             ','.join([daemon.get_name() for daemon in daemons_list]))
 
     def fill_default_satellites(self):  # pylint: disable=too-many-branches
         """If a required satellite is missing in the configuration, we create a new satellite
@@ -1697,7 +1731,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         """
 
         # Log all satellites list
-        logger.info("Alignak configured daemons list:")
+        logger.debug("Alignak configured daemons list:")
         self.log_daemons_list()
 
         # Get realms names and ids
@@ -1840,7 +1874,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     satellites_list.add_item(satellite)
 
         # Log all satellites list
-        logger.info("Alignak definitive daemons list:")
+        logger.debug("Alignak definitive daemons list:")
         self.log_daemons_list()
 
     def got_broker_module_type_defined(self, module_type):
@@ -1938,6 +1972,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 bp_item.child_dependencies.add(item.uuid)
 
     def hack_old_nagios_parameters(self):
+        # pylint: disable=too-many-branches
         """ Check if modules exist for some of the old Nagios parameters.
 
         If no module of the required type is present, it alerts the user that the parameters will
@@ -1966,7 +2001,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                       ('status_file', self.status_file,
                        'object_cache_file', self.object_cache_file)
                 logger.warning(msg)
-                self.configuration_warnings.append(msg)
+                self.add_warning(msg)
 
         # Now the log_file
         if hasattr(self, 'log_file') and self.log_file != '':
@@ -1983,7 +2018,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                       "as expected." % \
                       ('log_file', self.log_file)
                 logger.warning(msg)
-                self.configuration_warnings.append(msg)
+                self.add_warning(msg)
 
         # Now the syslog facility
         if hasattr(self, 'use_syslog') and self.use_syslog:
@@ -2000,7 +2035,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                       "as expected." % \
                       ('use_syslog', self.use_syslog)
                 logger.warning(msg)
-                self.configuration_warnings.append(msg)
+                self.add_warning(msg)
 
         # Now the host_perfdata or service_perfdata module
         if hasattr(self, 'service_perfdata_file') and self.service_perfdata_file != '' or \
@@ -2020,7 +2055,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                       ('host_perfdata_file', self.host_perfdata_file,
                        'service_perfdata_file', self.service_perfdata_file)
                 logger.warning(msg)
-                self.configuration_warnings.append(msg)
+                self.add_warning(msg)
 
         # Now the old retention file module
         if hasattr(self, 'state_retention_file') and self.state_retention_file != '' and \
@@ -2040,7 +2075,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                       ('state_retention_file', self.state_retention_file,
                        'retention_update_interval', self.retention_update_interval)
                 logger.warning(msg)
-                self.configuration_warnings.append(msg)
+                self.add_warning(msg)
 
         # Now the command_file
         if hasattr(self, 'command_file') and self.command_file != '':
@@ -2057,7 +2092,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                       "as expected." % \
                       ('command_file', self.command_file)
                 logger.warning(msg)
-                self.configuration_warnings.append(msg)
+                self.add_warning(msg)
 
     def propagate_timezone_option(self):
         """Set our timezone value and give it too to unset satellites
@@ -2138,7 +2173,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         if getattr(self, 'ocsp_timeout', None):
             msg = "ocsp_timeout parameter is not managed."
             logger.warning(msg)
-            self.configuration_warnings.append(msg)
+            self.add_warning(msg)
             valid &= False
         return valid
 
@@ -2194,7 +2229,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             self.add_error(msg)
             valid = False
 
-        for _, _, strclss, _, _ in self.types_creations.values():
+        for _, _, strclss, _, _ in list(self.types_creations.values()):
             if strclss in ['hostescalations', 'serviceescalations']:
                 logger.debug("Ignoring correctness check for '%s'...", strclss)
                 continue
@@ -2303,7 +2338,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :return: None
         """
-        for cls, _, strclss, _, _ in self.types_creations.values():
+        for cls, _, strclss, _, _ in list(self.types_creations.values()):
             logger.debug("Applying global conf for the class '%s'...", strclss)
             cls.load_global_conf(self)
 
@@ -2352,7 +2387,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # We create a graph with host in nodes
         graph = Graph()
-        graph.add_nodes(self.hosts.items.keys())
+        graph.add_nodes(list(self.hosts.items.keys()))
 
         # links will be used for relations between hosts
         links = set()
@@ -2514,7 +2549,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 logger.debug("  scheduler: %s", scheduler.instance_id)
                 packindices[s_id] = packindex
                 packindex += 1
-                for i in xrange(0, scheduler.weight):
+                for i in range(0, scheduler.weight):
                     weight_list.append(s_id)
             logger.debug("  pack indices: %s", packindices)
             # packindices is indexed with the scheduler id and contains
@@ -2523,7 +2558,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             round_robin = itertools.cycle(weight_list)
 
             # We must initialize nb_schedulers packs
-            for i in xrange(0, nb_schedulers):
+            for i in range(0, nb_schedulers):
                 packs[i] = []
 
             # Try to load the history association dict so we will try to
@@ -2533,7 +2568,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # Now we explode the numerous packs into reals packs:
             # we 'load balance' them in a round-robin way but with count number of hosts in
             # case have some packs with too many hosts and other with few
-            realm.packs.sort(sort_by_number_values)
+            realm.packs.sort(reverse=True)
             pack_higher_hosts = 0
             for hosts_pack in realm.packs:
                 valid_value = False
@@ -2558,10 +2593,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     i = old_pack
                 else:
                     if isinstance(i, int):
-                        i = round_robin.next()
+                        i = next(round_robin)
                     elif (len(packs[packindices[i]]) + len(hosts_pack)) >= pack_higher_hosts:
                         pack_higher_hosts = (len(packs[packindices[i]]) + len(hosts_pack))
-                        i = round_robin.next()
+                        i = next(round_robin)
 
                 for host_id in hosts_pack:
                     host = self.hosts[host_id]
@@ -2609,11 +2644,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # services (because they are splitted between these configurations)
         logger.info("Splitting the configuration into %d parts...", nb_parts)
         self.parts = {}
-        for part_index in xrange(0, nb_parts):
+        for part_index in range(0, nb_parts):
             self.parts[part_index] = Config()
 
             # Now we copy all properties of conf into the new ones
-            for prop, entry in Config.properties.items():
+            for prop, entry in list(Config.properties.items()):
                 # Do not copy the configuration instance id nor name!
                 if prop in ['instance_id', 'config_name']:
                     continue
@@ -2783,7 +2818,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         """
         config_dump = {}
 
-        for _, _, category, _, _ in self.types_creations.values():
+        for _, _, category, _, _ in list(self.types_creations.values()):
             try:
                 objs = [jsonify_r(i) for i in getattr(self, category)]
             except TypeError:  # pragma: no cover, simple protection
@@ -2797,8 +2832,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
             container = getattr(self, category)
             if category == "services":
-                objs = sorted(objs, key=lambda o: "%s/%s" %
-                                                  (o["host_name"], o["service_description"]))
+                objs = sorted(objs,
+                              key=lambda o: "%s/%s" % (o["host_name"], o["service_description"]))
             elif hasattr(container, "name_property"):
                 name_prop = container.name_property
                 objs = sorted(objs, key=lambda o, prop=name_prop: getattr(o, prop, ''))
@@ -2824,7 +2859,7 @@ def lazy():
     TODO: Should be removed
     """
     # let's compute the "USER" properties and macros..
-    for i in xrange(1, 15):
+    for i in range(1, 15):
         i = str(i)
         Config.properties['$USER' + str(i) + '$'] = StringProp(default='')
         Config.macros['USER' + str(i)] = '$USER' + i + '$'

@@ -11,7 +11,6 @@ ordereddict; python_version < '2.7'
 # Use py.test as test-runner
 pytest<3.3.0; python_version < '2.7'
 pytest; python_version >= '2.7'
-#pytest-cov; python_version >= '2.7'
 pytest-cov
 
 # Let coverage use the most recent version
@@ -24,8 +23,7 @@ codecov
 coveralls
 
 # Static code analysis libraries
-pylint<1.5.0; python_version < '2.7'
-pylint; python_version >= '2.7'
+pylint
 pycodestyle
 pep257
 
@@ -33,4 +31,4 @@ pep257
 freezegun
 
 # Alignak example module (develop branch)
--e git+git://github.com/Alignak-monitoring/alignak-module-example.git@develop#egg=alignak-module-example
+-e git+git://github.com/Alignak-monitoring/alignak-module-example.git@python3#egg=alignak-module-example

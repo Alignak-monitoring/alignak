@@ -29,7 +29,7 @@ import subprocess
 from time import sleep
 import shutil
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestLaunchDaemonsRealms(AlignakTest):
@@ -209,56 +209,56 @@ class TestLaunchDaemonsRealms(AlignakTest):
             'poller-master': [
                 # Check Ok
                 "Launch command: '/tmp/dummy_command.sh 0'",
-                "Action '/tmp/dummy_command.sh 0' exited with return code 0",
+                "Action '/tmp/dummy_command.sh 0' exited with code 0",
                 "Check result for '/tmp/dummy_command.sh 0': 0, Hi, I'm the dummy check.",
                 # Check unknown
                 "Launch command: '/tmp/dummy_command.sh'",
-                "Action '/tmp/dummy_command.sh' exited with return code 3",
+                "Action '/tmp/dummy_command.sh' exited with code 3",
                 "Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
                 # Check warning
                 "Launch command: '/tmp/dummy_command.sh 1'",
-                "Action '/tmp/dummy_command.sh 1' exited with return code 1",
+                "Action '/tmp/dummy_command.sh 1' exited with code 1",
                 "Check result for '/tmp/dummy_command.sh 1': 1, Hi, I'm the dummy check.",
                 # Check critical
                 "Launch command: '/tmp/dummy_command.sh 2'",
-                "Action '/tmp/dummy_command.sh 2' exited with return code 2",
+                "Action '/tmp/dummy_command.sh 2' exited with code 2",
                 "Check result for '/tmp/dummy_command.sh 2': 2, Hi, I'm the dummy check.",
                 # Check timeout
                 "Launch command: '/tmp/dummy_command.sh 0 12'",
                 "Action '/tmp/dummy_command.sh 0 12' exited on timeout (5 s)",
                 # Check unknown
                 "Launch command: '/tmp/dummy_command.sh'",
-                "Action '/tmp/dummy_command.sh' exited with return code 3",
+                "Action '/tmp/dummy_command.sh' exited with code 3",
                 "Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
             ],
             'poller-north': [
                 "Launch command: '/tmp/dummy_command.sh 0'",
-                "Action '/tmp/dummy_command.sh 0' exited with return code 0",
+                "Action '/tmp/dummy_command.sh 0' exited with code 0",
                 "Check result for '/tmp/dummy_command.sh 0': 0, Hi, I'm the dummy check.",
                 "Launch command: '/tmp/dummy_command.sh 1'",
-                "Action '/tmp/dummy_command.sh 1' exited with return code 1",
+                "Action '/tmp/dummy_command.sh 1' exited with code 1",
                 "Check result for '/tmp/dummy_command.sh 1': 1, Hi, I'm the dummy check.",
                 "Launch command: '/tmp/dummy_command.sh 2'",
-                "Action '/tmp/dummy_command.sh 2' exited with return code 2",
+                "Action '/tmp/dummy_command.sh 2' exited with code 2",
                 "Check result for '/tmp/dummy_command.sh 2': 2, Hi, I'm the dummy check.",
                 "Launch command: '/tmp/dummy_command.sh 0 10'",
                 "Action '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
                 "Launch command: '/tmp/dummy_command.sh'",
-                "Action '/tmp/dummy_command.sh' exited with return code 3",
+                "Action '/tmp/dummy_command.sh' exited with code 3",
                 "Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
             ],
             'poller-south': [
                 "Launch command: '/tmp/dummy_command.sh'",
-                "Action '/tmp/dummy_command.sh' exited with return code 3",
+                "Action '/tmp/dummy_command.sh' exited with code 3",
                 "Check result for '/tmp/dummy_command.sh': 3, Hi, I'm the dummy check.",
                 "Launch command: '/tmp/dummy_command.sh 1'",
-                "Action '/tmp/dummy_command.sh 1' exited with return code 1",
+                "Action '/tmp/dummy_command.sh 1' exited with code 1",
                 "Check result for '/tmp/dummy_command.sh 1': 1, Hi, I'm the dummy check.",
                 "Launch command: '/tmp/dummy_command.sh 0'",
-                "Action '/tmp/dummy_command.sh 0' exited with return code 0",
+                "Action '/tmp/dummy_command.sh 0' exited with code 0",
                 "Check result for '/tmp/dummy_command.sh 0': 0, Hi, I'm the dummy check.",
                 "Launch command: '/tmp/dummy_command.sh 2'",
-                "Action '/tmp/dummy_command.sh 2' exited with return code 2",
+                "Action '/tmp/dummy_command.sh 2' exited with code 2",
                 "Check result for '/tmp/dummy_command.sh 2': 2, Hi, I'm the dummy check.",
                 "Launch command: '/tmp/dummy_command.sh 0 10'",
                 "Action '/tmp/dummy_command.sh 0 10' exited on timeout (5 s)",
@@ -302,7 +302,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         for name in ['poller-master', 'poller-north', 'poller-south',
                      'scheduler-master', 'scheduler-north', 'scheduler-south']:
             assert os.path.exists('/tmp/%s.log' % name), '/tmp/%s.log does not exist!' % name
-            print("-----\n%s log file\n" % name)
+            print(("-----\n%s log file\n" % name))
             with open('/tmp/%s.log' % name) as f:
                 lines = f.readlines()
                 logs = []
@@ -327,12 +327,12 @@ class TestLaunchDaemonsRealms(AlignakTest):
                         errors_raised += 1
                         print("-KO-%d: %s" % (errors_raised, line))
                     # Catches INFO logs
-                    if 'INFO:' in line:
-                        if not travis_run:
-                            print("line: %s" % line)
+                    # if 'INFO:' in line:
+                    #     if not travis_run:
+                    #         print("line: %s" % line)
 
             for log in expected_logs[name]:
-                print("Last checked log %s: %s" % (name, log))
+                print("Last checked log %s: (%s) %s" % (name, type(log), log))
                 assert log in logs
 
     @pytest.mark.skip("To be re-checked ...")
@@ -440,7 +440,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         travis_run = 'TRAVIS' in os.environ
         for name in ['poller-master', 'scheduler-master']:
             assert os.path.exists('/tmp/%s.log' % name), '/tmp/%s.log does not exist!' % name
-            print("-----\n%s log file\n" % name)
+            print(("-----\n%s log file\n" % name))
             with open('/tmp/%s.log' % name) as f:
                 lines = f.readlines()
                 logs = []
@@ -456,19 +456,19 @@ class TestLaunchDaemonsRealms(AlignakTest):
                             line = line[1]
                             line = line.strip()
                             if not travis_run:
-                                print("-ok-: %s" % line)
+                                print(("-ok-: %s" % line))
                         except IndexError:
                             if not travis_run:
-                                print("***line: %s" % line)
+                                print(("***line: %s" % line))
                         logs.append(line)
                     if 'ERROR:' in line or 'CRITICAL:' in line:
                         errors_raised += 1
-                        print("-KO-%d: %s" % (errors_raised, line))
+                        print(("-KO-%d: %s" % (errors_raised, line)))
                     # Catches INFO logs
                     if 'INFO:' in line:
                         if not travis_run:
-                            print("    : %s" % line)
+                            print(("    : %s" % line))
 
             for log in expected_logs[name]:
-                print("Last checked log %s: %s" % (name, log))
+                print(("Last checked log %s: %s" % (name, log)))
                 assert log in logs

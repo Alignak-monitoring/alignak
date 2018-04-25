@@ -23,54 +23,86 @@
 
 import uuid
 from copy import copy
-from alignak.property import NONE_OBJECT, SetProp, StringProp
+from alignak.property import NONE_OBJECT, SetProp
 
 
 class AlignakObject(object):
     """This class provides a generic way to instantiate alignak objects.
-    Attribute are serialized dynamically, whether we un-serialize
+    Attributes are serialized dynamically, whether we un-serialize
     them create them at run / parsing time
 
     """
 
-    properties = {'uuid': StringProp(default='')}
+    properties = {}
     macros = {}
 
-    def __init__(self, params=None, parsing=True):  # pylint: disable=W0613
+    def __init__(self, params=None, parsing=True):  # pylint: disable=unused-argument
+        """
+        If parsing is True, then the objects are created from an initial configuration
+        read by the Alignak arbiter else the objects are restored from a previously
+        serialized instance sent by the arbiter to another daemon.
 
-        if params is None:
+        This function checks the object uuid in the following manner:
+        - in parsing mode, this function simply creates an object uuid
+        - in non parsing mode, this function restore the object attributes from the provided params
+
+        :param params: initialization parameters
+        :type params: dict
+        :param parsing: configuration parsing phase
+        :type parsing: bool
+        """
+        if parsing:
+            # Do not manage anything in the properties, it is the job of the Item __init__ function
+            if not hasattr(self, 'uuid'):
+                self.uuid = uuid.uuid4().hex
+            # else:
+            #     print("AlignakObject: parsing but already have an uuid! Parameters: %s" % params)
             return
+
+        self.fill_default()
+        if params is None:
+            # Object is created without any parameters
+            # print("AlignakObject: initialized with no parameters but default properties!")
+            return
+
+        if 'uuid' not in params:
+            # print("AlignakObject: no parsing but do not provide an uuid! Parameters: %s" % params)
+            self.uuid = uuid.uuid4().hex
+
         all_props = {}
         all_props.update(getattr(self, "properties", {}))
         all_props.update(getattr(self, "running_properties", {}))
-        for key, value in params.iteritems():
+
+        for key, value in params.items():
             if key in all_props and isinstance(all_props[key], SetProp):
                 setattr(self, key, set(value))
             else:
                 setattr(self, key, value)
 
-        if not hasattr(self, 'uuid'):
-            self.uuid = uuid.uuid4().hex
-
     def serialize(self):
-        """This function serializes into a simple dict object.
+        """This function serializes into a simple dictionary object.
+
         It is used when transferring data to other daemons over the network (http)
 
         Here is the generic function that simply export attributes declared in the
         properties dictionary of the object.
 
+        Note that a SetProp property will be serialized as a list.
+
         :return: Dictionary containing key and value from properties
         :rtype: dict
         """
-        cls = self.__class__
-        # id is not in *_properties
-        res = {'uuid': self.uuid}
-        for prop in cls.properties:
-            if hasattr(self, prop):
-                if isinstance(cls.properties[prop], SetProp):
-                    res[prop] = list(getattr(self, prop))
-                else:
-                    res[prop] = getattr(self, prop)
+        # uuid is not in *_properties
+        res = {
+            'uuid': self.uuid
+        }
+        for prop in self.__class__.properties:
+            if not hasattr(self, prop):
+                continue
+
+            res[prop] = getattr(self, prop)
+            if isinstance(self.__class__.properties[prop], SetProp):
+                res[prop] = list(getattr(self, prop))
 
         return res
 
@@ -80,13 +112,13 @@ class AlignakObject(object):
 
         :return: None
         """
-        cls = self.__class__
+        for prop, entry in self.__class__.properties.items():
+            if hasattr(self, prop):
+                continue
+            if not hasattr(entry, 'default') or entry.default is NONE_OBJECT:
+                continue
 
-        for prop, entry in cls.properties.items():
-            if not hasattr(self, prop) \
-                    and hasattr(entry, 'default') \
-                    and entry.default is not NONE_OBJECT:
-                if hasattr(entry.default, '__iter__'):
-                    setattr(self, prop, copy(entry.default))
-                else:
-                    setattr(self, prop, entry.default)
+            if hasattr(entry.default, '__iter__'):
+                setattr(self, prop, copy(entry.default))
+            else:
+                setattr(self, prop, entry.default)

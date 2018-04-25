@@ -23,7 +23,7 @@ import cherrypy
 from alignak.http.generic_interface import GenericInterface
 from alignak.misc.serialization import unserialize
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class BrokerInterface(GenericInterface):
@@ -33,40 +33,16 @@ class BrokerInterface(GenericInterface):
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
     def push_broks(self):
-        """Push broks objects to the daemon (internal)
+        """Push the provided broks objects to the broker daemon
+
         Only used on a Broker daemon by the Arbiter
 
+        :param: broks
+        :type: list
         :return: None
         """
-        broks = cherrypy.request.json
+        data = cherrypy.request.json
         with self.app.arbiter_broks_lock:
-            logger.debug("Pushing %d broks", len(broks['broks']))
+            logger.debug("Pushing %d broks", len(data['broks']))
             self.app.arbiter_broks.extend([unserialize(elem, True) for
-                                           elem in broks['broks'].values()])
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def get_raw_stats(self):
-        """
-        Get stats (queue size) for each modules
-
-        :return: list of modules with queue_size
-        :rtype: list
-        """
-        app = self.app
-        res = {
-            'modules_count': len(app.modules_manager.instances)
-        }
-
-        insts = [inst for inst in app.modules_manager.instances if inst.is_external]
-        for inst in insts:
-            try:
-                res[inst.uuid] = {'name': inst.get_name(),
-                                  'type': inst.get_types(),
-                                  'queue_size': inst.to_q.qsize()}
-            except Exception:  # pylint: disable=broad-except
-                res[inst.uuid] = {'name': inst.get_name(),
-                                  'type': inst.get_types(),
-                                  'queue_size': 0}
-
-        return res
+                                           elem in list(data['broks'].values())])

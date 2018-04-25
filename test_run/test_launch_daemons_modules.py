@@ -31,7 +31,7 @@ from time import sleep
 import shutil
 
 import pytest
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestLaunchDaemonsModules(AlignakTest):
@@ -154,7 +154,7 @@ class TestLaunchDaemonsModules(AlignakTest):
         print("Monitoring logs:")
         with open('/tmp/monitoring-logs.log') as f:
             for line in f:
-                print("- : %s" % line)
+                print(("- : %s" % line))
                 count += 1
         """
         [1496076886] INFO: CURRENT HOST STATE: localhost;UP;HARD;0;
@@ -192,7 +192,7 @@ class TestLaunchDaemonsModules(AlignakTest):
         print("Monitoring logs:")
         with open('/tmp/monitoring-logs.log') as f:
             for line in f:
-                print("- : %s" % line)
+                print(("- : %s" % line))
                 count += 1
         """
         [1496076886] INFO: CURRENT HOST STATE: localhost;UP;HARD;0;
@@ -205,11 +205,11 @@ class TestLaunchDaemonsModules(AlignakTest):
         module_pid = None
         for proc in psutil.process_iter():
             if "module: logs" in proc.name():
-                print("Found logs module in the ps: %s (pid=%d)" % (proc.name(), proc.pid))
+                print(("Found logs module in the ps: %s (pid=%d)" % (proc.name(), proc.pid)))
                 module_pid = proc.pid
         assert module_pid is not None
 
-        print("Asking pid=%d to end..." % (module_pid))
+        print(("Asking pid=%d to end..." % (module_pid)))
         daemon_process = psutil.Process(module_pid)
         daemon_process.terminate()
         try:
@@ -250,7 +250,7 @@ class TestLaunchDaemonsModules(AlignakTest):
         travis_run = 'TRAVIS' in os.environ
         for name in ['broker']:
             assert os.path.exists('/tmp/%sd.log' % name), '/tmp/%sd.log does not exist!' % name
-            print("-----\n%s log file\n" % name)
+            print(("-----\n%s log file\n" % name))
             with open('/tmp/%sd.log' % name) as f:
                 lines = f.readlines()
                 logs = []
@@ -260,27 +260,27 @@ class TestLaunchDaemonsModules(AlignakTest):
                         line = line.split('WARNING: ')
                         line = line[1]
                         line = line.strip()
-                        print("--- %s" % line[:-1])
+                        print(("--- %s" % line[:-1]))
                     if 'ERROR' in line:
                         if "The external module logs died unexpectedly!" not in line:
                             errors_raised += 1
                         line = line.split('ERROR: ')
                         line = line[1]
                         line = line.strip()
-                        print("*** %s" % line[:-1])
+                        print(("*** %s" % line[:-1]))
                     # Catches INFO logs
                     if 'INFO' in line:
                         line = line.split('INFO: ')
                         line = line[1]
                         line = line.strip()
                         if not travis_run:
-                            print("    %s" % line)
+                            print(("    %s" % line))
                     logs.append(line)
 
             if not travis_run:
                 print(logs)
             for log in expected_logs[name]:
-                print("Last checked log %s: %s" % (name, log))
+                print(("Last checked log %s: %s" % (name, log)))
                 assert log in logs, logs
 
         # Still only two logs
@@ -289,7 +289,7 @@ class TestLaunchDaemonsModules(AlignakTest):
         print("Monitoring logs:")
         with open('/tmp/monitoring-logs.log') as f:
             for line in f:
-                print("- : %s" % line)
+                print(("- : %s" % line))
                 count += 1
         """
         [1496076886] INFO: CURRENT HOST STATE: localhost;UP;HARD;0;
@@ -323,7 +323,7 @@ class TestLaunchDaemonsModules(AlignakTest):
         module_pid = None
         for proc in psutil.process_iter():
             if "module: web-services" in proc.name():
-                print("Found WS module in the ps: %s (pid=%d)" % (proc.name(), proc.pid))
+                print(("Found WS module in the ps: %s (pid=%d)" % (proc.name(), proc.pid)))
                 module_pid = proc.pid
         assert module_pid is not None
 
@@ -359,7 +359,7 @@ class TestLaunchDaemonsModules(AlignakTest):
         errors_raised = 0
         for name in ['receiver']:
             assert os.path.exists('/tmp/%sd.log' % name), '/tmp/%sd.log does not exist!' % name
-            print("-----\n%s log file\n" % name)
+            print(("-----\n%s log file\n" % name))
             with open('/tmp/%sd.log' % name) as f:
                 lines = f.readlines()
                 logs = []
@@ -369,9 +369,9 @@ class TestLaunchDaemonsModules(AlignakTest):
                         line = line.split('WARNING: ')
                         line = line[1]
                         line = line.strip()
-                        print("--- %s" % line[:-1])
+                        print(("--- %s" % line[:-1]))
                     if 'ERROR' in line:
-                        print("*** %s" % line[:-1])
+                        print(("*** %s" % line[:-1]))
                         if "The external module logs died unexpectedly!" not in line:
                             errors_raised += 1
                         line = line.split('ERROR: ')
@@ -382,13 +382,13 @@ class TestLaunchDaemonsModules(AlignakTest):
                         line = line.split('INFO: ')
                         line = line[1]
                         line = line.strip()
-                        print("    %s" % line)
+                        print(("    %s" % line))
                     logs.append(line)
 
             for log in logs:
-                print("...%s" % log)
+                print(("...%s" % log))
             for log in expected_logs[name]:
-                print("Last checked log %s: %s" % (name, log))
+                print(("Last checked log %s: %s" % (name, log)))
                 assert log in logs, logs
 
     # @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
@@ -419,10 +419,10 @@ class TestLaunchDaemonsModules(AlignakTest):
         modules_pids = {}
         for proc in psutil.process_iter():
             if "module: web-services" in proc.name():
-                print("Found WS module in the ps: %s (pid=%d)" % (proc.name(), proc.pid))
+                print(("Found WS module in the ps: %s (pid=%d)" % (proc.name(), proc.pid)))
                 modules_pids['ws'] = proc.pid
             if "module: logs" in proc.name():
-                print("Found logs module in the ps: %s (pid=%d)" % (proc.name(), proc.pid))
+                print(("Found logs module in the ps: %s (pid=%d)" % (proc.name(), proc.pid)))
                 modules_pids['logs'] = proc.pid
         assert len(modules_pids) == 2
 
@@ -431,7 +431,7 @@ class TestLaunchDaemonsModules(AlignakTest):
         print("Monitoring logs:")
         with open('/tmp/monitoring-logs.log') as f:
             for line in f:
-                print("- : %s" % line)
+                print(("- : %s" % line))
                 count += 1
         """
         [1496076886] INFO: CURRENT HOST STATE: localhost;UP;HARD;0;
@@ -491,7 +491,7 @@ class TestLaunchDaemonsModules(AlignakTest):
         errors_raised = 0
         for name in ['receiver', 'broker']:
             assert os.path.exists('/tmp/%sd.log' % name), '/tmp/%sd.log does not exist!' % name
-            print("-----\n%s log file\n" % name)
+            print(("-----\n%s log file\n" % name))
             with open('/tmp/%sd.log' % name) as f:
                 lines = f.readlines()
                 logs = []
@@ -501,9 +501,9 @@ class TestLaunchDaemonsModules(AlignakTest):
                         line = line.split('WARNING: ')
                         line = line[1]
                         line = line.strip()
-                        print("--- %s" % line[:-1])
+                        print(("--- %s" % line[:-1]))
                     if 'ERROR' in line:
-                        print("*** %s" % line[:-1])
+                        print(("*** %s" % line[:-1]))
                         errors_raised += 1
                         line = line.split('ERROR: ')
                         line = line[1]
@@ -513,13 +513,13 @@ class TestLaunchDaemonsModules(AlignakTest):
                         line = line.split('INFO: ')
                         line = line[1]
                         line = line.strip()
-                        print("    %s" % line)
+                        print(("    %s" % line))
                     logs.append(line)
 
             for log in logs:
-                print("...%s" % log)
+                print(("...%s" % log))
             for log in expected_logs[name]:
-                print("Last checked log %s: %s" % (name, log))
+                print(("Last checked log %s: %s" % (name, log)))
                 assert log in logs, logs
 
     # @pytest.mark.skipif(sys.version_info[:2] < (2, 7), reason="Not available for Python < 2.7")
@@ -609,7 +609,7 @@ class TestLaunchDaemonsModules(AlignakTest):
         errors_raised = 0
         for name in ['arbiter', 'broker', 'scheduler']:
             assert os.path.exists('/tmp/%sd.log' % name), '/tmp/%sd.log does not exist!' % name
-            print("-----\n%s log file\n" % name)
+            print(("-----\n%s log file\n" % name))
             with open('/tmp/%sd.log' % name) as f:
                 lines = f.readlines()
                 logs = []
@@ -619,9 +619,9 @@ class TestLaunchDaemonsModules(AlignakTest):
                         line = line.split('WARNING: ')
                         line = line[1]
                         line = line.strip()
-                        print("--- %s" % line[:-1])
+                        print(("--- %s" % line[:-1]))
                     if 'ERROR:' in line:
-                        print("*** %s" % line[:-1])
+                        print(("*** %s" % line[:-1]))
                         if "Error on backend login:" not in line \
                             and "Configured user account is not allowed for this module" not in line \
                             and "Alignak backend connection is not available. " not in line:
@@ -634,12 +634,12 @@ class TestLaunchDaemonsModules(AlignakTest):
                         line = line.split('INFO: ')
                         line = line[1]
                         line = line.strip()
-                        print("    %s" % line)
+                        print(("    %s" % line))
                     logs.append(line)
 
             for log in logs:
-                print("...%s" % log)
+                print(("...%s" % log))
             for log in expected_logs[name]:
-                print("Last checked log %s: %s" % (name, log))
+                print(("Last checked log %s: %s" % (name, log)))
                 assert log in logs, logs
         assert errors_raised == 0

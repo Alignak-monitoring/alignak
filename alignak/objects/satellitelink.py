@@ -46,7 +46,7 @@
 This module provides an abstraction layer for communications between Alignak daemons
 Used by the Arbiter
 """
-from __future__ import print_function
+
 import os
 import logging
 import time
@@ -59,7 +59,7 @@ from alignak.property import StringProp, ListProp, DictProp, AddrProp
 from alignak.http.client import HTTPClient, HTTPClientException, HTTPClientDataException
 from alignak.http.client import HTTPClientConnectionException, HTTPClientTimeoutException
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class LinkError(Exception):
@@ -80,6 +80,7 @@ class LinkError(Exception):
 
 
 class SatelliteLink(Item):
+    # pylint: disable=too-many-instance-attributes
     """SatelliteLink is a common Class for links between
     Arbiter and other satellites. Used by the Dispatcher object.
 
@@ -106,23 +107,23 @@ class SatelliteLink(Item):
         # Those are not to_send=True because they are updated by the configuration Dispatcher
         # and set when the daemon receives its configuration
         'managed_conf_id':
-            StringProp(default=''),
+            StringProp(default=u''),
         'push_flavor':
-            StringProp(default=''),
+            StringProp(default=u''),
         'hash':
-            StringProp(default=''),
+            StringProp(default=u''),
 
         # A satellite link has the type/name of the daemon it is related to
         'type':
-            StringProp(default='', fill_brok=['full_status'], to_send=True),
+            StringProp(default=u'', fill_brok=['full_status'], to_send=True),
         'name':
-            StringProp(default='', fill_brok=['full_status'], to_send=True),
+            StringProp(default=u'', fill_brok=['full_status'], to_send=True),
 
         # Listening interface and address used by the other daemons
         'host':
-            StringProp(default='0.0.0.0', to_send=True),
+            StringProp(default=u'0.0.0.0', to_send=True),
         'address':
-            StringProp(default='127.0.0.1', fill_brok=['full_status'], to_send=True),
+            StringProp(default=u'127.0.0.1', fill_brok=['full_status'], to_send=True),
         'active':
             BoolProp(default=True, fill_brok=['full_status'], to_send=True),
         'timeout':
@@ -151,16 +152,16 @@ class SatelliteLink(Item):
         'manage_arbiters':
             BoolProp(default=False, fill_brok=['full_status'], to_send=True),
         'modules':
-            ListProp(default=[''], split_on_coma=True),
+            ListProp(default=[''], split_on_comma=True),
         'polling_interval':
             IntegerProp(default=1, fill_brok=['full_status'], to_send=True),
         'use_timezone':
-            StringProp(default='NOTSET', to_send=True),
+            StringProp(default=u'NOTSET', to_send=True),
         'realm':
-            StringProp(default='', fill_brok=['full_status'],
+            StringProp(default=u'', fill_brok=['full_status'],
                        brok_transformation=get_obj_name_two_args_and_void),
         'realm_name':
-            StringProp(default=''),
+            StringProp(default=u''),
         'satellite_map':
             DictProp(default={}, elts_prop=AddrProp, to_send=True, override=True),
         'use_ssl':
@@ -243,7 +244,7 @@ class SatelliteLink(Item):
 
         if parsing:
             # Create a new satellite link identifier
-            self.instance_id = '%s_%d' % (self.__class__.__name__, self.__class__._next_id)
+            self.instance_id = u'%s_%d' % (self.__class__.__name__, self.__class__._next_id)
             self.__class__._next_id += 1
         elif 'instance_id' not in params:
             raise LinkError("When not parsing a configuration, "
@@ -264,7 +265,6 @@ class SatelliteLink(Item):
                     self.name = "Unnamed %s" % self.type
                     setattr(self, "%s_name" % self.type, self.name)
         except KeyError:
-            print("We got an unnamed %s: %s" % (self.my_type, self.__dict__))
             setattr(self, 'name', getattr(self, "%s_name" % self.type))
 
         # Initialize our satellite map, and update if required
@@ -405,7 +405,7 @@ class SatelliteLink(Item):
         # dictionary to be pushed to the satellite when the configuration is dispatched
         res = {}
         properties = self.__class__.properties
-        for prop, entry in properties.items():
+        for prop, entry in list(properties.items()):
             if hasattr(self, prop) and entry.to_send:
                 res[prop] = getattr(self, prop)
         return res
@@ -462,7 +462,7 @@ class SatelliteLink(Item):
             return False
 
         # Check in the schedulers list configurations
-        for managed_cfg in self.cfg_managed.values():
+        for managed_cfg in list(self.cfg_managed.values()):
             # If not even the cfg_id in the managed_conf, bail out
             if managed_cfg['managed_conf_id'] == cfg_part.instance_id \
                     and managed_cfg['push_flavor'] == cfg_part.push_flavor:
@@ -533,7 +533,7 @@ class SatelliteLink(Item):
         self.con = None
 
         # We are dead now! We must propagate the sad news...
-        if was_alive:
+        if was_alive and not self.stopping:
             logger.warning("Setting the satellite %s as dead :(", self.name)
             brok = self.get_update_status_brok()
             self.broks[brok.uuid] = brok
@@ -656,6 +656,8 @@ class SatelliteLink(Item):
         logger.info("  get the running identifier for %s %s.", self.type, self.name)
         # An exception is raised in this function if the daemon is not reachable
         self.running_id = self.con.get('get_running_id')
+        if isinstance(self.running_id, dict):
+            self.running_id = self.running_id['running_id']
 
         if former_running_id == 0:
             if self.running_id:
@@ -807,7 +809,7 @@ class SatelliteLink(Item):
 
     @valid_connection()
     @communicate()
-    def has_a_conf(self, magic_hash=None):
+    def has_a_conf(self, magic_hash=None):  # pragma: no cover
         """Send a HTTP request to the satellite (GET /have_conf)
         Used to know if the satellite has a conf
 
@@ -819,25 +821,6 @@ class SatelliteLink(Item):
         logger.debug("Have a configuration for %s, %s %s", self.name, self.alive, self.reachable)
         self.have_conf = self.con.get('have_conf', {'magic_hash': magic_hash})
         return self.have_conf
-
-    @valid_connection()
-    @communicate()
-    def remove_from_conf(self, sched_id):
-        """Send a HTTP request to the satellite (GET /remove_from_conf)
-        Tell a satellite to remove a scheduler from conf
-
-        TODO: is it still useful, remove_from_conf is implemented in the HTTP
-        interface of each daemon
-
-        :param sched_id: scheduler id to remove
-        :type sched_id: int
-        :return: True on success, False on failure, None if can't connect
-        :rtype: bool | None
-        TODO: Return False instead of None
-        """
-        logger.debug("Removing from configuration for %s, %s %s",
-                     self.name, self.alive, self.reachable)
-        return self.con.get('remove_from_conf', {'sched_id': sched_id})
 
     @valid_connection()
     @communicate()
@@ -915,7 +898,7 @@ class SatelliteLink(Item):
         """
         logger.debug("[%s] Pushing %d actions", self.name, len(actions))
         return self.con.post('push_actions', {'actions': actions,
-                                              'sched_id': scheduler_id}, wait='long')
+                                              'scheduler_id': scheduler_id}, wait='long')
 
     @valid_connection()
     @communicate()
@@ -982,8 +965,8 @@ class SatelliteLink(Item):
         return unserialize(res, True)
 
     @valid_connection()
-    def get_returns(self, scheduler_instance_id):
-        """Send a HTTP request to the satellite (GET /get_returns)
+    def get_results(self, scheduler_instance_id):
+        """Send a HTTP request to the satellite (GET /get_results)
         Get actions results from satellite.
 
         :param scheduler_instance_id: scheduler instance identifier
@@ -991,7 +974,7 @@ class SatelliteLink(Item):
         :return: Results list on success, [] on failure
         :rtype: list
         """
-        res = self.con.get('get_returns', {'scheduler_instance_id': scheduler_instance_id},
+        res = self.con.get('get_results', {'scheduler_instance_id': scheduler_instance_id},
                            wait='long')
         logger.debug("Got %d returns from %s: %s", len(res), self.name, res)
         return res

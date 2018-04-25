@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-# pylint: disable=too-many-lines
+# pylint: disable=too-many-lines, too-many-public-methods
 #
 # Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
@@ -67,7 +67,7 @@ import time
 import signal
 import traceback
 import socket
-import cStringIO
+import io
 import threading
 
 import psutil
@@ -89,7 +89,7 @@ from alignak.objects.satellitelink import SatelliteLink
 from alignak.monitor import MonitorConnection
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Arbiter(Daemon):  # pylint: disable=R0902
@@ -172,17 +172,17 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 pass
 
         self.broks = {}
+        self.broks_lock = threading.RLock()
         self.is_master = False
         self.link_to_myself = None
-
-        self.nb_broks_send = 0
+        self.instance_id = None
 
         # Now an external commands manager and a list for the external_commands
         self.external_commands_manager = None
         self.external_commands = []
         self.external_commands_lock = threading.RLock()
 
-        # Used to work out if we must still run or not - only for a spare arbiter
+        # Used to check if we must still run or not - only for a spare arbiter
         self.must_run = True
 
         # Did we received a kill signal
@@ -200,21 +200,23 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.conf = Config()
 
     def add(self, elt):
-        """Generic function to add objects to queues.
-        Only manage Broks and ExternalCommand
-
-        #Todo: does the arbiter still needs to manage external commands
+        """Generic function to add objects to the daemon internal lists.
+        Manage Broks, External commands
 
         :param elt: objects to add
-        :type elt: alignak.brok.Brok | alignak.external_command.ExternalCommand
+        :type elt: alignak.AlignakObject
         :return: None
         """
         if isinstance(elt, Brok):
-            self.broks[elt.uuid] = elt
+            elt.instance_id = self.instance_id
+            with self.broks_lock:
+                self.broks[elt.uuid] = elt
             statsmgr.counter('broks.added', 1)
         elif isinstance(elt, ExternalCommand):
-            self.external_commands.append(elt)
-            statsmgr.counter('external-commands.added', 1)
+            logger.debug("Queuing an external command '%s'", str(elt.__dict__))
+            with self.external_commands_lock:
+                self.external_commands.append(elt)
+                statsmgr.counter('external-commands.added', 1)
         else:  # pragma: no cover, simple dev alerting
             logger.error('Do not manage object type %s (%s)', type(elt), elt)
 
@@ -257,8 +259,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
             someone_is_concerned = True
             if broker_link.reachable:
-                logger.debug("Sending %d broks to the broker %s",
-                             len(self.broks), broker_link.name)
+                logger.debug("Sending %d broks to the broker %s", len(self.broks), broker_link.name)
                 if broker_link.push_broks(self.broks):
                     statsmgr.counter('broks.pushed', len(self.broks))
                     sent = True
@@ -292,9 +293,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
     def get_external_commands(self):
         """Get the external commands
-
-        todo: This would not be useful if the Arbiter inherited
-        from a Satellite rather than a Daemon
 
         :return: External commands list
         :rtype: list
@@ -342,7 +340,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 new_broks = satellite.get_and_clear_broks()
                 if new_broks:
                     logger.debug("Got %d broks from: %s", len(new_broks), satellite.name)
-                for brok in new_broks.values():
+                for brok in list(new_broks.values()):
                     logger.debug("Got brok from %s: %s", satellite.name, brok.type)
                     self.add(brok)
 
@@ -363,7 +361,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 self.add(brok)
 
     def load_monitoring_config_file(self):
-        # pylint: disable=too-many-branches,too-many-statements
+        # pylint: disable=too-many-branches,too-many-statements, too-many-locals
         """Load main configuration file (alignak.cfg)::
 
         * Read all files given in the -c parameters
@@ -427,7 +425,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         if self.alignak_env:
             # Get all the Alignak daemons from the configuration
             logger.info("Getting daemons configuration...")
-            for daemon_name, daemon_cfg in self.alignak_env.get_daemons().items():
+            for daemon_name, daemon_cfg in list(self.alignak_env.get_daemons().items()):
                 logger.debug("Got a daemon configuration for %s", daemon_name)
                 if 'type' not in daemon_cfg:
                     self.conf.add_error("Ignoring daemon with an unknown type: %s" % daemon_name)
@@ -482,7 +480,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                         module_cfg.pop('module_types')
                     logger.debug("Module cfg %s params: %s", module_cfg['name'], module_cfg)
 
-            for _, module_cfg in self.alignak_env.get_modules().items():
+            for _, module_cfg in list(self.alignak_env.get_modules().items()):
                 logger.info("- got a module %s, type: %s",
                             module_cfg.get('name', 'unset'), module_cfg.get('type', 'untyped'))
                 # If this module is found in the former Cfg files, replace the former configuration
@@ -514,7 +512,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     setattr(self.conf, key, entry.pythonize(value))
                 else:
                     setattr(self.conf, key, value)
-                logger.info("- setting '%s' as %s", key, getattr(self.conf, key))
+                logger.debug("- setting '%s' as %s", key, getattr(self.conf, key))
 
         self.alignak_name = getattr(self.conf, "alignak_name", self.name)
         logger.info("Configuration for Alignak: %s", self.alignak_name)
@@ -545,6 +543,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 # I update only if it does not yet exist (first configuration load)!
                 # I will not change myself because I am simply reloading a configuration ;)
                 self.link_to_myself = lnk_arbiter
+                self.link_to_myself.instance_id = self.name
+                self.link_to_myself.push_flavor = ''.encode('utf-8')
+                # self.link_to_myself.hash = self.conf.hash
             # Set myself as alive ;)
             self.link_to_myself.set_alive()
 
@@ -656,7 +657,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         if self.verify_only:
             self.conf.warn_about_unmanaged_parameters()
 
-        # Explode global conf parameters into Classes
+        # Explode global configuration parameters into Classes
         self.conf.explode_global_conf()
 
         # set our own timezone and propagate it to other satellites
@@ -810,10 +811,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 logger.info("Getting Alignak global configuration from module '%s'", instance.name)
                 cfg = instance.get_alignak_configuration()
                 alignak_cfg.update(cfg)
-            except Exception, exp:  # pylint: disable=broad-except
+            except Exception as exp:  # pylint: disable=broad-except
                 logger.error("Module get_alignak_configuration %s raised an exception %s. "
                              "Log and continue to run", instance.name, str(exp))
-                output = cStringIO.StringIO()
+                output = io.StringIO()
                 traceback.print_exc(file=output)
                 logger.error("Back trace of this remove: %s", output.getvalue())
                 output.close()
@@ -823,7 +824,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         params = []
         if alignak_cfg:
             logger.info("Got Alignak global configuration:")
-            for key, value in sorted(alignak_cfg.iteritems()):
+            for key, value in sorted(alignak_cfg.items()):
                 logger.info("- %s = %s", key, value)
                 # properties starting with an _ character are "transformed" to macro variables
                 if key.startswith('_'):
@@ -971,7 +972,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         result = True
 
         procs = [psutil.Process()]
-        for daemon in self.my_daemons.values():
+        for daemon in list(self.my_daemons.values()):
             # Get only the daemon (not useful for its children processes...)
             # procs = daemon['process'].children()
             procs.append(daemon['process'])
@@ -1036,7 +1037,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             logger.info("Alignak configuration daemons stop:")
 
             start = time.time()
-            for daemon in self.my_daemons.values():
+            for daemon in list(self.my_daemons.values()):
                 # Terminate the daemon and its children process
                 procs = daemon['process'].children()
                 procs.append(daemon['process'])
@@ -1047,7 +1048,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     except psutil.AccessDenied:
                         logger.warning("Process %s is %s", process.name(), process.status())
 
-            for daemon in self.my_daemons.values():
+            for daemon in list(self.my_daemons.values()):
                 # Stop the daemon and its children process
                 procs = daemon['process'].children()
                 procs.append(daemon['process'])
@@ -1097,9 +1098,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         return result
 
     def setup_new_conf(self):
+        # pylint: disable=too-many-locals
         """ Setup a new configuration received from a Master arbiter.
-
-        TODO : test this!
 
         TODO: perharps we should not accept the configuration or raise an error if we do not
         find our own configuration data in the data. Thus this should never happen...
@@ -1273,36 +1273,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             if brok:
                 self.add(brok)
 
-    def get_retention_data(self):  # pragma: no cover, useful?
-        """Get data for retention
-
-        TODO: using retention in the arbiter is dangerous and
-        do not seem of any utility with Alignak. To be removed!
-
-        :return: broks and external commands in a dict
-        :rtype: dict
-        """
-        res = {
-            'broks': self.broks,
-            'external_commands': self.external_commands
-        }
-        return res
-
-    def restore_retention_data(self, data):  # pragma: no cover, useful?
-        """Restore data from retention (broks, and external commands)
-
-        TODO: using retention in the arbiter is dangerous and
-        do not seem of any utility with Alignak. To be removed!
-
-        :param data: data to restore
-        :type data: dict
-        :return: None
-        """
-        broks = data['broks']
-        external_commands = data['external_commands']
-        self.broks.update(broks)
-        self.external_commands.extend(external_commands)
-
     def manage_signal(self, sig, frame):
         """Manage signals caught by the process
         Specific behavior for the arbiter when it receives a sigkill or sigterm
@@ -1312,10 +1282,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         :param frame: current stack frame
         :type frame:
         :return: None
-        TODO: Refactor with Daemon one
         """
         # Request the arbiter to stop
-        if sig in [signal.SIGINT, signal.SIGKILL]:
+        if sig in [signal.SIGINT, signal.SIGTERM]:
             logger.info("received a signal: %s", SIGNALS_TO_NAMES_DICT[sig])
             self.kill_request = True
             self.kill_timestamp = time.time()
@@ -1457,7 +1426,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.external_commands_manager = ExternalCommandManager(
             self.conf, 'dispatcher', self, self.conf.accept_passive_unknown_check_results)
 
-    def do_loop_turn(self):  # pylint: disable=too-many-branches, too-many-statements
+    def do_loop_turn(self):
+        # pylint: disable=too-many-branches, too-many-statements, too-many-locals
         """Loop turn for Arbiter
 
         If not a master daemon, wait for my master death...
@@ -1491,10 +1461,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 time.sleep(1)
                 self.interrupted = True
                 logger.info("exiting...")
-
-        # todo: make it configurable?
-        # time.sleep(0.5)
-        # _, _ = self.make_a_pause(0.01)
 
         if not self.kill_request:
             # Main loop treatment
@@ -1539,11 +1505,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             # self.get_external_commands_from_satellites()
             # statsmgr.timer('external-commands.got', time.time() - _t0)
             #
-            # # One broker is responsible for our broks, we give him our broks
-            # _t0 = time.time()
-            # self.push_broks_to_broker()
-            # statsmgr.timer('broks.pushed.time', time.time() - _t0)
-            #
+            # One broker is responsible for our broks, we give him our broks
+            _t0 = time.time()
+            self.push_broks_to_broker()
+            statsmgr.timer('broks.pushed.time', time.time() - _t0)
+
             # # We push our external commands to our schedulers...
             # _t0 = time.time()
             # self.push_external_commands_to_schedulers()
@@ -1633,7 +1599,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         if details:
             res['monitoring_objects'] = {}
 
-            for _, _, strclss, _, _ in self.conf.types_creations.values():
+            for _, _, strclss, _, _ in list(self.conf.types_creations.values()):
                 if strclss in ['hostescalations', 'serviceescalations']:
                     logger.debug("Ignoring count for '%s'...", strclss)
                     continue
@@ -1661,7 +1627,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         counters = res['counters']
         counters['external-commands'] = len(self.external_commands)
         counters['broks'] = len(self.broks)
-        for _, _, strclss, _, _ in self.conf.types_creations.values():
+        for _, _, strclss, _, _ in list(self.conf.types_creations.values()):
             if strclss in ['hostescalations', 'serviceescalations']:
                 logger.debug("Ignoring count for '%s'...", strclss)
                 continue
@@ -1674,13 +1640,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             for sat_type in ('arbiters', 'schedulers', 'reactionners',
                              'brokers', 'receivers', 'pollers'):
                 counters["dispatcher.%s" % sat_type] = len(getattr(self.dispatcher, sat_type))
-
-        # To be refactored
-        metrics = res['metrics']
-        metrics.append('%s.%s.external-commands.queue %d %d'
-                       % (self.type, self.name, len(self.external_commands), now))
-        metrics.append('%s.%s.broks.queue %d %d'
-                       % (self.type, self.name, len(self.broks), now))
 
         # Report our daemons states, but only if a dispatcher exists
         if getattr(self, 'dispatcher', None):
@@ -1727,6 +1686,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         return res
 
     def push_passive_check(self, details=False):
+        # pylint: disable=too-many-locals
         """Push the alignak overall state as a passive check
 
         Build all the daemons overall state as a passive check that can be notified
@@ -1786,7 +1746,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 "alias": inner_stats['alignak'],
                 "active_checks_enabled": False,
                 "passive_checks_enabled": True,
-                "notes": u''
+                "notes": ''
             },
             "variables": {
             },
@@ -1818,7 +1778,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # 1/ the monitored items counters
         if 'counters' in inner_stats:
             metrics = []
-            my_counters = [strclss for _, _, strclss, _, _ in self.conf.types_creations.values()
+            my_counters = [strclss for _, _, strclss, _, _ in
+                           list(self.conf.types_creations.values())
                            if strclss not in ['hostescalations', 'serviceescalations']]
             for counter in inner_stats['counters']:
                 # Only the arbiter created objects...
@@ -1831,7 +1792,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         if 'daemons_states' in inner_stats:
             state = 0
             long_output = []
-            for daemon_id in inner_stats['daemons_states']:
+            for daemon_id in sorted(inner_stats['daemons_states']):
                 daemon = inner_stats['daemons_states'][daemon_id]
                 res['services'].append({
                     "name": daemon_id,
@@ -1840,9 +1801,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                         "name": "%s_%s" % (daemon['type'], daemon['name']),
                         "state": ["ok", "warning", "critical", "unknown"][daemon['live_state']],
                         "output": [
-                            "daemon is alive and reachable.",
-                            "daemon is not reachable.",
-                            "daemon is not alive."
+                            u"daemon is alive and reachable.",
+                            u"daemon is not reachable.",
+                            u"daemon is not alive."
                         ][daemon['live_state']],
                         "long_output": "Realm: %s (%s). Listening on: %s"
                                        % (daemon['realm_name'], daemon['manage_sub_realms'],
@@ -1852,16 +1813,16 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 })
                 state = max(state, daemon['live_state'])
                 long_output.append(
-                    "%s - %s" % (daemon_id, ["daemon is alive and reachable.",
-                                             "daemon is not reachable.",
-                                             "daemon is not alive."][daemon['live_state']]))
+                    "%s - %s" % (daemon_id, [u"daemon is alive and reachable.",
+                                             u"daemon is not reachable.",
+                                             u"daemon is not alive."][daemon['live_state']]))
 
             res['livestate'].update({
                 "state": "up",  # Always Up ;)
                 "output": [
-                    "All my daemons are up and running.",
-                    "Some of my daemons are not reachable.",
-                    "Some of my daemons are not responding!"
+                    u"All my daemons are up and running.",
+                    u"Some of my daemons are not reachable.",
+                    u"Some of my daemons are not responding!"
                 ][state],
                 "long_output": '\n'.join(long_output)
             })

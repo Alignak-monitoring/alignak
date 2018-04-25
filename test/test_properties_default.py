@@ -50,7 +50,7 @@ from alignak.property import UnusedProp, NONE_OBJECT
 import pytest
 
 # TODO: clean import *
-from alignak_test import *
+from .alignak_test import *
 from alignak.property import *
 
 
@@ -60,7 +60,7 @@ class PropertiesTester(object):
         item = self.item # shortcut
         print("Testing unused properties:")
         for name in self.unused_props:
-            print("- %s" % name)
+            print(("- %s" % name))
             assert name in item.properties, \
                           'property %r not found in %s' % (name, self.item.my_type)
             assert isinstance(item.properties[name], UnusedProp)
@@ -69,7 +69,7 @@ class PropertiesTester(object):
         item = self.item # shortcut
         print("Testing properties without default:")
         for name in self.without_default:
-            print("- %s" % name)
+            print(("- %s" % name))
             assert name in item.properties, \
                           'property %r not found in %s' % (name, self.item.my_type)
             assert isinstance(item.properties[name], ( ListProp, StringProp, IntegerProp )), \
@@ -79,15 +79,17 @@ class PropertiesTester(object):
     def test_default_values(self):
         item = self.item # shortcut
         print("Testing properties with default:")
-        for name, value in self.properties.iteritems():
-            print("- %s=%s" % (name, value))
+        for name, value in self.properties.items():
+            print(("- %s=%s" % (name, value)))
             assert name in item.properties, \
                           'property %r not found in %s' % (name, self.item.my_type)
             if hasattr(item.properties[name], 'default'):
-                if item.properties[name].default != value:
-                    print "Bad default value: %s, %s: %s, %s" % (name, value, item.properties[name].default, value)
                 if not item.properties[name].unused:
-                    assert item.properties[name].default == value
+                    if item.properties[name].default != value:
+                        print("Bad default value for %s, got: '%s', expected: '%s'"
+                              % (name, value, item.properties[name].default))
+                    assert item.properties[name].default == value, \
+                        "Default value %s for %s is not correct" % (name, value)
 
     def test_all_props_are_tested(self):
         item = self.item # shortcut
@@ -95,14 +97,14 @@ class PropertiesTester(object):
 
         print("Testing all properties are tested:")
         for name in item.properties:
-            print("- %s" % name)
+            print(("- %s" % name))
 
         print("Testing all properties are tested:")
-        print("- list: %s" % prop_names)
+        print(("- list: %s" % prop_names))
         for name in item.properties:
             if name.startswith('$') and name.endswith('$'):
                 continue
-            print("- %s" % name)
+            print(("- %s" % name))
             assert name in prop_names, 'unknown property %r found' % name
 
 
@@ -157,7 +159,7 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('prefix', ''),
         ('alignak_name', ''),
         ('config_base_dir', ''),
-        ('triggers_dir', ''),
+        # ('triggers_dir', ''),
         ('packs_dir', ''),
         # ('resource_file', '/tmp/resources.txt'),
         ('enable_notifications', True),
@@ -226,9 +228,9 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('check_for_orphaned_services', True),
         ('check_for_orphaned_hosts', True),
         ('check_service_freshness', True),
-        ('service_freshness_check_interval', 3600),
+        ('service_freshness_check_interval', 60),
         ('check_host_freshness', True),
-        ('host_freshness_check_interval', 3600),
+        ('host_freshness_check_interval', 60),
         ('additional_freshness_latency', 15),
         ('enable_embedded_perl', True),
         ('use_embedded_perl_implicitly', False),
@@ -239,7 +241,7 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('use_regexp_matching', False),
         ('use_true_regexp_matching', None),
         ('broker_module', ''),
-        ('modified_attributes', 0L),
+        ('modified_attributes', 0),
 
         # Alignak specific
         ('flap_history', 20),
@@ -263,10 +265,10 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('daemons_initial_port', 7800),
         ('daemons_log_folder', '/usr/local/var/log/alignak'),
         ('daemons_check_period', 5),
-        ('daemons_start_timeout', 0),
-        ('daemons_dispatch_timeout', 0),
-        ('daemons_new_conf_timeout', 0),
-        ('daemons_stop_timeout', 30),
+        ('daemons_start_timeout', 1),
+        ('daemons_dispatch_timeout', 5),
+        ('daemons_new_conf_timeout', 1),
+        ('daemons_stop_timeout', 15),
         ('daemons_failure_kill', True)
         ])
 
@@ -283,7 +285,6 @@ class TestCommand(PropertiesTester, AlignakTest):
     without_default = ['command_name', 'command_line']
 
     properties = dict([
-        ('uuid', ''),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
@@ -301,7 +302,7 @@ class TestCommand(PropertiesTester, AlignakTest):
         from alignak.objects.command import Command
         self.item = None
         self.item = Command(parsing=True)
-        print self.item.properties
+        print(self.item.properties)
 
 
 class TestContactgroup(PropertiesTester, AlignakTest):
@@ -311,7 +312,6 @@ class TestContactgroup(PropertiesTester, AlignakTest):
     without_default = ['contactgroup_name', 'alias']
 
     properties = dict([
-        ('uuid', ''),
         ('members', None),
         ('imported_from', 'unknown'),
         ('use', []),
@@ -333,11 +333,10 @@ class TestContact(PropertiesTester, AlignakTest):
     unused_props = []
 
     without_default = [
-        'contact_name',
-        ]
+        'alias', 'contact_name'
+    ]
 
     properties = dict([
-        ('uuid', ''),
         ('host_notification_commands', []),
         ('service_notification_commands', []),
         ('host_notification_period', ''),
@@ -349,7 +348,6 @@ class TestContact(PropertiesTester, AlignakTest):
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
-        ('alias', 'none'),
         ('contactgroups', []),
         ('host_notifications_enabled', True),
         ('service_notifications_enabled', True),
@@ -384,7 +382,6 @@ class TestEscalation(PropertiesTester, AlignakTest):
                        'first_notification_time', 'last_notification_time']
 
     properties = dict([
-        ('uuid', ''),
         ('host_name', ''),
         ('hostgroup_name', ''),
         ('service_description', ''),
@@ -413,7 +410,6 @@ class TestHostdependency(PropertiesTester, AlignakTest):
     without_default = ['dependent_host_name', 'host_name']
 
     properties = dict([
-        ('uuid', ''),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
@@ -445,7 +441,6 @@ class TestHostescalation(PropertiesTester, AlignakTest):
         ]
 
     properties = dict([
-        ('uuid', ''),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
@@ -469,7 +464,6 @@ class TestHostextinfo(PropertiesTester, AlignakTest):
     without_default = ['host_name']
 
     properties = dict([
-        ('uuid', ''),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
@@ -498,7 +492,6 @@ class TestHostgroup(PropertiesTester, AlignakTest):
     without_default = ['hostgroup_name', 'alias']
 
     properties = dict([
-        ('uuid', ''),
         ('members', None),
         ('imported_from', 'unknown'),
         ('use', []),
@@ -524,11 +517,14 @@ class TestHost(PropertiesTester, AlignakTest):
     unused_props = []
 
     without_default = [
-        'uuid', 'host_name', 'alias', 'address',
-        'check_period', 'notification_period']
+        'host_name',
+        'alias',
+        'address',
+        'check_period',
+        'notification_period'
+    ]
 
     properties = dict([
-        # ('uuid', ''),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
@@ -547,7 +543,7 @@ class TestHost(PropertiesTester, AlignakTest):
         ('active_checks_enabled', True),
         ('passive_checks_enabled', True),
         ('check_freshness', False),
-        ('freshness_threshold', -1),
+        ('freshness_threshold', 0),
         ('event_handler', ''),
         ('event_handler_enabled', False),
         ('low_flap_threshold', 25),
@@ -619,7 +615,6 @@ class TestModule(PropertiesTester, AlignakTest):
     without_default = ['module_alias', 'python_name']
 
     properties = dict([
-        ('uuid', ''),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
@@ -644,7 +639,7 @@ class TestModule(PropertiesTester, AlignakTest):
         self.item = Module(parsing=True)
         print("Item properties:")
         for name in self.item.properties:
-            print("- %s" % name)
+            print(("- %s" % name))
 
 
 class TestNotificationWay(PropertiesTester, AlignakTest):
@@ -657,7 +652,6 @@ class TestNotificationWay(PropertiesTester, AlignakTest):
         'host_notification_commands', 'service_notification_commands']
 
     properties = dict([
-        ('uuid', ''),
         ('service_notification_options', ['']),
         ('host_notification_options', ['']),
         ('imported_from', 'unknown'),
@@ -680,10 +674,9 @@ class TestRealm(PropertiesTester, AlignakTest):
 
     unused_props = []
 
-    without_default = []
+    without_default = ['alias']
 
     properties = dict([
-        ('uuid', ''),
         ('members', None),
         ('imported_from', 'unknown'),
         ('use', []),
@@ -691,7 +684,6 @@ class TestRealm(PropertiesTester, AlignakTest):
         ('definition_order', 100),
         ('realm_name', ''),
         ('name', ''),
-        ('alias', ''),
         ('unknown_members', []),
         ('realm_members', []),
         ('higher_realms', []),
@@ -713,7 +705,6 @@ class TestResultmodulation(PropertiesTester, AlignakTest):
     without_default = ['resultmodulation_name']
 
     properties = dict([
-        ('uuid', ''),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
@@ -737,7 +728,6 @@ class TestServicedependency(PropertiesTester, AlignakTest):
     without_default = ['dependent_host_name', 'dependent_service_description', 'host_name', 'service_description']
 
     properties = dict([
-        ('uuid', ''),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
@@ -770,7 +760,6 @@ class TestServiceescalation(PropertiesTester, AlignakTest):
         'first_notification_time', 'last_notification_time']
 
     properties = dict([
-        ('uuid', ''),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
@@ -794,7 +783,6 @@ class TestServiceextinfo(PropertiesTester, AlignakTest):
     without_default = ['host_name', 'service_description']
 
     properties = dict([
-        ('uuid', ''),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
@@ -819,7 +807,6 @@ class TestServicegroup(PropertiesTester, AlignakTest):
     without_default = ['servicegroup_name', 'alias']
 
     properties = dict([
-        ('uuid', ''),
         ('members', None),
         ('imported_from', 'unknown'),
         ('use', []),
@@ -827,7 +814,6 @@ class TestServicegroup(PropertiesTester, AlignakTest):
         ('definition_order', 100),
         ('name', ''),
         ('unknown_members', []),
-        ('uuid', ''),
         ('notes', ''),
         ('notes_url', ''),
         ('action_url', ''),
@@ -845,17 +831,20 @@ class TestService(PropertiesTester, AlignakTest):
     unused_props = []
 
     without_default = [
-        'uuid', 'host_name', 'service_description',
-        'check_command', 'check_period', 'notification_period']
+        'alias',
+        'host_name',
+        'service_description',
+        'check_command',
+        'check_period',
+        'notification_period'
+    ]
 
     properties = dict([
-        # ('uuid', ''),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
-        ('alias', ''),
         ('max_check_attempts', 1),
         ('hostgroup_name', ''),
         ('display_name', ''),
@@ -866,7 +855,7 @@ class TestService(PropertiesTester, AlignakTest):
         ('active_checks_enabled', True),
         ('passive_checks_enabled', True),
         ('check_freshness', False),
-        ('freshness_threshold', -1),
+        ('freshness_threshold', 0),
         ('event_handler', ''),
         ('event_handler_enabled', False),
         ('check_interval', 0),
@@ -934,15 +923,13 @@ class TestTimeperiod(PropertiesTester, AlignakTest):
 
     unused_props = []
 
-    without_default = ['timeperiod_name']
+    without_default = ['alias', 'timeperiod_name']
 
     properties = dict([
-        ('uuid', ''),
         ('imported_from', 'unknown'),
         ('use', []),
         ('definition_order', 100),
         ('name', ''),
-        ('alias', ''),
         ('register', True),
         ('dateranges', []),
         ('exclude', []),

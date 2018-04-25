@@ -60,7 +60,7 @@
 import sys
 import hashlib
 import json
-import cPickle
+import pickle
 import logging
 import time
 import random
@@ -69,7 +69,7 @@ from alignak.misc.serialization import serialize
 from alignak.util import alive_then_spare_then_deads, master_then_spare
 from alignak.objects.satellitelink import LinkError
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # Always initialize random :)
 random.seed()
@@ -91,12 +91,13 @@ class DispatcherError(Exception):
         return "Dispatcher error: %s" % (self.message)
 
 
-class Dispatcher:
+class Dispatcher(object):
     """Dispatcher is in charge of sending configuration to other daemon.
     It has to handle spare, realms, poller tags etc.
     """
 
     def __init__(self, conf, arbiter_link):
+        # pylint: disable=too-many-branches
         """Initialize the dispatcher
 
         Note that the arbiter param is an ArbiterLink, not an Arbiter daemon. Thus it is only
@@ -129,7 +130,7 @@ class Dispatcher:
         logger.info("Dispatcher realms configuration:")
         for realm in self.alignak_conf.realms:
             logger.info("- %s:", realm.name)
-            for cfg_part in realm.parts.values():
+            for cfg_part in list(realm.parts.values()):
                 logger.info("  .%s (%s), flavor:%s, %s",
                             cfg_part.instance_id, cfg_part.uuid, cfg_part.push_flavor, cfg_part)
 
@@ -198,6 +199,7 @@ class Dispatcher:
             satellite.prepare_for_conf()
 
     def check_reachable(self, forced=False, test=False):
+        # pylint: disable=too-many-branches
         """Check all daemons state (reachable or not)
 
         If test parameter is True, do not really send but simulate only for testing purpose...
@@ -311,7 +313,7 @@ class Dispatcher:
         logger.info("Checking realms dispatch:")
         for realm in self.alignak_conf.realms:
             logger.info("- realm %s:", realm.name)
-            for cfg_part in realm.parts.values():
+            for cfg_part in list(realm.parts.values()):
                 logger.info("  .configuration %s", cfg_part)
 
                 # This should never happen, logically!
@@ -388,71 +390,6 @@ class Dispatcher:
 
         return self.dispatch_ok
 
-    # todo: to be removed, but not yet .... not used but I keep this code if needed;)
-    def check_bad_dispatch(self):  # pragma: no cover, not used!
-        """Check if we have a bad dispatch
-        For example : a spare started but the master was still alive
-        We need ask the spare to wait a new conf
-
-        :return: None
-        """
-        if not self.arbiter_link:
-            raise DispatcherError("Dispatcher configuration problem: no valid arbiter link!")
-
-        for daemon_link in self.all_daemons_links:
-            if daemon_link == self.arbiter_link:
-                # I exclude myself from the checking, sure I am Ok ;)
-                continue
-
-            if not daemon_link.have_conf:
-                # If element has a conf, I do not care, it's a good dispatch
-                continue
-
-            # If dead: I do not ask it something, it won't respond..
-            if daemon_link.cfg_managed is None and not daemon_link.reachable:
-                if daemon_link.have_conf:
-                    logger.warning("The element %s have a conf and should "
-                                   "not have one! I ask it to idle now",
-                                   daemon_link.get_name())
-                    daemon_link.active = False
-                    # daemon_link.wait_new_conf()
-                    # I do not care about order not send or not. If not,
-                    # The next loop will resent it
-
-        # I ask satellites which sched_id they manage. If I do not agree, I ask
-        # them to remove it
-        for satellite in self.satellites:
-            sat_type = satellite.type
-            if not satellite.reachable:
-                continue
-            cfg_ids = satellite.cfg_managed
-            # I do not care about satellites that do nothing, they already
-            # do what I want :)
-            if not cfg_ids:
-                continue
-            id_to_delete = []
-            for cfg_id in cfg_ids:
-                # Ok, we search for realms that have the conf
-                for realm in self.alignak_conf.realms:
-                    if cfg_id in realm.parts:
-                        conf_uuid = realm.parts[cfg_id].uuid
-                        # Ok we've got the realm, we check its to_satellites_managed_by
-                        # to see if reactionner is in. If not, we remove he sched_id for it
-                        if satellite not in realm.to_satellites_managed_by[sat_type][conf_uuid]:
-                            id_to_delete.append(cfg_id)
-            # Maybe we removed all conf_id of this reactionner
-            # We can put it idle, no active and wait_new_conf
-            if len(id_to_delete) == len(cfg_ids):
-                satellite.active = False
-                # logger.info("I ask %s to wait for a new conf", satellite.get_name())
-                # satellite.wait_new_conf()
-            else:
-                # It is not fully idle, just less cfg
-                for r_id in id_to_delete:
-                    logger.info("I ask %s to remove configuration %d",
-                                satellite.get_name(), r_id)
-                    satellite.remove_from_conf(id)
-
     def get_satellites_list(self, sat_type):
         """Get a sorted satellite list: master then spare
 
@@ -466,7 +403,7 @@ class Dispatcher:
                         'brokers', 'receivers', 'pollers']:
             for satellite in getattr(self, sat_type):
                 satellites_list.append(satellite)
-            satellites_list.sort(master_then_spare)
+            satellites_list = master_then_spare(satellites_list)
 
         return satellites_list
 
@@ -488,12 +425,12 @@ class Dispatcher:
         # Now we sort the schedulers so we take alive, then spare, then dead,
         # but we do not care about them!
         # todo: why do not care?
-        scheduler_links.sort(alive_then_spare_then_deads)
+        scheduler_links = alive_then_spare_then_deads(scheduler_links)
         scheduler_links.reverse()  # I need to pop the list, so reverse the list...
         return scheduler_links
 
     def prepare_dispatch(self):
-        # pylint:disable=too-many-branches, too-many-statements
+        # pylint:disable=too-many-branches, too-many-statements, too-many-locals
         """
         Prepare dispatch, so prepare for each daemon (schedulers, brokers, receivers, reactionners,
         pollers)
@@ -541,8 +478,8 @@ class Dispatcher:
             })
 
             # Hash the configuration
-            arbiter_cfg['hash'] = hashlib.sha1(
-                json.dumps(arbiter_cfg, sort_keys=True)).hexdigest()
+            cfg_string = json.dumps(arbiter_cfg, sort_keys=True).encode('utf-8')
+            arbiter_cfg['hash'] = hashlib.sha1(cfg_string).hexdigest()
 
             # Update the arbiters list, but do not include the whole conf
             arbiters_cfg[arbiter_link.uuid] = arbiter_cfg['self_conf']
@@ -555,11 +492,14 @@ class Dispatcher:
                 })
 
                 # Hash the whole configuration
-                arbiter_cfg['hash'] = hashlib.sha1(
-                    json.dumps(arbiter_cfg, sort_keys=True)).hexdigest()
+                try:
+                    s_conf_part = json.dumps(arbiter_cfg, sort_keys=True).encode('utf-8')
+                except UnicodeDecodeError:
+                    pass
+                arbiter_cfg['hash'] = hashlib.sha1(s_conf_part).hexdigest()
 
             # Dump the configuration part size
-            pickled_conf = cPickle.dumps(arbiter_cfg)
+            pickled_conf = pickle.dumps(arbiter_cfg)
             logger.info('   arbiter configuration size: %d bytes', sys.getsizeof(pickled_conf))
 
             # The configuration is assigned to the arbiter
@@ -590,7 +530,7 @@ class Dispatcher:
             # parts_to_dispatch is a list of configuration parts built when
             # the configuration is split into parts for the realms and their schedulers
             # Only get the parts that are not yet assigned to a scheduler
-            parts_to_dispatch = [cfg for cfg in realm.parts.values() if not cfg.is_assigned]
+            parts_to_dispatch = [cfg for cfg in list(realm.parts.values()) if not cfg.is_assigned]
             if not parts_to_dispatch:
                 logger.info('  no configuration to dispatch for this realm!')
                 continue
@@ -638,8 +578,12 @@ class Dispatcher:
                                  len(cfg_part.hosts), len(cfg_part.services))
 
                     # Serialization and hashing
-                    serialized_conf_part = serialize(realm.parts[cfg_part.instance_id])
-                    cfg_part.push_flavor = hashlib.sha1(serialized_conf_part).hexdigest()
+                    s_conf_part = serialize(realm.parts[cfg_part.instance_id])
+                    try:
+                        s_conf_part = s_conf_part.encode('utf-8')
+                    except UnicodeDecodeError:
+                        pass
+                    cfg_part.push_flavor = hashlib.sha1(s_conf_part).hexdigest()
 
                     # We generate the scheduler configuration for the satellites:
                     # ---
@@ -651,8 +595,8 @@ class Dispatcher:
                         'push_flavor': cfg_part.push_flavor
                     })
                     # Generate a configuration hash
-                    sat_scheduler_cfg['hash'] = hashlib.sha1(
-                        json.dumps(sat_scheduler_cfg, sort_keys=True)).hexdigest()
+                    cfg_string = json.dumps(sat_scheduler_cfg, sort_keys=True).encode('utf-8')
+                    sat_scheduler_cfg['hash'] = hashlib.sha1(cfg_string).hexdigest()
 
                     logger.debug(' satellite scheduler configuration: %s', sat_scheduler_cfg)
                     for sat_type in ('reactionner', 'poller', 'broker', 'receiver'):
@@ -674,7 +618,7 @@ class Dispatcher:
 
                         'modules': serialize(scheduler_link.modules, True),
 
-                        'conf_part': serialized_conf_part,
+                        'conf_part': serialize(realm.parts[cfg_part.instance_id]),
                         'managed_conf_id': cfg_part.instance_id,
                         'push_flavor': cfg_part.push_flavor,
 
@@ -682,11 +626,11 @@ class Dispatcher:
                     })
 
                     # Hash the whole configuration
-                    scheduler_link.cfg['hash'] = hashlib.sha1(
-                        json.dumps(scheduler_link.cfg, sort_keys=True)).hexdigest()
+                    cfg_string = json.dumps(scheduler_link.cfg, sort_keys=True).encode('utf-8')
+                    scheduler_link.cfg['hash'] = hashlib.sha1(cfg_string).hexdigest()
 
                     # Dump the configuration part size
-                    pickled_conf = cPickle.dumps(scheduler_link.cfg)
+                    pickled_conf = pickle.dumps(scheduler_link.cfg)
                     logger.info('   scheduler configuration size: %d bytes',
                                 sys.getsizeof(pickled_conf))
 
@@ -706,7 +650,7 @@ class Dispatcher:
                     break
 
             logger.info(" preparing the dispatch for satellites:")
-            for cfg_part in realm.parts.values():
+            for cfg_part in list(realm.parts.values()):
                 logger.info("  .configuration part %s (%s), name:%s",
                             cfg_part.instance_id, cfg_part.uuid, cfg_part.config_name)
                 for sat_type in ('reactionner', 'poller', 'broker', 'receiver'):
@@ -758,11 +702,11 @@ class Dispatcher:
                                 self.alignak_conf.realms, sat_link.manage_sub_realms)})
 
                         # Hash the whole configuration
-                        sat_link.cfg['hash'] = hashlib.sha1(
-                            json.dumps(sat_link.cfg, sort_keys=True)).hexdigest()
+                        cfg_string = json.dumps(sat_link.cfg, sort_keys=True).encode('utf-8')
+                        sat_link.cfg['hash'] = hashlib.sha1(cfg_string).hexdigest()
 
                         # Dump the configuration part size
-                        pickled_conf = cPickle.dumps(sat_link.cfg)
+                        pickled_conf = pickle.dumps(sat_link.cfg)
                         logger.info('   %s configuration size: %d bytes',
                                     sat_type, sys.getsizeof(pickled_conf))
 
@@ -786,7 +730,8 @@ class Dispatcher:
                             realm.to_satellites_need_dispatch[sat_type][
                                 cfg_part.instance_id] = False
 
-        nb_missed = len([cfg for cfg in self.alignak_conf.parts.values() if not cfg.is_assigned])
+        nb_missed = len([cfg for cfg in list(
+            self.alignak_conf.parts.values()) if not cfg.is_assigned])
         if nb_missed > 0:
             logger.warning("Some configuration parts are not dispatched, %d are missing", nb_missed)
         else:

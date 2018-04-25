@@ -133,7 +133,7 @@ from alignak.log import make_monitoring_log
 from alignak.misc.serialization import get_alignak_class
 from alignak.util import merge_periods
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Timeperiod(Item):
@@ -146,18 +146,28 @@ class Timeperiod(Item):
 
     properties = Item.properties.copy()
     properties.update({
-        'timeperiod_name':  StringProp(fill_brok=['full_status']),
-        'alias':            StringProp(default='', fill_brok=['full_status']),
-        'use':              ListProp(default=[]),
-        'register':         IntegerProp(default=1),
+        'timeperiod_name':
+            StringProp(fill_brok=['full_status']),
+        'alias':
+            StringProp(fill_brok=['full_status']),
+        'use':
+            ListProp(default=[]),
+        'register':
+            IntegerProp(default=1),
 
         # These are needed if a broker module calls methods on timeperiod objects
-        'dateranges':       ListProp(fill_brok=['full_status'], default=[]),
-        'exclude':          ListProp(fill_brok=['full_status'], default=[]),
-        'unresolved':          ListProp(fill_brok=['full_status'], default=[]),
-        'invalid_entries':          ListProp(fill_brok=['full_status'], default=[]),
-        'is_active':        BoolProp(default=False),
-        'activated_once':   BoolProp(default=False),
+        'dateranges':
+            ListProp(fill_brok=['full_status'], default=[]),
+        'exclude':
+            ListProp(fill_brok=['full_status'], default=[]),
+        'unresolved':
+            ListProp(fill_brok=['full_status'], default=[]),
+        'invalid_entries':
+            ListProp(fill_brok=['full_status'], default=[]),
+        'is_active':
+            BoolProp(default=False),
+        'activated_once':
+            BoolProp(default=False),
     })
     running_properties = Item.running_properties.copy()
 
@@ -167,10 +177,10 @@ class Timeperiod(Item):
             params = {}
 
         # Get standard params
-        standard_params = dict([(k, v) for k, v in params.items()
-                               if k in self.__class__.properties])
+        standard_params = dict(
+            [(k, v) for k, v in list(params.items()) if k in self.__class__.properties])
         # Get timeperiod params (monday, tuesday, ...)
-        timeperiod_params = dict([(k, v) for k, v in params.items()
+        timeperiod_params = dict([(k, v) for k, v in list(params.items())
                                   if k not in self.__class__.properties])
 
         if 'dateranges' in standard_params and isinstance(standard_params['dateranges'], list) \
@@ -203,7 +213,7 @@ class Timeperiod(Item):
             self.activated_once = False
 
             # Handle timeperiod params
-            for key, value in timeperiod_params.items():
+            for key, value in list(timeperiod_params.items()):
                 if isinstance(value, list):
                     if value:
                         value = value[-1]
@@ -391,6 +401,7 @@ class Timeperiod(Item):
             del self.invalid_cache[timestamp]
 
     def get_next_valid_time_from_t(self, timestamp):
+        # pylint: disable=too-many-branches
         """
         Get next valid time. If it's in cache, get it, otherwise define it.
         The limit to find it is 1 year.
@@ -459,6 +470,7 @@ class Timeperiod(Item):
         return local_min
 
     def get_next_invalid_time_from_t(self, timestamp):
+        # pylint: disable=too-many-branches
         """
         Get the next invalid time
 
@@ -566,7 +578,8 @@ class Timeperiod(Item):
 
         return string
 
-    def resolve_daterange(self, dateranges, entry):  # pylint: disable=R0911,R0915,R0912
+    def resolve_daterange(self, dateranges, entry):
+        # pylint: disable=R0911,R0915,R0912,too-many-locals
         """
         Try to solve dateranges (special cases)
 
@@ -877,6 +890,7 @@ class Timeperiod(Item):
         self.exclude = new_exclude
 
     def check_exclude_rec(self):
+        # pylint: disable=access-member-before-definition
         """
         Check if this timeperiod is tagged
 
@@ -904,7 +918,7 @@ class Timeperiod(Item):
         """
         cls = self.__class__
         # Now config properties
-        for prop, entry in cls.properties.items():
+        for prop, entry in list(cls.properties.items()):
             # Is this property intended for broking?
             # if 'fill_brok' in entry:
             if brok_type in entry.fill_brok:
@@ -981,16 +995,16 @@ class Timeperiods(Items):
         valid = True
         # We do not want a same hg to be explode again and again
         # so we tag it
-        for timeperiod in self.items.values():
+        for timeperiod in list(self.items.values()):
             timeperiod.rec_tag = False
 
-        for timeperiod in self.items.values():
-            for tmp_tp in self.items.values():
+        for timeperiod in list(self.items.values()):
+            for tmp_tp in list(self.items.values()):
                 tmp_tp.rec_tag = False
             valid = timeperiod.check_exclude_rec() and valid
 
         # We clean the tags and collect the warning/erro messages
-        for timeperiod in self.items.values():
+        for timeperiod in list(self.items.values()):
             del timeperiod.rec_tag
 
             # Now other checks

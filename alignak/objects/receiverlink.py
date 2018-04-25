@@ -47,7 +47,7 @@ import logging
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import IntegerProp, StringProp
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class ReceiverLink(SatelliteLink):

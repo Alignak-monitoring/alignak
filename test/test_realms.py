@@ -49,7 +49,7 @@ This file is used to test realms usage
 import os
 import re
 import shutil
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 import pytest
 
 
@@ -59,6 +59,7 @@ class TestRealms(AlignakTest):
     """
     def setUp(self):
         super(TestRealms, self).setUp()
+        self.set_unit_tests_logger_level('INFO')
 
     def test_no_defined_realm(self):
         """ Test configuration with no defined realm
@@ -164,7 +165,7 @@ class TestRealms(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/realms/no_defined_daemons.cfg', 'cfg/realms/no_defined_daemons.ini')
+        self.setup_with_file('cfg/realms/no_defined_daemons.cfg', 'cfg/realms/no_defined_daemons.ini', verbose=True)
         assert self.conf_is_correct
         self.show_logs()
 
@@ -313,7 +314,7 @@ class TestRealms(AlignakTest):
         assert self.conf_is_correct
 
         for scheduler in self._schedulers:
-            print("Scheduler: %s" % scheduler)
+            print(("Scheduler: %s" % scheduler))
             if scheduler == 'Scheduler-1':
                 sched_realm1 = self._schedulers[scheduler]
             elif scheduler == 'Scheduler-2':
@@ -323,8 +324,8 @@ class TestRealms(AlignakTest):
         realm2 = self._arbiter.conf.realms.find_by_name('realm2')
         assert realm2 is not None
 
-        print(sched_realm1.pushed_conf.hosts)
-        print(sched_realm2.pushed_conf.hosts)
+        print((sched_realm1.pushed_conf.hosts))
+        print((sched_realm2.pushed_conf.hosts))
         # find_by_name is not usable in a scheduler !
         # test_host_realm1 = sched_realm1.pushed_conf.hosts.find_by_name("test_host_realm1")
         # Host test_host_realm1 is in the realm 1 and not in the realm 2
@@ -460,7 +461,7 @@ class TestRealms(AlignakTest):
                              verbose=False)
         assert self.conf_is_correct
 
-        print("Realms: %s" % self._arbiter.conf.realms)
+        print(("Realms: %s" % self._arbiter.conf.realms))
 
         world = self._arbiter.conf.realms.find_by_name('World')
         assert world is not None
@@ -505,7 +506,7 @@ class TestRealms(AlignakTest):
                              verbose=False)
         assert self.conf_is_correct
 
-        print("Realms: %s" % self._arbiter.conf.realms)
+        print(("Realms: %s" % self._arbiter.conf.realms))
 
         world = self._arbiter.conf.realms.find_by_name('World')
         assert world is not None
@@ -571,14 +572,14 @@ class TestRealms(AlignakTest):
         assert World is not None
 
         # Check members for each realm - members list is an ordered list!
-        print("The World: %s" % (World))
+        print(("The World: %s" % (World)))
         assert World.realm_members != [Europe.get_name(), Asia.get_name()]
         assert World.realm_members == [Asia.get_name(), Europe.get_name()]
-        print("Asia: %s" % (Asia))
+        print(("Asia: %s" % (Asia)))
         assert Asia.realm_members == [Japan.get_name()]
         assert Japan.realm_members != [Tokyo.get_name(), Osaka.get_name()]
         assert Japan.realm_members == [Osaka.get_name(), Tokyo.get_name()]
-        print("Europe: %s" % (Europe))
+        print(("Europe: %s" % (Europe)))
         assert Europe.realm_members == [France.get_name(), Italy.get_name()]
         assert Italy.realm_members == [Roma.get_name(), Turin.get_name()]
         assert France.realm_members == [Lyon.get_name(), Paris.get_name()]
@@ -615,16 +616,20 @@ class TestRealms(AlignakTest):
 
         # check satellites defined in each realms
         broker_uuid = self._arbiter.conf.brokers.find_by_name('broker-master').uuid
+        print("Broker uuid: %s" % (broker_uuid))
         poller_uuid = self._arbiter.conf.pollers.find_by_name('poller-master').uuid
         receiver_uuid = self._arbiter.conf.receivers.find_by_name('receiver-master').uuid
         reactionner_uuid = self._arbiter.conf.reactionners.find_by_name('reactionner-master').uuid
 
+        for broker in self._arbiter.conf.brokers:
+            print("Broker: %s" % (broker))
+
         for realm in [Osaka, Tokyo, Japan, Asia, Turin, Roma, Italy, Lyon, Paris, France, Europe, World]:
-            print "Realm %s, brokers: %s" % (realm.realm_name, realm.brokers)
+            print("Realm %s, brokers: %s" % (realm.realm_name, realm.brokers))
             if realm.realm_name != 'France':
-                assert realm.brokers == [broker_uuid]
-                assert realm.potential_brokers == [broker_uuid]
-                assert realm.nb_brokers == 1
+                assert broker_uuid in realm.brokers
+                assert broker_uuid in realm.potential_brokers
+                assert realm.nb_brokers > 1
             assert realm.pollers == [poller_uuid]
             assert realm.receivers == [receiver_uuid]
             assert realm.reactionners == [reactionner_uuid]
@@ -632,9 +637,15 @@ class TestRealms(AlignakTest):
             assert realm.potential_receivers == [receiver_uuid]
             assert realm.potential_reactionners == [reactionner_uuid]
 
-        assert set(France.brokers) == set([broker_uuid, self._arbiter.conf.brokers.find_by_name('broker-france').uuid])
-        assert set(France.potential_brokers) == set([broker_uuid, self._arbiter.conf.brokers.find_by_name('broker-france').uuid])
-        assert France.nb_brokers == 2
+        print("France brokers: %s" % France.brokers)
+        print("France potential brokers: %s" % France.potential_brokers)
+        assert set(France.brokers) == set([self._arbiter.conf.brokers.find_by_name('B-world').uuid,
+                                           self._arbiter.conf.brokers.find_by_name('broker-master').uuid,
+                                           self._arbiter.conf.brokers.find_by_name('broker-france').uuid])
+        assert set(France.potential_brokers) == set([self._arbiter.conf.brokers.find_by_name('B-world').uuid,
+                                                     self._arbiter.conf.brokers.find_by_name('broker-master').uuid,
+                                                     self._arbiter.conf.brokers.find_by_name('broker-france').uuid])
+        assert France.nb_brokers == 3
 
     def test_sub_realms_multi_levels_loop(self):
         """ Test realm / sub-realm / sub-sub-realms... with a loop, so exit with error message

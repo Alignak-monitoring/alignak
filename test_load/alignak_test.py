@@ -24,13 +24,13 @@
 
 import os
 import sys
-
 import signal
-
 import time
 import string
 import re
 import locale
+
+from six import string_types
 
 import shutil
 import psutil
@@ -82,7 +82,7 @@ class AlignakTest(unittest2.TestCase):
 
     if sys.version_info < (2, 7):
         def assertRegex(self, *args, **kwargs):
-            return self.assertRegexpMatches(*args, **kwargs)
+            return self.assertRegex(*args, **kwargs)
 
     def setUp(self):
         """All tests initialization:
@@ -93,23 +93,33 @@ class AlignakTest(unittest2.TestCase):
         """
         self.my_pid = os.getpid()
 
-        print "\n" + self.id()
+        print("\n" + self.id())
         print("-" * 80)
         print("Test current working directory: %s" % (os.getcwd()))
 
         # Configure Alignak logger with test configuration
         logger_configuration_file = os.path.join(os.getcwd(), './cfg/alignak-logger.json')
+        print("Logger configuration: %s" % logger_configuration_file)
+        try:
+            os.makedirs('/tmp/monitoring-log')
+        except OSError as exp:
+            pass
         self.former_log_level = None
         setup_logger(logger_configuration_file, log_dir=None, process_name='', log_file='')
         self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
         self.logger_.info("Test: %s", self.id())
+        self.set_unit_tests_logger_level(logging.WARNING)
 
         # To make sure that no running daemon exist
         print("Checking Alignak running daemons...")
+        running_daemons = False
         for daemon in ['broker', 'poller', 'reactionner', 'receiver', 'scheduler', 'arbiter']:
             for proc in psutil.process_iter():
                 if 'alignak' in proc.name() and daemon in proc.name():
-                    assert False, "*** Found a running Alignak daemon: %s" % (proc.name())
+                    running_daemons = True
+        if running_daemons:
+            self._stop_alignak_daemons(arbiter_only=False)
+            # assert False, "*** Found a running Alignak daemon: %s" % (proc.name())
 
         print("System information:")
         perfdatas = []
@@ -121,7 +131,7 @@ class AlignakTest(unittest2.TestCase):
         for percent in cpu_percents:
             perfdatas.append("'cpu_%d_percent'=%.2f%%" % (cpu, percent))
             cpu += 1
-        print "-> cpu: %s" % " ".join(perfdatas)
+        print("-> cpu: %s" % " ".join(perfdatas))
 
         perfdatas = []
         virtual_memory = psutil.virtual_memory()
@@ -136,8 +146,8 @@ class AlignakTest(unittest2.TestCase):
                 perfdatas.append("'swap_used_%s'=%.2f%%"
                                  % (key, getattr(swap_memory, key)))
 
-        print "-> memory: %s" % " ".join(perfdatas)
-        print ("-" * 80) + "\n"
+        print("-> memory: %s" % " ".join(perfdatas))
+        print(("-" * 80) + "\n")
 
     def tearDown(self):
         """Test ending:
@@ -154,17 +164,22 @@ class AlignakTest(unittest2.TestCase):
                     handler.level = self.former_log_level
                 break
 
-    def set_debug_log(self):
-        """Set the test logger at DEBUG level - useful for some tests that check debug log"""
-        # Change the collector logger log level
-        print("set_debug_log")
+    def set_unit_tests_logger_level(self, log_level=logging.DEBUG):
+        """Set the test logger at the provided level -
+        useful for some tests that check debug log
+        """
+        # Change the logger and its hadlers log level
+        print("Set unit_tests logger: %s" % log_level)
         logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        logger_.setLevel(log_level)
         for handler in logger_.handlers:
+            print("- handler: %s" % handler)
+            handler.setLevel(log_level)
             if getattr(handler, '_name', None) == 'unit_tests':
                 self.former_log_level = handler.level
-                handler.setLevel(logging.DEBUG)
+                handler.setLevel(log_level)
                 print("Unit tests handler is set at debug!")
-                break
+                # break
 
     def _files_update(self, files, replacements):
         """Update files content with the defined replacements
@@ -177,7 +192,7 @@ class AlignakTest(unittest2.TestCase):
             lines = []
             with open(filename) as infile:
                 for line in infile:
-                    for src, target in replacements.iteritems():
+                    for src, target in replacements.items():
                         line = line.replace(src, target)
                     lines.append(line)
             with open(filename, 'w') as outfile:
@@ -195,7 +210,7 @@ class AlignakTest(unittest2.TestCase):
         print("Stopping the daemons...")
         start = time.time()
         if getattr(self, 'procs', None):
-            for name, proc in self.procs.items():
+            for name, proc in list(self.procs.items()):
                 if arbiter_only and name not in ['arbiter-master']:
                     continue
                 if proc.pid == self.my_pid:
@@ -300,6 +315,7 @@ class AlignakTest(unittest2.TestCase):
                 continue
             args = ["../alignak/bin/alignak_%s.py" % name.split('-')[0], "-n", name,
                     "-e", "%s/alignak.ini" % cfg_folder]
+            print("- %s arguments: %s" % (name, args))
             if piped:
                 self.procs[name] = \
                     subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -312,7 +328,7 @@ class AlignakTest(unittest2.TestCase):
         time.sleep(3)
 
         print("Testing daemons start")
-        for name, proc in self.procs.items():
+        for name, proc in list(self.procs.items()):
             ret = proc.poll()
             if ret is not None:
                 print("*** %s exited on start!" % (name))
@@ -328,12 +344,12 @@ class AlignakTest(unittest2.TestCase):
 
                 if proc.stdout:
                     for line in iter(proc.stdout.readline, b''):
-                        print(">>> " + line.rstrip())
+                        print(">>> " + str(line).rstrip())
                 else:
                     print("No stdout!")
                 if proc.stderr:
                     for line in iter(proc.stderr.readline, b''):
-                        print(">>> " + line.rstrip())
+                        print(">>> " + str(line).rstrip())
                 else:
                     print("No stderr!")
             assert ret is None, "Daemon %s not started!" % name
@@ -496,7 +512,7 @@ class AlignakTest(unittest2.TestCase):
         self.alignak_env.parse()
 
         arbiter_cfg = None
-        for daemon_section, daemon_cfg in self.alignak_env.get_daemons().items():
+        for daemon_section, daemon_cfg in list(self.alignak_env.get_daemons().items()):
             if daemon_cfg['type'] == 'arbiter':
                 arbiter_cfg = daemon_cfg
 
@@ -560,8 +576,10 @@ class AlignakTest(unittest2.TestCase):
         with requests_mock.mock() as mr:
             for link in self._arbiter.dispatcher.all_daemons_links:
                 mr.get('http://%s:%s/ping' % (link.address, link.port), json='pong')
-                mr.get('http://%s:%s/get_running_id' % (link.address, link.port), json=123456.123456)
+                mr.get('http://%s:%s/get_running_id' % (link.address, link.port),
+                       json={"running_id": 123456.123456})
                 mr.get('http://%s:%s/wait_new_conf' % (link.address, link.port), json=True)
+                mr.post('http://%s:%s/push_configuration' % (link.address, link.port), json=True)
                 mr.get('http://%s:%s/fill_initial_broks' % (link.address, link.port), json=[])
                 mr.get('http://%s:%s/get_managed_configurations' % (link.address, link.port), json={})
 
@@ -579,7 +597,6 @@ class AlignakTest(unittest2.TestCase):
                         print(" - %s" % (sat_link))
                     pushed_configuration = getattr(sat_link, 'unit_test_pushed_configuration', None)
                     if pushed_configuration:
-                        # print("- %s / %s" % (sat_link.name, pushed_configuration))
                         if verbose:
                             print("   pushed configuration, contains:")
                             for key in pushed_configuration:
@@ -587,7 +604,7 @@ class AlignakTest(unittest2.TestCase):
                     # Update the test class satellites lists
                     getattr(self, sat_type).update({sat_link.name: pushed_configuration})
                 if verbose:
-                    print("- my %s: %s" % (sat_type, getattr(self, sat_type).keys()))
+                    print("- my %s: %s" % (sat_type, list(getattr(self, sat_type).keys())))
 
             self.eca = None
             # Initialize a Scheduler daemon
@@ -633,7 +650,7 @@ class AlignakTest(unittest2.TestCase):
             # Get my first broker link
             self._main_broker = None
             if self._scheduler.my_daemon.brokers:
-                self._main_broker = [b for b in self._scheduler.my_daemon.brokers.values()][0]
+                self._main_broker = [b for b in list(self._scheduler.my_daemon.brokers.values())][0]
 
             # Initialize a Receiver daemon
             self._receiver = None
@@ -788,7 +805,7 @@ class AlignakTest(unittest2.TestCase):
                 if nb_ticks == 1:
                     fun()
                 if name == 'check_freshness':
-                    checks = sorted(self._scheduler.checks.values(),
+                    checks = sorted(list(self._scheduler.checks.values()),
                                     key=lambda x: x.creation_time)
                     checks = [chk for chk in checks if chk.freshness_expiry_check]
         return len(checks)
@@ -850,7 +867,7 @@ class AlignakTest(unittest2.TestCase):
         if verbose is True:
             self.show_actions()
         for a in actions:
-            a.status = 'inpoller'
+            a.status = u'in_poller'
             a.check_time = time.time()
             a.exit_status = 0
             self._scheduler.put_results(a)
@@ -885,10 +902,10 @@ class AlignakTest(unittest2.TestCase):
         logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
         for handler in logger_.handlers:
             if isinstance(handler, CollectorHandler):
-                print "--- logs <<<----------------------------------"
+                print("--- logs <<<----------------------------------")
                 for log in handler.collector:
                     self.safe_print(log)
-                print "--- logs >>>----------------------------------"
+                print("--- logs >>>----------------------------------")
                 break
         else:
             assert False, "Alignak test Logger is not initialized correctly!"
@@ -900,7 +917,7 @@ class AlignakTest(unittest2.TestCase):
 
         print("--- Scheduler: %s" % self._scheduler.my_daemon.name)
         print("--- actions <<<----------------------------------")
-        actions = sorted(self._scheduler.actions.values(), key=lambda x: (x.t_to_go, x.creation_time))
+        actions = sorted(list(self._scheduler.actions.values()), key=lambda x: (x.t_to_go, x.creation_time))
         for action in actions:
             print("Time to launch action: %s, creation: %s, now: %s" % (action.t_to_go, action.creation_time, time.time()))
             if action.is_a == 'notification':
@@ -915,22 +932,22 @@ class AlignakTest(unittest2.TestCase):
                          time.asctime(time.localtime(action.t_to_go)),
                          action.contact_name, action.command))
             elif action.is_a == 'eventhandler':
-                print "EVENTHANDLER:", action
+                print("EVENTHANDLER:", action)
             else:
-                print "ACTION:", action
-        print "--- actions >>>----------------------------------"
+                print("ACTION:", action)
+        print("--- actions >>>----------------------------------")
 
     def show_checks(self):
         """
         Show checks from the scheduler
         :return:
         """
-        print "--- Scheduler: %s" % self._scheduler.my_daemon.name
-        print "--- checks <<<--------------------------------"
-        checks = sorted(self._scheduler.checks.values(), key=lambda x: x.creation_time)
+        print("--- Scheduler: %s" % self._scheduler.my_daemon.name)
+        print("--- checks <<<--------------------------------")
+        checks = sorted(list(self._scheduler.checks.values()), key=lambda x: x.creation_time)
         for check in checks:
             print("- %s" % check)
-        print "--- checks >>>--------------------------------"
+        print("--- checks >>>--------------------------------")
 
     def show_and_clear_actions(self):
         self.show_actions()
@@ -952,7 +969,7 @@ class AlignakTest(unittest2.TestCase):
         @verified
         :return:
         """
-        return len(self._scheduler.actions.values())
+        return len(list(self._scheduler.actions.values()))
 
     def clear_logs(self):
         """
@@ -988,7 +1005,7 @@ class AlignakTest(unittest2.TestCase):
         """
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._main_broker.broks.values(), key=lambda x: x.creation_time):
+        for brok in sorted(list(self._main_broker.broks.values()), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -1013,14 +1030,14 @@ class AlignakTest(unittest2.TestCase):
         actions = []
         # I do this because sort take too times
         if number != len(self._scheduler.actions):
-            actions = sorted(self._scheduler.actions.values(), key=lambda x: x.creation_time)
+            actions = sorted(list(self._scheduler.actions.values()), key=lambda x: x.creation_time)
         self.assertEqual(number, len(self._scheduler.actions),
                          "Not found expected number of actions:\nactions_logs=[[[\n%s\n]]]" %
                          ('\n'.join('\t%s = creation: %s, is_a: %s, type: %s, status: %s, '
                                     'planned: %s, command: %s' %
                                     (idx, b.creation_time, b.is_a, b.type,
                                      b.status, b.t_to_go, b.command)
-                                    for idx, b in enumerate(actions))))
+                                    for idx, b in enumerate(sorted(self._scheduler.actions.values(), key=lambda x: (x.t_to_go, x.creation_time))))))
 
     def assert_actions_match(self, index, pattern, field):
         """
@@ -1115,7 +1132,7 @@ class AlignakTest(unittest2.TestCase):
         :type number: int
         :return: None
         """
-        checks = sorted(self._scheduler.checks.values(), key=lambda x: x.creation_time)
+        checks = sorted(list(self._scheduler.checks.values()), key=lambda x: x.creation_time)
         self.assertEqual(number, len(checks),
                          "Not found expected number of checks:\nchecks_logs=[[[\n%s\n]]]" %
                          ('\n'.join('\t%s = creation: %s, is_a: %s, type: %s, status: %s, planned: %s, '
@@ -1138,7 +1155,7 @@ class AlignakTest(unittest2.TestCase):
         :return: None
         """
         regex = re.compile(pattern)
-        checks = sorted(self._scheduler.checks.values(), key=lambda x: x.creation_time)
+        checks = sorted(list(self._scheduler.checks.values()), key=lambda x: x.creation_time)
         mycheck = checks[index]
         self.assertTrue(regex.search(getattr(mycheck, field)),
                         "Not found a matching pattern in checks:\nindex=%s field=%s pattern=%r\n"
@@ -1158,7 +1175,7 @@ class AlignakTest(unittest2.TestCase):
         :return:
         """
         regex = re.compile(pattern)
-        checks = sorted(self._scheduler.checks.values(), key=lambda x: x.creation_time)
+        checks = sorted(list(self._scheduler.checks.values()), key=lambda x: x.creation_time)
         for check in checks:
             if re.search(regex, getattr(check, field)):
                 self.assertTrue(not assert_not,
@@ -1208,21 +1225,31 @@ class AlignakTest(unittest2.TestCase):
 
         logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
         for handler in logger_.handlers:
-            if isinstance(handler, CollectorHandler):
+            if not isinstance(handler, CollectorHandler):
+                continue
+
+            # print("-----\nParsing collector handler log events...")
+            # print("Searching for: %s (%s)" % (pattern, type(pattern)))
+            try:
+                regex = re.compile(pattern, re.ASCII)
+            except AttributeError:
                 regex = re.compile(pattern)
 
-                for log in handler.collector:
-                    if re.search(regex, log):
-                        self.assertTrue(not assert_not,
-                                        "Found matching log line, pattern: %r\nlog: %r"
-                                        % (pattern, log))
-                        break
-                else:
-                    for log in handler.collector:
-                        print(".%s" % log)
-                    self.assertTrue(assert_not,
-                                    "No matching log line found, pattern: %r\n" % pattern)
-                break
+            for log in handler.collector:
+                if re.search(regex, log):
+                    # print("# found: %s" % (log))
+                    self.assertTrue(
+                        not assert_not,
+                        "Found matching log line, pattern: %r\nlog: %r" % (pattern, log)
+                    )
+                    break
+            else:
+                # # Dump all known log events for analysis
+                # for log in handler.collector:
+                #     print(". %s (%s)" % (repr(log), type(log)))
+                self.assertTrue(assert_not,
+                                "No matching log line found, pattern: %r\n" % pattern)
+            break
         else:
             assert False, "Alignak test Logger is not initialized correctly!"
 
@@ -1254,11 +1281,11 @@ class AlignakTest(unittest2.TestCase):
         """
         regex = re.compile(pattern)
 
-        my_broker = [b for b in self._scheduler.my_daemon.brokers.values()][0]
+        my_broker = [b for b in list(self._scheduler.my_daemon.brokers.values())][0]
 
         monitoring_logs = []
         print("Broker broks: %s" % my_broker.broks)
-        for brok in my_broker.broks.values():
+        for brok in list(my_broker.broks.values()):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -1390,17 +1417,14 @@ class AlignakTest(unittest2.TestCase):
         if kw:
             raise ValueError('unhandled named/keyword argument(s): %r' % kw)
         #
-        make_in_data_gen = lambda: ( a if isinstance(a, unicode)
-                                    else
-                                unicode(str(a), in_bytes_encoding, 'replace')
-                            for a in args )
+        make_in_data_gen = lambda: ( a if isinstance(a, string_types) else str(a) for a in args )
 
         possible_codings = ( out_encoding, )
         if out_encoding != 'ascii':
             possible_codings += ( 'ascii', )
 
         for coding in possible_codings:
-            data = u' '.join(make_in_data_gen()).encode(coding, 'xmlcharrefreplace')
+            data = ' '.join(make_in_data_gen()).encode(coding, 'xmlcharrefreplace')
             try:
                 sys.stdout.write(data)
                 break

@@ -59,7 +59,7 @@ from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
 from alignak.property import StringProp, ListProp
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Contactgroup(Itemgroup):
@@ -70,11 +70,14 @@ class Contactgroup(Itemgroup):
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        'uuid':                 StringProp(default='', fill_brok=['full_status']),
-        'contactgroup_name':    StringProp(fill_brok=['full_status']),
-        'alias':                StringProp(fill_brok=['full_status']),
-        'contactgroup_members': ListProp(default=[], fill_brok=['full_status'],
-                                         merging='join', split_on_coma=True)
+        # 'uuid':
+        #     StringProp(fill_brok=['full_status']),
+        'contactgroup_name':
+            StringProp(fill_brok=['full_status']),
+        'alias':
+            StringProp(fill_brok=['full_status']),
+        'contactgroup_members':
+            ListProp(default=[], fill_brok=['full_status'], merging='join', split_on_comma=True)
     })
 
     macros = {
@@ -116,6 +119,7 @@ class Contactgroup(Itemgroup):
         return []
 
     def get_contacts_by_explosion(self, contactgroups):
+        # pylint: disable=access-member-before-definition
         """
         Get hosts of this group
 
@@ -240,8 +244,7 @@ class Contactgroups(Itemgroups):
         contactgroup = self.find_by_name(cgname)
         # if the id do not exist, create the cg
         if contactgroup is None:
-            contactgroup = Contactgroup({'contactgroup_name': cgname,
-                                         'alias': cgname, 'members': cname})
+            contactgroup = Contactgroup({'contactgroup_name': cgname, 'members': cname})
             self.add_contactgroup(contactgroup)
         else:
             contactgroup.add_string_member(cname)
@@ -254,20 +257,20 @@ class Contactgroups(Itemgroups):
         """
         # We do not want a same hg to be explode again and again
         # so we tag it
-        for tmp_cg in self.items.values():
+        for tmp_cg in list(self.items.values()):
             tmp_cg.already_explode = False
 
-        for contactgroup in self.items.values():
+        for contactgroup in list(self.items.values()):
             if hasattr(contactgroup, 'contactgroup_members') and not \
                     contactgroup.already_explode:
                 # get_contacts_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
-                for tmp_cg in self.items.values():
+                for tmp_cg in list(self.items.values()):
                     tmp_cg.rec_tag = False
                 contactgroup.get_contacts_by_explosion(self)
 
         # We clean the tags
-        for tmp_cg in self.items.values():
+        for tmp_cg in list(self.items.values()):
             if hasattr(tmp_cg, 'rec_tag'):
                 del tmp_cg.rec_tag
             del tmp_cg.already_explode

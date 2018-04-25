@@ -86,7 +86,7 @@ from alignak.acknowledge import Acknowledge
 from alignak.comment import Comment
 from alignak.commandcall import CommandCall
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class SchedulingItem(Item):  # pylint: disable=R0902
@@ -100,10 +100,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     properties = Item.properties.copy()
     properties.update({
-        'uuid':
-            StringProp(),
+        # 'uuid':
+        #     StringProp(),
         'display_name':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
         'initial_state':
             CharProp(default='o', fill_brok=['full_status']),
         'max_check_attempts':
@@ -123,7 +123,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'check_freshness':
             BoolProp(default=False, fill_brok=['full_status']),
         'freshness_threshold':
-            IntegerProp(default=-1, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=['full_status']),
 
         'event_handler':
             StringProp(default='', fill_brok=['full_status']),
@@ -143,10 +143,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             BoolProp(default=True, fill_brok=['full_status']),
         'contacts':
             ListProp(default=[],
-                     fill_brok=['full_status'], merging='join', split_on_coma=True),
+                     fill_brok=['full_status'], merging='join', split_on_comma=True),
         'contact_groups':
             ListProp(default=[], fill_brok=['full_status'],
-                     merging='join', split_on_coma=True),
+                     merging='join', split_on_comma=True),
         'notification_interval':
             IntegerProp(default=60, fill_brok=['full_status'], special=True),
         'first_notification_delay':
@@ -159,43 +159,43 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'stalking_options':
             ListProp(default=[], fill_brok=['full_status'], merging='join'),
         'notes':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
         'notes_url':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
         'action_url':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
         'icon_image':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
         'icon_image_alt':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
         'icon_set':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
 
         # Alignak specific
         'poller_tag':
-            StringProp(default='None'),
+            StringProp(default=u'None'),
         'reactionner_tag':
-            StringProp(default='None'),
+            StringProp(default=u'None'),
         'resultmodulations':
             ListProp(default=[], merging='join'),
         'business_impact_modulations':
             ListProp(default=[], merging='join'),
         'escalations':
-            ListProp(default=[], fill_brok=['full_status'], merging='join', split_on_coma=True),
+            ListProp(default=[], fill_brok=['full_status'], merging='join', split_on_comma=True),
         'maintenance_period':
-            StringProp(default='',
+            StringProp(default=r'',
                        fill_brok=['full_status']),
         'time_to_orphanage':
             IntegerProp(default=300, fill_brok=['full_status']),
 
         'labels':
             ListProp(default=[], fill_brok=['full_status'], merging='join',
-                     split_on_coma=True),
+                     split_on_comma=True),
 
         # BUSINESS CORRELATOR PART
         # Business rules output format template
         'business_rule_output_template':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
         # Business rules notifications mode
         'business_rule_smart_notifications':
             BoolProp(default=False, fill_brok=['full_status']),
@@ -204,9 +204,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             BoolProp(default=False, fill_brok=['full_status']),
         # Enforces child nodes notification options
         'business_rule_host_notification_options':
-            ListProp(default=[], fill_brok=['full_status'], split_on_coma=True),
+            ListProp(default=[], fill_brok=['full_status'], split_on_comma=True),
         'business_rule_service_notification_options':
-            ListProp(default=[], fill_brok=['full_status'], split_on_coma=True),
+            ListProp(default=[], fill_brok=['full_status'], split_on_comma=True),
         # Business_Impact value
         'business_impact':
             IntegerProp(default=2, fill_brok=['full_status']),
@@ -229,20 +229,20 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'snapshot_enabled':
             BoolProp(default=False),
         'snapshot_command':
-            StringProp(default=''),
+            StringProp(default=u''),
         'snapshot_period':
-            StringProp(default=''),
+            StringProp(default=u''),
         'snapshot_interval':
             IntegerProp(default=5),
 
         'realm':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
     })
 
     running_properties = Item.running_properties.copy()
     running_properties.update({
         'modified_attributes':
-            IntegerProp(default=0L, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
         'last_chk':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'next_chk':
@@ -595,8 +595,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.remove_in_progress_notifications_master()
             self.create_notifications('FLAPPINGSTOP', notif_period, hosts, services)
             # And update our status for modules
-            has_changed = self.get_update_status_brok()
-            self.broks.append(has_changed)
+            self.broks.append(self.get_update_status_brok())
 
         if not self.is_flapping and res >= high_flap_threshold and is_full:
             self.is_flapping = True
@@ -606,8 +605,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.remove_in_progress_notifications_master()
             self.create_notifications('FLAPPINGSTART', notif_period, hosts, services)
             # And update our status for modules
-            has_changed = self.get_update_status_brok()
-            self.broks.append(has_changed)
+            self.broks.append(self.get_update_status_brok())
 
     def add_attempt(self):
         """Add an attempt when a object is a non-ok state
@@ -626,8 +624,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         return self.attempt >= self.max_check_attempts
 
     def do_check_freshness(self, hosts, services, timeperiods, macromodulations, checkmodulations,
-                           checks, when=None):
-        # pylint: disable=too-many-nested-blocks
+                           checks, when):
+        # pylint: disable=too-many-nested-blocks, too-many-branches
         """Check freshness and schedule a check now if necessary.
 
         This function is called by the scheduler if Alignak is configured to check the freshness.
@@ -658,8 +656,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :rtype: None | object
         """
         now = when
-        if not now:
-            now = time.time()
+
         # Before, check if class (host or service) have check_freshness OK
         # Then check if item want freshness, then check freshness
         cls = self.__class__
@@ -707,6 +704,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         return None
 
     def set_myself_as_problem(self, hosts, services, timeperiods, bi_modulations):
+        # pylint: disable=too-many-locals
         """ Raise all impact from my error. I'm setting myself
         as a problem, and I register myself as this in all
         hosts/services that depend_on_me. So they are now my
@@ -757,8 +755,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.update_business_impact_value(hosts, services, timeperiods, bi_modulations)
 
         # And we register a new broks for update status
-        brok = self.get_update_status_brok()
-        self.broks.append(brok)
+        self.broks.append(self.get_update_status_brok())
 
     def update_business_impact_value(self, hosts, services, timeperiods, bi_modulations):
         """We update our 'business_impact' value with the max of
@@ -786,12 +783,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # We look at our crit modulations. If one apply, we take apply it
         # and it's done
         in_modulation = False
-        for impactmod_id in self.business_impact_modulations:
+        for bi_modulation_id in self.business_impact_modulations:
+            bi_modulation = bi_modulations[bi_modulation_id]
             now = time.time()
-            impactmod = bi_modulations[impactmod_id]
-            period = timeperiods[impactmod.modulation_period]
+            period = timeperiods[bi_modulation.modulation_period]
             if period is None or period.is_time_valid(now):
-                self.business_impact = impactmod.business_impact
+                self.business_impact = bi_modulation.business_impact
                 in_modulation = True
                 # We apply the first available, that's all
                 break
@@ -848,10 +845,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # our new status, with good business_impact value
         if was_pb:
             # And we register a new broks for update status
-            brok = self.get_update_status_brok()
-            self.broks.append(brok)
+            self.broks.append(self.get_update_status_brok())
 
     def register_a_problem(self, prob, hosts, services, timeperiods, bi_modulations):
+        # pylint: disable=too-many-locals
         """Call recursively by potentials impacts so they
         update their source_problems list. But do not
         go below if the problem is not a real one for me
@@ -922,8 +919,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                             impacts.extend(new_impacts)
 
             # And we register a new broks for update status
-            brok = self.get_update_status_brok()
-            self.broks.append(brok)
+            self.broks.append(self.get_update_status_brok())
 
         # now we return all impacts (can be void of course)
         return impacts
@@ -947,8 +943,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.unset_impact_state()
 
         # And we register a new broks for update status
-        brok = self.get_update_status_brok()
-        self.broks.append(brok)
+        self.broks.append(self.get_update_status_brok())
 
     def is_enable_action_dependent(self, hosts, services):
         """
@@ -1009,6 +1004,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.set_unreachable()
 
     def do_i_raise_dependency(self, status, inherit_parents, hosts, services, timeperiods):
+        # pylint: disable=too-many-locals
         """Check if this object or one of its dependency state (chk dependencies) match the status
 
         :param status: state list where dependency matters (notification failure criteria)
@@ -1075,6 +1071,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     def raise_dependencies_check(self, ref_check, hosts, services, timeperiods, macromodulations,
                                  checkmodulations, checks):
+        # pylint: disable=too-many-locals, too-many-nested-blocks
         """Get checks that we depend on if EVERY following conditions is met::
 
         * timeperiod is valid
@@ -1131,6 +1128,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     def schedule(self, hosts, services, timeperiods, macromodulations, checkmodulations,
                  checks, force=False, force_time=None):
+        # pylint: disable=too-many-branches, too-many-arguments
         """Main scheduling function
         If a check is in progress, or active check are disabled, do not schedule a check.
         The check interval change with HARD state::
@@ -1281,7 +1279,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.active_checks_enabled = False
         for chk_id in self.checks_in_progress:
             chk = checks[chk_id]
-            chk.status = 'waitconsume'
+            chk.status = u'waitconsume'
             chk.exit_status = self.state_id
             chk.output = self.output
             chk.check_time = time.time()
@@ -1317,7 +1315,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return: None
         """
         if notif.uuid in self.notifications_in_progress:
-            notif.status = 'zombie'
+            notif.status = u'zombie'
             del self.notifications_in_progress[notif.uuid]
 
     def remove_in_progress_notifications(self):
@@ -1325,7 +1323,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :return:None
         """
-        for notif in self.notifications_in_progress.values():
+        for notif in list(self.notifications_in_progress.values()):
             self.remove_in_progress_notification(notif)
 
     def remove_in_progress_notifications_master(self):
@@ -1333,7 +1331,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :return: None
         """
-        for notif in self.notifications_in_progress.values():
+        for notif in list(self.notifications_in_progress.values()):
             if notif.is_a == 'notification' and not notif.contact:
                 self.remove_in_progress_notification(notif)
 
@@ -1383,8 +1381,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         macroresolver = MacroResolver()
         cmd = macroresolver.resolve_command(event_handler, data, macromodulations, timeperiods)
 
-        event_h = EventHandler({'command': cmd, 'timeout': cls.event_handler_timeout,
-                               'ref': self.uuid, 'reactionner_tag': event_handler.reactionner_tag})
+        event_h = EventHandler({
+            'command': cmd,
+            'timeout': cls.event_handler_timeout,
+            'ref': self.uuid,
+            'reactionner_tag': event_handler.reactionner_tag
+        })
         self.raise_event_handler_log_entry(event_handler)
 
         # ok we can put it in our temp action queue
@@ -1443,8 +1445,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         cmd = macroresolver.resolve_command(self.snapshot_command, data, macromodulations,
                                             timeperiods)
         reac_tag = self.snapshot_command.reactionner_tag
-        event_h = EventHandler({'command': cmd, 'timeout': cls.event_handler_timeout,
-                               'ref': self.uuid, 'reactionner_tag': reac_tag, 'is_snapshot': True})
+        event_h = EventHandler({
+            'command': cmd,
+            'timeout': cls.event_handler_timeout,
+            'ref': self.uuid,
+            'reactionner_tag': reac_tag,
+            'is_snapshot': True
+        })
         self.raise_snapshot_log_entry(self.snapshot_command)
 
         # we save the time we launch the snap
@@ -1470,10 +1477,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             downtime = self.downtimes[downtime_id]
             # Activate flexible downtimes (do not activate triggered downtimes)
             # Note: only activate if we are between downtime start and end time!
-            if not downtime.fixed and not downtime.is_in_effect and \
-                    downtime.start_time <= self.last_chk and \
-                    downtime.end_time >= self.last_chk and \
-                    self.state_id != 0 and downtime.trigger_id in ['', '0']:
+            if downtime.fixed or downtime.is_in_effect:
+                continue
+            if downtime.start_time <= self.last_chk and downtime.end_time >= self.last_chk \
+                    and self.state_id != 0 and downtime.trigger_id in ['', '0']:
                 # returns downtimestart notifications
                 self.broks.extend(downtime.enter(timeperiods, hosts, services))
                 status_updated = True
@@ -1520,7 +1527,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
     def consume_result(self, chk, notif_period, hosts,
                        services, timeperiods, macromodulations, checkmodulations, bi_modulations,
                        res_modulations, checks):
-        # pylint: disable=R0915,R0912,R0913,E1101
+        # pylint: disable=too-many-locals, too-many-arguments
+        # pylint: disable=too-many-branches, too-many-statements
         """Consume a check return and send action in return
         main function of reaction of checks like raise notifications
 
@@ -1569,14 +1577,22 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 logger.info("Got check result: %d for '%s'",
                             chk.exit_status, self.get_full_name())
 
-        # Protect against bad type output
-        # if str, go in unicode
-        if isinstance(chk.output, str):
-            chk.output = chk.output.decode('utf8', 'ignore')
-            chk.long_output = chk.long_output.decode('utf8', 'ignore')
-
-        if isinstance(chk.perf_data, str):
-            chk.perf_data = chk.perf_data.decode('utf8', 'ignore')
+        # # Protect against bad type output
+        # try:
+        #     # if str, convert to unicode
+        #     if isinstance(chk.output, str):
+        #         chk.output = chk.output.decode('utf8', 'ignore')
+        #         chk.long_output = chk.long_output.decode('utf8', 'ignore')
+        # except AttributeError:
+        #     # Python 3 raises an exception!
+        #     pass
+        #
+        # try:
+        #     if isinstance(chk.perf_data, str):
+        #         chk.perf_data = chk.perf_data.decode('utf8', 'ignore')
+        # except AttributeError:
+        #     # Python 3 raises an exception!
+        #     pass
 
         if os.getenv('ALIGNAK_LOG_CHECKS', None):
             level = ['info', 'warning', 'error', 'critical'][min(chk.exit_status, 3)]
@@ -1587,8 +1603,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # ============ MANAGE THE CHECK ============ #
         # Not OK, waitconsume and have dependencies, put this check in waitdep, create if
         # necessary the check of dependent items and nothing else ;)
-        if chk.exit_status != 0 and chk.status == 'waitconsume' and self.act_depend_of:
-            chk.status = 'waitdep'
+        if chk.exit_status != 0 and chk.status == u'waitconsume' and self.act_depend_of:
+            chk.status = u'waitdep'
             # Make sure the check know about his dep
             # C is my check, and he wants dependencies
             deps_checks = self.raise_dependencies_check(chk, hosts, services, timeperiods,
@@ -1656,20 +1672,20 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Used to know if a notification is raised or not
         enable_action = True
 
-        if chk.status == 'waitdep':
+        if chk.status == u'waitdep':
             # Check dependencies
             enable_action = self.is_enable_action_dependent(hosts, services)
             # If all dependencies not ok, define item as UNREACHABLE
             self.check_and_set_unreachability(hosts, services)
 
-        if chk.status in ['waitconsume', 'waitdep']:
+        if chk.status in [u'waitconsume', u'waitdep']:
             # check waiting consume or waiting result of dependencies
             if chk.depend_on_me != []:
                 # one or more checks wait this check  (dependency)
-                chk.status = 'havetoresolvedep'
+                chk.status = u'havetoresolvedep'
             else:
                 # the check go in zombie state to be removed later
-                chk.status = 'zombie'
+                chk.status = u'zombie'
 
         # from UP/OK/PENDING
         # to UP/OK
@@ -1927,7 +1943,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type host_ref: alignak.object.host.Host
         :return: None
         """
-        if notif.status == 'inpoller':
+        if notif.status == u'in_poller':
             self.update_notification_command(notif, contact, macromodulations, timeperiods,
                                              host_ref)
             self.notified_contacts.add(contact.uuid)
@@ -1991,6 +2007,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         return False
 
     def get_next_notification_time(self, notif, escalations, timeperiods):
+        # pylint: disable=too-many-locals
         """Get the next notification time for a notification
         Take the standard notification_interval or ask for our escalation
         if one of them need a smaller value to escalade
@@ -2106,7 +2123,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # t_wished==None for the first notification launch after consume
         # here we must look at the self.notification_period
         if t_wished is None:
-            now = int(time.time())
+            now = time.time()
             t_wished = now
             # if first notification, we must add first_notification_delay
             if self.current_notification_number == 0 and n_type == 'PROBLEM':
@@ -2125,9 +2142,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # We follow our order
             new_t = t_wished
 
-        if self.notification_is_blocked_by_item(notification_period, hosts, services,
-                                                n_type, t_wished=t_wished,
-                                                ) and \
+        if self.is_blocking_notifications(notification_period, hosts, services,
+                                          n_type, t_wished) and \
                 self.first_notification_delay == 0 and self.notification_interval == 0:
             # If notifications are blocked on the host/service level somehow
             # and repeated notifications are not configured,
@@ -2137,7 +2153,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # Create the notification with an incremented notification_number.
             # The current_notification_number  of the item itself will only
             # be incremented when this notification (or its children)
-            # have actually be sent.
+            # have actually been sent.
             next_notif_nb = self.current_notification_number + 1
         elif n_type == 'RECOVERY':
             # Recovery resets the notification counter to zero
@@ -2148,6 +2164,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             next_notif_nb = self.current_notification_number
 
         data = {
+            'status': u'scheduled',
             'type': n_type,
             'command': 'VOID',
             'ref': self.uuid,
@@ -2165,14 +2182,16 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # Keep a trace in our notifications queue
         self.notifications_in_progress[notif.uuid] = notif
-        # and put it in the temp queue for scheduler
+        # and put it in our queue for the scheduler to pick it up
         self.actions.append(notif)
 
     def scatter_notification(self, notif, contacts, notifways, timeperiods, macromodulations,
-                             escalations, host_ref=None):
-        """In create_notifications we created a notification "template". When it's
-        time to hand it over to the reactionner, this master notification needs
+                             escalations, host_ref):
+        # pylint: disable=too-many-locals, too-many-boolean-expressions
+        """In create_notifications we created a notification master (eg. a template).
+        When it's time to hand it over to the reactionner, this master notification needs
         to be split in several child notifications, one for each contact
+
         To be more exact, one for each contact who is willing to accept
         notifications of this type and at this time
 
@@ -2194,13 +2213,15 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return: child notifications
         :rtype: list[alignak.objects.notification.Notification]
         """
-        cls = self.__class__
-        childnotifications = []
-        escalated = False
         if notif.contact:
             # only master notifications can be split up
             return []
-        if notif.type == 'RECOVERY':
+
+        cls = self.__class__
+        childnotifications = []
+        escalated = False
+        notif_contacts = []
+        if notif.type == u'RECOVERY':
             if self.first_notification_delay != 0 and not self.notified_contacts:
                 # Recovered during first_notification_delay. No notifications
                 # have been sent yet, so we keep quiet
@@ -2226,7 +2247,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # if has been already notified except if the item hard state changed!
             # This can happen when a service exits a downtime and it is still in
             # critical/warning (and not acknowledge)
-            if notif.type == "PROBLEM" and \
+            if notif.type == u'PROBLEM' and \
                     self.notification_interval == 0 \
                     and self.state_type == 'HARD' and self.last_state_type == self.state_type \
                     and self.state == self.last_state \
@@ -2273,16 +2294,17 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     self.notifications_in_progress[child_n.uuid] = child_n
                     childnotifications.append(child_n)
 
-                    if notif.type == 'PROBLEM':
+                    if notif.type == u'PROBLEM':
                         # Remember the contacts. We might need them later in the
                         # recovery code some lines above
                         self.notified_contacts.add(contact.uuid)
 
         return childnotifications
 
-    def launch_check(self, timestamp, hosts, services, timeperiods,  # pylint: disable=R0913
+    def launch_check(self, timestamp, hosts, services, timeperiods,
                      macromodulations, checkmodulations, checks, ref_check=None, force=False,
                      dependent=False):
+        # pylint: disable=too-many-locals, too-many-arguments
         """Launch a check (command)
 
         :param timestamp:
@@ -2454,14 +2476,19 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             cmd = macroresolver.resolve_command(cls.perfdata_command, data, macromodulations,
                                                 timeperiods)
             reactionner_tag = cls.perfdata_command.reactionner_tag
-            event_h = EventHandler({'command': cmd, 'timeout': cls.perfdata_timeout,
-                                   'ref': self.uuid, 'reactionner_tag': reactionner_tag})
+            event_h = EventHandler({
+                'command': cmd,
+                'timeout': cls.perfdata_timeout,
+                'ref': self.uuid,
+                'reactionner_tag': reactionner_tag
+            })
 
             # ok we can put it in our temp action queue
             self.actions.append(event_h)
 
     def create_business_rules(self, hosts, services, hostgroups, servicegroups,
                               macromodulations, timeperiods, running=False):
+        # pylint: disable=too-many-locals
         """Create business rules if necessary (cmd contains bp_rule)
 
         :param hosts: Hosts object to look for objects
@@ -2514,6 +2541,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 self.business_rule = node
 
     def get_business_rule_output(self, hosts, services, macromodulations, timeperiods):
+        # pylint: disable=too-many-locals, too-many-branches
         """
         Returns a status string for business rules based items formatted
         using business_rule_output_template attribute as template.
@@ -2637,6 +2665,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     def manage_internal_check(self, hosts, services, check, hostgroups, servicegroups,
                               macromodulations, timeperiods):
+        # pylint: disable=too-many-branches
         """Manage internal commands such as ::
 
         * bp_rule
@@ -2722,6 +2751,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     def acknowledge_problem(self, notification_period, hosts, services, sticky, notify, author,
                             comment, end_time=0):
+        # pylint: disable=too-many-arguments
         """
         Add an acknowledge
 
@@ -3049,8 +3079,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def notification_is_blocked_by_item(self, notification_period, hosts, services, n_type,
-                                        t_wished=None):  # pragma: no cover, base function
+    def is_blocking_notifications(self, notification_period, hosts, services,
+                                  n_type, t_wished):  # pragma: no cover, base function
         """Check if a notification is blocked by item
 
         :param n_type: notification type
@@ -3076,6 +3106,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         pass
 
     def is_correct(self):
+        # pylint: disable=too-many-branches
         """
         Check if this object configuration is correct ::
 
@@ -3088,48 +3119,51 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         state = True
 
         if hasattr(self, 'trigger') and getattr(self, 'trigger', None):
-            msg = "[%s::%s] 'trigger' property is not allowed" % (self.my_type, self.get_name())
-            self.configuration_warnings.append(msg)
+            self.add_warning("[%s::%s] 'trigger' property is not allowed"
+                             % (self.my_type, self.get_name()))
 
         # If no notif period, set it to None, mean 24x7
         if not hasattr(self, 'notification_period'):
             self.notification_period = None
 
+        # If freshness_threshold is not set, use check interval or retry interval
+        if hasattr(self, 'freshness_threshold') and not self.freshness_threshold:
+            if getattr(self, 'check_interval', 0):
+                self.freshness_threshold = self.check_interval * 60
+                # self.add_warning("[%s::%s] using check interval as a freshness threshold: %d s"
+                #                  % (self.my_type, self.get_name(), self.freshness_threshold))
+            elif getattr(self, 'retry_interval', 0):
+                self.freshness_threshold = self.retry_interval * 60
+                # self.add_warning("[%s::%s] using retry interval as a freshness threshold: %d s"
+                #                  % (self.my_type, self.get_name(), self.freshness_threshold))
+
         # If we got an event handler, it should be valid
         if getattr(self, 'event_handler', None) and not self.event_handler.is_valid():
-            msg = "[%s::%s] event_handler '%s' is invalid" \
-                  % (self.my_type, self.get_name(), self.event_handler.command)
-            self.add_error(msg)
+            self.add_error("[%s::%s] event_handler '%s' is invalid"
+                           % (self.my_type, self.get_name(), self.event_handler.command))
             state = False
 
         if not hasattr(self, 'check_command'):
-            msg = "[%s::%s] no check_command" % (self.my_type, self.get_name())
-            self.add_error(msg)
+            self.add_error("[%s::%s] no check_command" % (self.my_type, self.get_name()))
             state = False
         # Ok got a command, but maybe it's invalid
         else:
             if not self.check_command.is_valid():
-                msg = "[%s::%s] check_command '%s' invalid" % (self.my_type, self.get_name(),
-                                                               self.check_command.command)
-                self.add_error(msg)
+                self.add_error("[%s::%s] check_command '%s' invalid"
+                               % (self.my_type, self.get_name(), self.check_command.command))
                 state = False
             if self.got_business_rule:
                 if not self.business_rule.is_valid():
-                    msg = "[%s::%s] business_rule invalid" % (
-                        self.my_type, self.get_name()
-                    )
-                    self.add_error(msg)
+                    self.add_error("[%s::%s] business_rule invalid"
+                                   % (self.my_type, self.get_name()))
                     for bperror in self.business_rule.configuration_errors:
-                        msg = "[%s::%s]: %s" % (self.my_type, self.get_name(), bperror)
-                        self.add_error(msg)
+                        self.add_error("[%s::%s]: %s" % (self.my_type, self.get_name(), bperror))
                     state = False
 
         if not hasattr(self, 'notification_interval') \
                 and self.notifications_enabled is True:  # pragma: no cover, should never happen
-            msg = "[%s::%s] no notification_interval but notifications enabled" % (
-                self.my_type, self.get_name()
-            )
-            self.add_error(msg)
+            self.add_error("[%s::%s] no notification_interval but notifications enabled"
+                           % (self.my_type, self.get_name()))
             state = False
 
         # if no check_period, means 24x7, like for services

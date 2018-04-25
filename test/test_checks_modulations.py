@@ -47,7 +47,7 @@
 """
 
 import time
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestCheckModulations(AlignakTest):
@@ -57,38 +57,32 @@ class TestCheckModulations(AlignakTest):
         self.setup_with_file('./cfg/cfg_checks_modulations.cfg')
         assert self.conf_is_correct
 
-        self._sched = self._scheduler
-
     def test_checks_modulated_host_and_service(self):
         """ Check modulation for an host and its service """
         # Get the host
-        host = self._sched.hosts.find_by_name("modulated_host")
+        host = self._scheduler.hosts.find_by_name("modulated_host")
         assert host is not None
         assert host.check_command is not None
 
         # Get the check modulation
-        mod = self._sched.checkmodulations.find_by_name("MODULATION")
+        mod = self._scheduler.checkmodulations.find_by_name("MODULATION")
         assert mod is not None
         assert mod.get_name() == "MODULATION"
         # Modulation is known by the host
         assert mod.uuid in host.checkmodulations
         # Modulation check command is not the same as the host one
-        assert mod.get_check_command(self._sched.timeperiods, time.time()) is not host.check_command
+        assert mod.get_check_command(self._scheduler.timeperiods, time.time()) is not host.check_command
 
         # Get the host service
-        svc = self._sched.services.find_srv_by_name_and_hostname("modulated_host",
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("modulated_host",
                                                                  "modulated_service")
 
         # Service is going CRITICAL/HARD ... this forces an host check!
         self.scheduler_loop(1, [[svc, 2, 'BAD']])
         assert len(host.checks_in_progress) == 1
         for c in host.checks_in_progress:
-            assert 'plugins/nothing VALUE' == self._sched.checks[c].command
+            assert 'plugins/nothing VALUE' == self._scheduler.checks[c].command
 
         assert len(svc.checks_in_progress) == 1
         for c in svc.checks_in_progress:
-            assert 'plugins/nothing VALUE' == self._sched.checks[c].command
-
-
-if __name__ == '__main__':
-    AlignakTest.main()
+            assert 'plugins/nothing VALUE' == self._scheduler.checks[c].command

@@ -51,7 +51,7 @@
 import time
 
 from alignak.action import Action
-from alignak.property import IntegerProp, StringProp, BoolProp
+from alignak.property import StringProp, BoolProp
 from alignak.autoslots import AutoSlots
 
 
@@ -60,6 +60,7 @@ class EventHandler(Action):
     when a host or a service is in a bad state
 
     """
+
     # AutoSlots create the __slots__ with properties and
     # running_properties names
     __metaclass__ = AutoSlots
@@ -69,20 +70,22 @@ class EventHandler(Action):
     properties = Action.properties.copy()
     properties.update({
         'is_a':
-            StringProp(default='eventhandler'),
-        'long_output':
-            StringProp(default=''),
-        'perf_data':
-            StringProp(default=''),
-        'sched_id':
-            IntegerProp(default=0),
+            StringProp(default=u'eventhandler'),
         'is_snapshot':
             BoolProp(default=False),
     })
 
-    def __init__(self, params=None, parsing=True):
+    def __init__(self, params=None, parsing=False):
         super(EventHandler, self).__init__(params, parsing=parsing)
+
+        self.fill_default()
+
+        # An event handler mus be launched as soon as possible
         self.t_to_go = time.time()
+
+    def __str__(self):  # pragma: no cover
+        return "Event Handler %s, item: %s, status: %s command: %s" \
+               % (self.uuid, self.ref, self.status, self.command)
 
     def get_return_from(self, e_handler):
         """Setter of the following attributes::
@@ -114,15 +117,13 @@ class EventHandler(Action):
         self.output = out
 
     def is_launchable(self, timestamp):
-        """Check if this event handler can be launched base on time
+        """Check if this event handler can be launched based on current time
 
         :param timestamp: time to compare
         :type timestamp: int
-        :return: True if t >= self.t_to_go, False otherwise
+        :return: True if timestamp >= self.t_to_go, False otherwise
         :rtype: bool
-        TODO: Duplicate from Notification.is_launchable
         """
+        if self.t_to_go is None:
+            return False
         return timestamp >= self.t_to_go
-
-    def __str__(self):  # pragma: no cover
-        return "Check %s status:%s command:%s" % (self.uuid, self.status, self.command)

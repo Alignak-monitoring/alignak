@@ -25,6 +25,9 @@ This module provides logging facilities for Alignak:
 It defines a colored stream handler class to allow using colored log. Using this class is
 as follows: alignak.log.ColorStreamHandler
 
+It defines a CollectorHandler class that is used to easily capture the log events for the unit
+tests.
+
 It also defines a UTC time formatter usable as alignak.log.UTCFormatter
 
 The setup_logger function initializes the daemon logger with the JSON provided configuration file.
@@ -33,28 +36,18 @@ The make_monitoring_log function emits a log to the monitoring log logger and re
 the Alignak broker.
 """
 from __future__ import print_function
+
 import os
 import json
 import time
 
 import logging
 from logging import Handler, StreamHandler
+from logging.config import dictConfig as logger_dictConfig
 
 from termcolor import cprint
 
 from alignak.brok import Brok
-
-# -----
-# When deprecating Python 2.6, change this and replace with
-from alignak.misc.dictconfig import dictConfig as logger_dictConfig
-# import sys
-# if sys.version_info < (2, 7):
-#     from alignak.misc.dictconfig import dictConfig as logger_dictConfig
-# else:
-#     from logging.config import dictConfig as logger_dictConfig
-# -----
-# this:
-# from logging.config import dictConfig as logger_dictConfig
 
 # Default values for root logger
 ALIGNAK_LOGGER_NAME = 'alignak'
@@ -64,9 +57,7 @@ ALIGNAK_LOGGER_LEVEL = logging.INFO
 MONITORING_LOGGER_NAME = 'monitoring-log'
 
 
-# logging.basicConfig(filename='/tmp/alignak.log', level=logging.DEBUG)
-
-logger = logging.getLogger(ALIGNAK_LOGGER_NAME)  # pylint: disable=C0103
+logger = logging.getLogger(ALIGNAK_LOGGER_NAME)  # pylint: disable=invalid-name
 logger.setLevel(ALIGNAK_LOGGER_LEVEL)
 
 
@@ -99,10 +90,10 @@ class ColorStreamHandler(StreamHandler):
     This logging handler provides colored logs when logs are emitted to a tty.
     """
     def emit(self, record):
+        colors = {'DEBUG': 'cyan', 'INFO': 'green',
+                  'WARNING': 'yellow', 'CRITICAL': 'magenta', 'ERROR': 'red'}
+        msg = self.format(record)
         try:
-            msg = self.format(record)
-            colors = {'DEBUG': 'cyan', 'INFO': 'magenta',
-                      'WARNING': 'yellow', 'CRITICAL': 'magenta', 'ERROR': 'red'}
             cprint(msg, colors[record.levelname])
         except UnicodeEncodeError:  # pragma: no cover, simple protection
             print(msg.encode('ascii', 'ignore'))
@@ -114,6 +105,7 @@ class ColorStreamHandler(StreamHandler):
 
 
 def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_file=''):
+    # pylint: disable=too-many-branches
     """
     Configure the provided logger
     - get and update the content of the Json configuration file
@@ -135,25 +127,30 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
     :rtype process_name: str
     :param log_file: log file name to update the defined log file
     :rtype log_file: str
-    :param uid: if set, the log files will be chowned to his user/group
-    :rtype uid: int
-    :param gid: if set, the log files will be chowned to his user/group
-    :rtype gid: int
     :return: None
     """
+    # print("Setting up the logger: %s - %s" % (process_name, logger_configuration_file))
     logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
     for handler in logger_.handlers:
+        if not process_name:
+            break
+        # Logger is already configured?
         if getattr(handler, '_name', None) == 'daemons':
-            # Already configured...
-            # Update the declared formats with the process name
+            # Update the declared formats and file names with the process name
+            # This is for unit tests purpose only: alignak_tests will be replaced
+            # with the provided process name
             for hdlr in logger_.handlers:
-                if process_name and 'alignak_tests' in hdlr.formatter._fmt:
-                    hdlr.formatter._fmt = \
-                        hdlr.formatter._fmt.replace("alignak_tests", process_name)
-                if getattr(hdlr, 'filename', None):
-                    if process_name and 'alignak_tests' in hdlr.filename:
-                        hdlr.filename = \
-                            hdlr.formatter._fmt.replace("alignak_tests", process_name)
+                # print("- handler : %s (%s)" % (hdlr, hdlr.formatter._fmt))
+                if 'alignak_tests' in hdlr.formatter._fmt:
+                    formatter = logging.Formatter(hdlr.formatter._fmt.replace("alignak_tests",
+                                                                              process_name))
+                    hdlr.setFormatter(formatter)
+                if getattr(hdlr, 'filename', None) and 'alignak_tests' in hdlr.filename:
+                    hdlr.filename = hdlr.filename._fmt.replace("alignak_tests", process_name)
+                #     print("- handler : %s (%s) -> %s" % (hdlr, hdlr.formatter._fmt,
+                # hdlr.filename))
+                # else:
+                #     print("- handler : %s (%s)" % (hdlr, hdlr.formatter._fmt))
             break
     else:
         if not logger_configuration_file or not os.path.exists(logger_configuration_file):
@@ -195,40 +192,40 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
         logger_dictConfig(config)
 
 
-def set_log_level(log_level=logging.INFO):
-    """Set the Alignak logger log level. This is mainly used for the arbiter veiry odde to
+def set_log_level(log_level=logging.INFO, handlers=None):
+    """Set the Alignak logger log level. This is mainly used for the arbiter verify code to
     set the log level at INFO level whatever the configured log level is set.
 
+    This is also used when changing the daemon log level thanks to the WS interface
+
+    If an handlers name list is provided, all the handlers which name is in this list are
+    concerned else only the `daemons` handler log level is changed.
+
+    :param handlers: list of concerned handlers
+    :type: list
     :param log_level: log level
     :return: n/a
     """
-    # Change the collector logger log level
-    print("set_debug_log")
+    # print("Setting log level: %s" % (log_level))
+    # Change the logger and all its handlers log level
     logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
-    logger.setLevel(log_level)
-    for handler in logger_.handlers:
-        handler.setLevel(log_level)
+    logger_.setLevel(log_level)
+
+    if handlers is not None:
+        for handler in logger_.handlers:
+            if getattr(handler, '_name', None) in handlers:
+                handler.setLevel(log_level)
 
 
-def get_logger_fds(logger_):
+def get_log_level():
+    """Get the Alignak logger log level. This is used when getting the daemon log level
+    thanks to the WS interface
+
+    :return: n/a
     """
-    Get the file descriptors used by the logger
-
-    :param logger_: logger object to configure. If None, configure the root logger
-    :return: list of file descriptors
-    """
-    if logger_ is None:
-        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
-
-    fds = []
-    for handler in logger_.handlers:
-        try:
-            fds.append(handler.stream.fileno())
-        except AttributeError:
-            # If a log handler do not have a stream...
-            pass
-
-    return fds
+    # Change the logger and all its handlers log level
+    logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+    return logger_.log_level
 
 
 def make_monitoring_log(level, message):
@@ -257,6 +254,9 @@ def make_monitoring_log(level, message):
     try:
         message = message.decode('utf8', 'ignore')
     except UnicodeEncodeError:
+        pass
+    except AttributeError:
+        # Python 3 raises an exception!
         pass
 
     logging_function(message)

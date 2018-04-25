@@ -40,7 +40,7 @@ from alignak.misc.serialization import unserialize
 from alignak.downtime import Downtime
 from alignak.objects.timeperiod import Timeperiod
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 class TestMaintenancePeriod(AlignakTest):
     """
@@ -106,7 +106,7 @@ class TestMaintenancePeriod(AlignakTest):
         assert 1 == len(host.downtimes)
         # The host is still in a downtime period
         assert host.in_scheduled_downtime
-        downtime = host.downtimes.values()[0]
+        downtime = list(host.downtimes.values())[0]
         assert downtime.fixed
         assert downtime.is_in_effect
         assert not downtime.can_be_deleted

@@ -45,7 +45,7 @@
 
 from functools import partial
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestExcludeServices(AlignakTest):

@@ -52,7 +52,7 @@ from requests.adapters import HTTPAdapter
 
 from alignak.misc.serialization import serialize
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class HTTPClientException(Exception):
@@ -129,6 +129,7 @@ class HTTPClient(object):
     """
     def __init__(self, address='', port=0, use_ssl=False, timeout=3,
                  data_timeout=120, uri='', strong_ssl=False, proxy=''):
+        # pylint: disable=too-many-arguments
         self.address = address
         self.port = port
         self.timeout = timeout
@@ -229,7 +230,7 @@ class HTTPClient(object):
         """
         uri = self.make_uri(path)
         timeout = self.make_timeout(wait)
-        for (key, value) in args.iteritems():
+        for (key, value) in list(args.items()):
             args[key] = serialize(value, True)
         try:
             logger.debug("post: %s, timeout: %s, params: %s", uri, timeout, args)

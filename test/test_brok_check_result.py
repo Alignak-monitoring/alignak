@@ -23,7 +23,7 @@ This file test the check_result brok
 """
 
 import time
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 from alignak.misc.serialization import unserialize
 
 
@@ -41,7 +41,7 @@ class TestBrokCheckResult(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        my_broker = [b for b in self._scheduler.my_daemon.brokers.values()][0]
+        my_broker = [b for b in list(self._scheduler.my_daemon.brokers.values())][0]
         my_broker.broks = {}
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
@@ -60,12 +60,12 @@ class TestBrokCheckResult(AlignakTest):
         time.sleep(0.1)
         host_check_results = []
         service_check_results = []
-        for brok in my_broker.broks.values():
+        for brok in list(my_broker.broks.values()):
             if brok.type == 'host_check_result':
-                print("Brok %s: %s" % (brok.type, brok))
+                print(("Brok %s: %s" % (brok.type, brok)))
                 host_check_results.append(brok)
             elif brok.type == 'service_check_result':
-                print("Brok %s: %s" % (brok.type, brok))
+                print(("Brok %s: %s" % (brok.type, brok)))
                 service_check_results.append(brok)
 
         assert len(host_check_results) == 1

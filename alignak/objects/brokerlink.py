@@ -55,7 +55,7 @@ class BrokerLink(SatelliteLink):
     properties = SatelliteLink.properties.copy()
     properties.update({
         'type':
-            StringProp(default='broker', fill_brok=['full_status'], to_send=True),
+            StringProp(default=u'broker', fill_brok=['full_status'], to_send=True),
         'broker_name':
             StringProp(default='', fill_brok=['full_status']),
         'port':

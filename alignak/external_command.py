@@ -57,15 +57,21 @@
 Used to process command sent by users
 
 """
+# Because some arguments are really not used:
 # pylint: disable=unused-argument
-# pylint: disable=C0302
-# pylint: disable=R0904
+# Because it is easier to keep all the source code in the same file:
+# pylint: disable=too-many-lines
+# pylint: disable=too-many-public-methods
+# Because sometimes we have many arguments
+# pylint: disable=too-many-arguments
+
 import logging
 import time
 import re
+import collections
 
-# pylint: disable=wildcard-import,unused-wildcard-import
 # This import, despite not used, is necessary to include all Alignak objects modules
+# pylint: disable=wildcard-import,unused-wildcard-import
 from alignak.objects import *
 from alignak.util import to_int, to_bool, split_semicolon
 from alignak.downtime import Downtime
@@ -77,10 +83,10 @@ from alignak.brok import Brok
 from alignak.misc.common import DICT_MODATTR
 from alignak.stats import statsmgr
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class ExternalCommand:  # pylint: disable=R0903
+class ExternalCommand(object):
     """ExternalCommand class is only an object with a cmd_line attribute.
     All parsing and execution is done in manager
 
@@ -92,6 +98,9 @@ class ExternalCommand:  # pylint: disable=R0903
         try:
             self.cmd_line = self.cmd_line.decode('utf8', 'ignore')
         except UnicodeEncodeError:
+            pass
+        except AttributeError:
+            # Python 3 will raise an exception
             pass
         self.creation_timestamp = timestamp or time.time()
 
@@ -108,7 +117,7 @@ class ExternalCommand:  # pylint: disable=R0903
                 "creation_timestamp": self.creation_timestamp}
 
 
-class ExternalCommandManager:
+class ExternalCommandManager(object):
     """ExternalCommandManager manages all external commands sent to Alignak.
 
     It basically parses arguments and executes the right function
@@ -529,7 +538,7 @@ class ExternalCommandManager:
         """
         if hasattr(self.daemon, "add"):
             func = getattr(self.daemon, "add")
-            if callable(func):
+            if isinstance(func, collections.Callable):
                 func(element)
                 return
 
@@ -595,6 +604,7 @@ class ExternalCommandManager:
         return cmd
 
     def search_host_and_dispatch(self, host_name, command, extcmd):
+        # pylint: disable=too-many-branches
         """Try to dispatch a command for a specific host (so specific scheduler)
         because this command is related to a host (change notification interval for example)
 
@@ -622,7 +632,7 @@ class ExternalCommandManager:
             else:
                 logger.warning("I did not found a scheduler for the host: %s", host_name)
         else:
-            for cfg_part in self.cfg_parts.values():
+            for cfg_part in list(self.cfg_parts.values()):
                 if cfg_part.hosts.find_by_name(host_name) is not None:
                     logger.debug("Host %s found in a configuration", host_name)
                     if cfg_part.is_assigned:
@@ -793,6 +803,9 @@ class ExternalCommandManager:
             for elt in elts[1:]:
                 try:
                     elt = elt.decode('utf8', 'ignore')
+                except AttributeError:
+                    # Python 3 will raise an error...
+                    pass
                 except UnicodeEncodeError:
                     pass
                 logger.debug("Searching for a new arg: %s (%d)", elt, i)
@@ -945,7 +958,7 @@ class ExternalCommandManager:
         :return: None
         """
         # todo: deprecate this
-        contact.modified_service_attributes = long(value)
+        contact.modified_service_attributes = int(value)
 
     @staticmethod
     def change_contact_modhattr(contact, value):
@@ -961,7 +974,7 @@ class ExternalCommandManager:
         :return: None
         """
         # todo: deprecate this
-        contact.modified_host_attributes = long(value)
+        contact.modified_host_attributes = int(value)
 
     @staticmethod
     def change_contact_modattr(contact, value):
@@ -977,7 +990,7 @@ class ExternalCommandManager:
         :return: None
         """
         # todo: deprecate this
-        contact.modified_attributes = long(value)
+        contact.modified_attributes = int(value)
 
     def change_contact_host_notification_timeperiod(self, contact, notification_timeperiod):
         """Change contact host notification timeperiod value
@@ -1021,7 +1034,7 @@ class ExternalCommandManager:
             brok = make_monitoring_log('info', "SERVICE COMMENT: %s;%s;%s;%s"
                                        % (self.hosts[service.host].get_name(),
                                           service.get_name(),
-                                          unicode(author, 'utf-8'), unicode(comment, 'utf-8')))
+                                          str(author, 'utf-8'), str(comment, 'utf-8')))
         except TypeError:
             brok = make_monitoring_log('info', "SERVICE COMMENT: %s;%s;%s;%s"
                                        % (self.hosts[service.host].get_name(),
@@ -1052,11 +1065,11 @@ class ExternalCommandManager:
         host.add_comment(comm)
         # todo: create and send a brok for host comment
         try:
-            brok = make_monitoring_log('info', u"HOST COMMENT: %s;%s;%s"
+            brok = make_monitoring_log('info', "HOST COMMENT: %s;%s;%s"
                                        % (host.get_name(),
-                                          unicode(author, 'utf-8'), unicode(comment, 'utf-8')))
+                                          str(author, 'utf-8'), str(comment, 'utf-8')))
         except TypeError:
-            brok = make_monitoring_log('info', u"HOST COMMENT: %s;%s;%s"
+            brok = make_monitoring_log('info', "HOST COMMENT: %s;%s;%s"
                                        % (host.get_name(), author, comment))
 
         if self.my_conf.monitoring_log_broks:
@@ -1383,7 +1396,7 @@ class ExternalCommandManager:
         # todo: deprecate this
         # We need to change each of the needed attributes.
         previous_value = host.modified_attributes
-        changes = long(value)
+        changes = int(value)
 
         # For all boolean and non boolean attributes
         for modattr in ["MODATTR_NOTIFICATIONS_ENABLED", "MODATTR_ACTIVE_CHECKS_ENABLED",
@@ -1419,7 +1432,7 @@ class ExternalCommandManager:
         """
         host.modified_attributes |= DICT_MODATTR["MODATTR_MAX_CHECK_ATTEMPTS"].value
         host.max_check_attempts = check_attempts
-        if host.state_type == 'HARD' and host.state == 'UP' and host.attempt > 1:
+        if host.state_type == u'HARD' and host.state == u'UP' and host.attempt > 1:
             host.attempt = host.max_check_attempts
         self.daemon.get_and_register_status_brok(host)
 
@@ -1437,7 +1450,7 @@ class ExternalCommandManager:
         """
         service.modified_attributes |= DICT_MODATTR["MODATTR_MAX_CHECK_ATTEMPTS"].value
         service.max_check_attempts = check_attempts
-        if service.state_type == 'HARD' and service.state == 'OK' and service.attempt > 1:
+        if service.state_type == u'HARD' and service.state == u'OK' and service.attempt > 1:
             service.attempt = service.max_check_attempts
         self.daemon.get_and_register_status_brok(service)
 
@@ -1625,7 +1638,7 @@ class ExternalCommandManager:
         # todo: deprecate this
         # We need to change each of the needed attributes.
         previous_value = service.modified_attributes
-        changes = long(value)
+        changes = int(value)
 
         # For all boolean and non boolean attributes
         for modattr in ["MODATTR_NOTIFICATIONS_ENABLED", "MODATTR_ACTIVE_CHECKS_ENABLED",
@@ -1718,7 +1731,7 @@ class ExternalCommandManager:
         :type host: alignak.objects.host.Host
         :return: None
         """
-        comments = host.comments.keys()
+        comments = list(host.comments.keys())
         for uuid in comments:
             host.del_comment(uuid)
 
@@ -1746,7 +1759,7 @@ class ExternalCommandManager:
         :type service: alignak.objects.service.Service
         :return: None
         """
-        comments = service.comments.keys()
+        comments = list(service.comments.keys())
         for uuid in comments:
             service.del_comment(uuid)
 
@@ -3058,6 +3071,9 @@ class ExternalCommandManager:
             plugin_output = plugin_output.decode('utf8', 'ignore')
             logger.debug('%s > Passive host check plugin output: %s',
                          host.get_full_name(), plugin_output)
+        except AttributeError:
+            # Python 3 will raise an exception
+            pass
         except UnicodeError:
             pass
 
@@ -3081,7 +3097,7 @@ class ExternalCommandManager:
         # So exit_status, output and status is eaten by the host
         chk.exit_status = status_code
         chk.get_outputs(plugin_output, host.max_plugins_output_length)
-        chk.status = 'waitconsume'
+        chk.status = u'waitconsume'
         chk.check_time = self.current_timestamp  # we are using the external command timestamps
         # Set the corresponding host's check type to passive
         chk.set_type_passive()
@@ -3097,9 +3113,9 @@ class ExternalCommandManager:
             if status_code == 2:  # UNREACHABLE
                 log_level = 'warning'
             brok = make_monitoring_log(
-                log_level, 'PASSIVE HOST CHECK: %s;%d;%s;%s;%s'
-                % (host.get_name().decode('utf8', 'ignore'),
-                   status_code, chk.output, chk.long_output, chk.perf_data)
+                log_level,
+                'PASSIVE HOST CHECK: %s;%d;%s;%s;%s' % (
+                    host.get_name(), status_code, chk.output, chk.long_output, chk.perf_data)
             )
             if self.my_conf.monitoring_log_broks:
                 # Send a brok to our arbiter else to our scheduler
@@ -3144,6 +3160,9 @@ class ExternalCommandManager:
             plugin_output = plugin_output.decode('utf8', 'ignore')
             logger.debug('%s > Passive service check plugin output: %s',
                          service.get_full_name(), plugin_output)
+        except AttributeError:
+            # Python 3 will raise an exception
+            pass
         except UnicodeError:
             pass
 
@@ -3173,7 +3192,7 @@ class ExternalCommandManager:
         logger.debug('%s > Passive service check output: %s',
                      service.get_full_name(), chk.output)
 
-        chk.status = 'waitconsume'
+        chk.status = u'waitconsume'
         chk.check_time = self.current_timestamp  # we are using the external command timestamps
         # Set the corresponding service's check type to passive
         chk.set_type_passive()
@@ -3190,8 +3209,7 @@ class ExternalCommandManager:
                 log_level = 'error'
             brok = make_monitoring_log(
                 log_level, 'PASSIVE SERVICE CHECK: %s;%s;%d;%s;%s;%s' % (
-                    self.hosts[service.host].get_name().decode('utf8', 'ignore'),
-                    service.get_name().decode('utf8', 'ignore'),
+                    self.hosts[service.host].get_name(), service.get_name(),
                     return_code, chk.output, chk.long_output, chk.perf_data
                 )
             )
@@ -3278,11 +3296,11 @@ class ExternalCommandManager:
         # Ok now run it
         e_handler.execute()
         # And wait for the command to finish
-        while e_handler.status not in ('done', 'timeout'):
+        while e_handler.status not in [u'done', u'timeout']:
             e_handler.check_finished(64000)
 
         log_level = 'info'
-        if e_handler.status == 'timeout' or e_handler.exit_status != 0:
+        if e_handler.status == u'timeout' or e_handler.exit_status != 0:
             logger.error("Cannot restart Alignak : the 'restart-alignak' command failed with"
                          " the error code '%d' and the text '%s'.",
                          e_handler.exit_status, e_handler.output)
@@ -3314,11 +3332,11 @@ class ExternalCommandManager:
         # Ok now run it
         e_handler.execute()
         # And wait for the command to finish
-        while e_handler.status not in ('done', 'timeout'):
+        while e_handler.status not in [u'done', u'timeout']:
             e_handler.check_finished(64000)
 
         log_level = 'info'
-        if e_handler.status == 'timeout' or e_handler.exit_status != 0:
+        if e_handler.status == u'timeout' or e_handler.exit_status != 0:
             logger.error("Cannot reload Alignak configuration: the 'reload-alignak' command failed"
                          " with the error code '%d' and the text '%s'.",
                          e_handler.exit_status, e_handler.output)

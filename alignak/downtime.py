@@ -51,8 +51,6 @@ See detailed concepts below
 
 """
 import time
-import uuid
-import warnings
 from alignak.comment import Comment
 from alignak.property import BoolProp, IntegerProp, StringProp
 from alignak.brok import Brok
@@ -75,42 +73,54 @@ class Downtime(AlignakObject):
 
     my_type = 'downtime'
     properties = {
-        'activate_me': StringProp(default=[]),
-        'entry_time': IntegerProp(default=0, fill_brok=['full_status']),
-        'fixed': BoolProp(default=True, fill_brok=['full_status']),
-        'start_time': IntegerProp(default=0, fill_brok=['full_status']),
-        'duration': IntegerProp(default=0, fill_brok=['full_status']),
-        'trigger_id': StringProp(default=''),
-        'end_time': IntegerProp(default=0, fill_brok=['full_status']),
-        'real_end_time': IntegerProp(default=0),
-        'author': StringProp(default='', fill_brok=['full_status']),
-        'comment': StringProp(default=''),
-        'is_in_effect': BoolProp(default=False),
-        'has_been_triggered': BoolProp(default=False),
-        'can_be_deleted': BoolProp(default=False),
-        'ref': StringProp(default=''),
-        'ref_type': StringProp(default=''),
-        'comment_id': StringProp(default=''),
+        'activate_me':
+            StringProp(default=u''),
+        'entry_time':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'fixed':
+            BoolProp(default=True, fill_brok=['full_status']),
+        'start_time':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'duration':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'trigger_id':
+            StringProp(default=u''),
+        'end_time':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'real_end_time':
+            IntegerProp(default=0),
+        'author':
+            StringProp(default=u'Alignak', fill_brok=['full_status']),
+        'comment':
+            StringProp(default=u''),
+        'is_in_effect':
+            BoolProp(default=False),
+        'has_been_triggered':
+            BoolProp(default=False),
+        'can_be_deleted':
+            BoolProp(default=False),
+        'ref':
+            StringProp(default=u'unset'),
+        'ref_type':
+            StringProp(default=u'unset'),
+        'comment_id':
+            StringProp(default=u''),
     }
 
-    def __init__(self, params, parsing=True):
+    def __init__(self, params, parsing=False):
+        creating = 'uuid' not in params
 
-        # TODO: Fix this if (un-serializing)
-        if 'uuid' not in params:
-            self.uuid = uuid.uuid4().hex
-            self.ref = params['ref']  # pointer to srv or host we are apply
-            self.ref_type = params['ref_type']
+        super(Downtime, self).__init__(params, parsing=parsing)
+
+        self.fill_default()
+
+        if creating:
             self.activate_me = []  # The other downtimes i need to activate
             self.entry_time = int(time.time())
-            self.fixed = params['fixed']
-            self.start_time = params['start_time']
-            self.duration = params['duration']
-            self.trigger_id = params['trigger_id']
             if self.trigger_id not in ['', '0']:  # triggered plus fixed makes no sense
                 self.fixed = False
-            self.end_time = params['end_time']
-            if params['fixed']:
-                self.duration = params['end_time'] - params['start_time']
+            if self.fixed:
+                self.duration = self.end_time - self.start_time
             # This is important for flexible downtimes. Here start_time and
             # end_time mean: in this time interval it is possible to trigger
             # the beginning of the downtime which lasts for duration.
@@ -118,17 +128,11 @@ class Downtime(AlignakObject):
             # recalculated from now+duration
             # end_time will be displayed in the web interface, but real_end_time
             # is used internally
-            self.real_end_time = params['end_time']
-            self.author = params['author']
-            self.comment = params['comment']
+            self.real_end_time = self.end_time
             self.is_in_effect = False
-            # fixed: start_time has been reached,
-            # flexible: non-ok checkresult
 
             self.has_been_triggered = False  # another downtime has triggered me
             self.can_be_deleted = False
-        else:
-            super(Downtime, self).__init__(params, parsing)
 
     def __str__(self):  # pragma: no cover
         if self.is_in_effect is True:
@@ -141,27 +145,6 @@ class Downtime(AlignakObject):
             d_type = "flexible"
         return "%s %s Downtime id=%s %s - %s" % (
             active, d_type, self.uuid, time.ctime(self.start_time), time.ctime(self.end_time))
-
-    @property
-    def id(self):  # pylint: disable=C0103
-        """Getter for id, raise deprecation warning
-
-        :return: self.uuid
-        """
-        warnings.warn("Access to deprecated attribute id %s Item class" % self.__class__,
-                      DeprecationWarning, stacklevel=2)
-        return self.uuid
-
-    @id.setter
-    def id(self, value):  # pylint: disable=C0103
-        """Setter for id, raise deprecation warning
-
-        :param value: value to set
-        :return: None
-        """
-        warnings.warn("Access to deprecated attribute id of %s class" % self.__class__,
-                      DeprecationWarning, stacklevel=2)
-        self.uuid = value
 
     def trigger_me(self, other_downtime):
         """Wrapper to activate_me.append function
@@ -208,8 +191,8 @@ class Downtime(AlignakObject):
             # Notification author data
             # todo: note that alias and name are not implemented yet
             author_data = {
-                'author': self.author, 'author_name': 'Not available',
-                'author_alias': 'Not available', 'author_comment': self.comment
+                'author': self.author, 'author_name': u'Not available',
+                'author_alias': u'Not available', 'author_comment': self.comment
             }
             item.create_notifications('DOWNTIMESTART', notif_period, hosts, services,
                                       author_data=author_data)
@@ -259,8 +242,8 @@ class Downtime(AlignakObject):
                 # Notification author data
                 # todo: note that alias and name are not implemented yet
                 author_data = {
-                    'author': self.author, 'author_name': 'Not available',
-                    'author_alias': 'Not available', 'author_comment': self.comment
+                    'author': self.author, u'author_name': 'Not available',
+                    'author_alias': u'Not available', 'author_comment': self.comment
                 }
                 item.create_notifications('DOWNTIMEEND', notif_period, hosts, services,
                                           author_data=author_data)
@@ -336,14 +319,15 @@ class Downtime(AlignakObject):
         else:
             hours, remainder = divmod(self.duration, 3600)
             minutes, _ = divmod(remainder, 60)
-            text = ("This %s has been scheduled for flexible downtime starting between %s and %s "
-                    "and lasting for a period of %d hours and %d minutes. "
-                    "Notifications for the %s will not be sent out during that time period." % (
-                        ref.my_type,
-                        time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.start_time)),
-                        time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.end_time)),
-                        hours, minutes, ref.my_type)
-                    )
+            text = (
+                "This %s has been scheduled for flexible downtime starting between %s and %s "
+                "and lasting for a period of %d hours and %d minutes. "
+                "Notifications for the %s will not be sent out during that time period."
+                % (ref.my_type,
+                   time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.start_time)),
+                   time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.end_time)),
+                   hours, minutes, ref.my_type)
+            )
         if ref.my_type == 'host':
             comment_type = 1
         else:
@@ -379,7 +363,7 @@ class Downtime(AlignakObject):
         """
         cls = self.__class__
         # Now config properties
-        for prop, entry in cls.properties.items():
+        for prop, entry in list(cls.properties.items()):
             if hasattr(prop, 'fill_brok'):
                 if brok_type in entry['fill_brok']:
                     data[prop] = getattr(self, prop)

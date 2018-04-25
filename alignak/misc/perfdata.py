@@ -78,7 +78,8 @@ def guess_int_or_float(val):
         return None
 
 
-class Metric:  # pylint: disable=R0903
+class Metric(object):
+    # pylint: disable=too-few-public-methods
     """
     Class providing a small abstraction for one metric of a Perfdatas class
     """
@@ -109,7 +110,8 @@ class Metric:  # pylint: disable=R0903
         return string
 
 
-class PerfDatas:  # pylint: disable=R0903
+class PerfDatas(object):
+    # pylint: disable=too-few-public-methods
     """
     Class providing performance data extracted from a check output
     """
@@ -124,7 +126,7 @@ class PerfDatas:  # pylint: disable=R0903
                 self.metrics[metric.name] = metric
 
     def __iter__(self):
-        return self.metrics.itervalues()
+        return iter(list(self.metrics.values()))
 
     def __len__(self):
         return len(self.metrics)

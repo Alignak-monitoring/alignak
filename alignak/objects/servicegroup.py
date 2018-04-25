@@ -55,7 +55,7 @@ import logging
 from alignak.property import StringProp, ListProp
 from .itemgroup import Itemgroup, Itemgroups
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Servicegroup(Itemgroup):
@@ -67,14 +67,20 @@ class Servicegroup(Itemgroup):
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        'uuid':                 StringProp(default='', fill_brok=['full_status']),
-        'servicegroup_name':    StringProp(fill_brok=['full_status']),
-        'alias':                StringProp(fill_brok=['full_status']),
-        'servicegroup_members': ListProp(default=[], fill_brok=['full_status'],
-                                         merging='join', split_on_coma=True),
-        'notes':                StringProp(default='', fill_brok=['full_status']),
-        'notes_url':            StringProp(default='', fill_brok=['full_status']),
-        'action_url':           StringProp(default='', fill_brok=['full_status']),
+        # 'uuid':
+        #     StringProp(fill_brok=['full_status']),
+        'servicegroup_name':
+            StringProp(fill_brok=['full_status']),
+        'alias':
+            StringProp(fill_brok=['full_status']),
+        'servicegroup_members':
+            ListProp(default=[], fill_brok=['full_status'], merging='join', split_on_comma=True),
+        'notes':
+            StringProp(default=u'', fill_brok=['full_status']),
+        'notes_url':
+            StringProp(default=u'', fill_brok=['full_status']),
+        'action_url':
+            StringProp(default=u'', fill_brok=['full_status']),
     })
 
     macros = {
@@ -119,6 +125,7 @@ class Servicegroup(Itemgroup):
         return []
 
     def get_services_by_explosion(self, servicegroups):
+        # pylint: disable=access-member-before-definition
         """
         Get all services of this servicegroup and add it in members container
 
@@ -214,10 +221,9 @@ class Servicegroups(Itemgroups):
                             servicegroup.add_string_unknown_member('%s,%s' %
                                                                    (host_name, service_desc))
                         elif host:
-                            self.configuration_warnings.append(
-                                'servicegroup %r : %s is excluded from the services of the host %s'
-                                % (servicegroup, service_desc, host_name)
-                            )
+                            self.add_warning('servicegroup %r : %s is excluded from the '
+                                             'services of the host %s'
+                                             % (servicegroup, service_desc, host_name))
                 seek += 1
 
             # Make members uniq
@@ -257,20 +263,20 @@ class Servicegroups(Itemgroups):
         """
         # We do not want a same service group to be exploded again and again
         # so we tag it
-        for servicegroup in self.items.values():
+        for servicegroup in list(self.items.values()):
             servicegroup.already_explode = False
 
-        for servicegroup in self.items.values():
+        for servicegroup in list(self.items.values()):
             if hasattr(servicegroup, 'servicegroup_members') and not \
                     servicegroup.already_explode:
                 # get_services_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
-                for sg2 in self.items.values():
+                for sg2 in list(self.items.values()):
                     sg2.rec_tag = False
                 servicegroup.get_services_by_explosion(self)
 
         # We clean the tags
-        for servicegroup in self.items.values():
+        for servicegroup in list(self.items.values()):
             try:
                 del servicegroup.rec_tag
             except AttributeError:

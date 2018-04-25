@@ -20,6 +20,7 @@
 This module provide object serialization for Alignak objects. It basically converts objects to json
 """
 import sys
+import collections
 
 try:
     import ujson as json
@@ -46,7 +47,7 @@ def serialize(obj, no_dump=False):
     """
     # print("Serialize (%s): %s" % (no_dump, obj))
 
-    if hasattr(obj, "serialize") and callable(obj.serialize):
+    if hasattr(obj, "serialize") and isinstance(obj.serialize, collections.Callable):
         o_dict = {
             '__sys_python_module__': "%s.%s" % (obj.__class__.__module__, obj.__class__.__name__),
             'content': obj.serialize()
@@ -54,7 +55,7 @@ def serialize(obj, no_dump=False):
 
     elif isinstance(obj, dict):
         o_dict = {}
-        for key, value in obj.iteritems():
+        for key, value in list(obj.items()):
             o_dict[key] = serialize(value, True)
 
     elif isinstance(obj, (list, set)):
@@ -107,7 +108,7 @@ def unserialize(j_obj, no_load=False):
             return cls(data['content'], parsing=False)
 
         data_dict = {}
-        for key, value in data.iteritems():
+        for key, value in list(data.items()):
             data_dict[key] = unserialize(value, True)
         return data_dict
 

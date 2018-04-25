@@ -47,13 +47,12 @@
 
 """
 import time
-import uuid
 import logging
 
 from alignak.alignakobject import AlignakObject
 from alignak.property import BoolProp, IntegerProp, StringProp
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class ContactDowntime(AlignakObject):
@@ -63,34 +62,30 @@ class ContactDowntime(AlignakObject):
     """
 
     properties = {
-        'start_time': IntegerProp(default=0, fill_brok=['full_status']),
-        'end_time': IntegerProp(default=0, fill_brok=['full_status']),
-        'author': StringProp(default='', fill_brok=['full_status']),
-        'comment': StringProp(default=''),
-        'is_in_effect': BoolProp(default=False),
-        'can_be_deleted': BoolProp(default=False),
-        'ref': StringProp(default=''),
+        'start_time':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'end_time':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'author':
+            StringProp(default=u'', fill_brok=['full_status']),
+        'comment':
+            StringProp(default=u''),
+        'is_in_effect':
+            BoolProp(default=False),
+        'can_be_deleted':
+            BoolProp(default=False),
+        'ref':
+            StringProp(default=u''),
 
     }
 
     # Schedule a contact downtime. It's far more easy than a host/service
     # one because we got a beginning, and an end. That's all for running.
     # got also an author and a comment for logging purpose.
-    def __init__(self, params):
+    def __init__(self, params, parsing=False):
+        super(ContactDowntime, self).__init__(params, parsing=parsing)
 
-        # TODO: Fix this if (un-serializing)
-        if 'uuid' not in params:
-            self.uuid = uuid.uuid4().hex
-            self.ref = params['ref']  # pointer to srv or host we are apply
-            self.start_time = params['start_time']
-            self.end_time = params['end_time']
-            self.author = params['author']
-            self.comment = params['comment']
-            self.is_in_effect = False
-            self.can_be_deleted = False
-            # self.add_automatic_comment()
-        else:
-            super(ContactDowntime, self).__init__(params)
+        self.fill_default()
 
     def check_activation(self, contacts):
         """Enter or exit downtime if necessary

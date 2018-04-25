@@ -94,24 +94,24 @@ class HostExtInfo(GenericExtInfo):
         'host_name':
             StringProp(),
         'notes':
-            StringProp(default=''),
+            StringProp(default=u''),
         'notes_url':
-            StringProp(default=''),
+            StringProp(default=u''),
         'icon_image':
-            StringProp(default=''),
+            StringProp(default=u''),
         'icon_image_alt':
-            StringProp(default=''),
+            StringProp(default=u''),
         'vrml_image':
-            StringProp(default=''),
+            StringProp(default=u''),
         'statusmap_image':
-            StringProp(default=''),
+            StringProp(default=u''),
 
         # No slots for this 2 because begin property by a number seems bad
         # it's stupid!
         '2d_coords':
-            StringProp(default='', no_slots=True),
+            StringProp(default=u'', no_slots=True),
         '3d_coords':
-            StringProp(default='', no_slots=True),
+            StringProp(default=u'', no_slots=True),
     })
 
     # Hosts macros and prop that give the information

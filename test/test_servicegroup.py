@@ -28,7 +28,7 @@ import time
 
 from alignak.objects import Service
 from alignak.objects import Servicegroup
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestServiceGroup(AlignakTest):
@@ -105,14 +105,14 @@ class TestServiceGroup(AlignakTest):
         print("List servicegroup services:")
         for service_id in sg.members:
             service = self._scheduler.services[service_id]
-            print("Service: %s" % service)
+            print(("Service: %s" % service))
             assert isinstance(service, Service)
 
             if service.get_name() == 'test_ok_0':
                 assert len(service.get_servicegroups()) == 4
                 for group_id in service.servicegroups:
                     group = self._scheduler.servicegroups[group_id]
-                    print("Group: %s" % group)
+                    print(("Group: %s" % group))
                     assert group.get_name() in [
                         'ok', 'servicegroup_01', 'servicegroup_02', 'allservices_and_groups'
                     ]
@@ -120,7 +120,7 @@ class TestServiceGroup(AlignakTest):
         assert len(sg.get_servicegroup_members()) == 4
         print("List servicegroup groups:")
         for group in sg.get_servicegroup_members():
-            print("Group: %s" % group)
+            print(("Group: %s" % group))
             assert group in [
                 'servicegroup_01', 'servicegroup_02', 'servicegroup_03', 'servicegroup_04'
             ]
@@ -141,10 +141,10 @@ class TestServiceGroup(AlignakTest):
         assert len(self._scheduler.servicegroups.get_members_by_name("void")) == \
             0
 
-        print("Services: %s" % sg.get_servicegroup_members())
+        print(("Services: %s" % sg.get_servicegroup_members()))
         assert len(sg.get_servicegroup_members()) == 0
 
-        print("Services: %s" % sg.get_services())
+        print(("Services: %s" % sg.get_services()))
         assert len(sg.get_services()) == 0
 
     def test_servicegroup_with_space(self):

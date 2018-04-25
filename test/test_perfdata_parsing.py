@@ -51,7 +51,7 @@ This file is used to test reading and processing of config files
 
 from alignak.misc.perfdata import Metric, PerfDatas
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestPerfdataParsing(AlignakTest):
@@ -228,14 +228,14 @@ class TestPerfdataParsing(AlignakTest):
         """ Create a perfdata with accented characters
         """
         # Metrics name can contain accented and special characters
-        perf_data_string = u"àéèï-192.168.0.1=-7.22636468709e-05s;1;2;0;;"
+        perf_data_string = "àéèï-192.168.0.1=-7.22636468709e-05s;1;2;0;;"
         perf_data = PerfDatas(perf_data_string)
         # Get a metrics dictionary
         assert isinstance(perf_data.metrics, dict)
         assert 1 == len(perf_data)
 
-        metric = perf_data[u'àéèï-192.168.0.1']
-        assert metric.name == u'àéèï-192.168.0.1'
+        metric = perf_data['àéèï-192.168.0.1']
+        assert metric.name == 'àéèï-192.168.0.1'
         assert metric.value == -7.22636468709e-05
         assert metric.uom == 's'
         assert metric.warning == 1

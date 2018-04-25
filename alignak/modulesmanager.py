@@ -51,17 +51,17 @@
 import logging
 import time
 import traceback
-import cStringIO
+import io
 
 import importlib
-
+import collections
 
 from alignak.basemodule import BaseModule
 
 # Initialization test period
 MODULE_INIT_PERIOD = 5
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class ModulesManager(object):
@@ -132,7 +132,8 @@ class ModulesManager(object):
 
                 # Check existing module get_instance method
                 if not hasattr(python_module, 'get_instance') or \
-                        not callable(getattr(python_module, 'get_instance')):  # pragma: no cover
+                        not isinstance(getattr(python_module, 'get_instance'),
+                                       collections.Callable):  # pragma: no cover
                     self.configuration_errors.append("Module %s is missing a 'get_instance' "
                                                      "function" % module.python_name)
                     raise AttributeError
@@ -187,7 +188,7 @@ class ModulesManager(object):
             )
             logger.error("The instance %s raised an exception on initialization: %s, I remove it!",
                          instance.name, str(exp))
-            output = cStringIO.StringIO()
+            output = io.StringIO()
             traceback.print_exc(file=output)
             logger.error("Traceback of the exception: %s", output.getvalue())
             output.close()
@@ -402,7 +403,7 @@ class ModulesManager(object):
         logger.info('Shutting down modules...')
         # Ask internal to quit if they can
         for instance in self.get_internal_instances():
-            if hasattr(instance, 'quit') and callable(instance.quit):
+            if hasattr(instance, 'quit') and isinstance(instance.quit, collections.Callable):
                 instance.quit()
 
         self.clear_instances([instance for instance in self.instances if instance.is_external])

@@ -46,7 +46,7 @@ Test service definition duplicate for each ...
 """
 
 import pytest
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 from alignak.util import generate_key_value_sequences, KeyValueSyntaxError
 
 
@@ -76,7 +76,7 @@ class TestServiceDescriptionDuplicateForEach(AlignakTest):
     def test_all_duplicate_ok(self):
         host = self._sched.hosts.find_by_name("my_host")
         services_desc = set(self._sched.services[s].service_description for s in host.services)
-        expected = set(map(lambda i: 'Generated Service %s' % i, range(1, 4)))
+        expected = set(['Generated Service %s' % i for i in range(1, 4)])
         assert expected == services_desc
 
     def test_complex(self):

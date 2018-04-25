@@ -45,7 +45,7 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 from pprint import pprint
-from alignak_test import *
+from .alignak_test import *
 
 
 class TestInheritanceAndPlus(AlignakTest):

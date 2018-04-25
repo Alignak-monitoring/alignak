@@ -57,17 +57,27 @@ class Comment(AlignakObject):
 
     my_type = 'comment'
     properties = {
-        'entry_time':   IntegerProp(),
-        'author':       StringProp(default='(Alignak)'),
-        'comment':      StringProp(default='Automatic Comment'),
-        'comment_type': IntegerProp(),
-        'entry_type':   IntegerProp(),
-        'source':       IntegerProp(),
-        'expires':      BoolProp(),
-        'ref':  StringProp(default=''),
+        'entry_time':
+            IntegerProp(default=0),
+        'entry_type':
+            IntegerProp(),
+        'author':
+            StringProp(default=u'Alignak'),
+        'comment':
+            StringProp(default=u''),
+        'comment_type':
+            IntegerProp(),
+        'source':
+            IntegerProp(default=0),
+        'expires':
+            BoolProp(default=False),
+        'ref':
+            StringProp(default=u'unset'),
+        'ref_type':
+            StringProp(default=u'unset'),
     }
 
-    def __init__(self, params, parsing=True):
+    def __init__(self, params, parsing=False):
         """Adds a comment to a particular service.
 
         :param ref: reference object (host / service)
@@ -101,8 +111,10 @@ class Comment(AlignakObject):
         :return: None
         """
         super(Comment, self).__init__(params, parsing)
+
         if not hasattr(self, 'entry_time'):
             self.entry_time = int(time.time())
+
         self.fill_default()
 
     def __str__(self):  # pragma: no cover

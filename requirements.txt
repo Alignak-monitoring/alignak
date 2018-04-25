@@ -1,16 +1,14 @@
-# CherryPy >= 5.1.0 and PyOpenssl == 0.14 (16 seems broken) are required for proper HTTPS setup
-# They are not added as hard dependencies here so that packaging works fine
-# CherryPy is not packaged anymore since v3.5XX so we let it as is.
-# Keep a CherryPy lower than 9.0 because WSGIServer is not more shipped with CherryPy
-# CherryPy<9.0.0
-# Alignak now supports recent CherryPy
+# Still needing future for the CarbonIFace lib and some other stuff (queues, ...)
+future
+
+# Alignak supports the most recent CherryPy
 CherryPy
 
 # Requests to communicate between the daemons
 requests
 
 # importlib is used to import modules used by the daemons
-importlib
+importlib; python_version == '2.7'
 
 # Colored console log
 termcolor
@@ -21,10 +19,9 @@ setproctitle
 # ujson is used for the internal objects serialization
 ujson
 
-# numpy for date and percentile computation - needs a compimler on the installation target system!
-# Uncomment or `pip install numpy` to use numpy library for math functions
-# numpy<1.12.0; python_version < '2.7'
-# numpy; python_version >= '2.7'
+# numpy for date and percentile computation - needs a compiler on the installation target system!
+# Comment to use an internal implementation of percentile function
+numpy
 
 # SSL between the daemons
 # This requirement is only a requirement if you intend to use SLL for the inter-daemons

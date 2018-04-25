@@ -70,13 +70,20 @@ class Command(Item):
 
     properties = Item.properties.copy()
     properties.update({
-        'command_name': StringProp(fill_brok=['full_status']),
-        'command_line': StringProp(fill_brok=['full_status']),
-        'poller_tag':   StringProp(default='None'),
-        'reactionner_tag':   StringProp(default='None'),
-        'module_type':  StringProp(default=None),
-        'timeout':      IntegerProp(default=-1),
-        'enable_environment_macros': BoolProp(default=False),
+        'command_name':
+            StringProp(fill_brok=['full_status']),
+        'command_line':
+            StringProp(fill_brok=['full_status']),
+        'poller_tag':
+            StringProp(default=u'None'),
+        'reactionner_tag':
+            StringProp(default=u'None'),
+        'module_type':
+            StringProp(default=None),
+        'timeout':
+            IntegerProp(default=-1),
+        'enable_environment_macros':
+            BoolProp(default=False),
     })
 
     def __init__(self, params=None, parsing=True):
@@ -89,11 +96,11 @@ class Command(Item):
             self.timeout = -1
 
         if not hasattr(self, 'poller_tag'):
-            self.poller_tag = 'None'
+            self.poller_tag = u'None'
         if not hasattr(self, 'enable_environment_macros'):
             self.enable_environment_macros = False
         if not hasattr(self, 'reactionner_tag'):
-            self.reactionner_tag = 'None'
+            self.reactionner_tag = u'None'
         if not hasattr(self, 'module_type'):
             # If the command start with a _, set the module_type
             # as the name of the command, without the _
@@ -103,7 +110,7 @@ class Command(Item):
                 self.module_type = module_type[1:]
             # If no command starting with _, be fork :)
             else:
-                self.module_type = 'fork'
+                self.module_type = u'fork'
 
     def get_name(self):
         """
@@ -127,7 +134,7 @@ class Command(Item):
         """
         cls = self.__class__
         # Now config properties
-        for prop, entry in cls.properties.items():
+        for prop, entry in list(cls.properties.items()):
             # Is this property intended for broking?
             # if 'fill_brok' in entry[prop]:
             if brok_type in entry.fill_brok:

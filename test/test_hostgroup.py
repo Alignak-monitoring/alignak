@@ -28,7 +28,7 @@ import time
 
 from alignak.objects import Host
 from alignak.objects import Hostgroup
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 import pytest
 
 
@@ -54,7 +54,7 @@ class TestHostGroup(AlignakTest):
         """
         self.setup_with_file('cfg/hostgroup/multiple_hostgroup.cfg')
 
-        print "Get the hosts and services"
+        print("Get the hosts and services")
         host = self._scheduler.hosts.find_by_name("will crash")
         assert host is not None
         svc = self._scheduler.services.find_srv_by_name_and_hostname(
@@ -174,14 +174,14 @@ class TestHostGroup(AlignakTest):
         print("List hostgroup hosts:")
         for host_id in hg.members:
             host = self._scheduler.hosts[host_id]
-            print("Host: %s" % host)
+            print(("Host: %s" % host))
             assert isinstance(host, Host)
 
             if host.get_name() == 'test_router_0':
                 assert len(host.get_hostgroups()) == 3
                 for group_id in host.hostgroups:
                     group = self._scheduler.hostgroups[group_id]
-                    print("Group: %s" % group)
+                    print(("Group: %s" % group))
                     assert group.get_name() in [
                         'router', 'allhosts', 'allhosts_and_groups'
                     ]
@@ -190,7 +190,7 @@ class TestHostGroup(AlignakTest):
                 assert len(host.get_hostgroups()) == 4
                 for group_id in host.hostgroups:
                     group = self._scheduler.hostgroups[group_id]
-                    print("Group: %s" % group)
+                    print(("Group: %s" % group))
                     assert group.get_name() in [
                         'allhosts', 'allhosts_and_groups', 'up', 'hostgroup_01'
                     ]
@@ -198,7 +198,7 @@ class TestHostGroup(AlignakTest):
         assert len(hg.get_hostgroup_members()) == 4
         print("List hostgroup groups:")
         for group in hg.get_hostgroup_members():
-            print("Group: %s" % group)
+            print(("Group: %s" % group))
             assert group in [
                 'hostgroup_01', 'hostgroup_02', 'hostgroup_03', 'hostgroup_04'
             ]
@@ -256,7 +256,7 @@ class TestHostGroup(AlignakTest):
         #  Search a hostgroup named tcp_hosts
         hg = self._scheduler.hostgroups.find_by_name("tcp_hosts")
         assert isinstance(hg, Hostgroup)
-        print(hg.__dict__)
+        print((hg.__dict__))
 
         assert len(self._scheduler.hostgroups.get_members_by_name("tcp_hosts")) == 3
 
@@ -267,9 +267,9 @@ class TestHostGroup(AlignakTest):
         print("Hostgroup hosts:")
         for host_id in hg.members:
             host = self._scheduler.hosts[host_id]
-            print("- host: %s" % host.get_name())
+            print(("- host: %s" % host.get_name()))
             assert len(host.services) > 0
             for service_uuid in host.services:
                 service = self._scheduler.services[service_uuid]
-                print("  has a service: %s" % service.get_name())
+                print(("  has a service: %s" % service.get_name()))
                 assert 'TCP' == service.get_name()

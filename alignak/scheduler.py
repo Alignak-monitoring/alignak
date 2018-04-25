@@ -69,13 +69,15 @@ The major part of monitoring "intelligence" is in this module.
 # pylint: disable=R0904
 import time
 import os
-import cStringIO
+import io
 import logging
 import tempfile
 import traceback
-from Queue import Queue
+import queue
 from collections import defaultdict
+from six import string_types
 
+from alignak.objects.item import Item
 from alignak.external_command import ExternalCommand
 from alignak.check import Check
 from alignak.notification import Notification
@@ -91,7 +93,7 @@ from alignak.misc.serialization import unserialize
 from alignak.acknowledge import Acknowledge
 from alignak.log import make_monitoring_log
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Scheduler(object):  # pylint: disable=R0902
@@ -111,7 +113,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # The actions results returned by satelittes or fetched from
         # passive satellites are stored in this queue
-        self.waiting_results = Queue()
+        self.waiting_results = queue.Queue()
 
         # Every N loop turns (usually seconds...) we call functions like consume, del zombies
         # etc. All of these functions are in recurrent_works with the tick count to run them.
@@ -287,8 +289,8 @@ class Scheduler(object):  # pylint: disable=R0902
         # Our external commands manager
         self.external_commands_manager = None
 
-        # Some flags
-        self.has_full_broks = False  # have a initial_broks in broks queue?
+        # This scheduler has raised the initial broks
+        self.raised_initial_broks = False
 
         self.need_dump_memory = False
         self.need_objects_dump = False
@@ -350,7 +352,7 @@ class Scheduler(object):  # pylint: disable=R0902
         for key in sorted(self.pushed_conf.macros):
             logger.debug("- %s: %s", key, getattr(self.pushed_conf.macros, key, []))
         logger.debug("Objects types:")
-        for _, _, strclss, _, _ in self.pushed_conf.types_creations.values():
+        for _, _, strclss, _, _ in list(self.pushed_conf.types_creations.values()):
             if strclss in ['arbiters', 'schedulers', 'brokers',
                            'pollers', 'reactionners', 'receivers']:
                 continue
@@ -440,21 +442,21 @@ class Scheduler(object):  # pylint: disable=R0902
         try:
             file_h = open(path, 'w')
             file_h.write('Scheduler DUMP at %d\n' % time.time())
-            for chk in self.checks.values():
+            for chk in list(self.checks.values()):
                 string = 'CHECK: %s:%s:%s:%s:%s:%s\n' % \
                          (chk.uuid, chk.status, chk.t_to_go,
-                          chk.poller_tag, chk.command, chk.worker_id)
+                          chk.poller_tag, chk.command, chk.my_worker)
                 file_h.write(string)
-            for act in self.actions.values():
+            for act in list(self.actions.values()):
                 string = '%s: %s:%s:%s:%s:%s:%s\n' % \
                     (act.__class__.my_type.upper(), act.uuid, act.status,
-                     act.t_to_go, act.reactionner_tag, act.command, act.worker_id)
+                     act.t_to_go, act.reactionner_tag, act.command, act.my_worker)
                 file_h.write(string)
             broks = {}
-            for broker in self.my_daemon.brokers.values():
+            for broker in list(self.my_daemon.brokers.values()):
                 for brok_uuid in broker.broks:
                     broks[brok_uuid] = broker.broks[brok_uuid]
-            for brok in broks.values():
+            for brok in list(broks.values()):
                 string = 'BROK: %s:%s\n' % (brok.uuid, brok.type)
                 file_h.write(string)
             file_h.close()
@@ -498,6 +500,7 @@ class Scheduler(object):  # pylint: disable=R0902
             statsmgr.timer('external_commands.got.time', time.time() - _t0)
         except Exception as exp:  # pylint: disable=broad-except
             logger.warning("External command parsing error: %s", exp)
+            logger.warning(traceback.print_exc())
 
     def add_brok(self, brok, broker_uuid=None):
         """Add a brok into brokers list
@@ -646,7 +649,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     logger.error("The instance %s raise an exception %s."
                                  "I disable it and set it to restart it later",
                                  instance.name, str(exp))
-                    output = cStringIO.StringIO()
+                    output = io.StringIO()
                     traceback.print_exc(file=output)
                     logger.error("Exception trace follows: %s", output.getvalue())
                     output.close()
@@ -654,6 +657,7 @@ class Scheduler(object):  # pylint: disable=R0902
         statsmgr.timer('core.hook.%s' % hook_name, time.time() - _t0)
 
     def clean_queues(self):
+        # pylint: disable=too-many-locals
         """Reduces internal list size to max allowed
 
         * checks and broks : 5 * length of hosts + services
@@ -677,7 +681,7 @@ class Scheduler(object):  # pylint: disable=R0902
         self.nb_checks_dropped = 0
         if max_checks and len(self.checks) > max_checks:
             # keys does not ensure sorted keys. Max is slow but we have no other way.
-            to_del_checks = [c for c in self.checks.values()]
+            to_del_checks = [c for c in list(self.checks.values())]
             to_del_checks.sort(key=lambda x: x.creation_time)
             to_del_checks = to_del_checks[:-max_checks]
             self.nb_checks_dropped = len(to_del_checks)
@@ -701,12 +705,12 @@ class Scheduler(object):  # pylint: disable=R0902
         # For broks and actions, it's more simple
         # or broks, manage global but also all brokers
         self.nb_broks_dropped = 0
-        for broker_link in self.my_daemon.brokers.values():
+        for broker_link in list(self.my_daemon.brokers.values()):
             if max_broks and len(broker_link.broks) > max_broks:
                 logger.warning("I have to drop some broks (%d > %d) for the broker %s "
                                "..., sorry :(", len(broker_link.broks), max_broks, broker_link)
 
-                to_del_broks = [c for c in broker_link.broks.values()]
+                to_del_broks = [c for c in list(broker_link.broks.values())]
                 to_del_broks.sort(key=lambda x: x.creation_time)
                 to_del_broks = to_del_broks[:-max_broks]
                 self.nb_broks_dropped = len(to_del_broks)
@@ -718,7 +722,7 @@ class Scheduler(object):  # pylint: disable=R0902
         if max_actions and len(self.actions) > max_actions:
             logger.warning("I have to del some actions (currently: %d, max: %d)..., sorry :(",
                            len(self.actions), max_actions)
-            to_del_actions = [c for c in self.actions.values()]
+            to_del_actions = [c for c in list(self.actions.values())]
             to_del_actions.sort(key=lambda x: x.creation_time)
             to_del_actions = to_del_actions[:-max_actions]
             self.nb_actions_dropped = len(to_del_actions)
@@ -794,85 +798,98 @@ class Scheduler(object):  # pylint: disable=R0902
                     self.get_and_register_status_brok(elt)
 
     def scatter_master_notifications(self):
-        """Generate children notifications from master notifications
+        """Generate children notifications from a master notification
         Also update notification number
-        Master notification are not launched by reactionners, only children ones
+
+        Master notification are raised when a notification must be sent out. They are not
+        launched by reactionners (only children are) but they are used to build the
+        children notifications.
+
+        From one master notification, several children notifications may be built,
+        indeed one per each contact...
 
         :return: None
         """
         now = time.time()
-        for act in self.actions.values():
+        for act in list(self.actions.values()):
             # We only want notifications
-            if act.is_a != 'notification':
+            if act.is_a != u'notification':
                 continue
-            if act.status == 'scheduled' and act.is_launchable(now):
-                if not act.contact:
-                    logger.debug("Scheduler got a master notification: %s", repr(act))
-                    logger.debug("No contact for this notification")
-                    # This is a "master" notification created by create_notifications.
-                    # It wont sent itself because it has no contact.
-                    # We use it to create "child" notifications (for the contacts and
-                    # notification_commands) which are executed in the reactionner.
-                    item = self.find_item_by_id(act.ref)
-                    childnotifs = []
-                    notif_period = self.timeperiods.items.get(item.notification_period, None)
-                    if not item.notification_is_blocked_by_item(notif_period, self.hosts,
-                                                                self.services, act.type,
-                                                                t_wished=now):
-                        # If it is possible to send notifications
-                        # of this type at the current time, then create
-                        # a single notification for each contact of this item.
-                        childnotifs = item.scatter_notification(
-                            act, self.contacts, self.notificationways, self.timeperiods,
-                            self.macromodulations, self.escalations,
-                            self.find_item_by_id(getattr(item, "host", None))
-                        )
-                        for notif in childnotifs:
-                            logger.debug(" - child notification: %s", notif)
-                            notif.status = 'scheduled'
-                            self.add(notif)  # this will send a brok
+            # And only the scheduler ones...
+            if act.status != u'scheduled':
+                continue
+            # ... that are immediately launchable!
+            if not act.is_launchable(now):
+                continue
+            # Avoid the one which have a contact ... they are child notifications!
+            if act.contact:
+                continue
 
-                    # If we have notification_interval then schedule
-                    # the next notification (problems only)
-                    if act.type == 'PROBLEM':
-                        # Update the ref notif number after raise the one of the notification
-                        if childnotifs:
-                            # notif_nb of the master notification
-                            # was already current_notification_number+1.
-                            # If notifications were sent,
-                            # then host/service-counter will also be incremented
-                            item.current_notification_number = act.notif_nb
+            logger.debug("Scheduler got a master notification: %s", repr(act))
+            logger.debug("No contact for this notification")
 
-                        if item.notification_interval != 0 and act.t_to_go is not None:
-                            # We must continue to send notifications.
-                            # Just leave it in the actions list and set it to "scheduled"
-                            # and it will be found again later
-                            # Ask the service/host to compute the next notif time. It can be just
-                            # a.t_to_go + item.notification_interval*item.__class__.interval_length
-                            # or maybe before because we have an
-                            # escalation that need to raise up before
-                            act.t_to_go = item.get_next_notification_time(act, self.escalations,
-                                                                          self.timeperiods)
+            # This is a "master" notification created by create_notifications.
 
-                            act.notif_nb = item.current_notification_number + 1
-                            logger.debug("Repeat master notification: %s", str(act))
-                            act.status = 'scheduled'
-                        else:
-                            # Wipe out this master notification. One problem notification is enough.
-                            item.remove_in_progress_notification(act)
-                            logger.debug("Remove master notification (no repeat): %s", str(act))
-                            act.status = 'zombie'
+            # We use it to create children notifications (for the contacts and
+            # notification_commands) which are executed in the reactionner.
+            item = self.find_item_by_id(act.ref)
+            children = []
+            notif_period = self.timeperiods[item.notification_period]
+            if not item.is_blocking_notifications(notif_period, self.hosts, self.services,
+                                                  act.type, now):
+                # If it is possible to send notifications
+                # of this type at the current time, then create
+                # a single notification for each contact of this item.
+                children = item.scatter_notification(
+                    act, self.contacts, self.notificationways, self.timeperiods,
+                    self.macromodulations, self.escalations,
+                    self.find_item_by_id(getattr(item, "host", None))
+                )
+                for notif in children:
+                    logger.debug(" - child notification: %s", notif)
+                    notif.status = u'scheduled'
+                    # Add the notification to the scheduler objects
+                    self.add(notif)
 
-                    else:
-                        # Wipe out this master notification.
-                        logger.debug("Remove master notification (no repeat): %s", str(act))
-                        # We don't repeat recover/downtime/flap/etc...
-                        item.remove_in_progress_notification(act)
-                        act.status = 'zombie'
+            # If we have notification_interval then schedule
+            # the next notification (problems only)
+            if act.type == u'PROBLEM':
+                # Update the ref notif number after raise the one of the notification
+                if children:
+                    # notif_nb of the master notification
+                    # was already current_notification_number+1.
+                    # If notifications were sent,
+                    # then host/service-counter will also be incremented
+                    item.current_notification_number = act.notif_nb
+
+                if item.notification_interval and act.t_to_go is not None:
+                    # We must continue to send notifications.
+                    # Just leave it in the actions list and set it to "scheduled"
+                    # and it will be found again later
+                    # Ask the service/host to compute the next notif time. It can be just
+                    # a.t_to_go + item.notification_interval*item.__class__.interval_length
+                    # or maybe before because we have an
+                    # escalation that need to raise up before
+                    act.t_to_go = item.get_next_notification_time(act, self.escalations,
+                                                                  self.timeperiods)
+
+                    act.notif_nb = item.current_notification_number + 1
+                    logger.debug("Repeat master notification: %s", str(act))
+                else:
+                    # Wipe out this master notification. It is a master one
+                    item.remove_in_progress_notification(act)
+                    logger.debug("Remove master notification (no repeat): %s", str(act))
+
+            else:
+                # Wipe out this master notification.
+                logger.debug("Remove master notification (no problem): %s", str(act))
+                # We don't repeat recover/downtime/flap/etc...
+                item.remove_in_progress_notification(act)
 
     def get_to_run_checks(self, do_checks=False, do_actions=False,
                           poller_tags=None, reactionner_tags=None,
                           worker_name='none', module_types=None):
+        # pylint: disable=too-many-branches
         """Get actions/checks for reactionner/poller
 
         Can get checks and actions (notifications and co)
@@ -908,7 +925,7 @@ class Scheduler(object):  # pylint: disable=R0902
         if do_checks:
             logger.debug("%d checks for poller tags: %s and module types: %s",
                          len(self.checks), poller_tags, module_types)
-            for chk in self.checks.values():
+            for chk in list(self.checks.values()):
                 logger.debug("Check: %s (%s / %s)", chk.uuid, chk.poller_tag, chk.module_type)
                 #  If the command is untagged, and the poller too, or if both are tagged
                 #  with same name, go for it
@@ -927,10 +944,10 @@ class Scheduler(object):  # pylint: disable=R0902
                              chk.status,
                              'now' if chk.is_launchable(now) else 'not yet')
                 # must be ok to launch, and not an internal one (business rules based)
-                if chk.status == 'scheduled' and chk.is_launchable(now) and not chk.internal:
+                if chk.status == u'scheduled' and chk.is_launchable(now) and not chk.internal:
                     logger.debug("Check to run: %s", chk)
-                    chk.status = 'inpoller'
-                    chk.worker_id = worker_name
+                    chk.status = u'in_poller'
+                    chk.my_worker = worker_name
                     res.append(chk)
 
                     self.nb_checks_launched += 1
@@ -947,7 +964,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # If a reactionner wants its actions
         if do_actions:
             logger.debug("%d actions for reactionner tags: %s", len(self.actions), reactionner_tags)
-            for act in self.actions.values():
+            for act in list(self.actions.values()):
                 is_master = (act.is_a == 'notification' and not act.contact)
                 logger.debug("Action: %s (%s / %s)", act.uuid, act.reactionner_tag, act.module_type)
 
@@ -968,11 +985,11 @@ class Scheduler(object):  # pylint: disable=R0902
                 # And now look if we can launch or not :)
                 logger.debug(" -> : worker %s (%s)",
                              act.status, 'now' if act.is_launchable(now) else 'not yet')
-                if act.status == 'scheduled' and act.is_launchable(now):
+                if act.status == u'scheduled' and act.is_launchable(now):
                     if not is_master:
                         # This is for child notifications and eventhandlers
-                        act.status = 'inpoller'
-                        act.worker_id = worker_name
+                        act.status = u'in_poller'
+                        act.my_worker = worker_name
                         res.append(act)
 
                         self.nb_actions_launched += 1
@@ -1009,23 +1026,28 @@ class Scheduler(object):  # pylint: disable=R0902
             # We will only see child notifications here
             try:
                 timeout = False
-                if action.status == 'timeout':
+                if action.status == u'timeout':
                     # Unfortunately the remove_in_progress_notification
                     # sets the status to zombie, so we need to save it here.
                     timeout = True
                     execution_time = action.execution_time
 
                 # Add protection for strange charset
-                if isinstance(action.output, str):
+                try:
                     action.output = action.output.decode('utf8', 'ignore')
+                except UnicodeDecodeError:
+                    pass
+                except AttributeError:
+                    # Python 3 will raise an exception
+                    pass
 
                 self.actions[action.uuid].get_return_from(action)
                 item = self.find_item_by_id(self.actions[action.uuid].ref)
                 item.remove_in_progress_notification(action)
-                self.actions[action.uuid].status = 'zombie'
+                self.actions[action.uuid].status = u'zombie'
                 item.last_notification = action.check_time
 
-                # And we ask the item to update it's state
+                # And we ask the item to update its state
                 self.get_and_register_status_brok(item)
 
                 self.counters[action.is_a]["total"]["results"]["total"] += 1
@@ -1050,11 +1072,11 @@ class Scheduler(object):  # pylint: disable=R0902
                     self.counters[action.is_a]["loop"]["timeout"] += 1
 
                     logger.warning("Contact %s %s notification command '%s ' "
-                                   "timed out after %d seconds",
+                                   "timed out after %.2f seconds",
                                    contact.contact_name,
                                    item.my_type,
                                    self.actions[action.uuid].command,
-                                   int(execution_time))
+                                   execution_time)
                 else:
                     self.nb_actions_results += 1
                     self.counters[action.is_a]["total"]["executed"] += 1
@@ -1092,7 +1114,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     self.counters[action.is_a]["loop"]["results"][action.status] = 0
                 self.counters[action.is_a]["loop"]["results"][action.status] += 1
 
-                if action.status == 'timeout':
+                if action.status == u'timeout':
                     ref = self.find_item_by_id(self.checks[action.uuid].ref)
                     action.output = "(%s %s check timed out)" % (
                         ref.my_type, ref.get_full_name()
@@ -1114,7 +1136,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     self.counters[action.is_a]["loop"]["executed"] += 1
 
                 self.checks[action.uuid].get_return_from(action)
-                self.checks[action.uuid].status = 'waitconsume'
+                self.checks[action.uuid].status = u'waitconsume'
             except (ValueError, AttributeError) as exp:  # pragma: no cover, simple protection
                 # bad object, drop it
                 logger.warning('put_results:: got bad check: %s ', str(exp))
@@ -1122,7 +1144,7 @@ class Scheduler(object):  # pylint: disable=R0902
         elif action.is_a == 'eventhandler':
             try:
                 old_action = self.actions[action.uuid]
-                old_action.status = 'zombie'
+                old_action.status = u'zombie'
             except KeyError as exp:  # pragma: no cover, simple protection
                 # cannot find old action
                 # bad object, drop it
@@ -1142,7 +1164,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     self.counters[action.is_a]["loop"]["results"][action.status] = 0
                 self.counters[action.is_a]["loop"]["results"][action.status] += 1
 
-                if action.status == 'timeout':
+                if action.status == u'timeout':
                     _type = 'event handler'
                     if action.is_snapshot:
                         _type = 'snapshot'
@@ -1184,7 +1206,7 @@ class Scheduler(object):  # pylint: disable=R0902
             if satellites is self.my_daemon.reactionners:
                 s_type = 'reactionner'
 
-            for link in [s for s in satellites.values() if s.passive]:
+            for link in [s for s in list(satellites.values()) if s.passive]:
                 logger.debug("Try to send actions to the %s '%s'", s_type, link.name)
 
                 # Get actions to execute
@@ -1222,10 +1244,10 @@ class Scheduler(object):  # pylint: disable=R0902
             if satellites is self.my_daemon.reactionners:
                 s_type = 'reactionner'
 
-            for link in [s for s in satellites.values() if s.passive]:
+            for link in [s for s in list(satellites.values()) if s.passive]:
                 logger.debug("Trying to get results from the %s '%s'", s_type, link.name)
 
-                results = link.get_returns(self.instance_id)
+                results = link.get_results(self.instance_id)
                 if results:
                     logger.debug("Got some results: %d results from %s", len(results), link.name)
                 else:
@@ -1263,14 +1285,14 @@ class Scheduler(object):  # pylint: disable=R0902
         if os.getenv('ALIGNAK_MANAGE_INTERNAL', '1') != '1':
             return
         now = time.time()
-        for chk in self.checks.values():
+        for chk in list(self.checks.values()):
             # must be ok to launch, and not an internal one (business rules based)
-            if chk.internal and chk.status == 'scheduled' and chk.is_launchable(now):
+            if chk.internal and chk.status == u'scheduled' and chk.is_launchable(now):
                 item = self.find_item_by_id(chk.ref)
                 # Only if active checks are enabled
                 if not item.active_checks_enabled:
                     # Ask to remove the check
-                    chk.status = 'zombie'
+                    chk.status = u'zombie'
                     continue
                 logger.debug("Run internal check for %s", item)
 
@@ -1278,7 +1300,7 @@ class Scheduler(object):  # pylint: disable=R0902
                                            self.servicegroups, self.macromodulations,
                                            self.timeperiods)
                 # Ask to consume the check result
-                chk.status = 'waitconsume'
+                chk.status = u'waitconsume'
 
                 # Count and execute only if active checks is enabled
                 self.nb_internal_checks += 1
@@ -1338,6 +1360,7 @@ class Scheduler(object):  # pylint: disable=R0902
         logger.info('Retention data loaded: %.2f seconds', time.time() - _t0)
 
     def get_retention_data(self):  # pylint: disable=R0912,too-many-statements
+        # pylint: disable=too-many-locals
         """Get all host and service data in order to store it after
         The module is in charge of that
 
@@ -1350,7 +1373,7 @@ class Scheduler(object):  # pylint: disable=R0902
         for host in self.hosts:
             h_dict = {}
             running_properties = host.__class__.running_properties
-            for prop, entry in running_properties.items():
+            for prop, entry in list(running_properties.items()):
                 if entry.retention:
                     val = getattr(host, prop)
                     # Maybe we should "prepare" the data before saving it
@@ -1362,7 +1385,7 @@ class Scheduler(object):  # pylint: disable=R0902
             # and some properties are also like this, like
             # active checks enabled or not
             properties = host.__class__.properties
-            for prop, entry in properties.items():
+            for prop, entry in list(properties.items()):
                 if entry.retention:
                     val = getattr(host, prop)
                     # Maybe we should "prepare" the data before saving it
@@ -1374,13 +1397,13 @@ class Scheduler(object):  # pylint: disable=R0902
             # manage special properties: the Notifications
             if 'notifications_in_progress' in h_dict and h_dict['notifications_in_progress'] != {}:
                 notifs = {}
-                for notif_uuid, notification in h_dict['notifications_in_progress'].iteritems():
+                for notif_uuid, notification in h_dict['notifications_in_progress'].items():
                     notifs[notif_uuid] = notification.serialize()
                 h_dict['notifications_in_progress'] = notifs
             # manage special properties: the downtimes
             downtimes = []
             if 'downtimes' in h_dict and h_dict['downtimes'] != {}:
-                for downtime in h_dict['downtimes'].values():
+                for downtime in list(h_dict['downtimes'].values()):
                     downtimes.append(downtime.serialize())
             h_dict['downtimes'] = downtimes
             # manage special properties: the acknowledges
@@ -1389,7 +1412,7 @@ class Scheduler(object):  # pylint: disable=R0902
             # manage special properties: the comments
             comments = []
             if 'comments' in h_dict and h_dict['comments'] != {}:
-                for comment in h_dict['comments'].values():
+                for comment in list(h_dict['comments'].values()):
                     comments.append(comment.serialize())
             h_dict['comments'] = comments
             # manage special properties: the notified_contacts
@@ -1405,7 +1428,7 @@ class Scheduler(object):  # pylint: disable=R0902
         for serv in self.services:
             s_dict = {}
             running_properties = serv.__class__.running_properties
-            for prop, entry in running_properties.items():
+            for prop, entry in list(running_properties.items()):
                 if entry.retention:
                     val = getattr(serv, prop)
                     # Maybe we should "prepare" the data before saving it
@@ -1421,7 +1444,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 # Same for properties, like active checks enabled or not
                 properties = serv.__class__.properties
 
-                for prop, entry in properties.items():
+                for prop, entry in list(properties.items()):
                     # We save the value only if the attribute
                     # is selected for retention AND has been modified.
                     if entry.retention and \
@@ -1437,13 +1460,13 @@ class Scheduler(object):  # pylint: disable=R0902
             # manage special properties: the notifications
             if 'notifications_in_progress' in s_dict and s_dict['notifications_in_progress'] != {}:
                 notifs = {}
-                for notif_uuid, notification in s_dict['notifications_in_progress'].iteritems():
+                for notif_uuid, notification in s_dict['notifications_in_progress'].items():
                     notifs[notif_uuid] = notification.serialize()
                 s_dict['notifications_in_progress'] = notifs
             # manage special properties: the downtimes
             downtimes = []
             if 'downtimes' in s_dict and s_dict['downtimes'] != {}:
-                for downtime in s_dict['downtimes'].values():
+                for downtime in list(s_dict['downtimes'].values()):
                     downtimes.append(downtime.serialize())
             s_dict['downtimes'] = downtimes
             # manage special properties: the acknowledges
@@ -1452,7 +1475,7 @@ class Scheduler(object):  # pylint: disable=R0902
             # manage special properties: the comments
             comments = []
             if 'comments' in s_dict and s_dict['comments'] != {}:
-                for comment in s_dict['comments'].values():
+                for comment in list(s_dict['comments'].values()):
                     comments.append(comment.serialize())
             s_dict['comments'] = comments
             # manage special properties: the notified_contacts
@@ -1499,6 +1522,7 @@ class Scheduler(object):  # pylint: disable=R0902
         logger.info('%d services restored from retention', len(ret_services))
 
     def restore_retention_data_item(self, data, item):
+        # pylint: disable=too-many-branches
         """
         restore data in item
 
@@ -1510,7 +1534,7 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         # First manage all running properties
         running_properties = item.__class__.running_properties
-        for prop, entry in running_properties.items():
+        for prop, entry in list(running_properties.items()):
             if entry.retention:
                 # Maybe the saved one was not with this value, so
                 # we just bypass this
@@ -1519,14 +1543,14 @@ class Scheduler(object):  # pylint: disable=R0902
         # Ok, some are in properties too (like active check enabled
         # or not. Will OVERRIDE THE CONFIGURATION VALUE!
         properties = item.__class__.properties
-        for prop, entry in properties.items():
+        for prop, entry in list(properties.items()):
             if entry.retention:
                 # Maybe the saved one was not with this value, so
                 # we just bypass this
                 if prop in data:
                     setattr(item, prop, data[prop])
         # Now manage all linked objects load from/ previous run
-        for notif_uuid, notif in item.notifications_in_progress.iteritems():
+        for notif_uuid, notif in item.notifications_in_progress.items():
             notif['ref'] = item.uuid
             mynotif = Notification(params=notif)
             self.add(mynotif)
@@ -1559,6 +1583,7 @@ class Scheduler(object):  # pylint: disable=R0902
         item.notified_contacts = new_notified_contacts
 
     def fill_initial_broks(self, broker_name, with_logs=False):
+        # pylint: disable=too-many-branches
         """Create initial broks for a specific broker
 
         :param broker_name: broker name
@@ -1569,7 +1594,7 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         broker_uuid = None
         logger.debug("My brokers: %s", self.my_daemon.brokers)
-        for broker_link in self.my_daemon.brokers.values():
+        for broker_link in list(self.my_daemon.brokers.values()):
             logger.debug("Searching broker: %s", broker_link)
             if broker_name == broker_link.name:
                 broker_uuid = broker_link.uuid
@@ -1631,14 +1656,14 @@ class Scheduler(object):  # pylint: disable=R0902
         brok = Brok({'type': 'initial_broks_done', 'data': {'instance_id': self.instance_id}})
         self.add_brok(brok, broker_uuid)
 
-        # We now have all raised all the full broks
-        self.has_full_broks = True
-
         final_broks_count = len(self.my_daemon.brokers[broker_uuid].broks)
         self.my_daemon.brokers[broker_uuid].initialized = True
 
         # Send the initial broks to our modules
         self.send_broks_to_modules()
+
+        # We now have raised all the initial broks
+        self.raised_initial_broks = True
 
         logger.info("Created %d initial broks for %s",
                     final_broks_count - initial_broks_count, broker_name)
@@ -1691,7 +1716,7 @@ class Scheduler(object):  # pylint: disable=R0902
             # Get data from the pushed configuration
             cls = self.pushed_conf.__class__
             # Now config properties
-            for prop, entry in cls.properties.items():
+            for prop, entry in list(cls.properties.items()):
                 # Is this property intended for broking?
                 # if 'fill_brok' in entry:
                 if 'full_status' not in entry.fill_brok:
@@ -1754,16 +1779,16 @@ class Scheduler(object):  # pylint: disable=R0902
         # All results are in self.waiting_results
         # We need to get them first
         queue_size = self.waiting_results.qsize()
-        for _ in xrange(queue_size):
+        for _ in range(queue_size):
             self.put_results(self.waiting_results.get())
 
         # Then we consume them
-        for chk in self.checks.values():
+        for chk in list(self.checks.values()):
             if chk.status == 'waitconsume':
                 logger.debug("Consuming: %s", chk)
                 item = self.find_item_by_id(chk.ref)
 
-                notification_period = self.timeperiods.items.get(item.notification_period, None)
+                notification_period = self.timeperiods[item.notification_period]
                 dep_checks = item.consume_result(chk, notification_period, self.hosts,
                                                  self.services, self.timeperiods,
                                                  self.macromodulations, self.checkmodulations,
@@ -1782,20 +1807,20 @@ class Scheduler(object):  # pylint: disable=R0902
         while have_resolved_checks:
             have_resolved_checks = False
             # All 'finished' checks (no more dep) raise checks they depend on
-            for chk in self.checks.values():
-                if chk.status == 'havetoresolvedep':
+            for chk in list(self.checks.values()):
+                if chk.status == u'havetoresolvedep':
                     for dependent_checks in chk.depend_on_me:
                         # Ok, now dependent will no more wait
                         dependent_checks.depend_on.remove(chk.uuid)
                         have_resolved_checks = True
                     # REMOVE OLD DEP CHECK -> zombie
-                    chk.status = 'zombie'
+                    chk.status = u'zombie'
 
             # Now, reinteger dep checks
-            for chk in self.checks.values():
-                if chk.status == 'waitdep' and not chk.depend_on:
+            for chk in list(self.checks.values()):
+                if chk.status == u'waitdep' and not chk.depend_on:
                     item = self.find_item_by_id(chk.ref)
-                    notification_period = self.timeperiods.items.get(item.notification_period, None)
+                    notification_period = self.timeperiods[item.notification_period]
                     dep_checks = item.consume_result(chk, notification_period, self.hosts,
                                                      self.services, self.timeperiods,
                                                      self.macromodulations, self.checkmodulations,
@@ -1810,8 +1835,8 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         id_to_del = []
-        for chk in self.checks.values():
-            if chk.status == 'zombie':
+        for chk in list(self.checks.values()):
+            if chk.status == u'zombie':
                 id_to_del.append(chk.uuid)
         # une petite tape dans le dos et tu t'en vas, merci...
         # *pat pat* GFTO, thks :)
@@ -1824,8 +1849,8 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         id_to_del = []
-        for act in self.actions.values():
-            if act.status == 'zombie':
+        for act in list(self.actions.values()):
+            if act.status == u'zombie':
                 id_to_del.append(act.uuid)
         # une petite tape dans le dos et tu t'en vas, merci...
         # *pat pat* GFTO, thks :)
@@ -1833,6 +1858,7 @@ class Scheduler(object):  # pylint: disable=R0902
             del self.actions[a_id]  # ZANKUSEN!
 
     def update_downtimes_and_comments(self):
+        # pylint: disable=too-many-branches
         """Iter over all hosts and services::
 
         TODO: add some unit tests for the maintenance period feature.
@@ -1847,7 +1873,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # Check maintenance periods
         for elt in self.all_my_hosts_and_services():
-            if elt.maintenance_period == '':
+            if elt.maintenance_period == r'':
                 continue
 
             if elt.in_maintenance == -1:
@@ -1880,7 +1906,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # A loop where those downtimes are removed
         # which were marked for deletion (mostly by dt.exit())
         for elt in self.all_my_hosts_and_services():
-            for downtime in elt.downtimes.values():
+            for downtime in list(elt.downtimes.values()):
                 if downtime.can_be_deleted is True:
                     logger.info("Downtime to delete: %s", downtime.__dict__)
                     ref = self.find_item_by_id(downtime.ref)
@@ -1889,7 +1915,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # Same for contact downtimes:
         for elt in self.contacts:
-            for downtime in elt.downtimes.values():
+            for downtime in list(elt.downtimes.values()):
                 if downtime.can_be_deleted is True:
                     ref = self.find_item_by_id(downtime.ref)
                     elt.del_downtime(downtime.uuid)
@@ -1897,7 +1923,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # Check start and stop times
         for elt in self.all_my_hosts_and_services():
-            for downtime in elt.downtimes.values():
+            for downtime in list(elt.downtimes.values()):
                 if downtime.real_end_time < now:
                     # this one has expired
                     broks.extend(downtime.exit(self.timeperiods, self.hosts, self.services))
@@ -1988,15 +2014,24 @@ class Scheduler(object):  # pylint: disable=R0902
         # (_, _, tick) = self.recurrent_works['check_freshness']
 
         _t0 = time.time()
+
+        # May be self.ticks is not set (unit tests context!)
+        ticks = getattr(self, 'ticks', self.pushed_conf.host_freshness_check_interval)
+
         items = []
-        if self.pushed_conf.check_host_freshness:
+        if self.pushed_conf.check_host_freshness \
+                and self.pushed_conf.host_freshness_check_interval % ticks == 0:
             # Freshness check is configured for hosts - get the list of concerned hosts:
             # host check freshness is enabled and the host is only passively checked
             hosts = [h for h in self.hosts if h.check_freshness and not h.freshness_expired and
                      h.passive_checks_enabled and not h.active_checks_enabled]
             statsmgr.gauge('freshness.hosts-count', len(hosts))
             items.extend(hosts)
-        if self.pushed_conf.check_service_freshness:
+
+        # May be self.ticks is not set (unit tests context!)
+        ticks = getattr(self, 'ticks', self.pushed_conf.service_freshness_check_interval)
+        if self.pushed_conf.check_service_freshness \
+                and self.pushed_conf.service_freshness_check_interval % ticks == 0:
             # Freshness check is configured for services - get the list of concerned services:
             # service check freshness is enabled and the service is only passively checked and
             # the depending host is not freshness expired
@@ -2012,7 +2047,7 @@ class Scheduler(object):  # pylint: disable=R0902
         for elt in items:
             chk = elt.do_check_freshness(self.hosts, self.services, self.timeperiods,
                                          self.macromodulations, self.checkmodulations,
-                                         self.checks, when=_t0)
+                                         self.checks, _t0)
             if chk is not None:
                 self.add(chk)
                 self.waiting_results.put(chk)
@@ -2023,7 +2058,7 @@ class Scheduler(object):  # pylint: disable=R0902
     def check_orphaned(self):
         """Check for orphaned checks/actions::
 
-        * status == 'inpoller' and t_to_go < now - time_to_orphanage (300 by default)
+        * status == 'in_poller' and t_to_go < now - time_to_orphanage (300 by default)
 
         if so raise a warning log.
 
@@ -2031,30 +2066,30 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         orphans_count = {}
         now = int(time.time())
-        for chk in self.checks.values():
-            if chk.status == 'inpoller':
+        for chk in list(self.checks.values()):
+            if chk.status == u'in_poller':
                 time_to_orphanage = self.find_item_by_id(chk.ref).get_time_to_orphanage()
                 if time_to_orphanage:
                     if chk.t_to_go < now - time_to_orphanage:
                         logger.info("Orphaned check (%d s / %s / %s) check for: %s (%s)",
                                     time_to_orphanage, chk.t_to_go, now,
                                     self.find_item_by_id(chk.ref).get_full_name(), chk)
-                        chk.status = 'scheduled'
-                        if chk.worker_id not in orphans_count:
-                            orphans_count[chk.worker_id] = 0
-                        orphans_count[chk.worker_id] += 1
-        for act in self.actions.values():
-            if act.status == 'inpoller':
+                        chk.status = u'scheduled'
+                        if chk.my_worker not in orphans_count:
+                            orphans_count[chk.my_worker] = 0
+                        orphans_count[chk.my_worker] += 1
+        for act in list(self.actions.values()):
+            if act.status == u'in_poller':
                 time_to_orphanage = self.find_item_by_id(act.ref).get_time_to_orphanage()
                 if time_to_orphanage:
                     if act.t_to_go < now - time_to_orphanage:
                         logger.info("Orphaned action (%d s / %s / %s) action for: %s (%s)",
                                     time_to_orphanage, act.t_to_go, now,
                                     self.find_item_by_id(act.ref).get_full_name(), act)
-                        act.status = 'scheduled'
-                        if act.worker_id not in orphans_count:
-                            orphans_count[act.worker_id] = 0
-                        orphans_count[act.worker_id] += 1
+                        act.status = u'scheduled'
+                        if act.my_worker not in orphans_count:
+                            orphans_count[act.my_worker] = 0
+                        orphans_count[act.my_worker] += 1
 
         for sta_name in orphans_count:
             logger.warning("%d actions never came back for the satellite '%s'. "
@@ -2071,8 +2106,8 @@ class Scheduler(object):  # pylint: disable=R0902
         t00 = time.time()
         nb_sent = 0
         broks = {}
-        for broker_link in self.my_daemon.brokers.values():
-            for brok in broker_link.broks.values():
+        for broker_link in list(self.my_daemon.brokers.values()):
+            for brok in list(broker_link.broks.values()):
                 if not getattr(brok, 'sent_to_externals', False):
                     broks[brok.uuid] = brok
         if not broks:
@@ -2081,15 +2116,15 @@ class Scheduler(object):  # pylint: disable=R0902
 
         for mod in self.my_daemon.modules_manager.get_external_instances():
             logger.debug("Look for sending to module %s", mod.get_name())
-            queue = mod.to_q
-            if queue is not None:
-                to_send = [b for b in broks.values() if mod.want_brok(b)]
-                queue.put(to_send)
+            module_queue = mod.to_q
+            if module_queue:
+                to_send = [b for b in list(broks.values()) if mod.want_brok(b)]
+                module_queue.put(to_send)
                 nb_sent += len(to_send)
 
         # No more need to send them
-        for brok in broks.values():
-            for broker_link in self.my_daemon.brokers.values():
+        for brok in list(broks.values()):
+            for broker_link in list(self.my_daemon.brokers.values()):
                 try:
                     broker_link.broks[brok.uuid].sent_to_externals = True
                 except KeyError:
@@ -2105,18 +2140,13 @@ class Scheduler(object):  # pylint: disable=R0902
         return self.my_daemon.get_objects_from_from_queues()
 
     def get_scheduler_stats(self, details=False):  # pylint: disable=unused-argument
+        # pylint: disable=too-many-locals
         """Get the scheduler statistics
 
         :return: A dict with the following structure
         ::
 
-           { 'metrics': ['scheduler.%s.checks.%s %d %d', 'scheduler.%s.%s.queue %d %d',
-                         'scheduler.%s.%s %d %d', 'scheduler.%s.latency.min %f %d',
-                         'scheduler.%s.latency.avg %f %d', 'scheduler.%s.latency.max %f %d'],
-             'version': VERSION,
-             'name': instance_name,
-             'type': 'scheduler',
-             'modules': [
+           { 'modules': [
                          {'internal': {'name': "MYMODULE1", 'state': 'ok'},
                          {'external': {'name': "MYMODULE2", 'state': 'stopped'},
                         ]
@@ -2128,34 +2158,22 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :rtype: dict
         """
-        now = int(time.time())
-
         res = {
             'counters': {},
-            'metrics': [],
             'latency': self.stats['latency'],
             'monitored_objects': {},
         }
 
-        res['metrics'].append('scheduler.%s.latency.min %f %d'
-                              % (self.name, res['latency']['min'], now))
-        res['metrics'].append('scheduler.%s.latency.avg %f %d'
-                              % (self.name, res['latency']['avg'], now))
-        res['metrics'].append('scheduler.%s.latency.max %f %d'
-                              % (self.name, res['latency']['max'], now))
-
         checks_status_counts = self.get_checks_status_counts()
 
-        for status in ('scheduled', 'inpoller', 'zombie'):
-            res['metrics'].append('scheduler.%s.checks.%s %d %d'
-                                  % (self.name, status, checks_status_counts[status], now))
+        for status in (u'scheduled', u'in_poller', u'zombie'):
+            res['counters']['scheduler.checks.%s' % status] = checks_status_counts[status]
 
-        for what in ('actions', 'checks'):
-            res['metrics'].append('scheduler.%s.%s.queue %d %d'
-                                  % (self.name, what, len(getattr(self, what)), now))
+        for what in (u'actions', u'checks'):
+            res['counters']['scheduler.%s.queue' % what] = len(getattr(self, what))
 
         if self.pushed_conf:
-            for _, _, strclss, _, _ in self.pushed_conf.types_creations.values():
+            for _, _, strclss, _, _ in list(self.pushed_conf.types_creations.values()):
                 # Internal statistics
                 res['counters'][strclss] = len(getattr(self, strclss, []))
 
@@ -2175,28 +2193,9 @@ class Scheduler(object):  # pylint: disable=R0902
                 old_u_time += u_time / interval
                 old_s_time += s_time / interval
                 all_commands[cmd] = (old_u_time, old_s_time)
-            # now sort it
-            stats = []
-            for (cmd, elem) in all_commands.iteritems():
-                u_time, s_time = elem
-                stats.append({'cmd': cmd, 'u_time': u_time, 's_time': s_time})
 
-            def p_sort(e01, e02):
-                """Compare elems by u_time param
-
-                :param e01: first elem to compare
-                :param e02: second elem to compare
-                :return: 1 if e01['u_time'] > e02['u_time'], -1
-                if e01['u_time'] < e02['u_time'], else 0
-                """
-                if e01['u_time'] > e02['u_time']:
-                    return 1
-                if e01['u_time'] < e02['u_time']:
-                    return -1
-                return 0
-            stats.sort(p_sort)
-            # take the first 10 ones for the put
-            res['commands'] = stats[:10]
+            # Return all the commands
+            res['commands'] = all_commands
 
         return res
 
@@ -2234,7 +2233,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         res = defaultdict(int)
         res["total"] = len(checks)
-        for chk in checks.itervalues():
+        for chk in checks.values():
             res[chk.status] += 1
         return res
 
@@ -2246,11 +2245,12 @@ class Scheduler(object):  # pylint: disable=R0902
         :return:
         :rtype: alignak.objects.item.Item | None
         """
-        if not object_id:
-            return None
+        # Item id may be an item
+        if isinstance(object_id, Item):
+            return object_id
 
-        # Temporary fix. To remove when all obj have uuids
-        if not isinstance(object_id, int) and not isinstance(object_id, basestring):
+        # Item id should be a uuid string
+        if not isinstance(object_id, string_types):
             logger.warning("Find an item by id, object_id is not int nor string: %s", object_id)
             return object_id
 
@@ -2260,7 +2260,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 return items[object_id]
 
         # raise AttributeError("Item with id %s not found" % object_id)  # pragma: no cover,
-        logger.error("Item with id %s not found", object_id)  # pragma: no cover,
+        logger.error("Item with id %s not found", str(object_id))  # pragma: no cover,
         return None
         # simple protection this should never happen
 
@@ -2379,7 +2379,7 @@ class Scheduler(object):  # pylint: disable=R0902
         for i in self.recurrent_works:
             (name, fun, nb_ticks) = self.recurrent_works[i]
             # A 0 in the tick will just disable it
-            if nb_ticks != 0:
+            if nb_ticks:
                 if self.ticks % nb_ticks == 0:
                     # Call it and save the time spend in it
                     _t0 = time.time()

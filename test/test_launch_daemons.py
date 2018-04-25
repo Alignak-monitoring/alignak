@@ -32,10 +32,9 @@ import shutil
 import psutil
 
 import pytest
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 from alignak.http.generic_interface import GenericInterface
-from alignak.http.receiver_interface import ReceiverInterface
 from alignak.http.arbiter_interface import ArbiterInterface
 from alignak.http.scheduler_interface import SchedulerInterface
 from alignak.http.broker_interface import BrokerInterface
@@ -96,7 +95,7 @@ class TestLaunchDaemons(AlignakTest):
         assert ret is not None, "Arbiter is still running!"
         stderr = arbiter.stderr.read()
         print(stderr)
-        assert "usage: alignak_arbiter.py" in stderr
+        assert b"usage: alignak_arbiter.py" in stderr
         # Arbiter process must exit with a return code == 2
         assert ret == 2
 
@@ -120,7 +119,7 @@ class TestLaunchDaemons(AlignakTest):
         print(stdout)
         stderr = arbiter.stderr.read()
         print(stderr)
-        assert "usage: alignak_arbiter.py" in stderr
+        assert b"usage: alignak_arbiter.py" in stderr
         # Arbiter process must exit with a return code == 2
         assert ret == 2
 
@@ -172,8 +171,8 @@ class TestLaunchDaemons(AlignakTest):
         assert ret is not None, "Arbiter is still running!"
         stdout = arbiter.stdout.read()
         print(stdout)
-        assert "Daemon 'arbiter-master' did not correctly read " \
-               "Alignak environment file: /tmp/etc/unexisting.ini" in stdout
+        assert b"Daemon 'arbiter-master' did not correctly read " \
+               b"Alignak environment file: /tmp/etc/unexisting.ini" in stdout
         # Arbiter process must exit with a return code == 1
         assert ret == 1
 
@@ -202,8 +201,8 @@ class TestLaunchDaemons(AlignakTest):
         assert ret is not None, "Arbiter is still running!"
         print("*** Arbiter exited with code: %d" % ret)
         stdout = arbiter.stdout.read()
-        assert "Daemon 'arbiter-master' is started with an environment " \
-               "file: /tmp/etc/alignak/alignak.ini" in stdout
+        assert b"Daemon 'arbiter-master' is started with an environment " \
+               b"file: /tmp/etc/alignak/alignak.ini" in stdout
         stderr = arbiter.stderr.read()
         print(stderr)
         # assert "The Alignak environment file is not existing or do not " \
@@ -222,7 +221,7 @@ class TestLaunchDaemons(AlignakTest):
         # Update configuration with a bad file name
         files = ['/tmp/etc/alignak/alignak.ini']
         replacements = {
-            ';CFG=%(etcdir)s/alignak.cfg': 'CFG=%(etcdir)s/alignak.cfg',
+            ';CFG=%(etcdir)s/alignak.cfg': 'CFG=%(etcdir)s/alignak-missing.cfg',
             # ';log_cherrypy=1': 'log_cherrypy=1'
         }
         self._files_update(files, replacements)
@@ -239,22 +238,21 @@ class TestLaunchDaemons(AlignakTest):
         errors = False
         stderr = False
         for line in iter(arbiter.stdout.readline, b''):
-            if 'ERROR' in line:
-                print("*** " + line.rstrip())
+            if b'ERROR' in line:
+                print("*** %s" % line.rstrip())
                 errors = True
-            assert 'CRITICAL' not in line
+                if b'All the daemons connections could not be established despite 3 tries!' not in line:
+                    errors = False
+                if b'Sorry, I bail out, exit code: 4' not in line:
+                    errors = False
+            assert b'CRITICAL' not in line
+        assert not errors
         for line in iter(arbiter.stderr.readline, b''):
-            print("*** " + line.rstrip())
+            print("### %s" % line.rstrip())
             stderr = True
-
-        # Arbiter process must exit with a return code == 1
-        # assert ret == 4
-        # No error messages be sent to stderr but in the log
-        # Cherrypy
-        if os.sys.version_info > (2, 7):
-            assert not stderr
-        # Errors must exist in the logs
-        assert errors
+            if b'Cannot call the additional groups setting with initgroups: Operation not permitted' not in line:
+                stderr = False
+        assert not stderr
 
     def test_arbiter_bad_configuration(self):
         """ Running the Alignak Arbiter with bad monitoring configuration (unknown sub directory)
@@ -293,12 +291,12 @@ class TestLaunchDaemons(AlignakTest):
         errors = False
         stderr = False
         for line in iter(arbiter.stdout.readline, b''):
-            if 'ERROR: ' in line:
-                print("*** " + line.rstrip())
+            if b'ERROR: ' in line:
+                print("*** %s" % line.rstrip())
                 errors = True
-            assert 'CRITICAL' not in line
+            assert b'CRITICAL' not in line
         for line in iter(arbiter.stderr.readline, b''):
-            print("*** " + line.rstrip())
+            print("*** %s" % line.rstrip())
             stderr = True
 
         # No error message sent to stderr but in the logger
@@ -335,7 +333,7 @@ class TestLaunchDaemons(AlignakTest):
         assert ret is not None, "Arbiter is still running!"
         stdout = arbiter.stdout.read()
         stderr = arbiter.stderr.read()
-        assert "I cannot find my own configuration (my-arbiter-name)" in stdout
+        assert b"I cannot find my own configuration (my-arbiter-name)" in stdout
         # Arbiter process must exit with a return code == 1
         assert ret == 1
 
@@ -356,13 +354,13 @@ class TestLaunchDaemons(AlignakTest):
         assert ret is not None, "Arbiter is still running!"
         errors = 0
         for line in iter(arbiter.stdout.readline, b''):
-            print(">>> " + line.rstrip())
-            if 'ERROR' in line:
+            print(">>> %s" % line.rstrip())
+            if b'ERROR' in line:
                 errors = errors + 1
-            if 'CRITICAL' in line:
+            if b'CRITICAL' in line:
                 errors = errors + 1
         for line in iter(arbiter.stderr.readline, b''):
-            print("*** " + line.rstrip())
+            print("*** %s" % line.rstrip())
             # if sys.version_info > (2, 7):
             #     assert False, "stderr output!"
         # Arbiter process must exit with a return code == 0 and no errors
@@ -390,16 +388,16 @@ class TestLaunchDaemons(AlignakTest):
         ok = False
         errors = 0
         for line in iter(arbiter.stdout.readline, b''):
-            print(">>> " + line.rstrip())
+            print(">>> %s" % line.rstrip())
             # if "Daemon 'arbiter-master' is started with an " \
             #    "overridden pid file: /tmp/arbiter.pid" in line:
             #     ok = True
-            if 'ERROR' in line:
+            if b'ERROR' in line:
                 errors = errors + 1
-            if 'CRITICAL' in line:
+            if b'CRITICAL' in line:
                 errors = errors + 1
         for line in iter(arbiter.stderr.readline, b''):
-            print("*** " + line.rstrip())
+            print("*** %s" % line.rstrip())
             # if sys.version_info > (2, 7):
             #     assert False, "stderr output!"
         # Arbiter process must exit with a return code == 0 and no errors
@@ -435,16 +433,16 @@ class TestLaunchDaemons(AlignakTest):
         ok = False
         errors = 0
         for line in iter(arbiter.stdout.readline, b''):
-            print(">>> " + line.rstrip())
-            if "Daemon 'arbiter-master' is started with an " \
-               "overridden log file: /tmp/arbiter.log" in line:
+            print(">>> %s" % line.rstrip())
+            if b"Daemon 'arbiter-master' is started with an " \
+               b"overridden log file: /tmp/arbiter.log" in line:
                 ok = True
-            if 'ERROR' in line:
+            if b'ERROR' in line:
                 errors = errors + 1
-            if 'CRITICAL' in line:
+            if b'CRITICAL' in line:
                 errors = errors + 1
         for line in iter(arbiter.stderr.readline, b''):
-            print("*** " + line.rstrip())
+            print("*** %s" % line.rstrip())
             # if sys.version_info > (2, 7):
             #     assert False, "stderr output!"
         # Arbiter process must exit with a return code == 0 and no errors
@@ -564,23 +562,23 @@ class TestLaunchDaemons(AlignakTest):
         # No ERRORS because the daemons are not alive !
         ok = 0
         for line in iter(arbiter.stdout.readline, b''):
-            print(">>> " + line.rstrip())
-            if 'INFO:' in line:
+            print(">>> %s" % line.rstrip())
+            if b'INFO:' in line:
                 # I must find this line
-                if '[alignak.daemons.arbiterdaemon] I found myself in the configuration: arbiter-spare' in line:
+                if b'[alignak.daemons.arbiterdaemon] I found myself in the configuration: arbiter-spare' in line:
                     ok += 1
                 # and this one also
-                if '[alignak.daemons.arbiterdaemon] I am a spare Arbiter: arbiter-spare' in line:
+                if b'[alignak.daemons.arbiterdaemon] I am a spare Arbiter: arbiter-spare' in line:
                     ok += 1
-                if 'I am not the master arbiter, I stop parsing the configuration' in line:
+                if b'I am not the master arbiter, I stop parsing the configuration' in line:
                     ok += 1
-                if 'Waiting for master...' in line:
+                if b'Waiting for master...' in line:
                     ok += 1
-                if 'Waiting for master death' in line:
+                if b'Waiting for master death' in line:
                     ok += 1
-                assert 'CRITICAL:' not in line
+                assert b'CRITICAL:' not in line
         for line in iter(arbiter.stderr.readline, b''):
-            print("*** " + line.rstrip())
+            print("*** %s" % line.rstrip())
             if sys.version_info > (2, 7):
                 assert False, "stderr output!"
         assert ok == 5

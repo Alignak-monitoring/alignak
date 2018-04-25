@@ -33,7 +33,7 @@ from alignak.brok import Brok
 
 from alignak.stats import *
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class FakeStatsdServer(threading.Thread):
@@ -50,7 +50,7 @@ class FakeStatsdServer(threading.Thread):
             self.port = sock.getsockname()[1]
         sock.listen(0)
         self.running = True
-        print("Starting fake StatsD server on %d", port)
+        print("Starting fake StatsD server on %d" % port)
         self.start()
 
     def stop(self):
@@ -73,7 +73,7 @@ class FakeStatsdServer(threading.Thread):
 
     def handle_connection(self, sock):
         data = sock.recv(4096)
-        print("Fake StatsD received: %s", data)
+        print(("Fake StatsD received: %s", data))
         sock.close()
 
 
@@ -91,7 +91,7 @@ class FakeCarbonServer(threading.Thread):
             self.port = sock.getsockname()[1]
         sock.listen(0)
         self.running = True
-        print("Starting fake carbon server on %d", port)
+        print("Starting fake carbon server on %d" % port)
         self.start()
 
     def stop(self):
@@ -114,7 +114,7 @@ class FakeCarbonServer(threading.Thread):
 
     def handle_connection(self, sock):
         data = sock.recv(4096)
-        print("Fake carbon received: %s", data)
+        print(("Fake carbon received: %s", data))
         sock.close()
 
 
@@ -126,7 +126,8 @@ class TestStatsD(AlignakTest):
         super(TestStatsD, self).setUp()
 
         # Log at DEBUG level
-        self.set_debug_log()
+        self.set_unit_tests_logger_level('INFO')
+        self.show_logs()
         self.clear_logs()
 
         # Create our own stats manager...
@@ -186,14 +187,6 @@ class TestStatsD(AlignakTest):
         assert self.statsmgr.statsd_addr is not None
 
         index = 0
-        # Only for Python > 2.7, DEBUG logs ...
-        if os.sys.version_info > (2, 7):
-            index = 1
-            self.assert_log_match(re.escape(
-                'StatsD configuration for arbiter-master - localhost:8125, '
-                'prefix: alignak, enabled: True, broks: False, file: None'
-            ), 0)
-
         self.assert_log_match(re.escape(
             'Sending arbiter-master statistics to: localhost:8125, prefix: alignak'
         ), index)
@@ -224,14 +217,6 @@ class TestStatsD(AlignakTest):
         assert self.statsmgr.statsd_addr is not None
 
         index = 0
-        # Only for Python > 2.7, DEBUG logs ...
-        if os.sys.version_info > (2, 7):
-            index = 1
-            self.assert_log_match(re.escape(
-                'StatsD configuration for arbiter-master - localhost:8125, '
-                'prefix: alignak, enabled: True, broks: True, file: None'
-            ), 0)
-
         self.assert_log_match(re.escape(
             'Sending arbiter-master statistics to: localhost:8125, prefix: alignak'
         ), index)
@@ -272,9 +257,6 @@ class TestStatsD(AlignakTest):
                                           statsd_host='localhost', statsd_port=8888,
                                           statsd_prefix='alignak', statsd_enabled=True)
         index = 0
-        # Only for Python > 2.7, DEBUG logs ...
-        if os.sys.version_info > (2, 7):
-            index = 1
         self.assert_log_match(re.escape(
             'Sending arbiter-master statistics to: localhost:8888, prefix: alignak'
         ), index)
@@ -305,9 +287,9 @@ class TestStatsD(AlignakTest):
                                statsd_prefix='alignak', statsd_enabled=True,
                                broks_enabled=True)
         index = 0
-        # Only for Python > 2.7, DEBUG logs ...
-        if os.sys.version_info > (2, 7):
-            index = 1
+        # # Only for Python > 2.7, DEBUG logs ...
+        # if os.sys.version_info > (2, 7):
+        #     index = 1
         self.show_logs()
         self.assert_log_match(re.escape(
             'Sending arbiter-master statistics to: localhost:8125, prefix: alignak'
@@ -401,9 +383,9 @@ class TestStatsD(AlignakTest):
                                statsd_prefix='alignak', statsd_enabled=True,
                                broks_enabled=True)
         index = 0
-        # Only for Python > 2.7, DEBUG logs ...
-        if os.sys.version_info > (2, 7):
-            index = 1
+        # # Only for Python > 2.7, DEBUG logs ...
+        # if os.sys.version_info > (2, 7):
+        #     index = 1
         self.show_logs()
         self.assert_log_match(re.escape(
             'Sending broker-master statistics to: localhost:8125, prefix: alignak'
@@ -497,9 +479,9 @@ class TestStatsD(AlignakTest):
                                statsd_prefix='alignak', statsd_enabled=True,
                                broks_enabled=True)
         index = 0
-        # Only for Python > 2.7, DEBUG logs ...
-        if os.sys.version_info > (2, 7):
-            index = 1
+        # # Only for Python > 2.7, DEBUG logs ...
+        # if os.sys.version_info > (2, 7):
+        #     index = 1
         self.show_logs()
         self.assert_log_match(re.escape(
             'Sending arbiter-master statistics to: localhost:8125, prefix: alignak'
@@ -593,7 +575,7 @@ if os.sys.version_info > (2, 7):
             super(TestCarbon, self).setUp()
 
             # Log at DEBUG level
-            self.set_debug_log()
+            self.set_unit_tests_logger_level()
             self.clear_logs()
 
             # Create our own stats manager...
@@ -655,14 +637,11 @@ if os.sys.version_info > (2, 7):
             assert self.statsmgr.metrics_count == 0
 
             index = 0
-            # Only for Python > 2.7, DEBUG logs ...
-            if os.sys.version_info > (2, 7):
-                index = 1
-                self.assert_log_match(re.escape(
-                    'Graphite/carbon configuration for arbiter-master - localhost:2003, '
-                    'prefix: alignak, enabled: True, broks: False, file: None'
-                ), 0)
-
+            self.assert_log_match(re.escape(
+                'Graphite/carbon configuration for arbiter-master - localhost:2003, '
+                'prefix: alignak, enabled: True, broks: False, file: None'
+            ), index)
+            index += 1
             self.assert_log_match(re.escape(
                 'Sending arbiter-master statistics to: localhost:2003, prefix: alignak'
             ), index)
@@ -683,14 +662,11 @@ if os.sys.version_info > (2, 7):
             assert self.statsmgr.metrics_count == 0
 
             index = 0
-            # Only for Python > 2.7, DEBUG logs ...
-            if os.sys.version_info > (2, 7):
-                index = 1
-                self.assert_log_match(re.escape(
-                    'Graphite/carbon configuration for arbiter-master - localhost:2003, '
-                    'prefix: alignak, enabled: True, broks: True, file: None'
-                ), 0)
-
+            self.assert_log_match(re.escape(
+                'Graphite/carbon configuration for arbiter-master - localhost:2003, '
+                'prefix: alignak, enabled: True, broks: True, file: None'
+            ), index)
+            index += 1
             self.assert_log_match(re.escape(
                 'Sending arbiter-master statistics to: localhost:2003, prefix: alignak'
             ), index)
@@ -723,9 +699,11 @@ if os.sys.version_info > (2, 7):
                                          host='localhost', port=8888,
                                          prefix='alignak', enabled=True)
             index = 0
-            # Only for Python > 2.7, DEBUG logs ...
-            if os.sys.version_info > (2, 7):
-                index = 1
+            self.assert_log_match(re.escape(
+                'Graphite/carbon configuration for arbiter-master - localhost:8888, '
+                'prefix: alignak, enabled: True, broks: False, file: None'
+            ), index)
+            index += 1
             self.assert_log_match(re.escape(
                 'Sending arbiter-master statistics to: localhost:8888, prefix: alignak'
             ), index)
@@ -746,10 +724,11 @@ if os.sys.version_info > (2, 7):
             assert self.statsmgr.metrics_count == 0
 
             index = 0
-            # Only for Python > 2.7, DEBUG logs ...
-            if os.sys.version_info > (2, 7):
-                index = 1
-            self.show_logs()
+            self.assert_log_match(re.escape(
+                'Graphite/carbon configuration for arbiter-master - localhost:2003, '
+                'prefix: alignak, enabled: True, broks: True, file: None'
+            ), index)
+            index += 1
             self.assert_log_match(re.escape(
                 'Sending arbiter-master statistics to: localhost:2003, prefix: alignak'
             ), index)
@@ -842,10 +821,11 @@ if os.sys.version_info > (2, 7):
                                   host='localhost', port=2003, prefix='alignak', enabled=True,
                                   broks_enabled=True)
             index = 0
-            # Only for Python > 2.7, DEBUG logs ...
-            if os.sys.version_info > (2, 7):
-                index = 1
-            self.show_logs()
+            self.assert_log_match(re.escape(
+                'Graphite/carbon configuration for broker-master - localhost:2003, '
+                'prefix: alignak, enabled: True, broks: True, file: None'
+            ), index)
+            index += 1
             self.assert_log_match(re.escape(
                 'Sending broker-master statistics to: localhost:2003, prefix: alignak'
             ), index)
@@ -935,10 +915,11 @@ if os.sys.version_info > (2, 7):
                                   host='localhost', port=2003, prefix='alignak', enabled=True,
                                   broks_enabled=True)
             index = 0
-            # Only for Python > 2.7, DEBUG logs ...
-            if os.sys.version_info > (2, 7):
-                index = 1
-            self.show_logs()
+            self.assert_log_match(re.escape(
+                'Graphite/carbon configuration for arbiter-master - localhost:2003, '
+                'prefix: alignak, enabled: True, broks: True, file: None'
+            ), index)
+            index += 1
             self.assert_log_match(re.escape(
                 'Sending arbiter-master statistics to: localhost:2003, prefix: alignak'
             ), index)
@@ -1040,13 +1021,6 @@ if os.sys.version_info > (2, 7):
             # Flush but no metrics exist
             assert self.statsmgr.flush()
 
-            index = 0
-            # Only for Python > 2.7, DEBUG logs ...
-            if os.sys.version_info > (2, 7):
-                index = 1
-                self.assert_log_match(re.escape(
-                    'Flushing - no metrics to send'
-                ), 0)
             self.clear_logs()
 
             # Create a timer metric
@@ -1063,11 +1037,6 @@ if os.sys.version_info > (2, 7):
 
             assert self.statsmgr.flush()
 
-            index = 0
-            self.assert_log_match(re.escape(
-                'Flushing 5 metrics to Graphite/carbon'
-            ), index)
-
 
 class TestStatsFile(AlignakTest):
     """
@@ -1078,7 +1047,7 @@ class TestStatsFile(AlignakTest):
         super(TestStatsFile, self).setUp()
 
         # Log at DEBUG level
-        self.set_debug_log()
+        self.set_unit_tests_logger_level()
         self.clear_logs()
 
         # Declare environment to send stats to a file
@@ -1100,7 +1069,7 @@ class TestStatsFile(AlignakTest):
     def tearDown(self):
         self.statsmgr.file_d.close()
 
-        print("-----\n%s stats file\n-----\n" % '/tmp/stats.alignak')
+        print(("-----\n%s stats file\n-----\n" % '/tmp/stats.alignak'))
         try:
             hfile = open('/tmp/stats.alignak', 'r')
             lines = hfile.readlines()
@@ -1108,7 +1077,7 @@ class TestStatsFile(AlignakTest):
             hfile.close()
             assert self.line_count == len(lines)
         except OSError as exp:
-            print("Error: %s" % exp)
+            print(("Error: %s" % exp))
             assert False
 
     def test_statsmgr_timer_file(self):
@@ -1119,10 +1088,11 @@ class TestStatsFile(AlignakTest):
         self.statsmgr.register('arbiter-master', 'arbiter',
                                statsd_enabled=True, statsd_host=None)
         index = 0
-        # Only for Python > 2.7, DEBUG logs ...
-        if os.sys.version_info > (2, 7):
-            index = 1
-        self.show_logs()
+        self.assert_log_match(re.escape(
+            'StatsD configuration for arbiter-master - None:8125, prefix: alignak, '
+            'enabled: True, broks: False, file: /tmp/stats.alignak'
+        ), index)
+        index += 1
         self.assert_log_match(re.escape(
             'Alignak internal statistics are written in the file /tmp/stats.alignak'
         ), index)
@@ -1154,10 +1124,11 @@ class TestStatsFile(AlignakTest):
         self.statsmgr.register('arbiter-master', 'arbiter',
                                statsd_enabled=True, statsd_host=None)
         index = 0
-        # Only for Python > 2.7, DEBUG logs ...
-        if os.sys.version_info > (2, 7):
-            index = 1
-        self.show_logs()
+        self.assert_log_match(re.escape(
+            'StatsD configuration for arbiter-master - None:8125, prefix: alignak, '
+            'enabled: True, broks: False, file: /tmp/stats.alignak'
+        ), index)
+        index += 1
         self.assert_log_match(re.escape(
             'Alignak internal statistics are written in the file /tmp/stats.alignak'
         ), index)
@@ -1181,10 +1152,11 @@ class TestStatsFile(AlignakTest):
                                statsd_prefix='alignak', statsd_enabled=True,
                                broks_enabled=True)
         index = 0
-        # Only for Python > 2.7, DEBUG logs ...
-        if os.sys.version_info > (2, 7):
-            index = 1
-        self.show_logs()
+        self.assert_log_match(re.escape(
+            'StatsD configuration for arbiter-master - localhost:8125, prefix: alignak, '
+            'enabled: True, broks: True, file: /tmp/stats.alignak'
+        ), index)
+        index += 1
         self.assert_log_match(re.escape(
             'Sending arbiter-master statistics to: localhost:8125, prefix: alignak'
         ), index)

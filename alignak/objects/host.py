@@ -76,7 +76,7 @@ from alignak.autoslots import AutoSlots
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, CharProp
 from alignak.log import make_monitoring_log
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Host(SchedulingItem):  # pylint: disable=R0904
@@ -87,7 +87,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
     # running_properties names
     __metaclass__ = AutoSlots
 
-    ok_up = 'UP'
+    ok_up = u'UP'
     my_type = 'host'
 
     # if Host(or more generally Item) instances were created with all properties
@@ -121,40 +121,40 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             StringProp(fill_brok=['full_status'], default=''),
         'parents':
             ListProp(default=[],
-                     fill_brok=['full_status'], merging='join', split_on_coma=True),
+                     fill_brok=['full_status'], merging='join', split_on_comma=True),
         'hostgroups':
             ListProp(default=[],
-                     fill_brok=['full_status'], merging='join', split_on_coma=True),
+                     fill_brok=['full_status'], merging='join', split_on_comma=True),
         'check_command':
             StringProp(default='_internal_host_up', fill_brok=['full_status']),
         'flap_detection_options':
             ListProp(default=['o', 'd', 'x'], fill_brok=['full_status'],
-                     merging='join', split_on_coma=True),
+                     merging='join', split_on_comma=True),
         'notification_options':
             ListProp(default=['d', 'x', 'r', 'f'], fill_brok=['full_status'],
-                     merging='join', split_on_coma=True),
+                     merging='join', split_on_comma=True),
         'vrml_image':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
         'statusmap_image':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
         'freshness_state':
             CharProp(default='x', fill_brok=['full_status']),
 
         # No slots for this 2 because begin property by a number seems bad
         # it's stupid!
         '2d_coords':
-            StringProp(default='', fill_brok=['full_status'], no_slots=True),
+            StringProp(default=u'', fill_brok=['full_status'], no_slots=True),
         '3d_coords':
-            StringProp(default='', fill_brok=['full_status'], no_slots=True),
+            StringProp(default=u'', fill_brok=['full_status'], no_slots=True),
         # New to alignak
         # 'fill_brok' is ok because in scheduler it's already
         # a string from conf_send_preparation
         'service_overrides':
-            ListProp(default=[], merging='duplicate', split_on_coma=False),
+            ListProp(default=[], merging='duplicate', split_on_comma=False),
         'service_excludes':
-            ListProp(default=[], merging='duplicate', split_on_coma=True),
+            ListProp(default=[], merging='duplicate', split_on_comma=True),
         'service_includes':
-            ListProp(default=[], merging='duplicate', split_on_coma=True),
+            ListProp(default=[], merging='duplicate', split_on_comma=True),
         'snapshot_criteria':
             ListProp(default=['d', 'x'], fill_brok=['full_status'], merging='join'),
     })
@@ -164,7 +164,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
     running_properties = SchedulingItem.running_properties.copy()
     running_properties.update({
         'state':
-            StringProp(default='UP', fill_brok=['full_status', 'check_result'],
+            StringProp(default=u'UP', fill_brok=['full_status', 'check_result'],
                        retention=True),
         'last_time_up':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
@@ -176,12 +176,12 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'services':
             StringProp(default=[]),
         'realm_name':
-            StringProp(default=''),
+            StringProp(default=u''),
         'got_default_realm':
             BoolProp(default=False),
 
         'state_before_hard_unknown_reach_phase':
-            StringProp(default='UP', retention=True),
+            StringProp(default=u'UP', retention=True),
 
         # Keep in mind our pack id after the cutting phase
         'pack_id':
@@ -343,7 +343,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         if self.notifications_enabled and not self.contacts:
             msg = "[%s::%s] notifications are enabled but no contacts nor contact_groups " \
                   "property is defined for this host" % (self.my_type, self.get_name())
-            self.configuration_warnings.append(msg)
+            self.add_warning(msg)
 
         return super(Host, self).is_correct() and state
 
@@ -512,22 +512,22 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         # There is no 1 case because it should have been managed by the caller for a host
         # like the schedulingitem::consume method.
         if status == 0:
-            self.state = 'UP'
+            self.state = u'UP'
             self.state_id = 0
             self.last_time_up = int(self.last_state_update)
             state_code = 'u'
         elif status in (2, 3):
-            self.state = 'DOWN'
+            self.state = u'DOWN'
             self.state_id = 1
             self.last_time_down = int(self.last_state_update)
             state_code = 'd'
         elif status == 4:
-            self.state = 'UNREACHABLE'
+            self.state = u'UNREACHABLE'
             self.state_id = 4
             self.last_time_unreachable = int(self.last_state_update)
             state_code = 'x'
         else:
-            self.state = 'DOWN'  # exit code UNDETERMINED
+            self.state = u'DOWN'  # exit code UNDETERMINED
             self.state_id = 1
             self.last_time_down = int(self.last_state_update)
             state_code = 'd'
@@ -552,11 +552,11 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         if status == self.state:
             return True
         # Now low status
-        elif status == 'o' and self.state == 'UP':
+        elif status == 'o' and self.state == u'UP':
             return True
-        elif status == 'd' and self.state == 'DOWN':
+        elif status == 'd' and self.state == u'DOWN':
             return True
-        elif status in ['u', 'x'] and self.state == 'UNREACHABLE':
+        elif status in ['u', 'x'] and self.state == u'UNREACHABLE':
             return True
         return False
 
@@ -747,9 +747,10 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             return
 
         brok = make_monitoring_log(
-            'info', "HOST FLAPPING ALERT: %s;STARTED; Host appears to have started flapping "
-                    "(%.1f%% change >= %.1f%% threshold)" %
-                    (self.get_name(), change_ratio, threshold)
+            'info',
+            "HOST FLAPPING ALERT: %s;STARTED; Host appears to have started "
+            "flapping (%.1f%% change >= %.1f%% threshold)"
+            % (self.get_name(), change_ratio, threshold)
         )
         self.broks.append(brok)
 
@@ -772,9 +773,10 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             return
 
         brok = make_monitoring_log(
-            'info', "HOST FLAPPING ALERT: %s;STOPPED; Host appears to have stopped flapping "
-                    "(%.1f%% change < %.1f%% threshold)" %
-                    (self.get_name(), change_ratio, threshold)
+            'info',
+            "HOST FLAPPING ALERT: %s;STOPPED; Host appears to have stopped flapping "
+            "(%.1f%% change < %.1f%% threshold)"
+            % (self.get_name(), change_ratio, threshold)
         )
         self.broks.append(brok)
 
@@ -868,7 +870,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: None
         """
         need_stalk = False
-        if check.status == 'waitconsume':
+        if check.status == u'waitconsume':
             if check.exit_status == 0 and 'o' in self.stalking_options:
                 need_stalk = True
             elif check.exit_status == 1 and 'd' in self.stalking_options:
@@ -943,9 +945,9 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         hours, mins = divmod(mins, 60)
         return "%02dh %02dm %02ds" % (hours, mins, secs)
 
-    def notification_is_blocked_by_item(self, notification_period, hosts, services,
-                                        n_type, t_wished=None):
-        # pylint: disable=too-many-return-statements
+    def is_blocking_notifications(self, notification_period, hosts, services, n_type, t_wished):
+        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-return-statements, too-many-boolean-expressions
         """Check if a notification is blocked by the host.
         Conditions are ONE of the following::
 
@@ -970,7 +972,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :type t_wished: float
         :return: True if ONE of the above condition was met, otherwise False
         :rtype: bool
-        TODO: Refactor this, a lot of code duplication with Service.notification_is_blocked_by_item
+        TODO: Refactor this, a lot of code duplication with Service.is_blocking_notifications
         """
         logger.debug("Checking if a host %s (%s) notification is blocked...",
                      self.get_name(), self.state)
@@ -994,70 +996,73 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                          self.get_name(), n_type)
             return True
 
-        if n_type in ('PROBLEM', 'RECOVERY') and (
-                self.state == 'DOWN' and 'd' not in self.notification_options or
-                self.state == 'UP' and 'r' not in self.notification_options or
-                self.state == 'UNREACHABLE' and 'x' not in self.notification_options):
+        if n_type in (u'PROBLEM', u'RECOVERY') and (
+                self.state == u'DOWN' and 'd' not in self.notification_options or
+                self.state == u'UP' and 'r' not in self.notification_options or
+                self.state == u'UNREACHABLE' and 'x' not in self.notification_options):
             logger.debug("Host: %s, notification %s sending is blocked by options",
                          self.get_name(), n_type)
             return True
 
-        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED') and
+        if (n_type in (u'FLAPPINGSTART', u'FLAPPINGSTOP', u'FLAPPINGDISABLED') and
                 'f' not in self.notification_options):
             logger.debug("Host: %s, notification %s sending is blocked by options",
                          n_type, self.get_name())
             return True
 
-        if (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED') and
+        if (n_type in (u'DOWNTIMESTART', u'DOWNTIMEEND', u'DOWNTIMECANCELLED') and
                 's' not in self.notification_options):
             logger.debug("Host: %s, notification %s sending is blocked by options",
                          n_type, self.get_name())
             return True
 
         # Flapping notifications are blocked when in scheduled downtime
-        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED') and
+        if (n_type in (u'FLAPPINGSTART', u'FLAPPINGSTOP', u'FLAPPINGDISABLED') and
                 self.scheduled_downtime_depth > 0):
             logger.debug("Host: %s, notification %s sending is blocked by downtime",
                          self.get_name(), n_type)
             return True
 
         # Acknowledgements make no sense when the status is ok/up
-        if n_type == 'ACKNOWLEDGEMENT' and self.state == self.ok_up:
+        if n_type == u'ACKNOWLEDGEMENT' and self.state == self.ok_up:
             logger.debug("Host: %s, notification %s sending is blocked by current state",
                          self.get_name(), n_type)
             return True
 
         # When in deep downtime, only allow end-of-downtime notifications
         # In depth 1 the downtime just started and can be notified
-        if self.scheduled_downtime_depth > 1 and n_type not in ('DOWNTIMEEND', 'DOWNTIMECANCELLED'):
+        if self.scheduled_downtime_depth > 1 and n_type not in (u'DOWNTIMEEND',
+                                                                u'DOWNTIMECANCELLED'):
             logger.debug("Host: %s, notification %s sending is blocked by deep downtime",
                          self.get_name(), n_type)
             return True
 
         # Block if in a scheduled downtime and a problem arises
         if self.scheduled_downtime_depth > 0 and \
-                n_type in ('PROBLEM', 'RECOVERY', 'ACKNOWLEDGEMENT'):
+                n_type in (u'PROBLEM', u'RECOVERY', u'ACKNOWLEDGEMENT'):
             logger.debug("Host: %s, notification %s sending is blocked by downtime",
                          self.get_name(), n_type)
             return True
 
         # Block if the status is SOFT
-        if self.state_type == 'SOFT' and n_type == 'PROBLEM':
+        if self.state_type == u'SOFT' and n_type == u'PROBLEM':
             logger.debug("Host: %s, notification %s sending is blocked by soft state",
                          self.get_name(), n_type)
             return True
 
         # Block if the problem has already been acknowledged
-        if self.problem_has_been_acknowledged and n_type not in ('ACKNOWLEDGEMENT',
-                                                                 'DOWNTIMESTART',
-                                                                 'DOWNTIMEEND',
-                                                                 'DOWNTIMECANCELLED'):
+        if self.problem_has_been_acknowledged and n_type not in (u'ACKNOWLEDGEMENT',
+                                                                 u'DOWNTIMESTART',
+                                                                 u'DOWNTIMEEND',
+                                                                 u'DOWNTIMECANCELLED'):
             logger.debug("Host: %s, notification %s sending is blocked by acknowledged",
                          self.get_name(), n_type)
             return True
 
         # Block if flapping
-        if self.is_flapping and n_type not in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
+        if self.is_flapping and n_type not in (u'FLAPPINGSTART',
+                                               u'FLAPPINGSTOP',
+                                               u'FLAPPINGDISABLED'):
             logger.debug("Host: %s, notification %s sending is blocked by flapping",
                          self.get_name(), n_type)
             return True
@@ -1067,7 +1072,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         if self.got_business_rule is True \
                 and self.business_rule_smart_notifications is True \
                 and self.business_rule_notification_is_blocked(hosts, services) is True \
-                and n_type == 'PROBLEM':
+                and n_type == u'PROBLEM':
             logger.debug("Host: %s, notification %s sending is blocked by business rules",
                          self.get_name(), n_type)
             return True
@@ -1377,7 +1382,7 @@ class Hosts(SchedulingItems):
         :type contactgroups: alignak.objects.contactgroup.Contactgroups
         :return: None
         """
-        for template in self.templates.itervalues():
+        for template in list(self.templates.values()):
             # items::explode_contact_groups_into_contacts
             # take all contacts from our contact_groups into our contact property
             self.explode_contact_groups_into_contacts(template, contactgroups)
@@ -1443,7 +1448,7 @@ class Hosts(SchedulingItems):
             msg = "Loop detected while checking hosts "
             self.add_error(msg)
             state = False
-            for uuid, item in self.items.iteritems():
+            for uuid, item in list(self.items.items()):
                 for elem in loop:
                     if elem == uuid:
                         msg = "Host %s is parent in dependency defined in %s" % (

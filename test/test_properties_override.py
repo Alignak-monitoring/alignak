@@ -48,7 +48,7 @@
 #
 
 import re
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 import pytest
 
 

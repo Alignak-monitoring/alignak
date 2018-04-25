@@ -48,7 +48,7 @@ This file test illegal characters in configuration
 
 """
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestIllegalNames(AlignakTest):
@@ -66,7 +66,7 @@ class TestIllegalNames(AlignakTest):
         self.setup_with_file('cfg/cfg_default.cfg')
 
         illegal_characts = self._arbiter.conf.illegal_object_name_chars
-        print "Illegal caracters: %s" % illegal_characts
+        print("Illegal caracters: %s" % illegal_characts)
         host = self._scheduler.hosts.find_by_name("test_host_0")
         # should be correct
         assert host.is_correct()

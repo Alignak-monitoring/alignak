@@ -52,7 +52,7 @@
 import time
 from alignak.dependencynode import DependencyNode
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestBusinessCorrelator(AlignakTest):
@@ -129,13 +129,13 @@ class TestBusinessCorrelator(AlignakTest):
         # The BR command is: bp_rule!test_host_0,db1|test_host_0,db2
         bp_rule = svc_cor.business_rule
         assert isinstance(bp_rule, DependencyNode)
-        print("BR scheduler: %s" % bp_rule)
+        print(("BR scheduler: %s" % bp_rule))
 
         # Get the BR associated with svc_cor
         # The BR command is: bp_rule!test_host_0,db1|test_host_0,db2
         bp_rule_arbiter = svc_cor2.business_rule
         assert isinstance(bp_rule_arbiter, DependencyNode)
-        print("BR arbiter: %s" % bp_rule_arbiter)
+        print(("BR arbiter: %s" % bp_rule_arbiter))
 
         # Get the BR elements list
         assert isinstance(bp_rule.list_all_elements(), list)
@@ -1435,7 +1435,7 @@ class TestBusinessCorrelator(AlignakTest):
                 assert ('1', '2', '2') == bp_rule.of_values
 
         sons = bp_rule.sons
-        print "Sons,", sons
+        print("Sons,", sons)
         # We've got 2 sons, 2 services nodes
         assert 2 == len(sons)
         assert 'host' == sons[0].operand
@@ -1461,7 +1461,7 @@ class TestBusinessCorrelator(AlignakTest):
         bp_rule = svc_cor.business_rule
         assert '|' == bp_rule.operand
 
-        print "All elements", bp_rule.list_all_elements()
+        print("All elements", bp_rule.list_all_elements())
         all_elements = bp_rule.list_all_elements()
 
         assert 2 == len(all_elements)
@@ -1701,7 +1701,7 @@ class TestBusinessCorrelator(AlignakTest):
         # Launch an internal check
         self.launch_internal_check(svc_cor)
 
-        print "ERP: Look at svc_cor state", svc_cor.state
+        print("ERP: Look at svc_cor state", svc_cor.state)
         # What is the svc_cor state now?
         assert 'OK' == svc_cor.state
         assert 'HARD' == svc_cor.state_type
@@ -1994,7 +1994,7 @@ class TestBusinessCorrelator(AlignakTest):
         # -----
         # Must be WARNING (worse no 0 value for both, like for AND rule)
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
-        print "state", state
+        print("state", state)
         assert 1 == state
 
         # Ok now more fun, with changing of_values and states
@@ -2411,7 +2411,7 @@ class TestBusinessCorrelator(AlignakTest):
         # Config is not correct because of a wrong relative path
         # in the main config file
         #
-        print "Get the hosts and services"
+        print("Get the hosts and services")
         now = time.time()
         host = self._sched.hosts.find_by_name("test_darthelmet")
         host.checks_in_progress = []
@@ -2432,7 +2432,7 @@ class TestBusinessCorrelator(AlignakTest):
         assert 'HARD' == A.state_type
 
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
-        print "WTF0", state
+        print("WTF0", state)
         assert 0 == state
 
         # Now we set the A as soft/DOWN
@@ -2453,7 +2453,7 @@ class TestBusinessCorrelator(AlignakTest):
 
         # The rule must still be a 2 (or inside)
         state = bp_rule.get_state(self._sched.hosts, self._sched.services)
-        print "WFT", state
+        print("WFT", state)
         assert 2 == state
 
         # Now we also set B as DOWN/HARD, should get back to 0!

@@ -52,7 +52,7 @@ Test alignak.property
 import alignak
 from alignak.property import NONE_OBJECT
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 import pytest
 
 
@@ -193,7 +193,7 @@ class TestListProp(PropertyTests, AlignakTest):
         assert p.pythonize(["1,2,3", "4,5,6"]) == ["1","2","3", "4","5","6"]
 
     def test_pythonize_nosplit(self):
-        p = self.prop_class(split_on_coma=False)
+        p = self.prop_class(split_on_comma=False)
         assert p.pythonize("") == []
         assert p.pythonize("1,2,3") == ["1,2,3"]
         # Default is to split on coma for list also.

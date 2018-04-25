@@ -26,7 +26,7 @@ import cherrypy
 from alignak.http.generic_interface import GenericInterface
 from alignak.external_command import ExternalCommand
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class ArbiterInterface(GenericInterface):
@@ -39,15 +39,18 @@ class ArbiterInterface(GenericInterface):
     def reload_configuration(self):
         """Ask to the arbiter to reload the monitored configuration
 
-        Returns False if the arbiter is not a master arbiter
+        In case of any error, this function returns an object containing some properties:
+        '_status': 'ERR' because of the error
+        `_message`: some more explanations about the error
 
         :return: True if configuration reload is accepted
         """
         # If I'm the master, ignore the command and raise a log
         if not self.app.is_master:
-            logger.warning("I received a request to reload the monitored configuration. "
-                           "I am not the Master, ignore and continue to run.")
-            return False
+            message = u"I received a request to reload the monitored configuration. " \
+                      u"I am not the Master arbiter, I ignore and continue to run."
+            logger.warning(message)
+            return {'_status': u'ERR', '_message': message}
 
         logger.warning("I received a request to reload the monitored configuration.")
         if self.app.loading_configuration:
@@ -70,7 +73,14 @@ class ArbiterInterface(GenericInterface):
 
         Else, nothing for the moment!
 
-        :return: True / False if configuration reload is accepted or not
+        In case of any error, this function returns an object containing some properties:
+        '_status': 'ERR' because of the error
+        `_message`: some more explanations about the error
+
+        The `_status` field is 'OK' with an according `_message` to explain what the Arbiter
+        will do depending upon the notification.
+
+        :return: dict
         """
         # request_parameters = cherrypy.request.json
         # event = request_parameters.get('event', event)
@@ -88,10 +98,10 @@ class ArbiterInterface(GenericInterface):
         if event in ['creation', 'deletion']:
             # If I'm the master, ignore the command and raise a log
             if not self.app.is_master:
-                message = "I received a request to reload the monitored configuration. " \
-                          "I am not the Master arbiter, I ignore and continue to run."
+                message = u"I received a request to reload the monitored configuration. " \
+                          u"I am not the Master arbiter, I ignore and continue to run."
                 logger.warning(message)
-                return {'_status': 'ERR', '_message': message}
+                return {'_status': u'ERR', '_message': message}
 
             message = "I received a request to reload the monitored configuration."
             if self.app.loading_configuration:
@@ -99,22 +109,45 @@ class ArbiterInterface(GenericInterface):
             logger.warning(message)
 
             self.app.need_config_reload = True
-            return {'_status': 'OK', '_message': message}
+            return {'_status': u'OK', '_message': message}
 
-        return {'_status': 'OK', '_message': "No action to do"}
+        return {'_status': u'OK', '_message': u"No action to do"}
 
     @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
-    def command(self):
+    def command(self, command=None):
         """ Request to execute an external command
-        :return:
+
+        Allowed parameters are:
+        `command`: mandatory parameter containing the whole command line or only the command name
+
+        `timestamp`: optional parameter containing the timestamp. If not present, the
+        current timestamp is added in the command line
+
+        `element`: the targeted element that will be appended after the command name (`command`).
+        If element contains a '/' character it is split to make an host and service.
+
+        `host`, `service` or `user`: the targeted host, service or user. Takes precedence over
+        the `element` to target a specific element
+
+        `parameters`: the parameter that will be appended after all the arguments
+
+        In case of any error, this function returns an object containing some properties:
+        '_status': 'ERR' because of the error
+        `_message`: some more explanations about the error
+
+        The `_status` field is 'OK' with an according `_message` to explain what the Arbiter
+        will do depending upon the notification. The `command` property contains the formatted
+        external command.
+
+        :return: dict
         """
         if cherrypy.request.method != "POST":
-            return {'_status': 'ERR', '_message': 'You must only POST on this endpoint.'}
+            return {'_status': u'ERR', '_message': u'You must only POST on this endpoint.'}
 
         if cherrypy.request and not cherrypy.request.json:
-            return {'_status': 'ERR', '_message': 'You must POST parameters on this endpoint.'}
+            return {'_status': u'ERR', '_message': u'You must POST parameters on this endpoint.'}
 
         logger.debug("Post /command: %s", cherrypy.request.params)
         command = cherrypy.request.json.get('command', None)
@@ -126,14 +159,14 @@ class ArbiterInterface(GenericInterface):
         parameters = cherrypy.request.json.get('parameters', None)
 
         if not command:
-            return {'_status': 'ERR', '_message': 'Missing command parameter'}
+            return {'_status': u'ERR', '_message': u'Missing command parameter'}
 
         command_line = command.upper()
         if timestamp:
             try:
                 timestamp = int(timestamp)
             except ValueError:
-                return {'_status': 'ERR', '_message': 'Timestamp must be an integer value'}
+                return {'_status': u'ERR', '_message': u'Timestamp must be an integer value'}
             command_line = '[%d] %s' % (timestamp, command_line)
 
         if host or service or user:
@@ -156,17 +189,22 @@ class ArbiterInterface(GenericInterface):
         logger.warning("Got an external command: %s", command_line)
         self.app.add(ExternalCommand(command_line))
 
-        return {'_status': 'OK', '_message': "Got command: %s" % command_line}
+        return {'_status': u'OK',
+                '_message': u"Got command: %s" % command_line,
+                'command': command_line}
 
     @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
     def push_configuration(self, pushed_configuration=None):
-        """HTTP POST to the arbiter with the new configuration (master arbiter sends
-        its configuration to the spare arbiter)
+        """Send a new configuration to the daemon
 
-        :param conf: serialized new configuration
-        :type conf:
+        Used by the master arbiter to send its configuration to a spare arbiter
+
+        This function is not intended for external use. It is quite complex to
+        build a configuration for a daemon and it is the arbter dispatcher job ;)
+
+        :param pushed_configuration: new conf to send
         :return: None
         """
         pushed_configuration = cherrypy.request.json
@@ -177,7 +215,8 @@ class ArbiterInterface(GenericInterface):
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def do_not_run(self):
-        """Master tells to its spare to not run (HTTP GET)
+        """The master arbiter tells to its spare arbiters to not run.
+
         A master arbiter will ignore this request
 
         :return: None
@@ -197,8 +236,7 @@ class ArbiterInterface(GenericInterface):
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def wait_new_conf(self):
-        """Ask the daemon to wait a new conf.
-        Reset cur_conf to wait new one
+        """Ask the daemon to drop its configuration and wait for a new one
 
         :return: None
         """
@@ -209,15 +247,20 @@ class ArbiterInterface(GenericInterface):
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def get_satellites_list(self, daemon_type=''):
-        """Get the satellite names sorted by type (HTTP GET)
+        """Get the arbiter satellite names sorted by type
+
+        Returns a list of the satellites as in:
+        {
+            'scheduler': ['Scheduler1']
+            'poller': ['Poller1', 'Poller2']
+            ...
+        }
+
+        If a specific daemon type is requested, the list is reduced to this unique daemon type.
 
         :param daemon_type: daemon type to filter
         :type daemon_type: str
         :return: dict with key *daemon_type* and value list of daemon name
-        Example ::
-
-         {'poller': ['Poller1', 'Poller2']}
-
         :rtype: dict
         """
         with self.app.conf_lock:
@@ -234,13 +277,13 @@ class ArbiterInterface(GenericInterface):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_all_states(self):
-        """Return all the data of satellites
+    def get_satellites_configuration(self):
+        """Return all the configuration data of satellites
 
         :return: dict containing satellites data
         Output looks like this ::
 
-        {'arbiter' : [{'schedproperty1':'value1' ..}, {'pollerproperty1', 'value11' ..}, ..],
+        {'arbiter' : [{'property1':'value1' ..}, {'property2', 'value11' ..}, ..],
         'scheduler': [..],
         'poller': [..],
         'reactionner': [..],
@@ -291,21 +334,18 @@ class ArbiterInterface(GenericInterface):
         :return: list all properties of all objects
         :rtype: list
         """
-        return {'message': "Deprecated in favor of the get_stats endpoint."}
+        return {'_status': u'ERR',
+                '_message': u"Deprecated in favor of the get_stats endpoint."}
 
     @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
     def push_external_command(self, command=None):
-        """HTTP POST to the arbiter with the new configuration (master arbiter sends
-        its configuration to the spare arbiter)
+        """Only to maintain ascending compatibility... this function uses the inner
+        *command* endpoint.
 
-        :param conf: serialized new configuration
-        :type conf:
+        :param command: Alignak external command
+        :type command: string
         :return: None
         """
-        if command is None:
-            data = cherrypy.request.json
-            command = data['command']
-        self.app.add(ExternalCommand(command))
-        return True
+        return self.command(command=command)

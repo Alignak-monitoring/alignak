@@ -55,6 +55,7 @@
  schedulers (and their associated broks) and take the new ones instead.
 """
 from __future__ import print_function
+
 from alignak.daemons.brokerdaemon import Broker
 from alignak.util import parse_daemon_args
 
@@ -69,7 +70,7 @@ def main():
         daemon = Broker(debug=args.debug_file is not None, **args.__dict__)
         daemon.main()
     except Exception as exp:  # pylint: disable=broad-except
-        print("*** Daemon exited because: %s" % str(exp))
+        print(("*** Daemon exited because: %s" % str(exp)))
         exit(1)
 
 

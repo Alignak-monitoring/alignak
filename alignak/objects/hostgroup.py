@@ -58,7 +58,7 @@ from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
 from alignak.property import StringProp, ListProp
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Hostgroup(Itemgroup):
@@ -70,15 +70,22 @@ class Hostgroup(Itemgroup):
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        'uuid':                 StringProp(default='', fill_brok=['full_status']),
-        'hostgroup_name':       StringProp(fill_brok=['full_status']),
-        'alias':                StringProp(fill_brok=['full_status']),
-        'hostgroup_members':    ListProp(default=[], fill_brok=['full_status'],
-                                         merging='join', split_on_coma=True),
-        'notes':                StringProp(default='', fill_brok=['full_status']),
-        'notes_url':            StringProp(default='', fill_brok=['full_status']),
-        'action_url':           StringProp(default='', fill_brok=['full_status']),
-        'realm':                StringProp(default='', fill_brok=['full_status']),
+        # 'uuid':
+        #     StringProp(fill_brok=['full_status']),
+        'hostgroup_name':
+            StringProp(fill_brok=['full_status']),
+        'alias':
+            StringProp(fill_brok=['full_status']),
+        'hostgroup_members':
+            ListProp(default=[], fill_brok=['full_status'], merging='join', split_on_comma=True),
+        'notes':
+            StringProp(default=u'', fill_brok=['full_status']),
+        'notes_url':
+            StringProp(default=u'', fill_brok=['full_status']),
+        'action_url':
+            StringProp(default=u'', fill_brok=['full_status']),
+        'realm':
+            StringProp(default=u'', fill_brok=['full_status']),
     })
 
     macros = {
@@ -123,6 +130,7 @@ class Hostgroup(Itemgroup):
         return []
 
     def get_hosts_by_explosion(self, hostgroups):
+        # pylint: disable=access-member-before-definition
         """
         Get hosts of this group
 
@@ -210,7 +218,7 @@ class Hostgroups(Itemgroups):
                 if mbr == '':  # void entry, skip this
                     continue
                 elif mbr == '*':
-                    new_mbrs.extend(hosts.items.keys())
+                    new_mbrs.extend(list(hosts.items.keys()))
                 else:
                     host = hosts.find_by_name(mbr)
                     if host is not None:
@@ -271,9 +279,9 @@ class Hostgroups(Itemgroups):
                     host.realm = hostgroup.realm
                 else:
                     if host.realm != hostgroup.realm:
-                        msg = "[hostgroups] host %s is not in the same realm " \
-                              "than its hostgroup %s" % (host.get_name(), hostgroup.get_name())
-                        hostgroup.configuration_warnings.append(msg)
+                        hostgroup.add_warning("[hostgroups] host %s is not in the same realm "
+                                              "than its hostgroup %s"
+                                              % (host.get_name(), hostgroup.get_name()))
 
     def add_member(self, hname, hgname):
         """
@@ -302,19 +310,19 @@ class Hostgroups(Itemgroups):
         """
         # We do not want a same hostgroup to be exploded again and again
         # so we tag it
-        for tmp_hg in self.items.values():
+        for tmp_hg in list(self.items.values()):
             tmp_hg.already_explode = False
-        for hostgroup in self.items.values():
+        for hostgroup in list(self.items.values()):
             if hasattr(hostgroup, 'hostgroup_members') and not \
                     hostgroup.already_explode:
                 # get_hosts_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
-                for tmp_hg in self.items.values():
+                for tmp_hg in list(self.items.values()):
                     tmp_hg.rec_tag = False
                 hostgroup.get_hosts_by_explosion(self)
 
         # We clean the tags
-        for tmp_hg in self.items.values():
+        for tmp_hg in list(self.items.values()):
             if hasattr(tmp_hg, 'rec_tag'):
                 del tmp_hg.rec_tag
             del tmp_hg.already_explode

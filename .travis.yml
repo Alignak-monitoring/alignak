@@ -1,28 +1,13 @@
 language: python
 sudo: required
 python:
-  - "2.6"
   - "2.7"
+  - "3.6"
 env:
   - TEST_SUITE=unit_tests
   - TEST_SUITE=integration
   - TEST_SUITE=codingstandard
-  - TEST_SUITE=virtualenv
-
-matrix:
-#  fast_finish: true
-  allow_failures:
-    - python: "2.6"
-  exclude:
-  - python: "2.6"
-    env: TEST_SUITE=integration
-  - python: "2.6"
-    env: TEST_SUITE=codingstandard
-  - python: "2.6"
-    env: TEST_SUITE=virtualenv
-
-#services:
-#  - mongodb
+#  - TEST_SUITE=virtualenv
 
 # command to install dependencies
 # some are only used for travis/coveralls so we are installing them here only
@@ -40,11 +25,11 @@ script:
   # To help eventual debug, knowing which exact packages are installed can be rather useful ;)
   - pip freeze
 
-  - |
-    if [[ $TEST_SUITE == 'virtualenv' ]]; then
-      # Virtual environment setup tests
-      ./test/test_virtualenv_setup.sh || travis_terminate 1;
-    fi
+#  - |
+#    if [[ $TEST_SUITE == 'virtualenv' ]]; then
+#      # Virtual environment setup tests
+#      ./test/test_virtualenv_setup.sh || travis_terminate 1;
+#    fi
 
   - |
     if [[ $TEST_SUITE == 'codingstandard' ]]; then
@@ -61,7 +46,7 @@ script:
     fi
 
   - |
-    if [[ $TEST_SUITE == 'unit_tests' && $TRAVIS_PYTHON_VERSION == '2.7' ]]; then
+    if [[ $TEST_SUITE == 'unit_tests' ]]; then
       # Run unit tests and code coverage analysis
       cd test
       # Run test suite with py.test running its coverage plugin
@@ -76,20 +61,6 @@ script:
     fi
 
   - |
-    if [[ $TEST_SUITE == 'unit_tests' && $TRAVIS_PYTHON_VERSION == '2.6' ]]; then
-      # Run unit tests and code coverage analysis
-      cd test
-      # Run test suite with py.test running its coverage plugin
-      # Dump the 10 slowest tests
-      # Do not print log synthesis on test end
-      echo "Starting tests..."
-      pytest --verbose --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
-      cd ..
-      cp test/.coverage .
-      # codecov
-      bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
-    fi
-
   - |
     if [[ $TEST_SUITE == 'integration' ]]; then
       # Run load tests and code dynamic analysis
@@ -113,14 +84,9 @@ script:
       bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
     fi
 
-after_failure:
-  - COREFILE=$(find . -maxdepth 1 -name "core*" | head -n 1) # find core file
-  - if [[ -f "$COREFILE" ]]; then gdb -c "$COREFILE" example -ex "thread apply all bt" -ex "set pagination 0" -batch; fi
-
-
 after_success:
   - |
-    if [[ $TEST_SUITE == 'unit_tests' && $TRAVIS_PYTHON_VERSION == '2.7' ]]; then
+    if [[ $TEST_SUITE == 'unit_tests' ]]; then
       # to get coverage data with relative paths and not absolute we have to
       # execute coveralls from the base directory of the project,
       # so we need to move the .coverage file here :

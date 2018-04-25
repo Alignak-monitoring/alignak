@@ -32,10 +32,9 @@ import shutil
 import psutil
 
 import pytest
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 from alignak.http.generic_interface import GenericInterface
-from alignak.http.receiver_interface import ReceiverInterface
 from alignak.http.arbiter_interface import ArbiterInterface
 from alignak.http.scheduler_interface import SchedulerInterface
 from alignak.http.broker_interface import BrokerInterface
@@ -69,14 +68,6 @@ class TestLaunchArbiter(AlignakTest):
         }
         self._files_update(files, replacements)
 
-        # # Clean the former existing pid and log files
-        # print("Cleaning pid and log files...")
-        # for daemon in ['arbiter-master', 'scheduler-master', 'broker-master',
-        #                'poller-master', 'reactionner-master', 'receiver-master']:
-        #     if os.path.exists('/tmp/var/run/%s.pid' % daemon):
-        #         os.remove('/tmp/var/run/%s.pid' % daemon)
-        #     if os.path.exists('/tmp/var/log/%s.log' % daemon):
-        #         os.remove('/tmp/var/log/%s.log' % daemon)
         self.req = requests.Session()
 
     def tearDown(self):
@@ -89,7 +80,7 @@ class TestLaunchArbiter(AlignakTest):
             'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
             'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
         }
-        for name, port in satellite_map.items():
+        for name, port in list(satellite_map.items()):
             if daemon_names and name not in daemon_names:
                 continue
             print("- pinging %s: http://localhost:%s/ping" % (name, port))
@@ -105,7 +96,7 @@ class TestLaunchArbiter(AlignakTest):
             'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
             'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
         }
-        for name, port in satellite_map.items():
+        for name, port in list(satellite_map.items()):
             if daemon_names and name not in daemon_names:
                 continue
             print("- stopping %s: http://localhost:%s/stop_request" % (name, port))
@@ -129,9 +120,10 @@ class TestLaunchArbiter(AlignakTest):
 
             'polling_interval=5': 'polling_interval=1',
             'daemons_check_period=5': '',
-            'daemons_stop_timeout=10': 'daemons_stop_timeout=5',
-            ';daemons_start_timeout=0': 'daemons_start_timeout=0',
-            ';daemons_dispatch_timeout=0': 'daemons_dispatch_timeout=0',
+            ';daemons_stop_timeout=30': 'daemons_stop_timeout=5',
+            ';daemons_start_timeout=1': 'daemons_start_timeout=0',
+            ';daemons_new_conf_timeout=1': 'daemons_new_conf_timeout=1',
+            ';daemons_dispatch_timeout=5': 'daemons_dispatch_timeout=0',
 
             'user=alignak': ';user=alignak',
             'group=alignak': ';group=alignak',
@@ -156,55 +148,50 @@ class TestLaunchArbiter(AlignakTest):
         assert ret == 4
         ok = True
         for line in iter(self.procs['arbiter-master'].stdout.readline, b''):
-            if 'WARNING:' in line:
+            if b'WARNING:' in line:
                 ok = False
                 # Only WARNING because of missing daemons...
-                if 'that we must be related with cannot be connected' in line:
+                if b'that we must be related with cannot be connected' in line:
                     ok = True
-                if 'Add failed attempt for' in line:
+                if b'Add failed attempt for' in line:
                     ok = True
-                if 'as dead, too much failed attempts' in line:
+                if b'as dead, too much failed attempts' in line:
                     ok = True
-                # if 'Exception: Server not available:' in line:
+                # if b'Exception: Server not available:' in line:
                 #     ok = True
-                if 'as dead :(' in line:
+                if b'as dead :(' in line:
                     ok = True
-                if 'is not alive for' in line:
+                if b'is not alive for' in line:
                     ok = True
-                if 'ignoring repeated file: ' in line:
+                if b'ignoring repeated file: ' in line:
                     ok = True
-                if 'directory did not exist' in line:
+                if b'directory did not exist' in line:
                     ok = True
-                if 'Cannot call the additional groups setting with ' in line:
+                if b'Cannot call the additional groups setting with ' in line:
                     ok = True
-                if '- satellites connection #1 is not correct; ' in line:
+                if b'- satellites connection #1 is not correct; ' in line:
                     ok = True
-                if '- satellites connection #2 is not correct; ' in line:
+                if b'- satellites connection #2 is not correct; ' in line:
                     ok = True
-                if '- satellites connection #3 is not correct; ' in line:
+                if b'- satellites connection #3 is not correct; ' in line:
                     ok = True
                 if ok:
-                    print("... " + line.rstrip())
+                    print("... %s" % line.rstrip())
                 else:
-                    print(">>> " + line.rstrip())
+                    print(">>> %s" % line.rstrip())
 
                 assert ok
-            if 'ERROR:' in line:
-                # Only ERROR because of configuration sending failures...
-                if 'The connection is not initialized for reactionner-master' in line:
-                    ok = True
-                assert ok
-            # if 'CRITICAL:' in line:
-            #     ok = False
-        assert ok
-        ok = True
-        for line in iter(self.procs['arbiter-master'].stderr.readline, b''):
-            print("*** " + line.rstrip())
-            if 'All the daemons connections could not be established ' \
-               'despite 3 tries! Sorry, I bail out!' not in line:
+            if b'ERROR:' in line:
                 ok = False
-        if not ok and sys.version_info > (2, 7):
-            assert False, "stderr output!"
+                # Only ERROR because of connection failure exit
+                if b'All the daemons connections could not be established despite 3 tries! Sorry, I bail out!' in line:
+                    ok = True
+                if b'Sorry, I bail out, exit code: 4' in line:
+                    ok = True
+
+                print("*** %s" % line.rstrip())
+                assert ok
+        assert ok
 
     def test_arbiter_no_daemons_no_stop(self):
         """ Run the Alignak Arbiter - all the expected daemons are missing
@@ -250,55 +237,50 @@ class TestLaunchArbiter(AlignakTest):
         assert ret == 4
         ok = True
         for line in iter(self.procs['arbiter-master'].stdout.readline, b''):
-            if 'WARNING:' in line:
+            if b'WARNING:' in line:
                 ok = False
                 # Only WARNING because of missing daemons...
-                if 'that we must be related with cannot be connected' in line:
+                if b'that we must be related with cannot be connected' in line:
                     ok = True
-                if 'Add failed attempt for' in line:
+                if b'Add failed attempt for' in line:
                     ok = True
-                if 'as dead, too much failed attempts' in line:
+                if b'as dead, too much failed attempts' in line:
                     ok = True
-                # if 'Exception: Server not available:' in line:
+                # if b'Exception: Server not available:' in line:
                 #     ok = True
-                if 'as dead :(' in line:
+                if b'as dead :(' in line:
                     ok = True
-                if 'is not alive for' in line:
+                if b'is not alive for' in line:
                     ok = True
-                if 'ignoring repeated file: ' in line:
+                if b'ignoring repeated file: ' in line:
                     ok = True
-                if 'directory did not exist' in line:
+                if b'directory did not exist' in line:
                     ok = True
-                if 'Cannot call the additional groups setting with ' in line:
+                if b'Cannot call the additional groups setting with ' in line:
                     ok = True
-                if '- satellites connection #1 is not correct; ' in line:
+                if b'- satellites connection #1 is not correct; ' in line:
                     ok = True
-                if '- satellites connection #2 is not correct; ' in line:
+                if b'- satellites connection #2 is not correct; ' in line:
                     ok = True
-                if '- satellites connection #3 is not correct; ' in line:
+                if b'- satellites connection #3 is not correct; ' in line:
                     ok = True
                 if ok:
-                    print("... " + line.rstrip())
+                    print("... %s" % line.rstrip())
                 else:
-                    print(">>> " + line.rstrip())
+                    print(">>> %s" % line.rstrip())
 
                 assert ok
-            if 'ERROR:' in line:
-                # Only ERROR because of configuration sending failures...
-                if 'The connection is not initialized for reactionner-master' in line:
-                    ok = True
-                assert ok
-                # if 'CRITICAL:' in line:
-                #     ok = False
-        assert ok
-        ok = True
-        for line in iter(self.procs['arbiter-master'].stderr.readline, b''):
-            print("*** " + line.rstrip())
-            if 'All the daemons connections could not be established ' \
-               'despite 3 tries! Sorry, I bail out!' not in line:
+            if b'ERROR:' in line:
                 ok = False
-        if not ok and sys.version_info > (2, 7):
-            assert False, "stderr output!"
+                # Only ERROR because of connection failure exit
+                if b'All the daemons connections could not be established despite 3 tries! Sorry, I bail out!' in line:
+                    ok = True
+                if b'Sorry, I bail out, exit code: 4' in line:
+                    ok = True
+
+                print("*** %s" % line.rstrip())
+                assert ok
+        assert ok
 
     def test_arbiter_daemons(self):
         """ Run the Alignak Arbiter - all the expected daemons are started by the arbiter

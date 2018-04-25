@@ -47,7 +47,7 @@ import logging
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
 from alignak.property import BoolProp, IntegerProp, StringProp
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class SchedulerLink(SatelliteLink):
@@ -61,7 +61,7 @@ class SchedulerLink(SatelliteLink):
     properties = SatelliteLink.properties.copy()
     properties.update({
         'type':
-            StringProp(default='scheduler', fill_brok=['full_status'], to_send=True),
+            StringProp(default=u'scheduler', fill_brok=['full_status'], to_send=True),
         'scheduler_name':
             StringProp(default='', fill_brok=['full_status']),
         'port':
@@ -105,7 +105,7 @@ class SchedulerLink(SatelliteLink):
         """
         res = {}
         properties = self.__class__.properties
-        for prop, entry in properties.items():
+        for prop, entry in list(properties.items()):
             if entry.override:
                 res[prop] = getattr(self, prop)
         return res

@@ -24,7 +24,7 @@ The acknowledge notifications are tested in test_notifications
 """
 
 import time
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestAcknowledges(AlignakTest):

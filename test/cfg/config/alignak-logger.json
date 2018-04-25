@@ -13,6 +13,11 @@
     },
 
     "handlers": {
+        "unit_tests": {
+            "class": "alignak.log.CollectorHandler",
+            "level": "DEBUG",
+            "formatter": "alignak"
+        },
         "console": {
             "class": "logging.StreamHandler",
             "level": "DEBUG",
@@ -32,25 +37,23 @@
             "filename": "%(logdir)s/%(daemon)s.log",
             "when": "midnight",
             "interval": 1,
-            "backupCount": 7,
-            "encoding": "utf8"
+            "backupCount": 7
         },
         "monitoring_logs": {
             "class": "logging.handlers.TimedRotatingFileHandler",
             "level": "INFO",
             "formatter": "monitoring-log",
-            "filename": "%(logdir)s/monitoring-logs.log",
+            "filename": "%(logdir)s/monitoring-log/monitoring-logs.log",
             "when": "midnight",
             "interval": 1,
-            "backupCount": 365,
-            "encoding": "utf8"
+            "backupCount": 365
         }
     },
 
     "loggers": {
         "alignak": {
             "level": "INFO",
-            "handlers": ["color_console", "daemons"],
+            "handlers": ["unit_tests", "color_console", "daemons"],
             "propagate": "no"
         },
         "monitoring-log": {

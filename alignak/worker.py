@@ -48,20 +48,21 @@
 """
 This module provide Worker class. It is used to spawn new processes in Poller and Reactionner
 """
-from Queue import Empty, Full
-from multiprocessing import Process
-
 import os
 import time
 import signal
 import traceback
-import cStringIO
+import io
 import logging
+
+from queue import Empty, Full
+from multiprocessing import Process
+from six import string_types
 
 from alignak.message import Message
 from alignak.misc.common import setproctitle, SIGNALS_TO_NAMES_DICT
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Worker(object):
@@ -105,7 +106,7 @@ class Worker(object):
 
         # Update the logger with the worker identifier
         global logger  # pylint: disable=invalid-name, global-statement
-        logger = logging.getLogger(__name__ + '.' + self._id)  # pylint: disable=C0103
+        logger = logging.getLogger(__name__ + '.' + self._id)  # pylint: disable=invalid-name
 
         self.actions_got = 0
         self.actions_launched = 0
@@ -168,7 +169,7 @@ class Worker(object):
         """
         self._process.start()
 
-    def manage_signal(self, sig, frame):  # pylint: disable=W0613
+    def manage_signal(self, sig, frame):  # pylint: disable=unused-argument
         """Manage signals caught by the process but I do not do anything...
         our master daemon is managing our termination.
 
@@ -274,7 +275,7 @@ class Worker(object):
         """
         # queue
         for chk in self.checks:
-            if chk.status == 'queue':
+            if chk.status == u'queue':
                 logger.debug("Launch check: %s", chk.uuid)
                 self._idletime = 0
                 self.actions_launched += 1
@@ -285,7 +286,7 @@ class Worker(object):
                     logger.error("I am dying because of too many open files: %s", chk)
                     self.i_am_dying = True
                 else:
-                    if not isinstance(process, basestring):
+                    if not isinstance(process, string_types):
                         logger.debug("Launched check: %s, pid=%d", chk.uuid, process.pid)
 
     def manage_finished_checks(self, queue):
@@ -302,11 +303,11 @@ class Worker(object):
         for action in self.checks:
             logger.debug("--- checking: last poll: %s, now: %s, wait_time: %s, action: %s",
                          action.last_poll, now, action.wait_time, action)
-            if action.status == 'launched' and action.last_poll < now - action.wait_time:
+            if action.status == u'launched' and action.last_poll < now - action.wait_time:
                 action.check_finished(self.max_plugins_output_length)
                 wait_time = min(wait_time, action.wait_time)
             # If action done, we can launch a new one
-            if action.status in ['done', 'timeout']:
+            if action.status in [u'done', u'timeout']:
                 logger.debug("--- check done/timeout: %s", action.uuid)
                 self.actions_finished += 1
                 to_del.append(action)
@@ -367,7 +368,7 @@ class Worker(object):
             logger.info("[%s] (pid=%d) stopped", self.get_id(), os.getpid())
         # Catch any exception, try to print it and exit anyway
         except Exception:  # pragma: no cover, this should never happen indeed ;)
-            output = cStringIO.StringIO()
+            output = io.StringIO()
             traceback.print_exc(file=output)
             logger.error("[%s] exit with an unmanaged exception : %s",
                          self._id, output.getvalue())

@@ -29,29 +29,14 @@
 #     Zoran Zaric, zz@zoranzaric.de
 #     Sebastien Coavoux, s.coavoux@free.fr
 
-#  This file is part of Shinken.
 #
-#  Shinken is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU Affero General Public License as published by
-#  the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-#
-#  Shinken is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-#
-#  You should have received a copy of the GNU Affero General Public License
-#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
-
-#
-# This file is used to test reading and processing of config files
+# This file is used to test reading and processing of notification ways
 #
 
 import time
 import copy
 from alignak.objects.notificationway import NotificationWay
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestNotificationWay(AlignakTest):
@@ -75,7 +60,7 @@ class TestNotificationWay(AlignakTest):
             'host_notification_period': '24x7',
             'host_notifications_enabled': '1',
             'min_business_impact': 0,
-            'notificationway_name': u'email_in_day',
+            'notificationway_name': 'email_in_day',
             'register': True,
             'service_notification_commands': 'notify-service-sms',
             'service_notification_options': 'wucrf',
@@ -143,10 +128,14 @@ class TestNotificationWay(AlignakTest):
         test.service_notification_commands = [None]
         assert not test.is_correct()
         pprint(test.__dict__)
-        assert '[notificationway::email_in_day] a service_notification_command is missing' in test.configuration_errors
-        assert '[notificationway::email_in_day] a host_notification_command is missing' in test.configuration_errors
-        assert '[notificationway::email_in_day] the service_notification_period is invalid' in test.configuration_errors
-        assert '[notificationway::email_in_day] the host_notification_period is invalid' in test.configuration_errors
+        assert '[notificationway::email_in_day] a service_notification_command is missing' \
+               in test.configuration_errors
+        assert '[notificationway::email_in_day] a host_notification_command is missing' \
+               in test.configuration_errors
+        assert '[notificationway::email_in_day] the service_notification_period is invalid' \
+               in test.configuration_errors
+        assert '[notificationway::email_in_day] the host_notification_period is invalid' \
+               in test.configuration_errors
 
     def test_contact_nw(self):
         """ Test notification ways for a contact"""
@@ -155,9 +144,9 @@ class TestNotificationWay(AlignakTest):
         # Get the contact
         contact = self._scheduler.contacts.find_by_name("test_contact")
 
-        print "All notification Way:"
+        print("All notification Way:")
         for nw in self._scheduler.notificationways:
-            print "\t", nw.notificationway_name
+            print("\t", nw.notificationway_name)
             assert nw.is_correct()
         # 3 defined NWs and 3 self created NWs
         assert len(self._scheduler.notificationways) == 6
@@ -172,49 +161,49 @@ class TestNotificationWay(AlignakTest):
         assert 0 == email_in_day.min_business_impact
         assert 5 == sms_the_night.min_business_impact
 
-        print "Contact '%s' notification way(s):" % contact.get_name()
+        print("Contact '%s' notification way(s):" % contact.get_name())
         # 2 NWs for 'test_contact'
         assert len(contact.notificationways) == 2
         for nw_id in contact.notificationways:
             nw = self._scheduler.notificationways[nw_id]
-            print "\t %s (or %s)" % (nw.notificationway_name, nw.get_name())
+            print("\t %s (or %s)" % (nw.notificationway_name, nw.get_name()))
             # Get host notifications commands
             for c in nw.host_notification_commands:
-                print "\t\t", c.get_name()
+                print("\t\t", c.get_name())
             for c in nw.get_notification_commands('host'):
-                print "\t\t", c.get_name()
+                print("\t\t", c.get_name())
             # Get service notifications commands
             for c in nw.service_notification_commands:
-                print "\t\t", c.get_name()
+                print("\t\t", c.get_name())
             for c in nw.get_notification_commands('service'):
-                print "\t\t", c.get_name()
+                print("\t\t", c.get_name())
 
-        print "Contact '%s' commands:" % (contact.get_name())
+        print("Contact '%s' commands:" % (contact.get_name()))
         # 2 commands for host notification (one from the NW and one contact defined)
         assert len(contact.host_notification_commands) == 2
         # 2 commands for service notification (one from the NW and one contact defined)
         assert len(contact.service_notification_commands) == 2
         # Get host notifications commands
         for c in contact.host_notification_commands:
-            print "\t\tcontact host property:", c.get_name()
+            print("\t\tcontact host property:", c.get_name())
         for c in contact.get_notification_commands(self._scheduler.notificationways, 'host'):
-            print "\t\tcontact host get_notification_commands:", c.get_name()
+            print("\t\tcontact host get_notification_commands:", c.get_name())
         # Get service notifications commands
         for c in contact.service_notification_commands:
-            print "\t\tcontact service property:", c.get_name()
+            print("\t\tcontact service property:", c.get_name())
         for c in contact.get_notification_commands(self._scheduler.notificationways, 'service'):
-            print "\t\tcontact service get_notification_commands:", c.get_name()
+            print("\t\tcontact service get_notification_commands:", c.get_name())
 
         contact_simple = self._scheduler.contacts.find_by_name("test_contact_simple")
         # It's the created notification way for this simple contact
         test_contact_simple_inner_notificationway = \
-            self._scheduler.notificationways.find_by_name("test_contact_simple_inner_notificationway")
-        print "Simple contact"
+            self._scheduler.notificationways.find_by_name("test_contact_simple_inner_nw")
+        print("Simple contact")
         for nw_id in contact_simple.notificationways:
             nw = self._scheduler.notificationways[nw_id]
-            print "\t", nw.notificationway_name
+            print("\t", nw.notificationway_name)
             for c in nw.service_notification_commands:
-                print "\t\t", c.get_name()
+                print("\t\t", c.get_name())
         assert test_contact_simple_inner_notificationway.uuid in contact_simple.notificationways
 
         # we take as criticity a huge value from now
@@ -265,20 +254,26 @@ class TestNotificationWay(AlignakTest):
         # Test the heritage for notification ways
         host_template = self._scheduler.hosts.find_by_name("test_host_contact_template")
         contact_template_1 = self._scheduler.contacts[host_template.contacts[0]]
-        commands_contact_template_1 = contact_template_1.get_notification_commands(self._scheduler.notificationways,'host')
+        commands_contact_template_1 = contact_template_1.get_notification_commands(
+            self._scheduler.notificationways,'host')
         contact_template_2 = self._scheduler.contacts[host_template.contacts[1]]
-        commands_contact_template_2 = contact_template_2.get_notification_commands(self._scheduler.notificationways,'host')
+        commands_contact_template_2 = contact_template_2.get_notification_commands(
+            self._scheduler.notificationways,'host')
 
         resp = sorted([sorted([command.get_name() for command in commands_contact_template_1]),
                        sorted([command.get_name() for command in commands_contact_template_2])])
 
-        assert sorted([['notify-host', 'notify-host-work'], ['notify-host-sms', 'notify-host-work']]) == resp
+        assert sorted([['notify-host', 'notify-host-work'],
+                       ['notify-host-sms', 'notify-host-work']]) == resp
 
         contact_template_1 = self._scheduler.contacts[host_template.contacts[0]]
-        commands_contact_template_1 = contact_template_1.get_notification_commands(self._scheduler.notificationways,'service')
+        commands_contact_template_1 = contact_template_1.get_notification_commands(
+            self._scheduler.notificationways,'service')
         contact_template_2 = self._scheduler.contacts[host_template.contacts[1]]
-        commands_contact_template_2 = contact_template_2.get_notification_commands(self._scheduler.notificationways,'service')
+        commands_contact_template_2 = contact_template_2.get_notification_commands(
+            self._scheduler.notificationways,'service')
         resp = sorted([sorted([command.get_name() for command in commands_contact_template_1]),
                        sorted([command.get_name() for command in commands_contact_template_2])])
 
-        assert sorted([['notify-service', 'notify-service-work'], ['notify-service-sms', 'notify-service-work']]) == resp
+        assert sorted([['notify-service', 'notify-service-work'],
+                       ['notify-service-sms', 'notify-service-work']]) == resp

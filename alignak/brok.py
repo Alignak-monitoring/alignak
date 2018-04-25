@@ -88,7 +88,7 @@ class Brok(object):
         if not parsing:
             if params is None:
                 return
-            for key, value in params.iteritems():
+            for key, value in params.items():
                 setattr(self, key, value)
 
             if not hasattr(self, 'uuid'):

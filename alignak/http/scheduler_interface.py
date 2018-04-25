@@ -22,10 +22,9 @@ import logging
 import cherrypy
 
 from alignak.http.generic_interface import GenericInterface
-from alignak.util import average_percentile
 from alignak.misc.serialization import serialize, unserialize
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class SchedulerInterface(GenericInterface):
@@ -36,13 +35,17 @@ class SchedulerInterface(GenericInterface):
     def get_checks(self, do_checks=False, do_actions=False, poller_tags=None,
                    reactionner_tags=None, worker_name='none',
                    module_types=None):
-        """Get checks from scheduler, used by poller or reactionner (active ones)
+        """Get checks from scheduler, used by poller or reactionner when they are
+        in active mode (passive = False)
+
+        This function is not intended for external use. Let the poller and reactionner
+        manage all this stuff by themselves ;)
 
         :param do_checks: used for poller to get checks
         :type do_checks: bool
         :param do_actions: used for reactionner to get actions
         :type do_actions: bool
-        :param poller_tags: pollers tags to filter on this poller
+        :param poller_tags: poller tags to filter on this poller
         :type poller_tags: list
         :param reactionner_tags: reactionner tags to filter on this reactionner
         :type reactionner_tags: list
@@ -68,7 +71,6 @@ class SchedulerInterface(GenericInterface):
             self.app.nb_pulled_checks += len(res)
         if do_actions:
             self.app.nb_pulled_actions += len(res)
-        # self.app.sched.nb_checks_send += len(res)
 
         return serialize(res, True)
 
@@ -79,7 +81,7 @@ class SchedulerInterface(GenericInterface):
 
         :param host_name: searched host name
         :type host_name: str
-        :return: serialized check/action list
+        :return: serialized host information
         :rtype: str
         """
         try:
@@ -92,9 +94,17 @@ class SchedulerInterface(GenericInterface):
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
     def put_results(self):
-        """Put results to scheduler, used by poller and reactionners
+        """Put results to scheduler, used by poller or reactionner when they are
+        in active mode (passive = False)
 
-        :return: True or ?? (if lock acquire fails)
+        This function is not intended for external use. Let the poller and reactionner
+        manage all this stuff by themselves ;)
+
+        :param from: poller/reactionner identification
+        :type from: str
+        :param results: list of actions results
+        :type results: list
+        :return: True
         :rtype: bool
         """
         res = cherrypy.request.json
@@ -132,7 +142,9 @@ class SchedulerInterface(GenericInterface):
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def get_broks(self, broker_name):
-        """Get broks from scheduler, used by brokers
+        """Get the broks from a scheduler, used by brokers
+
+        This is used by the brokers to get the broks list of a scheduler
 
         :param broker_name: broker name, used to filter broks
         :type broker_name: str
@@ -140,10 +152,8 @@ class SchedulerInterface(GenericInterface):
         :rtype: dict
         """
         logger.debug("Getting broks for %s from the scheduler", broker_name)
-        broker_uuid = None
         for broker_link in self.app.brokers.values():
-            if broker_name == broker_link.name:
-                broker_uuid = broker_link.uuid
+            if broker_name in [broker_link.name]:
                 break
         else:
             logger.warning("Requesting broks for an unknown broker: %s", broker_name)
@@ -152,15 +162,17 @@ class SchedulerInterface(GenericInterface):
         # Now get the broks for this specific broker
         res = self.app.get_broks(broker_name)
 
-        # we do not more have a full broks in queue
-        self.app.brokers[broker_uuid].has_full_broks = False
         return serialize(res, True)
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def fill_initial_broks(self, broker_name):
-        """Get initial_broks type broks from scheduler, used by brokers
-        Do not send broks, only make scheduler internal processing
+        """Get initial_broks from the scheduler
+
+        This is used by the brokers to prepare the initial status broks
+
+        This do not send broks, it only makes scheduler internal processing. Then the broker
+        must use the *get_broks* API to get all the stuff
 
         :param broker_name: broker name, used to filter broks
         :type broker_name: str
@@ -169,42 +181,6 @@ class SchedulerInterface(GenericInterface):
         with self.app.conf_lock:
             logger.info("A new broker just connected : %s", broker_name)
             return self.app.sched.fill_initial_broks(broker_name, with_logs=True)
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def get_raw_stats(self):
-        """Get raw stats from the daemon::
-
-        * nb_scheduled: number of scheduled checks (to launch in the future)
-        * nb_inpoller: number of check take by the pollers
-        * nb_zombies: number of zombie checks (should be close to zero)
-        * nb_notifications: number of notifications+event handlers
-        * latency: avg,min,max latency for the services (should be <10s)
-
-        :return: stats for scheduler
-        :rtype: dict
-        """
-        sched = self.app.sched
-
-        res = {'counters': sched.counters}
-
-        # Spare schedulers do not have such properties
-        if hasattr(sched, 'services'):
-            # Get a overview of the latencies with:
-            #  * average
-            #  * maximum (95 percentile)
-            #  * minimum (5 percentile)
-            latencies = [s.latency for s in sched.services]
-            latencies.extend([s.latency for s in sched.hosts])
-            lat_avg, lat_min, lat_max = average_percentile(latencies)
-            res['latency_average'] = 0.0
-            res['latency_minimum'] = 0.0
-            res['latency_maximum'] = 0.0
-            if lat_avg:
-                res['latency_average'] = lat_avg
-                res['latency_minimum'] = lat_min
-                res['latency_maximum'] = lat_max
-        return res
 
     @cherrypy.expose
     @cherrypy.tools.json_in()
@@ -220,26 +196,12 @@ class SchedulerInterface(GenericInterface):
             self.app.sched.run_external_commands(commands['cmds'])
 
     @cherrypy.expose
-    @cherrypy.tools.json_in()
-    @cherrypy.tools.json_out()
-    def push_configuration(self, pushed_configuration=None):
-        """Post conf to scheduler (from arbiter)
-
-        :return: None
-        """
-        # Stop the current scheduling loop
-        self.app.sched.stop_scheduling()
-        pushed_configuration = cherrypy.request.json
-        return super(SchedulerInterface, self).push_configuration(
-            pushed_configuration=pushed_configuration['conf'])
-
-    @cherrypy.expose
     @cherrypy.tools.json_out()
     def wait_new_conf(self):
-        """Ask to scheduler to wait for new conf (HTTP GET from arbiter)
+        """Ask the scheduler to drop its configuration and wait for a new one
 
         :return: None
         """
-        with self.app.conf_lock:
-            self.app.sched.stop_scheduling()
-            super(SchedulerInterface, self).wait_new_conf()
+        # Stop the scheduling loop
+        self.app.sched.stop_scheduling()
+        super(SchedulerInterface, self).wait_new_conf()

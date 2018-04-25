@@ -69,17 +69,19 @@ class Itemgroup(Item):
 
     properties = Item.properties.copy()
     properties.update({
-        'members': ListProp(fill_brok=['full_status'], default=None, split_on_coma=True),
+        'members':
+            ListProp(fill_brok=['full_status'], default=None, split_on_comma=True),
         # Alignak specific
-        'unknown_members': ListProp(default=[]),
+        'unknown_members':
+            ListProp(default=[]),
     })
 
     def __repr__(self):  # pragma: no cover
         if getattr(self, 'members', None) is None or not getattr(self, 'members'):
             return '<%r %r, no members/>' % (self.__class__.__name__, self.get_name())
         # Build a sorted list of unicode elements name or uuid, this to make it easier to compare ;)
-        dump_list = sorted([unicode(item.get_name()
-                                    if isinstance(item, Item) else item) for item in self])
+        dump_list = sorted([str(item.get_name()
+                                if isinstance(item, Item) else item) for item in self])
         return '<%r %r, %d members: %r/>' \
                % (self.__class__.__name__, self.get_name(), len(self.members), dump_list)
     __str__ = __repr__
@@ -208,7 +210,7 @@ class Itemgroup(Item):
         cls = self.__class__
         data = {}
         # Now config properties
-        for prop, entry in cls.properties.items():
+        for prop, entry in list(cls.properties.items()):
             if entry.fill_brok != []:
                 if hasattr(self, prop):
                     data[prop] = getattr(self, prop)

@@ -68,7 +68,7 @@ class CarbonIface(object):
              ...}
         """
         if self.__data_lock.acquire():
-            for k, v in dd.items():
+            for k, v in list(dd.items()):
                 ts = v.get('ts', time.time())
                 value = v.get('value')
                 self.__data.append((k, (ts, value)))
@@ -166,15 +166,12 @@ if __name__ == '__main__':  # pragma: no cover - never used this way...
         global data
         global carbon
         t = threading.Timer(1, keep_updating)
-        data = map(
-            lambda x: (
+        data = [(
                 x[0], (
                     time.time(),
                     x[1][1] + ((-1)**random.randint(1, 2)) * random.random()
                 )
-            ),
-            data
-        )
+            ) for x in data]
         carbon.send_data(data)
         rnd = random.random()
         if rnd > 0.85:

@@ -53,7 +53,7 @@ import time
 from alignak.commandcall import CommandCall
 from alignak.objects import SchedulingItem
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestPerfdataCommands(AlignakTest):
@@ -185,23 +185,23 @@ class TestPerfdataCommands(AlignakTest):
         self.scheduler_loop(1, [])
 
         assert isinstance(svc, SchedulingItem)
-        print "Actions", self._sched.actions
-        print 'Output', svc.output
-        print 'Long output', svc.long_output
-        print 'Performance data', svc.perf_data
+        print("Actions", self._sched.actions)
+        print('Output', svc.output)
+        print('Long output', svc.long_output)
+        print('Performance data', svc.perf_data)
 
         # Note that the check output is stripped
-        assert svc.output == u'DISK OK - free space: / 3326 MB (56%);'
+        assert svc.output == 'DISK OK - free space: / 3326 MB (56%);'
         # The check long output is also stripped
-        assert svc.long_output == u'/ 15272 MB (77%);\n' \
-                                          u'/boot 68 MB (69%);\n' \
-                                          u'/home 69357 MB (27%);\n' \
-                                          u'/var/log 819 MB (84%);'
+        assert svc.long_output == '/ 15272 MB (77%);\n' \
+                                          '/boot 68 MB (69%);\n' \
+                                          '/home 69357 MB (27%);\n' \
+                                          '/var/log 819 MB (84%);'
         # And the performance data are also stripped
-        assert svc.perf_data == u'/=2643MB;5948;5958;0;5968 ' \
-                                        u'/boot=68MB;88;93;0;98 ' \
-                                        u'/home=69357MB;253404;253409;0;253414 ' \
-                                        u'/var/log=818MB;970;975;0;980'
+        assert svc.perf_data == '/=2643MB;5948;5958;0;5968 ' \
+                                        '/boot=68MB;88;93;0;98 ' \
+                                        '/home=69357MB;253404;253409;0;253414 ' \
+                                        '/var/log=818MB;970;975;0;980'
 
         # The event handler is raised to be launched
         self.assert_actions_count(1)

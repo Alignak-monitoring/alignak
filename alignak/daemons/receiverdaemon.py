@@ -55,15 +55,16 @@ import time
 import traceback
 import logging
 
+from alignak.brok import Brok
 from alignak.objects.satellitelink import LinkError
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.satellite import Satellite
 from alignak.property import IntegerProp, StringProp
 from alignak.external_command import ExternalCommand, ExternalCommandManager
 from alignak.stats import statsmgr
-from alignak.http.receiver_interface import ReceiverInterface
+from alignak.http.generic_interface import GenericInterface
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Receiver(Satellite):
@@ -104,32 +105,28 @@ class Receiver(Satellite):
 
         self.accept_passive_unknown_check_results = False
 
-        self.http_interface = ReceiverInterface(self)
+        self.http_interface = GenericInterface(self)
 
     def add(self, elt):
-        """Add an object to the receiver one
-        Handles brok and external commands
+        """Generic function to add objects to the daemon internal lists.
+        Manage Broks, External commands
 
         :param elt: object to add
-        :type elt: object
+        :type elt: alignak.AlignakObject
         :return: None
         """
         # todo: fix this ... external commands are returned as a dictionary!!!
         if isinstance(elt, dict) and 'my_type' in elt and elt['my_type'] == "externalcommand":
-            logger.info("Queuing an external command: %s", elt)
-            cmd = ExternalCommand(elt['cmd_line'], elt['creation_timestamp'])
-            self.unprocessed_external_commands.append(cmd)
-            statsmgr.counter('external-commands.added', 1)
-            return
+            logger.warning("Queuing a dictionary external command: %s", elt)
+            elt = ExternalCommand(elt['cmd_line'], elt['creation_timestamp'])
 
-        cls_type = elt.__class__.my_type
-        if cls_type == 'brok':  # pragma: no cover, seems not to be used anywhere!
+        if isinstance(elt, Brok):
             # We tag the broks with our instance_id
             elt.instance_id = self.instance_id
-            self.broks[elt.uuid] = elt
+            with self.broks_lock:
+                self.broks[elt.uuid] = elt
             statsmgr.counter('broks.added', 1)
-            return
-        elif cls_type == 'externalcommand':
+        elif isinstance(elt, ExternalCommand):
             logger.debug("Queuing an external command: %s", str(ExternalCommand.__dict__))
             self.unprocessed_external_commands.append(elt)
             statsmgr.counter('external-commands.added', 1)
@@ -178,7 +175,7 @@ class Receiver(Satellite):
             # Initialize connection with all our satellites
             logger.info("Initializing connection with my satellites:")
             my_satellites = self.get_links_of_type(s_type=None)
-            for satellite in my_satellites.values():
+            for satellite in list(my_satellites.values()):
                 logger.info("- : %s/%s", satellite.type, satellite.name)
                 if not self.daemon_connection_init(satellite):
                     logger.error("Satellite connection failed: %s", satellite)
@@ -322,7 +319,6 @@ class Receiver(Satellite):
         :return: stats dictionary
         :rtype: dict
         """
-        now = int(time.time())
         # Call the base Daemon one
         res = super(Receiver, self).get_daemon_stats(details=details)
 
@@ -331,12 +327,6 @@ class Receiver(Satellite):
         counters = res['counters']
         counters['external-commands'] = len(self.external_commands)
         counters['unprocessed-external-commands'] = len(self.unprocessed_external_commands)
-
-        metrics = res['metrics']
-        metrics.append('%s.%s.external-commands.queue %d %d'
-                       % (self.type, self.name, len(self.external_commands), now))
-        metrics.append('%s.%s.unprocessed-external-commands.queue %d %d'
-                       % (self.type, self.name, len(self.external_commands), now))
 
         return res
 

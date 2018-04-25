@@ -23,7 +23,7 @@
 This file test unserialisation of data
 """
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 from alignak.misc.serialization import unserialize
 
 

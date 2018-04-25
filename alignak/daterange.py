@@ -58,7 +58,7 @@ from datetime import datetime, timedelta
 from alignak.util import get_sec_from_morning, get_day, get_start_of_day, get_end_of_day
 from alignak.alignakobject import AlignakObject
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 def find_day_by_weekday_offset(year, month, weekday, offset):
@@ -89,7 +89,7 @@ def find_day_by_weekday_offset(year, month, weekday, offset):
     # ok go for it
     nb_found = 0
     try:
-        for i in xrange(0, offset + 1):
+        for i in range(0, offset + 1):
             # in cal 0 mean "there are no day here :)"
             if cal[i][weekday] != 0:
                 nb_found += 1
@@ -295,7 +295,7 @@ class AbstractDaterange(AlignakObject):
         """
         return Daterange.rev_weekdays[weekday_id]
 
-    def get_start_and_end_time(self, ref=None):  # pylint: disable=W0613,R0201
+    def get_start_and_end_time(self, ref=None):  # pylint: disable=unused-argument,no-self-use
         """Generic function to get start time and end time
 
         :param ref: time in seconds
@@ -443,6 +443,7 @@ class AbstractDaterange(AlignakObject):
 
         if self.is_time_day_valid(timestamp):
             return get_day(timestamp)
+
         return None
 
     def get_next_valid_time_from_t(self, timestamp):
@@ -458,6 +459,8 @@ class AbstractDaterange(AlignakObject):
 
         # First we search for the day of t
         t_day = self.get_next_valid_day(timestamp)
+        if t_day is None:
+            return t_day
 
         # We search for the min of all tr.start > sec_from_morning
         # if it's the next day, use a start of the day search for timerange
@@ -580,8 +583,8 @@ class Daterange(AbstractDaterange):
         'june': 6, 'july': 7, 'august': 8, 'september': 9,
         'october': 10, 'november': 11, 'december': 12
     }
-    rev_weekdays = dict((v, k) for k, v in weekdays.items())
-    rev_months = dict((v, k) for k, v in months.items())
+    rev_weekdays = dict((v, k) for k, v in list(weekdays.items()))
+    rev_months = dict((v, k) for k, v in list(months.items()))
 
     def __init__(self, params, parsing=True):
         """
@@ -756,11 +759,11 @@ class MonthWeekDayDaterange(Daterange):
         :rtype: bool
         """
         valid = True
-        valid &= self.swday in xrange(7)
+        valid &= self.swday in range(7)
         if not valid:
             logger.error("Error: %s is not a valid day", self.swday)
 
-        valid &= self.ewday in xrange(7)
+        valid &= self.ewday in range(7)
         if not valid:
             logger.error("Error: %s is not a valid day", self.ewday)
 

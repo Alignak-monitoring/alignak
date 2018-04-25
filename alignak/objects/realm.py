@@ -59,7 +59,7 @@ from alignak.objects.item import Item
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
 from alignak.property import BoolProp, StringProp, DictProp, ListProp, IntegerProp
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # It change from hostgroup Class because there is no members
 # properties, just the realm_members that we rewrite on it.
@@ -76,15 +76,15 @@ class Realm(Itemgroup):
     properties = Itemgroup.properties.copy()
     properties.update({
         'realm_name':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
         'name':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
         'alias':
-            StringProp(default=''),
+            StringProp(fill_brok=['full_status']),
         'realm_members':
-            ListProp(default=[], split_on_coma=True),
+            ListProp(default=[], split_on_comma=True),
         'higher_realms':
-            ListProp(default=[], split_on_coma=True),
+            ListProp(default=[], split_on_comma=True),
         'default':
             BoolProp(default=False),
         'passively_checked_hosts':
@@ -217,7 +217,7 @@ class Realm(Itemgroup):
         :return: realm name
         :rtype: str
         """
-        return self.realm_name
+        return getattr(self, 'realm_name', 'unset')
 
     def prepare_for_satellites_conf(self, satellites):
         """Update the following attributes of a realm::

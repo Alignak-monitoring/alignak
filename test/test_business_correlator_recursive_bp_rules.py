@@ -45,7 +45,7 @@
 # This file is used to test reading and processing of config files
 #
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestBusinessCorrelatorRecursive(AlignakTest):
@@ -79,7 +79,7 @@ class TestBusinessCorrelatorRecursive(AlignakTest):
         assert host_main.got_business_rule
         assert host_main.business_rule is not None
         bp_rule = host_main.business_rule
-        print("Host BR: %s" % bp_rule)
+        print(("Host BR: %s" % bp_rule))
         # Host BR:
         # "Op:None Val:(u'1', u'1', u'1') Sons:['
         #   "Op:of: Val:(u'2', u'1', u'1') Sons:['
@@ -92,8 +92,8 @@ class TestBusinessCorrelatorRecursive(AlignakTest):
             [host_dif0, 2, 'DOWN | value1=1 value2=2'],
             [host_dif1, 2, 'DOWN | rtt=10']
         ])
-        print("Host dif-0 state: %s / %s" % (host_dif0.state_type, host_dif0.state))
-        print("Host dif-1 state: %s / %s" % (host_dif1.state_type, host_dif1.state))
+        print(("Host dif-0 state: %s / %s" % (host_dif0.state_type, host_dif0.state)))
+        print(("Host dif-1 state: %s / %s" % (host_dif1.state_type, host_dif1.state)))
         assert 'DOWN' == host_dif0.state
         assert 'HARD' == host_dif0.state_type
         assert 'DOWN' == host_dif1.state

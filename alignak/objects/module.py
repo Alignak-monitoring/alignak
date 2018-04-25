@@ -58,7 +58,7 @@ from alignak.objects.item import Item, Items
 
 from alignak.property import StringProp, ListProp, IntegerProp, BoolProp
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Module(Item):
@@ -70,11 +70,11 @@ class Module(Item):
     properties = Item.properties.copy()
     properties.update({
         'name':
-            StringProp(default='unset'),
+            StringProp(default=u'unset'),
         'type':
-            StringProp(default='unset'),
+            StringProp(default=u'unset'),
         'daemon':
-            StringProp(default='unset'),
+            StringProp(default=u'unset'),
         'python_name':
             StringProp(),
         # Old "deprecated" property - replaced with name
@@ -82,22 +82,22 @@ class Module(Item):
             StringProp(),
         # Old "deprecated" property - replaced with type
         'module_types':
-            ListProp(default=[''], split_on_coma=True),
+            ListProp(default=[u''], split_on_comma=True),
         # Do not manage modules having modules
         # 'modules':
-        #     ListProp(default=[''], split_on_coma=True)
+        #     ListProp(default=[''], split_on_comma=True)
 
         # Module log level
         'log_level':
-            StringProp(default='INFO'),
+            StringProp(default=u'INFO'),
 
         # Local statsd daemon for collecting daemon metrics
         'statsd_host':
-            StringProp(default='localhost'),
+            StringProp(default=u'localhost'),
         'statsd_port':
             IntegerProp(default=8125),
         'statsd_prefix':
-            StringProp(default='alignak'),
+            StringProp(default=u'alignak'),
         'statsd_enabled':
             BoolProp(default=False)
     })
@@ -111,11 +111,11 @@ class Module(Item):
         self.properties = Item.properties.copy()
         self.properties.update({
             'name':
-                StringProp(default='unset'),
+                StringProp(default=u'unset'),
             'type':
-                StringProp(default='unset'),
+                StringProp(default=u'unset'),
             'daemon':
-                StringProp(default='unset'),
+                StringProp(default=u'unset'),
             'python_name':
                 StringProp(),
             # Old "deprecated" property - replaced with name
@@ -123,22 +123,22 @@ class Module(Item):
                 StringProp(),
             # Old "deprecated" property - replaced with type
             'module_types':
-                ListProp(default=[''], split_on_coma=True),
+                ListProp(default=[''], split_on_comma=True),
             # Do not manage modules having modules
             # 'modules':
-            #     ListProp(default=[''], split_on_coma=True)
+            #     ListProp(default=[''], split_on_comma=True)
 
             # Module log level
             'log_level':
-                StringProp(default='INFO'),
+                StringProp(default=u'INFO'),
 
             # Local statsd daemon for collecting daemon metrics
             'statsd_host':
-                StringProp(default='localhost'),
+                StringProp(default=u'localhost'),
             'statsd_port':
                 IntegerProp(default=8125),
             'statsd_prefix':
-                StringProp(default='alignak'),
+                StringProp(default=u'alignak'),
             'statsd_enabled':
                 BoolProp(default=False)
         })

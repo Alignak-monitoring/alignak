@@ -62,11 +62,11 @@ import logging
 
 from alignak.misc.common import setproctitle, SIGNALS_TO_NAMES_DICT
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # The `properties` dict defines what the module can do and
 # if it's an external module or not.
-# pylint: disable=C0103
+# pylint: disable=invalid-name
 properties = {
     # module type ; to distinguish between them:
     # retention, logs, configuration, livestate, ...
@@ -81,6 +81,7 @@ properties = {
 
 
 class BaseModule(object):
+    # pylint: disable=too-many-instance-attributes
     """This is the base class for the Alignak modules.
     Modules can be used by the different Alignak daemons for different tasks.
     Example of task that an Alignak module can do:
@@ -155,7 +156,7 @@ class BaseModule(object):
         """
         return self.name
 
-    def init(self):  # pylint: disable=R0201
+    def init(self):  # pylint: disable=no-self-use
         """Handle this module "post" init ; just before it'll be started.
 
         This function initializes the module instance. If False is returned, the modules manager
@@ -237,7 +238,7 @@ class BaseModule(object):
             logger.exception('%s', traceback.format_exc())
             raise Exception(exp)
 
-    def start(self, http_daemon=None):  # pylint: disable=W0613
+    def start(self, http_daemon=None):  # pylint: disable=unused-argument
         """Actually restart the process if the module is external
         Try first to stop the process and create a new Process instance
         with target start_module.
@@ -311,7 +312,7 @@ class BaseModule(object):
 
         self.process = None
 
-    def want_brok(self, b):  # pylint: disable=W0613,R0201
+    def want_brok(self, b):  # pylint: disable=unused-argument,no-self-use
         """Generic function to check if the module need a specific brok
         In this case it is always True
 
@@ -334,7 +335,7 @@ class BaseModule(object):
         """
         pass
 
-    def manage_signal(self, sig, frame):  # pylint: disable=W0613
+    def manage_signal(self, sig, frame):  # pylint: disable=unused-argument
         """Generic function to handle signals
 
         Only called when the module process received SIGINT or SIGKILL.

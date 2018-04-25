@@ -60,12 +60,12 @@ elements like service, hosts or contacts.
 """
 # pylint: disable=C0302
 # pylint: disable=R0904
-import uuid
 import time
 import itertools
 import logging
 
 from copy import copy
+from six import string_types
 
 from alignak.property import (StringProp, ListProp, BoolProp, SetProp, DictProp,
                               IntegerProp, ToGuessProp, PythonizeError)
@@ -76,42 +76,57 @@ from alignak.util import strip_and_uniq, is_complex_expr
 from alignak.complexexpression import ComplexExpressionFactory
 from alignak.graph import Graph
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Item(AlignakObject):
-    """
-    Class to manage an item
-    An Item is the base of many objects of Alignak. So it define common properties,
+    """Class to manage an item
+
+    An Item is the base of many objects of Alignak. So it defines properties that are common
+    to all the objects:
+    - name
+    - register: it is a real object (True) or a template definition (False)
+    - imported_from: source configuration file or backend
+    - use: templates which this object inherits from
+    - definition_order: priority if the same object is defined several times
+    - tags: the information tags attached to an object
+        Note: some tags are automatically set on an object when it uses some templates.
+
+    And some configuration parsing information:
+    - conf_is_correct: whether configuration is correct or not
+    - configuration_warnings: list of configuration parsing warning log
+    - configuration_errors: list of configuration parsing error log
+
     common functions.
     """
     properties = AlignakObject.properties.copy()
     properties.update({
-        'imported_from':
-            StringProp(default='unknown'),
-        'use':
-            ListProp(default=[], split_on_coma=True),
         'name':
-            StringProp(default=''),
+            StringProp(default=u''),
+        'imported_from':
+            StringProp(default=u'unknown'),
+        'use':
+            ListProp(default=[], split_on_comma=True),
         'definition_order':
             IntegerProp(default=100),
-        # TODO: find why we can't uncomment this line below.
         'register':
             BoolProp(default=True)
     })
 
     running_properties = {
         # All errors and warning raised during the configuration parsing
-        # and that will raise real warning/errors during the configuration is_correct check
+        # and that will raise real warning/errors during the configuration correctness check
         'conf_is_correct':
             BoolProp(default=True),
         'configuration_warnings':
             ListProp(default=[]),
         'configuration_errors':
             ListProp(default=[]),
+
         # We save all templates we asked us to load from
         'tags':
             SetProp(default=set(), fill_brok=['full_status']),
+
         # used by host, service and contact
         # todo: conceptually this should be moved to the SchedulingItem and Contact objects...
         'downtimes':
@@ -125,21 +140,27 @@ class Item(AlignakObject):
     ok_up = ''
 
     def __init__(self, params=None, parsing=True):
+        # pylint: disable=too-many-branches
         # Comment this to avoid too verbose log!
         # logger.debug("Initializing a %s with %s", self.my_type, params)
         if not parsing:
             # Unserializing an existing object
             # todo: Why not initializing the running properties in this case?
             super(Item, self).__init__(params, parsing)
+            logger.debug("Restore %s: %s (%s)", self.__class__.my_type, self.uuid, self.get_name())
             return
 
-        # Creating a new Alignak object instance
-        self.uuid = uuid.uuid4().hex
+        super(Item, self).__init__(params, parsing)
+        # The new Alignak object identifier is set by the base AlignakObject class...
+        # self.uuid = uuid.uuid4().hex
+        logger.debug("New %s: %s", self.__class__.my_type, self.uuid)
 
         # For custom variables
-        self.customs = {}
+        if not hasattr(self, 'customs'):
+            self.customs = {}
         # For values with a +
-        self.plus = {}
+        if not hasattr(self, 'plus'):
+            self.plus = {}
         if not hasattr(self, 'old_properties'):
             self.old_properties = {}
 
@@ -150,20 +171,23 @@ class Item(AlignakObject):
             params = {}
         for key in params:
             # We want to create instance of object with the good type.
-            # Here we've just parsed config files so everything is a list.
+            # Here we've just parsed config files so everything is a string or a list.
             # We use the pythonize method to get the good type.
             try:
                 if key in self.properties:
                     val = self.properties[key].pythonize(params[key])
                 elif key in self.running_properties:
-                    self.add_warning("using the running property %s in a config file" % key)
+                    self.add_warning("using the running property '%s' in the configuration. "
+                                     "This is accepted but not recommended!" % key)
                     val = self.running_properties[key].pythonize(params[key])
                 elif hasattr(self, 'old_properties') and key in self.old_properties:
+                    self.add_warning("using an old Nagios property '%s' in the configuration. "
+                                     "This is accepted but not recommended!" % key)
                     val = self.properties[self.old_properties[key]].pythonize(params[key])
                 elif key.startswith('_'):  # custom macro, not need to detect something here
                     macro = params[key]
                     # If it's a string, directly use this
-                    if isinstance(macro, basestring):
+                    if isinstance(macro, string_types):
                         val = macro
                     # a list for a custom macro is not managed (conceptually invalid)
                     # so take the first defined
@@ -180,8 +204,6 @@ class Item(AlignakObject):
                 else:
                     logger.debug("Guessing the property '%s' type because it "
                                  "is not in %s object properties", key, self.__class__.__name__)
-                    # self.properties[key] = ToGuessProp(default='')
-                    # setattr(self, key, ToGuessProp(default=''))
                     val = ToGuessProp.pythonize(params[key])
                     logger.debug("Set the property '%s' type as %s", key, type(val))
             except (PythonizeError, ValueError) as expt:
@@ -190,14 +212,13 @@ class Item(AlignakObject):
 
             # checks for attribute value special syntax (+ or _)
             # we can have '+param' or ['+template1' , 'template2']
-            if isinstance(val, basestring) and len(val) >= 1 and val[0] == '+':
-                err = "A + value for a single string (%s) is not handled" % key
-                self.add_error(err)
+            if isinstance(val, string_types) and len(val) >= 1 and val[0] == '+':
+                self.add_error("A + value for a single string (%s) is not handled" % key)
                 continue
 
             if (isinstance(val, list) and
                     len(val) >= 1 and
-                    isinstance(val[0], unicode) and
+                    isinstance(val[0], string_types) and
                     len(val[0]) >= 1 and
                     val[0][0] == '+'):
                 # We manage a list property which first element is a string that starts with +
@@ -205,6 +226,7 @@ class Item(AlignakObject):
                 self.plus[key] = val   # we remove the +
             elif key[0] == "_":
                 # Except for some specific configuration variables
+                # _dist prefixed variables are reserved for Alignak directories
                 if not key.startswith('_dist'):
                     custom_name = key.upper()
                     self.customs[custom_name] = val
@@ -216,28 +238,21 @@ class Item(AlignakObject):
 
     # Simply moved all the __ functions near the initialization
     def __str__(self):  # pragma: no cover
-        cls_name = self.__class__.__name__
-        return '<%s name=%r />' % (cls_name, self.get_name())
+        return '<%s name=%r />' % (self.__class__.__name__, self.get_name())
     __repr__ = __str__
 
     def init_running_properties(self):
         """
-        Init the running_properties.
+        Initialize the running_properties.
         Each instance have own property.
 
         :return: None
         """
-        for prop, entry in self.__class__.running_properties.items():
-            # Copy is slow, so we check type
-            # Type with __iter__ are list or dict, or tuple.
-            # Item need its own list, so we copy
+        for prop, entry in list(self.__class__.running_properties.items()):
             val = entry.default
-            # todo: perharps isinstance(val, dict, list, set) ?
-            if hasattr(val, '__iter__'):
-                setattr(self, prop, copy(val))
-            else:
-                setattr(self, prop, val)
-            # each instance to have his own running prop!
+            # Make a copy of the value for complex iterable types
+            # As such, each instance has its own copy and not a simple reference
+            setattr(self, prop, copy(val) if isinstance(val, (set, list, dict)) else val)
 
     def copy(self):
         """
@@ -246,20 +261,27 @@ class Item(AlignakObject):
         :return: copy of this object with a new id
         :rtype: object
         """
-        cls = self.__class__
-        i = cls({})  # Dummy item but with it's own running properties
-        for prop in cls.properties:
-            if hasattr(self, prop) and prop != 'uuid':  # TODO: Fix it
-                val = getattr(self, prop)
-                setattr(i, prop, val)
-        # Also copy the customs tab
-        i.customs = copy(self.customs)
+        # New dummy item with it's own running properties
+        copied_item = self.__class__({})
+        # Now, copy the properties
+        for prop in self.__class__.properties:
+            if prop in ['uuid']:
+                continue
+            val = getattr(self, prop, None)
+            if val:
+                setattr(copied_item, prop, val)
+
+        # Also copy some running properties
+        # The custom variables
+        if hasattr(self, "customs"):
+            copied_item.customs = copy(self.customs)
         # And tags/templates
         if hasattr(self, "tags"):
-            i.tags = copy(self.tags)
+            copied_item.tags = copy(self.tags)
         if hasattr(self, "templates"):
-            i.templates = copy(self.templates)
-        return i
+            copied_item.templates = copy(self.templates)
+
+        return copied_item
 
     def clean(self):
         """
@@ -372,14 +394,15 @@ class Item(AlignakObject):
 
         :param prop: property to check
         :type prop: str
-        :return: True is self.plus have this property, otherwise False
+        :return: True is self.plus has this property, otherwise False
         :rtype: bool
         """
-        try:
-            self.plus[prop]
-        except KeyError:
-            return False
-        return True
+        return prop in self.plus
+        # try:
+        #     self.plus[prop]
+        # except KeyError:
+        #     return False
+        # return True
 
     def get_all_plus_and_delete(self):
         """
@@ -389,7 +412,7 @@ class Item(AlignakObject):
         :rtype: list
         """
         res = {}
-        props = self.plus.keys()  # we delete entries, so no for ... in ...
+        props = list(self.plus.keys())  # we delete entries, so no for ... in ...
         for prop in props:
             res[prop] = self.get_plus_and_delete(prop)
         return res
@@ -445,7 +468,7 @@ class Item(AlignakObject):
         state = self.conf_is_correct
         properties = self.__class__.properties
 
-        for prop, entry in properties.items():
+        for prop, entry in list(properties.items()):
             if hasattr(self, 'special_properties') and prop in getattr(self, 'special_properties'):
                 continue
             if not hasattr(self, prop) and entry.required:
@@ -464,7 +487,7 @@ class Item(AlignakObject):
         :return: None
         """
         old_properties = getattr(self.__class__, "old_properties", {})
-        for old_name, new_name in old_properties.items():
+        for old_name, new_name in list(old_properties.items()):
             # Ok, if we got old_name and NO new name,
             # we switch the name
             if hasattr(self, old_name) and not hasattr(self, new_name):
@@ -482,7 +505,7 @@ class Item(AlignakObject):
         :rtype: dict
         """
         res = {}
-        properties = self.__class__.properties.keys()
+        properties = list(self.__class__.properties.keys())
         # Register is not by default in the properties
         if 'register' not in properties:
             properties.append('register')
@@ -572,7 +595,7 @@ class Item(AlignakObject):
         """
         cls = self.__class__
         # Now config properties
-        for prop, entry in cls.properties.items():
+        for prop, entry in list(cls.properties.items()):
             # Is this property intended for broking?
             if brok_type in entry.fill_brok:
                 data[prop] = self.get_property_value_for_brok(prop, cls.properties)
@@ -580,7 +603,7 @@ class Item(AlignakObject):
         # Maybe the class do not have running_properties
         if hasattr(cls, 'running_properties'):
             # We've got prop in running_properties too
-            for prop, entry in cls.running_properties.items():
+            for prop, entry in list(cls.running_properties.items()):
                 # if 'fill_brok' in cls.running_properties[prop]:
                 if brok_type in entry.fill_brok:
                     data[prop] = self.get_property_value_for_brok(prop, cls.running_properties)
@@ -605,7 +628,7 @@ class Item(AlignakObject):
         :return: Brok object
         :rtype: object
         """
-        return Brok({'type': 'new_' + self.my_type, 'data': {'name': name}})
+        return Brok({'type': 'new_' + self.my_type, 'data': {'uuid': self.uuid, 'name': name}})
 
     def get_update_status_brok(self):
         """
@@ -625,7 +648,7 @@ class Item(AlignakObject):
         :return: Brok object
         :rtype: object
         """
-        data = {}
+        data = {'uuid': self.uuid}
         self.fill_data_brok_from(data, 'check_result')
         return Brok({'type': self.my_type + '_check_result', 'data': data})
 
@@ -636,7 +659,7 @@ class Item(AlignakObject):
         :return: Brok object
         :rtype: object
         """
-        data = {}
+        data = {'uuid': self.uuid}
         self.fill_data_brok_from(data, 'next_schedule')
         return Brok({'type': self.my_type + '_next_schedule', 'data': data})
 
@@ -652,18 +675,16 @@ class Item(AlignakObject):
         :rtype: object
         """
         data = {
-            'snapshot_output':
-                snap_output,
-            'snapshot_time':
-                int(time.time()),
-            'snapshot_exit_status':
-                exit_status,
+            'uuid': self.uuid,
+            'snapshot_output': snap_output,
+            'snapshot_time': int(time.time()),
+            'snapshot_exit_status': exit_status,
         }
         self.fill_data_brok_from(data, 'check_result')
         return Brok({'type': self.my_type + '_snapshot', 'data': data})
 
     def dump(self, dump_file=None):  # pragma: no cover, never called
-        # pylint: disable=W0613
+        # pylint: disable=unused-argument
         """
         Dump properties
 
@@ -699,7 +720,7 @@ class Item(AlignakObject):
         :return: name
         :rtype: str
         """
-        return self.name
+        return getattr(self, 'name', 'unnamed')
 
 
 class Items(object):
@@ -719,7 +740,7 @@ class Items(object):
 
         # We are un-serializing
         if isinstance(items, dict):
-            for item in items.values():
+            for item in list(items.values()):
                 self.add_item(self.inner_class(item, parsing=parsing))
         else:
             self.add_items(items, index_items)
@@ -727,13 +748,13 @@ class Items(object):
     # Simply moved all the __ functions near the initialization
     def __repr__(self):  # pragma: no cover
         # Build a sorted list of unicode elements name or uuid, this to make it easier to compare ;)
-        dump_list = sorted([unicode(item.get_name()
-                                    if isinstance(item, Item) else item) for item in self])
+        dump_list = sorted([str(item.get_name()
+                                if isinstance(item, Item) else item) for item in self])
         return '<%r, %d elements: %r/>' % (self.__class__.__name__, len(self), dump_list)
     __str__ = __repr__
 
     def __iter__(self):
-        return self.items.itervalues()
+        return iter(list(self.items.values()))
 
     def __len__(self):
         return len(self.items)
@@ -977,21 +998,11 @@ class Items(object):
         :return: item modified
         :rtype: object
         """
-        # TODO: simplify this function (along with its opposite: unindex_item)
-        # it's too complex for what it does.
-        # more over:
-        # There are cases (in unindex_item) where some item is tried to be removed
-        # from name_to_item while it's not present in it !
-        # so either it wasn't added or it was added with another key or the item key changed
-        # between the index and unindex calls..
-        #  -> We should simply not have to call unindex_item() with a non-indexed item !
         name_property = getattr(self.__class__, "name_property", None)
-        # if there is no 'name_property' set(it is None), then the following getattr() will
-        # "hopefully" evaluates to '',
-        # unless some(thing|one) have setattr(item, None, 'with_something'),
-        # which would be rather odd :
-        name = getattr(item, name_property, '')
-        if not name:
+        if name_property is None:
+            return None
+        name = getattr(item, name_property, None)
+        if name is None:
             item.add_error("a %s item has been defined without %s, from: %s"
                            % (self.inner_class.my_type, name_property, item.imported_from))
         elif name in self.name_to_item:
@@ -1009,7 +1020,10 @@ class Items(object):
         name_property = getattr(self.__class__, "name_property", None)
         if name_property is None:
             return
-        self.name_to_item.pop(getattr(item, name_property, ''), None)
+        name = getattr(item, name_property, None)
+        if name is None:
+            return
+        self.name_to_item.pop(name, None)
 
     def find_by_name(self, name):
         """
@@ -1029,8 +1043,8 @@ class Items(object):
 
         :return: None
         """
-        for i in itertools.chain(self.items.itervalues(),
-                                 self.templates.itervalues()):
+        for i in itertools.chain(iter(list(self.items.values())),
+                                 iter(list(self.templates.values()))):
             i.old_properties_names_to_new()
 
     def find_tpl_by_name(self, name):
@@ -1099,8 +1113,8 @@ class Items(object):
         :return: None
         """
         # First we create a list of all templates
-        for i in itertools.chain(self.items.itervalues(),
-                                 self.templates.itervalues()):
+        for i in itertools.chain(iter(list(self.items.values())),
+                                 iter(list(self.templates.values()))):
             self.linkify_item_templates(i)
         for i in self:
             i.tags = self.get_all_tags(i)
@@ -1202,7 +1216,7 @@ class Items(object):
         :rtype: dict
         """
         res = {}
-        for key, item in self.items.iteritems():
+        for key, item in list(self.items.items()):
             res[key] = item.serialize()
         return res
 
@@ -1214,8 +1228,8 @@ class Items(object):
         :type prop: str
         :return: None
         """
-        for i in itertools.chain(self.items.itervalues(),
-                                 self.templates.itervalues()):
+        for i in itertools.chain(iter(list(self.items.values())),
+                                 iter(list(self.templates.values()))):
             self.get_property_by_inheritance(i, prop)
             # If a "null" attribute was inherited, delete it
             try:
@@ -1235,8 +1249,8 @@ class Items(object):
         cls = self.inner_class
         for prop in cls.properties:
             self.apply_partial_inheritance(prop)
-        for i in itertools.chain(self.items.itervalues(),
-                                 self.templates.itervalues()):
+        for i in itertools.chain(iter(list(self.items.values())),
+                                 iter(list(self.templates.values()))):
             self.get_customs_properties_by_inheritance(i)
 
     def linkify_with_contacts(self, contacts):
@@ -1250,20 +1264,18 @@ class Items(object):
         for i in self:
             if not hasattr(i, 'contacts'):
                 continue
-            contacts_tab = strip_and_uniq(i.contacts)
-            new_contacts = []
-            for c_name in contacts_tab:
-                if not c_name:
-                    continue
 
-                contact = contacts.find_by_name(c_name)
-                if contact is not None:
-                    new_contacts.append(contact.uuid)
+            links_list = strip_and_uniq(i.contacts)
+            new = []
+            for name in [e for e in links_list if e]:
+                contact = contacts.find_by_name(name)
+                if contact is not None and contact.uuid not in new:
+                    new.append(contact.uuid)
                 else:
-                    err = "the contact '%s' defined for '%s' is unknown" % (c_name, i.get_name())
-                    i.add_error(err)
-            # Get the list, but first make elements unique
-            i.contacts = list(set(new_contacts))
+                    i.add_error("the contact '%s' defined for '%s' is unknown"
+                                % (name, i.get_name()))
+
+            i.contacts = new
 
     def linkify_with_escalations(self, escalations):
         """
@@ -1277,16 +1289,17 @@ class Items(object):
             if not hasattr(i, 'escalations'):
                 continue
 
-            escalations_tab = strip_and_uniq(i.escalations)
-            new_escalations = []
-            for es_name in [e for e in escalations_tab if e != '']:
-                escal = escalations.find_by_name(es_name)
-                if escal is not None:
-                    new_escalations.append(escal.uuid)
-                else:  # Escalation not found, not good!
-                    i.add_error("the escalation '%s' defined "
-                                "for '%s' is unknown" % (es_name, i.get_name()))
-            i.escalations = new_escalations
+            links_list = strip_and_uniq(i.escalations)
+            new = []
+            for name in [e for e in links_list if e]:
+                escalation = escalations.find_by_name(name)
+                if escalation is not None and escalation.uuid not in new:
+                    new.append(escalation.uuid)
+                else:
+                    i.add_error("the escalation '%s' defined for '%s' is unknown"
+                                % (name, i.get_name()))
+
+            i.escalations = new
 
     def linkify_with_resultmodulations(self, resultmodulations):
         """
@@ -1297,19 +1310,20 @@ class Items(object):
         :return: None
         """
         for i in self:
-            if hasattr(i, 'resultmodulations'):
-                resultmodulations_tab = strip_and_uniq(i.resultmodulations)
-                new_resultmodulations = []
-                for rm_name in resultmodulations_tab:
-                    resultmod = resultmodulations.find_by_name(rm_name)
-                    if resultmod is not None:
-                        new_resultmodulations.append(resultmod.uuid)
-                    else:
-                        err = ("the result modulation '%s' defined on the %s "
-                               "'%s' do not exist" % (rm_name, i.__class__.my_type, i.get_name()))
-                        i.configuration_warnings.append(err)
-                        continue
-                i.resultmodulations = new_resultmodulations
+            if not hasattr(i, 'resultmodulations'):
+                continue
+
+            links_list = strip_and_uniq(i.resultmodulations)
+            new = []
+            for name in [e for e in links_list if e]:
+                modulation = resultmodulations.find_by_name(name)
+                if modulation is not None and modulation.uuid not in new:
+                    new.append(modulation.uuid)
+                else:
+                    i.add_error("the result modulation '%s' defined on the %s "
+                                "'%s' do not exist" % (name, i.__class__.my_type, i.get_name()))
+
+            i.resultmodulations = new
 
     def linkify_with_business_impact_modulations(self, business_impact_modulations):
         """
@@ -1320,19 +1334,22 @@ class Items(object):
         :return: None
         """
         for i in self:
-            if hasattr(i, 'business_impact_modulations'):
-                business_impact_modulations_tab = strip_and_uniq(i.business_impact_modulations)
-                new_business_impact_modulations = []
-                for rm_name in business_impact_modulations_tab:
-                    resultmod = business_impact_modulations.find_by_name(rm_name)
-                    if resultmod is not None:
-                        new_business_impact_modulations.append(resultmod.uuid)
-                    else:
-                        err = ("the business impact modulation '%s' defined on the %s "
-                               "'%s' do not exist" % (rm_name, i.__class__.my_type, i.get_name()))
-                        i.add_error(err)
-                        continue
-                i.business_impact_modulations = new_business_impact_modulations
+            if not hasattr(i, 'business_impact_modulations'):
+                continue
+
+            links_list = strip_and_uniq(i.business_impact_modulations)
+            new = []
+            for name in [e for e in links_list if e]:
+                modulation = business_impact_modulations.find_by_name(name)
+                if modulation is not None and modulation.uuid not in new:
+                    new.append(modulation.uuid)
+                else:
+                    i.add_error("the business impact modulation '%s' "
+                                "defined on the %s '%s' do not exist"
+                                % (name, i.__class__.my_type, i.get_name()))
+
+                new.append(modulation.uuid)
+            i.business_impact_modulations = new
 
     @staticmethod
     def explode_contact_groups_into_contacts(item, contactgroups):
@@ -1379,23 +1396,23 @@ class Items(object):
         :return: None
         """
         for i in self:
-            if hasattr(i, prop):
-                tpname = getattr(i, prop).strip()
-                # some default values are '', so set None
-                if tpname == '':
-                    setattr(i, prop, '')
-                    continue
+            if not hasattr(i, prop):
+                continue
 
-                # Ok, get a real name, search for it
-                timeperiod = timeperiods.find_by_name(tpname)
-                # If not found, it's an error
-                if timeperiod is None:
-                    err = ("The %s of the %s '%s' named "
-                           "'%s' is unknown!" % (prop, i.__class__.my_type, i.get_name(), tpname))
-                    i.add_error(err)
-                    continue
-                # Got a real one, just set it :)
-                setattr(i, prop, timeperiod.uuid)
+            tpname = getattr(i, prop).strip()
+            # some default values are '', so set None
+            if not tpname:
+                setattr(i, prop, '')
+                continue
+
+            # Ok, get a real name, search for it
+            timeperiod = timeperiods.find_by_name(tpname)
+            if timeperiod is None:
+                i.add_error("The %s of the %s '%s' named '%s' is unknown!"
+                            % (prop, i.__class__.my_type, i.get_name(), tpname))
+                continue
+
+            setattr(i, prop, timeperiod.uuid)
 
     def linkify_with_checkmodulations(self, checkmodulations):
         """
@@ -1408,17 +1425,18 @@ class Items(object):
         for i in self:
             if not hasattr(i, 'checkmodulations'):
                 continue
-            new_checkmodulations = []
-            for cw_name in i.checkmodulations:
-                chkmod = checkmodulations.find_by_name(cw_name)
-                if chkmod is not None:
-                    new_checkmodulations.append(chkmod.uuid)
+
+            links_list = strip_and_uniq(i.checkmodulations)
+            new = []
+            for name in [e for e in links_list if e]:
+                modulation = checkmodulations.find_by_name(name)
+                if modulation is not None and modulation.uuid not in new:
+                    new.append(modulation.uuid)
                 else:
-                    err = ("The checkmodulations of the %s '%s' named "
-                           "'%s' is unknown!" % (i.__class__.my_type, i.get_name(), cw_name))
-                    i.add_error(err)
-            # Get the list, but first make elements uniq
-            i.checkmodulations = new_checkmodulations
+                    i.add_error("The checkmodulations of the %s '%s' named "
+                                "'%s' is unknown!" % (i.__class__.my_type, i.get_name(), name))
+
+            i.checkmodulations = new
 
     def linkify_with_macromodulations(self, macromodulations):
         """
@@ -1431,17 +1449,18 @@ class Items(object):
         for i in self:
             if not hasattr(i, 'macromodulations'):
                 continue
-            new_macromodulations = []
-            for cw_name in i.macromodulations:
-                macromod = macromodulations.find_by_name(cw_name)
-                if macromod is not None:
-                    new_macromodulations.append(macromod.uuid)
+
+            links_list = strip_and_uniq(i.macromodulations)
+            new = []
+            for name in [e for e in links_list if e]:
+                modulation = macromodulations.find_by_name(name)
+                if modulation is not None and modulation.uuid not in new:
+                    new.append(modulation.uuid)
                 else:
-                    err = ("The macromodulations of the %s '%s' named "
-                           "'%s' is unknown!" % (i.__class__.my_type, i.get_name(), cw_name))
-                    i.add_error(err)
-            # Get the list, but first make elements uniq
-            i.macromodulations = new_macromodulations
+                    i.add_error("The macromodulations of the %s '%s' named "
+                                "'%s' is unknown!" % (i.__class__.my_type, i.get_name(), name))
+
+            i.macromodulations = new
 
     def linkify_s_by_module(self, modules):
         """
@@ -1451,23 +1470,18 @@ class Items(object):
         :type modules: Modules
         :return: None
         """
-        for item in self:
-            logger.debug("Linkify %s with %s", self, modules)
-            new_modules = []
-            for module_name in item.modules:
-                # The modules list may contain empty strings...
-                if not module_name:
-                    continue
-                logger.debug("Linkify %s with %s", self, module_name)
-                module = modules.find_by_name(module_name)
-                if not module:
-                    item.add_error("Error: the module %s is unknown for %s"
-                                   % (module_name, item.get_name()))
-                    continue
-                # Found the module
-                new_modules.append(module)
+        for i in self:
 
-            item.modules = new_modules
+            links_list = strip_and_uniq(i.modules)
+            new = []
+            for name in [e for e in links_list if e]:
+                module = modules.find_by_name(name)
+                if module is not None and module.uuid not in new:
+                    new.append(module)
+                else:
+                    i.add_error("Error: the module %s is unknown for %s" % (name, i.get_name()))
+
+            i.modules = new
 
     @staticmethod
     def evaluate_hostgroup_expression(expr, hosts, hostgroups, look_in='hostgroups'):
@@ -1549,7 +1563,7 @@ class Items(object):
             try:
                 hnames_list.extend(
                     self.get_hosts_from_hostgroups(hgnames, hostgroups))
-            except ValueError, err:  # pragma: no cover, simple protection
+            except ValueError as err:  # pragma: no cover, simple protection
                 item.add_error(str(err))
 
         # Expands host names
@@ -1567,8 +1581,8 @@ class Items(object):
                 except KeyError:
                     pass
             elif host == '*':
-                hnames.update([host.host_name for host in hosts.items.itervalues()
-                              if getattr(host, 'host_name', '')])
+                hnames.update([host.host_name for host
+                               in hosts.items.values() if getattr(host, 'host_name', '')])
             # Else it's a host to add, but maybe it's ALL
             else:
                 hnames.add(host)
@@ -1576,6 +1590,7 @@ class Items(object):
         item.host_name = ','.join(hnames)
 
     def no_loop_in_parents(self, attr1, attr2):
+        # pylint: disable=too-many-branches
         """
         Find loop in dependencies.
         For now, used with the following attributes :
@@ -1614,6 +1629,7 @@ class Items(object):
                     parents.add_node(obj)
 
         # And now fill edges
+        # pylint: disable=too-many-nested-blocks
         for item in self:
             if attr1 == "self":
                 obj1 = item.uuid
@@ -1638,6 +1654,7 @@ class Items(object):
         return parents.loop_check()
 
     def get_property_by_inheritance(self, obj, prop):
+        # pylint: disable=too-many-branches
         """
         Get the property asked in parameter to this object or from defined templates of this
         object

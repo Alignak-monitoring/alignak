@@ -20,7 +20,7 @@
 """
  This file is used to test poller tags
 """
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestPollerTag(AlignakTest):
@@ -52,7 +52,7 @@ class TestPollerTag(AlignakTest):
         """
         host = self._sched.hosts.find_by_name("test_host_pt_01")
         self.external_command_loop()
-        checks = self._scheduler.checks.values()
+        checks = list(self._scheduler.checks.values())
         mycheck = self._sched.checks[host.checks_in_progress[0]]
         assert mycheck.poller_tag == 'north'
 
@@ -63,7 +63,7 @@ class TestPollerTag(AlignakTest):
         """
         host = self._sched.hosts.find_by_name("test_host_pt_02")
         self.external_command_loop()
-        checks = self._scheduler.checks.values()
+        checks = list(self._scheduler.checks.values())
         mycheck = self._sched.checks[host.checks_in_progress[0]]
         assert mycheck.poller_tag == 'south'
 
@@ -75,7 +75,7 @@ class TestPollerTag(AlignakTest):
         """
         host = self._sched.hosts.find_by_name("test_host_pt_03")
         self.external_command_loop()
-        checks = self._scheduler.checks.values()
+        checks = list(self._scheduler.checks.values())
         mycheck = self._sched.checks[host.checks_in_progress[0]]
         assert mycheck.poller_tag == 'south'
 
@@ -88,7 +88,7 @@ class TestPollerTag(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []
         self.external_command_loop()
-        checks = self._scheduler.checks.values()
+        checks = list(self._scheduler.checks.values())
         mycheck = self._sched.checks[svc.checks_in_progress[0]]
         assert mycheck.poller_tag == 'north'
 
@@ -102,7 +102,7 @@ class TestPollerTag(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []
         self.external_command_loop()
-        checks = self._scheduler.checks.values()
+        checks = list(self._scheduler.checks.values())
         mycheck = self._sched.checks[svc.checks_in_progress[0]]
         assert mycheck.poller_tag == 'south'
 
@@ -116,7 +116,7 @@ class TestPollerTag(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []
         self.external_command_loop()
-        checks = self._scheduler.checks.values()
+        checks = list(self._scheduler.checks.values())
         mycheck = self._sched.checks[svc.checks_in_progress[0]]
         assert mycheck.poller_tag == 'north'
 
@@ -126,11 +126,11 @@ class TestPollerTag(AlignakTest):
         :return: None
         """
         self.external_command_loop()
-        for check in self._sched.checks.values():
+        for check in list(self._sched.checks.values()):
             check.t_to_go = 0
         checks = self._sched.get_to_run_checks(do_checks=True, poller_tags=['None'],
                                                module_types=['fork'])
-        print checks
+        print(checks)
         assert len(checks) == 3
         for check in checks:
             assert check.poller_tag == 'None'
@@ -141,11 +141,11 @@ class TestPollerTag(AlignakTest):
         :return: None
         """
         self.external_command_loop()
-        for check in self._sched.checks.values():
+        for check in list(self._sched.checks.values()):
             check.t_to_go = 0
         checks = self._sched.get_to_run_checks(do_checks=True, poller_tags=['north'],
                                                module_types=['fork'])
-        print checks
+        print(checks)
         assert len(checks) == 3
         for check in checks:
             assert check.poller_tag == 'north'
@@ -157,11 +157,11 @@ class TestPollerTag(AlignakTest):
         :return: None
         """
         self.external_command_loop()
-        for check in self._sched.checks.values():
+        for check in list(self._sched.checks.values()):
             check.t_to_go = 0
         checks = self._sched.get_to_run_checks(do_checks=True, poller_tags=['south'],
                                                module_types=['fork'])
-        print checks
+        print(checks)
         assert len(checks) == 4
         for check in checks:
             assert check.poller_tag == 'south'

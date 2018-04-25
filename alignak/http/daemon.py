@@ -33,8 +33,6 @@ import cherrypy
 from cherrypy._cpreqbody import process_urlencoded, process_multipart, process_multipart_form_data
 # load global helper objects for logs and stats computation
 from alignak.http.cherrypy_extend import zlib_processor
-# todo: daemonize the process thanks to CherryPy plugin
-# from cherrypy.process.plugins import Daemonizer
 
 
 # Check if PyOpenSSL is installed
@@ -47,7 +45,7 @@ except ImportError:
     PYOPENSSL = False
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class PortNotFree(Exception):
@@ -103,7 +101,7 @@ class HTTPDaemon(object):
         # - socket_queue_size
         cherrypy.config.update({'engine.autoreload.on': False,
                                 'server.thread_pool': thread_pool_size,
-                                'server.socket_host': self.host,
+                                'server.socket_host': self.host.encode('utf-8'),
                                 'server.socket_port': self.port})
 
         # Default is to disable CherryPy logging

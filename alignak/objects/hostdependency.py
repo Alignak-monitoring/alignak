@@ -58,7 +58,7 @@ import logging
 from alignak.objects.item import Item, Items
 from alignak.property import BoolProp, StringProp, ListProp
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Hostdependency(Item):
@@ -80,14 +80,22 @@ class Hostdependency(Item):
 
     properties = Item.properties.copy()
     properties.update({
-        'dependent_host_name':           StringProp(),
-        'dependent_hostgroup_name':      StringProp(default=''),
-        'host_name':                     StringProp(),
-        'hostgroup_name':                StringProp(default=''),
-        'inherits_parent':               BoolProp(default=False),
-        'execution_failure_criteria':    ListProp(default=['n'], split_on_coma=True),
-        'notification_failure_criteria': ListProp(default=['n'], split_on_coma=True),
-        'dependency_period':             StringProp(default='')
+        'dependent_host_name':
+            StringProp(),
+        'dependent_hostgroup_name':
+            StringProp(default=''),
+        'host_name':
+            StringProp(),
+        'hostgroup_name':
+            StringProp(default=''),
+        'inherits_parent':
+            BoolProp(default=False),
+        'execution_failure_criteria':
+            ListProp(default=['n'], split_on_comma=True),
+        'notification_failure_criteria':
+            ListProp(default=['n'], split_on_comma=True),
+        'dependency_period':
+            StringProp(default='')
     })
 
     def __init__(self, params=None, parsing=True):
@@ -134,6 +142,7 @@ class Hostdependencies(Items):
             del self[h_id]
 
     def explode(self, hostgroups):
+        # pylint: disable=too-many-locals
         """Explode all host dependency for each member of hostgroups
         Each member of dependent hostgroup or hostgroup in dependency have to get a copy of
         host dependencies (quite complex to parse)
@@ -149,7 +158,7 @@ class Hostdependencies(Items):
 
         # Then for every host create a copy of the dependency with just the host
         # because we are adding services, we can't just loop in it
-        hostdeps = self.items.keys()
+        hostdeps = list(self.items.keys())
         for h_id in hostdeps:
             hostdep = self.items[h_id]
             # We explode first the dependent (son) part
@@ -237,7 +246,7 @@ class Hostdependencies(Items):
                     hostdep.host_name = host.uuid
                 if dephost:
                     hostdep.dependent_host_name = dephost.uuid
-            except AttributeError, exp:
+            except AttributeError as exp:
                 err = "Error: the host dependency miss a property '%s'" % exp
                 hostdep.add_error(err)
 

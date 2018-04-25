@@ -52,7 +52,6 @@
 implements way of sending notifications. Basically used for parsing.
 
 """
-import uuid
 import logging
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
@@ -60,7 +59,7 @@ from alignak.objects.commandcallitem import CommandCallItems
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
 from alignak.commandcall import CommandCall
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class NotificationWay(Item):
@@ -71,8 +70,6 @@ class NotificationWay(Item):
 
     properties = Item.properties.copy()
     properties.update({
-        'uuid':
-            StringProp(default='', fill_brok=['full_status']),
         'notificationway_name':
             StringProp(fill_brok=['full_status']),
         'host_notifications_enabled':
@@ -84,9 +81,9 @@ class NotificationWay(Item):
         'service_notification_period':
             StringProp(fill_brok=['full_status']),
         'host_notification_options':
-            ListProp(default=[''], fill_brok=['full_status'], split_on_coma=True),
+            ListProp(default=[''], fill_brok=['full_status'], split_on_comma=True),
         'service_notification_options':
-            ListProp(default=[''], fill_brok=['full_status'], split_on_coma=True),
+            ListProp(default=[''], fill_brok=['full_status'], split_on_comma=True),
         'host_notification_commands':
             ListProp(fill_brok=['full_status']),
         'service_notification_commands':
@@ -144,8 +141,9 @@ class NotificationWay(Item):
         """
         return self.notificationway_name
 
-    def want_service_notification(self, timeperiods,
-                                  timestamp, state, n_type, business_impact, cmd=None):
+    def want_service_notification(self, timeperiods, timestamp, state, n_type,
+                                  business_impact, cmd=None):
+        # pylint: disable=too-many-return-statements
         """Check if notification options match the state of the service
         Notification is NOT wanted in ONE of the following case::
 
@@ -183,30 +181,33 @@ class NotificationWay(Item):
             return False
 
         notif_period = timeperiods[self.service_notification_period]
-        valid = notif_period.is_time_valid(timestamp)
+        in_notification_period = notif_period.is_time_valid(timestamp)
         if 'n' in self.service_notification_options:
             return False
-        timestamp = {'WARNING': 'w', 'UNKNOWN': 'u', 'CRITICAL': 'c',
-                     'RECOVERY': 'r', 'FLAPPING': 'f', 'DOWNTIME': 's'}
-        if n_type == 'PROBLEM':
-            if state in timestamp:
-                return valid and timestamp[state] in self.service_notification_options
-        elif n_type == 'RECOVERY':
-            if n_type in timestamp:
-                return valid and timestamp[n_type] in self.service_notification_options
-        elif n_type == 'ACKNOWLEDGEMENT':
-            return valid
-        elif n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
-            return valid and 'f' in self.service_notification_options
-        elif n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED'):
-            # No notification when a downtime was cancelled. Is that true??
-            # According to the documentation we need to look at _host_ options
-            return valid and 's' in self.host_notification_options
+
+        if in_notification_period:
+            short_states = {
+                u'WARNING': 'w', u'UNKNOWN': 'u', u'CRITICAL': 'c',
+                u'RECOVERY': 'r', u'FLAPPING': 'f', u'DOWNTIME': 's'
+            }
+            if n_type == u'PROBLEM' and state in short_states:
+                return short_states[state] in self.service_notification_options
+            if n_type == u'RECOVERY' and n_type in short_states:
+                return short_states[n_type] in self.service_notification_options
+            if n_type == u'ACKNOWLEDGEMENT':
+                return in_notification_period
+            if n_type in (u'FLAPPINGSTART', u'FLAPPINGSTOP', u'FLAPPINGDISABLED'):
+                return 'f' in self.service_notification_options
+            if n_type in (u'DOWNTIMESTART', u'DOWNTIMEEND', u'DOWNTIMECANCELLED'):
+                # No notification when a downtime was cancelled. Is that true??
+                # According to the documentation we need to look at _host_ options
+                return 's' in self.host_notification_options
 
         return False
 
     def want_host_notification(self, timperiods, timestamp,
                                state, n_type, business_impact, cmd=None):
+        # pylint: disable=too-many-return-statements
         """Check if notification options match the state of the host
         Notification is NOT wanted in ONE of the following case::
 
@@ -244,23 +245,25 @@ class NotificationWay(Item):
             return False
 
         notif_period = timperiods[self.host_notification_period]
-        valid = notif_period.is_time_valid(timestamp)
+        in_notification_period = notif_period.is_time_valid(timestamp)
         if 'n' in self.host_notification_options:
             return False
-        timestamp = {'DOWN': 'd', 'UNREACHABLE': 'u', 'RECOVERY': 'r',
-                     'FLAPPING': 'f', 'DOWNTIME': 's'}
-        if n_type == 'PROBLEM':
-            if state in timestamp:
-                return valid and timestamp[state] in self.host_notification_options
-        elif n_type == 'RECOVERY':
-            if n_type in timestamp:
-                return valid and timestamp[n_type] in self.host_notification_options
-        elif n_type == 'ACKNOWLEDGEMENT':
-            return valid
-        elif n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
-            return valid and 'f' in self.host_notification_options
-        elif n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED'):
-            return valid and 's' in self.host_notification_options
+
+        if in_notification_period:
+            short_states = {
+                u'DOWN': 'd', u'UNREACHABLE': 'u', u'RECOVERY': 'r',
+                u'FLAPPING': 'f', u'DOWNTIME': 's'
+            }
+            if n_type == u'PROBLEM' and state in short_states:
+                return short_states[state] in self.host_notification_options
+            if n_type == u'RECOVERY' and n_type in short_states:
+                return short_states[n_type] in self.host_notification_options
+            if n_type == u'ACKNOWLEDGEMENT':
+                return in_notification_period
+            if n_type in (u'FLAPPINGSTART', u'FLAPPINGSTOP', u'FLAPPINGDISABLED'):
+                return 'f' in self.host_notification_options
+            if n_type in (u'DOWNTIMESTART', u'DOWNTIMEEND', u'DOWNTIMECANCELLED'):
+                return 's' in self.host_notification_options
 
         return False
 
@@ -278,6 +281,7 @@ class NotificationWay(Item):
         return notif_commands
 
     def is_correct(self):
+        # pylint: disable=too-many-branches
         """Check if this object configuration is correct ::
 
         * Check our own specific properties
@@ -382,7 +386,7 @@ class NotificationWays(CommandCallItems):
         self.linkify_command_list_with_commands(commands, 'service_notification_commands')
         self.linkify_command_list_with_commands(commands, 'host_notification_commands')
 
-    def new_inner_member(self, name=None, params=None):
+    def new_inner_member(self, name, params):
         """Create new instance of NotificationWay with given name and parameters
         and add it to the item list
 
@@ -392,12 +396,5 @@ class NotificationWays(CommandCallItems):
         :type params: dict
         :return: None
         """
-        new_uuid = uuid.uuid4().hex
-        if name is None:
-            name = 'Generated_notificationway_%s' % new_uuid
-        if params is None:
-            params = {}
         params['notificationway_name'] = name
-        params['uuid'] = new_uuid
-        notificationway = NotificationWay(params)
-        self.add_item(notificationway)
+        self.add_item(NotificationWay(params))

@@ -27,7 +27,7 @@ This file test all cases of eventhandler
 import time
 import pytest
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 from alignak.misc.serialization import unserialize
 
@@ -62,18 +62,18 @@ class TestEventhandler(AlignakTest):
         self._sched = self._scheduler
 
         host = self._sched.hosts.find_by_name("test_host_1")
-        print host.event_handler_enabled
+        print(host.event_handler_enabled)
         assert host.event_handler_enabled is True
-        print "host: %s" % host.event_handler
-        print "global: %s" % host.__class__.global_event_handler
+        print("host: %s" % host.event_handler)
+        print("global: %s" % host.__class__.global_event_handler)
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
         svc = self._sched.services.find_srv_by_name_and_hostname(
             "test_host_1", "test_ok_0")
         assert svc.event_handler_enabled is True
-        print "svc: %s" % svc.event_handler
-        print "global: %s" % svc.__class__.global_event_handler
+        print("svc: %s" % svc.event_handler)
+        print("global: %s" % svc.__class__.global_event_handler)
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         svc.enable_notifications = False
@@ -134,30 +134,30 @@ class TestEventhandler(AlignakTest):
         self.assert_actions_match(4, 'test_global_host_eventhandler.pl UP SOFT', 'command')
 
         # Get my first broker link
-        my_broker = [b for b in self._scheduler.my_daemon.brokers.values()][0]
+        my_broker = [b for b in list(self._scheduler.my_daemon.brokers.values())][0]
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(my_broker.broks.values(), key=lambda x: x.creation_time):
+        for brok in sorted(list(my_broker.broks.values()), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
 
         print(monitoring_logs)
         expected_logs = [
-            (u'info', u'SERVICE ALERT: test_host_1;test_ok_0;OK;HARD;2;OK'),
-            (u'error', u'SERVICE ALERT: test_host_1;test_ok_0;CRITICAL;HARD;2;CRITICAL'),
-            (u'error', u'SERVICE EVENT HANDLER: test_host_1;test_ok_0;CRITICAL;SOFT;'
-                       u'1;global_service_eventhandler'),
-            (u'info', u'SERVICE EVENT HANDLER: test_host_1;test_ok_0;OK;HARD;'
-                      u'2;global_service_eventhandler'),
-            (u'error', u'SERVICE ALERT: test_host_1;test_ok_0;CRITICAL;SOFT;1;CRITICAL'),
-            (u'error', u'SERVICE EVENT HANDLER: test_host_1;test_ok_0;CRITICAL;HARD;'
-                       u'2;global_service_eventhandler'),
-            (u'error', u'HOST ALERT: test_host_1;DOWN;SOFT;1;DOWN'),
-            (u'error', u'HOST EVENT HANDLER: test_host_1;DOWN;SOFT;1;global_host_eventhandler'),
-            (u'info', u'HOST ALERT: test_host_1;UP;SOFT;2;UP'),
-            (u'info', u'HOST EVENT HANDLER: test_host_1;UP;SOFT;2;global_host_eventhandler')
+            ('info', 'SERVICE ALERT: test_host_1;test_ok_0;OK;HARD;2;OK'),
+            ('error', 'SERVICE ALERT: test_host_1;test_ok_0;CRITICAL;HARD;2;CRITICAL'),
+            ('error', 'SERVICE EVENT HANDLER: test_host_1;test_ok_0;CRITICAL;SOFT;'
+                       '1;global_service_eventhandler'),
+            ('info', 'SERVICE EVENT HANDLER: test_host_1;test_ok_0;OK;HARD;'
+                      '2;global_service_eventhandler'),
+            ('error', 'SERVICE ALERT: test_host_1;test_ok_0;CRITICAL;SOFT;1;CRITICAL'),
+            ('error', 'SERVICE EVENT HANDLER: test_host_1;test_ok_0;CRITICAL;HARD;'
+                       '2;global_service_eventhandler'),
+            ('error', 'HOST ALERT: test_host_1;DOWN;SOFT;1;DOWN'),
+            ('error', 'HOST EVENT HANDLER: test_host_1;DOWN;SOFT;1;global_host_eventhandler'),
+            ('info', 'HOST ALERT: test_host_1;UP;SOFT;2;UP'),
+            ('info', 'HOST EVENT HANDLER: test_host_1;UP;SOFT;2;global_host_eventhandler')
         ]
 
         for log_level, log_message in expected_logs:

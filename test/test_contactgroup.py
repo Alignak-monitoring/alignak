@@ -28,7 +28,7 @@ import time
 
 from alignak.objects import Contact
 from alignak.objects import Contactgroup
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestContactGroup(AlignakTest):
@@ -118,14 +118,14 @@ class TestContactGroup(AlignakTest):
         print("List contactgroup contacts:")
         for contact_id in cg.members:
             contact = self._scheduler.contacts[contact_id]
-            print("Contact: %s" % contact)
+            print(("Contact: %s" % contact))
             assert isinstance(contact, Contact)
 
             if contact.get_name() == 'test_ok_0':
                 assert len(contact.get_contactgroups()) == 4
                 for group_id in contact.contactgroups:
                     group = self._scheduler.contactgroups[group_id]
-                    print("Group: %s" % group)
+                    print(("Group: %s" % group))
                     assert group.get_name() in [
                         'ok', 'contactgroup_01', 'contactgroup_02', 'allcontacts_and_groups'
                     ]
@@ -133,7 +133,7 @@ class TestContactGroup(AlignakTest):
         assert len(cg.get_contactgroup_members()) == 1
         print("List contactgroup groups:")
         for group in cg.get_contactgroup_members():
-            print("Group: %s" % group)
+            print(("Group: %s" % group))
             assert group in [
                 'test_contact'
             ]
@@ -152,21 +152,21 @@ class TestContactGroup(AlignakTest):
             # contactgroups property returns an object list ... unlike the hostgroups property
             # of an host group ...
             # group = self._scheduler.contactgroups[group_id]
-            print("Group: %s" % group)
+            print(("Group: %s" % group))
 
         # Found a contactgroup named void
         cg = self._scheduler.contactgroups.find_by_name("void")
-        print("cg: %s" % cg)
+        print(("cg: %s" % cg))
         assert isinstance(cg, Contactgroup)
         assert cg.get_name() == "void"
 
         assert len(self._scheduler.contactgroups.get_members_by_name("void")) == \
             0
 
-        print("Contacts: %s" % cg.get_contactgroup_members())
+        print(("Contacts: %s" % cg.get_contactgroup_members()))
         assert len(cg.get_contactgroup_members()) == 0
 
-        print("Contacts: %s" % cg.get_contacts())
+        print(("Contacts: %s" % cg.get_contacts()))
         assert len(cg.get_contacts()) == 0
 
     def test_contactgroup_with_space(self):
@@ -191,16 +191,16 @@ class TestContactGroup(AlignakTest):
             []
 
     def _dump_host(self, h):
-        print "Dumping host", h.get_name()
-        print h.contact_groups
+        print("Dumping host", h.get_name())
+        print(h.contact_groups)
         for c in h.contacts:
-            print "->", self._scheduler.contacts[c].get_name()
+            print("->", self._scheduler.contacts[c].get_name())
 
     def _dump_svc(self, s):
-        print "Dumping Service", s.get_name()
-        print "  contact_groups : %s " % s.contact_groups
+        print("Dumping Service", s.get_name())
+        print("  contact_groups : %s " % s.contact_groups)
         for c in s.contacts:
-            print "->", self._scheduler.contacts[c].get_name()
+            print("->", self._scheduler.contacts[c].get_name())
 
     def test_contactgroups_plus_inheritance(self):
         """ Test that contactgroups correclty manage inheritance

@@ -60,7 +60,7 @@ import logging
 from alignak.util import to_float, to_split, to_char, to_int, unique_value, list_split
 
 __all__ = ('UnusedProp', 'BoolProp', 'IntegerProp', 'FloatProp',
-           'CharProp', 'StringProp', 'ListProp',
+           'CharProp', 'StringProp', 'ListProp', 'DictProp',
            'FULL_STATUS', 'CHECK_RESULT')
 
 # Suggestion
@@ -76,6 +76,7 @@ NONE_OBJECT = object()
 
 
 class Property(object):
+    # pylint: disable=too-many-instance-attributes
     """Baseclass of all properties.
 
     Same semantic for all subclasses (except UnusedProp): The property
@@ -87,9 +88,9 @@ class Property(object):
                  unmanaged=False, _help='', no_slots=False,
                  fill_brok=None, brok_transformation=None, retention=False,
                  retention_preparation=None, to_send=False,
-                 override=False, managed=True, split_on_coma=True,
+                 override=False, managed=True, split_on_comma=True,
                  keep_empty=False, merging='uniq', special=False):
-
+        # pylint: disable=too-many-locals
         """
         `default`: default value to be used if this property is not set.
                    If default is None, this property is required.
@@ -108,7 +109,7 @@ class Property(object):
         `retention`: if set, we will save this property in the retention files
         `retention_preparation`: function, if set, will go this function before
                      being save to the retention data
-        `split_on_coma`: indicates that list property value should not be
+        `split_on_comma`: indicates that list property value should not be
                      split on coma delimiter (values conain comas that
                      we want to keep).
 
@@ -148,11 +149,11 @@ class Property(object):
         self.managed = managed
         self.unused = False
         self.merging = merging
-        self.split_on_coma = split_on_coma
+        self.split_on_comma = split_on_comma
         self.keep_empty = keep_empty
         self.special = special
 
-    def pythonize(self, val):  # pylint: disable=R0201
+    def pythonize(self, val):  # pylint: disable=no-self-use
         """Generic pythonize method
 
         :param val: value to python
@@ -220,7 +221,7 @@ class BoolProp(Property):
         if isinstance(val, bool):
             return val
         val = unique_value(val).lower()
-        if val in __boolean_states__.keys():
+        if val in list(__boolean_states__.keys()):
             return __boolean_states__[val]
         else:
             raise PythonizeError("Cannot convert '%s' to a boolean value" % val)
@@ -293,8 +294,7 @@ class StringProp(Property):
         :return: str corresponding to value
         :rtype: str
         """
-        val = unique_value(val)
-        return val
+        return unique_value(val).strip()
 
 
 class PathProp(StringProp):
@@ -321,11 +321,11 @@ class ListProp(Property):
         """
         if isinstance(val, list):
             return [s.strip() if hasattr(s, "strip") else s
-                    for s in list_split(val, self.split_on_coma)
+                    for s in list_split(val, self.split_on_comma)
                     if hasattr(s, "strip") and s.strip() != '' or self.keep_empty]
 
         return [s.strip() if hasattr(s, "strip") else s
-                for s in to_split(val, self.split_on_coma)
+                for s in to_split(val, self.split_on_comma)
                 if hasattr(s, "strip") and s.strip() != '' or self.keep_empty]
 
 

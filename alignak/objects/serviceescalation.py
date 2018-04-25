@@ -79,7 +79,7 @@ class Serviceescalation(Item):
         'escalation_period':
             StringProp(default=''),
         'escalation_options':
-            ListProp(default=['w', 'x', 'c', 'r'], split_on_coma=True),
+            ListProp(default=['w', 'x', 'c', 'r'], split_on_comma=True),
         'contacts':
             StringProp(),
         'contact_groups':

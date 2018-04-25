@@ -23,7 +23,7 @@ This file test the comments (acknowledge, downtimes...).
 """
 
 import time
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestComments(AlignakTest):

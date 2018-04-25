@@ -26,7 +26,7 @@ This file test the stats
 
 import time
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestStats(AlignakTest):
@@ -62,7 +62,7 @@ class TestStats(AlignakTest):
         now = time.time()
 
         svc0.latency = 0.96
-        svc1.latency = 0.88
+        svc1.latency = 0.884
         svc2.latency = 0.92
         svc3.latency = 1.3
         svc4.latency = 0.95

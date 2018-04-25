@@ -49,7 +49,7 @@
 #
 
 import time
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 from alignak.macroresolver import MacroResolver
 
 
@@ -205,7 +205,7 @@ class TestBusinesscorrelOutput(AlignakTest):
 
         # Performs checks
         output = svc_cor.output
-        print("BR output: %s" % output)
+        print(("BR output: %s" % output))
         assert output.find("[WARNING: test_host_02/srv2]") > 0
         assert output.find("[CRITICAL: test_host_03/srv3]") > 0
         assert output.find("[DOWN: test_host_04]") > 0

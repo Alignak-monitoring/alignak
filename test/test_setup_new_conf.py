@@ -25,7 +25,7 @@ This file test load the new conf on each module
 import logging
 import psutil
 import requests_mock
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 from alignak.daemons.schedulerdaemon import Alignak as schedulerdaemon
 from alignak.daemons.receiverdaemon import Receiver as receiverdaemon
 from alignak.daemons.pollerdaemon import Poller as pollerdaemon
@@ -68,8 +68,8 @@ class TestSetupNewConf(AlignakTest):
                 for key in memory._fields:
                     perfdatas.append("mem_%s=%db" % (key, getattr(memory, key)))
 
-                print("Process pid=%s, cpu/memory|%s" %
-                      (my_process.pid, " ".join(perfdatas)))
+                print(("Process pid=%s, cpu/memory|%s" %
+                      (my_process.pid, " ".join(perfdatas))))
 
             self.test_conf_scheduler()
 
@@ -102,7 +102,7 @@ class TestSetupNewConf(AlignakTest):
         assert scheduler_daemon.modules[0].option_2 == 'bar'
         assert scheduler_daemon.modules[0].option_3 == 'foobar'
         for host in scheduler_daemon.sched.pushed_conf.hosts:
-            print("Host: %s" % host)
+            print(("Host: %s" % host))
         # Two hosts declared in the configuration
         # One host provided by the Example module loaded in the arbiter
         assert 3 == len(scheduler_daemon.sched.pushed_conf.hosts)
@@ -133,7 +133,7 @@ class TestSetupNewConf(AlignakTest):
         assert scheduler_daemon.modules[0].option_2 == 'bar'
         assert scheduler_daemon.modules[0].option_3 == 'foobar'
         for host in scheduler_daemon.sched.pushed_conf.hosts:
-            print("Host: %s" % host)
+            print(("Host: %s" % host))
         # Two hosts declared in the configuration
         # One host provided by the Example module loaded in the arbiter
         assert 3 == len(scheduler_daemon.sched.pushed_conf.hosts)
@@ -259,7 +259,8 @@ class TestSetupNewConf(AlignakTest):
         # Simulate the daemons HTTP interface (very simple simulation !)
         with requests_mock.mock() as mockreq:
             mockreq.get('http://127.0.0.1:7768/ping', json='pong')
-            mockreq.get('http://127.0.0.1:7768/get_running_id', json=123456.123456)
+            mockreq.get('http://127.0.0.1:7768/get_running_id',
+                        json={"running_id": 123456.123456})
             mockreq.get('http://127.0.0.1:7768/fill_initial_broks', json=[])
             mockreq.get('http://127.0.0.1:7768/get_managed_configurations', json={})
             
@@ -267,8 +268,8 @@ class TestSetupNewConf(AlignakTest):
 
             # Check modules received configuration
             assert 1 == len(broker.modules)
-            print("Modules: %s" % broker.modules)
-            print(" - : %s" % broker.modules[0].__dict__)
+            print(("Modules: %s" % broker.modules))
+            print((" - : %s" % broker.modules[0].__dict__))
             assert broker.modules[0].module_alias == 'Example'
             assert broker.modules[0].option_1 == 'foo'
             assert broker.modules[0].option_2 == 'bar'
@@ -296,7 +297,8 @@ class TestSetupNewConf(AlignakTest):
         # Simulate the daemons HTTP interface (very simple simulation !)
         with requests_mock.mock() as mockreq:
             mockreq.get('http://127.0.0.1:7768/ping', json='pong')
-            mockreq.get('http://127.0.0.1:7768/get_running_id', json=123456.123456)
+            mockreq.get('http://127.0.0.1:7768/get_running_id',
+                        json={"running_id": 123456.123456})
             mockreq.get('http://127.0.0.1:7768/fill_initial_broks', json=[])
             mockreq.get('http://127.0.0.1:7768/get_managed_configurations', json={})
 

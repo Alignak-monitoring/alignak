@@ -48,7 +48,7 @@
 # This file is used to test commands
 #
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 from alignak.commandcall import CommandCall
 from alignak.objects import Command, Commands

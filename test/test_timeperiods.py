@@ -51,7 +51,7 @@
 #
 
 import datetime
-from alignak_test import *
+from .alignak_test import *
 from alignak.objects.timeperiod import Timeperiod
 
 
@@ -82,13 +82,13 @@ class TestTimeperiods(AlignakTest):
         now = time.time()
         # Get the 12 of july 2010 at 15:00, monday
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
-        print july_the_12
+        print(july_the_12)
 
         timeperiod = Timeperiod()
         timeperiod.resolve_daterange(timeperiod.dateranges, 'tuesday 16:30-24:00')
         t_next = timeperiod.get_next_valid_time_from_t(july_the_12)
         t_next = time.asctime(time.localtime(t_next))
-        print t_next
+        print(t_next)
         self.assertEqual("Tue Jul 13 16:30:00 2010", t_next)
 
     def test_simple_with_multiple_time(self):
@@ -102,15 +102,15 @@ class TestTimeperiods(AlignakTest):
         now = time.time()
         # Get the 12 of july 2010 at 15:00, monday
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
-        print july_the_12
+        print(july_the_12)
 
         # Then a simple same day
-        print "Cheking validity for", time.asctime(time.localtime(july_the_12))
+        print("Cheking validity for", time.asctime(time.localtime(july_the_12)))
         timeperiod = Timeperiod()
         timeperiod.resolve_daterange(timeperiod.dateranges, 'tuesday 00:00-07:00,21:30-24:00')
         t_next = timeperiod.get_next_valid_time_from_t(july_the_12)
         t_next = time.asctime(time.localtime(t_next))
-        print "RES:", t_next
+        print("RES:", t_next)
         self.assertEqual("Tue Jul 13 00:00:00 2010", t_next)
 
         # Now ask about at 00:00 time?
@@ -118,7 +118,7 @@ class TestTimeperiods(AlignakTest):
         # Then a simple same day
         t_next = timeperiod.get_next_valid_time_from_t(july_the_12)
         t_next = time.asctime(time.localtime(t_next))
-        print "Next?", t_next
+        print("Next?", t_next)
         self.assertEqual("Tue Jul 13 00:00:00 2010", t_next)
 
     def test_get_invalid_time(self):
@@ -130,13 +130,13 @@ class TestTimeperiods(AlignakTest):
         timeperiod = Timeperiod()
         timeperiod.resolve_daterange(timeperiod.dateranges, 'monday 00:00-24:00')
         first_nov = int(time.mktime(time.strptime("1 Nov 2010 00:00:00", "%d %b %Y %H:%M:%S")))
-        print first_nov
+        print(first_nov)
         end = timeperiod.get_next_invalid_time_from_t(first_nov)
         end = time.asctime(time.localtime(end))
         self.assertEqual("Tue Nov  2 00:00:00 2010", end)
 
         first_nov = int(time.mktime(time.strptime("2 Nov 2010 00:00:00", "%d %b %Y %H:%M:%S")))
-        print first_nov
+        print(first_nov)
         end = timeperiod.get_next_invalid_time_from_t(first_nov)
         end = time.asctime(time.localtime(end))
         self.assertEqual("Tue Nov  2 00:00:00 2010", end)
@@ -155,13 +155,13 @@ class TestTimeperiods(AlignakTest):
         timeperiod.exclude = [t2]
 
         first_nov = int(time.mktime(time.strptime("1 Nov 2010 00:00:00", "%d %b %Y %H:%M:%S")))
-        print first_nov
+        print(first_nov)
         end = timeperiod.get_next_invalid_time_from_t(first_nov)
         end = time.asctime(time.localtime(end))
         self.assertEqual("Mon Nov  1 08:30:00 2010", end)
 
         second_nov = int(time.mktime(time.strptime("2 Nov 2010 00:00:00", "%d %b %Y %H:%M:%S")))
-        print second_nov
+        print(second_nov)
         end = timeperiod.get_next_invalid_time_from_t(second_nov)
         end = time.asctime(time.localtime(end))
         self.assertEqual("Tue Nov  2 00:00:00 2010", end)
@@ -175,7 +175,7 @@ class TestTimeperiods(AlignakTest):
         timeperiod = Timeperiod()
         timeperiod.resolve_daterange(timeperiod.dateranges, 'monday 00:00-24:00')
         first_nov = int(time.mktime(time.strptime("26 Oct 2010 00:00:00", "%d %b %Y %H:%M:%S")))
-        print first_nov
+        print(first_nov)
         start = timeperiod.get_next_valid_time_from_t(first_nov)
         self.assertIsNotNone(start)
         start = time.asctime(time.localtime(start))
@@ -194,38 +194,38 @@ class TestTimeperiods(AlignakTest):
         now = time.time()
         # Get the 12 of july 2010 at 15:00, monday
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
-        print july_the_12
+        print(july_the_12)
 
         # Then a simple same day
         timeperiod = Timeperiod()
-        print "Cheking validity for", time.asctime(time.localtime(july_the_12))
+        print("Cheking validity for", time.asctime(time.localtime(july_the_12)))
         timeperiod.resolve_daterange(timeperiod.dateranges, 'monday 00:00-07:00,21:30-24:00')
         timeperiod.resolve_daterange(timeperiod.dateranges, 'tuesday 00:00-07:00,21:30-24:00')
         t_next = timeperiod.get_next_valid_time_from_t(july_the_12)
         t_next = time.asctime(time.localtime(t_next))
-        print "RES:", t_next
+        print("RES:", t_next)
         self.assertEqual("Mon Jul 12 21:30:00 2010", t_next)
 
         # what about the next invalid?
         t_next_inv = timeperiod.get_next_invalid_time_from_t(july_the_12)
         t_next_inv = time.asctime(time.localtime(t_next_inv))
-        print "RES:", t_next_inv
+        print("RES:", t_next_inv)
         self.assertEqual("Mon Jul 12 15:00:00 2010", t_next_inv)
 
         # what about a valid time and ask next invalid? Like at 22:00h?
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 22:00:00", "%d %b %Y %H:%M:%S"))
         t_next_inv = timeperiod.get_next_invalid_time_from_t(july_the_12)
         t_next_inv = time.asctime(time.localtime(t_next_inv))
-        print "RES:", t_next_inv #, t.is_time_valid(july_the_12)
+        print("RES:", t_next_inv) #, t.is_time_valid(july_the_12)
         self.assertEqual("Tue Jul 13 07:00:01 2010", t_next_inv)
 
         # Now ask about at 00:00 time?
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 00:00:00", "%d %b %Y %H:%M:%S"))
-        print "Cheking validity for", time.asctime(time.localtime(july_the_12))
+        print("Cheking validity for", time.asctime(time.localtime(july_the_12)))
         # Then a simple same day
         t_next = timeperiod.get_next_valid_time_from_t(july_the_12)
         t_next = time.asctime(time.localtime(t_next))
-        print "Next?", t_next
+        print("Next?", t_next)
         self.assertEqual("Mon Jul 12 00:00:00 2010", t_next)
 
     def test_get_invalid_when_timeperiod_24x7(self):
@@ -248,7 +248,7 @@ class TestTimeperiods(AlignakTest):
         tp_all.resolve_daterange(tp_all.dateranges, 'sunday 00:00-24:00')
         t_next_inv = tp_all.get_next_invalid_time_from_t(july_the_12)
         t_next_inv = time.asctime(time.localtime(t_next_inv))
-        print "RES:", t_next_inv #, t.is_time_valid(july_the_12)
+        print("RES:", t_next_inv) #, t.is_time_valid(july_the_12)
         self.assertEqual('Tue Jul 19 00:00:00 2011', t_next_inv)
 
     def test_simple_timeperiod_with_exclude(self):
@@ -260,7 +260,7 @@ class TestTimeperiods(AlignakTest):
         now = time.time()
         # Get the 12 of july 2010 at 15:00, monday
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
-        print july_the_12
+        print("July 12th, 2010: %s" % july_the_12)
 
         # First a false test, no results
         timeperiod = Timeperiod()
@@ -273,7 +273,7 @@ class TestTimeperiods(AlignakTest):
         timeperiod.resolve_daterange(timeperiod.dateranges, 'tuesday 16:30-24:00')
         t_next = timeperiod.get_next_valid_time_from_t(july_the_12)
         t_next = time.asctime(time.localtime(t_next))
-        print t_next
+        print(t_next)
         self.assertEqual("Tue Jul 13 16:30:00 2010", t_next)
 
         # Now we add this timeperiod an exception
@@ -288,7 +288,7 @@ class TestTimeperiods(AlignakTest):
         timeperiod.cache = {}
         t_next = timeperiod.get_next_valid_time_from_t(july_the_12)
         t_next = time.asctime(time.localtime(t_next))
-        print "T nxt with exclude:", t_next
+        print("T nxt with exclude:", t_next)
         self.assertEqual("Tue Jul 13 21:00:01 2010", t_next)
 
     def test_dayweek_timeperiod_with_exclude(self):
@@ -307,7 +307,7 @@ class TestTimeperiods(AlignakTest):
         timeperiod.resolve_daterange(timeperiod.dateranges, 'tuesday 2 16:30-24:00')
         t_next = timeperiod.get_next_valid_time_from_t(july_the_12)
         t_next = time.asctime(time.localtime(t_next))
-        print "T next", t_next
+        print("T next", t_next)
         self.assertEqual("Tue Jul 13 16:30:00 2010", t_next)
 
         # Now we add this timeperiod an exception
@@ -376,13 +376,13 @@ class TestTimeperiods(AlignakTest):
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
 
         # Then a funny daterange
-        print "Testing daterange", 'tuesday -1 - monday 1  16:30-24:00'
+        print("Testing daterange", 'tuesday -1 - monday 1  16:30-24:00')
         timerange = Timeperiod()
         timerange.timeperiod_name = 'T1'
         timerange.resolve_daterange(timerange.dateranges, 'tuesday -1 - monday 1  16:30-24:00')
         t_next = timerange.get_next_valid_time_from_t(july_the_12)
         t_next = time.asctime(time.localtime(t_next))
-        print "Next without exclude", t_next
+        print("Next without exclude", t_next)
         self.assertEqual("Tue Jul 27 16:30:00 2010", t_next)
 
         # Now we add this timeperiod an exception
@@ -417,13 +417,13 @@ class TestTimeperiods(AlignakTest):
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
 
         # Then a funny daterange
-        print "Testing daterange", 'tuesday -1 - monday 1  16:30-24:00'
+        print("Testing daterange", 'tuesday -1 - monday 1  16:30-24:00')
         timeperiod = Timeperiod()
         timeperiod.timeperiod_name = 'T1'
         timeperiod.resolve_daterange(timeperiod.dateranges, 'tuesday -1 - monday 1  16:30-24:00')
         t_next = timeperiod.get_next_valid_time_from_t(july_the_12)
         t_next = time.asctime(time.localtime(t_next))
-        print "Next without exclude", t_next
+        print("Next without exclude", t_next)
         self.assertEqual("Tue Jul 27 16:30:00 2010", t_next)
 
         # Now we add this timeperiod an exception
@@ -460,14 +460,14 @@ class TestTimeperiods(AlignakTest):
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
 
         # Then a funny daterange
-        print "Testing daterange", 'tuesday -1 july - monday 1 september  16:30-24:00'
+        print("Testing daterange", 'tuesday -1 july - monday 1 september  16:30-24:00')
         timeperiod = Timeperiod()
         timeperiod.timeperiod_name = 'T1'
         timeperiod.resolve_daterange(timeperiod.dateranges,
                                      'tuesday -1 july - monday 1 september  16:30-24:00')
         t_next = timeperiod.get_next_valid_time_from_t(july_the_12)
         t_next = time.asctime(time.localtime(t_next))
-        print "Next without exclude", t_next
+        print("Next without exclude", t_next)
         self.assertEqual("Tue Jul 27 16:30:00 2010", t_next)
 
         # Now we add this timeperiod an exception
@@ -490,7 +490,7 @@ class TestTimeperiods(AlignakTest):
         now = time.time()
         # Get the 13 of july 2010 at 15:00, tuesday
         july_the_13 = time.mktime(time.strptime("13 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
-        print july_the_13
+        print(july_the_13)
 
         # Now we add this timeperiod an exception
         timeperiod = Timeperiod()
@@ -506,7 +506,7 @@ class TestTimeperiods(AlignakTest):
 
         t_next = timeperiod.get_next_valid_time_from_t(july_the_13)
         t_next = time.asctime(time.localtime(t_next))
-        print "T next", t_next
+        print("T next", t_next)
         self.assertEqual("Wed Jul 14 00:00:00 2010", t_next)
 
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
@@ -522,7 +522,7 @@ class TestTimeperiods(AlignakTest):
         """
         # Get the 13 of july 2010 at 15:00, tuesday
         july_the_13 = time.mktime(time.strptime("13 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
-        print july_the_13
+        print(july_the_13)
 
         timeperiod = Timeperiod()
         timeperiod.resolve_daterange(timeperiod.dateranges, '2010-03-01 - 2020-03-01 00:00-24:00')
@@ -535,7 +535,7 @@ class TestTimeperiods(AlignakTest):
 
         t_next = timeperiod.get_next_valid_time_from_t(july_the_13)
         t_next = time.asctime(time.localtime(t_next))
-        print "T next", t_next
+        print("T next", t_next)
         self.assertEqual("Wed Jul 14 00:00:00 2010", t_next)
 
     def test_issue_1385(self):

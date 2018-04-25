@@ -73,8 +73,11 @@ from alignak.property import IntegerProp, StringProp, BoolProp
 from alignak.stats import statsmgr
 from alignak.http.broker_interface import BrokerInterface
 from alignak.objects.satellitelink import SatelliteLink, LinkError
+from alignak.brok import Brok
+from alignak.external_command import ExternalCommand
+from alignak.message import Message
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Broker(BaseSatellite):
@@ -124,33 +127,28 @@ class Broker(BaseSatellite):
 
         self.http_interface = BrokerInterface(self)
 
-    def add(self, elt):  # pragma: no cover, seems not to be used
-        """Add an element to the broker lists
-
-        Original comment : Schedulers have some queues. We can simplify the call by adding
-          elements into the proper queue just by looking at their type  Brok -> self.broks
-          TODO: better tag ID?
-          External commands -> self.external_commands
-
-        TODO: is it useful?
+    def add(self, elt):
+        """Generic function to add objects to the daemon internal lists.
+        Manage Broks, External commands and Messages (from modules queues)
 
         :param elt: object to add
-        :type elt: object
+        :type elt: alignak.AlignakObject
         :return: None
         """
-        cls_type = elt.__class__.my_type
-        if cls_type == 'brok':
+        if isinstance(elt, Brok):
             # We tag the broks with our instance_id
             elt.instance_id = self.instance_id
-            self.internal_broks.append(elt)
+            with self.broks_lock:
+                self.internal_broks.append(elt)
             statsmgr.counter('broks.added', 1)
-            return
-        elif cls_type == 'externalcommand':
-            self.external_commands.append(elt)
-            statsmgr.counter('external-commands.added', 1)
+        elif isinstance(elt, ExternalCommand):
+            logger.debug("Queuing an external command '%s'", str(elt.__dict__))
+            with self.external_commands_lock:
+                self.external_commands.append(elt)
+                statsmgr.counter('external-commands.added', 1)
         # Maybe we got a Message from the modules, it's way to ask something
         # like from now a full data from a scheduler for example.
-        elif cls_type == 'message':
+        elif isinstance(elt, Message):
             # We got a message, great!
             logger.debug(str(elt.__dict__))
             if elt.get_type() == 'NeedData':
@@ -233,7 +231,7 @@ class Broker(BaseSatellite):
         :return: None
         """
         for satellites in [self.schedulers, self.pollers, self.reactionners, self.receivers]:
-            for satellite_link in satellites.values():
+            for satellite_link in list(satellites.values()):
                 logger.debug("Getting broks from %s", satellite_link)
 
                 _t0 = time.time()
@@ -250,47 +248,25 @@ class Broker(BaseSatellite):
                                        % (satellite_link.name), len(tmp_broks))
                         statsmgr.timer('get-new-broks-time.%s'
                                        % (satellite_link.name), time.time() - _t0)
-                        for brok in tmp_broks.values():
+                        for brok in list(tmp_broks.values()):
                             brok.instance_id = satellite_link.instance_id
 
                         # Add the broks to our global list
-                        self.external_broks.extend(tmp_broks.values())
+                        self.external_broks.extend(list(tmp_broks.values()))
 
-    def get_retention_data(self):  # pragma: no cover, useful?
-        """Get all broks
-
-        TODO: using retention in the broker is dangerous and
-        do not seem of any utility with Alignak. To be removed!
-
-        :return: broks container
-        :rtype: object
-        """
-        return self.external_broks
-
-    def restore_retention_data(self, data):  # pragma: no cover, useful?
-        """Add data to broks container
-
-        TODO: using retention in the broker is dangerous and
-        do not seem of any utility with Alignak. To be removed!
-
-        :param data: broks to add
-        :type data: list
-        :return: None
-        """
-        self.external_broks.extend(data)
-
-    def do_stop(self):
-        """Stop all children of this process
-
-        :return: None
-        """
-        act = active_children()
-        for child in act:
-            child.terminate()
-            child.join(1)
-        super(Broker, self).do_stop()
+    # def do_stop(self):
+    #     """Stop all children of this process
+    #
+    #     :return: None
+    #     """
+    #     # my_active_children = active_children()
+    #     # for child in my_active_children:
+    #     #     child.terminate()
+    #     #     child.join(1)
+    #     super(Broker, self).do_stop()
 
     def setup_new_conf(self):
+        # pylint: disable=too-many-branches, too-many-locals
         """Broker custom setup_new_conf method
 
         This function calls the base satellite treatment and manages the configuration needed
@@ -352,8 +328,9 @@ class Broker(BaseSatellite):
                     new_link.wait_homerun = wait_homerun
                     new_link.actions = actions
 
-                    # # replacing satellite address and port by those defined in satellite_map
-                    # # todo: necessary ?
+                    # Replace satellite address and port by those defined in satellite_map
+                    # todo: check if it is really necessary! Add a unit test for this
+                    # Not sure about this because of the daemons/satellites configuration
                     # if new_link.name in self_conf.get('satellite_map', {}):
                     #     new_link = dict(new_link)  # make a copy
                     #     new_link.update(self_conf.get('satellite_map', {})[new_link.name])
@@ -379,7 +356,7 @@ class Broker(BaseSatellite):
             # Initialize connection with my schedulers first
             logger.info("Initializing connection with my schedulers:")
             my_satellites = self.get_links_of_type(s_type='scheduler')
-            for satellite in my_satellites.values():
+            for satellite in list(my_satellites.values()):
                 logger.info("- %s/%s", satellite.type, satellite.name)
                 if not self.daemon_connection_init(satellite):
                     logger.error("Satellite connection failed: %s", satellite)
@@ -388,7 +365,7 @@ class Broker(BaseSatellite):
             logger.info("Initializing connection with my satellites:")
             for sat_type in ['arbiter', 'reactionner', 'poller', 'receiver']:
                 my_satellites = self.get_links_of_type(s_type=sat_type)
-                for satellite in my_satellites.values():
+                for satellite in list(my_satellites.values()):
                     logger.info("- %s/%s", satellite.type, satellite.name)
                     if not self.daemon_connection_init(satellite):
                         logger.error("Satellite connection failed: %s", satellite)
@@ -421,6 +398,7 @@ class Broker(BaseSatellite):
         # self.modules_manager.clear_instances()
 
     def do_loop_turn(self):
+        # pylint: disable=too-many-branches
         """Loop used to:
          * check if modules are alive, if not restart them
          * add broks to queue of each modules
@@ -430,7 +408,7 @@ class Broker(BaseSatellite):
         if not self.got_initial_broks:
             # Asking initial broks from my schedulers
             my_satellites = self.get_links_of_type(s_type='scheduler')
-            for satellite in my_satellites.values():
+            for satellite in list(my_satellites.values()):
                 logger.info("Asking my initial broks from '%s'", satellite.name)
                 _t0 = time.time()
                 try:
@@ -525,7 +503,6 @@ class Broker(BaseSatellite):
         :return: stats dictionary
         :rtype: dict
         """
-        now = int(time.time())
         # Call the base Daemon one
         res = super(Broker, self).get_daemon_stats(details=details)
 
@@ -538,15 +515,6 @@ class Broker(BaseSatellite):
         counters['pollers'] = len(self.pollers)
         counters['reactionners'] = len(self.reactionners)
         counters['receivers'] = len(self.receivers)
-
-        # To be refactored
-        metrics = res['metrics']
-        metrics.append('%s.%s.external-broks.queue %d %d'
-                       % (self.type, self.name, len(self.external_broks), now))
-        metrics.append('%s.%s.internal-broks.queue %d %d'
-                       % (self.type, self.name, len(self.internal_broks), now))
-        metrics.append('%s.%s.arbiter-broks.queue %d %d'
-                       % (self.type, self.name, len(self.arbiter_broks), now))
 
         return res
 

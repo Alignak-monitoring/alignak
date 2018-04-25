@@ -23,7 +23,7 @@ This file test the last_state_change in many cases
 """
 
 import time
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestHostsvcLastStateChange(AlignakTest):

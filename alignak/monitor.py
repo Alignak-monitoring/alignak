@@ -31,7 +31,7 @@ from requests import RequestException
 from requests.auth import HTTPBasicAuth
 from requests.adapters import HTTPAdapter
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class MonitorConnection(object):
@@ -182,7 +182,7 @@ class MonitorConnection(object):
             return False
 
         endpoint = 'login'
-        json = {u'username': username, u'password': password}
+        json = {'username': username, 'password': password}
         response = self.get_response(method='POST', endpoint=endpoint, json=json)
         if response.status_code == 401:
             logger.error("Access denied to %s", self.url_endpoint_root)
@@ -244,7 +244,7 @@ class MonitorConnection(object):
 
         resp = self.decode(response=response)
         if '_status' not in resp:  # pragma: no cover - need specific backend tests
-            resp['_status'] = 'OK'  # TODO: Sure??
+            resp['_status'] = u'OK'  # TODO: Sure??
 
         return resp
 

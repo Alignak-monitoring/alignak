@@ -29,7 +29,7 @@ import pytest
 import logging
 import requests_mock
 from freezegun import freeze_time
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 from alignak.log import ALIGNAK_LOGGER_NAME
 from alignak.misc.serialization import unserialize
 from alignak.daemons.arbiterdaemon import Arbiter
@@ -45,7 +45,7 @@ class TestMonitor(AlignakTest):
         super(TestMonitor, self).setUp()
 
         # Log at DEBUG level
-        self.set_debug_log()
+        self.set_unit_tests_logger_level()
 
     def _monitoring(self, env_filename='cfg/monitor/simple.ini', loops=3, multi_realms=False):
         """ monitoring process: prepare, check, dispatch
@@ -85,9 +85,9 @@ class TestMonitor(AlignakTest):
         # #1 - Get a new dispatcher
         my_dispatcher = Dispatcher(my_arbiter.conf, my_arbiter.link_to_myself)
         my_arbiter.dispatcher = my_dispatcher
-        print("*** All daemons WS: %s"
+        print(("*** All daemons WS: %s"
               % ["%s:%s" % (link.address, link.port)
-                 for link in my_dispatcher.all_daemons_links])
+                 for link in my_dispatcher.all_daemons_links]))
 
         assert my_arbiter.alignak_monitor == "http://super_alignak:7773/ws"
         assert my_arbiter.alignak_monitor_username == 'admin'
@@ -129,18 +129,25 @@ class TestMonitor(AlignakTest):
                 # Check what is patched on /host ...
                 if 'host' in request.url:
                     received = request.json()
-                    print(index, request.url, received)
+                    print((index, request.url, received))
 
                     from pprint import pprint
                     pprint(received)
 
                     assert received['name'] == 'My Alignak'
                     assert received['livestate']['timestamp'] == 1519583400
-                    assert received['livestate']['state'] == u'up'
-                    assert received['livestate']['output'] == u'Some of my daemons are not reachable.'
+                    assert received['livestate']['state'] == 'up'
+                    assert received['livestate']['output'] == 'Some of my daemons are not reachable.'
                     for metric in metrics:
                         assert metric in received['livestate']['perf_data']
-                    assert received['livestate']['long_output'] == u'poller-master - daemon is not reachable.\nreactionner-master - daemon is not reachable.\nscheduler-master - daemon is not reachable.\nbroker-master - daemon is not reachable.\nreceiver-master - daemon is not reachable.'
+                    print(received['livestate']['long_output'])
+                    # Long output is sorted by daemon name
+                    assert received['livestate']['long_output'] == \
+                           u'broker-master - daemon is not reachable.\n' \
+                           u'poller-master - daemon is not reachable.\n' \
+                           u'reactionner-master - daemon is not reachable.\n' \
+                           u'receiver-master - daemon is not reachable.\n' \
+                           u'scheduler-master - daemon is not reachable.'
 
                     for link in my_dispatcher.all_daemons_links:
                         assert link.name in [service['name'] for service in received['services']]
@@ -185,9 +192,9 @@ class TestMonitor(AlignakTest):
         # #1 - Get a new dispatcher
         my_dispatcher = Dispatcher(my_arbiter.conf, my_arbiter.link_to_myself)
         my_arbiter.dispatcher = my_dispatcher
-        print("*** All daemons WS: %s"
+        print(("*** All daemons WS: %s"
               % ["%s:%s" % (link.address, link.port)
-                 for link in my_dispatcher.all_daemons_links])
+                 for link in my_dispatcher.all_daemons_links]))
 
         my_arbiter.push_passive_check(details=False)
 

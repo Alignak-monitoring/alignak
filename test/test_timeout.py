@@ -51,7 +51,7 @@
 #
 import time
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 from alignak.action import Action
 from alignak.notification import Notification
@@ -125,7 +125,7 @@ class TestWorkerTimeout(AlignakTest):
         w.returns_queue = from_queue
         w.slave_q = to_queue
 
-        for i in xrange(1, 10):
+        for i in range(1, 10):
             w.get_new_checks(to_queue, from_queue)
             # During the first loop the sleeping command is launched
             w.launch_new_checks()
@@ -149,4 +149,4 @@ class TestWorkerTimeout(AlignakTest):
         self._sched.put_results(o)
         self.show_logs()
         self.assert_any_log_match("Contact alignak service notification command "
-                                  "'libexec/sleep_command.sh 7 ' timed out after 2 seconds")
+                                  "'libexec/sleep_command.sh 7 ' timed out after")

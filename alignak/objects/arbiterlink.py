@@ -53,7 +53,7 @@ from alignak.property import IntegerProp, StringProp, FloatProp
 from alignak.http.client import HTTPClientException, HTTPClientConnectionException, \
     HTTPClientTimeoutException
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class ArbiterLink(SatelliteLink):
@@ -65,7 +65,7 @@ class ArbiterLink(SatelliteLink):
     properties = SatelliteLink.properties.copy()
     properties.update({
         'type':
-            StringProp(default='arbiter', fill_brok=['full_status'], to_send=True),
+            StringProp(default=u'arbiter', fill_brok=['full_status'], to_send=True),
         'arbiter_name':
             StringProp(default='', fill_brok=['full_status']),
         'host_name':
@@ -125,35 +125,6 @@ class ArbiterLink(SatelliteLink):
                                           "sending do not run: %s" % str(exp))
 
         return False
-
-    def get_all_states(self):
-        """Get states of all satellites
-
-        TODO: is it useful?
-
-        :return: list of all states
-        :rtype: list | None
-        """
-        logger.debug("[%s] get_all_states", self.get_name())
-
-        if not self.reachable or not self.ping():
-            logger.warning("Not reachable for get_all_states: %s", self.name)
-            return []
-
-        try:
-            return self.con.get('get_all_states')
-        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-            self.add_failed_check_attempt("Connection error when "
-                                          "getting all states: %s" % str(exp))
-            self.set_dead()
-        except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
-            self.add_failed_check_attempt("Connection timeout when "
-                                          "getting all states: %s" % str(exp))
-        except HTTPClientException as exp:
-            self.add_failed_check_attempt("Error when "
-                                          "getting all states: %s" % str(exp))
-
-        return None
 
 
 class ArbiterLinks(SatelliteLinks):

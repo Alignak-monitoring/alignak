@@ -48,7 +48,7 @@
 This file is used to test the complex hostgroups
 """
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestComplexHostgroups(AlignakTest):
@@ -75,7 +75,7 @@ class TestComplexHostgroups(AlignakTest):
 
     def dump_hosts(self, svc):
         for h in svc.host_name:
-            print h
+            print(h)
 
     # check if service exist in hst, but NOT in others
     def service_defined_only_on(self, service_description, hosts):
@@ -92,8 +92,8 @@ class TestComplexHostgroups(AlignakTest):
         for host in hosts:
             svc = self.find_service(host.host_name, service_description)
             if svc is None:
-                print "Error: the host %s is missing service %s!!" % (host.host_name,
-                                                                      service_description)
+                print("Error: the host %s is missing service %s!!" % (host.host_name,
+                                                                      service_description))
                 result = False
 
         # Do not exist on the other hosts
@@ -101,8 +101,8 @@ class TestComplexHostgroups(AlignakTest):
             if host not in hosts:
                 svc = self.find_service(host.host_name, service_description)
                 if svc is not None:
-                    print "Error: the host %s got the service %s!!" % (host.host_name,
-                                                                       service_description)
+                    print("Error: the host %s got the service %s!!" % (host.host_name,
+                                                                       service_description))
                     result = False
         return result
 

@@ -49,7 +49,7 @@
 """
 
 from alignak.misc.serialization import unserialize
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestFlapping(AlignakTest):
@@ -101,7 +101,7 @@ class TestFlapping(AlignakTest):
         assert 'CRITICAL' == svc.state
         assert 'HARD' == svc.state_type
         # Ok, now go in flap!
-        for i in xrange(1, 10):
+        for i in range(1, 10):
             self.scheduler_loop(1, [[svc, 0, 'Ok']])
             self.scheduler_loop(1, [[svc, 2, 'Crit']])
 
@@ -110,99 +110,99 @@ class TestFlapping(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._main_broker.broks.itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(iter(self._main_broker.broks.values()), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
 
         expected_logs = [
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Crit'),
-            (u'error', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;'
-                       u'notify-service;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Ok'),
-            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;'
-                      u'notify-service;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STARTED; '
-                      u'Service appears to have started flapping (83.8% change >= 50.0% threshold)'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      u'FLAPPINGSTART (OK);notify-service;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Crit'),
+            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;'
+                       'notify-service;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Ok'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;'
+                      'notify-service;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STARTED; '
+                      'Service appears to have started flapping (83.8% change >= 50.0% threshold)'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      'FLAPPINGSTART (OK);notify-service;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
         ]
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_logs
 
         # Now we put it as back :)
         # 10 is not enouth to get back as normal
-        for i in xrange(1, 11):
+        for i in range(1, 11):
             self.scheduler_loop(1, [[svc, 0, 'Ok']])
         assert svc.is_flapping
 
         # 10 others can be good (near 4.1 %)
-        for i in xrange(1, 11):
+        for i in range(1, 11):
             self.scheduler_loop(1, [[svc, 0, 'Ok']])
         assert not svc.is_flapping
 
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._main_broker.broks.itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(iter(self._main_broker.broks.values()), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
 
-        print("Logs: %s" % monitoring_logs)
+        print(("Logs: %s" % monitoring_logs))
         expected_logs = [
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Crit'),
-            (u'error', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;'
-                       u'notify-service;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Ok'),
-            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;'
-                      u'notify-service;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STARTED; '
-                      u'Service appears to have started flapping '
-                      u'(83.8% change >= 50.0% threshold)'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      u'FLAPPINGSTART (OK);notify-service;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STOPPED; '
-                      u'Service appears to have stopped flapping '
-                      u'(21.5% change < 25.0% threshold)'),
-            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      u'FLAPPINGSTOP (OK);notify-service;Ok')
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Crit'),
+            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;'
+                       'notify-service;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Ok'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;'
+                      'notify-service;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STARTED; '
+                      'Service appears to have started flapping '
+                      '(83.8% change >= 50.0% threshold)'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      'FLAPPINGSTART (OK);notify-service;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STOPPED; '
+                      'Service appears to have stopped flapping '
+                      '(21.5% change < 25.0% threshold)'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      'FLAPPINGSTOP (OK);notify-service;Ok')
         ]
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_logs
@@ -246,7 +246,7 @@ class TestFlapping(AlignakTest):
         assert 'CRITICAL' == svc.state
         assert 'HARD' == svc.state_type
         # Ok, now go in flap!
-        for i in xrange(1, 10):
+        for i in range(1, 10):
             self.scheduler_loop(1, [[svc, 0, 'Ok']])
             self.scheduler_loop(1, [[svc, 2, 'Crit']])
 
@@ -255,99 +255,99 @@ class TestFlapping(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._main_broker.broks.values(), key=lambda x: x.creation_time):
+        for brok in sorted(list(self._main_broker.broks.values()), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
 
         expected_logs = [
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Crit'),
-            (u'error', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;'
-                       u'notify-service;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Ok'),
-            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;'
-                      u'notify-service;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STARTED; '
-                      u'Service appears to have started flapping (83.8% change >= 50.0% threshold)'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      u'FLAPPINGSTART (OK);notify-service;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Crit'),
+            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;'
+                       'notify-service;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Ok'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;'
+                      'notify-service;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STARTED; '
+                      'Service appears to have started flapping (83.8% change >= 50.0% threshold)'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      'FLAPPINGSTART (OK);notify-service;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
         ]
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_logs
 
         # Now we put it as back :)
         # 10 is not enouth to get back as normal
-        for i in xrange(1, 11):
+        for i in range(1, 11):
             self.scheduler_loop(1, [[svc, 0, 'Ok']])
         assert svc.is_flapping
 
         # 10 others can be good (near 4.1 %)
-        for i in xrange(1, 11):
+        for i in range(1, 11):
             self.scheduler_loop(1, [[svc, 0, 'Ok']])
         assert not svc.is_flapping
 
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._main_broker.broks.values(), key=lambda x: x.creation_time):
+        for brok in sorted(list(self._main_broker.broks.values()), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
 
-        print("Logs: %s" % monitoring_logs)
+        print(("Logs: %s" % monitoring_logs))
         expected_logs = [
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Crit'),
-            (u'error', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;'
-                       u'notify-service;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Ok'),
-            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;'
-                      u'notify-service;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STARTED; '
-                      u'Service appears to have started flapping '
-                      u'(83.8% change >= 50.0% threshold)'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      u'FLAPPINGSTART (OK);notify-service;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            (u'error', u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
-            (u'info', u'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STOPPED; '
-                      u'Service appears to have stopped flapping '
-                      u'(21.5% change < 25.0% threshold)'),
-            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      u'FLAPPINGSTOP (OK);notify-service;Ok')
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Crit'),
+            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;'
+                       'notify-service;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Ok'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;'
+                      'notify-service;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STARTED; '
+                      'Service appears to have started flapping '
+                      '(83.8% change >= 50.0% threshold)'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      'FLAPPINGSTART (OK);notify-service;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STOPPED; '
+                      'Service appears to have stopped flapping '
+                      '(21.5% change < 25.0% threshold)'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      'FLAPPINGSTOP (OK);notify-service;Ok')
         ]
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_logs

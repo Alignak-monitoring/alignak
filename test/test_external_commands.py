@@ -56,8 +56,8 @@ import datetime
 import pytest
 from freezegun import freeze_time
 
-from alignak_test import AlignakTest
-from alignak_test import ExternalCommandManager
+from .alignak_test import AlignakTest
+from .alignak_test import ExternalCommandManager
 from alignak.misc.common import DICT_MODATTR
 from alignak.misc.serialization import serialize, unserialize
 from alignak.external_command import ExternalCommand
@@ -88,24 +88,25 @@ class TestExternalCommands(AlignakTest):
         """
         # Some external commands in a list
         external_commands = []
-        excmd = ExternalCommand('[%d] ACKNOWLEDGE_HOST_PROBLEM;test_host_fred;2;1;1;admin;Acknowledge requested from WebUI' % time.time())
+        excmd = ExternalCommand('[%d] ACKNOWLEDGE_HOST_PROBLEM;test_host_fred;2;1;1;admin;'
+                                'Acknowledge requested from WebUI' % time.time())
         external_commands.append(excmd)
         excmd = ExternalCommand('[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_1;unknownservice;'
                                 '1;Service is WARNING|rtt=9999;5;10;0;10000' % time.time())
         external_commands.append(excmd)
 
         # Serialize to send to another daemon
-        print("Commands: %s" % external_commands)
+        print(("Commands: %s" % external_commands))
         for cmd in external_commands:
-            print("- %s" % cmd.__dict__)
+            print(("- %s" % cmd.__dict__))
         res = serialize(external_commands, True)
-        print("Serialized: %s" % res)
+        print(("Serialized: %s" % res))
 
         # Unserialize when received by a daemon
         result = unserialize(res, True)
-        print("Unserialized: %s" % result)
+        print(("Unserialized: %s" % result))
         for cmd in result:
-            print("- %s" % cmd.__dict__)
+            print(("- %s" % cmd.__dict__))
             assert isinstance(cmd, ExternalCommand)
             assert cmd.__class__.my_type == "externalcommand"
 
@@ -140,8 +141,8 @@ class TestExternalCommands(AlignakTest):
         # Resolve command result is None because the command is not recognized
         assert res is None
         self.assert_any_log_match(
-            re.escape("WARNING: [arbiter-master.alignak.external_command] External command 'command' "
-                      "is not recognized, sorry")
+            re.escape(u"WARNING: [arbiter-master.alignak.external_command] "
+                      u"External command 'command' is not recognized, sorry")
         )
 
         # ---
@@ -152,12 +153,13 @@ class TestExternalCommands(AlignakTest):
         res = self.manage_external_command(excmd)
         if self.ecm_mode == 'applyer':
             self.assert_any_log_match(
-                re.escape("WARNING: [arbiter-master.alignak.external_command] The external command "
-                          "'SHUTDOWN_PROGRAM' is not currently implemented in Alignak.")
+                re.escape(u"WARNING: [arbiter-master.alignak.external_command] "
+                          u"The external command 'SHUTDOWN_PROGRAM' is not currently "
+                          u"implemented in Alignak.")
             )
         else:
             # Resolve command result is not None because the command is recognized
-            print("Result (mode=%s): %s" % (self.ecm_mode, res))
+            print(("Result (mode=%s): %s" % (self.ecm_mode, res)))
             assert res is not None
 
         # ---
@@ -173,7 +175,7 @@ class TestExternalCommands(AlignakTest):
             )
         else:
             # Resolve command result is not None because the command is recognized
-            print("Result (mode=%s): %s" % (self.ecm_mode, res))
+            print(("Result (mode=%s): %s" % (self.ecm_mode, res)))
             assert res is not None
 
         # ---
@@ -198,7 +200,7 @@ class TestExternalCommands(AlignakTest):
         assert res is None
         if self.ecm_mode == 'applyer':
             # We get 'monitoring_log' broks for logging to the monitoring logs...
-            broks = [b for b in self._main_broker.broks.values()
+            broks = [b for b in list(self._main_broker.broks.values())
                      if b.type == 'monitoring_log']
             assert len(broks) == 1
         # ...and some logs
@@ -214,7 +216,7 @@ class TestExternalCommands(AlignakTest):
         res = self.manage_external_command(excmd)
         if self.ecm_mode == 'applyer':
             # We get an 'monitoring_log' brok for logging to the monitoring logs...
-            broks = [b for b in self._main_broker.broks.values()
+            broks = [b for b in list(self._main_broker.broks.values())
                      if b.type == 'monitoring_log']
             assert len(broks) == 1
             # ...and some logs
@@ -228,14 +230,14 @@ class TestExternalCommands(AlignakTest):
         res = self.manage_external_command(excmd)
         if self.ecm_mode == 'applyer':
             # We get an 'monitoring_log' brok for logging to the monitoring logs...
-            broks = [b for b in self._main_broker.broks.values()
+            broks = [b for b in list(self._main_broker.broks.values())
                      if b.type == 'monitoring_log']
             assert len(broks) == 1
             # ...and some logs
             self.assert_any_log_match("External command 'unknown_command' is not recognized, sorry")
         else:
             # Resolve command result is not None because the command is recognized
-            print("Result unknown command (mode=%s): %s" % (self.ecm_mode, res))
+            print(("Result unknown command (mode=%s): %s" % (self.ecm_mode, res)))
             assert res is None
 
         #  ---
@@ -247,7 +249,7 @@ class TestExternalCommands(AlignakTest):
         self.external_command_loop()
         if self.ecm_mode == 'applyer':
             # No 'monitoring_log' brok
-            broks = [b for b in self._main_broker.broks.values()
+            broks = [b for b in list(self._main_broker.broks.values())
                      if b.type == 'monitoring_log']
             assert len(broks) == 0
             # ...but an unknown check result brok is raised...
@@ -262,7 +264,7 @@ class TestExternalCommands(AlignakTest):
                                           "but the host could not be found!")
         else:
             # Resolve command result is not None because the command is recognized
-            print("Result host check command (mode=%s): %s" % (self.ecm_mode, res))
+            print(("Result host check command (mode=%s): %s" % (self.ecm_mode, res)))
             assert res is None
 
         # Now test different types of commands
@@ -286,7 +288,7 @@ class TestExternalCommands(AlignakTest):
         now = time.time()
         excmd = '[%d] DISABLE_HOST_FRESHNESS_CHECKS' % now
         res = self.manage_external_command(excmd)
-        print("Result (mode=%s): %s" % (self.ecm_mode, res))
+        print(("Result (mode=%s): %s" % (self.ecm_mode, res)))
         if self.ecm_mode == 'applyer':
             # Command is supposed to be managed
             assert res is None
@@ -303,7 +305,7 @@ class TestExternalCommands(AlignakTest):
         self._main_broker.broks = {}
         excmd = '[%d] DISABLE_HOST_NOTIFICATIONS;test_host_0' % time.time()
         res = self.manage_external_command(excmd)
-        print("Result (mode=%s): %s" % (self.ecm_mode, res))
+        print(("Result (mode=%s): %s" % (self.ecm_mode, res)))
         self.show_logs()
         # Command is supposed to be managed
         assert res is None
@@ -327,7 +329,7 @@ class TestExternalCommands(AlignakTest):
         self._scheduler.run_external_commands(excmds)
         self.external_command_loop()
         # We get an 'monitoring_log' brok for logging to the monitoring logs...
-        broks = [b for b in self._main_broker.broks.values()
+        broks = [b for b in list(self._main_broker.broks.values())
                  if b.type == 'monitoring_log']
         assert len(broks) == 2
 
@@ -853,7 +855,7 @@ class TestExternalCommands(AlignakTest):
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         assert len(host.comments) == 1
-        comment = host.comments.values()[0]
+        comment = list(host.comments.values())[0]
         assert comment.comment == "My comment"
         assert comment.author == "test_contact"
 
@@ -897,26 +899,26 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
 
         expected_logs = [
-            (u'info',
+            ('info',
              u'EXTERNAL COMMAND: [%s] ADD_HOST_COMMENT;'
              u'test_host_0;1;test_contact;My comment' % now),
-            (u'info',
+            ('info',
              u'EXTERNAL COMMAND: [%s] ADD_HOST_COMMENT;'
              u'test_host_0;1;test_contact;My comment 2' % now),
-            (u'info',
+            ('info',
              u'EXTERNAL COMMAND: [%s] ADD_HOST_COMMENT;'
              u'test_host_0;1;test_contact;My accented é"{|:âàç comment' % now),
-            (u'info',
+            ('info',
              u'EXTERNAL COMMAND: [%s] DEL_HOST_COMMENT;qsdqszerzerzd' % now),
-            (u'warning',
+            ('warning',
              u'DEL_HOST_COMMENT: comment id: qsdqszerzerzd does not exist and cannot be deleted.'),
-            (u'info',
+            ('info',
              u'EXTERNAL COMMAND: [%s] DEL_ALL_HOST_COMMENTS;test_host_0' % now),
         ]
         for log_level, log_message in expected_logs:
@@ -945,7 +947,7 @@ class TestExternalCommands(AlignakTest):
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         assert len(svc.comments) == 1
-        comment = svc.comments.values()[0]
+        comment = list(svc.comments.values())[0]
         assert comment.comment == "My comment"
         assert comment.author == "test_contact"
 
@@ -990,26 +992,26 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
 
         expected_logs = [
-            (u'info',
+            ('info',
              u'EXTERNAL COMMAND: [%s] ADD_SVC_COMMENT;'
              u'test_host_0;test_ok_0;1;test_contact;My comment' % now),
-            (u'info',
+            ('info',
              u'EXTERNAL COMMAND: [%s] ADD_SVC_COMMENT;'
              u'test_host_0;test_ok_0;1;test_contact;My comment 2' % now),
-            (u'info',
+            ('info',
              u'EXTERNAL COMMAND: [%s] ADD_SVC_COMMENT;'
              u'test_host_0;test_ok_0;1;test_contact;My accented é"{|:âàç comment' % now),
-            (u'info',
+            ('info',
              u'EXTERNAL COMMAND: [%s] DEL_SVC_COMMENT;qsdqszerzerzd' % now),
-            (u'warning',
+            ('warning',
              u'DEL_SVC_COMMENT: comment id: qsdqszerzerzd does not exist and cannot be deleted.'),
-            (u'info',
+            ('info',
              u'EXTERNAL COMMAND: [%s] DEL_ALL_SVC_COMMENTS;test_host_0;test_ok_0' % now),
         ]
         for log_level, log_message in expected_logs:
@@ -1027,7 +1029,7 @@ class TestExternalCommands(AlignakTest):
         host.event_handler_enabled = False
         host.active_checks_enabled = True
         host.passive_checks_enabled = True
-        print("Host: %s - state: %s/%s" % (host, host.state_type, host.state))
+        print(("Host: %s - state: %s/%s" % (host, host.state_type, host.state)))
         assert host is not None
 
         # Get dependent host
@@ -1036,7 +1038,7 @@ class TestExternalCommands(AlignakTest):
         router.event_handler_enabled = False
         router.active_checks_enabled = True
         router.passive_checks_enabled = True
-        print("Router: %s - state: %s/%s" % (router, router.state_type, router.state))
+        print(("Router: %s - state: %s/%s" % (router, router.state_type, router.state)))
         assert router is not None
 
         now = int(time.time())
@@ -1056,14 +1058,14 @@ class TestExternalCommands(AlignakTest):
         self.assert_any_check_match('hostname test_host_0', 'command')
         self.assert_any_check_match('servicedesc test_ok_0', 'command')
         assert 'DOWN' == router.state
-        assert u'Host is DOWN' == router.output
+        assert 'Host is DOWN' == router.output
         assert False == router.problem_has_been_acknowledged
 
         # Acknowledge router
         excmd = '[%d] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test' % now
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
-        print "Host state", router.state, router.problem_has_been_acknowledged
+        print("Host state", router.state, router.problem_has_been_acknowledged)
         assert 'DOWN' == router.state
         assert True == router.problem_has_been_acknowledged
 
@@ -1071,32 +1073,32 @@ class TestExternalCommands(AlignakTest):
         excmd = '[%d] REMOVE_HOST_ACKNOWLEDGEMENT;test_router_0' % now
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
-        print "Host state", router.state, router.problem_has_been_acknowledged
+        print("Host state", router.state, router.problem_has_been_acknowledged)
         assert 'DOWN' == router.state
         assert False == router.problem_has_been_acknowledged
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
         print(monitoring_logs)
 
         expected_logs = [
-            (u'warning',
+            ('warning',
              u'PASSIVE HOST CHECK: test_router_0;2;Host is DOWN;;'),
-            (u'error',
+            ('error',
              u'HOST ALERT: test_router_0;DOWN;SOFT;1;Host is DOWN'),
-            (u'info',
+            ('info',
              u'HOST ACKNOWLEDGE ALERT: test_router_0;STARTED; Host problem has been acknowledged'),
-            (u'info',
+            ('info',
              u'EXTERNAL COMMAND: [1496341800] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test'),
-            (u'info',
+            ('info',
              u'HOST NOTIFICATION: test_contact;test_router_0;ACKNOWLEDGEMENT (DOWN);notify-host;Host is DOWN'),
-            (u'info',
+            ('info',
              u'EXTERNAL COMMAND: [1496341800] REMOVE_HOST_ACKNOWLEDGEMENT;test_router_0'),
-            (u'info',
+            ('info',
              u'HOST ACKNOWLEDGE ALERT: test_router_0;EXPIRED; Host problem acknowledge expired')
         ]
         for log_level, log_message in expected_logs:
@@ -1114,7 +1116,7 @@ class TestExternalCommands(AlignakTest):
         host.event_handler_enabled = False
         host.active_checks_enabled = True
         host.passive_checks_enabled = True
-        print("Host: %s - state: %s/%s" % (host, host.state_type, host.state))
+        print(("Host: %s - state: %s/%s" % (host, host.state_type, host.state)))
         assert host is not None
 
         # Get dependent host
@@ -1123,7 +1125,7 @@ class TestExternalCommands(AlignakTest):
         router.event_handler_enabled = False
         router.active_checks_enabled = True
         router.passive_checks_enabled = True
-        print("Router: %s - state: %s/%s" % (router, router.state_type, router.state))
+        print(("Router: %s - state: %s/%s" % (router, router.state_type, router.state)))
         assert router is not None
 
         # Get service
@@ -1133,7 +1135,7 @@ class TestExternalCommands(AlignakTest):
         svc.active_checks_enabled = True
         svc.passive_checks_enabled = True
         assert svc is not None
-        print("Service: %s - state: %s/%s" % (svc, svc.state_type, svc.state))
+        print(("Service: %s - state: %s/%s" % (svc, svc.state_type, svc.state)))
 
         now = int(time.time())
 
@@ -1166,28 +1168,35 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
 
         print(monitoring_logs)
         expected_logs = [
-            (u'info', u'ACTIVE HOST CHECK: test_host_0;UP;HARD;1;Host is UP'),
-            (u'warning', u'PASSIVE SERVICE CHECK: test_host_0;test_ok_0;1;Service is WARNING;;'),
-            (u'warning', u'SERVICE ALERT: test_host_0;test_ok_0;WARNING;SOFT;1;Service is WARNING'),
+            ('info',
+             u'ACTIVE HOST CHECK: test_host_0;UP;HARD;1;Host is UP'),
+            ('warning',
+             u'PASSIVE SERVICE CHECK: test_host_0;test_ok_0;1;Service is WARNING;;'),
+            ('warning',
+             u'SERVICE ALERT: test_host_0;test_ok_0;WARNING;SOFT;1;Service is WARNING'),
 
-            (u'info', u'EXTERNAL COMMAND: [%s] ACKNOWLEDGE_SVC_PROBLEM;'
-                      u'test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % now),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] ACKNOWLEDGE_SVC_PROBLEM;'
+             u'test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % now),
 
-            (u'info', u'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;STARTED; '
-                      u'Service problem has been acknowledged'),
-            (u'info', u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      u'ACKNOWLEDGEMENT (WARNING);notify-service;Service is WARNING'),
-            (u'info', u'EXTERNAL COMMAND: [%s] REMOVE_SVC_ACKNOWLEDGEMENT;'
-                      u'test_host_0;test_ok_0' % now),
-            (u'info', u'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;EXPIRED; '
-                      u'Service problem acknowledge expired')
+            ('info',
+             u'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;STARTED; '
+             u'Service problem has been acknowledged'),
+            ('info',
+             u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+             u'ACKNOWLEDGEMENT (WARNING);notify-service;Service is WARNING'),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;test_ok_0' % now),
+            ('info',
+             u'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;EXPIRED;'
+             u' Service problem acknowledge expired')
         ]
         for log_level, log_message in expected_logs:
             print("Last checked log %s: %s" % (log_level, log_message))
@@ -1248,7 +1257,7 @@ class TestExternalCommands(AlignakTest):
             assert False == svc.is_problem
             assert False == svc.problem_has_been_acknowledged
             assert len(host.downtimes) == 1
-            downtime = host.downtimes.values()[0]
+            downtime = list(host.downtimes.values())[0]
             assert downtime.comment == "My first downtime"
             assert downtime.author == "test_contact"
             assert downtime.start_time == now
@@ -1292,7 +1301,7 @@ class TestExternalCommands(AlignakTest):
 
             # We got 'monitoring_log' broks for logging to the monitoring logs...
             monitoring_logs = []
-            for brok in self._main_broker.broks.values():
+            for brok in list(self._main_broker.broks.values()):
                 if brok.type == 'monitoring_log':
                     data = unserialize(brok.data)
                     monitoring_logs.append((data['level'], data['message']))
@@ -1300,22 +1309,27 @@ class TestExternalCommands(AlignakTest):
             print(monitoring_logs)
             expected_logs = [
                 # Host UP
-                (u'info',
+                ('info',
                  u'PASSIVE HOST CHECK: test_host_0;0;Host is alive;;'),
 
                 # First downtime
-                (u'info',
-                 u'EXTERNAL COMMAND: [1496341800] SCHEDULE_HOST_DOWNTIME;test_host_0;1496341800;1496341802;1;0;1200;test_contact;My first downtime'),
+                ('info',
+                 u'EXTERNAL COMMAND: [1496341800] SCHEDULE_HOST_DOWNTIME;test_host_0;1496341800;'
+                 u'1496341802;1;0;1200;test_contact;My first downtime'),
 
-                (u'info',
-                 u'HOST DOWNTIME ALERT: test_host_0;STARTED; Host has entered a period of scheduled downtime'),
-                (u'info',
-                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (UP);notify-host;Host is alive'),
+                ('info',
+                 u'HOST DOWNTIME ALERT: test_host_0;STARTED; Host has entered a period '
+                 u'of scheduled downtime'),
+                ('info',
+                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (UP);notify-host;'
+                 u'Host is alive'),
 
-                (u'info',
-                 u'HOST DOWNTIME ALERT: test_host_0;STOPPED; Host has exited from a period of scheduled downtime'),
-                (u'info',
-                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMEEND (UP);notify-host;Host is alive')
+                ('info',
+                 u'HOST DOWNTIME ALERT: test_host_0;STOPPED; Host has exited from a period '
+                 u'of scheduled downtime'),
+                ('info',
+                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMEEND (UP);notify-host;'
+                 u'Host is alive')
             ]
             for log_level, log_message in expected_logs:
                 print("Last checked log %s: %s" % (log_level, log_message))
@@ -1397,7 +1411,7 @@ class TestExternalCommands(AlignakTest):
             self.external_command_loop()
 
             assert len(host.downtimes) == 1
-            downtime = host.downtimes.values()[0]
+            downtime = list(host.downtimes.values())[0]
             assert downtime.comment == "My first downtime"
             assert downtime.author == "test_contact"
             assert downtime.start_time == now + 2
@@ -1453,47 +1467,46 @@ class TestExternalCommands(AlignakTest):
 
             # We got 'monitoring_log' broks for logging to the monitoring logs...
             monitoring_logs = []
-            for brok in self._main_broker.broks.values():
+            for brok in list(self._main_broker.broks.values()):
                 if brok.type == 'monitoring_log':
                     data = unserialize(brok.data)
                     monitoring_logs.append((data['level'], data['message']))
 
             print(monitoring_logs)
             expected_logs = [
-                (u'warning',
+                ('warning',
                  u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
-                (u'warning',
+                ('warning',
                  u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
-                (u'warning',
+                ('warning',
                  u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
 
-                (u'error',
+                ('error',
                  u'HOST ALERT: test_host_0;DOWN;SOFT;1;Host is dead'),
-                (u'error',
+                ('error',
                  u'HOST ALERT: test_host_0;DOWN;SOFT;2;Host is dead'),
-                (u'error',
+                ('error',
                  u'HOST ALERT: test_host_0;DOWN;HARD;3;Host is dead'),
 
-                (u'error',
+                ('error',
                  u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;Host is dead'),
 
-                (u'info',
+                ('info',
                  u'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;'
-                 u'1200;test_contact;My first downtime'
-                 % (now, now + 2, now + 10)),
+                 u'1200;test_contact;My first downtime' % (now, now + 2, now + 10)),
 
-                (u'info',
+                ('info',
                  u'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;STARTED; Service problem has been acknowledged'),
-                (u'info',
+                ('info',
                  u'HOST ACKNOWLEDGE ALERT: test_host_0;STARTED; Host problem has been acknowledged'),
 
-                (u'info',
+                ('info',
                  u'HOST DOWNTIME ALERT: test_host_0;STARTED; Host has entered a period of scheduled downtime'),
-                (u'info',
+                ('info',
                  u'HOST DOWNTIME ALERT: test_host_0;STOPPED; Host has exited from a period of scheduled downtime'),
-                (u'info',
+                ('info',
                  u'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMEEND (DOWN);notify-host;Host is dead'),
-                (u'info',
+                ('info',
                  u'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (DOWN);notify-host;Host is dead'),
             ]
 
@@ -1566,7 +1579,7 @@ class TestExternalCommands(AlignakTest):
         assert True == svc.is_problem
         assert False == svc.problem_has_been_acknowledged
         assert len(host.downtimes) == 1
-        downtime = host.downtimes.values()[0]
+        downtime = list(host.downtimes.values())[0]
         assert downtime.comment == "My first downtime"
         assert downtime.author == "test_contact"
         assert downtime.start_time == now + 2
@@ -1596,7 +1609,7 @@ class TestExternalCommands(AlignakTest):
 
         #  ---
         # External command: delete an host downtime
-        downtime = host.downtimes.values()[0]
+        downtime = list(host.downtimes.values())[0]
         excmd = '[%d] DEL_HOST_DOWNTIME;%s' % (now, downtime.uuid)
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
@@ -1612,48 +1625,45 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
 
         print(monitoring_logs)
         expected_logs = [
-            (u'warning',
+            ('warning',
              u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
-            (u'warning',
+            ('warning',
              u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
-            (u'warning',
+            ('warning',
              u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
 
-            (u'error',
+            ('error',
              u'HOST ALERT: test_host_0;DOWN;SOFT;1;Host is dead'),
-            (u'error',
+            ('error',
              u'HOST ALERT: test_host_0;DOWN;SOFT;2;Host is dead'),
-            (u'error',
+            ('error',
              u'HOST ALERT: test_host_0;DOWN;HARD;3;Host is dead'),
 
-            (u'error',
+            ('error',
              u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;Host is dead'),
 
-            (u'info',
-             u'EXTERNAL COMMAND: [%s] '
-             u'SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;test_contact;My first downtime'
-             % (now, now + 2, now + 4)),
-            (u'info',
-             u'EXTERNAL COMMAND: '
-             u'[%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;'
-             u'test_contact;My accented é"{|:âàç downtime'
-             % (now, now + 180, now + 360)),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;'
+             u'test_contact;My first downtime' % (now, now + 2, now + 4)),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;'
+             u'test_contact;My accented é"{|:âàç downtime' % (now, now + 180, now + 360)),
 
-            (u'info',
+            ('info',
              u'EXTERNAL COMMAND: [%s] DEL_HOST_DOWNTIME;qsdqszerzerzd' % now),
-            (u'warning',
+            ('warning',
              u'DEL_HOST_DOWNTIME: downtime_id id: qsdqszerzerzd '
              u'does not exist and cannot be deleted.'),
         ]
         for log_level, log_message in expected_logs:
-            print log_message
+            print(log_message)
             assert (log_level, log_message) in monitoring_logs
 
     def test_service_downtimes(self):
@@ -1678,7 +1688,7 @@ class TestExternalCommands(AlignakTest):
         self.external_command_loop()
         assert len(svc.downtimes) == 1
         downtime_id = list(svc.downtimes)[0]
-        downtime = svc.downtimes.values()[0]
+        downtime = list(svc.downtimes.values())[0]
         assert downtime.comment == "My downtime"
         assert downtime.author == "test_contact"
         assert downtime.start_time == now + 120
@@ -1728,24 +1738,31 @@ class TestExternalCommands(AlignakTest):
     
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
     
         expected_logs = [
-            (u'info', u'EXTERNAL COMMAND: [%s] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;'
-                      u'%s;%s;1;0;1200;test_contact;My downtime' % (now, now + 120, now + 1200)),
-            (u'info', u'EXTERNAL COMMAND: [%s] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;'
-                      u'%s;%s;1;0;1200;test_contact;My downtime 2' % (now, now + 1120, now + 11200)),
-            (u'info', u'EXTERNAL COMMAND: [%s] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;'
-                      u'%s;%s;1;0;1200;test_contact;My accented é"{|:âàç downtime' % (
+            ('info',
+             u'EXTERNAL COMMAND: [%s] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;'
+             u'%s;%s;1;0;1200;test_contact;My downtime' % (now, now + 120, now + 1200)),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;'
+             u'%s;%s;1;0;1200;test_contact;My downtime 2' % (now, now + 1120, now + 11200)),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;'
+             u'%s;%s;1;0;1200;test_contact;My accented é"{|:âàç downtime' % (
              now, now + 2120, now + 21200)),
-            (u'info', u'EXTERNAL COMMAND: [%s] DEL_SVC_DOWNTIME;qsdqszerzerzd' % now),
-            (u'warning', u'DEL_SVC_DOWNTIME: downtime_id id: qsdqszerzerzd does '
-                         u'not exist and cannot be deleted.'),
-            (u'info', u'EXTERNAL COMMAND: [%s] DEL_SVC_DOWNTIME;%s' % (now, downtime_id)),
-            (u'info', u'EXTERNAL COMMAND: [%s] DEL_ALL_SVC_DOWNTIMES;test_host_0;test_ok_0' % now),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] DEL_SVC_DOWNTIME;qsdqszerzerzd' % now),
+            ('warning',
+             u'DEL_SVC_DOWNTIME: downtime_id id: qsdqszerzerzd does '
+             u'not exist and cannot be deleted.'),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] DEL_SVC_DOWNTIME;%s' % (now, downtime_id)),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] DEL_ALL_SVC_DOWNTIMES;test_host_0;test_ok_0' % now),
         ]
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_logs
@@ -1819,24 +1836,30 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
 
         expected_logs = [
-            (u'info', u'EXTERNAL COMMAND: [%s] SCHEDULE_CONTACT_DOWNTIME;test_contact;'
-                      u'%s;%s;test_contact;My downtime' % (now, now + 120, now + 1200)),
-            (u'info', u'EXTERNAL COMMAND: [%s] SCHEDULE_CONTACT_DOWNTIME;test_contact;'
-                      u'%s;%s;test_contact;My downtime 2' % (now, now + 1120, now + 11200)),
-            (u'info', u'EXTERNAL COMMAND: [%s] SCHEDULE_CONTACT_DOWNTIME;test_contact;'
-                      u'%s;%s;test_contact;My accented é"{|:âàç downtime' % (
-             now, now + 2120, now + 21200)),
-            (u'info', u'EXTERNAL COMMAND: [%s] DEL_CONTACT_DOWNTIME;qsdqszerzerzd' % now),
-            (u'warning', u'DEL_CONTACT_DOWNTIME: downtime_id id: qsdqszerzerzd does '
-                         u'not exist and cannot be deleted.'),
-            (u'info', u'EXTERNAL COMMAND: [%s] DEL_CONTACT_DOWNTIME;%s' % (now, downtime_id)),
-            (u'info', u'EXTERNAL COMMAND: [%s] DEL_ALL_CONTACT_DOWNTIMES;test_contact' % now),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] SCHEDULE_CONTACT_DOWNTIME;test_contact;'
+             u'%s;%s;test_contact;My downtime' % (now, now + 120, now + 1200)),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] SCHEDULE_CONTACT_DOWNTIME;test_contact;'
+             u'%s;%s;test_contact;My downtime 2' % (now, now + 1120, now + 11200)),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] SCHEDULE_CONTACT_DOWNTIME;test_contact;'
+             u'%s;%s;test_contact;My accented é"{|:âàç downtime' % (now, now + 2120, now + 21200)),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] DEL_CONTACT_DOWNTIME;qsdqszerzerzd' % now),
+            ('warning',
+             u'DEL_CONTACT_DOWNTIME: downtime_id id: qsdqszerzerzd does '
+             u'not exist and cannot be deleted.'),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] DEL_CONTACT_DOWNTIME;%s' % (now, downtime_id)),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] DEL_ALL_CONTACT_DOWNTIMES;test_contact' % now),
         ]
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_logs
@@ -1999,7 +2022,7 @@ class TestExternalCommands(AlignakTest):
         for host_id in hostgroup.get_hosts():
             host = self._scheduler.hosts[host_id]
             downtime_id = list(host.downtimes)[0]
-            downtime = host.downtimes.values()[0]
+            downtime = list(host.downtimes.values())[0]
             assert downtime.comment == "My downtime"
             assert downtime.author == "test_contact"
             assert downtime.start_time == now + 120
@@ -2021,7 +2044,7 @@ class TestExternalCommands(AlignakTest):
             for service_id in host.services:
                 service = self._scheduler.services[service_id]
                 downtime_id = list(host.downtimes)[0]
-                downtime = host.downtimes.values()[0]
+                downtime = list(host.downtimes.values())[0]
                 assert downtime.comment == "My downtime"
                 assert downtime.author == "test_contact"
                 assert downtime.start_time == now + 120
@@ -2513,7 +2536,7 @@ class TestExternalCommands(AlignakTest):
         # self.assert_any_log_match('I awoke after sleeping 3 seconds')
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -2540,7 +2563,7 @@ class TestExternalCommands(AlignakTest):
         # self.assert_any_log_match('I awoke after sleeping 2 seconds')
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -2574,14 +2597,16 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._main_broker.broks.values():
+        for brok in list(self._main_broker.broks.values()):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
 
         expected_logs = [
-            (u'info', u'EXTERNAL COMMAND: [%s] SHUTDOWN_PROGRAM' % (now)),
-            (u'warning', u'SHUTDOWN_PROGRAM: this command is not implemented!')
+            ('info',
+             u'EXTERNAL COMMAND: [%s] SHUTDOWN_PROGRAM' % (now)),
+            ('warning',
+             u'SHUTDOWN_PROGRAM: this command is not implemented!')
         ]
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_logs
@@ -2592,7 +2617,7 @@ class TestExternalCommands(AlignakTest):
         excmd = '[%d] SET_HOST_NOTIFICATION_NUMBER;test_host_0;0' % (now)
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._main_broker.broks.values()
+        broks = [b for b in list(self._main_broker.broks.values())
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
@@ -2602,7 +2627,7 @@ class TestExternalCommands(AlignakTest):
         excmd = '[%d] SET_SVC_NOTIFICATION_NUMBER;test_host_0;test_ok_0;1' % (now)
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._main_broker.broks.values()
+        broks = [b for b in list(self._main_broker.broks.values())
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
@@ -2613,7 +2638,7 @@ class TestExternalCommands(AlignakTest):
                 'test_contact;My notification' % (now)
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._main_broker.broks.values()
+        broks = [b for b in list(self._main_broker.broks.values())
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
@@ -2624,7 +2649,7 @@ class TestExternalCommands(AlignakTest):
                 'test_contact;My notification' % (now)
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._main_broker.broks.values()
+        broks = [b for b in list(self._main_broker.broks.values())
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
@@ -2635,7 +2660,7 @@ class TestExternalCommands(AlignakTest):
                 '1;0;1200;test_contact;My downtime' % (now, now + 120, now + 1200)
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._main_broker.broks.values()
+        broks = [b for b in list(self._main_broker.broks.values())
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
@@ -2646,7 +2671,7 @@ class TestExternalCommands(AlignakTest):
                 '1;0;1200;test_contact;My downtime' % (now, now + 120, now + 1200)
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._main_broker.broks.values()
+        broks = [b for b in list(self._main_broker.broks.values())
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
@@ -2655,7 +2680,7 @@ class TestExternalCommands(AlignakTest):
         excmd = '[%d] SAVE_STATE_INFORMATION' % int(time.time())
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._main_broker.broks.values()
+        broks = [b for b in list(self._main_broker.broks.values())
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
@@ -2664,7 +2689,7 @@ class TestExternalCommands(AlignakTest):
         excmd = '[%d] READ_STATE_INFORMATION' % int(time.time())
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._main_broker.broks.values()
+        broks = [b for b in list(self._main_broker.broks.values())
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
@@ -2673,7 +2698,7 @@ class TestExternalCommands(AlignakTest):
         excmd = '[%d] PROCESS_FILE;file;1' % int(time.time())
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._main_broker.broks.values()
+        broks = [b for b in list(self._main_broker.broks.values())
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
@@ -2682,7 +2707,7 @@ class TestExternalCommands(AlignakTest):
         excmd = '[%d] ENABLE_HOST_AND_CHILD_NOTIFICATIONS;test_host_0' % int(time.time())
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._main_broker.broks.values()
+        broks = [b for b in list(self._main_broker.broks.values())
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
@@ -2691,7 +2716,7 @@ class TestExternalCommands(AlignakTest):
         excmd = '[%d] DISABLE_HOST_AND_CHILD_NOTIFICATIONS;test_host_0' % int(time.time())
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._main_broker.broks.values()
+        broks = [b for b in list(self._main_broker.broks.values())
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
@@ -2700,7 +2725,7 @@ class TestExternalCommands(AlignakTest):
         excmd = '[%d] DISABLE_ALL_NOTIFICATIONS_BEYOND_HOST;test_host_0' % int(time.time())
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._main_broker.broks.values()
+        broks = [b for b in list(self._main_broker.broks.values())
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
@@ -2709,7 +2734,7 @@ class TestExternalCommands(AlignakTest):
         excmd = '[%d] ENABLE_ALL_NOTIFICATIONS_BEYOND_HOST;test_host_0' % int(time.time())
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._main_broker.broks.values()
+        broks = [b for b in list(self._main_broker.broks.values())
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
@@ -2718,7 +2743,7 @@ class TestExternalCommands(AlignakTest):
         excmd = '[%d] CHANGE_GLOBAL_HOST_EVENT_HANDLER;check-host-alive' % int(time.time())
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._main_broker.broks.values()
+        broks = [b for b in list(self._main_broker.broks.values())
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
@@ -2727,6 +2752,6 @@ class TestExternalCommands(AlignakTest):
         excmd = '[%d] CHANGE_GLOBAL_SVC_EVENT_HANDLER;check-host-alive' % int(time.time())
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in self._main_broker.broks.values()
+        broks = [b for b in list(self._main_broker.broks.values())
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)

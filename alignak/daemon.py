@@ -121,6 +121,7 @@ This module provides abstraction for creating daemon in Alignak
 """
 # pylint: disable=too-many-public-methods, unused-import
 from __future__ import print_function
+
 import os
 import errno
 import sys
@@ -134,10 +135,11 @@ import threading
 import logging
 import warnings
 import traceback
-from Queue import Empty, Full
+from queue import Empty, Full
 from multiprocessing.managers import SyncManager
 
-import ConfigParser
+import configparser
+import collections
 import psutil
 
 try:
@@ -194,7 +196,7 @@ except ImportError as exp:  # pragma: no cover, not for unit tests...
         """
         return []
 
-from alignak.log import setup_logger, get_logger_fds
+from alignak.log import setup_logger
 from alignak.http.daemon import HTTPDaemon, PortNotFree
 from alignak.load import Load
 from alignak.stats import statsmgr
@@ -207,7 +209,7 @@ from alignak.version import VERSION
 from alignak.bin.alignak_environment import AlignakConfigParser
 
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # #########################   DAEMON PART    ###############################
 # The standard I/O file descriptors are redirected to /dev/null by default.
@@ -238,14 +240,14 @@ class Daemon(object):
 
     properties = {
         'type':
-            StringProp(default='unknown'),
+            StringProp(default=u'unknown'),
         'daemon':
-            StringProp(default='unknown'),
+            StringProp(default=u'unknown'),
         'name':
             StringProp(),
         # Alignak main configuration file
         'env_filename':
-            StringProp(default=''),
+            StringProp(default=u''),
 
         # Deprecated - not used anywhere
         # 'use_log_file':
@@ -254,7 +256,7 @@ class Daemon(object):
             BoolProp(default=False),
 
         'pid_filename':
-            StringProp(default=''),
+            StringProp(default=u''),
 
         # Daemon directories
         'etcdir':   # /usr/local/etc/alignak
@@ -268,10 +270,10 @@ class Daemon(object):
 
         # Interface the daemon will listen to
         'host':
-            StringProp(default='0.0.0.0'),
+            StringProp(default=u'0.0.0.0'),
         # Server hostname
         'host_name':
-            StringProp(default='localhost'),
+            StringProp(default=u'localhost'),
 
         # Credentials the daemon will fork to
         'user':
@@ -285,14 +287,14 @@ class Daemon(object):
         'hard_ssl_name_check':
             BoolProp(default=False),
         'server_cert':
-            StringProp(default='etc/certs/server.cert'),
+            StringProp(default=u'etc/certs/server.cert'),
         'server_key':
-            StringProp(default='etc/certs/server.key'),
+            StringProp(default=u'etc/certs/server.key'),
         'ca_cert':
-            StringProp(default=''),
+            StringProp(default=u''),
         # Not used currently
         'server_dh':
-            StringProp(default=''),
+            StringProp(default=u''),
 
         # Deprecated in favor of logger_configuration
         # 'human_timestamp_log':
@@ -308,10 +310,10 @@ class Daemon(object):
         # 'log_rotation_count':
         #     IntegerProp(default=7),
         'logger_configuration':
-            StringProp(default='./alignak-logger.json'),
+            StringProp(default=u'./alignak-logger.json'),
         # Override log file name
         'log_filename':
-            StringProp(default=''),
+            StringProp(default=u''),
         # Set True to include cherrypy logs in the daemon log file
         'log_cherrypy':
             BoolProp(default=False),
@@ -333,7 +335,7 @@ class Daemon(object):
         'debug':
             BoolProp(default=False),
         'debug_file':
-            StringProp(default=None),
+            StringProp(default=u''),
         'monitoring_config_files':
             ListProp(default=[]),
 
@@ -353,21 +355,21 @@ class Daemon(object):
         # Alignak will report its status to its monitor
         # Interface is the same as the Alignak WS module PATCH/host
         'alignak_monitor':
-            StringProp(default=''),
+            StringProp(default=u''),
         'alignak_monitor_period':
             IntegerProp(default=30),
         'alignak_monitor_username':
-            StringProp(default=''),
+            StringProp(default=u''),
         'alignak_monitor_password':
-            StringProp(default=''),
+            StringProp(default=u''),
 
         # Local statsd daemon for collecting daemon metrics
         'statsd_host':
-            StringProp(default='localhost'),
+            StringProp(default=u'localhost'),
         'statsd_port':
             IntegerProp(default=8125),
         'statsd_prefix':
-            StringProp(default='alignak'),
+            StringProp(default=u'alignak'),
         'statsd_enabled':
             BoolProp(default=False),
         # Use Graphite/carbon connection instead of StatsD
@@ -409,7 +411,7 @@ class Daemon(object):
         # I define my default properties
         # Same as the Item.fill_default()... but I am not in this object hierarchy!
         my_properties = self.__class__.properties
-        for prop, entry in my_properties.items():
+        for prop, entry in list(my_properties.items()):
             if getattr(self, prop, None) is not None:
                 #  Still initialized...
                 continue
@@ -450,7 +452,7 @@ class Daemon(object):
                 self.alignak_env = AlignakConfigParser(args)
                 self.alignak_env.parse()
 
-                for prop, value in self.alignak_env.get_monitored_configuration().items():
+                for prop, value in list(self.alignak_env.get_monitored_configuration().items()):
                     self.pre_log.append(("DEBUG",
                                          "Found Alignak monitoring "
                                          "configuration parameter, %s = %s" % (prop, value)))
@@ -473,7 +475,7 @@ class Daemon(object):
                                          "If needed, edit the 'alignak.ini' configuration file "
                                          "to declare a CFG= defining an 'alignak.cfg file."))
 
-                my_configuration = self.alignak_env.get_daemons(daemon_name=self.name).items()
+                my_configuration = list(self.alignak_env.get_daemons(daemon_name=self.name).items())
                 for prop, value in my_configuration:
                     self.pre_log.append(("DEBUG",
                                          " found daemon parameter, %s = %s" % (prop, value)))
@@ -481,7 +483,7 @@ class Daemon(object):
                         # For an undeclared property, store the value as a string
                         setattr(self, prop, value)
                         self.pre_log.append(("DEBUG", " -> setting %s = %s" % (prop, value)))
-                    elif callable(getattr(self, prop)):
+                    elif isinstance(getattr(self, prop), collections.Callable):
                         # For a declared property, that match a self function name
                         self.exit_on_error("Variable %s cannot be defined as a property because "
                                            "it exists a callable function with the same name!"
@@ -500,7 +502,7 @@ class Daemon(object):
                     # Set the global Alignak configuration parameters
                     # as the current daemon properties
                     logger.info("Getting alignak configuration to configure the daemon...")
-                    for prop, value in self.alignak_env.get_alignak_configuration().items():
+                    for prop, value in list(self.alignak_env.get_alignak_configuration().items()):
                         if prop in ['name'] or prop.startswith('_'):
                             self.pre_log.append(("DEBUG",
                                                  "- ignoring '%s' variable." % prop))
@@ -514,9 +516,9 @@ class Daemon(object):
                         self.pre_log.append(("DEBUG",
                                              "- setting '%s' as %s" % (prop, getattr(self, prop))))
 
-            except ConfigParser.ParsingError as exp:
+            except configparser.ParsingError as exp:
                 self.exit_on_exception(EnvironmentFile(exp.message))
-            except ValueError as exp:
+            except Exception as exp:  # pylint: disable=broad-except
                 print("Daemon '%s' did not correctly read Alignak environment file: %s"
                       % (self.name, args['<cfg_file>']))
                 print("Exception: %s\n%s" % (exp, traceback.format_exc()))
@@ -591,7 +593,7 @@ class Daemon(object):
         #       % (self.name, self.logger_configuration))
 
         # Make my paths properties be absolute paths
-        for prop, entry in my_properties.items():
+        for prop, entry in list(my_properties.items()):
             # Set absolute paths for
             if isinstance(my_properties[prop], PathProp):
                 setattr(self, prop, os.path.abspath(getattr(self, prop)))
@@ -600,7 +602,7 @@ class Daemon(object):
         self.log_filename = PathProp().pythonize("%s.log" % self.name)
         self.log_filename = os.path.abspath(os.path.join(self.logdir, self.log_filename))
         if 'log_filename' in kwargs and kwargs['log_filename']:
-            self.log_filename = PathProp().pythonize(kwargs['log_filename'])
+            self.log_filename = PathProp().pythonize(kwargs['log_filename'].strip())
             # Make it an absolute path file in the log directory
             if self.log_filename != os.path.abspath(self.log_filename):
                 if self.log_filename:
@@ -633,7 +635,7 @@ class Daemon(object):
         self.pid_filename = PathProp().pythonize("%s.pid" % self.name)
         self.pid_filename = os.path.abspath(os.path.join(self.workdir, self.pid_filename))
         if 'pid_filename' in kwargs and kwargs['pid_filename']:
-            self.pid_filename = PathProp().pythonize(kwargs['pid_filename'])
+            self.pid_filename = PathProp().pythonize(kwargs['pid_filename'].strip())
             # Make it an absolute path file in the pid directory
             if self.pid_filename != os.path.abspath(self.pid_filename):
                 self.pid_filename = os.path.abspath(os.path.join(self.workdir, self.pid_filename))
@@ -763,7 +765,7 @@ class Daemon(object):
             print("Created the directory: %s, stat: %s" % (dirname, dir_stat))
             if not dir_stat.st_uid == self.uid:
                 os.chown(dirname, self.uid, self.gid)
-                os.chmod(dirname, 0775)
+                os.chmod(dirname, 0o775)
                 dir_stat = os.stat(dirname)
                 print("Changed directory ownership and permissions: %s, stat: %s"
                       % (dirname, dir_stat))
@@ -962,7 +964,8 @@ class Daemon(object):
         logger.debug("Nothing to do before the main loop")
         return
 
-    def do_main_loop(self):  # pylint: disable=too-many-branches, too-many-statements
+    def do_main_loop(self):
+        # pylint: disable=too-many-branches, too-many-statements, too-many-locals
         """Main loop for an Alignak daemon
 
         :return: None
@@ -1008,7 +1011,7 @@ class Daemon(object):
                 self.setup_new_conf()
 
             # Trying to restore our related daemons lost connections
-            for satellite in self.get_links_of_type(s_type=None).values():
+            for satellite in list(self.get_links_of_type(s_type=None).values()):
                 # Not for configuration disabled satellites
                 if not satellite.active:
                     continue
@@ -1155,7 +1158,7 @@ class Daemon(object):
                 logger.error(msg)
 
         if self.modules_manager.configuration_warnings:  # pragma: no cover, not tested
-            for msg in self.modules_manager.configuration_warning:
+            for msg in self.modules_manager.configuration_warnings:
                 logger.warning(msg)
         statsmgr.gauge('modules.count', len(modules))
         statsmgr.timer('modules.load-time', time.time() - _ts)
@@ -1468,6 +1471,9 @@ class Daemon(object):
                 if os.path.exists('/tmp/%s' % log_file):
                     with open('/tmp/%s' % log_file, "w") as file_log_file:
                         os.fchown(file_log_file.fileno(), self.uid, self.gid)
+                if os.path.exists('/tmp/monitoring-log/%s' % log_file):
+                    with open('/tmp/monitoring-log/%s' % log_file, "w") as file_log_file:
+                        os.fchown(file_log_file.fileno(), self.uid, self.gid)
         except Exception as exp:  # pylint: disable=broad-except
             #  pragma: no cover
             print("Could not set default log files ownership, exception: %s" % str(exp))
@@ -1500,6 +1506,7 @@ class Daemon(object):
         return True
 
     def setup_communication_daemon(self):
+        # pylint: disable=no-member
         """ Setup HTTP server daemon to listen
         for incoming HTTP requests from other Alignak daemons
 
@@ -1627,7 +1634,7 @@ class Daemon(object):
             self.exit_on_error("Cannot change user/group to %s/%s (%s [%d]). Exiting..."
                                % (self.user, self.group, err.strerror, err.errno), 2)
 
-    def manage_signal(self, sig, frame):  # pylint: disable=W0613
+    def manage_signal(self, sig, frame):  # pylint: disable=unused-argument
         """Manage signals caught by the daemon
         signal.SIGUSR1 : dump_memory
         signal.SIGUSR2 : dump_object (nothing)
@@ -1902,7 +1909,7 @@ class Daemon(object):
             else:
                 statsmgr.timer('hook.%s.%s' % (module.name, hook_name), time.time() - _ts)
 
-    def get_retention_data(self):  # pylint: disable=R0201
+    def get_retention_data(self):  # pylint: disable=no-self-use
         """Basic function to get retention data,
         Maybe be overridden by subclasses to implement real get
 
@@ -1923,6 +1930,29 @@ class Daemon(object):
         """
         pass
 
+    def get_id(self, details=False):  # pylint: disable=unused-argument
+        """Get daemon identification information
+
+        :return: A dict with the following structure
+        ::
+            {
+                "alignak": selfAlignak instance name
+                "type": daemon type
+                "name": daemon name
+                "version": Alignak version
+            }
+
+        :rtype: dict
+        """
+        # Modules information
+        res = {
+            "alignak": getattr(self, 'alignak_name', 'unknown'),
+            "type": getattr(self, 'type', 'unknown'),
+            "name": getattr(self, 'name', 'unknown'),
+            "version": VERSION
+        }
+        return res
+
     def get_daemon_stats(self, details=False):  # pylint: disable=unused-argument
         """Get state of modules and create a scheme for stats data of daemon
         This may be overridden in subclasses (and it is...)
@@ -1930,24 +1960,20 @@ class Daemon(object):
         :return: A dict with the following structure
         ::
             {
-                'metrics': [],
-                'version': VERSION,
-                'name': '',
-                'type': '',
                 'modules': {
                     'internal': {'name': "MYMODULE1", 'state': 'ok'},
                     'external': {'name': "MYMODULE2", 'state': 'stopped'},
-                }
+                },
+                And some extra information, see the source code below...
             }
 
-        :rtype: dict
+        These information are completed with the data provided by the get_id function
+        which provides the daemon identification
 
+        :rtype: dict
         """
-        res = {
-            "alignak": getattr(self, 'alignak_name', 'unknown'),
-            "type": getattr(self, 'type', 'unknown'),
-            "name": getattr(self, 'name', 'unknown'),
-            "version": VERSION,
+        res = self.get_id()
+        res.update({
             "program_start": self.program_start,
             "spare": self.spare,
             "load": self.load_1_min.load,
@@ -1956,7 +1982,7 @@ class Daemon(object):
             'modules': {
                 'internal': {}, 'external': {}
             }
-        }
+        })
 
         # Modules information
         modules = res['modules']

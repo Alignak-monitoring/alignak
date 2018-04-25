@@ -254,6 +254,7 @@ class DependencyNode(object):
         return worst_state
 
     def get_complex_xof_node_state(self, hosts, services):
+        # pylint: disable=too-many-locals, too-many-return-statements, too-many-branches
         """Get state , handle X of aggregation ::
 
            * Count the number of OK, WARNING, CRITICAL
@@ -460,7 +461,7 @@ class DependencyNodeFactory(object):
             node.operand = 'of:'
             groups = matches.groups()
             # We can have a Aof: rule, or a multiple A,B,Cof: rule.
-            mul_of = (groups[1] != u'' and groups[2] != u'')
+            mul_of = (groups[1] != '' and groups[2] != '')
             # If multi got (A,B,C)
             if mul_of:
                 node.is_of_mul = True
@@ -472,6 +473,7 @@ class DependencyNodeFactory(object):
 
     def eval_complex_cor_pattern(self, pattern, hosts, services,
                                  hostgroups, servicegroups, running=False):
+        # pylint: disable=too-many-branches
         """Parse and build recursively a tree of DependencyNode from a complex pattern
 
         :param pattern: pattern to parse
@@ -502,7 +504,7 @@ class DependencyNodeFactory(object):
                 # that should not be good in fact !
                 if stacked_parenthesis == 1 and tmp != '':
                     # TODO : real error
-                    print "ERROR : bad expression near", tmp
+                    print("ERROR : bad expression near", tmp)
                     continue
 
                 # If we are already in a par, add this (
@@ -515,7 +517,7 @@ class DependencyNodeFactory(object):
 
                 if stacked_parenthesis < 0:
                     # TODO : real error
-                    print "Error : bad expression near", tmp, "too much ')'"
+                    print("Error : bad expression near", tmp, "too much ')'")
                     continue
 
                 if stacked_parenthesis == 0:
@@ -547,7 +549,7 @@ class DependencyNodeFactory(object):
             elif char == '!':
                 tmp = tmp.strip()
                 if tmp and tmp[0] != '!':
-                    print "Error : bad expression near", tmp, "wrong position for '!'"
+                    print("Error : bad expression near", tmp, "wrong position for '!'")
                     continue
                 # Flags next node not state
                 son_is_not = True
@@ -686,6 +688,7 @@ class DependencyNodeFactory(object):
         return obj, error
 
     def expand_expression(self, pattern, hosts, services, hostgroups, servicegroups, running=False):
+        # pylint: disable=too-many-locals
         """Expand a host or service expression into a dependency node tree
         using (host|service)group membership, regex, or labels as item selector.
 
@@ -710,10 +713,11 @@ class DependencyNodeFactory(object):
         filters = []
         # Looks for hosts/services using appropriate filters
         try:
-            all_items = {"hosts": hosts,
-                         "hostgroups": hostgroups,
-                         "servicegroups": servicegroups
-                         }
+            all_items = {
+                "hosts": hosts,
+                "hostgroups": hostgroups,
+                "servicegroups": servicegroups
+            }
             if len(elts) > 1:
                 # We got a service expression
                 host_expr, service_expr = elts
@@ -725,7 +729,7 @@ class DependencyNodeFactory(object):
                 host_expr = elts[0]
                 filters.extend(self.get_host_filters(host_expr))
                 items = hosts.find_by_filter(filters, all_items)
-        except re.error, regerr:
+        except re.error as regerr:
             error = "Business rule uses invalid regex %s: %s" % (pattern, regerr)
         else:
             if not items:
@@ -758,6 +762,7 @@ class DependencyNodeFactory(object):
         return node
 
     def get_host_filters(self, expr):
+        # pylint: disable=too-many-return-statements
         """Generates host filter list corresponding to the expression ::
 
         * '*' => any
@@ -792,6 +797,7 @@ class DependencyNodeFactory(object):
         return [filter_none]
 
     def get_srv_host_filters(self, expr):
+        # pylint: disable=too-many-return-statements
         """Generates service filter list corresponding to the expression ::
 
         * '*' => any

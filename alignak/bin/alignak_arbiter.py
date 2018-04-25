@@ -52,6 +52,7 @@ to another scheduler available.
 It also reads orders form users (nagios.cmd) and sends them to schedulers.
 """
 from __future__ import print_function
+
 from alignak.daemons.arbiterdaemon import Arbiter
 from alignak.util import parse_daemon_args
 
@@ -72,7 +73,7 @@ def main():
                 break
             daemon = None
     except Exception as exp:  # pylint: disable=broad-except
-        print("*** Daemon exited because: %s" % str(exp))
+        print(("*** Daemon exited because: %s" % str(exp)))
         exit(1)
 
 

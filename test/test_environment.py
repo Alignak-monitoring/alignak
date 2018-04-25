@@ -27,7 +27,7 @@ import sys
 import re
 import time
 import unittest2
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 import pytest
 if sys.version_info >= (2, 7):
     from collections import OrderedDict

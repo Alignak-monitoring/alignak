@@ -18,7 +18,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 from alignak.objects.arbiterlink import ArbiterLink
 from alignak.objects.schedulerlink import SchedulerLink
 from alignak.objects.brokerlink import BrokerLink
@@ -34,12 +34,12 @@ class template_DaemonLink_get_name():
 
     def test_get_name(self):
         link = self.get_link()
-        print("Link: %s / %s" % (type(link), link))
+        print(("Link: %s / %s" % (type(link), link)))
         link.fill_default()
 
-        print("Name: %s / %s / %s" % (link.type, link.name, link.get_name()))
-        print("Config: %s" % (link.give_satellite_cfg()))
-        print("Config: %s" % (link.have_conf))
+        print(("Name: %s / %s / %s" % (link.type, link.name, link.get_name())))
+        print(("Config: %s" % (link.give_satellite_cfg())))
+        print(("Config: %s" % (link.have_conf)))
         assert False == link.have_conf
         try:
             self.assertEqual("Unnamed {0}".format(self.daemon_link.my_type), link.get_name())

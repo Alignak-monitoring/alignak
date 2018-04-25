@@ -67,10 +67,11 @@ from alignak.property import IntegerProp, StringProp
 from alignak.satellite import BaseSatellite
 from alignak.objects.satellitelink import SatelliteLink
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Alignak(BaseSatellite):
+    # pylint: disable=too-many-instance-attributes
     """Scheduler class. Referenced as "app" in most Interface
 
     """
@@ -102,7 +103,6 @@ class Alignak(BaseSatellite):
         self.nb_pushed_checks = 0
         self.nb_pushed_actions = 0
 
-        self.nb_broks_send = 0
         self.nb_pulled_broks = 0
         # ---
 
@@ -131,9 +131,9 @@ class Alignak(BaseSatellite):
         if not broker_name:
             return res
 
-        for broker_link in self.brokers.values():
+        for broker_link in list(self.brokers.values()):
             if broker_name == broker_link.name:
-                to_send = [b for b in self.brokers[broker_link.uuid].broks.values()
+                to_send = [b for b in list(self.brokers[broker_link.uuid].broks.values())
                            if getattr(b, 'sent_to_externals', False)]
                 for brok in to_send:
                     res[brok.uuid] = self.brokers[broker_link.uuid].broks.pop(brok.uuid)
@@ -145,6 +145,7 @@ class Alignak(BaseSatellite):
         return res
 
     def compensate_system_time_change(self, difference, timeperiods):  # pragma: no cover,
+        # pylint: disable=too-many-branches
         # not with unit tests
         """Compensate a system time change of difference for all hosts/services/checks/notifs
 
@@ -168,9 +169,9 @@ class Alignak(BaseSatellite):
             serv.compensate_system_time_change(difference)
 
         # Now all checks and actions
-        for chk in self.sched.checks.values():
+        for chk in list(self.sched.checks.values()):
             # Already launch checks should not be touch
-            if chk.status == 'scheduled' and chk.t_to_go is not None:
+            if chk.status == u'scheduled' and chk.t_to_go is not None:
                 t_to_go = chk.t_to_go
                 ref = self.sched.find_item_by_id(chk.ref)
                 new_t = max(0, t_to_go + difference)
@@ -181,7 +182,7 @@ class Alignak(BaseSatellite):
                 # But maybe no there is no more new value! Not good :(
                 # Say as error, with error output
                 if new_t is None:
-                    chk.state = 'waitconsume'
+                    chk.state = u'waitconsume'
                     chk.exit_status = 2
                     chk.output = '(Error: there is no available check time after time change!)'
                     chk.check_time = time.time()
@@ -191,9 +192,9 @@ class Alignak(BaseSatellite):
                     ref.next_chk = new_t
 
         # Now all checks and actions
-        for act in self.sched.actions.values():
+        for act in list(self.sched.actions.values()):
             # Already launch checks should not be touch
-            if act.status == 'scheduled':
+            if act.status == u'scheduled':
                 t_to_go = act.t_to_go
 
                 #  Event handler do not have ref
@@ -201,7 +202,7 @@ class Alignak(BaseSatellite):
                 new_t = max(0, t_to_go + difference)
 
                 # Notification should be check with notification_period
-                if act.is_a == 'notification':
+                if act.is_a == u'notification':
                     ref = self.sched.find_item_by_id(ref_id)
                     if ref.notification_period:
                         # But it's no so simple, we must match the timeperiod
@@ -248,11 +249,11 @@ class Alignak(BaseSatellite):
             logger.info("First scheduling done")
 
             # Connect to our passive satellites if needed
-            for satellite in [s for s in self.pollers.values() if s.passive]:
+            for satellite in [s for s in list(self.pollers.values()) if s.passive]:
                 if not self.daemon_connection_init(satellite):
                     logger.error("Passive satellite connection failed: %s", satellite)
 
-            for satellite in [s for s in self.reactionners.values() if s.passive]:
+            for satellite in [s for s in list(self.reactionners.values()) if s.passive]:
                 if not self.daemon_connection_init(satellite):
                     logger.error("Passive satellite connection failed: %s", satellite)
 
@@ -275,8 +276,8 @@ class Alignak(BaseSatellite):
     def get_managed_configurations(self):
         """Get the configurations managed by this scheduler
 
-        The configuration managed by a scheduler the self configuration got by the scheduler
-        during the dispatching.
+        The configuration managed by a scheduler is the self configuration got
+        by the scheduler during the dispatching.
 
         :return: a dict of scheduler links with instance_id as key and
         hash, push_flavor and configuration identifier as values
@@ -294,7 +295,8 @@ class Alignak(BaseSatellite):
         logger.debug("Get managed configuration: %s", res)
         return res
 
-    def setup_new_conf(self):  # pylint: disable=too-many-statements
+    def setup_new_conf(self):
+        # pylint: disable=too-many-statements, too-many-branches, too-many-locals
         """Setup new conf received for scheduler
 
         :return: None
@@ -395,9 +397,6 @@ class Alignak(BaseSatellite):
                         logger.warning("Do not override the configuration for: %s, with: %s. "
                                        "Please check whether this is necessary!",
                                        new_link.name, overriding)
-                        # satellite = dict(satellite)  # make a copy
-                        # satellite_object.update(self.cur_conf['override_conf'].
-                        # get('satellite_map', {})[satellite_object.name])
 
             # First mix conf and override_conf to have our definitive conf
             for prop in getattr(self.cur_conf, 'override_conf', []):
@@ -466,7 +465,7 @@ class Alignak(BaseSatellite):
             # Initialize connection with all our satellites
             logger.info("Initializing connection with my satellites:")
             my_satellites = self.get_links_of_type()
-            for satellite in my_satellites.values():
+            for satellite in list(my_satellites.values()):
                 logger.info("- : %s/%s", satellite.type, satellite.name)
                 if not self.daemon_connection_init(satellite):
                     logger.error("Satellite connection failed: %s", satellite)
@@ -516,8 +515,6 @@ class Alignak(BaseSatellite):
         scheduler_stats = self.sched.get_scheduler_stats(details=details)
         res['counters'].update(scheduler_stats['counters'])
         scheduler_stats.pop('counters')
-        res['metrics'].append(scheduler_stats['metrics'])
-        scheduler_stats.pop('metrics')
         res.update(scheduler_stats)
 
         return res

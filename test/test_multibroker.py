@@ -28,7 +28,7 @@ import pytest
 import requests_mock
 from alignak.misc.serialization import unserialize, get_alignak_class
 from alignak.http.scheduler_interface import SchedulerInterface
-from alignak_test import AlignakTest
+from .alignak_test import AlignakTest
 
 
 class TestMultibroker(AlignakTest):
@@ -69,11 +69,11 @@ class TestMultibroker(AlignakTest):
             else:
                 broker2_link_uuid = broker_link_uuid
             broker_broks_count[my_scheduler.my_daemon.brokers[broker_link_uuid].name] = 0
-            print("Broker %s:" % (my_scheduler.my_daemon.brokers[broker_link_uuid]))
+            print(("Broker %s:" % (my_scheduler.my_daemon.brokers[broker_link_uuid])))
             for brok in my_scheduler.my_daemon.brokers[broker_link_uuid].broks:
                 broker_broks_count[my_scheduler.my_daemon.brokers[broker_link_uuid].name] += 1
-                print("- %s: %s"
-                      % (brok, my_scheduler.my_daemon.brokers[broker_link_uuid].broks[brok]))
+                print(("- %s: %s"
+                      % (brok, my_scheduler.my_daemon.brokers[broker_link_uuid].broks[brok])))
 
         # Same list of broks in the two brokers
         self.assertItemsEqual(my_scheduler.my_daemon.brokers[broker1_link_uuid].broks,
@@ -85,10 +85,10 @@ class TestMultibroker(AlignakTest):
 
         # Test broker-master that gets its broks from the scheduler
         # Get the scheduler broks to be sent ...
-        to_send = [b for b in my_scheduler.my_daemon.brokers[broker1_link_uuid].broks.values()
+        to_send = [b for b in list(my_scheduler.my_daemon.brokers[broker1_link_uuid].broks.values())
                    if getattr(b, 'sent_to_externals', False)]
         for brok in to_send:
-            print("- %s" % (brok))
+            print(("- %s" % (brok)))
         assert 6 == len(to_send)
 
         broks_list = sched_interface.get_broks('broker-master')
@@ -98,20 +98,20 @@ class TestMultibroker(AlignakTest):
 
         # No more broks to get
         # Get the scheduler broks to be sent ...
-        to_send = [b for b in my_scheduler.my_daemon.brokers[broker1_link_uuid].broks.values()
+        to_send = [b for b in list(my_scheduler.my_daemon.brokers[broker1_link_uuid].broks.values())
                    if getattr(b, 'sent_to_externals', False)]
         for brok in to_send:
-            print("- %s" % (brok))
+            print(("- %s" % (brok)))
         assert 0 == len(to_send), "Still some broks to be sent!"
 
 
 
         # Test broker-master 2 that gets its broks from the scheduler
         # Get the scheduler broks to be sent ...
-        to_send = [b for b in my_scheduler.my_daemon.brokers[broker2_link_uuid].broks.values()
+        to_send = [b for b in list(my_scheduler.my_daemon.brokers[broker2_link_uuid].broks.values())
                    if getattr(b, 'sent_to_externals', False)]
         for brok in to_send:
-            print("- %s" % (brok))
+            print(("- %s" % (brok)))
         assert 6 == len(to_send)
 
         broks_list = sched_interface.get_broks('broker-master2')
@@ -121,10 +121,10 @@ class TestMultibroker(AlignakTest):
 
         # No more broks to get
         # Get the scheduler broks to be sent ...
-        to_send = [b for b in my_scheduler.my_daemon.brokers[broker2_link_uuid].broks.values()
+        to_send = [b for b in list(my_scheduler.my_daemon.brokers[broker2_link_uuid].broks.values())
                    if getattr(b, 'sent_to_externals', False)]
         for brok in to_send:
-            print("- %s" % (brok))
+            print(("- %s" % (brok)))
         assert 0 == len(to_send), "Still some broks to be sent!"
 
         # Test unknown broker that gets its broks from the scheduler
@@ -165,15 +165,15 @@ class TestMultibroker(AlignakTest):
         assert 2 == len(self.schedulers)
         my_first_scheduler = self._schedulers['scheduler-master']
         my_second_scheduler = self._schedulers['scheduler-master2']
-        print("Sched #1 %d hosts: %s" % (len(my_first_scheduler.hosts), my_first_scheduler.hosts))
-        print("Sched #2 %d hosts: %s" % (len(my_second_scheduler.hosts), my_second_scheduler.hosts))
+        print(("Sched #1 %d hosts: %s" % (len(my_first_scheduler.hosts), my_first_scheduler.hosts)))
+        print(("Sched #2 %d hosts: %s" % (len(my_second_scheduler.hosts), my_second_scheduler.hosts)))
         #
         if len(my_first_scheduler.hosts) == 1:
             my_first_scheduler = self._schedulers['scheduler-master2']
             my_second_scheduler = self._schedulers['scheduler-master']
 
         # Two brokers in first scheduler
-        print("Sched #1 brokers: %s" % my_first_scheduler.my_daemon.brokers)
+        print(("Sched #1 brokers: %s" % my_first_scheduler.my_daemon.brokers))
         assert 2 == len(my_first_scheduler.my_daemon.brokers)
         sched1_first_broker = None
         for broker_uuid in my_first_scheduler.my_daemon.brokers:
@@ -193,7 +193,7 @@ class TestMultibroker(AlignakTest):
             assert False, "Scheduler 1 - No broker master 2 link!"
 
         # Two brokers in second scheduler
-        print("Sched #2 brokers: %s" % my_second_scheduler.my_daemon.brokers)
+        print(("Sched #2 brokers: %s" % my_second_scheduler.my_daemon.brokers))
         assert 2 == len(my_second_scheduler.my_daemon.brokers)
         sched2_first_broker = None
         for broker_uuid in my_second_scheduler.my_daemon.brokers:
@@ -239,10 +239,10 @@ class TestMultibroker(AlignakTest):
         broker_broks_count = {}
         for broker_link_uuid in my_first_scheduler.my_daemon.brokers:
             broker_broks_count[broker_link_uuid] = 0
-            print("Broker %s:" % (my_first_scheduler.my_daemon.brokers[broker_link_uuid]))
+            print(("Broker %s:" % (my_first_scheduler.my_daemon.brokers[broker_link_uuid])))
             for brok in my_first_scheduler.my_daemon.brokers[broker_link_uuid].broks:
                 broker_broks_count[broker_link_uuid] += 1
-                print("- %s: %s" % (brok, my_first_scheduler.my_daemon.brokers[broker_link_uuid].broks[brok]))
+                print(("- %s: %s" % (brok, my_first_scheduler.my_daemon.brokers[broker_link_uuid].broks[brok])))
 
         for broker_link_uuid in my_first_scheduler.my_daemon.brokers:
             assert broker_broks_count[broker_link_uuid] == ref_broks_count
@@ -260,10 +260,10 @@ class TestMultibroker(AlignakTest):
         broker_broks_count = {}
         for broker_link_uuid in my_second_scheduler.my_daemon.brokers:
             broker_broks_count[broker_link_uuid] = 0
-            print("Broker %s:" % (my_second_scheduler.my_daemon.brokers[broker_link_uuid]))
+            print(("Broker %s:" % (my_second_scheduler.my_daemon.brokers[broker_link_uuid])))
             for brok in my_second_scheduler.my_daemon.brokers[broker_link_uuid].broks:
                 broker_broks_count[broker_link_uuid] += 1
-                print("- %s: %s" % (brok, my_second_scheduler.my_daemon.brokers[broker_link_uuid].broks[brok]))
+                print(("- %s: %s" % (brok, my_second_scheduler.my_daemon.brokers[broker_link_uuid].broks[brok])))
 
         for broker_link_uuid in my_second_scheduler.my_daemon.brokers:
             assert broker_broks_count[broker_link_uuid] == ref_broks_count
