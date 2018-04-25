@@ -353,7 +353,7 @@ class Stats(object):
                 return False
 
             logger.info('StatsD server contacted')
-            return True
+        return True
 
     def connect(self, name, _type, host='localhost', port=2003,
                 prefix='alignak', enabled=False, broks_enabled=False):
