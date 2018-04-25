@@ -1395,7 +1395,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             statsmgr.timer('dispatcher.dispatch', time.time() - _t0)
 
             # Make a pause to let our satellites get ready...
-            pause = max(self.conf.daemons_dispatch_timeout, len(self.my_daemons) * 0.5)
+            pause = max(1, max(self.conf.daemons_dispatch_timeout, len(self.my_daemons) * 0.5))
             # pause = len(self.my_daemons) * 0.2
             logger.info("- pausing %d seconds...", pause)
             time.sleep(pause)
@@ -1439,7 +1439,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                               exit_code=4)
 
         # Make a pause to let our started daemons get ready...
-        pause = max(self.conf.daemons_start_timeout, len(self.my_daemons) * 0.5)
+        pause = max(1, max(self.conf.daemons_start_timeout, len(self.my_daemons) * 0.5))
         if pause:
             logger.info("Pausing %.2f seconds...", pause)
             time.sleep(pause)
@@ -1937,7 +1937,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                                        time.time() - _ts)
 
                         # Make a pause to let our satellites get ready...
-                        pause = self.conf.daemons_new_conf_timeout
+                        pause = max(1, self.conf.daemons_new_conf_timeout)
                         if pause:
                             logger.info("Pausing %.2f seconds...", pause)
                             time.sleep(pause)
