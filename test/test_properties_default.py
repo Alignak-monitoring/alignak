@@ -263,9 +263,9 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('daemons_initial_port', 7800),
         ('daemons_log_folder', '/usr/local/var/log/alignak'),
         ('daemons_check_period', 5),
-        ('daemons_start_timeout', 0),
-        ('daemons_dispatch_timeout', 0),
-        ('daemons_new_conf_timeout', 0),
+        ('daemons_start_timeout', 1),
+        ('daemons_dispatch_timeout', 5),
+        ('daemons_new_conf_timeout', 1),
         ('daemons_stop_timeout', 30),
         ('daemons_failure_kill', True)
         ])
