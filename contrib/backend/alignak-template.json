@@ -1,0 +1,41 @@
+[
+    {
+        "_is_template": true,
+        "_realm": "All",
+        "_sub_realm": true,
+        "_templates_with_services": true,
+        "_templates": [
+        ],
+        "active_checks_enabled": false,
+        "address": "n/a",
+        "address6": "n/a",
+        "alias": "Alignak",
+        "business_impact": 4,
+        "check_period": "24x7",
+        "customs": {
+        },
+        "check_freshness": true,
+        "check_interval": 60,
+        "freshness_state": "d",
+        "freshness_threshold": 1200,
+        "imported_from": "alignak",
+        "maintenance_period": "Never",
+        "name": "alignak",
+        "notification_interval": 60,
+        "notification_options": [
+            "d",
+            "x",
+            "r",
+            "f"
+        ],
+        "notification_period": "24x7",
+        "notifications_enabled": true,
+        "notes": "",
+        "notes_url": "",
+        "passive_checks_enabled": true,
+        "snapshot_period": "Never",
+        "tags": [
+            "Alignak"
+        ]
+    }
+]

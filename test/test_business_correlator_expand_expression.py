@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -61,9 +61,10 @@ PROFILE_BP_RULE_RE_PROCESSING = False
 class TestBusinessCorrelatorExpand(AlignakTest):
 
     def setUp(self):
+        super(TestBusinessCorrelatorExpand, self).setUp()
         self.setup_with_file('cfg/cfg_business_correlator_expression.cfg')
         assert self.conf_is_correct
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
     def test_hostgroup_expansion_bprule_simple_host_srv(self):
         """ BR expansion - simple host/service """
@@ -396,7 +397,7 @@ class TestBusinessCorrelatorExpand(AlignakTest):
         assert bp_rule is svc_cor.business_rule
         bp_rule = svc_cor.business_rule
         assert 2 == bp_rule.get_state(self._sched.hosts, self._sched.services)
-        assert 0 == svc_cor.last_hard_state_id
+        assert 2 == svc_cor.last_hard_state_id
 
         # Get macro modulation value and change its value
         mod = self._sched.macromodulations.find_by_name("xof_modulation")

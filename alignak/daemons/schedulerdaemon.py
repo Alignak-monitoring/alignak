@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -52,8 +52,6 @@
 This module provide Alignak which is the main scheduling daemon class
 """
 
-import os
-import signal
 import time
 import traceback
 import logging
@@ -63,11 +61,11 @@ from alignak.scheduler import Scheduler
 from alignak.macroresolver import MacroResolver
 from alignak.brok import Brok
 from alignak.external_command import ExternalCommandManager
-from alignak.daemon import Daemon
-from alignak.http.scheduler_interface import SchedulerInterface
-from alignak.property import PathProp, IntegerProp, StringProp
-from alignak.satellite import BaseSatellite
 from alignak.stats import statsmgr
+from alignak.http.scheduler_interface import SchedulerInterface
+from alignak.property import IntegerProp, StringProp
+from alignak.satellite import BaseSatellite
+from alignak.objects.satellitelink import SatelliteLink
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -79,33 +77,21 @@ class Alignak(BaseSatellite):
 
     properties = BaseSatellite.properties.copy()
     properties.update({
-        'daemon_type':
+        'type':
             StringProp(default='scheduler'),
-        'pidfile':
-            PathProp(default='schedulerd.pid'),
         'port':
-            IntegerProp(default=7768),
-        'local_log':
-            PathProp(default='schedulerd.log'),
+            IntegerProp(default=7768)
     })
 
-    def __init__(self, config_file, is_daemon, do_replace, debug, debug_file,
-                 port=None, local_log=None, daemon_name=None):
-        self.daemon_name = 'scheduler'
-        if daemon_name:
-            self.daemon_name = daemon_name
+    def __init__(self, **kwargs):
+        """Scheduler daemon initialisation
 
-        BaseSatellite.__init__(self, self.daemon_name, config_file, is_daemon, do_replace,
-                               debug, debug_file, port, local_log)
+        :param kwargs: command line arguments
+        """
+        super(Alignak, self).__init__(kwargs.get('daemon_name', 'Default-scheduler'), **kwargs)
 
         self.http_interface = SchedulerInterface(self)
         self.sched = Scheduler(self)
-
-        self.must_run = True
-
-        # Now the interface
-        self.uri = None
-        self.uri2 = None
 
         # stats part
         # --- copied from scheduler.py
@@ -121,10 +107,42 @@ class Alignak(BaseSatellite):
         # ---
 
         # And possible links for satellites
-        # from now only pollers
+        self.brokers = {}
         self.pollers = {}
         self.reactionners = {}
-        self.brokers = {}
+        self.receivers = {}
+
+        # Modules are only loaded one time
+        self.have_modules = False
+
+        self.first_scheduling = False
+
+    def get_broks(self, broker_name):
+        """Send broks to a specific broker
+
+        :param broker_name: broker name to send broks
+        :type broker_name: str
+        :greturn: dict of brok for this broker
+        :rtype: dict[alignak.brok.Brok]
+        """
+        logger.debug("Broker %s requests my broks list", broker_name)
+        res = {}
+
+        if not broker_name:
+            return res
+
+        for broker_link in self.brokers.values():
+            if broker_name == broker_link.name:
+                to_send = [b for b in self.brokers[broker_link.uuid].broks.values()
+                           if getattr(b, 'sent_to_externals', False)]
+                for brok in to_send:
+                    res[brok.uuid] = self.brokers[broker_link.uuid].broks.pop(brok.uuid)
+                logger.debug("Providing %d broks to %s", len(to_send), broker_name)
+                break
+        else:
+            logger.warning("Got a brok request from an unknown broker: %s", broker_name)
+
+        return res
 
     def compensate_system_time_change(self, difference, timeperiods):  # pragma: no cover,
         # not with unit tests
@@ -134,7 +152,8 @@ class Alignak(BaseSatellite):
         :type difference: int
         :return: None
         """
-        logger.warning("A system time change of %d has been detected. Compensating...", difference)
+        super(Alignak, self).compensate_system_time_change(difference, timeperiods)
+
         # We only need to change some value
         self.program_start = max(0, self.program_start + difference)
 
@@ -202,215 +221,306 @@ class Alignak(BaseSatellite):
                 else:
                     act.t_to_go = new_t
 
-    def manage_signal(self, sig, frame):
-        """Manage signals caught by the daemon
-        signal.SIGUSR1 : dump_memory
-        signal.SIGUSR2 : dump_object (nothing)
-        signal.SIGTERM, signal.SIGINT : terminate process
-
-        :param sig: signal caught by daemon
-        :type sig: str
-        :param frame: current stack frame
-        :type frame:
-        :return: None
-        TODO: Refactor with Daemon one
-        """
-        logger.info("scheduler process %d received a signal: %s", os.getpid(), str(sig))
-        # If we got USR1, just dump memory
-        if sig == signal.SIGUSR1:
-            self.sched.need_dump_memory = True
-        elif sig == signal.SIGUSR2:  # usr2, dump objects
-            self.sched.need_objects_dump = True
-        else:  # if not, die :)
-            logger.info("scheduler process %d is dying...", os.getpid())
-            self.sched.die()
-            self.must_run = False
-            Daemon.manage_signal(self, sig, frame)
+    def do_before_loop(self):
+        """Stop the scheduling process"""
+        if self.sched:
+            self.sched.stop_scheduling()
 
     def do_loop_turn(self):
         """Scheduler loop turn
-        Basically wait initial conf and run
+
+        Simply run the Alignak scheduler loop
+
+        This is called when a configuration got received by the scheduler daemon. As of it,
+        check if the first scheduling has been done... and manage this.
 
         :return: None
         """
-        # Ok, now the conf
-        self.wait_for_initial_conf()
-        if not self.new_conf:
-            return
-        logger.info("New configuration received")
-        self.setup_new_conf()
-        logger.info("[%s] New configuration loaded, scheduling for Alignak: %s",
-                    self.name, self.sched.alignak_name)
-        self.sched.run()
+        if not self.first_scheduling:
+            # Ok, now all is initialized, we can make the initial broks
+            logger.info("First scheduling launched")
+            _t0 = time.time()
+            # Program start brok
+            self.sched.initial_program_status()
+            # First scheduling
+            self.sched.schedule()
+            statsmgr.timer('first_scheduling', time.time() - _t0)
+            logger.info("First scheduling done")
+
+            # Connect to our passive satellites if needed
+            for satellite in [s for s in self.pollers.values() if s.passive]:
+                if not self.daemon_connection_init(satellite):
+                    logger.error("Passive satellite connection failed: %s", satellite)
+
+            for satellite in [s for s in self.reactionners.values() if s.passive]:
+                if not self.daemon_connection_init(satellite):
+                    logger.error("Passive satellite connection failed: %s", satellite)
+
+            # Ticks are for recurrent function call like consume, del zombies etc
+            self.sched.ticks = 0
+            self.first_scheduling = True
+
+        # Each loop turn, execute the daemon specific treatment...
+        # only if the daemon has a configuration to manage
+        if self.sched.pushed_conf:
+            # If scheduling is not yet enabled, enable scheduling
+            if not self.sched.must_schedule:
+                self.sched.start_scheduling()
+                self.sched.before_run()
+            self.sched.run()
+        else:
+            logger.warning("#%d - No monitoring configuration to scheduler...",
+                           self.loop_count)
+
+    def get_managed_configurations(self):
+        """Get the configurations managed by this scheduler
+
+        The configuration managed by a scheduler the self configuration got by the scheduler
+        during the dispatching.
+
+        :return: a dict of scheduler links with instance_id as key and
+        hash, push_flavor and configuration identifier as values
+        :rtype: dict
+        """
+        res = {}
+        if self.sched.pushed_conf and self.cur_conf:
+            res = {
+                self.cur_conf['instance_id']: {
+                    'hash': self.cur_conf['hash'],
+                    'push_flavor': self.cur_conf['push_flavor'],
+                    'managed_conf_id': self.cur_conf['managed_conf_id']
+                }
+            }
+        logger.debug("Get managed configuration: %s", res)
+        return res
 
     def setup_new_conf(self):  # pylint: disable=too-many-statements
         """Setup new conf received for scheduler
 
         :return: None
         """
+        # Execute the base class treatment...
+        super(Alignak, self).setup_new_conf()
+
+        # ...then our own specific treatment!
         with self.conf_lock:
-            self.clean_previous_run()
-            new_conf = self.new_conf
-            logger.info("[%s] Sending us a configuration", self.name)
-            conf_raw = new_conf['conf']
-            override_conf = new_conf['override_conf']
-            modules = new_conf['modules']
-            satellites = new_conf['satellites']
-            instance_name = new_conf['instance_name']
+            # self_conf is our own configuration from the alignak environment
+            self_conf = self.cur_conf['self_conf']
+            if 'conf_part' not in self.cur_conf:
+                self.cur_conf['conf_part'] = None
+            conf_part = self.cur_conf['conf_part']
 
             # Ok now we can save the retention data
-            if hasattr(self.sched, 'conf'):
-                self.sched.update_retention_file(forced=True)
+            if self.sched.pushed_conf is not None:
+                self.sched.update_retention(forced=True)
 
-            # horay, we got a name, we can set it in our stats objects
-            statsmgr.register(instance_name, 'scheduler',
-                              statsd_host=new_conf['statsd_host'],
-                              statsd_port=new_conf['statsd_port'],
-                              statsd_prefix=new_conf['statsd_prefix'],
-                              statsd_enabled=new_conf['statsd_enabled'])
-
+            # Get the monitored objects configuration
             t00 = time.time()
             try:
-                conf = unserialize(conf_raw)
-            except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
-                logger.error('Cannot un-serialize configuration received from arbiter: %s', exp)
-            logger.debug("Conf received at %d. Un-serialized in %d secs", t00, time.time() - t00)
-            self.new_conf = None
+                received_conf_part = unserialize(conf_part)
+                assert received_conf_part is not None
+            except AssertionError as exp:
+                # This to indicate that no configuration is managed by this scheduler...
+                logger.warning("No managed configuration received from arbiter")
+            except AlignakClassLookupException:  # pragma: no cover
+                # This to indicate that the new configuration is not managed...
+                self.new_conf = {
+                    "_status": "Cannot un-serialize configuration received from arbiter"
+                }
+                logger.error(self.new_conf['_status'])
+                logger.error("Back trace of the error:\n%s", traceback.format_exc())
+                return
+            except Exception as exp:  # pylint: disable=broad-except
+                # This to indicate that the new configuration is not managed...
+                self.new_conf = {
+                    "_status": "Cannot un-serialize configuration received from arbiter"
+                }
+                logger.error(self.new_conf['_status'])
+                self.exit_on_exception(exp, self.new_conf)
 
-            if 'scheduler_name' in new_conf:
-                name = new_conf['scheduler_name']
-            else:
-                name = instance_name
-            self.name = name
+            # if not received_conf_part:
+            #     return
 
-            # Set my own process title
-            self.set_proctitle(self.name)
+            logger.info("Monitored configuration %s received at %d. Un-serialized in %d secs",
+                        received_conf_part, t00, time.time() - t00)
+            logger.info("Scheduler received configuration : %s", received_conf_part)
 
-            logger.info("[%s] Received a new configuration, containing: ", self.name)
-            for key in new_conf:
-                logger.info("[%s] - %s", self.name, key)
-            logger.info("[%s] configuration identifiers: %s (%s)",
-                        self.name, new_conf['conf_uuid'], new_conf['push_flavor'])
-
-            # Tag the conf with our data
-            self.conf = conf
-            self.conf.push_flavor = new_conf['push_flavor']
-            self.conf.alignak_name = new_conf['alignak_name']
-            self.conf.instance_name = instance_name
-            self.conf.skip_initial_broks = new_conf['skip_initial_broks']
-            self.conf.accept_passive_unknown_check_results = \
-                new_conf['accept_passive_unknown_check_results']
-
-            self.cur_conf = conf
-            self.override_conf = override_conf
-            self.modules = unserialize(modules, True)
-            self.satellites = satellites
-
-            # Now We create our pollers, reactionners and brokers
-            for sat_type in ['pollers', 'reactionners', 'brokers']:
-                if sat_type not in satellites:
+            # Now we create our pollers, reactionners and brokers
+            for link_type in ['pollers', 'reactionners', 'brokers']:
+                if link_type not in self.cur_conf['satellites']:
+                    logger.error("Missing %s in the configuration!", link_type)
                     continue
-                for sat_id in satellites[sat_type]:
-                    # Must look if we already have it
-                    sats = getattr(self, sat_type)
-                    sat = satellites[sat_type][sat_id]
 
-                    sats[sat_id] = sat
+                my_satellites = getattr(self, link_type, {})
+                received_satellites = self.cur_conf['satellites'][link_type]
+                for link_uuid in received_satellites:
+                    rs_conf = received_satellites[link_uuid]
+                    logger.info("- received %s - %s: %s", rs_conf['instance_id'],
+                                rs_conf['type'], rs_conf['name'])
 
-                    if sat['name'] in override_conf['satellitemap']:
-                        sat = dict(sat)  # make a copy
-                        sat.update(override_conf['satellitemap'][sat['name']])
+                    # Must look if we already had a configuration and save our broks
+                    already_got = rs_conf['instance_id'] in my_satellites
+                    broks = {}
+                    actions = {}
+                    wait_homerun = {}
+                    external_commands = {}
+                    running_id = 0
+                    if already_got:
+                        logger.warning("I already got: %s", rs_conf['instance_id'])
+                        # Save some information
+                        running_id = my_satellites[link_uuid].running_id
+                        (broks, actions,
+                         wait_homerun, external_commands) = \
+                            my_satellites[link_uuid].get_and_clear_context()
+                        # Delete the former link
+                        del my_satellites[link_uuid]
 
-                    proto = 'http'
-                    if sat['use_ssl']:
-                        proto = 'https'
-                    uri = '%s://%s:%s/' % (proto, sat['address'], sat['port'])
+                    # My new satellite link...
+                    new_link = SatelliteLink.get_a_satellite_link(link_type[:-1],
+                                                                  rs_conf)
+                    my_satellites[new_link.uuid] = new_link
+                    logger.info("I got a new %s satellite: %s", link_type, new_link)
+                    # print("My new %s satellite: %s" % (link_type, new_link))
 
-                    sats[sat_id]['uri'] = uri
-                    sats[sat_id]['con'] = None
-                    sats[sat_id]['running_id'] = 0
-                    sats[sat_id]['last_connection'] = 0
-                    sats[sat_id]['connection_attempt'] = 0
-                    sats[sat_id]['max_failed_connections'] = 3
-                    setattr(self, sat_type, sats)
-                logger.debug("We have our %s: %s ", sat_type, satellites[sat_type])
-                logger.info("We have our %s:", sat_type)
-                for daemon in satellites[sat_type].values():
-                    logger.info(" - %s ", daemon['name'])
+                    new_link.running_id = running_id
+                    new_link.external_commands = external_commands
+                    new_link.broks = broks
+                    new_link.wait_homerun = wait_homerun
+                    new_link.actions = actions
+
+                    # Replacing the satellite address and port by those defined in satellite_map
+                    if new_link.name in self.cur_conf['override_conf'].get('satellite_map', {}):
+                        override_conf = self.cur_conf['override_conf']
+                        overriding = override_conf.get('satellite_map')[new_link.name]
+                        logger.warning("Do not override the configuration for: %s, with: %s. "
+                                       "Please check whether this is necessary!",
+                                       new_link.name, overriding)
+                        # satellite = dict(satellite)  # make a copy
+                        # satellite_object.update(self.cur_conf['override_conf'].
+                        # get('satellite_map', {})[satellite_object.name])
 
             # First mix conf and override_conf to have our definitive conf
-            for prop in self.override_conf:
-                val = self.override_conf[prop]
-                setattr(self.conf, prop, val)
+            for prop in getattr(self.cur_conf, 'override_conf', []):
+                logger.debug("Overriden: %s / %s ", prop, getattr(received_conf_part, prop, None))
+                logger.debug("Overriding: %s / %s ", prop, self.cur_conf['override_conf'])
+                setattr(received_conf_part, prop, self.cur_conf['override_conf'].get(prop, None))
 
-            if self.conf.use_timezone != '':
-                logger.info("Setting our timezone to %s", str(self.conf.use_timezone))
-                os.environ['TZ'] = self.conf.use_timezone
-                time.tzset()
+            # Scheduler modules
+            if not self.have_modules:
+                try:
+                    self.modules = unserialize(self.cur_conf['modules'], no_load=True)
+                except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
+                    logger.error('Cannot un-serialize modules configuration '
+                                 'received from arbiter: %s', exp)
+                if self.modules:
+                    logger.info("I received some modules configuration: %s", self.modules)
+                    self.have_modules = True
 
-            self.do_load_modules(self.modules)
+                    self.do_load_modules(self.modules)
+                    # and start external modules too
+                    self.modules_manager.start_external_instances()
+                else:
+                    logger.info("I do not have modules")
 
-            logger.info("Loading configuration.")
-            self.conf.explode_global_conf()  # pylint: disable=E1101
+            if received_conf_part:
+                logger.info("Loading configuration...")
+                # Propagate the global parameters to the configuration items
+                received_conf_part.explode_global_conf()
 
-            # we give sched it's conf
-            self.sched.reset()
-            self.sched.load_conf(self.conf)
-            self.sched.load_satellites(self.pollers, self.reactionners, self.brokers)
+                # We give the configuration to our scheduler
+                self.sched.reset()
+                self.sched.load_conf(self.cur_conf['instance_id'],
+                                     self.cur_conf['instance_name'],
+                                     received_conf_part)
 
-            # We must update our Config dict macro with good value
-            # from the config parameters
-            self.sched.conf.fill_resource_macros_names_macros()
+                # Once loaded, the scheduler has an inner pushed_conf object
+                logger.info("Loaded: %s", self.sched.pushed_conf)
 
-            # Creating the Macroresolver Class & unique instance
-            m_solver = MacroResolver()
-            m_solver.init(self.conf)
+                # Update the scheduler ticks according to the configuration
+                self.sched.update_recurrent_works_tick(self_conf)
 
-            # self.conf.dump()
-            # self.conf.quick_debug()
+                # We must update our pushed configuration macros with correct values
+                # from the configuration parameters
+                # self.sched.pushed_conf.fill_resource_macros_names_macros()
 
-            # Now create the external commands manager
-            # We are an applyer: our role is not to dispatch commands, but to apply them
-            ecm = ExternalCommandManager(self.conf, 'applyer', self.sched)
+                # Creating the Macroresolver Class & unique instance
+                m_solver = MacroResolver()
+                m_solver.init(received_conf_part)
 
-            # Scheduler needs to know about this external command manager to use it if necessary
-            self.sched.set_external_commands_manager(ecm)
-            # Update External Commands Manager
-            self.sched.external_commands_manager.accept_passive_unknown_check_results = \
-                self.sched.conf.accept_passive_unknown_check_results
+                # Now create the external commands manager
+                # We are an applyer: our role is not to dispatch commands, but to apply them
+                ecm = ExternalCommandManager(received_conf_part, 'applyer', self.sched,
+                                             self_conf.get('accept_passive_unknown_check_results',
+                                                           False))
 
-            # We clear our schedulers managed (it's us :) )
-            # and set ourselves in it
-            self.schedulers = {self.conf.uuid: self.sched}  # pylint: disable=E1101
+                # Scheduler needs to know about this external command manager to use it if necessary
+                self.sched.external_commands_manager = ecm
 
-            # Ok now we can load the retention data
-            self.sched.retention_load()
+                # Ok now we can load the retention data
+                self.sched.retention_load()
 
             # Create brok new conf
             brok = Brok({'type': 'new_conf', 'data': {}})
             self.sched.add_brok(brok)
 
-    def what_i_managed(self):
-        # pylint: disable=no-member
-        """Get my managed dict (instance id and push_flavor)
+            # Initialize connection with all our satellites
+            logger.info("Initializing connection with my satellites:")
+            my_satellites = self.get_links_of_type()
+            for satellite in my_satellites.values():
+                logger.info("- : %s/%s", satellite.type, satellite.name)
+                if not self.daemon_connection_init(satellite):
+                    logger.error("Satellite connection failed: %s", satellite)
 
-        :return: dict containing instance_id key and push flavor value
-        :rtype: dict
-        """
-        if hasattr(self, 'conf'):
-            return {self.conf.uuid: self.conf.push_flavor}  # pylint: disable=E1101
+            if received_conf_part:
+                # Enable the scheduling process
+                logger.info("Loaded: %s", self.sched.pushed_conf)
+                self.sched.start_scheduling()
 
-        return {}
+        # Now I have a configuration!
+        self.have_conf = True
 
     def clean_previous_run(self):
         """Clean variables from previous configuration
 
         :return: None
         """
+        # Execute the base class treatment...
+        super(Alignak, self).clean_previous_run()
+
         # Clean all lists
         self.pollers.clear()
         self.reactionners.clear()
         self.brokers.clear()
+
+    def get_daemon_stats(self, details=False):
+        """Increase the stats provided by the Daemon base class
+
+        :return: stats dictionary
+        :rtype: dict
+        """
+        # Call the base Daemon one
+        res = super(Alignak, self).get_daemon_stats(details=details)
+
+        res.update({'name': self.name, 'type': self.type, 'monitored_objects': {}})
+
+        counters = res['counters']
+        counters['brokers'] = len(self.brokers)
+        counters['pollers'] = len(self.pollers)
+        counters['reactionners'] = len(self.reactionners)
+        counters['receivers'] = len(self.receivers)
+
+        if not self.sched:
+            return res
+
+        # Get statistics from the scheduler
+        scheduler_stats = self.sched.get_scheduler_stats(details=details)
+        res['counters'].update(scheduler_stats['counters'])
+        scheduler_stats.pop('counters')
+        res['metrics'].append(scheduler_stats['metrics'])
+        scheduler_stats.pop('metrics')
+        res.update(scheduler_stats)
+
+        return res
 
     def main(self):
         """Main function for Scheduler, launch after the init::
@@ -423,24 +533,23 @@ class Alignak(BaseSatellite):
         :return: None
         """
         try:
-            self.setup_alignak_logger()
-
-            # Look if we are enabled or not. If ok, start the daemon mode
-            self.look_for_early_exit()
-
-            # todo:
-            # This function returns False if some problem is detected during initialization
-            # (eg. communication port not free)
-            # Perharps we should stop the initialization process and exit?
+            # Start the daemon mode
             if not self.do_daemon_init_and_start():
-                return
+                self.exit_on_error(message="Daemon initialization error", exit_code=3)
 
-            self.load_modules_manager(self.name)
+            #  We wait for initial conf
+            self.wait_for_initial_conf()
+            if self.new_conf:
+                # Setup the received configuration
+                self.setup_new_conf()
 
-            self.uri = self.http_daemon.uri
-            logger.info("[Scheduler] General interface is at: %s", self.uri)
+                # Now the main loop
+                self.do_main_loop()
 
-            self.do_mainloop()
-        except Exception:
-            self.print_unrecoverable(traceback.format_exc())
+                # On main loop exit, call the scheduler after run process
+                self.sched.after_run()
+
+            self.request_stop()
+        except Exception:  # pragma: no cover, this should never happen indeed ;)
+            self.exit_on_exception(traceback.format_exc())
             raise

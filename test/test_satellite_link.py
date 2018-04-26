@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -34,12 +34,13 @@ class template_DaemonLink_get_name():
 
     def test_get_name(self):
         link = self.get_link()
+        print("Link: %s / %s" % (type(link), link))
         link.fill_default()
 
-        print("Name: %s / %s" % (link.get_my_type(), link.get_name()))
+        print("Name: %s / %s / %s" % (link.type, link.name, link.get_name()))
         print("Config: %s" % (link.give_satellite_cfg()))
-        print("Config: %s" % (link.have_conf()))
-        assert False == link.have_conf()
+        print("Config: %s" % (link.have_conf))
+        assert False == link.have_conf
         try:
             self.assertEqual("Unnamed {0}".format(self.daemon_link.my_type), link.get_name())
         except AttributeError:
@@ -48,33 +49,47 @@ class template_DaemonLink_get_name():
 
 class Test_ArbiterLink_get_name(template_DaemonLink_get_name, AlignakTest):
     """Test satellite link arbiter"""
+    def setUp(self):
+        super(Test_ArbiterLink_get_name, self).setUp()
+
     daemon_link = ArbiterLink
 
 
 class Test_SchedulerLink_get_name(template_DaemonLink_get_name, AlignakTest):
     """Test satellite link scheduler"""
+    def setUp(self):
+        super(Test_SchedulerLink_get_name, self).setUp()
+
     daemon_link = SchedulerLink
 
 
 class Test_BrokerLink_get_name(template_DaemonLink_get_name, AlignakTest):
     """Test satellite link broker"""
+    def setUp(self):
+        super(Test_BrokerLink_get_name, self).setUp()
+
     daemon_link = BrokerLink
 
 
 class Test_ReactionnerLink_get_name(template_DaemonLink_get_name, AlignakTest):
     """Test satellite link reactionner"""
+    def setUp(self):
+        super(Test_ReactionnerLink_get_name, self).setUp()
+
     daemon_link = ReactionnerLink
 
 
 class Test_ReceiverLink_get_name(template_DaemonLink_get_name, AlignakTest):
     """Test satellite link receiver"""
+    def setUp(self):
+        super(Test_ReceiverLink_get_name, self).setUp()
+
     daemon_link = ReceiverLink
 
 
 class Test_PollerLink_get_name(template_DaemonLink_get_name, AlignakTest):
     """Test satellite link poller"""
+    def setUp(self):
+        super(Test_PollerLink_get_name, self).setUp()
+
     daemon_link = PollerLink
-
-
-if __name__ == '__main__':
-    AlignakTest.main()

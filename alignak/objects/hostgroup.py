@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -56,7 +56,6 @@ This module provide Hostgroup and Hostgroups class used to manage host groups
 import logging
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
-from alignak.util import get_obj_name
 from alignak.property import StringProp, ListProp
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
@@ -79,8 +78,7 @@ class Hostgroup(Itemgroup):
         'notes':                StringProp(default='', fill_brok=['full_status']),
         'notes_url':            StringProp(default='', fill_brok=['full_status']),
         'action_url':           StringProp(default='', fill_brok=['full_status']),
-        'realm':                StringProp(default='', fill_brok=['full_status'],
-                                           conf_send_preparation=get_obj_name),
+        'realm':                StringProp(default='', fill_brok=['full_status']),
     })
 
     macros = {
@@ -258,7 +256,7 @@ class Hostgroups(Itemgroups):
             else:
                 err = "the hostgroup %s got an unknown realm '%s'" % \
                       (hostgroup.get_name(), hostgroup.realm)
-                hostgroup.configuration_errors.append(err)
+                hostgroup.add_error(err)
                 hostgroup.realm = None
                 continue
 

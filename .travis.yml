@@ -1,48 +1,140 @@
 language: python
-dist: trusty
 sudo: required
 python:
   - "2.6"
   - "2.7"
-
 env:
-  - TEST_SUITE=unit
-  # Alignak daemons run tests
-  - TEST_SUITE=run
-  - TEST_SUITE=load
+  - TEST_SUITE=unit_tests
+  - TEST_SUITE=integration
   - TEST_SUITE=codingstandard
   - TEST_SUITE=virtualenv
 
 matrix:
+#  fast_finish: true
+  allow_failures:
+    - python: "2.6"
   exclude:
   - python: "2.6"
-    env: TEST_SUITE=load
+    env: TEST_SUITE=integration
   - python: "2.6"
     env: TEST_SUITE=codingstandard
   - python: "2.6"
     env: TEST_SUITE=virtualenv
 
+#services:
+#  - mongodb
+
+# command to install dependencies
+# some are only used for travis/coveralls so we are installing them here only
 install:
   # Remove python warnings
   - unset PYTHONWARNINGS
-  # command to install dependencies
-  # some are only used for travis/coveralls so we are installing them here only
+#  - sudo apt-get install -y gdb  # gdb debugger
   - ./test/setup_test.sh
-  # some are specific for daemons run tests
-  - ./test_run/setup_test.sh
+
+#before_script:
+#  - ulimit -c unlimited -S  # enable core dumps
 
 # command to run tests
 script:
-  # so to help eventual debug: know what exact versions are in use can be rather useful.
+  # To help eventual debug, knowing which exact packages are installed can be rather useful ;)
   - pip freeze
-  # run test suite (wait no more than 30 minutes)
-  - travis_wait 60 ./.travis/$TEST_SUITE.sh
 
-# specific call to launch coverage data into coveralls.io
+  - |
+    if [[ $TEST_SUITE == 'virtualenv' ]]; then
+      # Virtual environment setup tests
+      ./test/test_virtualenv_setup.sh || travis_terminate 1;
+    fi
+
+  - |
+    if [[ $TEST_SUITE == 'codingstandard' ]]; then
+      # Static code analysis
+      # -- pycodestyle (former pep8)
+      # Exclude the dictconfig.py vendor file
+      travis_wait 60 pycodestyle --max-line-length=100 --exclude='*.pyc,alignak/misc/dictconfig.py,alignak/misc/carboniface.py' alignak/* || travis_terminate 1;
+      # -- pylint
+      unset PYTHONWARNINGS
+      travis_wait 60 pylint --rcfile=.pylintrc -r no alignak || travis_terminate 1;
+      export PYTHONWARNINGS=all
+      # -- pep257
+      travis_wait 60 pep257 --select=D300 alignak || travis_terminate 1;
+    fi
+
+  - |
+    if [[ $TEST_SUITE == 'unit_tests' && $TRAVIS_PYTHON_VERSION == '2.7' ]]; then
+      # Run unit tests and code coverage analysis
+      cd test
+      # Run test suite with py.test running its coverage plugin
+      # Dump the 10 slowest tests
+      # Do not print log synthesis on test end
+      echo "Starting tests..."
+      pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
+      cd ..
+      cp test/.coverage .
+      # codecov
+      bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
+    fi
+
+  - |
+    if [[ $TEST_SUITE == 'unit_tests' && $TRAVIS_PYTHON_VERSION == '2.6' ]]; then
+      # Run unit tests and code coverage analysis
+      cd test
+      # Run test suite with py.test running its coverage plugin
+      # Dump the 10 slowest tests
+      # Do not print log synthesis on test end
+      echo "Starting tests..."
+      pytest --verbose --durations=10 --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
+      cd ..
+      cp test/.coverage .
+      # codecov
+      bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
+    fi
+
+  - |
+    if [[ $TEST_SUITE == 'integration' ]]; then
+      # Run load tests and code dynamic analysis
+      cd test_load
+      # Run test suite with py.test running its coverage plugin
+      # Dump the 10 slowest tests - do not capture to have some activity in Travis
+      travis_wait 60 pytest --durations=10 --no-print-logs --capture=no -s --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
+      cd ..
+      cp test_load/.coverage .
+      # codecov
+      bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
+
+      # Run load tests and code dynamic analysis
+      cd test_run
+      # Run test suite with py.test running its coverage plugin
+      # Dump the 10 slowest tests - do not capture to have some activity in Travis
+      travis_wait 60 pytest --durations=10 --no-print-logs --capture=no -s --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
+      cd ..
+      cp test_run/.coverage .
+      # codecov
+      bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
+    fi
+
+after_failure:
+  - COREFILE=$(find . -maxdepth 1 -name "core*" | head -n 1) # find core file
+  - if [[ -f "$COREFILE" ]]; then gdb -c "$COREFILE" example -ex "thread apply all bt" -ex "set pagination 0" -batch; fi
+
+
 after_success:
-  - echo "Test Success - Branch($TRAVIS_BRANCH) Pull Request($TRAVIS_PULL_REQUEST) Tag($TRAVIS_TAG)"
-  # Send coverage report only for the Python 2.7 unit tests
-  - if [[ $TEST_SUITE == 'unit' && $TRAVIS_PYTHON_VERSION == '2.7' ]]; then ./.travis/report_coveralls.sh; fi
+  - |
+    if [[ $TEST_SUITE == 'unit_tests' && $TRAVIS_PYTHON_VERSION == '2.7' ]]; then
+      # to get coverage data with relative paths and not absolute we have to
+      # execute coveralls from the base directory of the project,
+      # so we need to move the .coverage file here :
+      # mv test/.coverage ./coverage_unit
+      # mv test_load/.coverage ./coverage_load
+      # mv test_run/.coverage ./coverage_run
+      # Combine the coverage collected data
+      # coverage combine coverage_unit coverage_load coverage_run
+
+      echo "Submitting coverage results to coveralls.io..."
+      coveralls --rcfile=test/.coveragerc
+      echo "Submitted"
+    fi
+
   - if [[ $TEST_SUITE == 'unit' && $TRAVIS_PYTHON_VERSION == '2.7' ]]; then ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION; fi
 
 notifications:

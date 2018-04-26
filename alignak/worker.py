@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -59,11 +59,7 @@ import cStringIO
 import logging
 
 from alignak.message import Message
-from alignak.misc.common import setproctitle
-
-# Friendly names for the system signals
-SIGNALS_TO_NAMES_DICT = dict((k, v) for v, k in reversed(sorted(signal.__dict__.items()))
-                             if v.startswith('SIG') and not v.startswith('SIG_'))
+from alignak.misc.common import setproctitle, SIGNALS_TO_NAMES_DICT
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -173,10 +169,8 @@ class Worker(object):
         self._process.start()
 
     def manage_signal(self, sig, frame):  # pylint: disable=W0613
-        """Manage signals caught by the daemon
-        signal.SIGUSR1 : dump_memory
-        signal.SIGUSR2 : dump_object (nothing)
-        signal.SIGTERM, signal.SIGINT : terminate process
+        """Manage signals caught by the process but I do not do anything...
+        our master daemon is managing our termination.
 
         :param sig: signal caught by daemon
         :type sig: str
@@ -267,7 +261,7 @@ class Worker(object):
         except (IOError, EOFError) as exp:
             logger.warning("My actions queue is no more available: %s", str(exp))
             self.interrupted = True
-        except Exception as exp:  # pylint: disable=W0703
+        except Exception as exp:  # pylint: disable=broad-except
             logger.error("Failed getting messages in actions queue: %s", str(exp))
 
         logger.debug("get_new_checks exit")
@@ -325,7 +319,7 @@ class Worker(object):
                 except (IOError, EOFError) as exp:
                     logger.warning("My returns queue is no more available: %s", str(exp))
                     # sys.exit(2)
-                except Exception as exp:  # pylint: disable=W0703
+                except Exception as exp:  # pylint: disable=broad-except
                     logger.error("Failed putting messages in returns queue: %s", str(exp))
             else:
                 logger.debug("--- not yet finished")
@@ -372,7 +366,7 @@ class Worker(object):
             self.do_work(actions_queue, returns_queue)
             logger.info("[%s] (pid=%d) stopped", self.get_id(), os.getpid())
         # Catch any exception, try to print it and exit anyway
-        except Exception:
+        except Exception:  # pragma: no cover, this should never happen indeed ;)
             output = cStringIO.StringIO()
             traceback.print_exc(file=output)
             logger.error("[%s] exit with an unmanaged exception : %s",

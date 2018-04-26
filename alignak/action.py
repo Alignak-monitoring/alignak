@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -100,7 +100,7 @@ def no_block_read(output):
     fcntl.fcntl(o_fd, fcntl.F_SETFL, o_fl | os.O_NONBLOCK)
     try:
         return output.read()
-    except Exception:  # pylint: disable=W0703
+    except Exception:  # pylint: disable=broad-except
         return ''
 
 
@@ -160,7 +160,7 @@ class ActionBase(AlignakObject):
             self.creation_time = time.time()
         # Set actions log only if not provided
         if not params or 'log_actions' not in params:
-            self.log_actions = 'TEST_LOG_ACTIONS' in os.environ
+            self.log_actions = 'ALIGNAK_LOG_ACTIONS' in os.environ
 
         # Fill default parameters
         self.fill_default()
@@ -213,7 +213,7 @@ class ActionBase(AlignakObject):
 
         logger.debug("Launch command: '%s', ref: %s", self.command, self.ref)
         if self.log_actions:
-            if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+            if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                 logger.warning("Launch command: '%s'", self.command)
             else:
                 logger.info("Launch command: '%s'", self.command)
@@ -276,7 +276,7 @@ class ActionBase(AlignakObject):
         logger.debug("Command result for '%s': %d, %s",
                      self.command, self.exit_status, self.output)
         if self.log_actions:
-            if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+            if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                 logger.warning("Check result for '%s': %d, %s",
                                self.command, self.exit_status, self.output)
                 if self.perf_data:
@@ -330,7 +330,7 @@ class ActionBase(AlignakObject):
                 self.u_time = n_child_utime - child_utime
                 self.s_time = n_child_stime - child_stime
                 if self.log_actions:
-                    if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+                    if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                         logger.warning("Action '%s' exited on timeout (%d s)",
                                        self.command, self.timeout)
                     else:
@@ -353,7 +353,7 @@ class ActionBase(AlignakObject):
 
         self.exit_status = self.process.returncode
         if self.log_actions:
-            if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+            if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                 logger.warning("Action '%s' exited with return code %d",
                                self.command, self.exit_status)
             else:
@@ -478,7 +478,7 @@ if os.name != 'nt':
             else:
                 try:
                     cmd = shlex.split(self.command.encode('utf8', 'ignore'))
-                except Exception as exp:  # pylint: disable=W0703
+                except Exception as exp:  # pylint: disable=broad-except
                     self.output = 'Not a valid shell command: ' + exp.__str__()
                     self.exit_status = 3
                     self.status = 'done'
@@ -518,7 +518,7 @@ if os.name != 'nt':
                 if exp.errno == 24 and exp.strerror == 'Too many open files':
                     return 'toomanyopenfiles'
                 return 'process_launch_failed'
-            except Exception as exp:  # pylint: disable=W0703
+            except Exception as exp:  # pylint: disable=broad-except
                 logger.error("Fail launching command: %s, force shell: %s, exception: %s",
                              self.command, force_shell, exp)
                 return 'process_launch_failed'
@@ -540,7 +540,7 @@ if os.name != 'nt':
             for file_d in [self.process.stdout, self.process.stderr]:
                 try:
                     file_d.close()
-                except Exception as exp:  # pylint: disable=W0703
+                except Exception as exp:  # pylint: disable=broad-except
                     logger.error("Exception stopping command: %s %s",
                                  self.command, exp)
 
@@ -568,7 +568,7 @@ else:  # pragma: no cover, not currently tested with Windows...
             else:
                 try:
                     cmd = shlex.split(self.command.encode('utf8', 'ignore'))
-                except Exception, exp:  # pylint: disable=W0703
+                except Exception as exp:  # pylint: disable=broad-except
                     self.output = 'Not a valid shell command: ' + exp.__str__()
                     self.exit_status = 3
                     self.status = 'done'

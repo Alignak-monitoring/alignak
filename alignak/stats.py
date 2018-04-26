@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -79,6 +79,9 @@ creates an internal brok.
 The `gauge` function sends a gauge value to the StatsD registered server and
 creates an internal brok.
 
+-----
+NOTE: this statistics dictionary is an old version that needs to be updated !
+-----
 Alignak daemons statistics dictionary:
 
 * scheduler: (some more exist but hereunder are the main metrics)
@@ -127,9 +130,9 @@ Alignak daemons statistics dictionary:
             delete_zombie_checks
             delete_zombie_actions
             clean_caches
-            update_retention_file
+            update_retention
             check_orphaned
-            get_and_register_update_program_status_brok
+            update_program_status
             check_for_system_time_change
             manage_internal_checks
             clean_queues
@@ -185,12 +188,15 @@ Alignak daemons statistics dictionary:
 """
 
 import os
+import sys
 import time
 import datetime
 import socket
 import logging
 
 from alignak.brok import Brok
+if sys.version_info >= (2, 7):
+    from alignak.misc.carboniface import CarbonIface
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -203,11 +209,15 @@ class Stats(object):
 
         echo "foo:1|c" | nc -u -w0 127.0.0.1 8125
 
+    With the Graphite option, this class stores the metrics in an inner list and
+    flushes the metrics to a Graphite instance when the flush method is called.
+
     """
     def __init__(self):
         # Our daemon type and name
         self.name = ''
-        self.type = ''
+        # This attribute is not used, but I keep ascending compatibility with former interface!
+        self._type = None
 
         # Our known statistics
         self.stats = {}
@@ -225,6 +235,11 @@ class Stats(object):
         self.statsd_sock = None
         self.statsd_addr = None
 
+        # Graphite connection
+        self.carbon = None
+        self.my_metrics = []
+        self.metrics_flush_count = 64
+
         # File part
         self.stats_file = None
         self.file_d = None
@@ -237,10 +252,22 @@ class Stats(object):
         if 'ALIGNAK_STATS_FILE_DATE_FMT' in os.environ:
             self.date_fmt = os.environ['ALIGNAK_STATS_FILE_DATE_FMT']
 
-    def register(self, name, _type,
-                 statsd_host='localhost', statsd_port=8125, statsd_prefix='alignak',
-                 statsd_enabled=False, broks_enabled=False):
-        """Init statsd instance with real values
+    @property
+    def metrics_count(self):
+        """
+        Number of internal stored metrics
+        :return:
+        """
+        return len(self.my_metrics)
+
+    def __repr__(self):  # pragma: no cover
+        return '<StatsD report to %r/%r, enabled: %r />' \
+               % (self.host, self.port, self.statsd_enabled)
+    __str__ = __repr__
+
+    def register(self, name, _type, statsd_host='localhost', statsd_port=8125,
+                 statsd_prefix='alignak', statsd_enabled=False, broks_enabled=False):
+        """Init instance with real values
 
         :param name: daemon name
         :type name: str
@@ -259,21 +286,27 @@ class Stats(object):
         :return: None
         """
         self.name = name
-        self.type = _type
+        # This attribute is not used, but I keep ascending compatibility with former interface!
+        self._type = _type
 
         # local statsd part
         self.statsd_host = statsd_host
-        self.statsd_port = statsd_port
+        self.statsd_port = int(statsd_port)
         self.statsd_prefix = statsd_prefix
         self.statsd_enabled = statsd_enabled
 
         # local broks part
         self.broks_enabled = broks_enabled
 
+        logger.debug("StatsD configuration for %s - %s:%s, prefix: %s, "
+                     "enabled: %s, broks: %s, file: %s",
+                     self.name, self.statsd_host, self.statsd_port,
+                     self.statsd_prefix, self.statsd_enabled, self.broks_enabled,
+                     self.stats_file)
+
         if self.statsd_enabled and self.statsd_host is not None and self.statsd_host != 'None':
-            logger.info('Sending %s/%s daemon statistics to: %s:%s, prefix: %s',
-                        self.type, self.name,
-                        self.statsd_host, self.statsd_port, self.statsd_prefix)
+            logger.info("Sending %s statistics to: %s:%s, prefix: %s",
+                        self.name, self.statsd_host, self.statsd_port, self.statsd_prefix)
             if self.load_statsd():
                 logger.info('Alignak internal statistics are sent to StatsD.')
             else:
@@ -299,22 +332,121 @@ class Stats(object):
         :return: True if socket got created else False and an exception log is raised
         """
         if not self.statsd_enabled:
-            logger.warning('StatsD is not enabled, connection is not allowed')
+            logger.info('Stats reporting is not enabled, connection is not allowed')
             return False
+
+        if self.statsd_enabled and self.carbon:
+            self.my_metrics.append(('.'.join([self.statsd_prefix, self.name, 'connection-test']),
+                                    (int(time.time()), int(time.time()))))
+            self.carbon.add_data_list(self.my_metrics)
+            self.flush(log=True)
+        else:
+            try:
+                logger.info('Trying to contact StatsD server...')
+                self.statsd_addr = (socket.gethostbyname(self.statsd_host), self.statsd_port)
+                self.statsd_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            except (socket.error, socket.gaierror) as exp:
+                logger.warning('Cannot create StatsD socket: %s', exp)
+                return False
+            except Exception as exp:  # pylint: disable=broad-except
+                logger.exception('Cannot create StatsD socket (other): %s', exp)
+                return False
+
+            logger.info('StatsD server contacted')
+        return True
+
+    def connect(self, name, _type, host='localhost', port=2003,
+                prefix='alignak', enabled=False, broks_enabled=False):
+        """Init instance with real values for a graphite/carbon connection
+
+        :param name: daemon name
+        :type name: str
+        :param _type: daemon type
+        :type _type:
+        :param host: host to post data
+        :type host: str
+        :param port: port to post data
+        :type port: int
+        :param prefix: prefix to add to metric
+        :type prefix: str
+        :param enabled: bool to enable statsd
+        :type enabled: bool
+        :param broks_enabled: bool to enable broks sending
+        :type broks_enabled: bool
+        :return: None
+        """
+        self.name = name
+        # This attribute is not used, but I keep ascending compatibility with former interface!
+        self._type = _type
+
+        # local graphite/carbon part
+        self.statsd_host = host
+        try:
+            self.statsd_port = int(port)
+        except ValueError:
+            self.statsd_port = 2003
+        self.statsd_prefix = prefix
+        self.statsd_enabled = enabled
+
+        # local broks part
+        self.broks_enabled = broks_enabled
+
+        logger.debug("Graphite/carbon configuration for %s - %s:%s, prefix: %s, "
+                     "enabled: %s, broks: %s, file: %s",
+                     self.name, self.statsd_host, self.statsd_port,
+                     self.statsd_prefix, self.statsd_enabled, self.broks_enabled,
+                     self.stats_file)
+
+        if self.statsd_enabled and self.statsd_host is not None and self.statsd_host != 'None':
+            logger.info("Sending %s statistics to: %s:%s, prefix: %s",
+                        self.name, self.statsd_host, self.statsd_port, self.statsd_prefix)
+
+            self.carbon = CarbonIface(self.statsd_host, self.statsd_port)
+            logger.info('Alignak internal statistics will be sent to Graphite.')
+
+        return self.statsd_enabled
+
+    def flush(self, log=False):
+        """Send inner stored metrics to the defined Graphite
+
+        Returns False if the sending failed with a warning log if log parameter is set
+
+        :return: bool
+        """
+        if not self.my_metrics:
+            logger.debug("Flushing - no metrics to send")
+            return True
 
         try:
-            logger.info('Trying to contact StatsD server...')
-            self.statsd_addr = (socket.gethostbyname(self.statsd_host), self.statsd_port)
-            self.statsd_sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        except (socket.error, socket.gaierror) as exp:
-            logger.warning('Cannot create StatsD socket: %s', exp)
-            return False
+            logger.debug("Flushing %d metrics to Graphite/carbon", self.metrics_count)
+            if self.carbon.send_data():
+                self.my_metrics = []
+            else:
+                if log:
+                    logger.warning("Failed sending metrics to Graphite/carbon. "
+                                   "Inner stored metric: %d", self.metrics_count)
+                return False
         except Exception as exp:  # pylint: disable=broad-except
-            logger.exception('Cannot create StatsD socket (other): %s', exp)
+            logger.warning("Failed sending metrics to Graphite/carbon. Inner stored metric: %d",
+                           self.metrics_count)
+            logger.warning("Exception: %s", str(exp))
             return False
-
-        logger.info('StatsD server contacted')
         return True
+
+    def send_to_graphite(self, metric, value):
+        """
+        Inner store a new metric and flush to Graphite if the flush threshold is reached
+        :param metric:
+        :param value:
+        :return:
+        """
+        # Manage Graphite part
+        if self.statsd_enabled and self.carbon:
+            self.my_metrics.append(('.'.join([self.statsd_prefix, self.name, metric]),
+                                    (int(time.time()), value)))
+            if self.metrics_count >= self.metrics_flush_count:
+                self.carbon.add_data_list(self.my_metrics)
+                self.flush()
 
     def timer(self, key, value):
         """Set a timer value
@@ -349,6 +481,10 @@ class Stats(object):
                 pass
                 # cannot send? ok not a huge problem here and we cannot
                 # log because it will be far too verbose :p
+
+        # Manage Graphite part
+        if self.statsd_enabled and self.carbon:
+            self.send_to_graphite(key, value)
 
         # Manage file part
         if self.statsd_enabled and self.file_d:
@@ -414,6 +550,10 @@ class Stats(object):
                 pass
                 # cannot send? ok not a huge problem here and we cannot
                 # log because it will be far too verbose :p
+
+        # Manage Graphite part
+        if self.statsd_enabled and self.carbon:
+            self.send_to_graphite(key, value)
 
         # Manage file part
         if self.statsd_enabled and self.file_d:
@@ -497,6 +637,10 @@ class Stats(object):
                 self.file_d.write(packet)
             except IOError:
                 logger.warning("Could not write to the file: %s", packet)
+
+        # Manage Graphite part
+        if self.statsd_enabled and self.carbon:
+            self.send_to_graphite(key, value)
 
         if self.broks_enabled:
             logger.debug("alignak stat brok: %s = %s", key, value)

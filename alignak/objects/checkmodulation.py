@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -95,7 +95,9 @@ class CheckModulation(Item):
 
     def serialize(self):
         res = super(CheckModulation, self).serialize()
-        res['check_command'] = self.check_command.serialize()
+        res['check_command'] = None
+        if getattr(self, 'check_command', None):
+            res['check_command'] = self.check_command.serialize()
         return res
 
     def get_name(self):
@@ -136,16 +138,16 @@ class CheckModulation(Item):
             msg = "[checkmodulation::%s] do not have any check_command defined" % (
                 self.get_name()
             )
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             state = False
         else:
             if self.check_command is None:
                 msg = "[checkmodulation::%s] a check_command is missing" % (self.get_name())
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
                 state = False
             if not self.check_command.is_valid():
                 msg = "[checkmodulation::%s] a check_command is invalid" % (self.get_name())
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
                 state = False
 
         # Ok just put None as check_period, means 24x7

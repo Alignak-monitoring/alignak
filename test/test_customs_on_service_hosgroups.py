@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -57,8 +57,9 @@ class TestCustomsonservicehosgroups(AlignakTest):
 
 
     def setUp(self):
+        super(TestCustomsonservicehosgroups, self).setUp()
         self.setup_with_file('cfg/cfg_customs_on_service_hosgroups.cfg')
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
     # We look for 3 services: on defined as direct on 1 hosts, on other
     # on 2 hsots, and a last one on a hostgroup

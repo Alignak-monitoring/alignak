@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -140,7 +140,7 @@ class Notification(Action):  # pylint: disable=R0902
 
         return True
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return "Notification %s type:%s status:%s command:%s ref:%s t_to_go:%s" % \
                (self.uuid, self.type, self.status, self.command, getattr(self, 'ref', 'unknown'),
                 time.asctime(time.localtime(self.t_to_go)))

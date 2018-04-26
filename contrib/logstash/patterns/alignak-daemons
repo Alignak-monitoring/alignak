@@ -1,0 +1,19 @@
+##################################################################################
+##################################################################################
+#
+# A set of GROK filters to process the Alignak daemons log files
+#
+#################################################################################
+#################################################################################
+
+##################################################################################
+### Timestamp for the event
+### -----
+### Set alignak_epoch from the log line - used in the date filter plugin
+##################################################################################
+### For timestamp: ALIGNAK_DAEMON_TIME \[%{NUMBER:alignak_epoch}\]
+ALIGNAK_DAEMON_TIME \[%{DATA:[alignak][timestamp]}\]
+
+# Log format is:
+# [date time] level: [source] message
+ALIGNAK_DAEMON_LOG \[%{DATA:[alignak][timestamp]}\] %{DATA:[alignak][log_level]}: \[%{DATA:[alignak][source]}\] %{GREEDYDATA:[alignak][message]}

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -105,5 +105,5 @@ class Comment(AlignakObject):
             self.entry_time = int(time.time())
         self.fill_default()
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return "Comment id=%s %s" % (self.uuid, self.comment)

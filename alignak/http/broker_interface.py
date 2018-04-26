@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -17,9 +17,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 """This module provide a specific HTTP interface for a Broker."""
+import logging
 import cherrypy
+
 from alignak.http.generic_interface import GenericInterface
 from alignak.misc.serialization import unserialize
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class BrokerInterface(GenericInterface):
@@ -36,6 +40,7 @@ class BrokerInterface(GenericInterface):
         """
         broks = cherrypy.request.json
         with self.app.arbiter_broks_lock:
+            logger.debug("Pushing %d broks", len(broks['broks']))
             self.app.arbiter_broks.extend([unserialize(elem, True) for
                                            elem in broks['broks'].values()])
 
@@ -56,12 +61,12 @@ class BrokerInterface(GenericInterface):
         insts = [inst for inst in app.modules_manager.instances if inst.is_external]
         for inst in insts:
             try:
-                res[inst.uuid] = {'module_alias': inst.get_name(),
-                                  'module_types': inst.get_types(),
+                res[inst.uuid] = {'name': inst.get_name(),
+                                  'type': inst.get_types(),
                                   'queue_size': inst.to_q.qsize()}
-            except Exception:  # pylint: disable=W0703
-                res[inst.uuid] = {'module_alias': inst.get_name(),
-                                  'module_types': inst.get_types(),
+            except Exception:  # pylint: disable=broad-except
+                res[inst.uuid] = {'name': inst.get_name(),
+                                  'type': inst.get_types(),
                                   'queue_size': 0}
 
         return res

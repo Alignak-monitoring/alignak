@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -59,8 +59,11 @@ len(host.services)
 
 import re
 import time
+import logging
 
 from alignak.borg import Borg
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 class MacroResolver(Borg):
@@ -140,23 +143,23 @@ class MacroResolver(Borg):
 
         # For searching class and elements for on-demand
         # we need link to types
-        self.conf = conf
+        self.my_conf = conf
         self.lists_on_demand = []
-        self.hosts = conf.hosts
+        self.hosts = self.my_conf.hosts
         # For special void host_name handling...
         self.host_class = self.hosts.inner_class
         self.lists_on_demand.append(self.hosts)
-        self.services = conf.services
-        self.contacts = conf.contacts
+        self.services = self.my_conf.services
+        self.contacts = self.my_conf.contacts
         self.lists_on_demand.append(self.contacts)
-        self.hostgroups = conf.hostgroups
+        self.hostgroups = self.my_conf.hostgroups
         self.lists_on_demand.append(self.hostgroups)
-        self.commands = conf.commands
-        self.servicegroups = conf.servicegroups
+        self.commands = self.my_conf.commands
+        self.servicegroups = self.my_conf.servicegroups
         self.lists_on_demand.append(self.servicegroups)
-        self.contactgroups = conf.contactgroups
+        self.contactgroups = self.my_conf.contactgroups
         self.lists_on_demand.append(self.contactgroups)
-        self.illegal_macro_output_chars = conf.illegal_macro_output_chars
+        self.illegal_macro_output_chars = self.my_conf.illegal_macro_output_chars
 
     @staticmethod
     def _get_macros(chain):
@@ -290,8 +293,8 @@ class MacroResolver(Borg):
         """
         # Now we prepare the classes for looking at the class.macros
         data.append(self)  # For getting global MACROS
-        if hasattr(self, 'conf'):
-            data.append(self.conf)  # For USERN macros
+        if hasattr(self, 'my_conf'):
+            data.append(self.my_conf)  # For USERN macros
 
         # we should do some loops for nested macros
         # like $USER1$ hiding like a ninja in a $ARG2$ Macro. And if
@@ -337,16 +340,19 @@ class MacroResolver(Borg):
                     # Beware : only cut the first _HOST or _SERVICE or _CONTACT value,
                     # so the macro name can have it on it..
                     macro_name = re.split('_' + cls_type, macro, 1)[1].upper()
+                    logger.debug(" ->: %s - %s", cls_type, macro_name)
                     # Ok, we've got the macro like MAC_ADDRESS for _HOSTMAC_ADDRESS
                     # Now we get the element in data that have the type HOST
                     # and we check if it got the custom value
                     for elt in data:
                         if not elt or elt.__class__.my_type.upper() != cls_type:
                             continue
+                        logger.debug("   : for %s: %s", elt, elt.customs)
                         if not getattr(elt, 'customs'):
                             continue
                         if '_' + macro_name in elt.customs:
                             macros[macro]['val'] = elt.customs['_' + macro_name]
+                        logger.debug("   : macro %s = %s", macro, macros[macro]['val'])
                         # Then look on the macromodulations, in reverse order, so
                         # the last to set, will be the first to have. (yes, don't want to play
                         # with break and such things sorry...)
@@ -364,7 +370,7 @@ class MacroResolver(Borg):
 
             # We resolved all we can, now replace the macros in the command call
             for macro in macros:
-                c_line = c_line.replace('$' + macro + '$', macros[macro]['val'])
+                c_line = c_line.replace('$' + macro + '$', "%s" % (macros[macro]['val']))
 
             # A $$ means we want a $, it's not a macro!
             # We replace $$ by a big dirty thing to be sure to not misinterpret it
@@ -383,13 +389,15 @@ class MacroResolver(Borg):
 
         :param com: check / event handler or command call object
         :type com: object
-        :param data: objects list, use to look for a specific macro
+        :param data: objects list, used to search for a specific macro (custom or object related)
         :type data:
         :return: command line with '$MACRO$' replaced with values
         :rtype: str
         """
-        c_line = com.command.command_line
-        return self.resolve_simple_macros_in_string(c_line, data, macromodulations, timeperiods,
+        logger.debug("Resolving: macros in: %s, arguments: %s",
+                     com.command.command_line, com.args)
+        return self.resolve_simple_macros_in_string(com.command.command_line, data,
+                                                    macromodulations, timeperiods,
                                                     args=com.args)
 
     @staticmethod
@@ -464,6 +472,7 @@ class MacroResolver(Borg):
             except IndexError:
                 # Required argument not found, returns an empty string
                 return ''
+        return ''
 
     def _resolve_ondemand(self, macro, data):
         """Get on demand macro value

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -47,8 +47,8 @@
 
 """
 import logging
-import warnings
 import requests
+from requests.adapters import HTTPAdapter
 
 from alignak.misc.serialization import serialize
 
@@ -60,7 +60,28 @@ class HTTPClientException(Exception):
     pass
 
 
-class HTTPClientTimeoutException(Exception):
+class HTTPClientDataException(Exception):  # pragma: no cover, hopefully never raised
+    """HTTP Data Exception - raised when the HTTP response is not OK (200)
+
+    Its attribute are:
+    - rsp_code: the HTTP response code,
+    - rsp_text: the HTTP response bodyeout.
+    """
+    def __init__(self, rsp_code, rsp_text, uri):
+        # Call the base class constructor with the parameters it needs
+        super(HTTPClientDataException, self).__init__()
+
+        self.code = rsp_code
+        self.text = rsp_text
+        self.uri = uri
+        self.msg = "Bad server response for %s: %s - %s" % (self.uri, self.code, self.text)
+
+    def __str__(self):  # pragma: no cover
+        """Exception to String"""
+        return self.msg
+
+
+class HTTPClientTimeoutException(Exception):  # pragma: no cover, not with unit tests
     """HTTP Timeout Exception - raised when no response issued by the server in the specified
     time frame.
     This specific exception is raised when a requests Timeout exception is catched.
@@ -76,7 +97,7 @@ class HTTPClientTimeoutException(Exception):
         self.timeout = timeout
         self.uri = uri
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         """Exception to String"""
         return "Request timeout (%d seconds) for %s" % (self.timeout, self.uri)
 
@@ -89,16 +110,16 @@ class HTTPClientConnectionException(Exception):
     - uri: the requested URI,
     - timeout: the duration of the timeout.
     """
-    def __init__(self, uri, message):
+    def __init__(self, uri, msg):
         # Call the base class constructor with the parameters it needs
         super(HTTPClientConnectionException, self).__init__()
 
         self.uri = uri
-        self.message = message
+        self.msg = msg
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         """Exception to String"""
-        return "Server not available: %s - %s" % (self.uri, self.message)
+        return "Server not available: %s - %s" % (self.uri, self.msg)
 
 
 class HTTPClient(object):
@@ -118,29 +139,18 @@ class HTTPClient(object):
             protocol = "https" if use_ssl else "http"
             uri = "%s://%s:%s/" % (protocol, self.address, self.port)
         self.uri = uri
+
         self._requests_con = requests.Session()
+        # self.session = requests.Session()
+        self._requests_con.header = {'Content-Type': 'application/json'}
+
+        # Requests HTTP adapters
+        http_adapter = HTTPAdapter(max_retries=3)
+        https_adapter = HTTPAdapter(max_retries=3)
+        self._requests_con.mount('http://', http_adapter)
+        self._requests_con.mount('https://', https_adapter)
+
         self.set_proxy(proxy)
-
-    @property
-    def con(self):  # pragma: no cover, deprecated
-        """Deprecated property of HTTPClient
-
-        :return: connection
-        :rtype: object
-        """
-        warnings.warn("HTTPClient.con is deprecated attribute, "
-                      "please use HTTPClient.connection instead.",
-                      DeprecationWarning, stacklevel=2)
-        return self.connection
-
-    @property
-    def connection(self):
-        """Get connection attribute
-
-        :return:
-        :rtype:
-        """
-        return self._requests_con
 
     def make_uri(self, path):
         """Create uri from path
@@ -162,7 +172,7 @@ class HTTPClient(object):
         """
         return self.timeout if wait == 'short' else self.data_timeout
 
-    def set_proxy(self, proxy):
+    def set_proxy(self, proxy):  # pragma: no cover, not with unit tests
         """Set HTTP proxy
 
         :param proxy: proxy url
@@ -192,16 +202,18 @@ class HTTPClient(object):
         uri = self.make_uri(path)
         timeout = self.make_timeout(wait)
         try:
+            logger.debug("get: %s, timeout: %s, params: %s", uri, timeout, args)
             rsp = self._requests_con.get(uri, params=args, timeout=timeout, verify=self.strong_ssl)
+            logger.debug("got: %d - %s", rsp.status_code, rsp.text)
             if rsp.status_code != 200:
-                raise Exception('HTTP GET not OK: %s ; text=%r' % (rsp.status_code, rsp.text))
+                raise HTTPClientDataException(rsp.status_code, rsp.text, uri)
             return rsp.json()
         except (requests.Timeout, requests.ConnectTimeout):
             raise HTTPClientTimeoutException(timeout, uri)
         except requests.ConnectionError as exp:
-            raise HTTPClientConnectionException(uri, exp.message)
-        except Exception as err:
-            raise HTTPClientException('Request error to %s: %s' % (uri, err))
+            raise HTTPClientConnectionException(uri, exp.args[0])
+        except Exception as exp:
+            raise HTTPClientException('Request error to %s: %s' % (uri, exp))
 
     def post(self, path, args, wait='short'):
         """Do a POST HTTP request
@@ -220,24 +232,27 @@ class HTTPClient(object):
         for (key, value) in args.iteritems():
             args[key] = serialize(value, True)
         try:
+            logger.debug("post: %s, timeout: %s, params: %s", uri, timeout, args)
             rsp = self._requests_con.post(uri, json=args, timeout=timeout, verify=self.strong_ssl)
+            logger.debug("got: %d - %s", rsp.status_code, rsp.text)
             if rsp.status_code != 200:
-                raise Exception("HTTP POST not OK: %s ; text=%r" % (rsp.status_code, rsp.text))
+                raise HTTPClientDataException(rsp.status_code, rsp.text, uri)
+            return rsp.content
         except (requests.Timeout, requests.ConnectTimeout):
             raise HTTPClientTimeoutException(timeout, uri)
         except requests.ConnectionError as exp:
-            raise HTTPClientConnectionException(uri, exp.message)
-        except Exception as err:
-            raise HTTPClientException('Request error to %s: %s' % (uri, err))
-        return rsp.content
+            raise HTTPClientConnectionException(uri, exp.args[0])
+        except Exception as exp:
+            raise HTTPClientException('Request error to %s: %s' % (uri, exp))
 
-    def put(self, path, data, wait='short'):
+    def put(self, path, args, wait='short'):  # pragma: no cover, looks never used!
+        # todo: remove this because it looks never used anywhere...
         """Do a PUT HTTP request
 
         :param path: path to do the request
         :type path: str
-        :param data: data to send in the request
-        :type data:
+        :param args: data to send in the request
+        :type args:
         :param wait: timeout policy (short / long)
         :type wait: int
         :return: Content of the HTTP response if server returned 200
@@ -246,13 +261,15 @@ class HTTPClient(object):
         uri = self.make_uri(path)
         timeout = self.make_timeout(wait)
         try:
-            rsp = self._requests_con.put(uri, data, timeout=timeout, verify=self.strong_ssl)
+            logger.debug("put: %s, timeout: %s, params: %s", uri, timeout, args)
+            rsp = self._requests_con.put(uri, args, timeout=timeout, verify=self.strong_ssl)
+            logger.debug("got: %d - %s", rsp.status_code, rsp.text)
             if rsp.status_code != 200:
-                raise Exception('HTTP PUT not OK: %s ; text=%r' % (rsp.status_code, rsp.text))
+                raise HTTPClientDataException(rsp.status_code, rsp.text, uri)
+            return rsp.content
         except (requests.Timeout, requests.ConnectTimeout):
             raise HTTPClientTimeoutException(timeout, uri)
         except requests.ConnectionError as exp:
-            raise HTTPClientConnectionException(uri, exp.message)
-        except Exception as err:
-            raise HTTPClientException('Request error to %s: %s' % (uri, err))
-        return rsp.content
+            raise HTTPClientConnectionException(uri, exp.args[0])
+        except Exception as exp:
+            raise HTTPClientException('Request error to %s: %s' % (uri, exp))

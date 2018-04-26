@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # -*- mode: python ; coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -85,8 +85,7 @@ class Property(object):
 
     def __init__(self, default=NONE_OBJECT, class_inherit=None,  # pylint: disable=R0913
                  unmanaged=False, _help='', no_slots=False,
-                 fill_brok=None, conf_send_preparation=None,
-                 brok_transformation=None, retention=False,
+                 fill_brok=None, brok_transformation=None, retention=False,
                  retention_preparation=None, to_send=False,
                  override=False, managed=True, split_on_coma=True,
                  keep_empty=False, merging='uniq', special=False):
@@ -115,11 +114,6 @@ class Property(object):
 
         Only for the initial call:
 
-        conf_send_preparation: if set, will pass the property to this
-                     function. It's used to 'flatten' some dangerous
-                     properties like realms that are too 'linked' to
-                     be send like that.
-
         brok_transformation: if set, will call the function with the
                      value of the property when flattening
                      data is necessary (like realm_name instead of
@@ -146,7 +140,6 @@ class Property(object):
         self.unmanaged = unmanaged
         self.no_slots = no_slots
         self.fill_brok = fill_brok or []
-        self.conf_send_preparation = conf_send_preparation
         self.brok_transformation = brok_transformation
         self.retention = retention
         self.retention_preparation = retention_preparation

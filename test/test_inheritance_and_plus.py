@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -50,12 +50,15 @@ from alignak_test import *
 
 class TestInheritanceAndPlus(AlignakTest):
 
+    def setUp(self):
+        super(TestInheritanceAndPlus, self).setUp()
+
     def test_inheritance(self):
         """Test properties inheritance
         """
         self.setup_with_file('cfg/cfg_inheritance.cfg')
         assert self.conf_is_correct
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         print("Hosts: ")
         pprint(self._sched.hosts.__dict__)
@@ -140,7 +143,7 @@ class TestInheritanceAndPlus(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_inheritance_and_plus.cfg')
         assert self.conf_is_correct
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         # Get the hostgroups
         linux = self._sched.hostgroups.find_by_name('linux')

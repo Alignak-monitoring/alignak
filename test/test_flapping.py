@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -56,13 +56,11 @@ class TestFlapping(AlignakTest):
     """
     This class tests the flapping management
     """
-
     def setUp(self):
+        super(TestFlapping, self).setUp()
+
         self.setup_with_file('cfg/cfg_flapping.cfg')
         assert self.conf_is_correct
-
-        self._sched = self.schedulers['scheduler-master'].sched
-        self._broker = self._sched.brokers['broker-master']
 
     def test_flapping(self):
         """Test host/service flapping detection
@@ -70,13 +68,13 @@ class TestFlapping(AlignakTest):
         :return:
         """
         # Get the hosts and services"
-        host = self._sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.act_depend_of = []
         assert host.flap_detection_enabled
-        router = self._sched.hosts.find_by_name("test_router_0")
+        router = self._scheduler.hosts.find_by_name("test_router_0")
         router.act_depend_of = []
         assert router.flap_detection_enabled
-        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.event_handler_enabled = False
         svc.act_depend_of = []
         # Force because the default configuration disables the flapping detection
@@ -112,7 +110,7 @@ class TestFlapping(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(self._main_broker.broks.itervalues(), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -164,7 +162,7 @@ class TestFlapping(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(self._main_broker.broks.itervalues(), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -215,13 +213,13 @@ class TestFlapping(AlignakTest):
         :return:
         """
         # Get the hosts and services"
-        host = self._sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.act_depend_of = []
         assert host.flap_detection_enabled
-        router = self._sched.hosts.find_by_name("test_router_0")
+        router = self._scheduler.hosts.find_by_name("test_router_0")
         router.act_depend_of = []
         assert router.flap_detection_enabled
-        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.event_handler_enabled = False
         svc.act_depend_of = []
         # Force because the default configuration disables the flapping detection
@@ -257,7 +255,7 @@ class TestFlapping(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(self._main_broker.broks.values(), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -309,7 +307,7 @@ class TestFlapping(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(self._main_broker.broks.values(), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -353,7 +351,3 @@ class TestFlapping(AlignakTest):
         ]
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_logs
-
-
-if __name__ == '__main__':
-    AlignakTest.main()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -53,15 +53,14 @@ from alignak_test import AlignakTest
 class TestCheckModulations(AlignakTest):
 
     def setUp(self):
+        super(TestCheckModulations, self).setUp()
         self.setup_with_file('./cfg/cfg_checks_modulations.cfg')
         assert self.conf_is_correct
 
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
     def test_checks_modulated_host_and_service(self):
         """ Check modulation for an host and its service """
-        self.print_header()
-
         # Get the host
         host = self._sched.hosts.find_by_name("modulated_host")
         assert host is not None

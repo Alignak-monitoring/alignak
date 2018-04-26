@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -36,13 +36,14 @@ class TestEventhandler(AlignakTest):
     """
     This class test the eventhandler
     """
+    def setUp(self):
+        super(TestEventhandler, self).setUp()
 
     def test_global_unknown_event_handler(self):
         """ Test global event handler unknown command
 
         :return: None
         """
-        self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/cfg_global_event_handlers_not_found.cfg')
         assert self.conf_is_correct is False
@@ -56,10 +57,9 @@ class TestEventhandler(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_global_event_handlers.cfg')
 
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         host = self._sched.hosts.find_by_name("test_host_1")
         print host.event_handler_enabled
@@ -133,8 +133,12 @@ class TestEventhandler(AlignakTest):
         self.assert_actions_match(3, 'test_global_host_eventhandler.pl DOWN SOFT', 'command')
         self.assert_actions_match(4, 'test_global_host_eventhandler.pl UP SOFT', 'command')
 
+        # Get my first broker link
+        my_broker = [b for b in self._scheduler.my_daemon.brokers.values()][0]
+
+        # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+        for brok in sorted(my_broker.broks.values(), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -168,14 +172,13 @@ class TestEventhandler(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -224,14 +227,13 @@ class TestEventhandler(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -281,14 +283,13 @@ class TestEventhandler(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -363,14 +364,13 @@ class TestEventhandler(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -419,14 +419,13 @@ class TestEventhandler(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -476,14 +475,13 @@ class TestEventhandler(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults

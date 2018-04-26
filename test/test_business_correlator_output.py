@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -56,9 +56,10 @@ from alignak.macroresolver import MacroResolver
 class TestBusinesscorrelOutput(AlignakTest):
 
     def setUp(self):
+        super(TestBusinesscorrelOutput, self).setUp()
         self.setup_with_file('cfg/cfg_business_correlator_output.cfg')
         assert self.conf_is_correct
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
     def launch_internal_check(self, svc_br):
         """ Launch an internal check for the business rule service provided """

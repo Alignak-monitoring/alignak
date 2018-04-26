@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -40,6 +40,8 @@ class TestDateRanges(AlignakTest):
     """
     This class test dataranges
     """
+    def setUp(self):
+        super(TestDateRanges, self).setUp()
 
     def test_get_start_of_day(self):
         """ Test function get_start_of_day and return the timestamp of begin of day
@@ -50,6 +52,7 @@ class TestDateRanges(AlignakTest):
         start = time.mktime((2015, 7, 26, 0, 0, 0, 0, 0, now.tm_isdst))
         timestamp = alignak.util.get_start_of_day(2015, 7, 26)
         # time.timezone is the offset related of the current timezone of the system
+        print("Start: %s, timestamp: %s")
         assert start == (timestamp - time.timezone)
 
     @pytest.mark.skip("To be completed... because the start test do not pass locally!")
@@ -78,6 +81,7 @@ class TestDateRanges(AlignakTest):
         now = time.localtime()
         start = time.mktime((2016, 8, 20, 23, 59, 59, 0, 0, now.tm_isdst))
         timestamp = alignak.util.get_end_of_day(2016, 8, 20)
+        print("Start: %s, timestamp: %s")
         # time.timezone is the offset related of the current timezone of the system
         assert start == (timestamp - time.timezone)
 

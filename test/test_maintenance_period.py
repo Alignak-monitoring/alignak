@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -47,19 +47,12 @@ class TestMaintenancePeriod(AlignakTest):
     This class tests the maintenance_period
     """
     def setUp(self):
-        """
-        For each test load and check the configuration
-        :return: None
-        """
-        self.print_header()
+        super(TestMaintenancePeriod, self).setUp()
         self.setup_with_file('cfg/cfg_default.cfg')
         assert self.conf_is_correct
 
         # Our scheduler
-        self._sched = self.schedulers['scheduler-master'].sched
-
-        # Our broker
-        self._broker = self._sched.brokers['broker-master']
+        self._sched = self._scheduler
 
         # No error messages
         assert len(self.configuration_errors) == 0
@@ -71,7 +64,6 @@ class TestMaintenancePeriod(AlignakTest):
         
         :return: None
         """
-        self.print_header()
         # Get the host
         host = self._sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -105,7 +97,7 @@ class TestMaintenancePeriod(AlignakTest):
         }
         timeperiod = Timeperiod(data)
         timeperiod.explode()
-        self.schedulers['scheduler-master'].sched.timeperiods[timeperiod.uuid] = timeperiod
+        self._scheduler.timeperiods[timeperiod.uuid] = timeperiod
         host.maintenance_period = timeperiod.uuid
 
         # Make the host be UP again

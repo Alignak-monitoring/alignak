@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -51,11 +51,12 @@ This file test illegal characters in configuration
 from alignak_test import AlignakTest
 
 
-class TestConfig(AlignakTest):
+class TestIllegalNames(AlignakTest):
     """
     This class test illegal characters in configuration
     """
-    # setUp is inherited from AlignakTest
+    def setUp(self):
+        super(TestIllegalNames, self).setUp()
 
     def test_illegal_character_in_names(self):
         """ Test illegal characters in host_name
@@ -64,9 +65,9 @@ class TestConfig(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        illegal_characts = self.arbiter.conf.illegal_object_name_chars
+        illegal_characts = self._arbiter.conf.illegal_object_name_chars
         print "Illegal caracters: %s" % illegal_characts
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         # should be correct
         assert host.is_correct()
 

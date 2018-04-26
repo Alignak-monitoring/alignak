@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -55,14 +55,13 @@ import pytest
 class TestPropertyOverride(AlignakTest):
 
     def setUp(self):
+        super(TestPropertyOverride, self).setUp()
         self.setup_with_file('cfg/cfg_property_override.cfg')
         assert self.conf_is_correct
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
         
     def test_service_property_override(self):
         """ Property override """
-        self.print_header()
-
         svc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "srv-svc")
         svc2 = self._sched.services.find_srv_by_name_and_hostname("test_host_02", "srv-svc")
         svc1proc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "proc proc1")
@@ -103,7 +102,7 @@ class TestPropertyOverride(AlignakTest):
             assert 1 == svc.retry_interval
             assert self._sched.commands[cmdsvc.uuid] is \
                           self._sched.commands[svc.check_command.command.uuid]
-            assert ["w","u","c","r","f","s"] == svc.notification_options
+            assert ["w","u","x","c","r","f","s"] == svc.notification_options
             assert True is svc.notifications_enabled
 
         # Check overriden properies value
@@ -120,10 +119,11 @@ class TestPropertyOverride(AlignakTest):
 
 class TestPropertyOverrideConfigBroken(AlignakTest):
 
+    def setUp(self):
+        super(TestPropertyOverrideConfigBroken, self).setUp()
+
     def test_service_property_override_errors(self):
         """ Property override broken """
-        self.print_header()
-
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/cfg_property_override_broken.cfg')
         assert not self.conf_is_correct

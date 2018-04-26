@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -63,39 +63,48 @@ class TestModules(AlignakTest):
     """
     This class contains the tests for the modules
     """
+    def setUp(self):
+        super(TestModules, self).setUp()
 
     def test_module_loading(self):
         """ Test arbiter, broker, ... detecting configured modules
 
         :return:
         """
-        self.print_header()
-        self.setup_with_file('./cfg/cfg_default_with_modules.cfg')
+        self.setup_with_file('cfg/cfg_default_with_modules.cfg',
+                             'cfg/default_with_modules/alignak.ini')
         assert self.conf_is_correct
         self.show_configuration_logs()
+        self.show_logs()
 
-        # The only existing arbiter module is Example declared in the configuration
-        modules = [m.module_alias for m in self.arbiter.myself.modules]
+        # arbiter modules
+        modules = [m.module_alias for m in self._arbiter.link_to_myself.modules]
+        assert modules == ['Example']
+        modules = [m.name for m in self._arbiter.link_to_myself.modules]
         assert modules == ['Example']
 
-        # The only existing broker module is Example declared in the configuration
-        modules = [m.module_alias for m in self.brokers['broker-master'].modules]
+        # broker modules
+        modules = [m.module_alias for m in self._broker_daemon.modules]
+        assert modules == ['Example']
+        modules = [m.name for m in self._broker_daemon.modules]
         assert modules == ['Example']
 
-        # The only existing poller module is Example declared in the configuration
-        modules = [m.module_alias for m in self.pollers['poller-master'].modules]
-        assert modules == ['Example']
-
-        # The only existing receiver module is Example declared in the configuration
-        modules = [m.module_alias for m in self.receivers['receiver-master'].modules]
-        assert modules == ['Example']
-
-        # The only existing reactionner module is Example declared in the configuration
-        modules = [m.module_alias for m in self.reactionners['reactionner-master'].modules]
-        assert modules == ['Example']
+        # # The only existing poller module is Example declared in the configuration
+        # modules = [m.module_alias for m in self.pollers['poller-master'].modules]
+        # assert modules == ['Example']
+        #
+        # # The only existing receiver module is Example declared in the configuration
+        # modules = [m.module_alias for m in self.receivers['receiver-master'].modules]
+        # assert modules == ['Example']
+        #
+        # # The only existing reactionner module is Example declared in the configuration
+        # modules = [m.module_alias for m in self.reactionners['reactionner-master'].modules]
+        # assert modules == ['Example']
 
         # No scheduler modules created
-        modules = [m.module_alias for m in self.schedulers['scheduler-master'].modules]
+        modules = [m.module_alias for m in self._scheduler_daemon.modules]
+        assert modules == ['Example']
+        modules = [m.name for m in self._scheduler_daemon.modules]
         assert modules == ['Example']
 
         # Loading module logs
@@ -122,15 +131,14 @@ class TestModules(AlignakTest):
 
         :return:
         """
-        self.print_header()
-        self.setup_with_file('./cfg/cfg_arbiter_configuration_module.cfg')
+        self.setup_with_file('./cfg/modules/arbiter_modules.cfg')
         assert self.conf_is_correct
         self.show_configuration_logs()
         self.show_logs()
 
         # The arbiter module is 'backend_arbiter' declared in the configuration
-        modules = [m.module_alias for m in self.arbiter.myself.modules]
-        assert modules == ['backend_arbiter']
+        modules = [m.module_alias for m in self._arbiter.link_to_myself.modules]
+        assert modules == ['Example']
 
     def test_missing_module_detection(self):
         """ Detect missing module configuration
@@ -141,7 +149,6 @@ class TestModules(AlignakTest):
 
         :return:
         """
-        self.print_header()
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/modules/alignak_modules_nagios_parameters.cfg')
         assert not self.conf_is_correct
@@ -184,7 +191,7 @@ class TestModules(AlignakTest):
         self.assert_any_log_match(
             re.escape(
                 "Your configuration parameter 'command_file = /var/alignak.cmd' needs to use "
-                "an external module such as 'logs' but I did not found one!"
+                "an external module such as 'external_commands' but I did not found one!"
             )
         )
 
@@ -194,43 +201,48 @@ class TestModules(AlignakTest):
         Check that the feature is detected as disabled
         :return:
         """
-        self.print_header()
         self.setup_with_file('cfg/modules/alignak_module_with_submodules.cfg')
         assert self.conf_is_correct
         self.show_configuration_logs()
 
-        # No arbiter modules created
-        modules = [m.module_alias for m in self.arbiter.myself.modules]
+        # arbiter modules
+        modules = [m.module_alias for m in self._arbiter.link_to_myself.modules]
+        assert modules == ['Example']
+        modules = [m.name for m in self._arbiter.link_to_myself.modules]
         assert modules == ['Example']
 
-        # The only existing broker module is Example declared in the configuration
-        modules = [m.module_alias for m in self.brokers['broker-master'].modules]
+        # broker modules
+        modules = [m.module_alias for m in self._broker_daemon.modules]
+        assert modules == ['Example']
+        modules = [m.name for m in self._broker_daemon.modules]
         assert modules == ['Example']
 
-        # The only existing poller module is Example declared in the configuration
-        modules = [m.module_alias for m in self.pollers['poller-master'].modules]
-        assert modules == ['Example']
-
-        # The only existing receiver module is Example declared in the configuration
-        modules = [m.module_alias for m in self.receivers['receiver-master'].modules]
-        assert modules == ['Example']
-
-        # The only existing reactionner module is Example declared in the configuration
-        modules = [m.module_alias for m in self.reactionners['reactionner-master'].modules]
-        assert modules == ['Example']
+        # # The only existing poller module is Example declared in the configuration
+        # modules = [m.module_alias for m in self.pollers['poller-master'].modules]
+        # assert modules == ['Example']
+        #
+        # # The only existing receiver module is Example declared in the configuration
+        # modules = [m.module_alias for m in self.receivers['receiver-master'].modules]
+        # assert modules == ['Example']
+        #
+        # # The only existing reactionner module is Example declared in the configuration
+        # modules = [m.module_alias for m in self.reactionners['reactionner-master'].modules]
+        # assert modules == ['Example']
 
         # No scheduler modules created
-        modules = [m.module_alias for m in self.schedulers['scheduler-master'].modules]
+        modules = [m.module_alias for m in self._scheduler_daemon.modules]
+        assert modules == ['Example']
+        modules = [m.name for m in self._scheduler_daemon.modules]
         assert modules == ['Example']
 
-    def test_modulemanager(self):
-        """ Module manager manages its modules
+    def test_modulemanager_1(self):
+        """ Module manager manages its modules - old form
 
         Test if the module manager manages correctly all the modules
         :return:
         """
-        self.print_header()
-        self.setup_with_file('cfg/cfg_default_with_modules.cfg')
+        self.setup_with_file('cfg/cfg_default_with_modules.cfg',
+                             'cfg/default_with_modules/alignak.ini')
         assert self.conf_is_correct
 
         # Create an Alignak module
@@ -239,18 +251,41 @@ class TestModules(AlignakTest):
             'module_types': 'example',
             'python_name': 'alignak_module_example'
         })
+        self.run_modulemanager(mod)
+
+    def test_modulemanager_2(self):
+        """ Module manager manages its modules - new form
+
+        Test if the module manager manages correctly all the modules
+        :return:
+        """
+        self.setup_with_file('cfg/cfg_default_with_modules.cfg',
+                             'cfg/default_with_modules/alignak.ini')
+        assert self.conf_is_correct
+
+        # Create an Alignak module
+        mod = Module({
+            'name': 'mod-example',
+            'type': 'example',
+            'python_name': 'alignak_module_example'
+        })
+        self.run_modulemanager(mod)
+
+    def run_modulemanager(self, mod):
+        # Force the daemon SyncManager to None for unit tests!
+        self._broker_daemon.sync_manager = None
 
         # Create the modules manager for a daemon type
-        self.modulemanager = ModulesManager('receiver', None)
+        self.modules_manager = ModulesManager(self._broker_daemon)
 
         # Load an initialize the modules:
         #  - load python module
         #  - get module properties and instances
-        self.modulemanager.load_and_init([mod])
+        self.modules_manager.load_and_init([mod])
 
         # Loading module logs
         self.assert_any_log_match(re.escape(
-            "Importing Python module 'alignak_module_example' for Example..."
+            "Importing Python module 'alignak_module_example' for mod-example..."
         ))
         self.assert_any_log_match(re.escape(
             "Module properties: {'daemons': ['arbiter', 'broker', 'scheduler', 'poller', "
@@ -258,30 +293,27 @@ class TestModules(AlignakTest):
             "'running', 'retention'], 'type': 'example', 'external': True}"
         ))
         self.assert_any_log_match(re.escape(
-            "Imported 'alignak_module_example' for Example"
+            "Imported 'alignak_module_example' for mod-example"
         ))
         self.assert_any_log_match(re.escape(
-            "Give an instance of alignak_module_example for alias: Example"
-        ))
-        self.assert_any_log_match(re.escape(
-            "I correctly loaded my modules: [Example]"
+            "Give an instance of alignak_module_example for alias: mod-example"
         ))
 
-        my_module = self.modulemanager.instances[0]
+        my_module = self.modules_manager.instances[0]
         assert my_module.is_external
 
         # Get list of not external modules
-        assert [] == self.modulemanager.get_internal_instances()
+        assert [] == self.modules_manager.get_internal_instances()
         for phase in ['configuration', 'late_configuration', 'running', 'retention']:
-            assert [] == self.modulemanager.get_internal_instances(phase)
+            assert [] == self.modules_manager.get_internal_instances(phase)
 
         # Get list of external modules
-        assert [my_module] == self.modulemanager.get_external_instances()
+        assert [my_module] == self.modules_manager.get_external_instances()
         for phase in ['configuration', 'late_configuration', 'running', 'retention']:
-            assert [my_module] == self.modulemanager.get_external_instances(phase)
+            assert [my_module] == self.modules_manager.get_external_instances(phase)
 
         # Start external modules
-        self.modulemanager.start_external_instances()
+        self.modules_manager.start_external_instances()
 
         # Starting external module logs
         self.assert_any_log_match(re.escape(
@@ -313,10 +345,10 @@ class TestModules(AlignakTest):
         ))
 
         # Nothing special ...
-        self.modulemanager.check_alive_instances()
+        self.modules_manager.check_alive_instances()
 
         # Try to restart the dead modules
-        self.modulemanager.try_to_restart_deads()
+        self.modules_manager.try_to_restart_deads()
 
         # In fact it's too early, so it won't do it
 
@@ -325,8 +357,8 @@ class TestModules(AlignakTest):
 
         # So we lie
         my_module.last_init_try = -5
-        self.modulemanager.check_alive_instances()
-        self.modulemanager.try_to_restart_deads()
+        self.modules_manager.check_alive_instances()
+        self.modules_manager.try_to_restart_deads()
 
         # In fact it's too early, so it won't do it
 
@@ -335,7 +367,7 @@ class TestModules(AlignakTest):
 
         # should be nothing more in to_restart of
         # the module manager
-        assert [] == self.modulemanager.to_restart
+        assert [] == self.modules_manager.to_restart
 
         # Now we look for time restart so we kill it again
         my_module.kill()
@@ -343,19 +375,19 @@ class TestModules(AlignakTest):
         assert not my_module.process.is_alive()
 
         # Should be too early
-        self.modulemanager.check_alive_instances()
-        self.modulemanager.try_to_restart_deads()
+        self.modules_manager.check_alive_instances()
+        self.modules_manager.try_to_restart_deads()
         assert not my_module.process.is_alive()
         # We lie for the test again
         my_module.last_init_try = -5
-        self.modulemanager.check_alive_instances()
-        self.modulemanager.try_to_restart_deads()
+        self.modules_manager.check_alive_instances()
+        self.modules_manager.try_to_restart_deads()
 
         # Here the inst should be alive again
         assert my_module.process.is_alive()
 
         # And we clear all now
-        self.modulemanager.stop_all()
+        self.modules_manager.stop_all()
         # Stopping module logs
         self.assert_any_log_match(re.escape(
             "I'm stopping module "
@@ -369,14 +401,12 @@ class TestModules(AlignakTest):
         Configured with several modules
         :return:
         """
-        self.print_header()
-        self.setup_with_file('cfg/cfg_default_with_modules.cfg')
+        self.setup_with_file('cfg/cfg_default_with_modules.cfg',
+                             'cfg/default_with_modules/alignak.ini')
         assert self.conf_is_correct
 
-        for mod in self.arbiter.conf.modules:
-            print (mod.__dict__)
-
-        # time_hacker.set_real_time()
+        # for mod in self._arbiter.conf.modules:
+        #     print (mod.__dict__)
 
         # Create an Alignak module
         mod = Module({
@@ -395,57 +425,88 @@ class TestModules(AlignakTest):
             'option2': 'bor',
             'option3': 1
         })
+
+        # Force the daemon SyncManager to None for unit tests!
+        self._broker_daemon.sync_manager = None
         # Create the modules manager for a daemon type
-        self.modulemanager = ModulesManager('receiver', None)
+        self.modules_manager = ModulesManager(self._broker_daemon)
+        print("Modules: %s" % self._broker_daemon.modules)
 
         # Load an initialize the modules:
         #  - load python module
         #  - get module properties and instances
-        self.modulemanager.load_and_init([mod, mod2])
+        assert self.modules_manager.load_and_init([mod, mod2])
+        print("I correctly loaded my modules: [%s]" % ','.join([inst.name for inst in
+                                                                self.modules_manager.instances]))
         self.show_logs()
 
-        # Loading module logs
         self.assert_any_log_match(re.escape(
             "Importing Python module 'alignak_module_example' for mod-example..."
         ))
         self.assert_any_log_match(re.escape(
-            "Importing Python module 'alignak_module_example' for mod-example-2..."
-        ))
-        self.assert_any_log_match(re.escape(
-            "Module properties: {'daemons': ['arbiter', 'broker', 'scheduler', 'poller', "
-            "'receiver', 'reactionner'], 'phases': ['configuration', 'late_configuration', "
-            "'running', 'retention'], 'type': 'example', 'external': True}"
+            "Module properties: {'daemons': ['arbiter', 'broker', 'scheduler', 'poller', 'receiver', 'reactionner'], 'phases': ['configuration', 'late_configuration', 'running', 'retention'], 'type': 'example', 'external': True}"
         ))
         self.assert_any_log_match(re.escape(
             "Imported 'alignak_module_example' for mod-example"
         ))
         self.assert_any_log_match(re.escape(
+            "Loaded Python module 'alignak_module_example' (mod-example)"
+        ))
+        self.assert_any_log_match(re.escape(
+            "Importing Python module 'alignak_module_example' for mod-example-2..."
+        ))
+        self.assert_any_log_match(re.escape(
+            "Module properties: {'daemons': ['arbiter', 'broker', 'scheduler', 'poller', 'receiver', 'reactionner'], 'phases': ['configuration', 'late_configuration', 'running', 'retention'], 'type': 'example', 'external': True}"
+        ))
+        self.assert_any_log_match(re.escape(
             "Imported 'alignak_module_example' for mod-example-2"
         ))
         self.assert_any_log_match(re.escape(
-            "[alignak.module.mod-example] configuration, foo, bar, 1"
+            "Loaded Python module 'alignak_module_example' (mod-example-2)"
+        ))
+        # Too complex to compare ... and only for a simple dump log :/
+        # self.assert_any_log_match(re.escape(
+        #     "Alignak starting module 'mod-example', parameters: {'enable_problem_impacts_states_change': '', 'log_notifications': '', 'statsd_prefix': '', 'local_log': '', 'daemons_initial_port': '', 'log_access': '', 'log_initial_states': '', 'log_host_retries': '', 'uuid': 'b924b227d1bb4db598dca7a2c71fe1de', 'logdir': '', 'option_2': '', 'option_3': '', 'option_1': '', 'hard_ssl_name_check': '', 'log_external_commands': '', 'server_key': '', 'password': '', 'idontcareaboutsecurity': '', 'python_name': 'alignak_module_example', 'log_flappings': '', 'daemon': 'unset', 'tick_update_program_status': '', 'name': 'mod-example', 'statsd_enabled': '', 'server_dh': '', 'alignak_launched': '', 'tick_clean_queues': '', 'old_properties': {}, 'max_plugins_output_length': '', 'port': '', 'downtimes': {}, 'log_event_handlers': '', 'log_error': '', 'log_dir': '', 'vardir': '', 'enable_notifications': '', 'option2': 'bar', 'option3': 1, 'pidfile': '', 'option1': 'foo', 'definition_order': 100, 'tags': set([]), 'use': [], 'host': '', 'spare': '', 'group': '', 'properties': {'daemons': ['arbiter', 'broker', 'scheduler', 'poller', 'receiver', 'reactionner'], 'phases': ['configuration', 'late_configuration', 'running', 'retention'], 'type': 'example', 'external': True}, 'set_timestamp': '', 'max_service_check_spread': '', 'execute_host_checks': '', 'host_freshness_check_interval': '', 'plus': {}, 'log_snapshots': '', 'accept_passive_service_checks': '', 'service_freshness_check_interval': '', 'statsd_host': '', 'module_alias': 'mod-example', 'module_types': ['example'], 'alignak_name': '', 'max_queue_size': '', 'alignak_backend': '', 'type': ['unset'], 'notification_timeout': '', 'username': '', 'server_cert': '', 'feedback_host': '', 'host_check_timeout': '', 'log_passive_checks': '', 'etcdir': '', 'daemons_check_period': '', 'configuration_warnings': [], 'execute_service_checks': '', 'service_check_timeout': '', 'imported_from': 'unknown', 'max_host_check_spread': '', 'disable_old_nagios_parameters_whining': '', 'statsd_port': '', 'accept_passive_host_checks': '', 'log_active_checks': '', 'allow_host_creation': '', 'no_event_handlers_during_downtimes': '', 'log_service_retries': '', 'retention_update_interval': '', 'allow_service_creation': '', 'use_ssl': '', 'conf_is_correct': True, 'daemons_log_folder': '', 'realm': '', 'api_url': '', 'enable_environment_macros': '', 'verify_modification': '', 'workdir': '', 'ca_cert': '', 'log_filename': '', 'give_feedback': '', 'customs': {}, 'user': '', 'configuration_errors': [], 'register': True, 'modules': '', 'tick_update_retention': ''}"
+        # ))
+        self.assert_any_log_match(re.escape(
+            "Give an instance of alignak_module_example for alias: mod-example"
         ))
         self.assert_any_log_match(re.escape(
-            "[alignak.module.mod-example-2] configuration, faa, bor, 1"
+            "configuration, foo, bar, 1"
+        ))
+        # Too complex to compare ... and only for a simple dump log :/
+        # self.assert_any_log_match(re.escape(
+        #     "Alignak starting module 'mod-example-2', parameters: {'enable_problem_impacts_states_change': '', 'log_notifications': '', 'statsd_prefix': '', 'local_log': '', 'daemons_initial_port': '', 'log_access': '', 'log_initial_states': '', 'log_host_retries': '', 'uuid': 'e48da9297c464850b08ce6cecf63defd', 'logdir': '', 'option_2': '', 'option_3': '', 'option_1': '', 'hard_ssl_name_check': '', 'log_external_commands': '', 'server_key': '', 'password': '', 'idontcareaboutsecurity': '', 'python_name': 'alignak_module_example', 'log_flappings': '', 'daemon': 'unset', 'tick_update_program_status': '', 'name': 'mod-example-2', 'statsd_enabled': '', 'server_dh': '', 'alignak_launched': '', 'tick_clean_queues': '', 'old_properties': {}, 'max_plugins_output_length': '', 'port': '', 'downtimes': {}, 'log_event_handlers': '', 'log_error': '', 'log_dir': '', 'vardir': '', 'enable_notifications': '', 'option2': 'bor', 'option3': 1, 'pidfile': '', 'option1': 'faa', 'definition_order': 100, 'tags': set([]), 'use': [], 'host': '', 'spare': '', 'group': '', 'properties': {'daemons': ['arbiter', 'broker', 'scheduler', 'poller', 'receiver', 'reactionner'], 'phases': ['configuration', 'late_configuration', 'running', 'retention'], 'type': 'example', 'external': True}, 'set_timestamp': '', 'max_service_check_spread': '', 'execute_host_checks': '', 'host_freshness_check_interval': '', 'plus': {}, 'log_snapshots': '', 'accept_passive_service_checks': '', 'service_freshness_check_interval': '', 'statsd_host': '', 'module_alias': 'mod-example-2', 'module_types': ['example'], 'alignak_name': '', 'max_queue_size': '', 'alignak_backend': '', 'type': ['unset'], 'notification_timeout': '', 'username': '', 'server_cert': '', 'feedback_host': '', 'host_check_timeout': '', 'log_passive_checks': '', 'etcdir': '', 'daemons_check_period': '', 'configuration_warnings': [], 'execute_service_checks': '', 'service_check_timeout': '', 'imported_from': 'unknown', 'max_host_check_spread': '', 'disable_old_nagios_parameters_whining': '', 'statsd_port': '', 'accept_passive_host_checks': '', 'log_active_checks': '', 'allow_host_creation': '', 'no_event_handlers_during_downtimes': '', 'log_service_retries': '', 'retention_update_interval': '', 'allow_service_creation': '', 'use_ssl': '', 'conf_is_correct': True, 'daemons_log_folder': '', 'realm': '', 'api_url': '', 'enable_environment_macros': '', 'verify_modification': '', 'workdir': '', 'ca_cert': '', 'log_filename': '', 'give_feedback': '', 'customs': {}, 'user': '', 'configuration_errors': [], 'register': True, 'modules': '', 'tick_update_retention': ''}"
+        # ))
+        self.assert_any_log_match(re.escape(
+            "Give an instance of alignak_module_example for alias: mod-example-2"
+        ))
+        self.assert_any_log_match(re.escape(
+            "configuration, faa, bor, 1"
+        ))
+        # Loading module logs
+        self.assert_any_log_match(re.escape(
+            "Importing Python module 'alignak_module_example' for mod-example..."
         ))
 
-        my_module = self.modulemanager.instances[0]
-        my_module2 = self.modulemanager.instances[1]
+        my_module = self.modules_manager.instances[0]
+        my_module2 = self.modules_manager.instances[1]
         assert my_module.is_external
         assert my_module2.is_external
 
         # Get list of not external modules
-        assert [] == self.modulemanager.get_internal_instances()
+        assert [] == self.modules_manager.get_internal_instances()
         for phase in ['configuration', 'late_configuration', 'running', 'retention']:
-            assert [] == self.modulemanager.get_internal_instances(phase)
+            assert [] == self.modules_manager.get_internal_instances(phase)
 
         # Get list of external modules
-        assert [my_module, my_module2] == self.modulemanager.get_external_instances()
+        assert [my_module, my_module2] == self.modules_manager.get_external_instances()
         for phase in ['configuration', 'late_configuration', 'running', 'retention']:
-            assert [my_module, my_module2] == self.modulemanager.get_external_instances(phase)
+            assert [my_module, my_module2] == self.modules_manager.get_external_instances(phase)
 
         # Start external modules
-        self.modulemanager.start_external_instances()
+        self.modules_manager.start_external_instances()
+        self.modules_manager.start_external_instances()
 
         # Starting external module logs
         self.assert_any_log_match(re.escape(
@@ -477,10 +538,10 @@ class TestModules(AlignakTest):
         ))
 
         # Nothing special ...
-        self.modulemanager.check_alive_instances()
+        self.modules_manager.check_alive_instances()
 
         # Try to restart the dead modules
-        self.modulemanager.try_to_restart_deads()
+        self.modules_manager.try_to_restart_deads()
 
         # In fact it's too early, so it won't do it
 
@@ -489,8 +550,8 @@ class TestModules(AlignakTest):
 
         # So we lie
         my_module.last_init_try = -5
-        self.modulemanager.check_alive_instances()
-        self.modulemanager.try_to_restart_deads()
+        self.modules_manager.check_alive_instances()
+        self.modules_manager.try_to_restart_deads()
 
         # In fact it's too early, so it won't do it
 
@@ -499,7 +560,7 @@ class TestModules(AlignakTest):
 
         # should be nothing more in to_restart of
         # the module manager
-        assert [] == self.modulemanager.to_restart
+        # assert [] == self.modules_manager.to_restart
 
         # Now we look for time restart so we kill it again
         my_module.kill()
@@ -507,19 +568,19 @@ class TestModules(AlignakTest):
         assert not my_module.process.is_alive()
 
         # Should be too early
-        self.modulemanager.check_alive_instances()
-        self.modulemanager.try_to_restart_deads()
+        self.modules_manager.check_alive_instances()
+        self.modules_manager.try_to_restart_deads()
         assert not my_module.process.is_alive()
         # We lie for the test again
         my_module.last_init_try = -5
-        self.modulemanager.check_alive_instances()
-        self.modulemanager.try_to_restart_deads()
+        self.modules_manager.check_alive_instances()
+        self.modules_manager.try_to_restart_deads()
 
         # Here the inst should be alive again
         assert my_module.process.is_alive()
 
         # And we clear all now
-        self.modulemanager.stop_all()
+        self.modules_manager.stop_all()
         # Stopping module logs
         self.assert_any_log_match(re.escape(
             "I'm stopping module "

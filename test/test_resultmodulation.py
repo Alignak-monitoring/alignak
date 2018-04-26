@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -53,16 +53,15 @@ from alignak_test import AlignakTest
 
 class TestResultModulation(AlignakTest):
     def setUp(self):
+        super(TestResultModulation, self).setUp()
         self.setup_with_file('cfg/cfg_result_modulation.cfg')
         assert self.conf_is_correct
 
         # Our scheduler
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
     def test_service_resultmodulation(self):
         """ Test result modulations """
-        self.print_header()
-
         # Get the host
         host = self._sched.hosts.find_by_name("test_host_0")
         assert host is not None
@@ -120,8 +119,6 @@ class TestResultModulation(AlignakTest):
 
          Despite this service should also be impacted
         """
-        self.print_header()
-
         # Get the router
         router = self._sched.hosts.find_by_name("test_router_0_resmod")
         router.checks_in_progress = []
@@ -154,7 +151,3 @@ class TestResultModulation(AlignakTest):
         # The service has a result modulation. So CRITICAL is transformed as WARNING.
         self.assertEqual('WARNING', svc2.state)
         self.assertEqual('HARD', svc2.state_type)
-
-
-if __name__ == '__main__':
-    AlignakTest.main()

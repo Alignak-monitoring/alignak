@@ -2,16 +2,17 @@
 # They are not added as hard dependencies here so that packaging works fine
 # CherryPy is not packaged anymore since v3.5XX so we let it as is.
 # Keep a CherryPy lower than 9.0 because WSGIServer is not more shipped with CherryPy
-CherryPy<9.0.0
+# CherryPy<9.0.0
+# Alignak now supports recent CherryPy
+CherryPy
 
 # Requests to communicate between the daemons
-# Version <=2.14.2 else some tests using requests-mock are broken with the 2.16.0 version
-requests>=2.7.0,<=2.14.2
+requests
 
 # importlib is used to import modules used by the daemons
 importlib
 
-# colored console log
+# Colored console log
 termcolor
 
 # Set process titles
@@ -20,9 +21,10 @@ setproctitle
 # ujson is used for the internal objects serialization
 ujson
 
-# numpy for date and percentile computation
-numpy<1.12.0; python_version < '2.7'
-numpy; python_version >= '2.7'
+# numpy for date and percentile computation - needs a compimler on the installation target system!
+# Uncomment or `pip install numpy` to use numpy library for math functions
+# numpy<1.12.0; python_version < '2.7'
+# numpy; python_version >= '2.7'
 
 # SSL between the daemons
 # This requirement is only a requirement if you intend to use SLL for the inter-daemons
@@ -34,5 +36,6 @@ numpy; python_version >= '2.7'
 docopt
 
 # Use psutil for daemons memory monitoring (env ALIGNAK_DAEMONS_MONITORING)
-# Use psutil for scheduler TEST_LOG_MONITORING
+# Use psutil for scheduler ALIGNAK_LOG_MONITORING
+# Use psutil for launching daemons from the Arbiter
 psutil

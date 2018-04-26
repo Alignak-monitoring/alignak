@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -130,7 +130,7 @@ class Downtime(AlignakObject):
         else:
             super(Downtime, self).__init__(params, parsing)
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         if self.is_in_effect is True:
             active = "active"
         else:
@@ -277,7 +277,7 @@ class Downtime(AlignakObject):
         self.can_be_deleted = True
         # when a downtime ends and the service was critical
         # a notification is sent with the next critical check
-        # So we should set a flag here which signals consume_result
+        # So we should set a flag here which informs the consume_result function
         # to send a notification
         item.in_scheduled_downtime_during_last_check = True
         return broks

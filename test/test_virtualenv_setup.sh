@@ -115,54 +115,55 @@ function setup_virtualenv(){
 }
 
 function test_setup(){
-error_found=0
-for raw_file in $(awk '{print $2}' $1); do
+    error_found=0
+    for raw_file in $(awk '{print $2}' $1); do
 
-    file=$(echo "$raw_file" | sed  -e "s:VIRTUALENVPATH:$VIRTUALENVPATH:g" \
-                                   -e "s:PYTHONVERSION:$PYTHONVERSION:g" \
-                                   -e "s:ALIGNAKVERSION:$ALIGNAKVERSION:g"\
-                                   -e "s:SHORTPYVERSION:$SHORTPYVERSION:g")
-    exp_chmod=$(grep "$raw_file$" $1| cut -d " " -f 1 )
-    if [[ "$exp_chmod" == "" ]]; then
-        echo "Can't find file in conf after sed - RAWFILE:$raw_file, FILE:$file"
-    fi
-    echo "Found the file: $file"
-
-    cur_chmod=$(stat -c "%a" $file 2>> /tmp/stat.failure)
-    if [[ $? -ne 0 ]];then
-        tail -1 /tmp/stat.failure
-
-        if [[ $error_found -eq 0 ]]; then
-            get_first_existing_path $file
-            sudo updatedb
-            locate -i alignak | grep -v "monitoring"
+        file=$(echo "$raw_file" | sed  -e "s:VIRTUALENVPATH:$VIRTUALENVPATH:g" \
+                                       -e "s:PYTHONVERSION:$PYTHONVERSION:g" \
+                                       -e "s:ALIGNAKVERSION:$ALIGNAKVERSION:g"\
+                                       -e "s:SHORTPYVERSION:$SHORTPYVERSION:g")
+        exp_chmod=$(grep "$raw_file$" $1| cut -d " " -f 1 )
+        if [[ "$exp_chmod" == "" ]]; then
+            echo "Can't find file in conf after sed - RAWFILE:$raw_file, FILE:$file"
         fi
+        # Too verbose in tests result
+        # echo "Found the file: $file"
 
-        if [[ $STOP_ON_FAILURE -eq 1 ]];then
-            return 1
-        else
-            error_found=1
-            continue
-        fi
-    fi
+        cur_chmod=$(stat -c "%a" $file 2>> /tmp/stat.failure)
+        if [[ $? -ne 0 ]];then
+            tail -1 /tmp/stat.failure
 
-    if [[ $SKIP_PERMISSION -eq 0 ]]; then
-        # Sometimes there are sticky bit or setuid or setgid on dirs
-        # Let just ignore this.
-        cur_chmod=$(ignore_sticky_or_setid $cur_chmod)
+            if [[ $error_found -eq 0 ]]; then
+                get_first_existing_path $file
+                sudo updatedb
+                locate -i alignak | grep -v "monitoring"
+            fi
 
-        if [[ "$exp_chmod" != "$cur_chmod" ]]; then
-            echo "Right error on file $file - expected: $exp_chmod, found: $cur_chmod"
-            if [[ $STOP_ON_FAILURE -eq 1 ]]; then
+            if [[ $STOP_ON_FAILURE -eq 1 ]];then
                 return 1
             else
                 error_found=1
+                continue
             fi
         fi
-    fi
-done 
 
-return $error_found
+        if [[ $SKIP_PERMISSION -eq 0 ]]; then
+            # Sometimes there are sticky bit or setuid or setgid on dirs
+            # Let just ignore this.
+            cur_chmod=$(ignore_sticky_or_setid $cur_chmod)
+
+            if [[ "$exp_chmod" != "$cur_chmod" ]]; then
+                echo "Right error on file $file - expected: $exp_chmod, found: $cur_chmod"
+                if [[ $STOP_ON_FAILURE -eq 1 ]]; then
+                    return 1
+                else
+                    error_found=1
+                fi
+            fi
+        fi
+    done
+
+    return $error_found
 }
 
 #TODO

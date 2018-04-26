@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -63,12 +63,14 @@ from alignak.objects.contact import Contact
 
 class TestWorkerTimeout(AlignakTest):
     def setUp(self):
+        super(TestWorkerTimeout, self).setUp()
+
         # we have an external process, so we must un-fake time functions
         self.setup_with_file('cfg/cfg_check_worker_timeout.cfg')
         assert self.conf_is_correct
 
         # Our scheduler
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
     def test_notification_timeout(self):
         """ Test timeout for notification sending
@@ -148,6 +150,3 @@ class TestWorkerTimeout(AlignakTest):
         self.show_logs()
         self.assert_any_log_match("Contact alignak service notification command "
                                   "'libexec/sleep_command.sh 7 ' timed out after 2 seconds")
-
-if __name__ == '__main__':
-    AlignakTest.main()

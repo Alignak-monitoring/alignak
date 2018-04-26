@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -85,17 +85,11 @@ from alignak.downtime import Downtime
 from alignak.comment import Comment
 from alignak.util import average_percentile
 from alignak.load import Load
-from alignak.http.client import HTTPClientException, HTTPClientConnectionException, \
-    HTTPClientTimeoutException
 from alignak.stats import statsmgr
 from alignak.misc.common import DICT_MODATTR
-from alignak.misc.serialization import unserialize, AlignakClassLookupException
+from alignak.misc.serialization import unserialize
 from alignak.acknowledge import Acknowledge
 from alignak.log import make_monitoring_log
-
-if 'TEST_LOG_MONITORING' in os.environ:
-    import psutil
-
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -110,68 +104,66 @@ class Scheduler(object):  # pylint: disable=R0902
         :type scheduler_daemon: alignak.daemons.schedulerdaemon.Alignak
         :return: None
         """
-        self.sched_daemon = scheduler_daemon
-        # When set to false by us, we die and arbiter launch a new Scheduler
-        self.must_run = True
+        self.my_daemon = scheduler_daemon
 
-        # Dump system health, defaults to report every 5 loop count
-        self.system_health = False
-        self.system_health_period = 5
-        if 'TEST_LOG_MONITORING' in os.environ:
-            self.system_health = True
-            if os.environ['TEST_LOG_MONITORING']:
-                try:
-                    self.system_health_period = int(os.environ['TEST_LOG_MONITORING'])
-                except ValueError:
-                    pass
+        # The scheduling is on/off, default is False
+        self.must_schedule = False
 
-        # protect this unique list
         # The actions results returned by satelittes or fetched from
-        # passive satellites are store in this queue
-        self.waiting_results = Queue()  # satellites returns us results
+        # passive satellites are stored in this queue
+        self.waiting_results = Queue()
 
-        self.log_loop = 'TEST_LOG_LOOP' in os.environ
-
-        # Every N seconds we call functions like consume, del zombies
-        # etc. All of theses functions are in recurrent_works with the
-        # every tick to run. So must be an integer > 0
-        # The order is important, so make key an int.
+        # Every N loop turns (usually seconds...) we call functions like consume, del zombies
+        # etc. All of these functions are in recurrent_works with the tick count to run them.
+        # So it must be an integer > 0
+        # The order is important, so make key an integer index.
         # TODO: at load, change value by configuration one (like reaper time, etc)
         self.recurrent_works = {
-            0: ('update_downtimes_and_comments', self.update_downtimes_and_comments, 1),
-            1: ('schedule', self.schedule, 1),  # just schedule
-            2: ('check_freshness', self.check_freshness, 10),
-            3: ('consume_results', self.consume_results, 1),  # incorporate checks and dependencies
-
+            0: ('update_downtimes_and_comments',
+                self.update_downtimes_and_comments, 1),
+            1: ('schedule',
+                self.schedule, 1),
+            2: ('check_freshness',
+                self.check_freshness, 10),
+            3: ('consume_results',
+                self.consume_results, 1),
             # now get the news actions (checks, notif) raised
-            4: ('get_new_actions', self.get_new_actions, 1),
-            5: ('scatter_master_notifications', self.scatter_master_notifications, 1),
-            6: ('get_new_broks', self.get_new_broks, 1),  # and broks
-            7: ('delete_zombie_checks', self.delete_zombie_checks, 1),
-            8: ('delete_zombie_actions', self.delete_zombie_actions, 1),
-            9: ('clean_caches', self.clean_caches, 1),
-            10: ('update_retention_file', self.update_retention_file, 3600),
-            11: ('check_orphaned', self.check_orphaned, 60),
-            # For NagVis like tools: update our status every 10s
-            12: ('get_and_register_update_program_status_brok',
-                 self.get_and_register_update_program_status_brok, 10),
-            # Check for system time change. And AFTER get new checks so they are changed too.
-            13: ('check_for_system_time_change', self.sched_daemon.check_for_system_time_change, 1),
-            # launch if need all internal checks
-            14: ('manage_internal_checks', self.manage_internal_checks, 1),
-            # clean some times possible overridden Queues, to do not explode in memory usage
-            # every 1/4 of hour
-            15: ('clean_queues', self.clean_queues, 1),
-            # Look for new business_impact change by modulation every minute
-            16: ('update_business_values', self.update_business_values, 60),
-            # Reset the topology change flag if need
-            17: ('reset_topology_change_flag', self.reset_topology_change_flag, 1),
-            18: ('check_for_expire_acknowledge', self.check_for_expire_acknowledge, 1),
-            19: ('send_broks_to_modules', self.send_broks_to_modules, 1),
-            20: ('get_objects_from_from_queues', self.get_objects_from_from_queues, 1),
-            # If change the number of get_latency_average_percentile in recurrent_works, change it
-            # in the function get_latency_average_percentile()
-            21: ('get_latency_average_percentile', self.get_latency_average_percentile, 10),
+            4: ('get_new_actions',
+                self.get_new_actions, 1),
+            5: ('scatter_master_notifications',
+                self.scatter_master_notifications, 1),
+            6: ('get_new_broks',
+                self.get_new_broks, 1),  # and broks
+            7: ('delete_zombie_checks',
+                self.delete_zombie_checks, 1),
+            8: ('delete_zombie_actions',
+                self.delete_zombie_actions, 1),
+            9: ('clean_caches',
+                self.clean_caches, 1),
+            10: ('update_retention',
+                 self.update_retention, 3600),
+            11: ('check_orphaned',
+                 self.check_orphaned, 60),
+            12: ('update_program_status',
+                 self.update_program_status, 10),
+            13: ('check_for_system_time_change',
+                 self.my_daemon.check_for_system_time_change, 1),
+            14: ('manage_internal_checks',
+                 self.manage_internal_checks, 1),
+            15: ('clean_queues',
+                 self.clean_queues, 1),
+            16: ('update_business_values',
+                 self.update_business_values, 60),
+            17: ('reset_topology_change_flag',
+                 self.reset_topology_change_flag, 1),
+            18: ('check_for_expire_acknowledge',
+                 self.check_for_expire_acknowledge, 1),
+            19: ('send_broks_to_modules',
+                 self.send_broks_to_modules, 1),
+            20: ('get_objects_from_from_queues',
+                 self.get_objects_from_from_queues, 1),
+            21: ('get_latency_average_percentile',
+                 self.get_latency_average_percentile, 10),
         }
 
         # stats part
@@ -193,6 +185,9 @@ class Scheduler(object):  # pylint: disable=R0902
                 "loop": {
                     "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
                 },
+                "internal": {
+                    "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
+                },
                 "active": {
                     "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
                 },
@@ -207,6 +202,9 @@ class Scheduler(object):  # pylint: disable=R0902
                 "loop": {
                     "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
                 },
+                "internal": {
+                    "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
+                },
                 "active": {
                     "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
                 },
@@ -219,6 +217,9 @@ class Scheduler(object):  # pylint: disable=R0902
                     "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
                 },
                 "loop": {
+                    "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
+                },
+                "internal": {
                     "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
                 },
                 "active": {
@@ -268,187 +269,168 @@ class Scheduler(object):  # pylint: disable=R0902
             }
         }
 
-        # Temporary set. Will be updated with received configuration
-        self.instance_id = 0
+        # Temporary set. Will be updated with the configuration received from our Arbiter
+        self.instance_id = 'uninstantiated'
+        self.instance_name = self.my_daemon.name
+        self.alignak_name = None
 
-        # Ours queues
+        # And a dummy push flavor
+        self.push_flavor = 0
+
+        # Our queues
         self.checks = {}
         self.actions = {}
+
+        self.program_start = int(time.time())
+        self.pushed_conf = None
 
         # Our external commands manager
         self.external_commands_manager = None
 
         # Some flags
         self.has_full_broks = False  # have a initial_broks in broks queue?
-        self.need_dump_memory = False  # set by signal 1
-        self.need_objects_dump = False  # set by signal 2
 
-        # And a dummy push flavor
-        self.push_flavor = 0
+        self.need_dump_memory = False
+        self.need_objects_dump = False
 
-        # Alignak instance name
-        self.alignak_name = None
+    @property
+    def name(self):
+        """Get the scheduler name
 
-        # Now fake initialize for our satellites
-        self.brokers = {}
-        self.pollers = {}
-        self.reactionners = {}
+        Indeed, we return our suffixed daemon name
+
+        :return:
+        :rtype:
+        """
+        return "%s scheduler" % self.my_daemon.name
 
     def reset(self):
         # pylint: disable=not-context-manager
         """Reset scheduler::
 
         * Remove waiting results
-        * Clear check, actions, broks lists
+        * Clear checks and actions lists
 
         :return: None
         """
-        self.must_run = True
-        # self.interrupted = False
-
-        with self.waiting_results.mutex:  # pylint: disable=not-context-manager
+        logger.info("Scheduling loop reset")
+        with self.waiting_results.mutex:
             self.waiting_results.queue.clear()
-        for obj in self.checks, self.actions, self.brokers:
-            obj.clear()
+        for my_lists in self.checks, self.actions:
+            my_lists.clear()
 
-    def iter_hosts_and_services(self):
-        """Create an iterator for hosts and services
+    def all_my_hosts_and_services(self):
+        """Create an iterator for all my known hosts and services
 
         :return: None
         """
         for what in (self.hosts, self.services):
-            for elt in what:
-                yield elt
+            for item in what:
+                yield item
 
-    def load_conf(self, conf):
-        """Load configuration received from Arbiter
+    def load_conf(self, instance_id, instance_name, conf):
+        """Load configuration received from Arbiter and pushed by our Scheduler daemon
 
+        :param instance_name: scheduler instance name
+        :type instance_name: str
+        :param instance_id: scheduler instance id
+        :type instance_id: str
         :param conf: configuration to load
         :type conf: alignak.objects.config.Config
         :return: None
         """
-        self.program_start = int(time.time())
-        self.conf = conf
+        self.pushed_conf = conf
 
-        logger.debug("[%s] loading my configuration:", conf.instance_name)
+        logger.info("loading my configuration (%s / %s):",
+                    instance_id, self.pushed_conf.instance_id)
         logger.debug("Properties:")
-        for key in sorted(self.conf.properties):
-            logger.debug("- %s: %s", key, getattr(self.conf, key, []))
+        for key in sorted(self.pushed_conf.properties):
+            logger.debug("- %s: %s", key, getattr(self.pushed_conf, key, []))
         logger.debug("Macros:")
-        for key in sorted(self.conf.macros):
-            logger.debug("- %s: %s", key, getattr(self.conf.macros, key, []))
+        for key in sorted(self.pushed_conf.macros):
+            logger.debug("- %s: %s", key, getattr(self.pushed_conf.macros, key, []))
         logger.debug("Objects types:")
-        for key in sorted(self.conf.types_creations):
-            logger.debug("- %s: %s", key, getattr(self.conf.types_creations, key, []))
+        for _, _, strclss, _, _ in self.pushed_conf.types_creations.values():
+            if strclss in ['arbiters', 'schedulers', 'brokers',
+                           'pollers', 'reactionners', 'receivers']:
+                continue
+            setattr(self, strclss, getattr(self.pushed_conf, strclss, []))
+            # Internal statistics
+            logger.debug("- %d %s", len(getattr(self, strclss)), strclss)
+            statsmgr.gauge('configuration.%s' % strclss, len(getattr(self, strclss)))
 
-        self.hostgroups = conf.hostgroups
-        self.services = conf.services
-        # We need reversed list for search in the retention
-        # file read
-        self.services.optimize_service_search(conf.hosts)
-        self.hosts = conf.hosts
+        # We need reversed list for searching in the retention file read
+        # todo: check what it is about...
+        self.services.optimize_service_search(self.hosts)
 
-        self.notificationways = conf.notificationways
-        self.checkmodulations = conf.checkmodulations
-        self.macromodulations = conf.macromodulations
-        self.businessimpactmodulations = conf.businessimpactmodulations
-        self.resultmodulations = conf.resultmodulations
-        self.contacts = conf.contacts
-        self.contactgroups = conf.contactgroups
-        self.servicegroups = conf.servicegroups
-        self.timeperiods = conf.timeperiods
-        self.commands = conf.commands
-        self.triggers = conf.triggers
-        self.triggers.compile()
-        self.triggers.load_objects(self)
-        self.escalations = conf.escalations
-
-        # Internal statistics
-        statsmgr.gauge('configuration.hosts', len(self.hosts))
-        statsmgr.gauge('configuration.services', len(self.services))
-        statsmgr.gauge('configuration.hostgroups', len(self.hostgroups))
-        statsmgr.gauge('configuration.servicegroups', len(self.servicegroups))
-        statsmgr.gauge('configuration.contacts', len(self.contacts))
-        statsmgr.gauge('configuration.contactgroups', len(self.contactgroups))
-        statsmgr.gauge('configuration.timeperiods', len(self.timeperiods))
-        statsmgr.gauge('configuration.commands', len(self.commands))
-        statsmgr.gauge('configuration.notificationways', len(self.notificationways))
-        statsmgr.gauge('configuration.escalations', len(self.escalations))
+        # Just deprecated
+        # # Compile the triggers
+        # if getattr(self, 'triggers', None):
+        #     logger.info("compiling the triggers...")
+        #     self.triggers.compile()
+        #     self.triggers.load_objects(self)
+        # else:
+        #     logger.info("No triggers")
 
         # From the Arbiter configuration. Used for satellites to differentiate the schedulers
-        self.instance_id = conf.uuid
-        logger.info("Set my instance id as '%s'", self.instance_id)
-        # Tag our hosts with our instance_id
+        self.alignak_name = self.pushed_conf.alignak_name
+        self.instance_id = instance_id
+        self.instance_name = instance_name
+
+        self.push_flavor = getattr(self.pushed_conf, 'push_flavor', 'None')
+        logger.info("Set my scheduler instance: %s (%s - %s - %s)",
+                    self.name, self.instance_id, self.instance_name, self.push_flavor)
+
+        # Tag our monitored hosts/services with our instance_id
         for host in self.hosts:
-            host.instance_id = conf.instance_id
+            host.instance_id = self.instance_id
         for serv in self.services:
-            serv.instance_id = conf.instance_id
-        # self for instance_name
-        self.instance_name = conf.instance_name
-        # and push flavor
-        self.push_flavor = conf.push_flavor
-        # and Alignak instance name
-        self.alignak_name = conf.alignak_name
+            serv.instance_id = self.instance_id
 
-        # Update our hosts/services freshness threshold
-        if self.conf.check_host_freshness and self.conf.host_freshness_check_interval >= 0:
-            for host in self.hosts:
-                if host.freshness_threshold == -1:
-                    host.freshness_threshold = self.conf.host_freshness_check_interval
-            for service in self.services:
-                if service.freshness_threshold == -1:
-                    service.freshness_threshold = self.conf.service_freshness_check_interval
+    def update_recurrent_works_tick(self, conf):
+        """Modify the tick value for the scheduler recurrent work
 
-        # Now we can update our 'ticks' for special calls
-        # like the retention one, etc
-        self.update_recurrent_works_tick('update_retention_file',
-                                         self.conf.retention_update_interval * 60)
-        self.update_recurrent_works_tick('clean_queues', self.conf.cleaning_queues_interval)
-
-    def update_recurrent_works_tick(self, f_name, new_tick):
-        """Modify the tick value for a recurrent work
         A tick is an amount of loop of the scheduler before executing the recurrent work
 
-        :param f_name: recurrent work name
-        :type f_name: str
-        :param new_tick: new value
-        :type new_tick: str
+        The provided configuration may contain some tick-function_name keys that contain
+        a tick value to be updated. Those parameters are defined in the alignak environment file.
+
+        :param conf: the daemon link configuration to search in
         :return: None
         """
         for key in self.recurrent_works:
             (name, fun, _) = self.recurrent_works[key]
-            if name == f_name:
-                logger.debug("Changing the tick to %d for the function %s", new_tick, name)
+            new_tick = conf.get('tick_%s' % name, None)
+            if new_tick is None:
+                continue
+            # Update the default scheduler tick for this function
+            try:
+                new_tick = int(new_tick)
+                logger.info("Changing the default tick to %d for the action %s", new_tick, name)
                 self.recurrent_works[key] = (name, fun, new_tick)
+            except ValueError:
+                logger.warning("Changing the default tick for '%s' to '%s' failed!", new_tick, name)
 
-    def load_satellites(self, pollers, reactionners, brokers):
-        """Setter for pollers, reactionners and brokers attributes
-
-        :param pollers: pollers value to set
-        :type pollers:
-        :param reactionners: reactionners value to set
-        :type reactionners:
-        :param brokers: brokers value to set
-        :type brokers:
-        :return: None
-        """
-        self.pollers = pollers
-        self.reactionners = reactionners
-        for broker in brokers.values():
-            self.brokers[broker['name']] = {'broks': {}, 'has_full_broks': False,
-                                            'initialized': False}
-
-    def die(self):
-        """Set must_run attribute to False
+    def start_scheduling(self):
+        """Set must_schedule attribute to True - enable the scheduling loop
 
         :return: None
         """
-        logger.debug("Asking me to die...")
-        self.must_run = False
-        # self.sched_daemon.interrupted = True
+        logger.info("Enabling the scheduling loop...")
+        self.must_schedule = True
+
+    def stop_scheduling(self):
+        """Set must_schedule attribute to False - disable the scheduling loop
+
+        :return: None
+        """
+        logger.info("Disabling the scheduling loop...")
+        self.must_schedule = False
 
     def dump_objects(self):
         """Dump scheduler objects into a dump (temp) file
+
+        todo: never used - check this function if necessary!
 
         :return: None
         """
@@ -469,9 +451,9 @@ class Scheduler(object):  # pylint: disable=R0902
                      act.t_to_go, act.reactionner_tag, act.command, act.worker_id)
                 file_h.write(string)
             broks = {}
-            for broker in self.brokers.values():
-                for brok_uuid in broker['broks']:
-                    broks[brok_uuid] = broker['broks'][brok_uuid]
+            for broker in self.my_daemon.brokers.values():
+                for brok_uuid in broker.broks:
+                    broks[brok_uuid] = broker.broks[brok_uuid]
             for brok in broks.values():
                 string = 'BROK: %s:%s\n' % (brok.uuid, brok.type)
                 file_h.write(string)
@@ -482,6 +464,8 @@ class Scheduler(object):  # pylint: disable=R0902
     def dump_config(self):
         """Dump scheduler config into a dump (temp) file
 
+        todo: never used - check this function if necessary!
+
         :return: None
         """
         temp_d = tempfile.gettempdir()
@@ -490,19 +474,10 @@ class Scheduler(object):  # pylint: disable=R0902
         try:
             file_h = open(path, 'w')
             file_h.write('Scheduler config DUMP at %d\n' % time.time())
-            self.conf.dump(file_h)
+            self.pushed_conf.dump(file_h)
             file_h.close()
         except (OSError, IndexError) as exp:  # pragma: no cover, should never happen...
             logger.critical("Error when writing the config dump file %s : %s", path, str(exp))
-
-    def set_external_commands_manager(self, ecm):
-        """Setter for external_command_manager attribute
-
-        :param ecm: new value
-        :type ecm: alignak.external_command.ExternalCommandManager
-        :return: None
-        """
-        self.external_commands_manager = ecm
 
     def run_external_commands(self, cmds):
         """Run external commands Arbiter/Receiver sent
@@ -511,62 +486,65 @@ class Scheduler(object):  # pylint: disable=R0902
         :type cmds: list
         :return: None
         """
-        _t0 = time.time()
-        logger.debug("Scheduler '%s' got %d commands", self.instance_name, len(cmds))
-        for command in cmds:
-            self.run_external_command(command)
-        statsmgr.timer('core.run_external_commands', time.time() - _t0)
+        if not self.external_commands_manager:
+            return
 
-    def run_external_command(self, command):
-        """Run a single external command
+        try:
+            _t0 = time.time()
+            logger.debug("Scheduler '%s' got %d commands", self.name, len(cmds))
+            for command in cmds:
+                self.external_commands_manager.resolve_command(ExternalCommand(command))
+            statsmgr.counter('external_commands.got.count', len(cmds))
+            statsmgr.timer('external_commands.got.time', time.time() - _t0)
+        except Exception as exp:  # pylint: disable=broad-except
+            logger.warning("External command parsing error: %s", exp)
 
-        :param command: command line to run
-        :type command: str
-        :return: None
-        """
-        logger.debug("Scheduler '%s' resolves command '%s'", self.instance_name, command)
-        ext_cmd = ExternalCommand(command)
-        self.external_commands_manager.resolve_command(ext_cmd)
-
-    def add_brok(self, brok, bname=None):
+    def add_brok(self, brok, broker_uuid=None):
         """Add a brok into brokers list
         It can be for a specific one, all brokers or none (startup)
 
         :param brok: brok to add
         :type brok: alignak.brok.Brok
-        :param bname: broker name for the brok
-        :type bname: str
+        :param broker_uuid: broker uuid for the brok
+        :type broker_uuid: str
         :return: None
         """
-        # For brok, we TAG brok with our instance_id
+        # We tag the brok with our instance_id
         brok.instance_id = self.instance_id
-        self.nb_broks += 1
-        if bname:
+        if broker_uuid:
+            if broker_uuid not in self.my_daemon.brokers:
+                logger.info("Unknown broker: %s / %s!", broker_uuid, self.my_daemon.brokers)
+                return
+            broker_link = self.my_daemon.brokers[broker_uuid]
+            logger.debug("Adding a brok %s for: %s", brok.type, broker_uuid)
             # it's just for one broker
-            self.brokers[bname]['broks'][brok.uuid] = brok
+            self.my_daemon.brokers[broker_link.uuid].broks[brok.uuid] = brok
+            self.nb_broks += 1
         else:
+            logger.debug("Adding a brok %s to all brokers", brok.type)
             # add brok to all brokers
-            for name in self.brokers:
-                self.brokers[name]['broks'][brok.uuid] = brok
+            for broker_link_uuid in self.my_daemon.brokers:
+                logger.debug("- adding to %s", self.my_daemon.brokers[broker_link_uuid])
+                self.my_daemon.brokers[broker_link_uuid].broks[brok.uuid] = brok
+                self.nb_broks += 1
 
-    def add_notification(self, notif):
+    def add_notification(self, notification):
         """Add a notification into actions list
 
-        :param notif: notification to add
-        :type notif: alignak.notification.Notification
+        :param notification: notification to add
+        :type notification: alignak.notification.Notification
         :return: None
         """
-        if notif.uuid in self.actions:
-            logger.debug("Already existing notification: %s", notif)
+        if notification.uuid in self.actions:
+            logger.warning("Already existing notification: %s", notification)
             return
 
-        self.actions[notif.uuid] = notif
+        self.actions[notification.uuid] = notification
         self.nb_notifications += 1
 
         # A notification ask for a brok
-        if notif.contact is not None:
-            brok = notif.get_initial_status_brok()
-            self.add(brok)
+        if notification.contact is not None:
+            self.add(notification.get_initial_status_brok())
 
     def add_check(self, check):
         """Add a check into the scheduler checks list
@@ -580,6 +558,7 @@ class Scheduler(object):  # pylint: disable=R0902
         if check.uuid in self.checks:
             logger.debug("Already existing check: %s", check)
             return
+        logger.debug("Adding a check: %s", check)
 
         # Add a new check to the scheduler checks list
         self.checks[check.uuid] = check
@@ -592,7 +571,7 @@ class Scheduler(object):  # pylint: disable=R0902
             brok = item.get_next_schedule_brok()
             self.add(brok)
 
-    def add_eventhandler(self, action):
+    def add_event_handler(self, action):
         """Add a event handler into actions list
 
         :param action: event handler to add
@@ -600,13 +579,13 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         if action.uuid in self.actions:
-            logger.debug("Already existing eventhandler: %s", action)
+            logger.info("Already existing event handler: %s", action)
             return
 
         self.actions[action.uuid] = action
         self.nb_event_handlers += 1
 
-    def add_externalcommand(self, ext_cmd):
+    def add_external_command(self, ext_cmd):
         """Resolve external command
 
         :param ext_cmd: extermal command to run
@@ -617,7 +596,7 @@ class Scheduler(object):  # pylint: disable=R0902
         self.nb_external_commands += 1
 
     def add(self, elt):
-        """Generic function to add objects into scheduler internal lists::
+        """Generic function to add objects into the scheduler daemon internal lists::
 
         Brok -> self.brokers
         Check -> self.checks
@@ -629,7 +608,7 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         if elt is None:
             return
-        logger.debug("Add: %s / %s", elt.my_type, elt.__dict__)
+        logger.debug("Adding: %s / %s", elt.my_type, elt.__dict__)
         fun = self.__add_actions.get(elt.__class__, None)
         if fun:
             fun(self, elt)
@@ -640,8 +619,8 @@ class Scheduler(object):  # pylint: disable=R0902
         Check:              add_check,
         Brok:               add_brok,
         Notification:       add_notification,
-        EventHandler:       add_eventhandler,
-        ExternalCommand:    add_externalcommand,
+        EventHandler:       add_event_handler,
+        ExternalCommand:    add_external_command,
     }
 
     def hook_point(self, hook_name):
@@ -653,25 +632,25 @@ class Scheduler(object):  # pylint: disable=R0902
         TODO: find a way to merge this and the version in daemon.py
         """
         _t0 = time.time()
-        for inst in self.sched_daemon.modules_manager.instances:
+        for instance in self.my_daemon.modules_manager.instances:
             full_hook_name = 'hook_' + hook_name
             logger.debug("hook_point: %s: %s %s",
-                         inst.get_name(), str(hasattr(inst, full_hook_name)), hook_name)
+                         instance.name, str(hasattr(instance, full_hook_name)), hook_name)
 
-            if hasattr(inst, full_hook_name):
-                fun = getattr(inst, full_hook_name)
+            if hasattr(instance, full_hook_name):
+                fun = getattr(instance, full_hook_name)
                 try:
                     fun(self)
-                # pylint: disable=W0703
+                # pylint: disable=broad-except
                 except Exception as exp:  # pragma: no cover, never happen during unit tests...
                     logger.error("The instance %s raise an exception %s."
                                  "I disable it and set it to restart it later",
-                                 inst.get_name(), str(exp))
+                                 instance.name, str(exp))
                     output = cStringIO.StringIO()
                     traceback.print_exc(file=output)
                     logger.error("Exception trace follows: %s", output.getvalue())
                     output.close()
-                    self.sched_daemon.modules_manager.set_to_restart(inst)
+                    self.my_daemon.modules_manager.set_to_restart(instance)
         statsmgr.timer('core.hook.%s' % hook_name, time.time() - _t0)
 
     def clean_queues(self):
@@ -682,8 +661,9 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
-        # if we set the interval at 0, we bail out
-        if self.conf.cleaning_queues_interval == 0:
+        # If we set the interval at 0, we bail out
+        if getattr(self.pushed_conf, 'tick_clean_queues', 0) == 0:
+            logger.debug("No queues cleaning...")
             return
 
         max_checks = 5 * (len(self.hosts) + len(self.services))
@@ -721,20 +701,18 @@ class Scheduler(object):  # pylint: disable=R0902
         # For broks and actions, it's more simple
         # or broks, manage global but also all brokers
         self.nb_broks_dropped = 0
-        for broker in self.brokers.values():
-            if max_broks and len(broker['broks']) > max_broks:
+        for broker_link in self.my_daemon.brokers.values():
+            if max_broks and len(broker_link.broks) > max_broks:
                 logger.warning("I have to drop some broks (%d > %d) for the broker %s "
-                               "..., sorry :(", len(broker['broks']), max_broks, broker)
-                for brok in broker['broks'].values():
-                    logger.warning("- dropping: %s / %s", brok.type, brok.data)
+                               "..., sorry :(", len(broker_link.broks), max_broks, broker_link)
 
-                to_del_broks = [c for c in broker['broks'].values()]
+                to_del_broks = [c for c in broker_link.broks.values()]
                 to_del_broks.sort(key=lambda x: x.creation_time)
                 to_del_broks = to_del_broks[:-max_broks]
                 self.nb_broks_dropped = len(to_del_broks)
                 for brok in to_del_broks:
-                    logger.warning("- dropped a %s brok: %s", brok.type, brok.data)
-                    del broker['broks'][brok.uuid]
+                    logger.warning("- dropped a %s brok", brok.type)
+                    del broker_link.broks[brok.uuid]
 
         self.nb_actions_dropped = 0
         if max_actions and len(self.actions) > max_actions:
@@ -782,7 +760,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
-        for elt in self.iter_hosts_and_services():
+        for elt in self.all_my_hosts_and_services():
             elt.check_for_expire_acknowledge()
 
     def update_business_values(self):
@@ -790,7 +768,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
-        for elt in self.iter_hosts_and_services():
+        for elt in self.all_my_hosts_and_services():
             if not elt.is_problem:
                 was = elt.business_impact
                 elt.update_business_impact_value(self.hosts, self.services,
@@ -803,7 +781,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # When all impacts and classic elements are updated,
         # we can update problems (their value depend on impacts, so
         # they must be done after)
-        for elt in self.iter_hosts_and_services():
+        for elt in self.all_my_hosts_and_services():
             # We first update impacts and classic elements
             if elt.is_problem:
                 was = elt.business_impact
@@ -1013,7 +991,7 @@ class Scheduler(object):  # pylint: disable=R0902
     def put_results(self, action):  # pylint: disable=too-many-branches,too-many-statements
         """Get result from pollers/reactionners (actives ones)
 
-        :param action: check / action / eventhandler to handle
+        :param action: check / action / event handler to handle
         :type action:
         :return: None
         """
@@ -1024,9 +1002,11 @@ class Scheduler(object):  # pylint: disable=R0902
             except KeyError as exp:  # pragma: no cover, simple protection
                 # Cannot find notification - drop it
                 logger.warning('put_results:: get unknown notification : %s ', str(exp))
+                for uuid in self.actions:
+                    logger.debug('put_results:: known action: %s ', self.actions[uuid])
                 return
 
-            # We will only see childnotifications here
+            # We will only see child notifications here
             try:
                 timeout = False
                 if action.status == 'timeout':
@@ -1088,12 +1068,15 @@ class Scheduler(object):  # pylint: disable=R0902
             except (ValueError, AttributeError) as exp:  # pragma: no cover, simple protection
                 # bad object, drop it
                 logger.warning('put_results:: got bad notification : %s ', str(exp))
+
         elif action.is_a == 'check':
             try:
                 self.checks[action.uuid]
             except KeyError as exp:  # pragma: no cover, simple protection
                 # Cannot find check - drop it
-                logger.warning('put_results:: get unknown check : %s ', str(exp))
+                logger.warning('put_results:: get unknown check: %s ', action)
+                for uuid in self.checks:
+                    logger.debug('put_results:: known check: %s ', self.checks[uuid])
                 return
 
             try:
@@ -1115,7 +1098,7 @@ class Scheduler(object):  # pylint: disable=R0902
                         ref.my_type, ref.get_full_name()
                     )  # pylint: disable=E1101
                     action.long_output = action.output
-                    action.exit_status = self.conf.timeout_exit_status
+                    action.exit_status = self.pushed_conf.timeout_exit_status
 
                     self.nb_checks_results_timeout += 1
                     self.counters[action.is_a]["total"]["timeout"] += 1
@@ -1186,6 +1169,7 @@ class Scheduler(object):  # pylint: disable=R0902
             except (ValueError, AttributeError) as exp:  # pragma: no cover, simple protection
                 # bad object, drop it
                 logger.warning('put_results:: got bad event handler: %s ', str(exp))
+
         else:  # pragma: no cover, simple protection, should not happen!
             logger.error("The received result type in unknown! %s", str(action.is_a))
 
@@ -1195,150 +1179,81 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         # We loop for our passive pollers or reactionners
-        for satellites in [self.pollers, self.reactionners]:
+        for satellites in [self.my_daemon.pollers, self.my_daemon.reactionners]:
             s_type = 'poller'
-            if satellites is self.reactionners:
+            if satellites is self.my_daemon.reactionners:
                 s_type = 'reactionner'
 
-            for link in [p for p in satellites.values() if p['passive']]:
-                logger.debug("Try to send actions to the %s '%s'", s_type, link['name'])
-
-                if link['con'] is None:
-                    if not self.sched_daemon.daemon_connection_init(link['instance_id'],
-                                                                    s_type=s_type):
-                        if link['connection_attempt'] <= link['max_failed_connections']:
-                            logger.warning("The connection for the %s '%s' cannot be established, "
-                                           "it is not possible to get actions for this %s.",
-                                           s_type, link['name'], s_type)
-                        else:
-                            logger.error("The connection for the %s '%s' cannot be established, "
-                                         "it is not possible to get actions for this %s.",
-                                         s_type, link['name'], s_type)
-                        continue
+            for link in [s for s in satellites.values() if s.passive]:
+                logger.debug("Try to send actions to the %s '%s'", s_type, link.name)
 
                 # Get actions to execute
                 lst = []
                 if s_type == 'poller':
                     lst = self.get_to_run_checks(do_checks=True, do_actions=False,
-                                                 poller_tags=link['poller_tags'],
-                                                 worker_name=link['name'])
+                                                 poller_tags=link.poller_tags,
+                                                 worker_name=link.name)
                 elif s_type == 'reactionner':
                     lst = self.get_to_run_checks(do_checks=False, do_actions=True,
-                                                 reactionner_tags=link['reactionner_tags'],
-                                                 worker_name=link['name'])
+                                                 reactionner_tags=link.reactionner_tags,
+                                                 worker_name=link.name)
                 if not lst:
                     logger.debug("Nothing to do...")
                     continue
 
-                try:
-                    logger.info("Sending %d actions to the %s '%s'", len(lst), s_type, link['name'])
-                    link['con'].post('push_actions', {'actions': lst, 'sched_id': self.instance_id})
-                    if s_type == 'poller':
-                        self.nb_checks_launched += len(lst)
-                        self.nb_checks_launched_passive += len(lst)
-                    if s_type == 'reactionner':
-                        self.nb_actions_launched += len(lst)
-                        self.nb_actions_launched_passive += len(lst)
-                except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-                    logger.warning("Connection error with the %s '%s' when pushing actions: %s",
-                                   s_type, link['name'], str(exp))
-                    link['con'] = None
-                except HTTPClientTimeoutException as exp:
-                    logger.warning("Connection timeout with the %s '%s' when pushing actions: %s",
-                                   s_type, link['name'], str(exp))
-                    link['con'] = None
-                except HTTPClientException as exp:  # pragma: no cover, simple protection
-                    logger.error("Connection error with the %s '%s' when pushing actions: %s",
-                                 s_type, link['name'], str(exp))
-                    link['con'] = None
-                except KeyError as exp:  # pragma: no cover, simple protection
-                    logger.warning("push_actions: The %s '%s' is not initialized: %s",
-                                   s_type, link['name'], str(exp))
-                    link['con'] = None
+                logger.info("Sending %d actions to the %s '%s'", len(lst), s_type, link.name)
+                link.push_actions(lst, self.instance_id)
+                if s_type == 'poller':
+                    self.nb_checks_launched += len(lst)
+                    self.nb_checks_launched_passive += len(lst)
+                if s_type == 'reactionner':
+                    self.nb_actions_launched += len(lst)
+                    self.nb_actions_launched_passive += len(lst)
 
     def get_actions_from_passives_satellites(self):
-        #  pylint: disable=W0703
+        #  pylint: disable=broad-except
         """Get actions/checks results from passive poller/reactionners
 
         :return: None
         """
         # We loop for our passive pollers or reactionners
-        for satellites in [self.pollers, self.reactionners]:
+        for satellites in [self.my_daemon.pollers, self.my_daemon.reactionners]:
             s_type = 'poller'
-            if satellites is self.reactionners:
+            if satellites is self.my_daemon.reactionners:
                 s_type = 'reactionner'
 
-            for link in [p for p in satellites.values() if p['passive']]:
-                logger.debug("Try to get results from the %s '%s'", s_type, link['name'])
+            for link in [s for s in satellites.values() if s.passive]:
+                logger.debug("Trying to get results from the %s '%s'", s_type, link.name)
 
-                if link['con'] is None:
-                    if not self.sched_daemon.daemon_connection_init(link['instance_id'],
-                                                                    s_type=s_type):
-                        if link['connection_attempt'] <= link['max_failed_connections']:
-                            logger.warning("The connection for the %s '%s' cannot be established, "
-                                           "it is not possible to get results for this %s.",
-                                           s_type, link['name'], s_type)
-                        else:
-                            logger.error("The connection for the %s '%s' cannot be established, "
-                                         "it is not possible to get results for this %s.",
-                                         s_type, link['name'], s_type)
-                        continue
+                results = link.get_returns(self.instance_id)
+                if results:
+                    logger.debug("Got some results: %d results from %s", len(results), link.name)
+                else:
+                    logger.debug("-> no passive results from %s", link.name)
+                    continue
 
-                try:
-                    results = link['con'].get('get_returns', {'sched_id': self.instance_id},
-                                              wait='long')
-                    if results:
-                        who_sent = link['name']
-                        logger.debug("Got some results: %d results from %s", len(results), who_sent)
-                    else:
-                        logger.debug("-> no passive results from %s", link['name'])
-                        continue
+                results = unserialize(results, no_load=True)
+                if results:
+                    logger.info("Received %d passive results from %s",
+                                len(results), link['name'])
+                self.nb_checks_results += len(results)
 
-                    results = unserialize(results, no_load=True)
-                    if results:
-                        logger.info("Received %d passive results from %s",
-                                    len(results), link['name'])
-                    self.nb_checks_results += len(results)
+                for result in results:
+                    logger.debug("-> result: %s", result)
+                    result.set_type_passive()
 
-                    for result in results:
-                        logger.debug("-> result: %s", result)
-                        result.set_type_passive()
+                    # Update scheduler counters
+                    self.counters[result.is_a]["total"]["results"]["total"] += 1
+                    if result.status not in self.counters[result.is_a]["total"]["results"]:
+                        self.counters[result.is_a]["total"]["results"][result.status] = 0
+                    self.counters[result.is_a]["total"]["results"][result.status] += 1
+                    self.counters[result.is_a]["active"]["results"]["total"] += 1
+                    if result.status not in self.counters[result.is_a]["active"]["results"]:
+                        self.counters[result.is_a]["active"]["results"][result.status] = 0
+                    self.counters[result.is_a]["active"]["results"][result.status] += 1
 
-                        # Update scheduler counters
-                        self.counters[result.is_a]["total"]["results"]["total"] += 1
-                        if result.status not in self.counters[result.is_a]["total"]["results"]:
-                            self.counters[result.is_a]["total"]["results"][result.status] = 0
-                        self.counters[result.is_a]["total"]["results"][result.status] += 1
-                        self.counters[result.is_a]["active"]["results"]["total"] += 1
-                        if result.status not in self.counters[result.is_a]["active"]["results"]:
-                            self.counters[result.is_a]["active"]["results"][result.status] = 0
-                        self.counters[result.is_a]["active"]["results"][result.status] += 1
-
-                        # Append to the scheduler result queue
-                        self.waiting_results.put(result)
-                except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-                    logger.warning("Connection error with the %s '%s' when pushing results: %s",
-                                   s_type, link['name'], str(exp))
-                    link['con'] = None
-                except HTTPClientTimeoutException as exp:
-                    logger.warning("Connection timeout with the %s '%s' when pushing results: %s",
-                                   s_type, link['name'], str(exp))
-                    link['con'] = None
-                except HTTPClientException as exp:  # pragma: no cover, simple protection
-                    logger.error("Error with the %s '%s' when pushing results: %s",
-                                 s_type, link['name'], str(exp))
-                    link['con'] = None
-                except KeyError as exp:  # pragma: no cover, simple protection
-                    logger.warning("get_actions: The %s '%s' is not initialized: %s",
-                                   s_type, link['name'], str(exp))
-                    link['con'] = None
-                except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
-                    logger.error('Cannot un-serialize passive results from satellite %s : %s',
-                                 link['name'], exp)
-                except Exception as exp:  # pragma: no cover, simple protection
-                    logger.error('Cannot load passive results from satellite %s : %s',
-                                 link['name'], str(exp))
-                    logger.exception(exp)
+                    # Append to the scheduler result queue
+                    self.waiting_results.put(result)
 
     def manage_internal_checks(self):
         """Run internal checks
@@ -1357,6 +1272,13 @@ class Scheduler(object):  # pylint: disable=R0902
                     # Ask to remove the check
                     chk.status = 'zombie'
                     continue
+                logger.debug("Run internal check for %s", item)
+
+                item.manage_internal_check(self.hosts, self.services, chk, self.hostgroups,
+                                           self.servicegroups, self.macromodulations,
+                                           self.timeperiods)
+                # Ask to consume the check result
+                chk.status = 'waitconsume'
 
                 # Count and execute only if active checks is enabled
                 self.nb_internal_checks += 1
@@ -1370,29 +1292,6 @@ class Scheduler(object):  # pylint: disable=R0902
                     self.counters["check"]["loop"]["results"]["internal"] = 0
                 self.counters["check"]["loop"]["results"]["internal"] += 1
 
-                item.manage_internal_check(self.hosts, self.services, chk, self.hostgroups,
-                                           self.servicegroups, self.macromodulations,
-                                           self.timeperiods)
-                # Ask to consume the check result
-                chk.status = 'waitconsume'
-
-    def get_broks(self, bname):
-        """Send broks to a specific broker
-
-        :param bname: broker name to send broks
-        :type bname: str
-        :greturn: dict of brok for this broker
-        :rtype: dict[alignak.brok.Brok]
-        """
-        to_send = [b for b in self.brokers[bname]['broks'].values()
-                   if getattr(b, 'sent_to_sched_externals', False)]
-
-        res = {}
-        for brok in to_send:
-            res[brok.uuid] = brok
-            del self.brokers[bname]['broks'][brok.uuid]
-        return res
-
     def reset_topology_change_flag(self):
         """Set topology_change attribute to False in all hosts and services
 
@@ -1403,7 +1302,7 @@ class Scheduler(object):  # pylint: disable=R0902
         for i in self.services:
             i.topology_change = False
 
-    def update_retention_file(self, forced=False):
+    def update_retention(self, forced=False):
         """Call hook point 'save_retention'.
         Retention modules will write back retention (to file, db etc)
 
@@ -1412,11 +1311,17 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         # If we set the update to 0, we do not want of this
-        # if we do not forced (like at stopping)
-        if self.conf.retention_update_interval == 0 and not forced:
+        # if we are not forced (like at stopping)
+        if self.pushed_conf.retention_update_interval == 0 and not forced:
             return
 
+        _t0 = time.time()
         self.hook_point('save_retention')
+
+        brok = make_monitoring_log('INFO', 'RETENTION SAVE: %s' % self.name)
+        if self.pushed_conf.monitoring_log_broks:
+            self.add(brok)
+        logger.info('Retention data saved: %.2f seconds', time.time() - _t0)
 
     def retention_load(self):
         """Call hook point 'load_retention'.
@@ -1424,7 +1329,13 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
+        _t0 = time.time()
         self.hook_point('load_retention')
+
+        brok = make_monitoring_log('INFO', 'RETENTION LOAD: %s' % self.name)
+        if self.pushed_conf.monitoring_log_broks:
+            self.add(brok)
+        logger.info('Retention data loaded: %.2f seconds', time.time() - _t0)
 
     def get_retention_data(self):  # pylint: disable=R0912,too-many-statements
         """Get all host and service data in order to store it after
@@ -1433,8 +1344,6 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: dict containing host and service data
         :rtype: dict
         """
-        brok = make_monitoring_log('INFO', 'RETENTION SAVE: %s' % self.instance_name)
-        self.add(brok)
         # We create an all_data dict with list of useful retention data dicts
         # of our hosts and services
         all_data = {'hosts': {}, 'services': {}}
@@ -1568,9 +1477,6 @@ class Scheduler(object):  # pylint: disable=R0902
         :type data: dict
         :return: None
         """
-        brok = make_monitoring_log('INFO', 'RETENTION LOAD: %s' % self.instance_name)
-        self.add(brok)
-
         ret_hosts = data['hosts']
         for ret_h_name in ret_hosts:
             # We take the dict of our value to load
@@ -1652,23 +1558,40 @@ class Scheduler(object):  # pylint: disable=R0902
                 new_notified_contacts.add(comm.uuid)
         item.notified_contacts = new_notified_contacts
 
-    def fill_initial_broks(self, bname, with_logs=False):
+    def fill_initial_broks(self, broker_name, with_logs=False):
         """Create initial broks for a specific broker
 
-        :param bname: broker name
-        :type bname: str
-        :param with_logs: tell if we write a log line for hosts/services
-               initial states
+        :param broker_name: broker name
+        :type broker_name: str
+        :param with_logs: tell if we raise some broks to log the initial states for hosts/services
         :type with_logs: bool
-        :return: None
+        :return: number of created broks
         """
-        # First a Brok for delete all from my instance_id
-        brok = Brok({'type': 'clean_all_my_instance_id', 'data': {'instance_id': self.instance_id}})
-        self.add_brok(brok, bname)
+        broker_uuid = None
+        logger.debug("My brokers: %s", self.my_daemon.brokers)
+        for broker_link in self.my_daemon.brokers.values():
+            logger.debug("Searching broker: %s", broker_link)
+            if broker_name == broker_link.name:
+                broker_uuid = broker_link.uuid
+                logger.info("Filling initial broks for: %s (%s)", broker_name, broker_uuid)
+                break
+        else:
+            if self.pushed_conf:
+                # I am yet configured but I do not know this broker ! Something went wrong!!!
+                logger.error("Requested initial broks for an unknown broker: %s", broker_name)
+            else:
+                logger.info("Requested initial broks for an unknown broker: %s", broker_name)
+            return 0
+
+        if self.my_daemon.brokers[broker_uuid].initialized:
+            logger.warning("The broker %s still got its initial broks...", broker_name)
+            return 0
+
+        initial_broks_count = len(self.my_daemon.brokers[broker_uuid].broks)
 
         # first the program status
         brok = self.get_program_status_brok()
-        self.add_brok(brok, bname)
+        self.add_brok(brok, broker_uuid)
 
         #  We can't call initial_status from all this types
         #  The order is important, service need host...
@@ -1677,9 +1600,16 @@ class Scheduler(object):  # pylint: disable=R0902
                                 self.hosts, self.hostgroups,
                                 self.services, self.servicegroups)
 
-        self.conf.skip_initial_broks = getattr(self.conf, 'skip_initial_broks', False)
-        logger.debug("Skipping initial broks? %s", str(self.conf.skip_initial_broks))
-        if not self.conf.skip_initial_broks:
+        self.pushed_conf.skip_initial_broks = getattr(self.pushed_conf, 'skip_initial_broks', False)
+        logger.debug("Skipping initial broks? %s", str(self.pushed_conf.skip_initial_broks))
+        if not self.pushed_conf.skip_initial_broks:
+            #  We call initial_status from all this types
+            #  The order is important, service need host...
+            initial_status_types = (self.timeperiods, self.commands,
+                                    self.contacts, self.contactgroups,
+                                    self.hosts, self.hostgroups,
+                                    self.services, self.servicegroups)
+
             for tab in initial_status_types:
                 for item in tab:
                     if hasattr(item, 'members'):
@@ -1687,7 +1617,7 @@ class Scheduler(object):  # pylint: disable=R0902
                         brok = item.get_initial_status_brok(member_items)
                     else:
                         brok = item.get_initial_status_brok()
-                    self.add_brok(brok, bname)
+                    self.add_brok(brok, broker_uuid)
 
         # Only raises the all logs at the scheduler startup
         if with_logs:
@@ -1699,88 +1629,120 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # Add a brok to say that we finished all initial_pass
         brok = Brok({'type': 'initial_broks_done', 'data': {'instance_id': self.instance_id}})
-        self.add_brok(brok, bname)
+        self.add_brok(brok, broker_uuid)
 
-        # We now have all full broks
+        # We now have all raised all the full broks
         self.has_full_broks = True
 
-        logger.info("[%s] Created %d initial Broks for broker %s",
-                    self.instance_name, len(self.brokers[bname]['broks']), bname)
-        self.brokers[bname]['initialized'] = True
+        final_broks_count = len(self.my_daemon.brokers[broker_uuid].broks)
+        self.my_daemon.brokers[broker_uuid].initialized = True
+
+        # Send the initial broks to our modules
         self.send_broks_to_modules()
 
-    def get_and_register_program_status_brok(self):
+        logger.info("Created %d initial broks for %s",
+                    final_broks_count - initial_broks_count, broker_name)
+        return final_broks_count - initial_broks_count
+
+    def initial_program_status(self):
         """Create and add a program_status brok
 
         :return: None
         """
-        brok = self.get_program_status_brok()
+        brok = self.get_program_status_brok(brok_type='program_status')
         self.add(brok)
 
-    def get_and_register_update_program_status_brok(self):
+    def update_program_status(self):
         """Create and add a update_program_status brok
 
         :return: None
         """
-        brok = self.get_program_status_brok()
-        brok.type = 'update_program_status'
+        brok = self.get_program_status_brok(brok_type='update_program_status')
         self.add(brok)
 
-    def get_program_status_brok(self):
+    def get_program_status_brok(self, brok_type='program_status'):
         """Create a program status brok
+
+        Get the properties from the Config class where an entry exist for the brok 'full_status'
 
         :return: Brok with program status data
         :rtype: alignak.brok.Brok
         TODO: GET REAL VALUES
         """
         now = int(time.time())
+
+        data = {
+            # Those should be fetched from the pushed configuration ?
+            "is_running": 1,
+            "instance_id": self.instance_id,
+            "alignak_name": self.alignak_name,
+            "instance_name": self.name,
+            "last_alive": now,
+            "last_command_check": now,
+            "last_log_rotation": now,
+            "pid": os.getpid(),
+            "daemon_mode": 1,
+            "modified_host_attributes": 0,
+            "modified_service_attributes": 0,
+        }
+
+        # Get data from the configuration
+        if self.pushed_conf:
+            # Get data from the pushed configuration
+            cls = self.pushed_conf.__class__
+            # Now config properties
+            for prop, entry in cls.properties.items():
+                # Is this property intended for broking?
+                # if 'fill_brok' in entry:
+                if 'full_status' not in entry.fill_brok:
+                    continue
+                if hasattr(self.pushed_conf, prop):
+                    data[prop] = getattr(self.pushed_conf, prop)
+                elif entry.has_default:
+                    data[prop] = entry.default
+
         # todo: some information in this brok are unuseful: last_log_rotation, command_file
         # Some others are unaccurate: last_command_check, modified_host_attributes,
         # modified_service_attributes
         # I do not remove yet because some modules may use them?
-        data = {
-            "is_running": 1,
-            "instance_id": self.instance_id,
-            "alignak_name": self.alignak_name,
-            "instance_name": self.instance_name,
-            "last_alive": now,
-            "interval_length": self.conf.interval_length,
-            "program_start": self.program_start,
-            "pid": os.getpid(),
-            "daemon_mode": 1,
-            "last_command_check": now,
-            "last_log_rotation": now,
-            "notifications_enabled": self.conf.enable_notifications,
-            "active_service_checks_enabled": self.conf.execute_service_checks,
-            "passive_service_checks_enabled": self.conf.accept_passive_service_checks,
-            "active_host_checks_enabled": self.conf.execute_host_checks,
-            "passive_host_checks_enabled": self.conf.accept_passive_host_checks,
-            "event_handlers_enabled": self.conf.enable_event_handlers,
-            "flap_detection_enabled": self.conf.enable_flap_detection,
-            "process_performance_data": self.conf.process_performance_data,
-            "modified_host_attributes": 0,
-            "modified_service_attributes": 0,
-            "global_host_event_handler": self.conf.global_host_event_handler.get_name()
-            if self.conf.global_host_event_handler else '',
-            'global_service_event_handler': self.conf.global_service_event_handler.get_name()
-            if self.conf.global_service_event_handler else '',
-
-            # Flapping
-            "enable_flap_detection": self.conf.enable_flap_detection,
-            "flap_history": self.conf.flap_history,
-            "low_host_flap_threshold": self.conf.low_host_flap_threshold,
-            "low_service_flap_threshold": self.conf.low_service_flap_threshold,
-            "high_host_flap_threshold": self.conf.high_host_flap_threshold,
-            "high_service_flap_threshold": self.conf.high_service_flap_threshold,
-
-            # Stats
-            "statsd_enabled": self.conf.statsd_enabled,
-            "statsd_host": self.conf.statsd_host,
-            "statsd_port": self.conf.statsd_port,
-            "statsd_prefix": self.conf.statsd_prefix,
-        }
-        logger.debug("Program status brok data: %s", data)
-        brok = Brok({'type': 'program_status', 'data': data})
+        # data = {
+        #     # "is_running": 1,
+        #     # "instance_id": self.instance_id,
+        #     # "alignak_name": self.alignak_name,
+        #     # "instance_name": self.name,
+        #     # "last_alive": now,
+        #     "interval_length": self.pushed_conf.interval_length,
+        #     # "program_start": self.program_start,
+        #     # "pid": os.getpid(),
+        #     # "daemon_mode": 1,
+        #     # "last_command_check": now,
+        #     # "last_log_rotation": now,
+        #     # "notifications_enabled": self.pushed_conf.enable_notifications,
+        #     # "active_service_checks_enabled": self.pushed_conf.execute_service_checks,
+        #     # "passive_service_checks_enabled": self.pushed_conf.accept_passive_service_checks,
+        #     # "active_host_checks_enabled": self.pushed_conf.execute_host_checks,
+        #     # "passive_host_checks_enabled": self.pushed_conf.accept_passive_host_checks,
+        #     # "event_handlers_enabled": self.pushed_conf.enable_event_handlers,
+        #     # "flap_detection_enabled": self.pushed_conf.enable_flap_detection,
+        #     "process_performance_data": self.pushed_conf.process_performance_data,
+        #     # "modified_host_attributes": 0,
+        #     # "modified_service_attributes": 0,
+        #     "global_host_event_handler": self.pushed_conf.global_host_event_handler.get_name()
+        #     if self.pushed_conf.global_host_event_handler else '',
+        #     'global_service_event_handler':
+        # self.pushed_conf.global_service_event_handler.get_name()
+        #     if self.pushed_conf.global_service_event_handler else '',
+        #
+        #     # Flapping - duplicated!
+        #     # # # "enable_flap_detection": self.pushed_conf.enable_flap_detection,
+        #     "flap_history": self.pushed_conf.flap_history,
+        #     "low_host_flap_threshold": self.pushed_conf.low_host_flap_threshold,
+        #     "low_service_flap_threshold": self.pushed_conf.low_service_flap_threshold,
+        #     "high_host_flap_threshold": self.pushed_conf.high_host_flap_threshold,
+        #     "high_service_flap_threshold": self.pushed_conf.high_service_flap_threshold,
+        # }
+        logger.debug("Program status brok %s data: %s", brok_type, data)
+        brok = Brok({'type': brok_type, 'data': data})
         return brok
 
     def consume_results(self):
@@ -1798,18 +1760,21 @@ class Scheduler(object):  # pylint: disable=R0902
         # Then we consume them
         for chk in self.checks.values():
             if chk.status == 'waitconsume':
+                logger.debug("Consuming: %s", chk)
                 item = self.find_item_by_id(chk.ref)
 
-                notif_period = self.timeperiods.items.get(item.notification_period, None)
-                depchks = item.consume_result(chk, notif_period, self.hosts, self.services,
-                                              self.timeperiods, self.macromodulations,
-                                              self.checkmodulations, self.businessimpactmodulations,
-                                              self.resultmodulations, self.triggers, self.checks)
+                notification_period = self.timeperiods.items.get(item.notification_period, None)
+                dep_checks = item.consume_result(chk, notification_period, self.hosts,
+                                                 self.services, self.timeperiods,
+                                                 self.macromodulations, self.checkmodulations,
+                                                 self.businessimpactmodulations,
+                                                 self.resultmodulations, self.checks)
 
-                for dep in depchks:
-                    self.add(dep)
+                for check in dep_checks:
+                    logger.debug("-> raised a dependency check: %s", chk)
+                    self.add(check)
 
-                if self.conf.log_active_checks and not chk.passive_check:
+                if self.pushed_conf.log_active_checks and not chk.passive_check:
                     item.raise_check_result()
 
         # loop to resolve dependencies
@@ -1830,15 +1795,14 @@ class Scheduler(object):  # pylint: disable=R0902
             for chk in self.checks.values():
                 if chk.status == 'waitdep' and not chk.depend_on:
                     item = self.find_item_by_id(chk.ref)
-                    notif_period = self.timeperiods.items.get(item.notification_period, None)
-                    depchks = item.consume_result(chk, notif_period, self.hosts, self.services,
-                                                  self.timeperiods, self.macromodulations,
-                                                  self.checkmodulations,
-                                                  self.businessimpactmodulations,
-                                                  self.resultmodulations, self.triggers,
-                                                  self.checks)
-                    for dep in depchks:
-                        self.add(dep)
+                    notification_period = self.timeperiods.items.get(item.notification_period, None)
+                    dep_checks = item.consume_result(chk, notification_period, self.hosts,
+                                                     self.services, self.timeperiods,
+                                                     self.macromodulations, self.checkmodulations,
+                                                     self.businessimpactmodulations,
+                                                     self.resultmodulations, self.checks)
+                    for check in dep_checks:
+                        self.add(check)
 
     def delete_zombie_checks(self):
         """Remove checks that have a zombie status (usually timeouts)
@@ -1882,7 +1846,7 @@ class Scheduler(object):  # pylint: disable=R0902
         now = time.time()
 
         # Check maintenance periods
-        for elt in self.iter_hosts_and_services():
+        for elt in self.all_my_hosts_and_services():
             if elt.maintenance_period == '':
                 continue
 
@@ -1915,7 +1879,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # A loop where those downtimes are removed
         # which were marked for deletion (mostly by dt.exit())
-        for elt in self.iter_hosts_and_services():
+        for elt in self.all_my_hosts_and_services():
             for downtime in elt.downtimes.values():
                 if downtime.can_be_deleted is True:
                     logger.info("Downtime to delete: %s", downtime.__dict__)
@@ -1932,7 +1896,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     broks.append(ref.get_update_status_brok())
 
         # Check start and stop times
-        for elt in self.iter_hosts_and_services():
+        for elt in self.all_my_hosts_and_services():
             for downtime in elt.downtimes.values():
                 if downtime.real_end_time < now:
                     # this one has expired
@@ -1945,22 +1909,24 @@ class Scheduler(object):  # pylint: disable=R0902
         for brok in broks:
             self.add(brok)
 
-    def schedule(self, elems=None):
+    def schedule(self, elements=None):
         """Iter over all hosts and services and call schedule method
         (schedule next check)
 
-        :param elems: None or list of host / services to schedule
-        :type elems: None | list
+        If elements is None all our hosts and services are scheduled for a check.
+
+        :param elements: None or list of host / services to schedule
+        :type elements: None | list
         :return: None
         """
-        if not elems:
-            elems = self.iter_hosts_and_services()
+        if not elements:
+            elements = self.all_my_hosts_and_services()
 
         # ask for service and hosts their next check
-        for elt in elems:
+        for elt in elements:
             logger.debug("Add check for: %s", elt)
-            self.add_check(elt.schedule(self.hosts, self.services, self.timeperiods,
-                                        self.macromodulations, self.checkmodulations, self.checks))
+            self.add(elt.schedule(self.hosts, self.services, self.timeperiods,
+                                  self.macromodulations, self.checkmodulations, self.checks))
 
     def get_new_actions(self):
         """Call 'get_new_actions' hook point
@@ -1970,7 +1936,7 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         self.hook_point('get_new_actions')
         # ask for service and hosts their next check
-        for elt in self.iter_hosts_and_services():
+        for elt in self.all_my_hosts_and_services():
             for act in elt.actions:
                 logger.debug("Got a new action for %s: %s", elt, act)
                 self.add(act)
@@ -1984,8 +1950,10 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         # ask for service and hosts their broks waiting
         # be eaten
-        for elt in self.iter_hosts_and_services():
+        for elt in self.all_my_hosts_and_services():
             for brok in elt.broks:
+                if brok.type == 'monitoring_log' and not self.pushed_conf.monitoring_log_broks:
+                    continue
                 self.add(brok)
             # We take all, we can clear it
             elt.broks = []
@@ -1993,6 +1961,8 @@ class Scheduler(object):  # pylint: disable=R0902
         # Also fetch broks from contact (like contactdowntime)
         for contact in self.contacts:
             for brok in contact.broks:
+                if brok.type == 'monitoring_log' and not self.pushed_conf.monitoring_log_broks:
+                    continue
                 self.add(brok)
             contact.broks = []
 
@@ -2001,36 +1971,53 @@ class Scheduler(object):  # pylint: disable=R0902
         Iter over all hosts and services to check freshness if check_freshness enabled and
         passive_checks_enabled are set
 
+        For the host items, the list of hosts to check contains hosts that:
+        - have freshness check enabled
+        - are not yet freshness expired
+        - are only passively checked
+
+        For the service items, the list of services to check contains services that:
+        - do not depend upon an host that is freshness expired
+        - have freshness check enabled
+        - are not yet freshness expired
+        - are only passively checked
+
         :return: None
         """
+        # Get tick count
+        # (_, _, tick) = self.recurrent_works['check_freshness']
+
         _t0 = time.time()
         items = []
-        if self.conf.check_host_freshness:
+        if self.pushed_conf.check_host_freshness:
             # Freshness check is configured for hosts - get the list of concerned hosts:
             # host check freshness is enabled and the host is only passively checked
             hosts = [h for h in self.hosts if h.check_freshness and not h.freshness_expired and
                      h.passive_checks_enabled and not h.active_checks_enabled]
             statsmgr.gauge('freshness.hosts-count', len(hosts))
             items.extend(hosts)
-        if self.conf.check_service_freshness:
+        if self.pushed_conf.check_service_freshness:
             # Freshness check is configured for services - get the list of concerned services:
             # service check freshness is enabled and the service is only passively checked and
             # the depending host is not freshness expired
             services = [s for s in self.services if not self.hosts[s.host].freshness_expired and
-                        s.check_freshness and
+                        s.check_freshness and not s.freshness_expired and
                         s.passive_checks_enabled and not s.active_checks_enabled]
             statsmgr.gauge('freshness.services-count', len(services))
             items.extend(services)
         statsmgr.timer('freshness.items-list', time.time() - _t0)
 
         _t0 = time.time()
+        raised_checks = 0
         for elt in items:
             chk = elt.do_check_freshness(self.hosts, self.services, self.timeperiods,
                                          self.macromodulations, self.checkmodulations,
-                                         self.checks)
+                                         self.checks, when=_t0)
             if chk is not None:
                 self.add(chk)
                 self.waiting_results.put(chk)
+                raised_checks += 1
+        statsmgr.gauge('freshness.raised-checks', raised_checks)
         statsmgr.timer('freshness.do-check', time.time() - _t0)
 
     def check_orphaned(self):
@@ -2076,7 +2063,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
     def send_broks_to_modules(self):
         """Put broks into module queues
-        Only broks without sent_to_sched_externals to True are sent
+        Only broks without sent_to_externals to True are sent
         Only modules that ask for broks will get some
 
         :return: None
@@ -2084,12 +2071,15 @@ class Scheduler(object):  # pylint: disable=R0902
         t00 = time.time()
         nb_sent = 0
         broks = {}
-        for broker in self.brokers.values():
-            for brok in broker['broks'].values():
-                if not getattr(brok, 'sent_to_sched_externals', False):
+        for broker_link in self.my_daemon.brokers.values():
+            for brok in broker_link.broks.values():
+                if not getattr(brok, 'sent_to_externals', False):
                     broks[brok.uuid] = brok
+        if not broks:
+            return
+        logger.debug("sending %d broks to modules...", len(broks))
 
-        for mod in self.sched_daemon.modules_manager.get_external_instances():
+        for mod in self.my_daemon.modules_manager.get_external_instances():
             logger.debug("Look for sending to module %s", mod.get_name())
             queue = mod.to_q
             if queue is not None:
@@ -2099,12 +2089,12 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # No more need to send them
         for brok in broks.values():
-            for broker in self.brokers.values():
+            for broker_link in self.my_daemon.brokers.values():
                 try:
-                    broker['broks'][brok.uuid].sent_to_sched_externals = True
+                    broker_link.broks[brok.uuid].sent_to_externals = True
                 except KeyError:
                     logger.debug("Issue #959 - should not have happened")
-        logger.debug("Time to send %s broks (after %d secs)", nb_sent, time.time() - t00)
+        logger.debug("Time to send %d broks (after %d secs)", nb_sent, time.time() - t00)
 
     def get_objects_from_from_queues(self):
         """Same behavior than Daemon.get_objects_from_from_queues().
@@ -2112,75 +2102,10 @@ class Scheduler(object):  # pylint: disable=R0902
         :return:
         :rtype:
         """
-        return self.sched_daemon.get_objects_from_from_queues()
+        return self.my_daemon.get_objects_from_from_queues()
 
-    def get_latency_average_percentile(self):
-        """
-        Get a overview of the latencies with just a 95 percentile + min/max values
-
-        :return: None
-        """
-        (_, _, time_interval) = self.recurrent_works[21]
-        last_time = time.time() - time_interval
-        latencies = [s.latency for s in self.services if s.last_chk > last_time]
-        lat_avg, lat_min, lat_max = average_percentile(latencies)
-        if lat_avg is not None:
-            self.stats['latency']['avg'] = lat_avg
-            self.stats['latency']['min'] = lat_min
-            self.stats['latency']['max'] = lat_max
-            logger.debug("Latency (avg/min/max): %.2f/%.2f/%.2f", lat_avg, lat_min, lat_max)
-
-    def get_checks_status_counts(self, checks=None):
-        """ Compute the counts of the different checks status and
-        return it as a defaultdict(int) with the keys being the different
-        statutes and the value being the count of the checks in that status.
-
-        :checks: None or the checks you want to count their statuses.
-                 If None then self.checks is used.
-
-        :param checks: NoneType | dict
-        :type checks: None | dict
-        :return:
-        :rtype: defaultdict(int)
-        """
-        if checks is None:
-            checks = self.checks
-
-        res = defaultdict(int)
-        res["total"] = len(checks)
-        for chk in checks.itervalues():
-            res[chk.status] += 1
-        return res
-
-    def find_item_by_id(self, o_id):
-        """Get item based on its id or uuid
-
-        :param o_id:
-        :type o_id: int | str
-        :return:
-        :rtype: alignak.objects.item.Item | None
-        """
-        # TODO: Use uuid instead of id, because all obj have the same id (1,2,3)
-        # TODO: Ensure minimal list of objects in chain.
-        if not o_id:
-            return None
-
-        # Temporary fix. To remove when all obj have uuids
-        if not isinstance(o_id, int) and not isinstance(o_id, basestring):
-            return o_id
-
-        for items in [self.hosts, self.services, self.actions, self.checks, self.hostgroups,
-                      self.servicegroups, self.contacts, self.contactgroups]:
-            if o_id in items:
-                return items[o_id]
-
-        raise AttributeError("Item with id %s not found" % o_id)  # pragma: no cover,
-        # simple protection this should never happen
-
-    def get_stats_struct(self):  # pragma: no cover, seems never called!
-        """Get state of modules and create a scheme for stats data of daemon
-
-        TODO: confirm this method is useful because it is never called during the tests!
+    def get_scheduler_stats(self, details=False):  # pylint: disable=unused-argument
+        """Get the scheduler statistics
 
         :return: A dict with the following structure
         ::
@@ -2205,144 +2130,142 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         now = int(time.time())
 
-        res = self.sched_daemon.get_stats_struct()
-        res.update({'name': self.instance_name, 'type': 'scheduler'})
+        res = {
+            'counters': {},
+            'metrics': [],
+            'latency': self.stats['latency'],
+            'monitored_objects': {},
+        }
 
-        res['latency'] = self.stats['latency']
-
-        res['hosts'] = len(self.hosts)
-        res['services'] = len(self.services)
-        # metrics specific
-        metrics = res['metrics']
+        res['metrics'].append('scheduler.%s.latency.min %f %d'
+                              % (self.name, res['latency']['min'], now))
+        res['metrics'].append('scheduler.%s.latency.avg %f %d'
+                              % (self.name, res['latency']['avg'], now))
+        res['metrics'].append('scheduler.%s.latency.max %f %d'
+                              % (self.name, res['latency']['max'], now))
 
         checks_status_counts = self.get_checks_status_counts()
 
         for status in ('scheduled', 'inpoller', 'zombie'):
-            metrics.append('scheduler.%s.checks.%s %d %d' % (
-                self.instance_name,
-                status,
-                checks_status_counts[status],
-                now))
+            res['metrics'].append('scheduler.%s.checks.%s %d %d'
+                                  % (self.name, status, checks_status_counts[status], now))
 
-        for what in ('actions', 'broks'):
-            metrics.append('scheduler.%s.%s.queue %d %d' % (
-                self.instance_name, what, len(getattr(self, what)), now))
+        for what in ('actions', 'checks'):
+            res['metrics'].append('scheduler.%s.%s.queue %d %d'
+                                  % (self.name, what, len(getattr(self, what)), now))
 
-        metrics.append('scheduler.%s.latency.min %f %d' % (self.instance_name,
-                                                           res['latency']['min'], now))
-        metrics.append('scheduler.%s.latency.avg %f %d' % (self.instance_name,
-                                                           res['latency']['avg'], now))
-        metrics.append('scheduler.%s.latency.max %f %d' % (self.instance_name,
-                                                           res['latency']['max'], now))
+        if self.pushed_conf:
+            for _, _, strclss, _, _ in self.pushed_conf.types_creations.values():
+                # Internal statistics
+                res['counters'][strclss] = len(getattr(self, strclss, []))
 
-        all_commands = {}
-        # compute some stats
-        for elt in self.iter_hosts_and_services():
-            last_cmd = elt.last_check_command
-            if not last_cmd:
-                continue
-            interval = elt.check_interval
-            if interval == 0:
-                interval = 1
-            cmd = os.path.split(last_cmd.split(' ', 1)[0])[1]
-            u_time = elt.u_time
-            s_time = elt.s_time
-            old_u_time, old_s_time = all_commands.get(cmd, (0.0, 0.0))
-            old_u_time += u_time / interval
-            old_s_time += s_time / interval
-            all_commands[cmd] = (old_u_time, old_s_time)
-        # now sort it
-        stats = []
-        for (cmd, elem) in all_commands.iteritems():
-            u_time, s_time = elem
-            stats.append({'cmd': cmd, 'u_time': u_time, 's_time': s_time})
+            all_commands = {}
+            # compute some stats
+            for elt in self.all_my_hosts_and_services():
+                last_cmd = elt.last_check_command
+                if not last_cmd:
+                    continue
+                interval = elt.check_interval
+                if interval == 0:
+                    interval = 1
+                cmd = os.path.split(last_cmd.split(' ', 1)[0])[1]
+                u_time = elt.u_time
+                s_time = elt.s_time
+                old_u_time, old_s_time = all_commands.get(cmd, (0.0, 0.0))
+                old_u_time += u_time / interval
+                old_s_time += s_time / interval
+                all_commands[cmd] = (old_u_time, old_s_time)
+            # now sort it
+            stats = []
+            for (cmd, elem) in all_commands.iteritems():
+                u_time, s_time = elem
+                stats.append({'cmd': cmd, 'u_time': u_time, 's_time': s_time})
 
-        def p_sort(e01, e02):
-            """Compare elems by u_time param
+            def p_sort(e01, e02):
+                """Compare elems by u_time param
 
-            :param e01: first elem to compare
-            :param e02: second elem to compare
-            :return: 1 if e01['u_time'] > e02['u_time'], -1 if e01['u_time'] < e02['u_time'], else 0
-            """
-            if e01['u_time'] > e02['u_time']:
-                return 1
-            if e01['u_time'] < e02['u_time']:
-                return -1
-            return 0
-        stats.sort(p_sort)
-        # take the first 10 ones for the put
-        res['commands'] = stats[:10]
+                :param e01: first elem to compare
+                :param e02: second elem to compare
+                :return: 1 if e01['u_time'] > e02['u_time'], -1
+                if e01['u_time'] < e02['u_time'], else 0
+                """
+                if e01['u_time'] > e02['u_time']:
+                    return 1
+                if e01['u_time'] < e02['u_time']:
+                    return -1
+                return 0
+            stats.sort(p_sort)
+            # take the first 10 ones for the put
+            res['commands'] = stats[:10]
+
         return res
 
-    def run(self):  # pylint: disable=too-many-locals, too-many-statements, too-many-branches
-        """Main scheduler function::
-
-        * Load retention
-        * Call 'pre_scheduler_mod_start' hook point
-        * Start modules
-        * Schedule first checks
-        * Init connection with pollers/reactionners
-        * Run main loop
-
-            * Do recurrent works
-            * Push/Get actions to passive satellites
-            * Update stats
-            * Call 'scheduler_tick' hook point
-
-        * Save retention (on quit)
+    def get_latency_average_percentile(self):
+        """
+        Get a overview of the latencies with just a 95 percentile + min/max values
 
         :return: None
         """
-        # Finally start the external modules now we got our data
-        self.hook_point('pre_scheduler_mod_start')
-        self.sched_daemon.modules_manager.start_external_instances(late_start=True)
+        (_, _, time_interval) = self.recurrent_works[21]
+        last_time = time.time() - time_interval
+        latencies = [s.latency for s in self.services if s.last_chk > last_time]
+        lat_avg, lat_min, lat_max = average_percentile(latencies)
+        if lat_avg is not None:
+            self.stats['latency']['avg'] = lat_avg
+            self.stats['latency']['min'] = lat_min
+            self.stats['latency']['max'] = lat_max
+            logger.debug("Latency (avg/min/max): %.2f/%.2f/%.2f", lat_avg, lat_min, lat_max)
 
-        if self.system_health:
-            logger.info("Scheduler system health is enabled, reporting every %d loop count.",
-                        self.system_health_period)
+    def get_checks_status_counts(self, checks=None):
+        """ Compute the counts of the different checks status and
+        return it as a defaultdict(int) with the keys being the different
+        status and the values being the count of the checks in that status.
 
-        # Ok, now all is initialized, we can make the initial broks
-        logger.info("[%s] First scheduling launched", self.instance_name)
-        _t1 = time.time()
-        # Program start brok
-        self.get_and_register_program_status_brok()
-        # First scheduling
-        self.schedule()
-        statsmgr.timer('first_scheduling', time.time() - _t1)
-        logger.info("[%s] First scheduling done", self.instance_name)
+        :checks: None or the checks you want to count their statuses.
+                 If None then self.checks is used.
 
-        # Now connect to the passive satellites if needed
-        for s_id in self.pollers:
-            if not self.pollers[s_id]['passive']:
-                continue
-            self.sched_daemon.daemon_connection_init(s_id, 'poller')
+        :param checks: NoneType | dict
+        :type checks: None | dict
+        :return:
+        :rtype: defaultdict(int)
+        """
+        if checks is None:
+            checks = self.checks
 
-        for s_id in self.reactionners:
-            if not self.reactionners[s_id]['passive']:
-                continue
-            self.sched_daemon.daemon_connection_init(s_id, 'reactionner')
+        res = defaultdict(int)
+        res["total"] = len(checks)
+        for chk in checks.itervalues():
+            res[chk.status] += 1
+        return res
 
-        # Ticks are for recurrent function call like consume, del zombies etc
-        ticks = 0
+    def find_item_by_id(self, object_id):
+        """Get item based on its id or uuid
 
-        # Increased on each loop turn
-        loop_count = 0
-        # Last loop duration
-        loop_duration = 0
-        # For the scheduler pause duration
-        pause_duration = 0.5
-        logger.info("Scheduler pause duration: %.2f", pause_duration)
-        # For the scheduler maximum expected loop duration
-        maximum_loop_duration = 1.0
-        logger.info("Scheduler maximum expected loop duration: %.2f", maximum_loop_duration)
+        :param object_id:
+        :type object_id: int | str
+        :return:
+        :rtype: alignak.objects.item.Item | None
+        """
+        if not object_id:
+            return None
 
-        # Scheduler start timestamp
-        sch_start_ts = time.time()
-        elapsed_time = 0
+        # Temporary fix. To remove when all obj have uuids
+        if not isinstance(object_id, int) and not isinstance(object_id, basestring):
+            logger.warning("Find an item by id, object_id is not int nor string: %s", object_id)
+            return object_id
 
-        # We must reset it if we received a new conf from the Arbiter.
-        # Otherwise, the stat check average won't be correct
+        for items in [self.hosts, self.services, self.actions, self.checks, self.hostgroups,
+                      self.servicegroups, self.contacts, self.contactgroups]:
+            if object_id in items:
+                return items[object_id]
 
+        # raise AttributeError("Item with id %s not found" % object_id)  # pragma: no cover,
+        logger.error("Item with id %s not found", object_id)  # pragma: no cover,
+        return None
+        # simple protection this should never happen
+
+    def before_run(self):
+        """Initialize the scheduling process"""
         # Actions and checks counters
         self.nb_checks_total = 0
         self.nb_checks_launched = 0
@@ -2374,277 +2297,227 @@ class Scheduler(object):  # pylint: disable=R0902
         self.nb_external_commands = 0
 
         self.load_one_min = Load(initial_value=1)
-        logger.info("[%s] starting scheduler loop: %.2f", self.instance_name, sch_start_ts)
-        while self.must_run:
-            # Scheduler load
-            # fixme: measuring the scheduler load with this method is a non-sense ...
-            # self.load_one_min.update_load(self.sched_daemon.sleep_time)
-            # load = min(100, 100.0 - self.load_one_min.get_load() * 100)
-            # logger.info("Load: (sleep) %.2f (average: %.2f) -> %d%%",
-            #             self.sched_daemon.sleep_time, self.load_one_min.get_load(), load)
-            # statsmgr.gauge('load.sleep', self.sched_daemon.sleep_time)
-            # statsmgr.gauge('load.average', self.load_one_min.get_load())
-            # statsmgr.gauge('load.load', load)
 
-            # Increment loop count
-            loop_count += 1
-            if self.log_loop:
-                logger.debug("--- %d", loop_count)
+        self.ticks = 0
 
-            # Increment ticks count
-            ticks += 1
-
-            loop_start_ts = time.time()
-            # Do recurrent works like schedule, consume, delete_zombie_checks
-            for i in self.recurrent_works:
-                (name, fun, nb_ticks) = self.recurrent_works[i]
-                # A 0 in the tick will just disable it
-                if nb_ticks != 0:
-                    if ticks % nb_ticks == 0:
-                        # Call it and save the time spend in it
-                        _t0 = time.time()
-                        fun()
-                        statsmgr.timer('loop.recurrent.%s' % name, time.time() - _t0)
-            statsmgr.timer('loop.recurrent', time.time() - loop_start_ts)
-
-            _ts = time.time()
-            self.push_actions_to_passives_satellites()
-            statsmgr.timer('loop.push_actions_to_passives_satellites', time.time() - _ts)
-            _ts = time.time()
-            self.get_actions_from_passives_satellites()
-            statsmgr.timer('loop.get_actions_from_passives_satellites', time.time() - _ts)
-
-            # Scheduler statistics
-            # - broks / notifications counters
-            if self.log_loop:
-                logger.debug("Items (loop): broks: %d, notifications: %d, checks: %d, internal "
-                             "checks: %d, event handlers: %d, external commands: %d",
-                             self.nb_broks, self.nb_notifications, self.nb_checks,
-                             self.nb_internal_checks, self.nb_event_handlers,
-                             self.nb_external_commands)
-            statsmgr.gauge('checks', self.nb_checks)
-            statsmgr.gauge('broks', self.nb_broks)
-            statsmgr.gauge('internal_checks', self.nb_internal_checks)
-            statsmgr.gauge('notifications', self.nb_notifications)
-            statsmgr.gauge('event_handlers', self.nb_event_handlers)
-            statsmgr.gauge('external_commands', self.nb_external_commands)
-            self.nb_checks_total += self.nb_checks
-            self.nb_broks_total += self.nb_broks
-            self.nb_internal_checks_total += self.nb_internal_checks
-            self.nb_notifications_total += self.nb_notifications
-            self.nb_event_handlers_total += self.nb_event_handlers
-            self.nb_external_commands_total += self.nb_external_commands
-            if self.log_loop:
-                logger.debug("Items (total): broks: %d, notifications: %d, checks: %d, internal "
-                             "checks: %d, event handlers: %d, external commands: %d",
-                             self.nb_broks_total, self.nb_notifications_total, self.nb_checks_total,
-                             self.nb_internal_checks_total, self.nb_event_handlers_total,
-                             self.nb_external_commands_total)
-            # Reset on each loop
-            # self.nb_checks = 0 not yet for this one!
-            self.nb_broks = 0
-            self.nb_internal_checks = 0
-            self.nb_notifications = 0
-            self.nb_event_handlers = 0
-            self.nb_external_commands = 0
-
-            # - checks / actions counters
-            for action_type in self.counters:
-                for action_group in ['total', 'active', 'passive', 'loop']:
-                    # Actions launched
-                    statsmgr.gauge('actions.%s.%s.launched'
-                                   % (action_type, action_group),
-                                   self.counters[action_type][action_group]["launched"])
-                    # Actions timed out
-                    statsmgr.gauge('actions.%s.%s.timeout'
-                                   % (action_type, action_group),
-                                   self.counters[action_type][action_group]["timeout"])
-                    # Actions executed within time
-                    statsmgr.gauge('actions.%s.%s.executed'
-                                   % (action_type, action_group),
-                                   self.counters[action_type][action_group]["executed"])
-
-                    # Reset loop counters
-                    if action_group == 'loop' and self.log_loop:
-                        logger.debug("Actions '%s/%s': launched: %d, timeout: %d, executed: %d",
-                                     action_type, action_group,
-                                     self.counters[action_type][action_group]["launched"],
-                                     self.counters[action_type][action_group]["timeout"],
-                                     self.counters[action_type][action_group]["executed"])
-
-                        self.counters[action_type][action_group]["launched"] = 0
-                        self.counters[action_type][action_group]["timeout"] = 0
-                        self.counters[action_type][action_group]["executed"] = 0
-
-                    # Reset loop counters
-                    if action_group == 'total' and self.log_loop:
-                        logger.debug("Actions '%s/%s': launched: %d, timeout: %d, executed: %d",
-                                     action_type, action_group,
-                                     self.counters[action_type][action_group]["launched"],
-                                     self.counters[action_type][action_group]["timeout"],
-                                     self.counters[action_type][action_group]["executed"])
-
-                    # Actions results
-                    dump_result = "Results '%s/%s': " % (action_type, action_group)
-                    for result in self.counters[action_type][action_group]["results"]:
-                        my_result = self.counters[action_type][action_group]["results"][result]
-                        statsmgr.gauge('actions.%s.%s.result.%s'
-                                       % (action_type, action_group, result), my_result)
-                        dump_result += "%s: %d, " % (result, my_result)
-                    if action_group in ['loop', 'total'] and self.log_loop:
-                        logger.debug(dump_result)
-
-            # - current state - this should perharps be removed because the checks status got
-            # already pushed to the stats with the previous treatment?
-            # checks_status = defaultdict(int)
-            # checks_status["total"] = len(self.checks)
-            # for chk in self.checks.itervalues():
-            #     checks_status[chk.status] += 1
-            # dump_result = "Checks count (loop): "
-            # for status, count in checks_status.iteritems():
-            #     dump_result += "%s: %d, " % (status, count)
-            #     statsmgr.gauge('checks.%s' % status, count)
-            # if self.log_loop:
-            #     logger.debug(dump_result)
-
-            if self.need_dump_memory:
-                _ts = time.time()
-                logger.debug('I must dump my memory...')
-                self.sched_daemon.dump_memory()
-                self.need_dump_memory = False
-                statsmgr.timer('loop.memory_dump', time.time() - _ts)
-
-            if self.need_objects_dump:
-                _ts = time.time()
-                logger.debug('I must dump my objects...')
-                self.dump_objects()
-                self.dump_config()
-                self.need_objects_dump = False
-                statsmgr.timer('loop.objects_dump', time.time() - _ts)
-
-            _ts = time.time()
-            self.hook_point('scheduler_tick')
-            statsmgr.timer('loop.hook-tick', time.time() - _ts)
-
-            loop_end_ts = time.time()
-            loop_duration = loop_end_ts - loop_start_ts
-
-            pause = maximum_loop_duration - loop_duration
-            if loop_duration > maximum_loop_duration:
-                logger.warning("The scheduler loop exceeded the maximum expected loop "
-                               "duration: %.2f. The last loop needed %.2f seconds to execute. "
-                               "You should update your configuration to reduce the load on "
-                               "this scheduler.", maximum_loop_duration, loop_duration)
-                # Make a very very short pause ...
-                pause = 0.1
-
-            # Pause the scheduler execution to avoid too much load on the system
-            logger.debug("Before pause: sleep time: %s", pause)
-            work, time_changed = self.sched_daemon.make_a_pause(pause)
-            logger.debug("After pause: %.2f / %.2f, sleep time: %.2f",
-                         work, time_changed, self.sched_daemon.sleep_time)
-            if work > pause_duration:
-                logger.warning("Too much work during the pause (%.2f out of %.2f)! "
-                               "The scheduler should rest for a while... but one need to change "
-                               "its code for this. Please log an issue in the project repository;",
-                               work, pause_duration)
-                pause_duration += 0.1
-            self.sched_daemon.sleep_time = 0.0
-
-            # And now, the whole average time spent
-            elapsed_time = loop_end_ts - sch_start_ts
-            if self.log_loop:
-                logger.debug("Elapsed time, current loop: %.2f, from start: %.2f (%d loops)",
-                             loop_duration, elapsed_time, loop_count)
-            statsmgr.gauge('loop.count', loop_count)
-            statsmgr.timer('loop.duration', loop_duration)
-            statsmgr.timer('run.duration', elapsed_time)
-            if self.log_loop:
-                logger.debug("Check average (loop) = %d checks results, %.2f checks/s",
-                             self.nb_checks, self.nb_checks / loop_duration)
-                logger.debug("Check average (total) = %d checks results, %.2f checks/s",
-                             self.nb_checks_total, self.nb_checks_total / elapsed_time)
-            self.nb_checks = 0
-
-            if self.nb_checks_dropped > 0 \
-                    or self.nb_broks_dropped > 0 or self.nb_actions_dropped > 0:
-                logger.warning("We dropped %d checks, %d broks and %d actions",
-                               self.nb_checks_dropped, self.nb_broks_dropped,
-                               self.nb_actions_dropped)
-                self.nb_checks_dropped = self.nb_broks_dropped = self.nb_actions_dropped = 0
-
-            if self.system_health and (loop_count % self.system_health_period == 1):
-                perfdatas = []
-                cpu_count = psutil.cpu_count()
-                perfdatas.append("'cpu_count'=%d" % cpu_count)
-                logger.debug("  . cpu count: %d", cpu_count)
-
-                cpu_percents = psutil.cpu_percent(percpu=True)
-                cpu = 1
-                for percent in cpu_percents:
-                    perfdatas.append("'cpu_%d_percent'=%.2f%%" % (cpu, percent))
-                    cpu += 1
-
-                cpu_times_percent = psutil.cpu_times_percent(percpu=True)
-                cpu = 1
-                for cpu_times_percent in cpu_times_percent:
-                    logger.debug("  . cpu time percent: %s", cpu_times_percent)
-                    for key in cpu_times_percent._fields:
-                        perfdatas.append(
-                            "'cpu_%d_%s_percent'=%.2f%%" % (cpu, key,
-                                                            getattr(cpu_times_percent, key)))
-                    cpu += 1
-
-                logger.info("Scheduler %s cpu|%s", self.instance_name, " ".join(perfdatas))
-
-                perfdatas = []
-                disk_partitions = psutil.disk_partitions(all=False)
-                for disk_partition in disk_partitions:
-                    logger.debug("  . disk partition: %s", disk_partition)
-
-                    disk = getattr(disk_partition, 'mountpoint')
-                    disk_usage = psutil.disk_usage(disk)
-                    logger.debug("  . disk usage: %s", disk_usage)
-                    for key in disk_usage._fields:
-                        if 'percent' in key:
-                            perfdatas.append("'disk_%s_percent_used'=%.2f%%"
-                                             % (disk, getattr(disk_usage, key)))
-                        else:
-                            perfdatas.append("'disk_%s_%s'=%dB"
-                                             % (disk, key, getattr(disk_usage, key)))
-
-                logger.info("Scheduler %s disks|%s", self.instance_name, " ".join(perfdatas))
-
-                perfdatas = []
-                virtual_memory = psutil.virtual_memory()
-                logger.debug("  . memory: %s", virtual_memory)
-                for key in virtual_memory._fields:
-                    if 'percent' in key:
-                        perfdatas.append("'mem_percent_used_%s'=%.2f%%"
-                                         % (key, getattr(virtual_memory, key)))
-                    else:
-                        perfdatas.append("'mem_%s'=%dB"
-                                         % (key, getattr(virtual_memory, key)))
-
-                perfdatas = []
-                swap_memory = psutil.swap_memory()
-                logger.debug("  . memory: %s", swap_memory)
-                for key in swap_memory._fields:
-                    if 'percent' in key:
-                        perfdatas.append("'swap_used_%s'=%.2f%%"
-                                         % (key, getattr(swap_memory, key)))
-                    else:
-                        perfdatas.append("'swap_%s'=%dB"
-                                         % (key, getattr(swap_memory, key)))
-
-                logger.info("Scheduler %s memory|%s", self.instance_name, " ".join(perfdatas))
-
-            if self.log_loop:
-                logger.debug("+++ %d", loop_count)
-
-        logger.info("[%s] stopping scheduler loop: started: %.2f, elapsed time: %.2f seconds",
-                    self.instance_name, sch_start_ts, elapsed_time)
-
+    def after_run(self):
+        """After the scheduling process"""
         # We must save the retention at the quit BY OURSELVES
         # because our daemon will not be able to do it for us
-        self.update_retention_file(True)
+        self.update_retention(True)
+
+    def run(self):  # pylint: disable=too-many-locals, too-many-statements, too-many-branches
+        """Main scheduler function::
+
+        * Load retention
+        * Call 'pre_scheduler_mod_start' hook point
+        * Start modules
+        * Schedule first checks
+        * Init connection with pollers/reactionners
+        * Run main loop
+
+            * Do recurrent works
+            * Push/Get actions to passive satellites
+            * Update stats
+            * Call 'scheduler_tick' hook point
+
+        * Save retention (on quit)
+
+        :return: None
+        """
+        if not self.must_schedule:
+            logger.warning("#%d - scheduler is not active...",
+                           self.my_daemon.loop_count)
+            return
+        # Finally start the external modules now we got our data
+        # fred: Not of any interest imho
+        # self.hook_point('pre_scheduler_mod_start')
+        # fred: in the main daemon
+        # self.my_daemon.modules_manager.start_external_instances(late_start=True)
+
+        # fred: moved to the main daemon
+        # # Ok, now all is initialized, we can make the initial broks
+        # logger.info("[%s] First scheduling launched", self.name)
+        # _t1 = time.time()
+        # # Program start brok
+        # self.get_and_register_program_status_brok()
+        # # First scheduling
+        # self.schedule()
+        # statsmgr.timer('first_scheduling', time.time() - _t1)
+        # logger.info("[%s] First scheduling done", self.name)
+        #
+        # # Connect to our passive satellites if needed
+        # for satellite in [s for s in self.my_daemon.pollers.values() if s.passive]:
+        #     if not self.my_daemon.daemon_connection_init(satellite):
+        #         logger.error("Passive satellite connection failed: %s", satellite)
+        #
+        # for satellite in [s for s in self.my_daemon.reactionners.values() if s.passive]:
+        #     if not self.my_daemon.daemon_connection_init(satellite):
+        #         logger.error("Passive satellite connection failed: %s", satellite)
+
+        # Ticks are for recurrent function call like consume, del zombies etc
+        # ticks = 0
+
+        # We must reset it if we received a new conf from the Arbiter.
+        # Otherwise, the stat check average won't be correct
+
+        # Scheduler load
+        # fixme: measuring the scheduler load with this method is a non-sense ...
+        # self.load_one_min.update_load(self.my_daemon.sleep_time)
+        # load = min(100, 100.0 - self.load_one_min.get_load() * 100)
+        # logger.info("Load: (sleep) %.2f (average: %.2f) -> %d%%",
+        #             self.v.sleep_time, self.load_one_min.get_load(), load)
+        # statsmgr.gauge('load.sleep', self.my_daemon.sleep_time)
+        # statsmgr.gauge('load.average', self.load_one_min.get_load())
+        # statsmgr.gauge('load.load', load)
+
+        # Increment ticks count
+        self.ticks += 1
+
+        loop_start_ts = time.time()
+        # Do recurrent works like schedule, consume, delete_zombie_checks
+        for i in self.recurrent_works:
+            (name, fun, nb_ticks) = self.recurrent_works[i]
+            # A 0 in the tick will just disable it
+            if nb_ticks != 0:
+                if self.ticks % nb_ticks == 0:
+                    # Call it and save the time spend in it
+                    _t0 = time.time()
+                    fun()
+                    statsmgr.timer('loop.recurrent.%s' % name, time.time() - _t0)
+        statsmgr.timer('loop.recurrent', time.time() - loop_start_ts)
+
+        _ts = time.time()
+        self.push_actions_to_passives_satellites()
+        statsmgr.timer('loop.push_actions_to_passives_satellites', time.time() - _ts)
+        _ts = time.time()
+        self.get_actions_from_passives_satellites()
+        statsmgr.timer('loop.get_actions_from_passives_satellites', time.time() - _ts)
+
+        # Scheduler statistics
+        # - broks / notifications counters
+        if self.my_daemon.log_loop:
+            logger.debug("Items (loop): broks: %d, notifications: %d, checks: %d, internal "
+                         "checks: %d, event handlers: %d, external commands: %d",
+                         self.nb_broks, self.nb_notifications, self.nb_checks,
+                         self.nb_internal_checks, self.nb_event_handlers,
+                         self.nb_external_commands)
+        statsmgr.gauge('checks', self.nb_checks)
+        statsmgr.gauge('broks', self.nb_broks)
+        statsmgr.gauge('internal_checks', self.nb_internal_checks)
+        statsmgr.gauge('notifications', self.nb_notifications)
+        statsmgr.gauge('event_handlers', self.nb_event_handlers)
+        statsmgr.gauge('external_commands', self.nb_external_commands)
+        self.nb_checks_total += self.nb_checks
+        self.nb_broks_total += self.nb_broks
+        self.nb_internal_checks_total += self.nb_internal_checks
+        self.nb_notifications_total += self.nb_notifications
+        self.nb_event_handlers_total += self.nb_event_handlers
+        self.nb_external_commands_total += self.nb_external_commands
+        if self.my_daemon.log_loop:
+            logger.debug("Items (total): broks: %d, notifications: %d, checks: %d, internal "
+                         "checks: %d, event handlers: %d, external commands: %d",
+                         self.nb_broks_total, self.nb_notifications_total, self.nb_checks_total,
+                         self.nb_internal_checks_total, self.nb_event_handlers_total,
+                         self.nb_external_commands_total)
+        # Reset on each loop
+        # self.nb_checks = 0 not yet for this one!
+        self.nb_broks = 0
+        self.nb_internal_checks = 0
+        self.nb_notifications = 0
+        self.nb_event_handlers = 0
+        self.nb_external_commands = 0
+
+        # - checks / actions counters
+        for action_type in self.counters:
+            for action_group in ['total', 'active', 'passive', 'loop']:
+                # Actions launched
+                statsmgr.gauge('actions.%s.%s.launched'
+                               % (action_type, action_group),
+                               self.counters[action_type][action_group]["launched"])
+                # Actions timed out
+                statsmgr.gauge('actions.%s.%s.timeout'
+                               % (action_type, action_group),
+                               self.counters[action_type][action_group]["timeout"])
+                # Actions executed within time
+                statsmgr.gauge('actions.%s.%s.executed'
+                               % (action_type, action_group),
+                               self.counters[action_type][action_group]["executed"])
+
+                # Reset loop counters
+                if action_group == 'loop':
+                    # if self.my_daemon.log_loop:
+                    #     logger.debug("Actions '%s/%s': launched: %d, timeout: %d, executed: %d",
+                    #                  action_type, action_group,
+                    #                  self.counters[action_type][action_group]["launched"],
+                    #                  self.counters[action_type][action_group]["timeout"],
+                    #                  self.counters[action_type][action_group]["executed"])
+
+                    self.counters[action_type][action_group]["launched"] = 0
+                    self.counters[action_type][action_group]["timeout"] = 0
+                    self.counters[action_type][action_group]["executed"] = 0
+
+                # # Reset loop counters
+                # if action_group == 'total':
+                #     if self.my_daemon.log_loop:
+                #         logger.debug("Actions '%s/%s': launched: %d, timeout: %d, executed: %d",
+                #                      action_type, action_group,
+                #                      self.counters[action_type][action_group]["launched"],
+                #                      self.counters[action_type][action_group]["timeout"],
+                #                      self.counters[action_type][action_group]["executed"])
+
+                # Actions results
+                dump_result = "Results '%s/%s': " % (action_type, action_group)
+                for result in self.counters[action_type][action_group]["results"]:
+                    my_result = self.counters[action_type][action_group]["results"][result]
+                    statsmgr.gauge('actions.%s.%s.result.%s'
+                                   % (action_type, action_group, result), my_result)
+                    dump_result += "%s: %d, " % (result, my_result)
+                # if action_group in ['loop', 'total'] and self.my_daemon.log_loop:
+                #     logger.debug(dump_result)
+
+        # - current state - this should perhaps be removed because the checks status got
+        # already pushed to the stats with the previous treatment?
+        # checks_status = defaultdict(int)
+        # checks_status["total"] = len(self.checks)
+        # for chk in self.checks.itervalues():
+        #     checks_status[chk.status] += 1
+        # dump_result = "Checks count (loop): "
+        # for status, count in checks_status.iteritems():
+        #     dump_result += "%s: %d, " % (status, count)
+        #     statsmgr.gauge('checks.%s' % status, count)
+        # if self.log_loop:
+        #     logger.debug(dump_result)
+
+        if self.my_daemon.need_dump_memory:
+            _ts = time.time()
+            logger.debug('I must dump my memory...')
+            self.my_daemon.dump_memory()
+            self.my_daemon.need_dump_memory = False
+            statsmgr.timer('loop.memory_dump', time.time() - _ts)
+
+        if self.my_daemon.need_objects_dump:
+            _ts = time.time()
+            logger.debug('I must dump my objects...')
+            self.dump_objects()
+            self.dump_config()
+            self.my_daemon.need_objects_dump = False
+            statsmgr.timer('loop.objects_dump', time.time() - _ts)
+
+        _ts = time.time()
+        self.hook_point('scheduler_tick')
+        statsmgr.timer('loop.hook-tick', time.time() - _ts)
+
+        if self.my_daemon.log_loop:
+            elapsed_time = time.time() - self.my_daemon.start_time
+            logger.debug("Check average (total) = %d checks results, %.2f checks/s",
+                         self.nb_checks_total,
+                         self.nb_checks_total / elapsed_time)
+        self.nb_checks = 0
+
+        if self.nb_checks_dropped > 0 \
+                or self.nb_broks_dropped > 0 or self.nb_actions_dropped > 0:
+            logger.warning("We dropped %d checks, %d broks and %d actions",
+                           self.nb_checks_dropped, self.nb_broks_dropped,
+                           self.nb_actions_dropped)
+            self.nb_checks_dropped = self.nb_broks_dropped = self.nb_actions_dropped = 0

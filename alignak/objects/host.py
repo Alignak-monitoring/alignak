@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -258,6 +258,12 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'hostgroup': 'hostgroups',
     })
 
+    def __str__(self):  # pragma: no cover
+        return '<Host %s, uuid=%s, %s (%s), realm: %s, use: %s />' \
+               % (self.get_full_name(), self.uuid, self.state, self.state_type,
+                  getattr(self, 'realm', 'Unset'), getattr(self, 'use', None))
+    __repr__ = __str__
+
 #######
 #                   __ _                       _   _
 #                  / _(_)                     | | (_)
@@ -330,7 +336,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                     msg = "[%s::%s] host_name got an illegal character: %s" % (
                         self.my_type, self.get_name(), char
                     )
-                    self.configuration_errors.append(msg)
+                    self.add_error(msg)
                     state = False
 
         # Ok now we manage special cases...
@@ -366,6 +372,16 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                 return self.name
             except AttributeError:  # outch, no name for this template
                 return 'UNNAMEDHOSTTEMPLATE'
+
+    def get_full_name(self):
+        """Accessor to host_name attribute
+
+        :return: host_name
+        :rtype: str
+        """
+        if self.is_tpl():
+            return "tpl-%s" % (self.name)
+        return getattr(self, 'host_name', 'unnamed')
 
     def get_groupname(self, hostgroups):
         """Get name of the first host's hostgroup (alphabetic sort)
@@ -411,14 +427,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             group_aliases.append(hostgroup.alias)
         return ','.join(sorted(group_aliases))
 
-    def get_full_name(self):
-        """Accessor to host_name attribute
-
-        :return: host_name
-        :rtype: str
-        """
-        return self.host_name
-
     def get_hostgroups(self):
         """Accessor to hostgroups attribute
 
@@ -426,34 +434,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :rtype: list
         """
         return self.hostgroups
-
-    def get_host_tags(self):
-        """Accessor to tags attribute
-
-        :return: tag list of host
-        :rtype: list
-        """
-        return self.tags
-
-    # def get_realm_name(self):
-    #     """Accessor to realm attribute
-    #     :return: realm object of host
-    #     :rtype: alignak.objects.realm.Realm
-    #     """
-    #     return self.realm_name
-    #
-    def is_linked_with_host(self, other):
-        """Check if other is in act_depend_of host attribute
-
-        :param other: other host to search
-        :type other: alignak.objects.host.Host
-        :return: True if other in act_depend_of list, otherwise False
-        :rtype: bool
-        """
-        for (host, _, _, _) in self.act_depend_of:
-            if host == other:
-                return True
-        return False
 
     def add_service_link(self, service):
         """Add a service to the service list of this host
@@ -463,14 +443,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: None
         """
         self.services.append(service)
-
-    def __repr__(self):
-        return '<Host host_name=%r name=%r use=%r />' % (
-            getattr(self, 'host_name', None),
-            getattr(self, 'name', None),
-            getattr(self, 'use', None))
-
-    __str__ = __repr__
 
     def is_excluded_for(self, service):
         """Check whether this host should have the passed service be "excluded" or "not included".
@@ -637,8 +609,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         )
         self.broks.append(brok)
 
-        if 'TEST_LOG_ALERTS' in os.environ:
-            if os.environ['TEST_LOG_ALERTS'] == 'WARNING':
+        if 'ALIGNAK_LOG_ALERTS' in os.environ:
+            if os.environ['ALIGNAK_LOG_ALERTS'] == 'WARNING':
                 logger.warning('HOST ALERT: %s;%s;%s;%d;%s', self.get_name(), self.state,
                                self.state_type, self.attempt, self.output)
             else:
@@ -698,8 +670,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         )
         self.broks.append(brok)
 
-        if 'TEST_LOG_NOTIFICATIONS' in os.environ:
-            if os.environ['TEST_LOG_NOTIFICATIONS'] == 'WARNING':
+        if 'ALIGNAK_LOG_NOTIFICATIONS' in os.environ:
+            if os.environ['ALIGNAK_LOG_NOTIFICATIONS'] == 'WARNING':
                 logger.warning("HOST NOTIFICATION: %s;%s;%s;%s;%s", contact.get_name(),
                                self.get_name(), state, command.get_name(), self.output)
             else:
@@ -908,34 +880,34 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         if need_stalk:
             logger.info("Stalking %s: %s", self.get_name(), self.output)
 
-    def get_data_for_checks(self):
-        """Get data for a check
-
-        :return: list containing a single host (this one)
-        :rtype: list
-        """
-        return [self]
-
-    def get_data_for_event_handler(self):
-        """Get data for an event handler
-
-        :return: list containing a single host (this one)
-        :rtype: list
-        """
-        return [self]
-
-    def get_data_for_notifications(self, contact, notif):
-        """Get data for a notification
-
-        :param contact: The contact to return
-        :type contact:
-        :param notif: the notification to return
-        :type notif:
-        :return: list containing a the host and the given parameters
-        :rtype: list
-        """
-        return [self, contact, notif]
-
+    # def get_data_for_checks(self):
+    #     """Get data for a check
+    #
+    #     :return: list containing a single host (this one)
+    #     :rtype: list
+    #     """
+    #     return [self]
+    #
+    # def get_data_for_event_handler(self):
+    #     """Get data for an event handler
+    #
+    #     :return: list containing a single host (this one)
+    #     :rtype: list
+    #     """
+    #     return [self]
+    #
+    # def get_data_for_notifications(self, contact, notif):
+    #     """Get data for a notification
+    #
+    #     :param contact: The contact to return
+    #     :type contact:
+    #     :param notif: the notification to return
+    #     :type notif:
+    #     :return: list containing a the host and the given parameters
+    #     :rtype: list
+    #     """
+    #     return [self, contact, notif]
+    #
     def notification_is_blocked_by_contact(self, notifways, timeperiods, notif, contact):
         """Check if the notification is blocked by this contact.
 
@@ -1000,6 +972,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :rtype: bool
         TODO: Refactor this, a lot of code duplication with Service.notification_is_blocked_by_item
         """
+        logger.debug("Checking if a host %s (%s) notification is blocked...",
+                     self.get_name(), self.state)
         if t_wished is None:
             t_wished = time.time()
 
@@ -1260,7 +1234,7 @@ class Hosts(SchedulingItems):
 
     def linkify(self, timeperiods=None, commands=None, contacts=None,  # pylint: disable=R0913
                 realms=None, resultmodulations=None, businessimpactmodulations=None,
-                escalations=None, hostgroups=None, triggers=None,
+                escalations=None, hostgroups=None,
                 checkmodulations=None, macromodulations=None):
         """Create link between objects::
 
@@ -1286,8 +1260,6 @@ class Hosts(SchedulingItems):
         :type escalations: alignak.objects.escalation.Escalations
         :param hostgroups: hostgroups to link
         :type hostgroups: alignak.objects.hostgroup.Hostgroups
-        :param triggers: triggers to link
-        :type triggers: alignak.objects.trigger.Triggers
         :param checkmodulations: checkmodulations to link
         :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
         :param macromodulations: macromodulations to link
@@ -1312,7 +1284,6 @@ class Hosts(SchedulingItems):
         # (just the escalation here, not serviceesca or hostesca).
         # This last one will be link in escalations linkify.
         self.linkify_with_escalations(escalations)
-        self.linkify_with_triggers(triggers)
         self.linkify_with_checkmodulations(checkmodulations)
         self.linkify_with_macromodulations(macromodulations)
 
@@ -1341,7 +1312,7 @@ class Hosts(SchedulingItems):
                 else:
                     err = "the parent '%s' for the host '%s' is unknown!" % (parent,
                                                                              host.get_name())
-                    self.configuration_errors.append(err)
+                    self.add_error(err)
             # We find the id, we replace the names
             host.parents = new_parents
 
@@ -1358,7 +1329,7 @@ class Hosts(SchedulingItems):
                 realm = realms.find_by_name(host.realm.strip())
                 if realm is None:
                     err = "the host %s got an invalid realm (%s)!" % (host.get_name(), host.realm)
-                    host.configuration_errors.append(err)
+                    host.add_error(err)
                     # This to avoid having an host.realm as a string name
                     host.realm_name = host.realm
                     host.realm = None
@@ -1391,13 +1362,12 @@ class Hosts(SchedulingItems):
                     else:
                         err = ("the hostgroup '%s' of the host '%s' is "
                                "unknown" % (hg_name, host.host_name))
-                        host.configuration_errors.append(err)
+                        host.add_error(err)
             host.hostgroups = new_hostgroups
 
     def explode(self, hostgroups, contactgroups):
         """Explode hosts with hostgroups, contactgroups::
 
-        * Add triggers source to host triggers
         * Add contact from contactgroups to host contacts
         * Add host into their hostgroups as hostgroup members
 
@@ -1405,8 +1375,6 @@ class Hosts(SchedulingItems):
         :type hostgroups: alignak.objects.hostgroup.Hostgroups
         :param contactgroups: Contactgorups to explode
         :type contactgroups: alignak.objects.contactgroup.Contactgroups
-        :param triggers: Triggers to explode
-        :type triggers: alignak.objects.trigger.Triggers
         :return: None
         """
         for template in self.templates.itervalues():
@@ -1473,7 +1441,7 @@ class Hosts(SchedulingItems):
         loop = self.no_loop_in_parents("self", "parents")
         if loop:
             msg = "Loop detected while checking hosts "
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             state = False
             for uuid, item in self.items.iteritems():
                 for elem in loop:
@@ -1481,11 +1449,11 @@ class Hosts(SchedulingItems):
                         msg = "Host %s is parent in dependency defined in %s" % (
                             item.get_name(), item.imported_from
                         )
-                        self.configuration_errors.append(msg)
+                        self.add_error(msg)
                     elif elem in item.parents:
                         msg = "Host %s is child in dependency defined in %s" % (
                             self[elem].get_name(), self[elem].imported_from
                         )
-                        self.configuration_errors.append(msg)
+                        self.add_error(msg)
 
         return super(Hosts, self).is_correct() and state

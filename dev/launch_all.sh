@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -20,6 +20,10 @@
 #
 DIR="$(cd $(dirname "$0"); pwd)"
 
+# ----------------------------------------------------------------------------
+#  This script is an example script that starts a list of Alignak daemons. It
+# starts one instance of each daemon type
+# ----------------------------------------------------------------------------
 #
 # Run this script with the -d parameter to start all the daemons in debug mode
 #
@@ -31,11 +35,11 @@ DIR="$(cd $(dirname "$0"); pwd)"
 #echo "#       export REQUESTS_CA_BUNDLE"
 #echo "# -----------------------------------------------------------------------------"
 
-#TEST_LOG_ACTIONS=1
-#export TEST_LOG_ACTIONS
+#ALIGNAK_LOG_ACTIONS=1
+#export ALIGNAK_LOG_ACTIONS
 #echo "# -----------------------------------------------------------------------------"
-#echo "# Info: TEST_LOG_ACTIONS=$TEST_LOG_ACTIONS"
-#echo "#       export TEST_LOG_ACTIONS"
+#echo "# Info: ALIGNAK_LOG_ACTIONS=$ALIGNAK_LOG_ACTIONS"
+#echo "#       export ALIGNAK_LOG_ACTIONS"
 #echo "# -----------------------------------------------------------------------------"
 
 "$DIR"/launch_scheduler.sh $@

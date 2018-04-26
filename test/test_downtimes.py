@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -64,15 +64,13 @@ class TestDowntime(AlignakTest):
         For each test load and check the configuration
         :return: None
         """
-        self.print_header()
+        super(TestDowntime, self).setUp()
+
         self.setup_with_file('cfg/cfg_default.cfg')
         assert self.conf_is_correct
 
         # Our scheduler
-        self._sched = self.schedulers['scheduler-master'].sched
-
-        # Our broker
-        self._broker = self._sched.brokers['broker-master']
+        self._sched = self._scheduler
 
         # No error messages
         assert len(self.configuration_errors) == 0
@@ -81,8 +79,6 @@ class TestDowntime(AlignakTest):
 
     def test_create_downtime(self):
         """ Create a downtime object """
-        self.print_header()
-
         now = int(time.time())
 
         # With common parameters
@@ -133,8 +129,6 @@ class TestDowntime(AlignakTest):
 
     def test_schedule_fixed_svc_downtime(self):
         """ Schedule a fixed downtime for a service """
-        self.print_header()
-
         # Get the service
         svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.checks_in_progress = []
@@ -158,7 +152,7 @@ class TestDowntime(AlignakTest):
         # downtime valid for 5 seconds from now
         cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;%d;%d;1;0;%d;" \
               "downtime author;downtime comment" % (now, now, now + duration, duration)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         self.external_command_loop()
         # A downtime exist for the service
         assert len(svc.downtimes) == 1
@@ -314,7 +308,7 @@ class TestDowntime(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(self._main_broker.broks.itervalues(), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -349,8 +343,6 @@ class TestDowntime(AlignakTest):
 
     def test_schedule_flexible_svc_downtime(self):
         """ Schedule a flexible downtime for a service """
-        self.print_header()
-
         # Get the service
         svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.checks_in_progress = []
@@ -377,7 +369,7 @@ class TestDowntime(AlignakTest):
         now = int(time.time())
         cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;%d;%d;0;0;%d;" \
               "downtime author;downtime comment" % (now, now, now + 3600, duration)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         self.external_command_loop()
         # A downtime exist for the service
         assert len(svc.downtimes) == 1
@@ -517,7 +509,7 @@ class TestDowntime(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(self._main_broker.broks.itervalues(), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -548,8 +540,6 @@ class TestDowntime(AlignakTest):
 
     def test_schedule_fixed_host_downtime(self):
         """ Schedule a fixed downtime for an host """
-        self.print_header()
-
         # Get the host
         host = self._sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -576,7 +566,7 @@ class TestDowntime(AlignakTest):
         # downtime valid for 5 seconds from now
         cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_host_0;%d;%d;1;;%d;" \
               "downtime author;downtime comment" % (now, now, now + duration, duration)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         self.external_command_loop()
         # A downtime exist for the host
         assert len(host.downtimes) == 1
@@ -729,7 +719,7 @@ class TestDowntime(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(self._main_broker.broks.values(), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -763,8 +753,6 @@ class TestDowntime(AlignakTest):
 
     def test_schedule_fixed_host_downtime_with_service(self):
         """ Schedule a downtime for an host - services changes are not notified """
-        self.print_header()
-
         # Get the host
         host = self._sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -802,7 +790,7 @@ class TestDowntime(AlignakTest):
         # downtime valid for 5 seconds from now
         cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_host_0;%d;%d;1;;%d;" \
               "downtime author;downtime comment" % (now, now, now + duration, duration)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         self.external_command_loop()
         # A downtime exist for the host
         assert len(host.downtimes) == 1
@@ -913,7 +901,7 @@ class TestDowntime(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(self._broker['broks'].itervalues(), key=lambda x: x.creation_time):
+        for brok in sorted(self._main_broker.broks.itervalues(), key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -936,6 +924,3 @@ class TestDowntime(AlignakTest):
         ]
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_logs
-
-if __name__ == '__main__':
-    AlignakTest.main()

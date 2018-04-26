@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -78,7 +78,7 @@ class Hostescalation(Item):
         'escalation_period':
             StringProp(default=''),
         'escalation_options':
-            ListProp(default=['d', 'u', 'r', 'w', 'c']),
+            ListProp(default=['d', 'x', 'r']),
         'contacts':
             StringProp(),
         'contact_groups':
@@ -88,6 +88,15 @@ class Hostescalation(Item):
         'last_notification_time':
             IntegerProp(),
     })
+
+    def __init__(self, params=None, parsing=True):
+        if params is None:
+            params = {}
+
+        for prop in ['escalation_options']:
+            if prop in params:
+                params[prop] = [p.replace('u', 'x') for p in params[prop]]
+        super(Hostescalation, self).__init__(params, parsing=parsing)
 
 
 class Hostescalations(Items):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -23,12 +23,13 @@
 
 import uuid
 from copy import copy
-from alignak.property import SetProp, StringProp
+from alignak.property import NONE_OBJECT, SetProp, StringProp
 
 
 class AlignakObject(object):
-    """This class provide a generic way to instantiate alignak objects.
-    Attribute are ser dynamically, whether we un-serialize them create them at run / parsing time
+    """This class provides a generic way to instantiate alignak objects.
+    Attribute are serialized dynamically, whether we un-serialize
+    them create them at run / parsing time
 
     """
 
@@ -52,7 +53,7 @@ class AlignakObject(object):
             self.uuid = uuid.uuid4().hex
 
     def serialize(self):
-        """This function serialize into a simple dict object.
+        """This function serializes into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
         Here is the generic function that simply export attributes declared in the
@@ -75,14 +76,16 @@ class AlignakObject(object):
 
     def fill_default(self):
         """
-        Define properties with default value when not defined
+        Define the object properties with a default value when the property is not yet defined
 
         :return: None
         """
         cls = self.__class__
 
         for prop, entry in cls.properties.items():
-            if not hasattr(self, prop) and entry.has_default:
+            if not hasattr(self, prop) \
+                    and hasattr(entry, 'default') \
+                    and entry.default is not NONE_OBJECT:
                 if hasattr(entry.default, '__iter__'):
                     setattr(self, prop, copy(entry.default))
                 else:

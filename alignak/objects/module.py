@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -53,10 +53,10 @@ This module provide Module and Modules classes used to manage internal and exter
 for each daemon
 """
 import logging
+import warnings
 from alignak.objects.item import Item, Items
 
-from alignak.property import StringProp, ListProp
-from alignak.util import strip_and_uniq
+from alignak.property import StringProp, ListProp, IntegerProp, BoolProp
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
@@ -69,16 +69,95 @@ class Module(Item):
 
     properties = Item.properties.copy()
     properties.update({
-        'python_name': StringProp(),
-        'module_alias': StringProp(),
-        'module_types': ListProp(default=[''], split_on_coma=True),
-        'modules': ListProp(default=[''], split_on_coma=True)
+        'name':
+            StringProp(default='unset'),
+        'type':
+            StringProp(default='unset'),
+        'daemon':
+            StringProp(default='unset'),
+        'python_name':
+            StringProp(),
+        # Old "deprecated" property - replaced with name
+        'module_alias':
+            StringProp(),
+        # Old "deprecated" property - replaced with type
+        'module_types':
+            ListProp(default=[''], split_on_coma=True),
+        # Do not manage modules having modules
+        # 'modules':
+        #     ListProp(default=[''], split_on_coma=True)
+
+        # Module log level
+        'log_level':
+            StringProp(default='INFO'),
+
+        # Local statsd daemon for collecting daemon metrics
+        'statsd_host':
+            StringProp(default='localhost'),
+        'statsd_port':
+            IntegerProp(default=8125),
+        'statsd_prefix':
+            StringProp(default='alignak'),
+        'statsd_enabled':
+            BoolProp(default=False)
     })
 
     macros = {}
 
     def __init__(self, params=None, parsing=True):
+        # Must be declared in this function rather than as class variable. This because the
+        # modules may have some properties that are not the same from one instance to another.
+        # Other objects very often have the same properties... but not the modules!
+        self.properties = Item.properties.copy()
+        self.properties.update({
+            'name':
+                StringProp(default='unset'),
+            'type':
+                StringProp(default='unset'),
+            'daemon':
+                StringProp(default='unset'),
+            'python_name':
+                StringProp(),
+            # Old "deprecated" property - replaced with name
+            'module_alias':
+                StringProp(),
+            # Old "deprecated" property - replaced with type
+            'module_types':
+                ListProp(default=[''], split_on_coma=True),
+            # Do not manage modules having modules
+            # 'modules':
+            #     ListProp(default=[''], split_on_coma=True)
+
+            # Module log level
+            'log_level':
+                StringProp(default='INFO'),
+
+            # Local statsd daemon for collecting daemon metrics
+            'statsd_host':
+                StringProp(default='localhost'),
+            'statsd_port':
+                IntegerProp(default=8125),
+            'statsd_prefix':
+                StringProp(default='alignak'),
+            'statsd_enabled':
+                BoolProp(default=False)
+        })
+
+        # Manage the missing module name
+        if params and 'name' not in params:
+            if 'module_alias' in params:
+                params['name'] = params['module_alias']
+            else:
+                params['name'] = "Unnamed"
+        if params and 'module_alias' not in params:
+            if 'name' in params:
+                params['module_alias'] = params['name']
+            else:
+                params['module_alias'] = "Unnamed"
+
         super(Module, self).__init__(params, parsing=parsing)
+
+        self.fill_default()
 
         # Remove extra Item base class properties...
         for prop in ['customs', 'plus', 'downtimes', 'old_properties',
@@ -86,7 +165,12 @@ class Module(Item):
             if getattr(self, prop, None):
                 delattr(self, prop)
 
-    # For debugging purpose only (nice name)
+    def __repr__(self):  # pragma: no cover
+        return '<%r %r, module: %r, type(s): %r />' % \
+               (self.__class__.__name__, self.name, getattr(self, 'python_name', 'Unknown'),
+                getattr(self, 'type', 'Unknown'))
+    __str__ = __repr__
+
     def get_name(self):
         """
         Get name of module
@@ -94,16 +178,16 @@ class Module(Item):
         :return: Name of module
         :rtype: str
         """
-        return self.module_alias
+        return getattr(self, 'name', self.module_alias)
 
     def get_types(self):
         """
-        Get name of module
+        Get types of the module
 
-        :return: Name of module
+        :return: Types of the module
         :rtype: str
         """
-        return self.module_types
+        return getattr(self, 'module_types', 'Untyped module')
 
     def is_a_module(self, module_type):
         """
@@ -115,10 +199,21 @@ class Module(Item):
         """
         return module_type in self.module_types
 
-    def __repr__(self):
-        return '<module module=%s alias=%s />' % (self.python_name, self.module_alias)
+    def serialize(self):
+        """A module may have some properties that are not defined in the class properties list.
+        Serializing a module is the same as serializing an Item but we also also include all the
+        existing properties that are not defined in the properties or running_properties
+        class list.
+        """
+        res = super(Module, self).serialize()
 
-    __str__ = __repr__
+        cls = self.__class__
+        for prop in self.__dict__:
+            if prop in cls.properties or prop in cls.running_properties or prop in ['properties']:
+                continue
+            res[prop] = getattr(self, prop)
+
+        return res
 
 
 class Modules(Items):
@@ -126,46 +221,13 @@ class Modules(Items):
     Class to manage list of modules
     Modules is used to group all Module
     """
-    name_property = "module_alias"
+    name_property = "name"
     inner_class = Module
 
     def linkify(self):
-        """
-        Link modules
+        """Link modules
 
         :return: None
         """
-        self.linkify_s_by_plug()
-
-    def linkify_s_by_plug(self, modules=None):
-        """
-        Link modules
-
-        :return: None
-        """
-        for module in self:
-            new_modules = []
-            mods = strip_and_uniq(module.modules)
-            for plug_name in mods:
-                plug_name = plug_name.strip()
-
-                # don't read void names
-                if plug_name == '':
-                    continue
-
-                # We are the modules, we search them :)
-                plug = self.find_by_name(plug_name)
-                if plug is not None:
-                    new_modules.append(plug)
-                else:
-                    err = "[module] unknown %s module from %s" % (plug_name, module.get_name())
-                    module.configuration_errors.append(err)
-            module.modules = new_modules
-
-    def explode(self):
-        """
-        Explode but not explode because this function is empty
-
-        :return: None
-        """
-        pass
+        warnings.warn("Linking modules to modules (%s) is not managed by Alignak.".format(s=self),
+                      DeprecationWarning, stacklevel=2)

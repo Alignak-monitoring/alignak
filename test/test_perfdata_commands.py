@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -60,8 +60,8 @@ class TestPerfdataCommands(AlignakTest):
     """
     This class tests the perfomance data commands that can be attached to hosts or services
     """
-
     def setUp(self):
+        super(TestPerfdataCommands, self).setUp()
         self.setup_with_file('cfg/cfg_perfdata_commands.cfg')
         assert self.conf_is_correct
 
@@ -70,9 +70,7 @@ class TestPerfdataCommands(AlignakTest):
         Test the service performance data command
         :return:
         """
-        self.print_header()
-
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         # We want an event handler (the perfdata command) to be put in the actions dict
         # after we got a service check
@@ -100,7 +98,7 @@ class TestPerfdataCommands(AlignakTest):
 
         # Now, disable the perfdata management
         cmd = "[%lu] DISABLE_PERFORMANCE_DATA" % int(time.time())
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
 
         # Get a service check with perfdata
         self.scheduler_loop(1, [[svc, 0, 'OK | percent=99%']])
@@ -113,9 +111,7 @@ class TestPerfdataCommands(AlignakTest):
         Test the service performance data command
         :return:
         """
-        self.print_header()
-
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         # We want an event handler (the perfdata command) to be put in the actions dict
         # after we got a service check
@@ -143,7 +139,7 @@ class TestPerfdataCommands(AlignakTest):
 
         # Now, disable the perfdata management
         cmd = "[%lu] DISABLE_PERFORMANCE_DATA" % int(time.time())
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
 
         # Get a host check with perfdata
         self.scheduler_loop(1, [[host, 0, 'UP | percent=99%']])
@@ -156,9 +152,7 @@ class TestPerfdataCommands(AlignakTest):
         Test with performance data on several lignes
         :return:
         """
-        self.print_header()
-
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
         # We want an event handler (the perfdata command) to be put in the actions dict
         # after we got a service check
@@ -213,7 +207,3 @@ class TestPerfdataCommands(AlignakTest):
         self.assert_actions_count(1)
         self.assert_actions_match(0, '/submit_service_result', 'command')
         self.show_and_clear_actions()
-
-
-if __name__ == '__main__':
-    AlignakTest.main()

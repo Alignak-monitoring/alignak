@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
+# pylint:disable=too-many-public-methods
+
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -44,16 +46,37 @@
 This module provides an abstraction layer for communications between Alignak daemons
 Used by the Arbiter
 """
+from __future__ import print_function
+import os
 import logging
+import time
 
 from alignak.util import get_obj_name_two_args_and_void
-from alignak.misc.serialization import unserialize, AlignakClassLookupException
+from alignak.misc.serialization import unserialize, get_alignak_class
 from alignak.objects.item import Item, Items
-from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, DictProp, AddrProp
-from alignak.http.client import HTTPClient, HTTPClientException
+from alignak.property import BoolProp, IntegerProp, FloatProp
+from alignak.property import StringProp, ListProp, DictProp, AddrProp
+from alignak.http.client import HTTPClient, HTTPClientException, HTTPClientDataException
 from alignak.http.client import HTTPClientConnectionException, HTTPClientTimeoutException
 
 logger = logging.getLogger(__name__)  # pylint: disable=C0103
+
+
+class LinkError(Exception):
+    """Exception raised for errors with the satellite links.
+
+    Attributes:
+        msg  -- explanation of the error
+    """
+
+    def __init__(self, msg):
+        super(LinkError, self).__init__(msg)
+        logger.error(msg)
+        self.msg = msg
+
+    def __str__(self):  # pragma: no cover
+        """Exception to String"""
+        return "Satellite link error: %s" % self.msg
 
 
 class SatelliteLink(Item):
@@ -61,27 +84,74 @@ class SatelliteLink(Item):
     Arbiter and other satellites. Used by the Dispatcher object.
 
     """
+    # Next value used for auto generated instance_id
+    _next_id = 1
 
+    # All the class properties that are 'to_send' are stored in the 'global'
+    # configuration to be pushed to the satellite when the configuration is dispatched
     properties = Item.properties.copy()
     properties.update({
+        'instance_id':
+            StringProp(to_send=True),
+
+        # When this property is set, the Arbiter will launch the corresponding daemon
+        'alignak_launched':
+            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
+        # This property is set by the Arbiter when it detects that this daemon
+        # is needed but not declared in the configuration
+        'missing_daemon':
+            BoolProp(default=False, fill_brok=['full_status']),
+
+        # Sent to the satellites and used to check the managed configuration
+        # Those are not to_send=True because they are updated by the configuration Dispatcher
+        # and set when the daemon receives its configuration
+        'managed_conf_id':
+            StringProp(default=''),
+        'push_flavor':
+            StringProp(default=''),
+        'hash':
+            StringProp(default=''),
+
+        # A satellite link has the type/name of the daemon it is related to
+        'type':
+            StringProp(default='', fill_brok=['full_status'], to_send=True),
+        'name':
+            StringProp(default='', fill_brok=['full_status'], to_send=True),
+
+        # Listening interface and address used by the other daemons
+        'host':
+            StringProp(default='0.0.0.0', to_send=True),
         'address':
-            StringProp(default='localhost', fill_brok=['full_status']),
+            StringProp(default='127.0.0.1', fill_brok=['full_status'], to_send=True),
+        'active':
+            BoolProp(default=True, fill_brok=['full_status'], to_send=True),
         'timeout':
-            IntegerProp(default=3, fill_brok=['full_status']),
+            IntegerProp(default=3, fill_brok=['full_status'], to_send=True),
         'data_timeout':
-            IntegerProp(default=120, fill_brok=['full_status']),
-        'check_interval':
-            IntegerProp(default=60, fill_brok=['full_status']),
+            IntegerProp(default=120, fill_brok=['full_status'], to_send=True),
+
+        # the delay (seconds) between two ping retries
+        'ping_period':
+            IntegerProp(default=5),
+
+        # The maximum number of retries before setting the daemon as dead
         'max_check_attempts':
             IntegerProp(default=3, fill_brok=['full_status']),
+
+        # For a spare daemon link
         'spare':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
+        'spare_check_interval':
+            IntegerProp(default=5, fill_brok=['full_status']),
+        'spare_max_check_attempts':
+            IntegerProp(default=3, fill_brok=['full_status']),
+
         'manage_sub_realms':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=['full_status'], to_send=True),
         'manage_arbiters':
             BoolProp(default=False, fill_brok=['full_status'], to_send=True),
         'modules':
-            ListProp(default=[''], to_send=True, split_on_coma=True),
+            ListProp(default=[''], split_on_coma=True),
         'polling_interval':
             IntegerProp(default=1, fill_brok=['full_status'], to_send=True),
         'use_timezone':
@@ -91,12 +161,12 @@ class SatelliteLink(Item):
                        brok_transformation=get_obj_name_two_args_and_void),
         'realm_name':
             StringProp(default=''),
-        'satellitemap':
+        'satellite_map':
             DictProp(default={}, elts_prop=AddrProp, to_send=True, override=True),
         'use_ssl':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
         'hard_ssl_name_check':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=['full_status'], to_send=True),
         'passive':
             BoolProp(default=False, fill_brok=['full_status'], to_send=True),
     })
@@ -105,10 +175,25 @@ class SatelliteLink(Item):
     running_properties.update({
         'con':
             StringProp(default=None),
-        'alive':
+        'uri':
+            StringProp(default=None),
+
+        'reachable':    # Can be reached - assumed True as default ;)
+            BoolProp(default=False, fill_brok=['full_status']),
+        'alive':        # Is alive (attached process s launched...)
+            BoolProp(default=False, fill_brok=['full_status']),
+        'valid':        # Is valid (the daemon is the expected one)
+            BoolProp(default=False, fill_brok=['full_status']),
+        'need_conf':    # The daemon needs to receive a configuration
             BoolProp(default=True, fill_brok=['full_status']),
-        'broks':
-            StringProp(default=[]),
+        'have_conf':    # The daemon has received a configuration
+            BoolProp(default=False, fill_brok=['full_status']),
+
+        'stopping':     # The daemon is requested to stop
+            BoolProp(default=False, fill_brok=['full_status']),
+
+        'running_id':   # The running identifier of my related daemon
+            FloatProp(default=0, fill_brok=['full_status']),
 
         # the number of poll attempt from the arbiter dispatcher
         'attempt':
@@ -120,133 +205,306 @@ class SatelliteLink(Item):
         # the number of failed attempt for the connection
         'connection_attempt':
             IntegerProp(default=0, fill_brok=['full_status']),
-        # the number of failed attempt for the connection
-        'max_failed_connections':
-            IntegerProp(default=3, fill_brok=['full_status']),
 
-        # can be network ask or not (dead or check in timeout or error)
-        'reachable':
-            BoolProp(default=True, fill_brok=['full_status']),
         'last_check':
             IntegerProp(default=0, fill_brok=['full_status']),
-        'managed_confs':
+        'cfg_managed':
             DictProp(default={}),
-        'is_sent':
+        'cfg_to_manage':
+            DictProp(default={}),
+        'configuration_sent':
             BoolProp(default=False),
     })
 
-    def __init__(self, *args, **kwargs):
-        super(SatelliteLink, self).__init__(*args, **kwargs)
+    def __init__(self, params=None, parsing=True):
+        """Initialize a SatelliteLink
+
+        If parsing is True, we are initializing from a configuration, else we are initializing
+        from a copy of another satellite link data. This is used when the daemons receive their
+        configuration from the arbiter.
+
+        When initializing from an arbiter configuration, an instance_id property must exist else
+        a LinkError exception is raised!
+
+        If a satellite_map property exists in the provided parameters, it will update
+        the default existing one
+        """
+        super(SatelliteLink, self).__init__(params, parsing)
+
+        logger.debug("Initialize a %s, params: %s", self.__class__.__name__, params)
+
+        # My interface context
+        self.broks = {}
+        self.actions = {}
+        self.wait_homerun = {}
+        self.pushed_commands = []
+
+        self.init_running_properties()
+
+        if parsing:
+            # Create a new satellite link identifier
+            self.instance_id = '%s_%d' % (self.__class__.__name__, self.__class__._next_id)
+            self.__class__._next_id += 1
+        elif 'instance_id' not in params:
+            raise LinkError("When not parsing a configuration, "
+                            "an instance_id must exist in the provided parameters")
 
         self.fill_default()
 
-        self.arb_satmap = {'address': '0.0.0.0', 'port': 0}
-        if hasattr(self, 'address'):
-            self.arb_satmap['address'] = self.address
-        if hasattr(self, 'port'):
-            try:
-                self.arb_satmap['port'] = int(self.port)
-            except ValueError:  # pragma: no cover, simple protection
-                logger.error("Satellite port must be an integer: %s", self.port)
+        # Hack for ascending compatibility with Shinken configuration
+        try:
+            # We received a configuration with a 'name' property...
+            if self.name:
+                setattr(self, "%s_name" % self.type, self.name)
+            else:
+                # We received a configuration without a 'name' property... old form!
+                if getattr(self, "%s_name" % self.type, None):
+                    setattr(self, 'name', getattr(self, "%s_name" % self.type))
+                else:
+                    self.name = "Unnamed %s" % self.type
+                    setattr(self, "%s_name" % self.type, self.name)
+        except KeyError:
+            print("We got an unnamed %s: %s" % (self.my_type, self.__dict__))
+            setattr(self, 'name', getattr(self, "%s_name" % self.type))
 
-        # Create the link connection
-        if not self.con:
-            self.create_connection()
+        # Initialize our satellite map, and update if required
+        self.set_arbiter_satellite_map(params.get('satellite_map', {}))
 
-    def get_name(self):
-        """Get the name of the link based on its type
-        if *mytype*_name is an attribute then returns self.*mytype*_name.
-        otherwise returns "Unnamed *mytype*"
-        Example : self.poller_name or "Unnamed poller"
+        self.cfg = {
+            'self_conf': {},
+            'schedulers': {},
+            'arbiters': {}
+        }
 
-        :return: String corresponding to the link name
+        # Create the daemon connection
+        self.create_connection()
+
+    def __repr__(self):  # pragma: no cover
+        return '<%s - %s/%s, %s//%s:%s, rid: %s, spare: %s, managing: %s (%s) />' \
+               % (self.instance_id, self.type, self.name,
+                  self.scheme, self.address, self.port, self.running_id, self.spare,
+                  self.managed_conf_id, self.push_flavor)
+    __str__ = __repr__
+
+    @property
+    def scheme(self):
+        """Daemon interface scheme
+
+        :return: http or https if the daemon uses SSL
         :rtype: str
         """
-        return getattr(self, "{0}_name".format(self.get_my_type()),
-                       "Unnamed {0}".format(self.get_my_type()))
+        _scheme = 'http'
+        if self.use_ssl:
+            _scheme = 'https'
+        return _scheme
 
-    def set_arbiter_satellitemap(self, satellitemap):
+    @staticmethod
+    def get_a_satellite_link(sat_type, sat_dict):
+        """Get a SatelliteLink object for a given satellite type and a dictionary
+
+        :param sat_type: type of satellite
+        :param sat_dict: satellite configuration data
+        :return:
         """
-            arb_satmap is the satellitemap in current context:
+        cls = get_alignak_class('alignak.objects.%slink.%sLink' % (sat_type, sat_type.capitalize()))
+        return cls(params=sat_dict, parsing=False)
+
+    def get_live_state(self):
+        """Get the SatelliteLink live state.
+
+        The live state is a tuple information containing a state identifier and a message, where:
+            state is:
+            - 0 for an up and running satellite
+            - 1 if the satellite is not reachale
+            - 2 if the satellite is dead
+            - 3 else (not active)
+
+        :return: tuple
+        """
+        live_state = 0
+        if self.active:
+            if not self.reachable:
+                live_state = 1
+            elif not self.alive:
+                live_state = 2
+        else:
+            live_state = 3
+
+        live_output = "%s/%s is %s" % (self.type, self.name, [
+            "up and running.",
+            "warning because not reachable.",
+            "critical because not responding.",
+            "not active by configuration."
+        ][live_state])
+
+        return (live_state, live_output)
+
+    def set_arbiter_satellite_map(self, satellite_map=None):
+        """
+            satellite_map is the satellites map in current context:
                 - A SatelliteLink is owned by an Arbiter
-                - satellitemap attribute of SatelliteLink is the map
-                  defined IN THE satellite configuration
-                  but for creating connections, we need the have the satellitemap of the Arbiter
+                - satellite_map attribute of a SatelliteLink is the map defined
+                IN THE satellite configuration but for creating connections,
+                we need to have the satellites map from the Arbiter point of view
 
         :return: None
         """
-        self.arb_satmap = {'address': self.address, 'port': self.port, 'use_ssl': self.use_ssl,
-                           'hard_ssl_name_check': self.hard_ssl_name_check}
-        self.arb_satmap.update(satellitemap)
+        self.satellite_map = {
+            'address': self.address, 'port': self.port,
+            'use_ssl': self.use_ssl, 'hard_ssl_name_check': self.hard_ssl_name_check
+        }
+        if satellite_map:
+            self.satellite_map.update(satellite_map)
 
-    def create_connection(self):
-        """Initialize HTTP connection with a satellite (con attribute) and
-        set uri attribute
+    def get_and_clear_context(self):
+        """Get and clean all of our broks, actions, external commands and homerun
 
-        :return: None
+        :return: list of all broks of the satellite link
+        :rtype: list
         """
-        self.con = None
+        res = (self.broks, self.actions, self.wait_homerun, self.pushed_commands)
+        self.broks = {}
+        self.actions = {}
+        self.wait_homerun = {}
+        self.pushed_commands = []
+        return res
 
-        # Create the HTTP client for the connection
-        try:
-            self.con = HTTPClient(address=self.arb_satmap['address'], port=self.arb_satmap['port'],
-                                  timeout=self.timeout, data_timeout=self.data_timeout,
-                                  use_ssl=self.use_ssl, strong_ssl=self.hard_ssl_name_check)
-            self.uri = self.con.uri
-            # Set the satellite as alive
-            self.set_alive()
-        except HTTPClientException as exp:
-            logger.error("Error with '%s' when creating client: %s",
-                         self.get_name(), str(exp))
-            # Set the satellite as dead
-            self.set_dead()
-
-    def put_conf(self, conf):
-        """Send the conf (serialized) to the satellite
-        HTTP request to the satellite (POST / put_conf)
-
-        :param conf: The conf to send (data depend on the satellite)
-        :type conf:
-        :return: None
-        """
-        if not self.reachable:
-            logger.warning("Not reachable for put_conf: %s", self.get_name())
-            return False
-
-        try:
-            self.con.post('put_conf', {'conf': conf}, wait='long')
-            return True
-        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Connection error when sending configuration: %s",
-                           self.get_name(), str(exp))
-            self.add_failed_check_attempt(reason=str(exp))
-            self.set_dead()
-        except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Connection timeout when sending configuration: %s",
-                           self.get_name(), str(exp))
-            self.add_failed_check_attempt(reason=str(exp))
-        except HTTPClientException as exp:  # pragma: no cover, simple protection
-            logger.error("[%s] Error when sending configuration: %s", self.get_name(), str(exp))
-            self.con = None
-        except AttributeError as exp:  # pragma: no cover, simple protection
-            # Connection is not created
-            logger.error("[%s] put_conf - Connection does not exist!", self.get_name())
-
-        return False
-
-    def get_all_broks(self):
+    def get_and_clear_broks(self):
         """Get and clean all of our broks
 
-        :return: list of all broks in the satellite
+        :return: list of all broks of the satellite link
         :rtype: list
         """
         res = self.broks
-        self.broks = []
+        self.broks = {}
         return res
+
+    def prepare_for_conf(self):
+        """Initialize the pushed configuration dictionary
+        with the inner properties that are to be propagated to the satellite link.
+
+        :return: None
+        """
+        logger.debug("- preparing: %s", self)
+        self.cfg = {
+            'self_conf': self.give_satellite_cfg(),
+            'schedulers': {},
+            'arbiters': {}
+        }
+        logger.debug("- prepared: %s", self.cfg)
+
+    def give_satellite_cfg(self):
+        """Get the default information for a satellite.
+
+        Overridden by the specific satellites links
+
+        :return: dictionary of information common to all the links
+        :rtype: dict
+        """
+        # All the satellite link class properties that are 'to_send' are stored in a
+        # dictionary to be pushed to the satellite when the configuration is dispatched
+        res = {}
+        properties = self.__class__.properties
+        for prop, entry in properties.items():
+            if hasattr(self, prop) and entry.to_send:
+                res[prop] = getattr(self, prop)
+        return res
+
+    def give_satellite_json(self):
+        """Get the json information for a satellite.
+
+        This to provide information that will be exposed by a daemon on its HTTP interface.
+
+        :return: dictionary of information common to all the links
+        :rtype: dict
+        """
+        daemon_properties = ['type', 'name', 'uri', 'spare', 'configuration_sent',
+                             'realm_name', 'manage_sub_realms',
+                             'active', 'reachable', 'alive', 'passive',
+                             'last_check', 'polling_interval', 'max_check_attempts']
+
+        (live_state, live_output) = self.get_live_state()
+        res = {
+            "live_state": live_state,
+            "live_output": live_output
+        }
+        for sat_prop in daemon_properties:
+            res[sat_prop] = getattr(self, sat_prop, 'not_yet_defined')
+        return res
+
+    def manages(self, cfg_part):
+        """Tell if the satellite is managing this configuration part
+
+        The managed configuration is formed as a dictionary indexed on the link instance_id:
+         {
+            u'SchedulerLink_1': {
+                u'hash': u'4d08630a3483e1eac7898e7a721bd5d7768c8320',
+                u'push_flavor': u'4d08630a3483e1eac7898e7a721bd5d7768c8320',
+                u'managed_conf_id': [u'Config_1']
+            }
+        }
+
+        Note that the managed configuration is a string array rather than a simple string...
+        no special for this reason, probably due to the serialization when the configuration is
+        pushed :/
+
+        :param cfg_part: configuration part as prepare by the Dispatcher
+        :type cfg_part: Conf
+        :return: True if the satellite manages this configuration
+        :rtype: bool
+        """
+        logger.debug("Do I (%s/%s) manage: %s, my managed configuration(s): %s",
+                     self.type, self.name, cfg_part, self.cfg_managed)
+
+        # If we do not yet manage a configuration
+        if not self.cfg_managed:
+            logger.info("I (%s/%s) do not manage (yet) any configuration!", self.type, self.name)
+            return False
+
+        # Check in the schedulers list configurations
+        for managed_cfg in self.cfg_managed.values():
+            # If not even the cfg_id in the managed_conf, bail out
+            if managed_cfg['managed_conf_id'] == cfg_part.instance_id \
+                    and managed_cfg['push_flavor'] == cfg_part.push_flavor:
+                logger.debug("I do manage this configuration: %s", cfg_part)
+                break
+        else:
+            logger.warning("I (%s/%s) do not manage this configuration: %s",
+                           self.type, self.name, cfg_part)
+            return False
+
+        return True
+
+    def create_connection(self):
+        """Initialize HTTP connection with a satellite (con attribute) and
+        set its uri attribute
+
+        This is called on the satellite link initialization
+
+        :return: None
+        """
+        # Create the HTTP client for the connection
+        try:
+            self.con = HTTPClient(address=self.satellite_map['address'],
+                                  port=self.satellite_map['port'], timeout=self.timeout,
+                                  data_timeout=self.data_timeout,
+                                  use_ssl=self.satellite_map['use_ssl'],
+                                  strong_ssl=self.satellite_map['hard_ssl_name_check'])
+            self.uri = self.con.uri
+        except HTTPClientException as exp:
+            # logger.error("Error with '%s' when creating client: %s", self.name, str(exp))
+            # Set the satellite as dead
+            self.set_dead()
+            raise LinkError("Error with '%s' when creating client: %s" % (self.name, str(exp)))
 
     def set_alive(self):
         """Set alive, reachable, and reset attempts.
         If we change state, raise a status brok update
+
+        alive, means the daemon is prenset in the system
+        reachable, means that the HTTP connection is valid
+
+        With this function we confirm that the daemon is reachable and, thus, we assume it is alive!
 
         :return: None
         """
@@ -257,182 +515,299 @@ class SatelliteLink(Item):
 
         # We came from dead to alive! We must propagate the good news
         if not was_alive:
-            logger.warning("Setting the satellite %s as alive :)", self.get_name())
+            logger.info("Setting %s satellite as alive :)", self.name)
             brok = self.get_update_status_brok()
-            self.broks.append(brok)
+            self.broks[brok.uuid] = brok
 
     def set_dead(self):
         """Set the satellite into dead state:
-
-        * Alive -> False
-        * con -> None
-
-        Create an update Brok
+        If we change state, raise a status brok update
 
         :return:None
         """
         was_alive = self.alive
         self.alive = False
         self.reachable = False
+        self.attempt = 0
+        # We will have to create a new connection...
         self.con = None
 
-        # We are dead now! ! We must propagate the sad news
+        # We are dead now! We must propagate the sad news...
         if was_alive:
-            logger.warning("Setting the satellite %s as dead :(", self.get_name())
+            logger.warning("Setting the satellite %s as dead :(", self.name)
             brok = self.get_update_status_brok()
-            self.broks.append(brok)
+            self.broks[brok.uuid] = brok
 
     def add_failed_check_attempt(self, reason=''):
-        """Go in reachable=False and add a failed attempt
-        if we reach the max, go dead
+        """Set the daemon as unreachable and add a failed attempt
+        if we reach the maximum attempts, set the daemon as dead
 
         :param reason: the reason of adding an attempts (stack trace sometimes)
         :type reason: str
         :return: None
         """
         self.reachable = False
-        self.attempt += 1
-        self.attempt = min(self.attempt, self.max_check_attempts)
+        self.attempt = self.attempt + 1
 
-        logger.info("Failed attempt to %s (%d/%d), reason: %s",
-                    self.get_name(), self.attempt, self.max_check_attempts, reason)
+        logger.debug("Failed attempt for %s (%d/%d), reason: %s",
+                     self.name, self.attempt, self.max_check_attempts, reason)
         # Don't need to warn again and again if the satellite is already dead
         # Only warn when it is alive
         if self.alive:
-            logger.warning("Add failed attempt to %s (%d/%d), reason: %s",
-                           self.get_name(), self.attempt, self.max_check_attempts, reason)
+            if not self.stopping:
+                logger.warning("Add failed attempt for %s (%d/%d) - %s",
+                               self.name, self.attempt, self.max_check_attempts, reason)
+            else:
+                logger.info("Stopping... failed attempt for %s (%d/%d) - also probably stopping",
+                            self.name, self.attempt, self.max_check_attempts)
 
-        # check when we just go HARD (dead)
-        if self.attempt == self.max_check_attempts:
+        # If we reached the maximum attempts, set the daemon as dead
+        if self.attempt >= self.max_check_attempts:
+            if not self.stopping:
+                logger.warning("Set %s as dead, too much failed attempts (%d), last problem is: %s",
+                               self.name, self.max_check_attempts, reason)
+            else:
+                logger.info("Stopping... set %s as dead, too much failed attempts (%d)",
+                            self.name, self.max_check_attempts)
+
             self.set_dead()
 
-    # pylint: disable=inconsistent-return-statements
-    def update_infos(self, now):
-        """Update satellite info each self.check_interval seconds
-        so we smooth arbiter actions for just useful actions.
-        Create update Brok
+    def valid_connection(*outer_args, **outer_kwargs):
+        # pylint: disable=unused-argument, no-method-argument
+        """Check if the daemon connection is established and valid"""
+        def decorator(func):  # pylint: disable=missing-docstring
+            def decorated(*args, **kwargs):  # pylint: disable=missing-docstring
+                # outer_args and outer_kwargs are the decorator arguments
+                # args and kwargs are the decorated function arguments
+                link = args[0]
+                if not link.con:
+                    raise LinkError("The connection is not created for %s" % link.name)
+                if not link.running_id:
+                    raise LinkError("The connection is not initialized for %s" % link.name)
 
-        :return: None
+                return func(*args, **kwargs)
+            return decorated
+        return decorator
+
+    def communicate(*outer_args, **outer_kwargs):
+        # pylint: disable=unused-argument, no-method-argument
+        """Check if the daemon connection is authorized and valid"""
+        def decorator(func):  # pylint: disable=missing-docstring
+            def decorated(*args, **kwargs):  # pylint: disable=missing-docstring
+                # outer_args and outer_kwargs are the decorator arguments
+                # args and kwargs are the decorated function arguments
+                fn_name = func.__name__
+                link = args[0]
+                if not link.alive:
+                    logger.warning("%s is not alive for %s", link.name, fn_name)
+                    return None
+
+                try:
+                    if not link.reachable:
+                        raise LinkError("The %s %s is not reachable" % (link.type, link.name))
+
+                    logger.debug("[%s] Calling: %s, %s, %s", link.name, fn_name, args, kwargs)
+                    return func(*args, **kwargs)
+                except HTTPClientConnectionException as exp:
+                    # A Connection error is raised when the daemon connection cannot be established
+                    # No way with the configuration parameters!
+                    if not link.stopping:
+                        logger.warning("A daemon (%s/%s) that we must be related with "
+                                       "cannot be connected: %s", link.type, link.name, exp)
+                    else:
+                        logger.info("Stopping... daemon (%s/%s) cannot be connected. "
+                                    "It is also probably stopping.", link.type, link.name)
+                    link.set_dead()
+                except (LinkError, HTTPClientTimeoutException) as exp:
+                    link.add_failed_check_attempt("Connection timeout "
+                                                  "with '%s': %s" % (fn_name, str(exp)))
+                    return False
+                except HTTPClientDataException as exp:
+                    # A Data error is raised when the daemon HTTP reponse is not 200!
+                    # No way with the communication if some problems exist in the daemon interface!
+                    # Abort all
+                    err = "Some daemons that we must be related with " \
+                          "have some interface problems. Sorry, I bail out"
+                    logger.error(err)
+                    os.sys.exit(err)
+                except HTTPClientException as exp:
+                    link.add_failed_check_attempt("Error with '%s': %s" % (fn_name, str(exp)))
+
+                return None
+
+            return decorated
+        return decorator
+
+    @communicate()
+    def get_running_id(self):
+        """Send a HTTP request to the satellite (GET /get_running_id)
+        Used to get the daemon running identifier that allows to know if the daemon got restarted
+
+        This is called on connection initialization or re-connection
+
+        If the daemon is notreachable, this function will raise an exception and the caller
+        will receive a False as return
+
+        :return: Boolean indicating if the running id was received
+        :type: bool
         """
+        former_running_id = self.running_id
+
+        logger.info("  get the running identifier for %s %s.", self.type, self.name)
+        # An exception is raised in this function if the daemon is not reachable
+        self.running_id = self.con.get('get_running_id')
+
+        if former_running_id == 0:
+            if self.running_id:
+                logger.info("  -> got the running identifier for %s %s: %s.",
+                            self.type, self.name, self.running_id)
+                former_running_id = self.running_id
+
+        # If the daemon has just started or has been restarted: it has a new running_id.
+        if former_running_id != self.running_id:
+            if former_running_id:
+                logger.info("  -> The %s %s running identifier changed: %s. "
+                            "The daemon was certainly restarted!",
+                            self.type, self.name, self.running_id)
+            # So we clear all verifications, they are obsolete now.
+            logger.info("The running id of the %s %s changed (%s), "
+                        "we must clear its context.",
+                        self.type, self.name, self.running_id)
+            (_, _, _, _) = self.get_and_clear_context()
+
+        # Set the daemon as alive
+        self.set_alive()
+
+        return True
+
+    @valid_connection()
+    @communicate()
+    def stop_request(self, stop_now=False):
+        """Send a stop request to the daemon
+
+        :param stop_now: stop now or go to stop wait mode
+        :type stop_now: bool
+        :return: the daemon response (True)
+        """
+        logger.debug("Sending stop request to %s, stop now: %s", self.name, stop_now)
+
+        res = self.con.get('stop_request', {'stop_now': '1' if stop_now else '0'})
+        return res
+
+    @valid_connection()
+    @communicate()
+    def update_infos(self, forced=False, test=False):
+        """Update satellite info each self.polling_interval seconds
+        so we smooth arbiter actions for just useful actions.
+
+        Raise a satellite update status Brok
+
+        If forced is True, then ignore the ping period. This is used when the configuration
+        has not yet been dispatched to the Arbiter satellites.
+
+        If test is True, do not really ping the daemon (useful for the unit tests only)
+
+        :param forced: ignore the ping smoothing
+        :type forced: bool
+        :param test:
+        :type test: bool
+        :return:
+        None if the last request is too recent,
+        False if a timeout was raised during the request,
+        else the managed configurations dictionary
+        """
+        logger.debug("Update informations, forced: %s", forced)
+
         # First look if it's not too early to ping
-        if (now - self.last_check) < self.check_interval:
-            return False
+        now = time.time()
+        if not forced and self.last_check and self.last_check + self.polling_interval > now:
+            logger.debug("Too early to ping %s, ping period is %ds!, last check: %d, now: %d",
+                         self.name, self.polling_interval, self.last_check, now)
+            return None
 
-        self.last_check = now
+        self.get_conf(test=test)
 
-        # We ping and update the managed list
-        self.ping()
-        if not self.alive:
-            logger.info("Not alive for ping: %s", self.get_name())
-            return False
-
-        if self.attempt > 0:
-            logger.info("Not responding to ping: %s (%d / %d)",
-                        self.get_name(), self.attempt, self.max_check_attempts)
-            return False
-
-        self.update_managed_conf()
+        # Update the daemon last check timestamp
+        self.last_check = time.time()
 
         # Update the state of this element
         brok = self.get_update_status_brok()
-        self.broks.append(brok)
+        self.broks[brok.uuid] = brok
 
-    def known_conf_managed_push(self, cfg_id, push_flavor):
-        """The elements just got a new conf_id, we put it in our list
-         because maybe the satellite is too busy to answer now
+        return self.cfg_managed
 
-        :param cfg_id: config id
-        :type cfg_id: int
-        :param push_flavor: push_flavor we pushed earlier to the satellite
-        :type push_flavor: int
-        :return: None
-        """
-        self.managed_confs[cfg_id] = push_flavor
-
-    # pylint: disable=inconsistent-return-statements
+    @valid_connection()
+    @communicate()
     def ping(self):
         """Send a HTTP request to the satellite (GET /ping)
-        Add failed attempt if an error occurs
-        Otherwise, set alive this satellite
 
         :return: None
         """
-        if self.con is None:
-            self.create_connection()
+        logger.debug("Pinging for %s, %s %s", self.name, self.alive, self.reachable)
+        res = self.con.get('ping')
+        # Should return us pong string
+        if res == 'pong':
+            return True
 
-        # If the connection failed to initialize, bail out
-        if self.con is None:
-            self.add_failed_check_attempt('no connection exist on ping')
-            return
+        # This sould never happen! Except is the source code got modified!
+        logger.warning("I responded '%s' to ping! WTF is it?", res)
+        self.add_failed_check_attempt('ping / NOT pong')
+        # Return True anyway... someone answered!
+        return True
 
-        logger.debug("Pinging %s", self.get_name())
-        try:
-            res = self.con.get('ping')
+    @valid_connection()
+    @communicate()
+    def get_initial_broks(self, broker_name):
+        """Send a HTTP request to the satellite (GET /fill_initial_broks)
 
-            # Should return us pong string
-            if res == 'pong':
-                self.set_alive()
-                return True
+        Used to build the initial broks for a broker connecting to a scheduler
 
-            # This sould never happen! Except is the source code got modified!
-            logger.warning("[%s] I responded '%s' to ping! WTF is it?", self.get_name(), res)
-            self.add_failed_check_attempt('pinog / NOT pong')
-        except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Connection error when pinging: %s",
-                           self.get_name(), str(exp))
-            self.add_failed_check_attempt(reason=str(exp))
-            self.set_dead()
-        except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Connection timeout when pinging: %s",
-                           self.get_name(), str(exp))
-            self.add_failed_check_attempt(reason=str(exp))
-        except HTTPClientException as exp:
-            logger.error("[%s] Error when pinging: %s", self.get_name(), str(exp))
-            # todo: raise an error and set daemon as dead?
-            # any other error than conenction or timeout is really a bad situation !!!
-            self.add_failed_check_attempt(reason=str(exp))
-        except AttributeError as exp:  # pragma: no cover, simple protection
-            # Connection is not created
-            logger.error("[%s] ping - Connection does not exist!", self.get_name())
+        The first ping ensure the satellite is there to avoid a big timeout
 
-        return False
+        :param broker_name: the concerned broker name
+        :type broker_name: str
+        :return: Boolean indicating if the running id changed
+        :type: bool
+        """
+        logger.debug("Getting initial broks for %s, %s %s", self.name, self.alive, self.reachable)
+        return self.con.get('fill_initial_broks', {'broker_name': broker_name}, wait='long')
 
-    def wait_new_conf(self):  # pragma: no cover, no more used
+    @valid_connection()
+    @communicate()
+    def wait_new_conf(self):
         """Send a HTTP request to the satellite (GET /wait_new_conf)
-
-        TODO: is it still useful, wait_new_conf is implemented in the
-        HTTP interface of each daemon
 
         :return: True if wait new conf, otherwise False
         :rtype: bool
         """
-        if not self.reachable:
-            logger.warning("Not reachable for wait_new_conf: %s", self.get_name())
-            return False
+        logger.debug("Wait new configuration for %s, %s %s", self.name, self.alive, self.reachable)
+        return self.con.get('wait_new_conf')
 
-        try:
-            logger.warning("Arbiter wants me to wait for a new configuration")
-            self.con.get('wait_new_conf')
+    @valid_connection()
+    @communicate()
+    def put_conf(self, configuration, test=False):
+        """Send the configuration to the satellite
+        HTTP request to the satellite (POST /push_configuration)
+
+        If test is True, store the configuration internally
+
+        :param configuration: The conf to send (data depend on the satellite)
+        :type configuration:
+        :return: None
+        """
+        logger.debug("Sending configuration to %s, %s %s", self.name, self.alive, self.reachable)
+        # ----------
+        if test:
+            setattr(self, 'unit_test_pushed_configuration', configuration)
+            # print("*** unit tests - sent configuration %s: %s" % (self.name, configuration))
             return True
-        except HTTPClientConnectionException as exp:
-            logger.warning("[%s] Connection error when waiting new configuration: %s",
-                           self.get_name(), str(exp))
-            self.add_failed_check_attempt(reason=str(exp))
-            self.set_dead()
-        except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Connection timeout when waiting new configuration: %s",
-                           self.get_name(), str(exp))
-            self.add_failed_check_attempt(reason=str(exp))
-        except HTTPClientException as exp:  # pragma: no cover, simple protection
-            logger.error("[%s] Error when waiting new configuration: %s",
-                         self.get_name(), str(exp))
-        except AttributeError as exp:  # pragma: no cover, simple protection
-            # Connection is not created
-            logger.error("[%s] wait_new_conf - Connection does not exist!", self.get_name())
+        # ----------
 
-        return False
+        return self.con.post('push_configuration', {'conf': configuration}, wait='long')
 
-    def have_conf(self, magic_hash=None):
+    @valid_connection()
+    @communicate()
+    def has_a_conf(self, magic_hash=None):
         """Send a HTTP request to the satellite (GET /have_conf)
         Used to know if the satellite has a conf
 
@@ -441,32 +816,13 @@ class SatelliteLink(Item):
         :return: Boolean indicating if the satellite has a (specific) configuration
         :type: bool
         """
-        if not self.reachable:
-            logger.warning("Not reachable for have_conf: %s", self.get_name())
-            return False
+        logger.debug("Have a configuration for %s, %s %s", self.name, self.alive, self.reachable)
+        self.have_conf = self.con.get('have_conf', {'magic_hash': magic_hash})
+        return self.have_conf
 
-        try:
-            return self.con.get('have_conf', {'magic_hash': magic_hash})
-        except HTTPClientConnectionException as exp:
-            logger.warning("[%s] Connection error when testing if has configuration: %s",
-                           self.get_name(), str(exp))
-            self.add_failed_check_attempt(reason=str(exp))
-            self.set_dead()
-        except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Connection timeout when testing if has configuration: %s",
-                           self.get_name(), str(exp))
-            self.add_failed_check_attempt(reason=str(exp))
-        except HTTPClientException as exp:  # pragma: no cover, simple protection
-            logger.error("[%s] Error when testing if has configuration: %s",
-                         self.get_name(), str(exp))
-        except AttributeError as exp:  # pragma: no cover, simple protection
-            # Connection is not created
-            logger.error("[%s] have_conf - Connection does not exist! - %s", self.get_name(), exp)
-
-        return False
-
-    # pylint: disable=inconsistent-return-statements
-    def remove_from_conf(self, sched_id):  # pragma: no cover, no more used
+    @valid_connection()
+    @communicate()
+    def remove_from_conf(self, sched_id):
         """Send a HTTP request to the satellite (GET /remove_from_conf)
         Tell a satellite to remove a scheduler from conf
 
@@ -479,100 +835,58 @@ class SatelliteLink(Item):
         :rtype: bool | None
         TODO: Return False instead of None
         """
-        if not self.reachable:
-            logger.warning("Not reachable for remove_from_conf: %s", self.get_name())
-            return
+        logger.debug("Removing from configuration for %s, %s %s",
+                     self.name, self.alive, self.reachable)
+        return self.con.get('remove_from_conf', {'sched_id': sched_id})
 
-        try:
-            self.con.get('remove_from_conf', {'sched_id': sched_id})
-            # todo: do not handle the result to confirm?
-            return True
-        except HTTPClientConnectionException as exp:
-            logger.warning("[%s] Connection error when removing from configuration: %s",
-                           self.get_name(), str(exp))
-            self.add_failed_check_attempt(reason=str(exp))
-            self.set_dead()
-        except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Connection timeout when removing from configuration: %s",
-                           self.get_name(), str(exp))
-            self.add_failed_check_attempt(reason=str(exp))
-        except HTTPClientException as exp:  # pragma: no cover, simple protection
-            logger.error("[%s] Error when removing from configuration: %s",
-                         self.get_name(), str(exp))
-        except AttributeError as exp:  # pragma: no cover, simple protection
-            # Connection is not created
-            logger.error("[%s] remove_from_conf - Connection does not exist!", self.get_name())
-
-        return False
-
-    # pylint: disable=inconsistent-return-statements
-    def update_managed_conf(self):
-        """Send a HTTP request to the satellite (GET /what_i_managed)
-        and update managed_conf attribute with dict (cleaned)
+    @valid_connection()
+    @communicate()
+    def get_conf(self, test=False):
+        """Send a HTTP request to the satellite (GET /get_managed_configurations)
+        and update the cfg_managed attribute with the new information
         Set to {} on failure
 
-        :return: None
+        the managed configurations are a dictionary which keys are the scheduler link instance id
+        and the values are the push_flavor
+
+        If test is True, returns the unit test internally stored configuration
+
+        Returns False if a timeout is raised
+
+        :return: see @communicate, or the managed configuration
         """
-        self.managed_confs = {}
-
-        if not self.reachable:
-            logger.warning("Not reachable for update_managed_conf: %s", self.get_name())
-            return
-
-        try:
-            res = self.con.get('what_i_managed')
-            self.managed_confs = res
-            # self.managed_confs = unserialize(str(res))
-            return True
-        except HTTPClientConnectionException as exp:
-            logger.warning("[%s] Connection error when getting what I manage: %s",
-                           self.get_name(), str(exp))
-            self.add_failed_check_attempt(reason=str(exp))
-            self.set_dead()
-        except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Connection timeout when getting what I manage: %s",
-                           self.get_name(), str(exp))
-            logger.debug("Connection: %s", self.con.__dict__)
-            self.add_failed_check_attempt(reason=str(exp))
-        except HTTPClientException as exp:  # pragma: no cover, simple protection
-            logger.warning("Error to the %s '%s' when getting what I manage",
-                           self.my_type, self.get_name())
-            logger.exception("Raised exception: %s", exp)
-        except AttributeError as exp:  # pragma: no cover, simple protection
-            # Connection is not created
-            logger.error("[%s] update_managed_conf - Connection does not exist!", self.get_name())
-
-        return False
-
-    def do_i_manage(self, cfg_id, push_flavor):
-        """Tell if the satellite is managing cfg_id with push_flavor
-
-        :param cfg_id: config id
-        :type cfg_id: int
-        :param push_flavor: flavor id, random it generated at parsing
-        :type push_flavor: int
-        :return: True if the satellite has push_flavor in managed_confs[cfg_id]
-        :rtype: bool
-        """
-        if self.managed_confs:
-            logger.debug("My managed configurations:")
-            for conf in self.managed_confs:
-                logger.debug("- %s", conf)
+        logger.debug("Get managed configuration for %s, %s %s",
+                     self.name, self.alive, self.reachable)
+        # ----------
+        if test:
+            self.cfg_managed = {}
+            self.have_conf = True
+            if getattr(self, 'unit_test_pushed_configuration', None) is not None:
+                # Note this is a dict not a SatelliteLink object !
+                for scheduler_link in self.unit_test_pushed_configuration['schedulers'].values():
+                    self.cfg_managed[scheduler_link['instance_id']] = {
+                        'hash': scheduler_link['hash'],
+                        'push_flavor': scheduler_link['push_flavor'],
+                        'managed_conf_id': scheduler_link['managed_conf_id']
+                    }
+            # print("*** unit tests - get managed configuration %s: %s"
+            #       % (self.name, self.cfg_managed))
+        # ----------
         else:
-            logger.debug("No managed configuration!")
+            self.cfg_managed = self.con.get('get_managed_configurations')
+            logger.debug("My (%s) fresh managed configuration: %s", self.name, self.cfg_managed)
 
-        # If not even the cfg_id in the managed_conf, bail out
-        if cfg_id not in self.managed_confs:
-            logger.warning("I (%s) do not manage this configuration: %s", self, cfg_id)
-            return False
+        self.have_conf = (self.cfg_managed != {})
 
-        # maybe it's in but with a false push_flavor. check it :)
-        return self.managed_confs[cfg_id] == push_flavor
+        return self.cfg_managed
 
+    @valid_connection()
+    @communicate()
     def push_broks(self, broks):
         """Send a HTTP request to the satellite (GET /ping)
         and THEN Send a HTTP request to the satellite (POST /push_broks)
         Send broks to the satellite
+
         The first ping ensure the satellite is there to avoid a big timeout
 
         :param broks: Brok list to send
@@ -580,135 +894,149 @@ class SatelliteLink(Item):
         :return: True on success, False on failure
         :rtype: bool
         """
-        if not self.reachable:
-            logger.warning("Not reachable for push_broks: %s", self.get_name())
-            return False
+        logger.debug("[%s] Pushing %d broks", self.name, len(broks))
+        return self.con.post('push_broks', {'broks': broks}, wait='long')
 
-        try:
-            self.con.post('push_broks', {'broks': broks}, wait='long')
-            return True
-        except HTTPClientConnectionException as exp:
-            logger.warning("[%s] Connection error when pushing broks: %s",
-                           self.get_name(), str(exp))
-            self.add_failed_check_attempt(reason=str(exp))
-            self.set_dead()
-        except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Connection timeout when pushing broks: %s",
-                           self.get_name(), str(exp))
-            self.add_failed_check_attempt(reason=str(exp))
-        except HTTPClientException as exp:  # pragma: no cover, simple protection
-            logger.error("[%s] Error when pushing broks: %s", self.get_name(), str(exp))
-        except AttributeError as exp:  # pragma: no cover, simple protection
-            # Connection is not created
-            logger.error("[%s] push_broks - Connection does not exist!", self.get_name())
-
-        return False
-
-    def get_external_commands(self):
+    @valid_connection()
+    @communicate()
+    def push_actions(self, actions, scheduler_id):
         """Send a HTTP request to the satellite (GET /ping)
-        and THEN send a HTTP request to the satellite (GET /get_external_commands)
-        Get external commands from satellite.
-        Un-serialize data received.
+        and THEN Send a HTTP request to the satellite (POST /push_broks)
+        Send broks to the satellite
+
+        The first ping ensure the satellite is there to avoid a big timeout
+
+        :param actions: Action list to send
+        :type actions: list
+        :param scheduler_id: Scheduler identifier
+        :type scheduler_id: uuid
+        :return: True on success, False on failure
+        :rtype: bool
+        """
+        logger.debug("[%s] Pushing %d actions", self.name, len(actions))
+        return self.con.post('push_actions', {'actions': actions,
+                                              'sched_id': scheduler_id}, wait='long')
+
+    @valid_connection()
+    @communicate()
+    def push_results(self, results, scheduler_name):
+        """Send a HTTP request to the satellite (GET /ping)
+        and THEN Send a HTTP request to the satellite (POST /put_results)
+        Send actions results to the satellite
+
+        The first ping ensure the satellite is there to avoid a big timeout
+
+        :param results: Results list to send
+        :type results: list
+        :param scheduler_name: Scheduler name
+        :type scheduler_name: uuid
+        :return: True on success, False on failure
+        :rtype: bool
+        """
+        logger.debug("[%s] Pushing %d results", self.name, len(results))
+        return self.con.post('put_results', {'results': results, 'from': scheduler_name},
+                             wait='long')
+
+    @valid_connection()
+    @communicate()
+    def push_external_commands(self, commands):
+        """Send a HTTP request to the satellite (POST /run_external_commands)
+        to send the external commands to the satellite
+
+        :param results: Results list to send
+        :type results: list
+        :return: True on success, False on failure
+        :rtype: bool
+        """
+        logger.debug("Pushing %d external commands", len(commands))
+        return self.con.post('run_external_commands', {'cmds': commands}, wait='long')
+
+    @valid_connection()
+    @communicate()
+    def get_external_commands(self):
+        """Send a HTTP request to the satellite (GET /get_external_commands) to
+        get the external commands from the satellite.
 
         :return: External Command list on success, [] on failure
         :rtype: list
         """
-        if not self.reachable:
-            logger.warning("Not reachable for get_external_commands: %s", self.get_name())
-            return []
+        res = self.con.get('get_external_commands', wait='long')
+        logger.debug("Got %d external commands from %s: %s", len(res), self.name, res)
+        return unserialize(res, True)
 
-        try:
-            res = self.con.get('get_external_commands', wait='long')
-            tab = unserialize(str(res))
-            # Protect against bad return
-            if not isinstance(tab, list):
-                self.con = None
-                return []
-            return tab
-        except HTTPClientConnectionException as exp:
-            logger.warning("[%s] Connection error when getting external commands: %s",
-                           self.get_name(), str(exp))
-            self.add_failed_check_attempt(reason=str(exp))
-            self.set_dead()
-        except HTTPClientTimeoutException as exp:  # pragma: no cover, simple protection
-            logger.warning("[%s] Connection timeout when getting external commands: %s",
-                           self.get_name(), str(exp))
-            self.add_failed_check_attempt(reason=str(exp))
-        except HTTPClientException as exp:  # pragma: no cover, simple protection
-            logger.error("[%s] Error when getting external commands: %s",
-                         self.get_name(), str(exp))
-            self.con = None
-        except AttributeError as exp:  # pragma: no cover, simple protection
-            # Connection is not created
-            logger.error("[%s] get_external_commands - Connection does not exist!", self.get_name())
-        except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
-            logger.error('Cannot un-serialize external commands received: %s', exp)
+    @valid_connection()
+    @communicate()
+    def get_broks(self, broker_name):
+        """Send a HTTP request to the satellite (GET /ping)
+        and THEN send a HTTP request to the satellite (GET /get_broks)
+        Get broks from satellite.
+        Un-serialize data received.
 
-        return []
-
-    def prepare_for_conf(self):
-        """Init cfg dict attribute with __class__.properties
-        and extra __class__ attribute
-        (like __init__ could do with an object)
-
-        :return: None
+        :param broker_name: the concerned broker link
+        :type broker_name: BrokerLink
+        :return: Broks list on success, [] on failure
+        :rtype: list
         """
-        self.cfg = {'global': {}, 'schedulers': {}, 'arbiters': {}}
-        properties = self.__class__.properties
-        for prop, entry in properties.items():
-            if entry.to_send:
-                self.cfg['global'][prop] = getattr(self, prop)
+        res = self.con.get('get_broks', {'broker_name': broker_name}, wait='long')
+        logger.debug("Got broks from %s: %s", self.name, res)
+        return unserialize(res, True)
 
-        cls = self.__class__
-        # Also add global values
-        self.cfg['global']['statsd_host'] = cls.statsd_host
-        self.cfg['global']['statsd_port'] = cls.statsd_port
-        self.cfg['global']['statsd_prefix'] = cls.statsd_prefix
-        self.cfg['global']['statsd_enabled'] = cls.statsd_enabled
+    @valid_connection()
+    def get_returns(self, scheduler_instance_id):
+        """Send a HTTP request to the satellite (GET /get_returns)
+        Get actions results from satellite.
 
-    def add_global_conf_parameters(self, params):
-        """Add some extra params in cfg dict attribute.
-        Some attributes are in the global configuration
-
-        :param params: dict to update cfg with
-        :type params: dict
-        :return: None
+        :param scheduler_instance_id: scheduler instance identifier
+        :type scheduler_instance_id: str
+        :return: Results list on success, [] on failure
+        :rtype: list
         """
-        for prop in params:
-            self.cfg['global'][prop] = params[prop]
+        res = self.con.get('get_returns', {'scheduler_instance_id': scheduler_instance_id},
+                           wait='long')
+        logger.debug("Got %d returns from %s: %s", len(res), self.name, res)
+        return res
 
-    def get_my_type(self):
-        """Get the satellite type. Accessor to __class__.mytype
-        ie : poller, scheduler, receiver, broker, arbiter or reactionner
+    @valid_connection()
+    def get_actions(self, params):
+        """Send a HTTP request to the satellite (GET /get_checks)
+        Get actions from satellite.
+        Un-serialize data received.
 
-        :return: Satellite type
-        :rtype: str
+        :param params: the request parameters
+        :type params: str
+        :return: Actions list on success, [] on failure
+        :rtype: list
         """
-        return self.__class__.my_type
+        res = self.con.get('get_checks', params, wait='long')
+        logger.debug("Got actions from %s: %s", self.name, res)
+        return unserialize(res, True)
 
-    def give_satellite_cfg(self):
-        """Get a configuration for this satellite.
-        Not used by Scheduler and Arbiter (overridden)
+    @valid_connection()
+    def get_host(self, host_name):
+        """Send a HTTP request to the scheduler (GET /get_host)
+        Get host information from the scheduler.
+        Un-serialize data received.
 
-        :return: Configuration for satellite
-        :rtype: dict
+        :param params: the request parameters
+        :type params: str
+        :return: Actions list on success, [] on failure
+        :rtype: list
         """
-        return {'port': self.port, 'address': self.address,
-                'name': self.get_name(), 'instance_id': self.uuid,
-                'use_ssl': self.use_ssl, 'hard_ssl_name_check': self.hard_ssl_name_check,
-                'timeout': self.timeout, 'data_timeout': self.data_timeout,
-                'max_check_attempts': self.max_check_attempts,
-                'active': True, 'passive': self.passive,
-                'poller_tags': getattr(self, 'poller_tags', []),
-                'reactionner_tags': getattr(self, 'reactionner_tags', [])
-                }
+        res = self.con.get('get_host', host_name, wait='long')
+        logger.debug("Got an host from %s: %s", self.name, res)
+        return unserialize(res, True)
 
 
 class SatelliteLinks(Items):
     """Class to handle serveral SatelliteLink"""
 
-    # name_property = "name"
-    # inner_class = SchedulerLink
+    name_property = "name"
+    inner_class = SatelliteLink
+
+    def __repr__(self):  # pragma: no cover
+        return '<%r %d elements: %r/>' % \
+               (self.__class__.__name__, len(self), ', '.join([s.name for s in self]))
+    __str__ = __repr__
 
     def linkify(self, realms, modules):
         """Link realms and modules in all SatelliteLink
@@ -720,33 +1048,41 @@ class SatelliteLinks(Items):
         :type modules: list
         :return: None
         """
-        self.linkify_s_by_p(realms)
-        self.linkify_s_by_plug(modules)
+        logger.debug("Linkify %s with %s and %s", self, realms, modules)
+        self.linkify_s_by_realm(realms)
+        self.linkify_s_by_module(modules)
 
-    def linkify_s_by_p(self, realms):
+    def linkify_s_by_realm(self, realms):
         """Link realms in all SatelliteLink
 
         :param realms: Realm object list
         :type realms: list
         :return: None
         """
-        for satlink in self:
-            r_name = satlink.realm.strip()
-            # If no realm name, take the default one
-            if r_name == '':
-                realm = realms.get_default()
-            else:  # find the realm one
-                realm = realms.find_by_name(r_name)
+        for link in self:
+            try:
+                realm_name = link.realm.strip()
+                # If no realm name, use the default one
+                if not realm_name:
+                    realm = realms.get_default()
+                else:  # find the realm one
+                    realm = realms.find_by_name(realm_name)
+            except AttributeError:
+                realm = link.realm
+
             # Check if what we get is OK or not
-            if realm is not None:
-                satlink.realm = realm.uuid
-                satlink.realm_name = realm.get_name()
-                getattr(realm, '%ss' % satlink.my_type).append(satlink.uuid)
-                # case SatelliteLink has manage_sub_realms
-                if getattr(satlink, 'manage_sub_realms', False):
-                    for r_uuid in realm.all_sub_members:
-                        getattr(realms[r_uuid], '%ss' % satlink.my_type).append(satlink.uuid)
-            else:
-                err = "The %s %s got a unknown realm '%s'" % \
-                      (satlink.__class__.my_type, satlink.get_name(), r_name)
-                satlink.configuration_errors.append(err)
+            if not realm:
+                link.add_error("The %s %s has an unknown realm '%s'"
+                               % (link.type, link.name, realm_name))
+                continue
+
+            link.realm = realm.uuid
+            link.realm_name = realm.get_name()
+            logger.debug("Linkify %s with %s", link, realm)
+            getattr(realm, '%ss' % link.my_type).append(link.uuid)
+
+            # case SatelliteLink has manage_sub_realms
+            if getattr(link, 'manage_sub_realms', False):
+                for realm_uuid in realm.all_sub_members:
+                    logger.debug("Linkify %s with %s", link, realms[realm_uuid])
+                    getattr(realms[realm_uuid], '%ss' % link.my_type).append(link.uuid)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -59,9 +59,6 @@ import pytest
 
 class PropertyTests:
     """Common tests for all property classes"""
-
-    def setUp(self):
-        pass
 
     def test_no_default_value(self):
         p = self.prop_class()

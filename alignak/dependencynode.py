@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -94,10 +94,11 @@ class DependencyNode(object):
             if 'not_value' in params:
                 self.not_value = params['not_value']
 
-    def __str__(self):
-        return "Op:'%s' Val:'%s' Sons:'[%s]' IsNot:'%s'" % (self.operand, self.of_values,
-                                                            ','.join([str(s) for s in self.sons]),
-                                                            self.not_value)
+    def __repr__(self):  # pragma: no cover
+        return '"Op:%s Val:%s Sons:[\'%s\'] IsNot:%s"' % (self.operand, self.of_values,
+                                                          ','.join([str(s) for s in self.sons]),
+                                                          self.not_value)
+    __str__ = __repr__
 
     def serialize(self):
         """This function serialize into a simple dict object.

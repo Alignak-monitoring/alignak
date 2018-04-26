@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -67,7 +67,6 @@
  use it too (but far less)"""
 # pylint: disable=C0302
 import re
-import sys
 import string
 import os
 import socket
@@ -78,7 +77,6 @@ import tempfile
 import uuid
 import logging
 from StringIO import StringIO
-from multiprocessing import Process, Manager
 import json
 
 from alignak.misc.serialization import serialize
@@ -108,8 +106,8 @@ from alignak.objects.hostdependency import Hostdependency, Hostdependencies
 from alignak.objects.module import Module, Modules
 from alignak.objects.hostextinfo import HostExtInfo, HostsExtInfo
 from alignak.objects.serviceextinfo import ServiceExtInfo, ServicesExtInfo
-from alignak.objects.trigger import Triggers
-from alignak.objects.pack import Packs
+# from alignak.objects.trigger import Trigger, Triggers
+# from alignak.objects.pack import Packs
 from alignak.util import split_semicolon, sort_by_number_values
 from alignak.objects.arbiterlink import ArbiterLink, ArbiterLinks
 from alignak.objects.schedulerlink import SchedulerLink, SchedulerLinks
@@ -140,6 +138,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
  use it too (but far less)
 
     """
+    # Next value used for auto generated instance_id
+    _next_id = 1
+
     cache_path = "objects.cache"
     my_type = "config"
 
@@ -154,9 +155,28 @@ class Config(Item):  # pylint: disable=R0904,R0902
     # *unused: just to warn the user that the option he use is no more used
     #  in Alignak
     # *usage_text: if present, will print it to explain why it's no more useful
+    # ---
+    # All the properties with 'full_status' in the fill_brok will be include in the
+    # 'program_status' and 'update_program_status' broks.
+    # ---
     properties = {
+        # -----
+        # Included in the program status brok raised for the scheduler live state
+        # -----
+        # Used for the ALIGNAK macro
+        # Alignak instance name is set as the arbiter name
+        # if it is not defined in the configuration file
+        'alignak_name':
+            StringProp(default=''),
+
+        # Configuration identification - instance id and name
+        'instance_id':
+            StringProp(default=''),
+        'config_name':
+            StringProp(default='Main configuration'),
+
         'program_start':
-            IntegerProp(default=0),
+            IntegerProp(default=0, fill_brok=['program_status']),
         'last_alive':
             IntegerProp(default=0),
         'last_log_rotation':
@@ -173,28 +193,24 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'modified_service_attributes':
             IntegerProp(default=0),
 
-        'passive_host_checks_enabled':
-            BoolProp(default=True),
-        'passive_service_checks_enabled':
-            BoolProp(default=True),
-        'active_host_checks_enabled':
-            BoolProp(default=True),
-        'active_service_checks_enabled':
-            BoolProp(default=True),
-        'event_handlers_enabled':
-            BoolProp(default=True),
-        'flap_detection_enabled':
-            BoolProp(default=True),
-        'notifications_enabled':
-            BoolProp(default=True),
         'daemon_mode':
             BoolProp(default=True),
-        'instance_name':
-            StringProp(default=''),
-        'instance_id':
-            StringProp(default=''),
-        'name':
-            StringProp(default=''),
+        # -----
+
+        # 'passive_host_checks_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
+        # 'passive_service_checks_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
+        # 'active_host_checks_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
+        # 'active_service_checks_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
+        'event_handlers_enabled':
+            BoolProp(default=True, fill_brok=['full_status']),
+        # 'flap_detection_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
+        # 'notifications_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
 
         # Used for the PREFIX macro
         # Alignak prefix does not exist as for Nagios meaning.
@@ -202,25 +218,20 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'prefix':
             UnusedProp(text=NOT_MANAGED),
 
-        # Used for the ALIGNAK macro
-        # Alignak instance name is set as tha arbiter name if it is not defined in the config
-        'alignak_name':
-            StringProp(default=''),
-
         # Used for the MAINCONFIGFILE macro
         'main_config_file':
-            StringProp(default='/usr/local/etc/alignak/alignak.cfg'),
+            StringProp(default='/usr/local/etc/alignak/alignak.ini'),
 
         'config_base_dir':
             StringProp(default=''),  # will be set when we will load a file
 
         # Triggers directory
         'triggers_dir':
-            StringProp(default=''),
+            UnusedProp(text=NOT_MANAGED),
 
         # Packs directory
         'packs_dir':
-            StringProp(default=''),
+            UnusedProp(text=NOT_MANAGED),
 
         # Inner objects cache file for Nagios CGI
         'object_cache_file':
@@ -248,25 +259,35 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Enable the notifications
         'enable_notifications':
-            BoolProp(default=True, class_inherit=[(Host, None), (Service, None), (Contact, None)]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Host, None), (Service, None), (Contact, None)]),
 
         # Service checks
         'execute_service_checks':
-            BoolProp(default=True, class_inherit=[(Service, 'execute_checks')]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Service, 'execute_checks')]),
 
         'accept_passive_service_checks':
-            BoolProp(default=True, class_inherit=[(Service, 'accept_passive_checks')]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Service, 'accept_passive_checks')]),
 
         # Host checks
         'execute_host_checks':
-            BoolProp(default=True, class_inherit=[(Host, 'execute_checks')]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Host, 'execute_checks')]),
 
         'accept_passive_host_checks':
-            BoolProp(default=True, class_inherit=[(Host, 'accept_passive_checks')]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Host, 'accept_passive_checks')]),
+
+        # Accept passive checks for unknown host/service
+        'accept_passive_unknown_check_results':
+            BoolProp(default=True, fill_brok=['full_status']),
 
         # Enable event handlers
         'enable_event_handlers':
-            BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Host, None), (Service, None)]),
 
         # Inner log self created module parameter
         'log_file':
@@ -336,42 +357,54 @@ class Config(Item):  # pylint: disable=R0904,R0902
             BoolProp(default=False),
 
         # Monitoring logs configuration
+        'monitoring_log_broks':
+            BoolProp(default=False, fill_brok=['full_status']),
+
         'log_notifications':
-            BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Host, None), (Service, None)]),
 
         'log_service_retries':
-            BoolProp(default=True, class_inherit=[(Service, 'log_retries')]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Service, 'log_retries')]),
 
         'log_host_retries':
-            BoolProp(default=True, class_inherit=[(Host, 'log_retries')]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Host, 'log_retries')]),
 
         'log_event_handlers':
-            BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Host, None), (Service, None)]),
 
         'log_snapshots':
-            BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Host, None), (Service, None)]),
 
         'log_flappings':
-            BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Host, None), (Service, None)]),
 
         'log_initial_states':
-            BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Host, None), (Service, None)]),
 
         'log_external_commands':
-            BoolProp(default=True),
+            BoolProp(default=True, fill_brok=['full_status']),
 
         'log_passive_checks':
-            BoolProp(default=False),
+            BoolProp(default=False, fill_brok=['full_status']),
 
         'log_active_checks':
-            BoolProp(default=False),
+            BoolProp(default=False, fill_brok=['full_status']),
 
         # Event handlers
         'global_host_event_handler':
-            StringProp(default='', class_inherit=[(Host, 'global_event_handler')]),
+            StringProp(default='', fill_brok=['full_status'],
+                       class_inherit=[(Host, 'global_event_handler')]),
 
         'global_service_event_handler':
-            StringProp(default='', class_inherit=[(Service, 'global_event_handler')]),
+            StringProp(default='', fill_brok=['full_status'],
+                       class_inherit=[(Service, 'global_event_handler')]),
 
         'sleep_time':
             UnusedProp(text='this deprecated option is useless in the alignak way of doing.'),
@@ -411,7 +444,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             IntegerProp(default=30, class_inherit=[(Host, 'max_check_spread')]),
 
         'interval_length':
-            IntegerProp(default=60, class_inherit=[(Host, None), (Service, None)]),
+            IntegerProp(default=60, fill_brok=['full_status'],
+                        class_inherit=[(Host, None), (Service, None)]),
 
         'auto_reschedule_checks':
             BoolProp(managed=False, default=True),
@@ -463,19 +497,24 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Flapping management
         'enable_flap_detection':
-            BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Host, None), (Service, None)]),
 
         'low_service_flap_threshold':
-            IntegerProp(default=20, class_inherit=[(Service, 'global_low_flap_threshold')]),
+            IntegerProp(default=20, fill_brok=['full_status'],
+                        class_inherit=[(Service, 'global_low_flap_threshold')]),
 
         'high_service_flap_threshold':
-            IntegerProp(default=30, class_inherit=[(Service, 'global_high_flap_threshold')]),
+            IntegerProp(default=30, fill_brok=['full_status'],
+                        class_inherit=[(Service, 'global_high_flap_threshold')]),
 
         'low_host_flap_threshold':
-            IntegerProp(default=20, class_inherit=[(Host, 'global_low_flap_threshold')]),
+            IntegerProp(default=20, fill_brok=['full_status'],
+                        class_inherit=[(Host, 'global_low_flap_threshold')]),
 
         'high_host_flap_threshold':
-            IntegerProp(default=30, class_inherit=[(Host, 'global_high_flap_threshold')]),
+            IntegerProp(default=30, fill_brok=['full_status'],
+                        class_inherit=[(Host, 'global_high_flap_threshold')]),
 
         'flap_history':
             IntegerProp(default=20, class_inherit=[(Host, None), (Service, None)]),
@@ -565,7 +604,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             BoolProp(default=True, class_inherit=[(Host, 'global_check_freshness')]),
 
         'host_freshness_check_interval':
-            IntegerProp(default=3600),
+            IntegerProp(default=3600, class_inherit=[(Host, 'freshness_threshold'),
+                                                     (Service, 'freshness_threshold')]),
 
         'additional_freshness_latency':
             IntegerProp(default=15, class_inherit=[(Host, None), (Service, None)]),
@@ -643,10 +683,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'cleaning_queues_interval':
             IntegerProp(default=900),
 
-        # Enable or not the notice about old Nagios parameters
-        'disable_old_nagios_parameters_whining':
-            BoolProp(default=False),
-
         # Now for problem/impact states changes
         'enable_problem_impacts_states_change':
             BoolProp(default=False, class_inherit=[(Host, None), (Service, None)]),
@@ -658,42 +694,34 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'runners_timeout':
             IntegerProp(default=3600),
 
-        # pack_distribution_file is for keeping a distribution history
-        # of the host distribution in the several "packs" so a same
-        # scheduler will have more change of getting the same host
-        'pack_distribution_file':
-            StringProp(default='pack_distribution.dat'),
+        # Self created daemons configuration
+        'daemons_arguments':
+            StringProp(default=''),
 
-        # Large env tweaks
-        'use_multiprocesses_serializer':
-            BoolProp(default=False),
-
-        # Self created daemons
         'daemons_log_folder':
             StringProp(default='/usr/local/var/log/alignak'),
 
         'daemons_initial_port':
             IntegerProp(default=7800),
 
-        # Local statsd daemon for collecting Alignak internal statistics
-        'statsd_host':
-            StringProp(default='localhost',
-                       class_inherit=[(SchedulerLink, None), (ReactionnerLink, None),
-                                      (BrokerLink, None), (PollerLink, None),
-                                      (ReceiverLink, None), (ArbiterLink, None)]),
-        'statsd_port':
-            IntegerProp(default=8125,
-                        class_inherit=[(SchedulerLink, None), (ReactionnerLink, None),
-                                       (BrokerLink, None), (PollerLink, None),
-                                       (ReceiverLink, None), (ArbiterLink, None)]),
-        'statsd_prefix': StringProp(default='alignak',
-                                    class_inherit=[(SchedulerLink, None), (ReactionnerLink, None),
-                                                   (BrokerLink, None), (PollerLink, None),
-                                                   (ReceiverLink, None), (ArbiterLink, None)]),
-        'statsd_enabled': BoolProp(default=False,
-                                   class_inherit=[(SchedulerLink, None), (ReactionnerLink, None),
-                                                  (BrokerLink, None), (PollerLink, None),
-                                                  (ReceiverLink, None), (ArbiterLink, None)]),
+        # Kill launched daemons on communication failure
+        'daemons_failure_kill':
+            BoolProp(default=True),
+
+        'daemons_check_period':
+            IntegerProp(default=5),
+
+        'daemons_start_timeout':
+            IntegerProp(default=1),
+
+        'daemons_new_conf_timeout':
+            IntegerProp(default=1),
+
+        'daemons_dispatch_timeout':
+            IntegerProp(default=5),
+
+        'daemons_stop_timeout':
+            IntegerProp(default=30)
     }
 
     macros = {
@@ -717,67 +745,72 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # 'USERn': '$USERn$' # Add at run time
     }
 
-    # We create dict of objects
-    # Type: 'name in objects': {Class of object, Class of objects,
-    # 'property for self for the objects(config)'
+    # To create dict of objects from the raw objects got from files or backend
+    # Dictionary: objects type: {
+    #   Class of object,
+    #   Class of objects list,
+    #   'name of the Config property for the objects',
+    #   True to create an intial index,
+    #   True if the property is clonable
+    # }
     types_creations = {
         'timeperiod':
-            (Timeperiod, Timeperiods, 'timeperiods', True),
+            (Timeperiod, Timeperiods, 'timeperiods', True, True),
         'service':
-            (Service, Services, 'services', False),
+            (Service, Services, 'services', False, True),
         'servicegroup':
-            (Servicegroup, Servicegroups, 'servicegroups', True),
+            (Servicegroup, Servicegroups, 'servicegroups', True, True),
         'command':
-            (Command, Commands, 'commands', True),
+            (Command, Commands, 'commands', True, True),
         'host':
-            (Host, Hosts, 'hosts', True),
+            (Host, Hosts, 'hosts', True, True),
         'hostgroup':
-            (Hostgroup, Hostgroups, 'hostgroups', True),
+            (Hostgroup, Hostgroups, 'hostgroups', True, True),
         'contact':
-            (Contact, Contacts, 'contacts', True),
+            (Contact, Contacts, 'contacts', True, True),
         'contactgroup':
-            (Contactgroup, Contactgroups, 'contactgroups', True),
+            (Contactgroup, Contactgroups, 'contactgroups', True, True),
         'notificationway':
-            (NotificationWay, NotificationWays, 'notificationways', True),
+            (NotificationWay, NotificationWays, 'notificationways', True, True),
         'checkmodulation':
-            (CheckModulation, CheckModulations, 'checkmodulations', True),
+            (CheckModulation, CheckModulations, 'checkmodulations', True, True),
         'macromodulation':
-            (MacroModulation, MacroModulations, 'macromodulations', True),
+            (MacroModulation, MacroModulations, 'macromodulations', True, True),
         'servicedependency':
-            (Servicedependency, Servicedependencies, 'servicedependencies', True),
+            (Servicedependency, Servicedependencies, 'servicedependencies', True, True),
         'hostdependency':
-            (Hostdependency, Hostdependencies, 'hostdependencies', True),
+            (Hostdependency, Hostdependencies, 'hostdependencies', True, True),
         'arbiter':
-            (ArbiterLink, ArbiterLinks, 'arbiters', True),
+            (ArbiterLink, ArbiterLinks, 'arbiters', True, False),
         'scheduler':
-            (SchedulerLink, SchedulerLinks, 'schedulers', True),
+            (SchedulerLink, SchedulerLinks, 'schedulers', True, False),
         'reactionner':
-            (ReactionnerLink, ReactionnerLinks, 'reactionners', True),
+            (ReactionnerLink, ReactionnerLinks, 'reactionners', True, False),
         'broker':
-            (BrokerLink, BrokerLinks, 'brokers', True),
+            (BrokerLink, BrokerLinks, 'brokers', True, False),
         'receiver':
-            (ReceiverLink, ReceiverLinks, 'receivers', True),
+            (ReceiverLink, ReceiverLinks, 'receivers', True, False),
         'poller':
-            (PollerLink, PollerLinks, 'pollers', True),
+            (PollerLink, PollerLinks, 'pollers', True, False),
         'realm':
-            (Realm, Realms, 'realms', True),
+            (Realm, Realms, 'realms', True, False),
         'module':
-            (Module, Modules, 'modules', True),
+            (Module, Modules, 'modules', True, False),
         'resultmodulation':
-            (Resultmodulation, Resultmodulations, 'resultmodulations', True),
+            (Resultmodulation, Resultmodulations, 'resultmodulations', True, True),
         'businessimpactmodulation':
             (Businessimpactmodulation, Businessimpactmodulations,
-             'businessimpactmodulations', True),
+             'businessimpactmodulations', True, True),
         'escalation':
-            (Escalation, Escalations, 'escalations', True),
+            (Escalation, Escalations, 'escalations', True, True),
         'serviceescalation':
-            (Serviceescalation, Serviceescalations, 'serviceescalations', False),
+            (Serviceescalation, Serviceescalations, 'serviceescalations', False, False),
         'hostescalation':
-            (Hostescalation, Hostescalations, 'hostescalations', False),
+            (Hostescalation, Hostescalations, 'hostescalations', False, False),
         'hostextinfo':
-            (HostExtInfo, HostsExtInfo, 'hostsextinfo', True),
+            (HostExtInfo, HostsExtInfo, 'hostsextinfo', True, False),
         'serviceextinfo':
-            (ServiceExtInfo, ServicesExtInfo, 'servicesextinfo', True),
+            (ServiceExtInfo, ServicesExtInfo, 'servicesextinfo', True, False),
     }
 
     # This tab is used to transform old parameters name into new ones
@@ -791,17 +824,30 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
     early_created_types = ['arbiter', 'module']
 
-    configuration_types = ['void', 'timeperiod', 'command', 'contactgroup', 'hostgroup',
-                           'contact', 'notificationway', 'checkmodulation',
-                           'macromodulation', 'host', 'service', 'servicegroup',
-                           'servicedependency', 'hostdependency', 'arbiter', 'scheduler',
-                           'reactionner', 'broker', 'receiver', 'poller', 'realm', 'module',
-                           'resultmodulation', 'escalation', 'serviceescalation', 'hostescalation',
-                           'businessimpactmodulation', 'hostextinfo', 'serviceextinfo']
+    configuration_types = ['void', 'timeperiod', 'command',
+                           'realm',
+                           'host', 'hostgroup', 'hostdependency', 'hostextinfo',
+                           'service', 'servicegroup', 'servicedependency', 'serviceextinfo',
+                           'contact', 'contactgroup',
+                           'notificationway', 'escalation', 'serviceescalation', 'hostescalation',
+                           'checkmodulation', 'macromodulation', 'resultmodulation',
+                           'businessimpactmodulation',
+                           'arbiter', 'scheduler', 'reactionner', 'broker', 'receiver', 'poller',
+                           'module']
 
     def __init__(self, params=None, parsing=True):
         if params is None:
             params = {}
+
+        if parsing:
+            # Create a new configuration identifier
+            self.instance_id = '%s_%d' % (self.__class__.__name__, self.__class__._next_id)
+            self.__class__._next_id += 1
+        elif 'instance_id' not in params:
+            logger.error("When not parsing a configuration, an instance_id "
+                         "must exist in the provided parameters for a configuration!")
+        else:
+            self.instance_id = params['instance_id']
 
         # At deserialization, those are dictionaries
         # TODO: Separate parsing instance from recreated ones
@@ -813,21 +859,18 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 # And remove prop, to prevent from being overridden
                 del params[prop]
 
-        for _, clss, strclss, _ in self.types_creations.values():
+        for _, clss, strclss, _, _ in self.types_creations.values():
             if strclss in params and isinstance(params[strclss], dict):
                 setattr(self, strclss, clss(params[strclss], parsing=parsing))
                 del params[strclss]
 
-        for clss, prop in [(Triggers, 'triggers'), (Packs, 'packs')]:
-            if prop in params and isinstance(params[prop], dict):
-                setattr(self, prop, clss(params[prop], parsing=parsing))
-                del params[prop]
-            else:
-                setattr(self, prop, clss({}))
-
         super(Config, self).__init__(params, parsing=parsing)
         self.params = {}
         self.resource_macros_names = []
+
+        # The configuration files I read
+        self.my_cfg_files = []
+
         # By default the conf is correct and the warnings and errors lists are empty
         self.conf_is_correct = True
         self.configuration_warnings = []
@@ -836,19 +879,20 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # identify this conf
         random.seed(time.time())
         self.magic_hash = random.randint(1, 100000)
-        self.triggers_dirs = []
-        self.packs_dirs = []
 
         # Store daemons detected as missing during the configuration check
         self.missing_daemons = []
 
+    def __repr__(self):  # pragma: no cover
+        return '<%s %s - %s />' % (self.__class__.__name__, self.instance_id,
+                                   getattr(self, 'config_name', 'unknown'))
+    __str__ = __repr__
+
     def serialize(self):
         res = super(Config, self).serialize()
-        if hasattr(self, 'instance_id'):
-            res['instance_id'] = self.instance_id
+
         # The following are not in properties so not in the dict
-        for prop in ['triggers', 'packs', 'hosts',
-                     'services', 'hostgroups', 'notificationways',
+        for prop in ['hosts', 'services', 'hostgroups', 'notificationways',
                      'checkmodulations', 'macromodulations', 'businessimpactmodulations',
                      'resultmodulations', 'contacts', 'contactgroups',
                      'servicegroups', 'timeperiods', 'commands',
@@ -861,14 +905,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 res[prop] = getattr(self, prop).serialize()
         res['macros'] = self.macros
         return res
-
-    def get_name(self):
-        """Get config name
-
-        :return: Hard-coded value 'global configuration file'
-        :rtype: str
-        """
-        return 'global configuration file'
 
     def fill_resource_macros_names_macros(self):
         """ fill the macro dict will all value
@@ -922,11 +958,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 # it's a macro or a useless now param, we don't touch this
                 val = value
             else:
-                msg = "Guessing the property %s type because it is not in %s object properties" % (
-                    key, self.__class__.__name__
-                )
-                self.configuration_warnings.append(msg)
-                logger.warning(msg)
+                logger.debug("Guessing the property '%s' type because it "
+                             "is not in %s object properties", key, self.__class__.__name__)
                 val = ToGuessProp.pythonize(clean_params[key])
 
             setattr(self, key, val)
@@ -958,7 +991,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
         res = [elt.strip() for elt in tmp if elt.strip() != '']
         return res
 
-    def read_config(self, files):  # pylint: disable=R0912
+    def read_config(self, files):
+        # pylint: disable=too-many-nested-blocks,too-many-statements,too-many-branches
         """Read and parse main configuration files
         (specified with -c option to the Arbiter)
         and put them into a StringIO object
@@ -971,24 +1005,33 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # just a first pass to get the cfg_file and all files in a buf
         res = StringIO()
 
+        # Make sure the configuration files are not repeated...
+        if not self.read_config_silent and files:
+            logger.info("Reading the configuration files...")
         for c_file in files:
+            # Make sure the configuration files are not repeated...
+            if os.path.abspath(c_file) in self.my_cfg_files:
+                logger.warning("- ignoring repeated file: %s", os.path.abspath(c_file))
+                continue
+            self.my_cfg_files.append(os.path.abspath(c_file))
+
             # We add a \n (or \r\n) to be sure config files are separated
             # if the previous does not finish with a line return
             res.write(os.linesep)
             res.write('# IMPORTEDFROM=%s' % (c_file) + os.linesep)
             if not self.read_config_silent:
-                logger.info("[config] opening '%s' configuration file", c_file)
+                logger.info("- opening '%s' configuration file", c_file)
             try:
                 # Open in Universal way for Windows, Mac, Linux-based systems
                 file_d = open(c_file, 'rU')
                 buf = file_d.readlines()
                 file_d.close()
-                self.config_base_dir = os.path.dirname(c_file)
                 # Update macro used properties
+                self.config_base_dir = os.path.dirname(c_file)
                 self.main_config_file = os.path.abspath(c_file)
             except IOError, exp:
-                msg = "[config] cannot open main config file '%s' for reading: %s" % (c_file, exp)
-                self.add_error(msg)
+                self.add_error("cannot open main file '%s' for reading: %s"
+                               % (c_file, exp))
                 continue
 
             for line in buf:
@@ -1004,20 +1047,29 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     else:
                         cfg_file_name = os.path.join(self.config_base_dir, elts[1])
                     cfg_file_name = cfg_file_name.strip()
-                    try:
-                        file_d = open(cfg_file_name, 'rU')
+
+                    # Make sure the configuration files are not repeated...
+                    if os.path.abspath(cfg_file_name) in self.my_cfg_files:
+                        logger.warning("- ignoring repeated file: %s",
+                                       os.path.abspath(cfg_file_name))
+                    else:
+                        self.my_cfg_files.append(os.path.abspath(cfg_file_name))
+
                         if not self.read_config_silent:
-                            logger.info("Processing object config file '%s'", cfg_file_name)
-                        res.write(os.linesep + '# IMPORTEDFROM=%s' % (cfg_file_name) + os.linesep)
-                        res.write(file_d.read().decode('utf8', 'replace'))
-                        # Be sure to add a line return so we won't mix files
-                        res.write(os.linesep)
-                        file_d.close()
-                    except IOError, exp:
-                        msg = "[config] cannot open config file '%s' for reading: %s" % (
-                            cfg_file_name, exp
-                        )
-                        self.add_error(msg)
+                            logger.info("  reading: %s", cfg_file_name)
+
+                        try:
+                            # Read the file content to the buffer
+                            file_d = open(cfg_file_name, 'rU')
+                            res.write(os.linesep + '# IMPORTEDFROM=%s' %
+                                      (cfg_file_name + os.linesep))
+                            res.write(file_d.read().decode('utf8', 'replace'))
+                            # Be sure to add a line return so we won't mix files
+                            res.write(os.linesep)
+                            file_d.close()
+                        except IOError, exp:
+                            self.add_error("cannot open file '%s' for reading: %s"
+                                           % (cfg_file_name, exp))
                 elif re.search("^cfg_dir", line):
                     elts = line.split('=', 1)
                     if os.path.isabs(elts[1]):
@@ -1026,47 +1078,37 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         cfg_dir_name = os.path.join(self.config_base_dir, elts[1])
                     # Ok, look if it's really a directory
                     if not os.path.isdir(cfg_dir_name):
-                        msg = "[config] cannot open config dir '%s' for reading" % \
-                              (cfg_dir_name)
-                        self.add_error(msg)
-
-                    # Look for .pack file into it :)
-                    self.packs_dirs.append(cfg_dir_name)
+                        self.add_error("cannot open directory '%s' for reading" %
+                                       (cfg_dir_name))
 
                     # Now walk for it.
                     for root, _, walk_files in os.walk(cfg_dir_name, followlinks=True):
-                        for pack_file in walk_files:
-                            if not re.search(r"\.cfg$", pack_file):
+                        for found_file in walk_files:
+                            if not re.search(r"\.cfg$", found_file):
                                 continue
-                            if not self.read_config_silent:
-                                logger.info("Processing object config file '%s'",
-                                            os.path.join(root, pack_file))
-                            try:
-                                res.write(os.linesep + '# IMPORTEDFROM=%s' %
-                                          (os.path.join(root, pack_file)) + os.linesep)
-                                file_d = open(os.path.join(root, pack_file), 'rU')
-                                res.write(file_d.read().decode('utf8', 'replace'))
-                                # Be sure to separate files data
-                                res.write(os.linesep)
-                                file_d.close()
-                            except IOError as exp:  # pragma: no cover, simple protection
-                                msg = "[config] cannot open pack file '%s' for reading: %s" % \
-                                      (os.path.join(root, c_file), exp)
-                                self.add_error(msg)
-                elif re.search("^triggers_dir", line):
-                    elts = line.split('=', 1)
-                    if os.path.isabs(elts[1]):
-                        trig_dir_name = elts[1]
-                    else:
-                        trig_dir_name = os.path.join(self.config_base_dir, elts[1])
-                    # Ok, look if it's really a directory
-                    if not os.path.isdir(trig_dir_name):
-                        msg = "[config] cannot open triggers dir '%s' for reading" % \
-                              (trig_dir_name)
-                        self.add_error(msg)
-                        continue
-                    # Ok it's a valid one, I keep it
-                    self.triggers_dirs.append(trig_dir_name)
+
+                            cfg_file_name = os.path.join(root, found_file)
+                            # Make sure the configuration files are not repeated...
+                            if os.path.abspath(cfg_file_name) in self.my_cfg_files:
+                                logger.warning("- ignoring repeated file: %s",
+                                               os.path.abspath(cfg_file_name))
+                            else:
+                                self.my_cfg_files.append(os.path.abspath(cfg_file_name))
+
+                                if not self.read_config_silent:
+                                    logger.info("  reading: %s", cfg_file_name)
+                                try:
+                                    # Read the file content to the buffer
+                                    file_d = open(cfg_file_name, 'rU')
+                                    res.write(os.linesep + '# IMPORTEDFROM=%s' %
+                                              (cfg_file_name + os.linesep))
+                                    res.write(file_d.read().decode('utf8', 'replace'))
+                                    # Be sure to separate files data
+                                    res.write(os.linesep)
+                                    file_d.close()
+                                except IOError as exp:  # pragma: no cover, simple protection
+                                    self.add_error("cannot open file '%s' for reading: %s"
+                                                   % (os.path.join(root, c_file), exp))
 
         config = res.getvalue()
         res.close()
@@ -1092,10 +1134,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :rtype: dict
         """
+        if not self.read_config_silent and buf:
+            logger.info("Parsing the configuration files...")
         params = []
         objectscfg = {}
-        types = self.__class__.configuration_types
-        for o_type in types:
+        for o_type in self.__class__.configuration_types:
             objectscfg[o_type] = []
 
         tmp = []
@@ -1167,6 +1210,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 else:
                     params.append(line)
 
+        # todo: this looks unuseful...
         # Maybe the type of the last element is unknown, declare it
         if tmp_type not in objectscfg:
             objectscfg[tmp_type] = []
@@ -1224,20 +1268,32 @@ class Config(Item):  # pylint: disable=R0904,R0902
         }
         raw_objects['command'].append(echo_obj)
 
-    def create_objects(self, raw_objects):
-        """Create real 'object' from dicts of prop/value
+    def early_create_objects(self, raw_objects):
+        """Create the objects needed for the post configuration file initialization
 
         :param raw_objects:  dict with all object with str values
         :type raw_objects: dict
         :return: None
         """
         types_creations = self.__class__.types_creations
-
-        # some types are already created in this time
         early_created_types = self.__class__.early_created_types
 
-        # Before really create the objects, we add
-        # ghost ones like the bp_rule for correlation
+        for o_type in types_creations:
+            if o_type in early_created_types:
+                self.create_objects_for_type(raw_objects, o_type)
+
+    def create_objects(self, raw_objects):
+        """Create all the objects got after the post configuration file initialization
+
+        :param raw_objects:  dict with all object with str values
+        :type raw_objects: dict
+        :return: None
+        """
+        types_creations = self.__class__.types_creations
+        early_created_types = self.__class__.early_created_types
+
+        # Before really creating the objects, we add some ghost
+        # ones like the bp_rule for correlation
         self.add_ghost_objects(raw_objects)
 
         for o_type in types_creations:
@@ -1245,47 +1301,58 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 self.create_objects_for_type(raw_objects, o_type)
 
     def create_objects_for_type(self, raw_objects, o_type):
-        """Generic function to create object regarding the o_type
+        """Generic function to create objects regarding the o_type
 
-        :param raw_objects: Raw object we need to instantiate objects
+        This function create real Alignak objects from the raw data got from the configuration.
+
+        :param raw_objects: Raw objects
         :type raw_objects: dict
         :param o_type: the object type we want to create
         :type o_type: object
         :return: None
         """
-        types_creations = self.__class__.types_creations
+
         # Ex: the above code do for timeperiods:
         # timeperiods = []
         # for timeperiodcfg in objects['timeperiod']:
         #    t = Timeperiod(timeperiodcfg)
-        #    t.clean()
         #    timeperiods.append(t)
         # self.timeperiods = Timeperiods(timeperiods)
 
-        (cls, clss, prop, initial_index) = types_creations[o_type]
-        # List where we put objects
+        types_creations = self.__class__.types_creations
+        (cls, clss, prop, initial_index, _) = types_creations[o_type]
+
+        # List to store the created objects
         lst = []
-        for obj_cfg in raw_objects[o_type]:
-            # We create the object
-            obj = cls(obj_cfg)
-            # Change Nagios2 names to Nagios3 ones (before using them)
-            obj.old_properties_names_to_new()
-            lst.append(obj)
-        # we create the objects Class and we set it in prop
+        try:
+            for obj_cfg in raw_objects[o_type]:
+                my_object = cls(obj_cfg)
+                # We create the object
+                lst.append(my_object)
+        except KeyError:
+            logger.debug("No %s objects in the raw configuration objects", o_type)
+
+        # Create the objects list and set it in our properties
         setattr(self, prop, clss(lst, initial_index))
 
-    def early_arbiter_linking(self):
+    def early_arbiter_linking(self, arbiter_name, params):
         """ Prepare the arbiter for early operations
 
+        :param arbiter_name: default arbiter name if no arbiter exist in the configuration
+        :type arbiter_name: str
         :return: None
         """
 
         if not self.arbiters:
-            logger.warning("There is no arbiter, I add one in localhost:7770")
-            arb = ArbiterLink({'arbiter_name': 'Default-Arbiter',
-                               'host_name': socket.gethostname(),
-                               'address': 'localhost', 'port': '7770',
-                               'spare': '0'})
+            params.update({
+                'name': arbiter_name, 'arbiter_name': arbiter_name,
+                'host_name': socket.gethostname(),
+                'address': '127.0.0.1', 'port': 7770,
+                'spare': '0'
+            })
+            logger.warning("There is no arbiter, I add myself (%s) reachable on %s:%d",
+                           arbiter_name, params['address'], params['port'])
+            arb = ArbiterLink(params, parsing=True)
             self.arbiters = ArbiterLinks([arb])
 
         # First fill default
@@ -1294,22 +1361,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         self.arbiters.linkify(modules=self.modules)
         self.modules.linkify()
-
-    def load_triggers(self):
-        """Load all triggers .trig files from all triggers_dir
-
-        :return: None
-        """
-        for path in self.triggers_dirs:
-            self.triggers.load_file(path)
-
-    def load_packs(self):  # pragma: no cover, not used, see #551
-        """Load all packs .pack files from all packs_dirs
-
-        :return: None
-        """
-        for path in self.packs_dirs:
-            self.packs.load_file(path)
 
     def linkify_one_command_with_commands(self, commands, prop):
         """
@@ -1357,9 +1408,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                            self.contacts, self.realms,
                            self.resultmodulations, self.businessimpactmodulations,
                            self.escalations, self.hostgroups,
-                           self.triggers, self.checkmodulations,
-                           self.macromodulations
-                           )
+                           self.checkmodulations, self.macromodulations)
 
         self.hostsextinfo.merge(self.hosts)
 
@@ -1372,9 +1421,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                               self.timeperiods, self.contacts,
                               self.resultmodulations, self.businessimpactmodulations,
                               self.escalations, self.servicegroups,
-                              self.triggers, self.checkmodulations,
-                              self.macromodulations
-                              )
+                              self.checkmodulations, self.macromodulations)
 
         self.servicesextinfo.merge(self.services)
 
@@ -1412,175 +1459,33 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         self.realms.linkify()
 
-        # Link all links with realms
-        # self.arbiters.linkify(self.modules)
+        # Link all satellite links with realms
         self.schedulers.linkify(self.realms, self.modules)
         self.brokers.linkify(self.realms, self.modules)
         self.receivers.linkify(self.realms, self.modules)
         self.reactionners.linkify(self.realms, self.modules)
         self.pollers.linkify(self.realms, self.modules)
 
-        # Ok, now update all realms with backlinks of
-        # satellites
-        self.realms.prepare_for_satellites_conf((self.reactionners, self.pollers,
-                                                 self.brokers, self.receivers))
+        # Ok, now update all realms with backlinks of satellites
+        satellites = []
+        satellites.extend(self.pollers)
+        satellites.extend(self.reactionners)
+        satellites.extend(self.receivers)
+        satellites.extend(self.brokers)
+        self.realms.prepare_for_satellites_conf(satellites)
 
     def clean(self):
         """Wrapper for calling the clean method of services attribute
 
         :return: None
         """
-        self.services.clean()
-
-    def prepare_for_sending(self):
-        """Some properties are dangerous to be send like that
-        like realms linked in hosts. Realms are too big to send (too linked)
-        We are also pre-serializing the confs so the sending phase will
-        be quicker.
-
-        :return: None
-        """
-        # Preparing hosts and hostgroups for sending. Some properties
-        # should be "flatten" before sent, like .realm object that should
-        # be changed into names
-        self.hosts.prepare_for_sending()
-        self.hostgroups.prepare_for_sending()
-        t01 = time.time()
-        logger.info('[Arbiter] Serializing the configurations...')
-
-        # There are two ways of configuration serializing
-        # One if to use the serial way, the other is with use_multiprocesses_serializer
-        # to call to sub-workers to do the job.
-        # TODO : enable on windows? I'm not sure it will work, must give a test
-        if os.name == 'nt' or not self.use_multiprocesses_serializer:
-            logger.info('Using the default serialization pass')
-            for realm in self.realms:
-                for (i, conf) in realm.confs.iteritems():
-                    # Remember to protect the local conf hostgroups too!
-                    conf.hostgroups.prepare_for_sending()
-                    logger.debug('[%s] Serializing the configuration %d', realm.get_name(), i)
-                    t00 = time.time()
-                    conf_id = conf.uuid
-                    realm.serialized_confs[conf_id] = serialize(conf)
-                    logger.debug("[config] time to serialize the conf %s:%s is %s (size:%s)",
-                                 realm.get_name(), i, time.time() - t00,
-                                 len(realm.serialized_confs[conf_id]))
-                    logger.debug("SERIALIZE LEN : %d", len(realm.serialized_confs[conf_id]))
-            # Now serialize the whole conf, for easy and quick spare send
-            t00 = time.time()
-            whole_conf_pack = serialize(self)
-            logger.debug("[config] time to serialize the global conf : %s (size:%s)",
-                         time.time() - t00, len(whole_conf_pack))
-            self.whole_conf_pack = whole_conf_pack
-            logger.debug("[config]serializing total: %s", (time.time() - t01))
-
-        else:  # pragma: no cover, not currently the default processing method
-            logger.info('Using the multiprocessing serialization pass')
-            t01 = time.time()
-
-            # We ask a manager to manage the communication with our children
-            manager = Manager()
-            # The list will got all the strings from the children
-            child_q = manager.list()
-            for realm in self.realms:
-                processes = []
-                for (i, conf) in realm.confs.iteritems():
-                    def serialize_config(comm_q, rname, cid, conf):
-                        """Serialized config. Used in subprocesses to serialize all config faster
-
-                        :param comm_q: Queue to communicate
-                        :param rname: realm name
-                        :param cid: configuration id
-                        :param conf: configuration to serialize
-                        :return: None (put in queue)
-                        """
-                        # Remember to protect the local conf hostgroups too!
-                        conf.hostgroups.prepare_for_sending()
-                        logger.debug('[%s] Serializing the configuration %d', rname, cid)
-                        t00 = time.time()
-                        res = serialize(conf)
-                        logger.debug("[config] time to serialize the conf %s:%s is %s (size:%s)",
-                                     rname, cid, time.time() - t00, len(res))
-                        comm_q.append((cid, res))
-
-                    # Prepare a sub-process that will manage the serialize computation
-                    proc = Process(target=serialize_config,
-                                   name="serializer-%s-%d" % (realm.get_name(), i),
-                                   args=(child_q, realm.get_name(), i, conf))
-                    proc.start()
-                    processes.append((i, proc))
-
-                # Here all sub-processes are launched for this realm, now wait for them to finish
-                while processes:
-                    to_del = []
-                    for (i, proc) in processes:
-                        if proc.exitcode is not None:
-                            to_del.append((i, proc))
-                            # remember to join() so the children can die
-                            proc.join()
-                    for (i, proc) in to_del:
-                        logger.debug("The sub process %s is done with the return code %d",
-                                     proc.name, proc.exitcode)
-                        processes.remove((i, proc))
-                    # Don't be too quick to poll!
-                    time.sleep(0.1)
-
-                # Check if we got the good number of configuration,
-                #  maybe one of the children got problems?
-                if len(child_q) != len(realm.confs):
-                    logger.error("Something goes wrong in the configuration serializations, "
-                                 "please restart Alignak Arbiter")
-                    sys.exit(2)
-                # Now get the serialized configuration and saved them into self
-                for (i, cfg) in child_q:
-                    realm.serialized_confs[cfg.uuid] = cfg
-
-            # Now serialize the whole configuration into one big serialized object,
-            # for the arbiter spares
-            whole_queue = manager.list()
-            t00 = time.time()
-
-            def create_whole_conf_pack(whole_queue, self):
-                """The function that just compute the whole conf serialize string, but n a children
-                """
-                logger.debug("[config] sub processing the whole configuration pack creation")
-                whole_queue.append(serialize(self))
-                logger.debug("[config] sub processing the whole configuration pack creation "
-                             "finished")
-            # Go for it
-            proc = Process(target=create_whole_conf_pack,
-                           args=(whole_queue, self),
-                           name='serializer-whole-configuration')
-            proc.start()
-            # Wait for it to die
-            while proc.exitcode is None:
-                time.sleep(0.1)
-            proc.join()
-            # Maybe we don't have our result?
-            if len(whole_queue) != 1:
-                logger.error("Something goes wrong in the whole configuration pack creation, "
-                             "please restart Alignak Arbiter")
-                sys.exit(2)
-
-            # Get it and save it
-            self.whole_conf_pack = whole_queue.pop()
-            logger.debug("[config] time to serialize the global conf : %s (size:%s)",
-                         time.time() - t00, len(self.whole_conf_pack))
-
-            # Shutdown the manager, the sub-process should be gone now
-            manager.shutdown()
-
-    def notice_about_useless_parameters(self):
-        """Used to warn about useless parameter and print why it's not use.
-
-        :return: None
-        """
-        if not self.disable_old_nagios_parameters_whining:
-            properties = self.__class__.properties
-            for prop, entry in properties.items():
-                if isinstance(entry, UnusedProp):
-                    logger.warning("The parameter %s is useless and can be removed "
-                                   "from the configuration (Reason: %s)", prop, entry.text)
+        logger.debug("Cleaning configuration objects before configuration sending:")
+        types_creations = self.__class__.types_creations
+        for o_type in types_creations:
+            (_, _, inner_property, _, _) = types_creations[o_type]
+            logger.debug("  . for %s", inner_property, )
+            inner_object = getattr(self, inner_property)
+            inner_object.clean()
 
     def warn_about_unmanaged_parameters(self):
         """used to raise warning if the user got parameter
@@ -1598,12 +1503,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     line = prop
                 unmanaged.append(line)
         if unmanaged:
-            logger.warning("The following parameter(s) are not currently managed.")
+            logger.warning("The following parameter(s) are not currently managed:")
 
             for line in unmanaged:
-                logger.info(line)
+                logger.warning('- %s', line)
 
-            logger.warning("Unmanaged configuration statements, do you really need it?"
+            logger.warning("Those are unmanaged configuration statements, do you really need it? "
                            "Create an issue on the Alignak repository or submit a pull "
                            "request: http://www.github.com/Alignak-monitoring/alignak")
 
@@ -1704,45 +1609,39 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :return: None
         """
+        logger.debug("Filling the unset properties with their default value:")
         # Fill default for config (self)
         super(Config, self).fill_default()
-        self.hosts.fill_default()
-        self.hostgroups.fill_default()
-        self.contacts.fill_default()
-        self.contactgroups.fill_default()
-        self.notificationways.fill_default()
-        self.checkmodulations.fill_default()
-        self.macromodulations.fill_default()
-        self.services.fill_default()
-        self.servicegroups.fill_default()
-        self.resultmodulations.fill_default()
-        self.businessimpactmodulations.fill_default()
-        self.hostsextinfo.fill_default()
-        self.servicesextinfo.fill_default()
 
-        # Now escalations
-        self.escalations.fill_default()
+        types_creations = self.__class__.types_creations
+        for o_type in types_creations:
+            (_, _, inner_property, _, _) = types_creations[o_type]
+            # Not yet for the daemons links
+            if inner_property in ['realms', 'arbiters', 'schedulers', 'reactionners',
+                                  'pollers', 'brokers', 'receivers']:
+                continue
+            logger.debug("  . for %s", inner_property,)
+            inner_object = getattr(self, inner_property, None)
+            if inner_object:
+                inner_object.fill_default()
+            else:
+                logger.debug("No %s to fill with default values", inner_property)
 
-        # Also fill default of host/servicedep objects
-        self.servicedependencies.fill_default()
-        self.hostdependencies.fill_default()
-
-        # We have all monitored elements, we can create a default
-        # realm if none is defined
+        # We have all monitored elements, we can create a default realm if none is defined
         self.fill_default_realm()
         self.realms.fill_default()
 
-        # Then we create missing satellites, so no other satellites will
-        # be created after this point
+        # Then we create missing satellites, so no other satellites will be created after
         self.fill_default_satellites()
-        self.reactionners.fill_default()
-        self.pollers.fill_default()
-        self.brokers.fill_default()
-        self.receivers.fill_default()
-        self.schedulers.fill_default()
 
-        # The arbiters are already done.
-        # self.arbiters.fill_default()
+        types_creations = self.__class__.types_creations
+        for o_type in types_creations:
+            (_, _, inner_property, _, _) = types_creations[o_type]
+            # Only for the daemons links
+            if inner_property in ['schedulers', 'reactionners', 'pollers', 'brokers', 'receivers']:
+                logger.debug("  . for %s", inner_property,)
+                inner_object = getattr(self, inner_property)
+                inner_object.fill_default()
 
         # Now fill some fields we can predict (like address for hosts)
         self.fill_predictive_missing_parameters()
@@ -1771,7 +1670,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 'realm_name': 'All', 'alias': 'Self created default realm', 'default': '1'
             })
             self.realms = Realms([default])
-            logger.warning("No realms defined, I added one as %s", default.get_name())
+            logger.warning("No realms defined, I am adding one as %s", default.get_name())
 
         # Check that a default realm (and only one) is defined and get this default realm
         self.realms.get_default(check=True)
@@ -1781,19 +1680,18 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :return:
         """
-        satellites = [self.schedulers, self.pollers, self.brokers,
-                      self.reactionners, self.receivers]
-        for satellites_list in satellites:
-            if not satellites_list:
-                logger.info("- %ss: None", satellites_list.inner_class.my_type)
+        daemons = [self.arbiters, self.schedulers, self.pollers,
+                   self.brokers, self.reactionners, self.receivers]
+        for daemons_list in daemons:
+            if not daemons_list:
+                logger.info("- %ss: None", daemons_list.inner_class.my_type)
             else:
-                logger.info("- %ss: %s", satellites_list.inner_class.my_type,
-                            ','.join([daemon.get_name() for daemon in satellites_list]))
+                logger.info("- %ss: %s", daemons_list.inner_class.my_type,
+                            ','.join([daemon.get_name() for daemon in daemons_list]))
 
-    def fill_default_satellites(self):
-        # pylint: disable=too-many-branches
-        """If a satellite is missing, we add them in the localhost
-        with defaults values
+    def fill_default_satellites(self):  # pylint: disable=too-many-branches
+        """If a required satellite is missing in the configuration, we create a new satellite
+        on localhost with some default values
 
         :return: None
         """
@@ -1811,38 +1709,68 @@ class Config(Item):  # pylint: disable=R0904,R0902
         default_realm = self.realms.get_default()
 
         if not self.schedulers:
-            logger.warning("No scheduler defined, I add one at localhost:7768")
-            daemon = SchedulerLink({'scheduler_name': 'Default-Scheduler',
-                                    'address': 'localhost', 'port': '7768'})
-            self.schedulers = SchedulerLinks([daemon])
-        if not self.pollers:
-            logger.warning("No poller defined, I add one at localhost:7771")
-            poller = PollerLink({'poller_name': 'Default-Poller',
-                                 'address': 'localhost', 'port': '7771'})
-            self.pollers = PollerLinks([poller])
+            logger.warning("No scheduler defined, I am adding one on 127.0.0.1:%d",
+                           self.daemons_initial_port)
+            satellite = SchedulerLink({'type': 'scheduler', 'name': 'Default-Scheduler',
+                                       'alignak_launched': True, 'missing_daemon': True,
+                                       'spare': '0', 'manage_sub_realms': '0',
+                                       'address': '127.0.0.1', 'port': self.daemons_initial_port})
+            self.daemons_initial_port = self.daemons_initial_port + 1
+            self.schedulers = SchedulerLinks([satellite])
+            self.missing_daemons.append(satellite)
         if not self.reactionners:
-            logger.warning("No reactionner defined, I add one at localhost:7769")
-            reactionner = ReactionnerLink({'reactionner_name': 'Default-Reactionner',
-                                           'address': 'localhost', 'port': '7769'})
-            self.reactionners = ReactionnerLinks([reactionner])
+            logger.warning("No reactionner defined, I am adding one on 127.0.0.1:%d",
+                           self.daemons_initial_port)
+            satellite = ReactionnerLink({'type': 'reactionner', 'name': 'Default-Reactionner',
+                                         'alignak_launched': True, 'missing_daemon': True,
+                                         'spare': '0', 'manage_sub_realms': '0',
+                                         'address': '127.0.0.1', 'port': self.daemons_initial_port})
+            self.daemons_initial_port = self.daemons_initial_port + 1
+            self.reactionners = ReactionnerLinks([satellite])
+            self.missing_daemons.append(satellite)
+        if not self.pollers:
+            logger.warning("No poller defined, I am adding one on 127.0.0.1:%d",
+                           self.daemons_initial_port)
+            satellite = PollerLink({'type': 'poller', 'name': 'Default-Poller',
+                                    'alignak_launched': True, 'missing_daemon': True,
+                                    'spare': '0', 'manage_sub_realms': '0',
+                                    'address': '127.0.0.1', 'port': self.daemons_initial_port})
+            self.daemons_initial_port = self.daemons_initial_port + 1
+            self.pollers = PollerLinks([satellite])
+            self.missing_daemons.append(satellite)
         if not self.brokers:
-            logger.warning("No broker defined, I add one at localhost:7772")
-            broker = BrokerLink({'broker_name': 'Default-Broker',
-                                 'address': 'localhost', 'port': '7772',
-                                 'manage_arbiters': '1'})
-            self.brokers = BrokerLinks([broker])
+            logger.warning("No broker defined, I am adding one on 127.0.0.1:%d",
+                           self.daemons_initial_port)
+            satellite = BrokerLink({'type': 'broker', 'name': 'Default-Broker',
+                                    'alignak_launched': True, 'missing_daemon': True,
+                                    'spare': '0', 'manage_sub_realms': '0',
+                                    'address': '127.0.0.1', 'port': self.daemons_initial_port})
+            self.daemons_initial_port = self.daemons_initial_port + 1
+            self.brokers = BrokerLinks([satellite])
+            self.missing_daemons.append(satellite)
+        if not self.receivers:
+            logger.warning("No receiver defined, I am adding one on 127.0.0.1:%d",
+                           self.daemons_initial_port)
+            satellite = ReceiverLink({'type': 'receiver', 'name': 'Default-Receiver',
+                                      'alignak_launched': True, 'missing_daemon': True,
+                                      'spare': '0', 'manage_sub_realms': '0',
+                                      'address': '127.0.0.1', 'port': self.daemons_initial_port})
+            self.daemons_initial_port = self.daemons_initial_port + 1
+            self.receivers = ReceiverLinks([satellite])
+            self.missing_daemons.append(satellite)
 
-        # Affect default realm to the satellites that do not have a defined realm
+        # Assign default realm to the satellites that do not have a defined realm
         satellites = [self.pollers, self.brokers, self.reactionners,
                       self.receivers, self.schedulers]
         for satellites_list in satellites:
             for satellite in satellites_list:
-                if not hasattr(satellite, 'realm') or getattr(satellite, 'realm') == '':
+                if not satellite.realm:
+                    # Beware: realm is not yet a real realm object uuid ... but still a realm name !
                     satellite.realm = default_realm.get_name()
                     satellite.realm_name = default_realm.get_name()
-                    logger.info("Tagging %s with realm %s", satellite.get_name(), satellite.realm)
+                    logger.info("Tagging %s with realm %s", satellite.name, satellite.realm_name)
 
-        # Parse hosts for realms and set host in the default realm is no realm is set
+        # Parse hosts for realms and set host in the default realm if no realm is set
         hosts_realms_names = set()
         for host in self.hosts:
             host_realm_name = getattr(host, 'realm', None)
@@ -1851,54 +1779,65 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 host.got_default_realm = True
             hosts_realms_names.add(host.realm)
 
+        # todo: Check the realm / sub-realms relation and the manage_sub_realms daemons
+        # to avoid creating some daemons for the sub-realms! A manage_sub_realm enabled
+        # daemon may be used instead of a brand new daemon!
+        # As of now, we consider the reactionner and receiver are managing sub-realms
+        # and thus do not create if missing in realms
+
         # Check that all daemons and realms are coherent (scheduler, broker, poller)
         satellites = [self.schedulers, self.pollers, self.brokers]
         for satellites_list in satellites:
             # Check that all schedulers and realms are coherent
-            daemons_class = satellites_list.inner_class
-            daemons_realms_names = set()
-            for daemon in satellites_list:
-                daemon_type = getattr(daemon, 'my_type', None)
-                daemon_realm_name = getattr(daemon, 'realm', None)
-                if daemon_realm_name is None:
+            sat_class = satellites_list.inner_class
+            sat_realms_names = set()
+            for satellite in satellites_list:
+                # Beware: realm is not yet a real realm object uuid ... but still a realm name !
+                if not satellite.realm:
                     logger.warning("The %s %s do not have a defined realm",
-                                   daemon_type, daemon.get_name())
+                                   satellite.type, satellite.name)
                     continue
 
-                if daemon_realm_name not in realms_names:
+                if satellite.realm not in realms_names:
                     logger.warning("The %s %s is affected to an unknown realm: '%s' (%s)",
-                                   daemon_type, daemon.get_name(), daemon_realm_name, realms_names)
+                                   satellite.type, satellite.name,
+                                   satellite.realm, realms_names)
                     continue
-                daemons_realms_names.add(daemon_realm_name)
-                # If the daemon manges sub realms, include the sub realms
-                if getattr(daemon, 'manage_sub_realms', None):
-                    for realm in self.realms[realms_names_ids[daemon_realm_name]].all_sub_members:
-                        daemons_realms_names.add(realm)
+                sat_realms_names.add(satellite.realm)
 
-            if not hosts_realms_names.issubset(daemons_realms_names):
-                for realm in hosts_realms_names.difference(daemons_realms_names):
+                # If the daemon manages sub realms, include the sub realms
+                if satellite.manage_sub_realms:
+                    for realm in self.realms[realms_names_ids[satellite.realm]].all_sub_members:
+                        sat_realms_names.add(realm)
+
+            if not hosts_realms_names.issubset(sat_realms_names):
+                for realm in hosts_realms_names.difference(sat_realms_names):
                     self.add_warning("Some hosts exist in the realm '%s' but no %s is "
-                                     "defined for this realm" % (realm, daemon_type))
+                                     "defined for this realm" % (realm, satellite.type))
 
                     # Add a self-generated daemon
-                    logger.warning("Trying to add a %s for the realm: %s", daemon_type, realm)
-                    new_daemon = daemons_class({
-                        '%s_name' % daemon_type: '%s-%s' % (daemon_type.capitalize(), realm),
-                        'realm': realm, 'spare': '0',
-                        'address': 'localhost', 'port': self.daemons_initial_port,
-                        'manage_sub_realms': '0', 'manage_arbiters': '0',
+                    logger.warning("Adding a %s for the realm: %s", satellite.type, realm)
+                    new_daemon = sat_class({
+                        'type': satellite.type, 'name': '%s-%s' % (satellite.type, realm),
+                        'alignak_launched': True, 'missing_daemon': True,
+                        'realm': realm, 'spare': '0', 'manage_sub_realms': '0',
+                        'address': '127.0.0.1', 'port': self.daemons_initial_port
                     })
+                    self.add_warning("Added a %s (%s, %s) for the realm '%s'"
+                                     % (satellite.type, '%s-%s' % (satellite.type, realm),
+                                        satellite.uri, realm))
                     self.daemons_initial_port = self.daemons_initial_port + 1
                     self.missing_daemons.append(new_daemon)
-                    self.add_warning("Added a %s in the realm '%s'" % (daemon_type, realm))
+
         # Now we have a list of the missing daemons, parse this list and
         # add the daemons to their respective list
-        satellites = [self.schedulers, self.pollers, self.brokers]
+        satellites = [self.pollers, self.brokers, self.reactionners,
+                      self.receivers, self.schedulers]
         for satellites_list in satellites:
-            daemons_class = satellites_list.inner_class
-            for daemon in self.missing_daemons:
-                if daemon.__class__ == daemons_class:
-                    satellites_list.add_item(daemon)
+            sat_class = satellites_list.inner_class
+            for satellite in self.missing_daemons:
+                if satellite.__class__ == sat_class:
+                    satellites_list.add_item(satellite)
 
         # Log all satellites list
         logger.info("Alignak definitive daemons list:")
@@ -1912,8 +1851,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :return: True if mod_type is found else False
         :rtype: bool
         """
-        for broker in self.brokers:
-            for module in broker.modules:
+        for broker_link in self.brokers:
+            for module in broker_link.modules:
                 if module.is_a_module(module_type):
                     return True
         return False
@@ -1927,15 +1866,15 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :rtype: bool
         TODO: Factorize it with got_broker_module_type_defined
         """
-        for scheduler in self.schedulers:
-            for module in scheduler.modules:
+        for scheduler_link in self.schedulers:
+            for module in scheduler_link.modules:
                 if module.is_a_module(module_type):
                     return True
         return False
 
     def got_arbiter_module_type_defined(self, module_type):
         """Check if a module type is defined in one of the arbiters
-        Also check the module_alias
+        Also check the module name
 
         :param module_type: module type to search for
         :type module_type: str
@@ -1947,13 +1886,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # Do like the linkify will do after....
             for module in getattr(arbiter, 'modules', []):
                 # So look at what the arbiter try to call as module
-                module = module.strip()
+                module_name = module.get_name()
                 # Ok, now look in modules...
                 for mod in self.modules:
                     # try to see if this module is the good type
                     if getattr(mod, 'python_name', '').strip() == module_type.strip():
                         # if so, the good name?
-                        if getattr(mod, 'module_alias', '').strip() == module:
+                        if getattr(mod, 'name', '').strip() == module_name:
                             return True
         return False
 
@@ -2005,6 +1944,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
         be ignored and the functions will be disabled, else it encourages the user to set the
         correct parameters in the installed modules.
 
+        TODO :clean and deprecate this part of the configuration checking!
+
         :return: None
         """
         # For status_dat
@@ -2017,7 +1958,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                       ('status_file', self.status_file,
                        'object_cache_file', self.object_cache_file)
                 logger.error(msg)
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
             else:
                 msg = "Your configuration parameters '%s = %s' and '%s = %s' are deprecated " \
                       "and will be ignored. Please configure your external 'retention' module " \
@@ -2035,7 +1976,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                       "such as 'logs' but I did not found one!" % \
                       ('log_file', self.log_file)
                 logger.error(msg)
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
             else:
                 msg = "Your configuration parameters '%s = %s' are deprecated " \
                       "and will be ignored. Please configure your external 'logs' module " \
@@ -2052,7 +1993,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                       "such as 'logs' but I did not found one!" % \
                       ('use_syslog', self.use_syslog)
                 logger.error(msg)
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
             else:
                 msg = "Your configuration parameters '%s = %s' are deprecated " \
                       "and will be ignored. Please configure your external 'logs' module " \
@@ -2071,7 +2012,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                       ('host_perfdata_file', self.host_perfdata_file,
                        'service_perfdata_file', self.service_perfdata_file)
                 logger.error(msg)
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
             else:
                 msg = "Your configuration parameters '%s = %s' and '%s = %s' are deprecated " \
                       "and will be ignored. Please configure your external 'retention' module " \
@@ -2091,7 +2032,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                       ('state_retention_file', self.state_retention_file,
                        'retention_update_interval', self.retention_update_interval)
                 logger.error(msg)
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
             else:
                 msg = "Your configuration parameters '%s = %s' and '%s = %s' are deprecated " \
                       "and will be ignored. Please configure your external 'retention' module " \
@@ -2106,13 +2047,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # Ok, the user wants external commands file, search for such a module
             if not self.got_arbiter_module_type_defined('external_commands'):
                 msg = "Your configuration parameter '%s = %s' needs to use an external module " \
-                      "such as 'logs' but I did not found one!" % \
+                      "such as 'external_commands' but I did not found one!" % \
                       ('command_file', self.command_file)
                 logger.error(msg)
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
             else:
                 msg = "Your configuration parameters '%s = %s' are deprecated " \
-                      "and will be ignored. Please configure your external 'logs' module " \
+                      "and will be ignored. Please configure the 'external_commands' module " \
                       "as expected." % \
                       ('command_file', self.command_file)
                 logger.warning(msg)
@@ -2123,7 +2064,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :return: None
         """
-        if self.use_timezone != '':
+        if self.use_timezone:
             # first apply myself
             os.environ['TZ'] = self.use_timezone
             time.tzset()
@@ -2216,7 +2157,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             logger.info('Alignak name is not defined, using the main arbiter name...')
             for arbiter in self.arbiters:
                 if not arbiter.spare:
-                    self.alignak_name = arbiter.arbiter_name
+                    self.alignak_name = arbiter.name
                     break
         logger.info('Alignak name is: %s', self.alignak_name)
 
@@ -2231,74 +2172,70 @@ class Config(Item):  # pylint: disable=R0904,R0902
         if self.global_host_event_handler and not self.global_host_event_handler.is_valid():
             msg = "[%s::%s] global host event_handler '%s' is invalid" \
                   % (self.my_type, self.get_name(), self.global_host_event_handler.command)
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             valid = False
 
         if self.global_service_event_handler and not self.global_service_event_handler .is_valid():
             msg = "[%s::%s] global service event_handler '%s' is invalid" \
                   % (self.my_type, self.get_name(), self.global_service_event_handler .command)
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             valid = False
 
         # If we got global performance data commands, they should be valid
         if self.host_perfdata_command and not self.host_perfdata_command.is_valid():
             msg = "[%s::%s] global host performance data command '%s' is invalid" \
                   % (self.my_type, self.get_name(), self.host_perfdata_command.command)
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             valid = False
 
         if self.service_perfdata_command and not self.service_perfdata_command.is_valid():
             msg = "[%s::%s] global service performance data command '%s' is invalid" \
                   % (self.my_type, self.get_name(), self.service_perfdata_command.command)
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             valid = False
 
-        for obj in ['hosts', 'hostgroups', 'contacts', 'contactgroups', 'notificationways',
-                    'escalations', 'services', 'servicegroups', 'timeperiods', 'commands',
-                    'hostsextinfo', 'servicesextinfo', 'checkmodulations', 'macromodulations',
-                    'realms', 'servicedependencies', 'hostdependencies', 'resultmodulations',
-                    'businessimpactmodulations', 'arbiters', 'schedulers', 'reactionners',
-                    'pollers', 'brokers', 'receivers', ]:
-            if not self.read_config_silent:
-                logger.info('Checking %s...', obj)
-
-            try:
-                cur = getattr(self, obj)
-            except AttributeError:  # pragma: no cover, simple protection
-                logger.info("\t%s are not present in the configuration", obj)
+        for _, _, strclss, _, _ in self.types_creations.values():
+            if strclss in ['hostescalations', 'serviceescalations']:
+                logger.debug("Ignoring correctness check for '%s'...", strclss)
                 continue
 
-            if not cur.is_correct():
+            if not self.read_config_silent:
+                logger.info('Checking %s...', strclss)
+
+            try:
+                checked_list = getattr(self, strclss)
+            except AttributeError:  # pragma: no cover, simple protection
+                logger.info("\t%s are not present in the configuration", strclss)
+                continue
+
+            if not checked_list.is_correct():
                 if not self.read_config_silent:
-                    logger.info('Checked %s, configuration is incorrect!', obj)
+                    logger.info('Checked %s, configuration is incorrect!', strclss)
 
                 valid = False
-                self.configuration_errors += cur.configuration_errors
-                msg = "%s configuration is incorrect!" % obj
-                self.configuration_errors.append(msg)
-                logger.error(msg)
-            if cur.configuration_warnings:
-                self.configuration_warnings += cur.configuration_warnings
-                logger.warning("\t%s configuration warnings: %d, total: %d", obj,
-                               len(cur.configuration_warnings), len(self.configuration_warnings))
+                self.configuration_errors += checked_list.configuration_errors
+                self.add_error("%s configuration is incorrect!" % strclss)
+                logger.error("%s configuration is incorrect!", strclss)
+            if checked_list.configuration_warnings:
+                self.configuration_warnings += checked_list.configuration_warnings
+                logger.warning("\t%s configuration warnings: %d, total: %d", strclss,
+                               len(checked_list.configuration_warnings),
+                               len(self.configuration_warnings))
 
             if not self.read_config_silent:
-                if obj == 'services':
-                    dump_list = sorted(cur, key=lambda k: k.host_name)
-                else:
-                    try:
-                        dump_list = sorted(cur, key=lambda k: k.get_name())
-                    except AttributeError:  # pragma: no cover, simple protection
-                        dump_list = cur
+                try:
+                    dump_list = sorted(checked_list, key=lambda k: k.get_name())
+                except AttributeError:  # pragma: no cover, simple protection
+                    dump_list = checked_list
 
                 # Dump at DEBUG level because some tests break with INFO level, and it is not
                 # really necessary to have information about each object ;
                 for cur_obj in dump_list:
-                    if obj == 'services':
+                    if strclss == 'services':
                         logger.debug('\t%s', cur_obj.get_full_name())
                     else:
                         logger.debug('\t%s', cur_obj.get_name())
-                logger.info('\tChecked %d %s', len(cur), obj)
+                logger.info('\tChecked %d %s', len(checked_list), strclss)
 
         # Parse hosts and services for tags and realms
         hosts_tag = set()
@@ -2366,10 +2303,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :return: None
         """
-        clss = [Service, Host, Contact, SchedulerLink,
-                PollerLink, ReactionnerLink, BrokerLink,
-                ReceiverLink, ArbiterLink, HostExtInfo]
-        for cls in clss:
+        for cls, _, strclss, _, _ in self.types_creations.values():
+            logger.debug("Applying global conf for the class '%s'...", strclss)
             cls.load_global_conf(self)
 
     def remove_templates(self):
@@ -2383,29 +2318,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         self.servicedependencies.remove_templates()
         self.hostdependencies.remove_templates()
         self.timeperiods.remove_templates()
-
-    def add_error(self, txt):
-        """Add a message in the configuration errors list so we can print them
-         all in one place
-
-         Set the configuration as not valid
-
-        :param txt: error message
-        :type txt: str
-        :return: None
-        """
-        self.configuration_errors.append(txt)
-        self.conf_is_correct = False
-
-    def add_warning(self, txt):
-        """Add a message in the configuration warnings list so we can print them
-         all in one place
-
-        :param txt: warning message
-        :type txt: str
-        :return: None
-        """
-        self.configuration_warnings.append(txt)
 
     def show_errors(self):
         """
@@ -2427,18 +2339,17 @@ class Config(Item):  # pylint: disable=R0904,R0902
             for msg in self.configuration_errors:
                 logger.info(msg)
 
-    def create_packs(self, nb_packs):  # pylint: disable=R0915,R0914,R0912,W0613
+    def create_packs(self):  # pylint: disable=R0915,R0914,R0912,W0613
         """Create packs of hosts and services (all dependencies are resolved)
         It create a graph. All hosts are connected to their
         parents, and hosts without parent are connected to host 'root'.
         services are linked to their host. Dependencies between hosts/services are managed.
         REF: doc/pack-creation.png
-        TODO : Check why np_packs is not used.
 
-        :param nb_packs: the number of packs to create (number of scheduler basically)
-        :type nb_packs: int
         :return: None
         """
+        logger.info("- creating hosts packs for the realms:")
+
         # We create a graph with host in nodes
         graph = Graph()
         graph.add_nodes(self.hosts.items.keys())
@@ -2460,8 +2371,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # For services: they are linked with their own host but we need
         # to have the hosts of the service dependency in the same pack too
-        for serv in self.services:
-            for (dep_id, _, _, _) in serv.act_depend_of:
+        for service in self.services:
+            for (dep_id, _, _, _) in service.act_depend_of:
                 if dep_id in self.services:
                     dep = self.services[dep_id]
                 else:
@@ -2469,25 +2380,25 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 # I don't care about dep host: they are just the host
                 # of the service...
                 if hasattr(dep, 'host'):
-                    links.add((dep.host, serv.host))
+                    links.add((dep.host, service.host))
             # The other type of dep
-            for (dep_id, _, _, _, _) in serv.chk_depend_of:
+            for (dep_id, _, _, _, _) in service.chk_depend_of:
                 if dep_id in self.services:
                     dep = self.services[dep_id]
                 else:
                     dep = self.hosts[dep_id]
-                links.add((dep.host, serv.host))
+                links.add((dep.host, service.host))
 
         # For host/service that are business based, we need to link them too
-        for serv in [srv for srv in self.services if srv.got_business_rule]:
-            for elem_uuid in serv.business_rule.list_all_elements():
+        for service in [srv for srv in self.services if srv.got_business_rule]:
+            for elem_uuid in service.business_rule.list_all_elements():
                 if elem_uuid in self.services:
                     elem = self.services[elem_uuid]
-                    if elem.host != serv.host:  # do not a host with itself
-                        links.add((elem.host, serv.host))
-                else:  # it's already a host]
-                    if elem_uuid != serv.host:
-                        links.add((elem_uuid, serv.host))
+                    if elem.host != service.host:  # do not link a host with itself
+                        links.add((elem.host, service.host))
+                else:  # it's already a host but only if it is in the known hosts list!
+                    if elem_uuid in self.hosts and elem_uuid != service.host:
+                        links.add((elem_uuid, service.host))
 
         # Same for hosts of course
         for host in [hst for hst in self.hosts if hst.got_business_rule]:
@@ -2513,16 +2424,22 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # with it: it's a list of ours mini_packs
         # Now we look if all elements of all packs have the
         # same realm. If not, not good!
-        for pack in graph.get_accessibility_packs():
+        for hosts_pack in graph.get_accessibility_packs():
+            passively_checked_hosts = False
+            actively_checked_hosts = False
             tmp_realms = set()
-            for elt_id in pack:
-                elt = self.hosts[elt_id]
-                if elt.realm:
-                    tmp_realms.add(elt.realm)
+            logger.debug(" - host pack hosts:")
+            for host_id in hosts_pack:
+                host = self.hosts[host_id]
+                logger.debug("  - %s", host.get_name())
+                passively_checked_hosts = passively_checked_hosts or host.passive_checks_enabled
+                actively_checked_hosts = actively_checked_hosts or host.active_checks_enabled
+                if host.realm:
+                    tmp_realms.add(host.realm)
             if len(tmp_realms) > 1:
                 self.add_error("Error: the realm configuration of yours hosts is not good because "
                                "there is more than one realm in one pack (host relations):")
-                for host_id in pack:
+                for host_id in hosts_pack:
                     host = self.hosts[host_id]
                     if host.realm is None:
                         self.add_error(' -> the host %s do not have a realm' % host.get_name())
@@ -2533,23 +2450,30 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         self.add_error(' -> the host %s is in the realm %s' %
                                        (host.get_name(), host.realm_name))
             if len(tmp_realms) == 1:  # Ok, good
-                realm = self.realms[tmp_realms.pop()]  # There is just one element
-                realm.packs.append(pack)
-            elif not tmp_realms:  # Hum.. no realm value? So default Realm
+                realm = self.realms[tmp_realms.pop()]
+                # Set the current hosts pack to its realm
+                logger.debug(" - append pack %s to realm %s", hosts_pack, realm.get_name())
+                realm.packs.append(hosts_pack)
+                # Set if the realm only has passively or actively checked hosts...
+                realm.passively_checked_hosts = passively_checked_hosts
+                realm.actively_checked_hosts = actively_checked_hosts
+            elif not tmp_realms:  # Hum... no realm value? So default Realm
                 if default_realm is not None:
-                    default_realm.packs.append(pack)
+                    # Set the current hosts pack to the default realm
+                    default_realm.packs.append(hosts_pack)
                 else:
                     self.add_error("Error: some hosts do not have a realm and you did not "
                                    "defined a default realm!")
-                    for host in pack:
+                    for host in hosts_pack:
                         self.add_error('    Impacted host: %s ' % host.get_name())
 
         # The load balancing is for a loop, so all
-        # hosts of a realm (in a pack) will be dispatch
-        # in the schedulers of this realm
+        # hosts of a realm (in a pack) will be dispatched
+        # to the schedulers of this realm
         # REF: doc/pack-aggregation.png
 
-        # Count the numbers of elements in all the realms, to compare it the total number of hosts
+        # Count the numbers of elements in all the realms,
+        # to compare with the total number of hosts
         nb_elements_all_realms = 0
         for realm in self.realms:
             packs = {}
@@ -2559,37 +2483,46 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # every weight point schedulers (so Weight round robin)
             weight_list = []
             no_spare_schedulers = [s_id for s_id in realm.schedulers
-                                   if not self.schedulers[s_id].spare]
+                                   if self.schedulers[s_id].active and
+                                   not self.schedulers[s_id].spare]
             nb_schedulers = len(no_spare_schedulers)
+            logger.info("  %d schedulers in the realm %s", nb_schedulers, realm.get_name())
 
-            # Maybe there is no scheduler in the realm, it's can be a
+            # Maybe there is no scheduler in the realm, it can be a
             # big problem if there are elements in packs
             nb_elements = 0
-            for pack in realm.packs:
-                nb_elements += len(pack)
-                nb_elements_all_realms += len(pack)
-            logger.info("Number of hosts in the realm %s: %d "
-                        "(distributed in %d linked packs)",
-                        realm.get_name(), nb_elements, len(realm.packs))
+            for hosts_pack in realm.packs:
+                nb_elements += len(hosts_pack)
+                nb_elements_all_realms += len(hosts_pack)
+            realm.hosts_count = nb_elements
+            if nb_elements:
+                logger.info("  %d hosts in the realm %s, distributed in %d linked packs",
+                            nb_elements, realm.get_name(), len(realm.packs))
+            else:
+                logger.info("  no hosts in the realm %s", realm.get_name())
 
             if nb_schedulers == 0 and nb_elements != 0:
-                err = "The realm %s has hosts but no scheduler!" % realm.get_name()
-                self.add_error(err)
+                self.add_error("The realm %s has hosts but no scheduler!" % realm.get_name())
                 realm.packs = []  # Dumb pack
                 continue
 
+            # Create a relation between a pack and each scheduler in the realm
             packindex = 0
             packindices = {}
             for s_id in no_spare_schedulers:
-                sched = self.schedulers[s_id]
+                scheduler = self.schedulers[s_id]
+                logger.debug("  scheduler: %s", scheduler.instance_id)
                 packindices[s_id] = packindex
                 packindex += 1
-                for i in xrange(0, sched.weight):
+                for i in xrange(0, scheduler.weight):
                     weight_list.append(s_id)
+            logger.debug("  pack indices: %s", packindices)
+            # packindices is indexed with the scheduler id and contains
+            # the configuration part number to get used: sched1:0, sched2: 1, ...
 
             round_robin = itertools.cycle(weight_list)
 
-            # We must have nb_schedulers packs
+            # We must initialize nb_schedulers packs
             for i in xrange(0, nb_schedulers):
                 packs[i] = []
 
@@ -2597,17 +2530,17 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # send the hosts in the same "pack"
             assoc = {}
 
-            # Now we explode the numerous packs into nb_packs reals packs:
+            # Now we explode the numerous packs into reals packs:
             # we 'load balance' them in a round-robin way but with count number of hosts in
             # case have some packs with too many hosts and other with few
             realm.packs.sort(sort_by_number_values)
             pack_higher_hosts = 0
-            for pack in realm.packs:
+            for hosts_pack in realm.packs:
                 valid_value = False
                 old_pack = -1
-                for elt_id in pack:
-                    elt = self.hosts[elt_id]
-                    old_i = assoc.get(elt.get_name(), -1)
+                for host_id in hosts_pack:
+                    host = self.hosts[host_id]
+                    old_i = assoc.get(host.get_name(), -1)
                     # Maybe it's a new, if so, don't count it
                     if old_i == -1:
                         continue
@@ -2626,23 +2559,20 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 else:
                     if isinstance(i, int):
                         i = round_robin.next()
-                    elif (len(packs[packindices[i]]) + len(pack)) >= pack_higher_hosts:
-                        pack_higher_hosts = (len(packs[packindices[i]]) + len(pack))
+                    elif (len(packs[packindices[i]]) + len(hosts_pack)) >= pack_higher_hosts:
+                        pack_higher_hosts = (len(packs[packindices[i]]) + len(hosts_pack))
                         i = round_robin.next()
 
-                for elt_id in pack:
-                    elt = self.hosts[elt_id]
-                    packs[packindices[i]].append(elt_id)
-                    assoc[elt.get_name()] = i
+                for host_id in hosts_pack:
+                    host = self.hosts[host_id]
+                    packs[packindices[i]].append(host_id)
+                    assoc[host.get_name()] = i
 
-            # Now in packs we have the number of packs [h1, h2, etc]
-            # equal to the number of schedulers.
+            # Now packs is a dictionary indexed with the configuration part
+            # number and containing the list of hosts
             realm.packs = packs
 
-        for what in (self.contacts, self.hosts, self.services, self.commands):
-            logger.info("Number of %s : %d", type(what).__name__, len(what))
-
-        logger.info("Total number of hosts in all realms: %d", nb_elements_all_realms)
+        logger.info("  total number of hosts in all realms: %d", nb_elements_all_realms)
         if len(self.hosts) != nb_elements_all_realms:
             logger.warning("There are %d hosts defined, and %d hosts dispatched in the realms. "
                            "Some hosts have been ignored", len(self.hosts), nb_elements_all_realms)
@@ -2650,96 +2580,135 @@ class Config(Item):  # pylint: disable=R0904,R0902
                            "Some hosts have been "
                            "ignored" % (len(self.hosts), nb_elements_all_realms))
 
-    def cut_into_parts(self):  # pylint: disable=R0912,R0914
+    def cut_into_parts(self):  # pylint: disable=R0912,R0914, too-many-statements
         """Cut conf into part for scheduler dispatch.
-        Basically it provide a set of host/services for each scheduler that
+
+        Basically it provides a set of host/services for each scheduler that
         have no dependencies between them
 
-        :return:None
+        :return: None
         """
-        # I do not care about alive or not. User must have set a spare if need it
-        nb_parts = sum(1 for s in self.schedulers
-                       if not s.spare)
+        # User must have set a spare if he needed one
+        logger.info("Splitting the configuration into parts:")
+        nb_parts = 0
+        for realm in self.realms:
+            no_spare_schedulers = [s_id for s_id in realm.schedulers
+                                   if self.schedulers[s_id].active and
+                                   not self.schedulers[s_id].spare]
+            nb_schedulers = len(no_spare_schedulers)
+            nb_parts += nb_schedulers
+            logger.info(" - %d schedulers in the realm %s", nb_schedulers, realm.get_name())
 
         if nb_parts == 0:
+            logger.warning("Splitting the configuration into parts but I found no scheduler. "
+                           "Considering that one exist anyway...")
             nb_parts = 1
 
         # We create dummy configurations for schedulers:
-        # they are clone of the master
-        # conf but without hosts and services (because they are dispatched between
-        # theses configurations)
-        self.confs = {}
-        for i in xrange(0, nb_parts):
-            cur_conf = self.confs[i] = Config()
+        # they are clone of the master configuration but without hosts and
+        # services (because they are splitted between these configurations)
+        logger.info("Splitting the configuration into %d parts...", nb_parts)
+        self.parts = {}
+        for part_index in xrange(0, nb_parts):
+            self.parts[part_index] = Config()
 
             # Now we copy all properties of conf into the new ones
             for prop, entry in Config.properties.items():
+                # Do not copy the configuration instance id nor name!
+                if prop in ['instance_id', 'config_name']:
+                    continue
+                # Only the one that are managed and used
                 if entry.managed and not isinstance(entry, UnusedProp):
                     val = getattr(self, prop)
-                    setattr(cur_conf, prop, val)
+                    setattr(self.parts[part_index], prop, val)
 
-            # we need a deepcopy because each conf
-            # will have new hostgroups
-            cur_conf.uuid = uuid.uuid4().hex
-            cur_conf.commands = self.commands
-            cur_conf.timeperiods = self.timeperiods
-            # Create hostgroups with just the name and same id, but no members
-            new_hostgroups = []
-            for hostgroup in self.hostgroups:
-                new_hostgroups.append(hostgroup.copy_shell())
-            cur_conf.hostgroups = Hostgroups(new_hostgroups)
-            cur_conf.notificationways = self.notificationways
-            cur_conf.checkmodulations = self.checkmodulations
-            cur_conf.macromodulations = self.macromodulations
-            cur_conf.businessimpactmodulations = self.businessimpactmodulations
-            cur_conf.resultmodulations = self.resultmodulations
-            cur_conf.contactgroups = self.contactgroups
-            cur_conf.contacts = self.contacts
-            cur_conf.triggers = self.triggers
-            cur_conf.escalations = self.escalations
-            # Create servicegroups with just the name and same id, but no members
-            new_servicegroups = []
-            for servicegroup in self.servicegroups:
-                new_servicegroups.append(servicegroup.copy_shell())
-            cur_conf.servicegroups = Servicegroups(new_servicegroups)
-            # Create ours classes
-            cur_conf.hosts = Hosts([])
-            cur_conf.services = Services([])
+            # Set the cloned configuration name
+            self.parts[part_index].config_name = "%s (%d)" % (self.config_name, part_index)
+            logger.info("- cloning configuration: %s -> %s",
+                        self.parts[part_index].config_name, self.parts[part_index])
+
+            # Copy the configuration objects lists. We need a deepcopy because each configuration
+            # will have some new groups... but we keep the same uuid
+            self.parts[part_index].uuid = uuid.uuid4().hex
+
+            types_creations = self.__class__.types_creations
+            for o_type in types_creations:
+                (_, clss, inner_property, _, clonable) = types_creations[o_type]
+                if not clonable:
+                    logger.debug("  . do not clone: %s", inner_property)
+                    continue
+                # todo: Indeed contactgroups should be managed like hostgroups...
+                if inner_property in ['hostgroups', 'servicegroups']:
+                    new_groups = []
+                    for group in getattr(self, inner_property):
+                        new_groups.append(group.copy_shell())
+                    setattr(self.parts[part_index], inner_property, clss(new_groups))
+                elif inner_property in ['hosts', 'services']:
+                    setattr(self.parts[part_index], inner_property, clss([]))
+                else:
+                    setattr(self.parts[part_index], inner_property, getattr(self, inner_property))
+                logger.debug("  . cloned %s: %s -> %s", inner_property,
+                             getattr(self, inner_property),
+                             getattr(self.parts[part_index], inner_property))
 
             # The elements of the others conf will be tag here
-            cur_conf.other_elements = {}
-            # if a scheduler have accepted the conf
-            cur_conf.is_assigned = False
+            self.parts[part_index].other_elements = {}
 
-        logger.info("Creating packs for realms")
+            # No scheduler has yet accepted the configuration
+            self.parts[part_index].is_assigned = False
+            self.parts[part_index].scheduler_link = None
+            self.parts[part_index].push_flavor = ''
+        # Once parts got created, the current configuration has some 'parts'
+        # self.parts is the configuration split into parts for the schedulers
 
         # Just create packs. There can be numerous ones
-        # In pack we've got hosts and service
-        # packs are in the realms
-        # REF: doc/pack-creation.png
-        self.create_packs(nb_parts)
+        # In pack we've got hosts and service and packs are in the realms
+        logger.debug("Creating packs for realms...")
+        self.create_packs()
+        # Once packs got created, all the realms have some 'packs'
 
-        # We've got all big packs and get elements into configurations
-        # REF: doc/pack-aggregation.png
+        logger.info("Realms:")
+        for realm in self.realms:
+            logger.info(" - realm: %s", realm)
+            for idx in realm.packs:
+                logger.info("   - pack: %s / %d hosts", idx, len(realm.packs[idx]))
+                logger.info("    : %s", ','.join([self.hosts[host_id].get_name()
+                                                  for host_id in realm.packs[idx]]))
+
+        # We have packs for realms and elements into configurations, let's merge this...
+        logger.info("Realms:")
         offset = 0
         for realm in self.realms:
-            for i in realm.packs:
-                for host_id in realm.packs[i]:
-                    host = self.hosts[host_id]
-                    host.pack_id = i
-                    self.confs[i + offset].hosts.add_item(host)
-                    for serv_id in host.services:
-                        serv = self.services[serv_id]
-                        self.confs[i + offset].services.add_item(serv)
-                # Now the conf can be link in the realm
-                realm.confs[i + offset] = self.confs[i + offset]
+            logger.info(" Realm: %s", realm)
+            for idx in realm.packs:
+                logger.info(" - pack: %s / %d hosts", idx, len(realm.packs[idx]))
+                if not realm.packs[idx]:
+                    logger.info(" - no hosts are declared in this realm pack.")
+                    # continue
+                try:
+                    instance_id = self.parts[idx + offset].instance_id
+                    for host_id in realm.packs[idx]:
+                        host = self.hosts[host_id]
+                        host.pack_id = idx
+                        self.parts[idx + offset].hosts.add_item(host)
+                        for service_id in host.services:
+                            service = self.services[service_id]
+                            self.parts[idx + offset].services.add_item(service)
+                    # Now the conf can be linked with the realm
+                    realm.parts.update({instance_id: self.parts[idx + offset]})
+                    # offset += 1
+                except KeyError:
+                    logger.info(" - no configuration part is affected "
+                                "because of mismatching hosts packs / schedulers count. "
+                                "Probably too much schedulers for the hosts count!")
+
             offset += len(realm.packs)
             del realm.packs
 
-        # We've nearly have hosts and services. Now we want REALS hosts (Class)
+        # We've nearly have hosts and services. Now we want real hosts (Class)
         # And we want groups too
-        for i in self.confs:
-            cfg = self.confs[i]
+        for part_index in self.parts:
+            cfg = self.parts[part_index]
 
             # Fill host groups
             for ori_hg in self.hostgroups:
@@ -2767,12 +2736,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 servicegroup = cfg.servicegroups.find_by_name(ori_sg.get_name())
                 mbrs = ori_sg.members
                 mbrs_id = []
-                for serv in mbrs:
-                    if serv != '':
-                        mbrs_id.append(serv)
-                for serv in cfg.services:
-                    if serv.uuid in mbrs_id:
-                        servicegroup.members.append(serv.uuid)
+                for service in mbrs:
+                    if service != '':
+                        mbrs_id.append(service)
+                for service in cfg.services:
+                    if service.uuid in mbrs_id:
+                        servicegroup.members.append(service.uuid)
 
             # And also relink the services with the valid servicegroups
             for host in cfg.services:
@@ -2786,47 +2755,35 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Now we fill other_elements by host (service are with their host
         # so they are not tagged)
-        for i in self.confs:
-            for host in self.confs[i].hosts:
-                for j in [j for j in self.confs if j != i]:  # So other than i
-                    self.confs[i].other_elements[host.get_name()] = i
+        logger.info("Configuration parts:")
+        for part_index in self.parts:
+            for host in self.parts[part_index].hosts:
+                for j in [j for j in self.parts if j != part_index]:  # So other than i
+                    self.parts[part_index].other_elements[host.get_name()] = part_index
+            logger.info("- part: %d - %s, %d hosts", part_index, self.parts[part_index],
+                        len(self.parts[part_index].hosts))
 
-        # We tag conf with instance_id
-        for i in self.confs:
-            self.confs[i].instance_id = i
-            random.seed(time.time())
+    def prepare_for_sending(self):
+        """The configuration needs to be serialized before being sent to a spare arbiter
 
-    def dump(self, dfile=None):
-        """Dump configuration to a file in a JSON format
-
-        :param dfile: the file to dump
-        :type dfile: file
         :return: None
         """
-        dmp = {}
+        if [arbiter_link for arbiter_link in self.arbiters if arbiter_link.spare]:
+            logger.info('Serializing the configuration for my spare arbiter...')
 
-        for category in ("hosts",
-                         "hostgroups",
-                         "hostdependencies",
-                         "contactgroups",
-                         "contacts",
-                         "notificationways",
-                         "checkmodulations",
-                         "macromodulations",
-                         "servicegroups",
-                         "services",
-                         "servicedependencies",
-                         "resultmodulations",
-                         "businessimpactmodulations",
-                         "escalations",
-                         "arbiters",
-                         "brokers",
-                         "pollers",
-                         "reactionners",
-                         "receivers",
-                         "schedulers",
-                         "realms",
-                         ):
+            # Now serialize the whole configuration, for sending to spare arbiters
+            self.spare_arbiter_conf = serialize(self)
+
+    def dump(self, dump_file=None):  # pragma: no cover, not for unit tests...
+        """Dump configuration to a file in a JSON format
+
+        :param dump_file: the file to dump
+        :type dump_file: file
+        :return: None
+        """
+        config_dump = {}
+
+        for _, _, category, _, _ in self.types_creations.values():
             try:
                 objs = [jsonify_r(i) for i in getattr(self, category)]
             except TypeError:  # pragma: no cover, simple protection
@@ -2841,29 +2798,23 @@ class Config(Item):  # pylint: disable=R0904,R0902
             container = getattr(self, category)
             if category == "services":
                 objs = sorted(objs, key=lambda o: "%s/%s" %
-                              (o["host_name"], o["service_description"]))
+                                                  (o["host_name"], o["service_description"]))
             elif hasattr(container, "name_property"):
                 name_prop = container.name_property
                 objs = sorted(objs, key=lambda o, prop=name_prop: getattr(o, prop, ''))
-            dmp[category] = objs
+            config_dump[category] = objs
 
-        if dfile is None:
+        if dump_file is None:
             temp_d = tempfile.gettempdir()
             path = os.path.join(temp_d, 'alignak-config-dump-%d' % time.time())
-            dfile = open(path, "wb")
+            dump_file = open(path, "wb")
             close = True
         else:
             close = False
-        dfile.write(
-            json.dumps(
-                dmp,
-                indent=4,
-                separators=(',', ': '),
-                sort_keys=True
-            )
-        )
-        if close is True:
-            dfile.close()
+
+        dump_file.write(json.dumps(config_dump, indent=4, separators=(',', ': '), sort_keys=True))
+        if close:
+            dump_file.close()
 
 
 def lazy():

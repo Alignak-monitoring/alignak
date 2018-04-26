@@ -1,0 +1,29 @@
+[Unit]
+Description=Alignak arbiter %I daemon instance
+PartOf=alignak.service
+
+[Service]
+# Environment variables
+Environment=ALIGNAKCFG=/applis/Smoove/smoove/etc/alignak/alignak.cfg
+Environment=ALIGNAKDAEMONS=/applis/Smoove/smoove/etc/alignak/daemons
+
+Type=forking
+
+# Execution
+ExecStartPre=/bin/mkdir -p /usr/var/log/alignak
+ExecStartPre=/bin/chown alignak:alignak /usr/var/log/alignak
+ExecStartPre=/bin/mkdir -p /usr/var/run/alignak
+ExecStartPre=/bin/chown alignak:alignak /usr/var/run/alignak
+
+# PID file as declared in daemon ini configuration file
+PIDFile=/usr/var/run/alignak/arbiter-%i.pid
+
+ExecStartPre=/bin/echo Alignak starting arbiter %i - /usr/bin/alignak-arbiter -d -c ${ALIGNAKDAEMONS}/arbiter-%i.ini -a ${ALIGNAKCFG}
+ExecStart=/usr/bin/alignak-arbiter -d -c ${ALIGNAKDAEMONS}/arbiter-%i.ini -a ${ALIGNAKCFG}
+
+KillSignal=SIGINT
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=alignak.service
+

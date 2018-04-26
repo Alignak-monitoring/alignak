@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -22,27 +22,33 @@
     This file contains classes and utilities for Alignak tests modules
 """
 
+import os
 import sys
-from sys import __stdout__
-from functools import partial
+
+import signal
 
 import time
-import datetime
-import os
 import string
 import re
-import random
-import copy
 import locale
-import socket
 
-import unittest2 as unittest
+import shutil
+import psutil
+import subprocess
+
+from copy import deepcopy
+
+import unittest2
 
 import logging
-from logging import Handler
+from logging import Handler, Formatter
+from logging.handlers import TimedRotatingFileHandler
+
+import requests_mock
 
 import alignak
-from alignak.log import DEFAULT_FORMATTER_NAMED, ROOT_LOGGER_NAME
+from alignak.log import setup_logger, ALIGNAK_LOGGER_NAME, ColorStreamHandler, CollectorHandler
+from alignak.bin.alignak_environment import AlignakConfigParser
 from alignak.objects.config import Config
 from alignak.objects.command import Command
 from alignak.objects.module import Module
@@ -71,54 +77,96 @@ from alignak.daemons.schedulerdaemon import Alignak
 from alignak.daemons.brokerdaemon import Broker
 from alignak.daemons.arbiterdaemon import Arbiter
 from alignak.daemons.receiverdaemon import Receiver
-from logging import ERROR
 
-from alignak_tst_utils import safe_print
-
-# Modules are by default on the ../modules
-myself = os.path.abspath(__file__)
-
-
-class CollectorHandler(Handler):
-    """
-    This log handler collecting all emitted log.
-
-    Used for tet purpose (assertion)
-    """
-
-    def __init__(self):
-        Handler.__init__(self, logging.DEBUG)
-        self.collector = []
-
-    def emit(self, record):
-        try:
-            msg = self.format(record)
-            self.collector.append(msg)
-        except TypeError:
-            self.handleError(record)
-
-
-class AlignakTest(unittest.TestCase):
-
-    maxDiff = None
+class AlignakTest(unittest2.TestCase):
 
     if sys.version_info < (2, 7):
         def assertRegex(self, *args, **kwargs):
             return self.assertRegexpMatches(*args, **kwargs)
 
-    def setup_logger(self):
+    def setUp(self):
+        """All tests initialization:
+        - output test identifier
+        - setup test logger
+        - track running Alignak daemons
+        - output system cpu/memory
         """
-        Setup a log collector
-        :return:
+        self.my_pid = os.getpid()
+
+        print "\n" + self.id()
+        print("-" * 80)
+        print("Test current working directory: %s" % (os.getcwd()))
+
+        # Configure Alignak logger with test configuration
+        logger_configuration_file = os.path.join(os.getcwd(), './cfg/alignak-logger.json')
+        self.former_log_level = None
+        setup_logger(logger_configuration_file, log_dir=None, process_name='', log_file='')
+        self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        self.logger_.info("Test: %s", self.id())
+
+        # To make sure that no running daemon exist
+        print("Checking Alignak running daemons...")
+        for daemon in ['broker', 'poller', 'reactionner', 'receiver', 'scheduler', 'arbiter']:
+            for proc in psutil.process_iter():
+                if 'alignak' in proc.name() and daemon in proc.name():
+                    assert False, "*** Found a running Alignak daemon: %s" % (proc.name())
+
+        print("System information:")
+        perfdatas = []
+        cpu_count = psutil.cpu_count()
+        perfdatas.append("'cpu_count'=%d" % cpu_count)
+
+        cpu_percents = psutil.cpu_percent(percpu=True)
+        cpu = 1
+        for percent in cpu_percents:
+            perfdatas.append("'cpu_%d_percent'=%.2f%%" % (cpu, percent))
+            cpu += 1
+        print "-> cpu: %s" % " ".join(perfdatas)
+
+        perfdatas = []
+        virtual_memory = psutil.virtual_memory()
+        for key in virtual_memory._fields:
+            if 'percent' in key:
+                perfdatas.append("'mem_percent_used_%s'=%.2f%%"
+                                 % (key, getattr(virtual_memory, key)))
+
+        swap_memory = psutil.swap_memory()
+        for key in swap_memory._fields:
+            if 'percent' in key:
+                perfdatas.append("'swap_used_%s'=%.2f%%"
+                                 % (key, getattr(swap_memory, key)))
+
+        print "-> memory: %s" % " ".join(perfdatas)
+        print ("-" * 80) + "\n"
+
+    def tearDown(self):
+        """Test ending:
+        - restore initial log level if it got changed
         """
-        self.logger = logging.getLogger("alignak")
+        # Clear Alignak unit tests log list
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for handler in logger_.handlers:
+            if getattr(handler, '_name', None) == 'unit_tests':
+                print("Log handler %s, stored %d logs" % (handler._name, len(handler.collector)))
+                handler.collector = []
+                # Restore the collector logger log level
+                if self.former_log_level:
+                    handler.level = self.former_log_level
+                break
 
-        # Add collector for test purpose.
-        collector_h = CollectorHandler()
-        collector_h.setFormatter(DEFAULT_FORMATTER_NAMED)
-        self.logger.addHandler(collector_h)
+    def set_debug_log(self):
+        """Set the test logger at DEBUG level - useful for some tests that check debug log"""
+        # Change the collector logger log level
+        print("set_debug_log")
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for handler in logger_.handlers:
+            if getattr(handler, '_name', None) == 'unit_tests':
+                self.former_log_level = handler.level
+                handler.setLevel(logging.DEBUG)
+                print("Unit tests handler is set at debug!")
+                break
 
-    def files_update(self, files, replacements):
+    def _files_update(self, files, replacements):
         """Update files content with the defined replacements
 
         :param files: list of files to parse and replace
@@ -136,9 +184,232 @@ class AlignakTest(unittest.TestCase):
                 for line in lines:
                     outfile.write(line)
 
-    def setup_with_file(self, configuration_file):
+    def _stop_alignak_daemons(self, arbiter_only=True):
+        """ Stop the Alignak daemons started formerly
+
+        If some alignak- daemons are still running after the kill, force kill them.
+
+        :return: None
         """
-        Load alignak with defined configuration file
+
+        print("Stopping the daemons...")
+        start = time.time()
+        if getattr(self, 'procs', None):
+            for name, proc in self.procs.items():
+                if arbiter_only and name not in ['arbiter-master']:
+                    continue
+                if proc.pid == self.my_pid:
+                    print("- do not kill myself!")
+                    continue
+                print("Asking %s (pid=%d) to end..." % (name, proc.pid))
+                try:
+                    daemon_process = psutil.Process(proc.pid)
+                except psutil.NoSuchProcess:
+                    print("not existing!")
+                    continue
+                # children = daemon_process.children(recursive=True)
+                daemon_process.terminate()
+                try:
+                    # The default arbiter / daemons stopping process is 30 seconds graceful ... so
+                    # not really compatible with this default delay. The test must update the
+                    # default delay or set a shorter delay than the default one
+                    daemon_process.wait(10)
+                except psutil.TimeoutExpired:
+                    print("***** stopping timeout 10 seconds, force-killing the daemon...")
+                    daemon_process.kill()
+                except psutil.NoSuchProcess:
+                    print("not existing!")
+                    pass
+                print("%s terminated" % (name))
+            print("Stopping daemons duration: %d seconds" % (time.time() - start))
+
+        time.sleep(1.0)
+
+        print("Killing remaining processes...")
+        for daemon in ['broker', 'poller', 'reactionner', 'receiver', 'scheduler', 'arbiter']:
+            for proc in psutil.process_iter():
+                if daemon not in proc.name():
+                    continue
+                if getattr(self, 'my_pid', None) and proc.pid == self.my_pid:
+                    continue
+                print("- killing %s" % (proc.name()))
+                try:
+                    daemon_process = psutil.Process(proc.pid)
+                except psutil.NoSuchProcess:
+                    print("not existing!")
+                    continue
+
+                daemon_process.terminate()
+                try:
+                    daemon_process.wait(10)
+                except psutil.TimeoutExpired:
+                    print("***** timeout 10 seconds, force-killing the daemon...")
+                    daemon_process.kill()
+
+    def _run_alignak_daemons(self, cfg_folder='/tmp', runtime=30,
+                             daemons_list=[], spare_daemons=[], piped=False, run_folder='',
+                             arbiter_only=True):
+        """ Run the Alignak daemons for a passive configuration
+
+        Let the daemons run for the number of seconds defined in the runtime parameter and
+        then kill the required daemons (list in the spare_daemons parameter)
+
+        Check that the run daemons did not raised any ERROR log
+
+        :return: None
+        """
+        # Load and test the configuration
+        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), cfg_folder)
+        if not run_folder:
+            run_folder = cfg_folder
+        print("Running Alignak daemons, cfg_folder: %s, run_folder: %s" % (cfg_folder, run_folder))
+
+        # Update alignak.ini file to avoid using the alignak:alignak user account
+        files = ['%s/alignak.ini' % cfg_folder]
+        replacements = {
+            'user=alignak': ';user=alignak',
+            'group=alignak': ';group=alignak'
+
+        }
+        print("Commenting user/group in alignak.ini...")
+        self._files_update(files, replacements)
+
+        print("Cleaning pid and log files...")
+        for name in daemons_list + ['arbiter-master']:
+            # if arbiter_only and name not in ['arbiter-master']:
+            #     continue
+            if os.path.exists('%s/%s.pid' % (run_folder, name)):
+                os.remove('%s/%s.pid' % (run_folder, name))
+                print("- removed %s/%s.pid" % (run_folder, name))
+            if os.path.exists('%s/%s.log' % (run_folder, name)):
+                os.remove('%s/%s.log' % (run_folder, name))
+                print("- removed %s/%s.log" % (run_folder, name))
+
+        self._stop_alignak_daemons()
+
+        # Some script comands may exist in the test folder ...
+        if os.path.exists(cfg_folder + '/dummy_command.sh'):
+            shutil.copy(cfg_folder + '/dummy_command.sh', '/tmp/dummy_command.sh')
+        if os.path.exists(cfg_folder + '/check_command.sh'):
+            shutil.copy(cfg_folder + '/check_command.sh', '/tmp/check_command.sh')
+
+        print("Launching the daemons...")
+        self.procs = {}
+        for name in daemons_list + ['arbiter-master']:
+            if arbiter_only and name not in ['arbiter-master']:
+                continue
+            args = ["../alignak/bin/alignak_%s.py" % name.split('-')[0], "-n", name,
+                    "-e", "%s/alignak.ini" % cfg_folder]
+            if piped:
+                self.procs[name] = \
+                    subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            else:
+                self.procs[name] = subprocess.Popen(args)
+
+            time.sleep(0.1)
+            print("- %s launched (pid=%d)" % (name, self.procs[name].pid))
+
+        time.sleep(3)
+
+        print("Testing daemons start")
+        for name, proc in self.procs.items():
+            ret = proc.poll()
+            if ret is not None:
+                print("*** %s exited on start!" % (name))
+                if os.path.exists("/tmp/alignak.log"):
+                    with open("/tmp/alignak.log") as f:
+                        for line in f:
+                            print("xxx %s" % line)
+
+                if os.path.exists("%s/arbiter-master.log" % cfg_folder):
+                    with open("%s/arbiter-master.log" % cfg_folder) as f:
+                        for line in f:
+                            print("... %s" % line)
+
+                if proc.stdout:
+                    for line in iter(proc.stdout.readline, b''):
+                        print(">>> " + line.rstrip())
+                else:
+                    print("No stdout!")
+                if proc.stderr:
+                    for line in iter(proc.stderr.readline, b''):
+                        print(">>> " + line.rstrip())
+                else:
+                    print("No stderr!")
+            assert ret is None, "Daemon %s not started!" % name
+            print("%s running (pid=%d)" % (name, self.procs[name].pid))
+
+        # Let the daemons start ...
+        time.sleep(3)
+
+        print("Testing pid files and log files...")
+        for name in daemons_list + ['arbiter-master']:
+            if arbiter_only and name not in ['arbiter-master']:
+                continue
+            print("- %s for %s" % ('%s/%s.pid' % (run_folder, name), name))
+            # Some times pid and log files may not exist ...
+            if not os.path.exists('%s/%s.pid' % (run_folder, name)):
+                print('%s/%s.pid does not exist!' % (run_folder, name))
+            print("- %s for %s" % ('%s/%s.log' % (run_folder, name), name))
+            if not os.path.exists('%s/%s.log' % (run_folder, name)):
+                print('%s/%s.log does not exist!' % (run_folder, name))
+
+        time.sleep(1)
+
+        # Let the arbiter build and dispatch its configuration
+        # Let the schedulers get their configuration and run the first checks
+        time.sleep(runtime)
+
+    def _check_daemons_log_for_errors(self, daemons_list, ignored_warnings=[], ignored_errors=[]):
+        """
+        Check that the daemons all started correctly and that they got their configuration
+        ignored_warnings and ignored_errors are lists of strings that make a WARNING or ERROR log
+        not to be considered as a warning or error
+
+        :return:
+        """
+        print("Get information from log files...")
+        travis_run = 'TRAVIS' in os.environ
+        nb_errors = 0
+        nb_warnings = 0
+        for daemon in ['arbiter-master'] + daemons_list:
+            print("- log /tmp/%s.log" % daemon)
+            assert os.path.exists("/tmp/%s.log" % daemon), '/tmp/%s.log does not exist!' % daemon
+            daemon_errors = False
+            print("-----\n%s log file\n-----\n" % daemon)
+            with open('/tmp/%s.log' % daemon) as f:
+                for line in f:
+                    if 'WARNING: ' in line or daemon_errors:
+                        if not travis_run:
+                            print(line[:-1])
+                        if 'Cannot call the additional groups setting ' not in line \
+                                and 'loop exceeded the maximum expected' not in line \
+                                and 'ignoring repeated file' not in line:
+                            for ignore_line in ignored_warnings:
+                                if ignore_line in line:
+                                    break
+                            else:
+                                nb_warnings += 1
+                                print("---" + line[:-1])
+                            # nb_warnings += 1
+                    if 'ERROR: ' in line or 'CRITICAL: ' in line:
+                        if not daemon_errors:
+                            print(line[:-1])
+                        for ignore_line in ignored_errors:
+                            if ignore_line in line:
+                                break
+                        else:
+                            nb_errors += 1
+                        if nb_errors > 0:
+                            daemon_errors = True
+
+        return (nb_errors, nb_warnings)
+
+    def setup_with_file(self, configuration_file, env_file=None, verbose=False, unit_test=True):
+        """
+        Load alignak with the provided configuration and environment files
+
+        If verbose is True the envirnment loading is printed out on the console.
 
         If the configuration loading fails, a SystemExit exception is raised to the caller.
 
@@ -147,129 +418,262 @@ class AlignakTest(unittest.TestCase):
         The configuration errors property contains a list of the error message that are normally
         logged as ERROR by the arbiter.
 
-        @verified
+        If unit_test is True it will simulate the dispatcher configuration sending
+        to the declared satellites in the configuration. Set to False if you intend to run
+        real daemons that will receive their configuration!
 
         :param configuration_file: path + file name of the main configuration file
         :type configuration_file: str
+        :param env_file: path + file name of the alignak environment file
+        :type env_file: str
+        :param verbose: load Alignak environment in verbose mode (defaults True)
+        :type verbose: bool
         :return: None
         """
         self.broks = {}
+
+        # Our own satellites lists ...
+        self.arbiters = {}
         self.schedulers = {}
         self.brokers = {}
         self.pollers = {}
         self.receivers = {}
         self.reactionners = {}
-        self.arbiter = None
+
+        # Our own schedulers lists ...
+        # Indexed on the scheduler name
+        self._schedulers = {}
+
+        # The main arbiter and scheduler daemons
+        self._arbiter = None
+        self._scheduler_daemon = None
+        self._scheduler = None
         self.conf_is_correct = False
         self.configuration_warnings = []
         self.configuration_errors = []
 
-        # Add collector for test purpose.
-        self.setup_logger()
+        # This to allow using a reference configuration if needed,
+        # and to make some tests easier to set-up
+        print("Preparing default configuration...")
+        if os.path.exists('/tmp/etc/alignak'):
+            shutil.rmtree('/tmp/etc/alignak')
+
+        if os.path.exists('../etc'):
+            shutil.copytree('../etc', '/tmp/etc/alignak')
+            files = ['/tmp/etc/alignak/alignak.ini']
+            replacements = {
+                '_dist=/usr/local/': '_dist=/tmp',
+                'user=alignak': ';user=alignak',
+                'group=alignak': ';group=alignak'
+
+            }
+            self._files_update(files, replacements)
+        print("Prepared")
 
         # Initialize the Arbiter with no daemon configuration file
-        self.arbiter = Arbiter(None, [configuration_file], False, False, False, False,
-                              '/tmp/arbiter.log', 'arbiter-master')
+        configuration_dir = os.path.dirname(configuration_file)
+        print("Test configuration directory: %s, file: %s"
+              % (os.path.abspath(configuration_dir), configuration_file))
+        self.env_filename = None
+        if env_file is not None:
+            self.env_filename = env_file
+        else:
+            self.env_filename = os.path.join(configuration_dir, 'alignak.ini')
+            if os.path.exists(os.path.join(configuration_dir, 'alignak.ini')):
+                self.env_filename = os.path.join(configuration_dir, 'alignak.ini')
+            elif os.path.exists(os.path.join(os.path.join(configuration_dir, '..'), 'alignak.ini')):
+                    self.env_filename = os.path.join(os.path.join(configuration_dir, '..'), 'alignak.ini')
+            else:
+                print("No Alignak configuration file found for the test: %s!" % self.env_filename)
+                raise SystemExit("No Alignak configuration file found for the test!")
+
+        self.env_filename = os.path.abspath(self.env_filename)
+        print("Found Alignak environment file: %s" % self.env_filename)
+
+        # Get Alignak environment
+        args = {'<cfg_file>': self.env_filename, '--verbose': verbose}
+        self.alignak_env = AlignakConfigParser(args)
+        self.alignak_env.parse()
+
+        arbiter_cfg = None
+        for daemon_section, daemon_cfg in self.alignak_env.get_daemons().items():
+            if daemon_cfg['type'] == 'arbiter':
+                arbiter_cfg = daemon_cfg
+
+        arbiter_name = 'Default-Arbiter'
+        if arbiter_cfg:
+            arbiter_name = arbiter_cfg['name']
+
+        # Using default values that are usually provided by the command line parameters
+        args = {
+            'env_file': self.env_filename,
+            'alignak_name': 'alignak-test', 'daemon_name': arbiter_name,
+            'monitoring_files': [configuration_file],
+        }
+        self._arbiter = Arbiter(**args)
 
         try:
-            # The following is copy paste from setup_alignak_logger
-            # The only difference is that keep logger at INFO level to gather messages
-            # This is needed to assert later on logs we received.
-            self.logger.setLevel(logging.INFO)
-            # Force the debug level if the daemon is said to start with such level
-            if self.arbiter.debug:
-                self.logger.setLevel(logging.DEBUG)
+            # Configure the logger
+            # self._arbiter.debug = True
+            self._arbiter.setup_alignak_logger()
 
-            # Log will be broks
-            for line in self.arbiter.get_header():
-                self.logger.info(line)
+            # Setup our modules manager
+            self._arbiter.load_modules_manager()
 
-            self.arbiter.load_monitoring_config_file()
+            # Load and initialize the arbiter configuration
+            self._arbiter.load_monitoring_config_file()
 
             # If this assertion does not match, then there is a bug in the arbiter :)
-            self.assertTrue(self.arbiter.conf.conf_is_correct)
+            self.assertTrue(self._arbiter.conf.conf_is_correct)
             self.conf_is_correct = True
-            self.configuration_warnings = self.arbiter.conf.configuration_warnings
-            self.configuration_errors = self.arbiter.conf.configuration_errors
+            self.configuration_warnings = self._arbiter.conf.configuration_warnings
+            self.configuration_errors = self._arbiter.conf.configuration_errors
         except SystemExit:
-            self.configuration_warnings = self.arbiter.conf.configuration_warnings
-            self.configuration_errors = self.arbiter.conf.configuration_errors
+            self.configuration_warnings = self._arbiter.conf.configuration_warnings
+            self.configuration_errors = self._arbiter.conf.configuration_errors
             self.show_configuration_logs()
+            self.show_logs()
             raise
 
-        for arb in self.arbiter.conf.arbiters:
-            if arb.get_name() == self.arbiter.arbiter_name:
-                self.arbiter.myself = arb
-        self.arbiter.dispatcher = Dispatcher(self.arbiter.conf, self.arbiter.myself)
-        self.arbiter.dispatcher.prepare_dispatch()
+        # Prepare the configuration dispatching
+        for arbiter_link in self._arbiter.conf.arbiters:
+            if arbiter_link.get_name() == self._arbiter.arbiter_name:
+                self._arbiter.link_to_myself = arbiter_link
+            assert arbiter_link is not None, "There is no arbiter link in the configuration!"
 
-        # Build schedulers dictionary with the schedulers involved in the configuration
-        for scheduler in self.arbiter.dispatcher.schedulers:
-            sched = Alignak([], False, False, True, '/tmp/scheduler.log')
-            sched.load_modules_manager(scheduler.name)
-            sched.new_conf = scheduler.conf_package
-            if sched.new_conf:
-                sched.setup_new_conf()
-            self.schedulers[scheduler.scheduler_name] = sched
+        if not unit_test:
+            return
 
-        # Build pollers dictionary with the pollers involved in the configuration
-        for poller in self.arbiter.dispatcher.pollers:
-            self.pollers[poller.poller_name] = poller
+        # Prepare the configuration dispatching
+        self._arbiter.dispatcher = Dispatcher(self._arbiter.conf, self._arbiter.link_to_myself)
+        self._arbiter.dispatcher.prepare_dispatch()
 
-        # Build receivers dictionary with the receivers involved in the configuration
-        for receiver in self.arbiter.dispatcher.receivers:
-            print("Receiver: %s" % receiver)
-            self.receivers[receiver.receiver_name] = receiver
+        # Create an Arbiter external commands manager in dispatcher mode
+        self._arbiter.external_commands_manager = ExternalCommandManager(self._arbiter.conf,
+                                                                         'dispatcher',
+                                                                         self._arbiter,
+                                                                         accept_unknown=True)
 
-        # Build reactionners dictionary with the reactionners involved in the configuration
-        for reactionner in self.arbiter.dispatcher.reactionners:
-            self.reactionners[reactionner.reactionner_name] = reactionner
+        print("All daemons WS: %s" % ["%s:%s" % (link.address, link.port) for link in self._arbiter.dispatcher.all_daemons_links])
 
-        # Build brokers dictionary with the brokers involved in the configuration
-        for broker in self.arbiter.dispatcher.brokers:
-            self.brokers[broker.broker_name] = broker
+        # Simulate the daemons HTTP interface (very simple simulation !)
+        with requests_mock.mock() as mr:
+            for link in self._arbiter.dispatcher.all_daemons_links:
+                mr.get('http://%s:%s/ping' % (link.address, link.port), json='pong')
+                mr.get('http://%s:%s/get_running_id' % (link.address, link.port), json=123456.123456)
+                mr.get('http://%s:%s/wait_new_conf' % (link.address, link.port), json=True)
+                mr.get('http://%s:%s/fill_initial_broks' % (link.address, link.port), json=[])
+                mr.get('http://%s:%s/get_managed_configurations' % (link.address, link.port), json={})
 
-        # Initialize the Receiver with no daemon configuration file
-        self.receiver = Receiver(None, False, False, False, False)
-        # if self.arbiter.dispatcher.satellites:
-        #     some_receivers = False
-        #     for satellite in self.arbiter.dispatcher.satellites:
-        #         if satellite.get_my_type() == 'receiver':
-        #             # self.receiver.load_modules_manager(satellite.name)
-        #             self.receiver.modules_manager = \
-        #                 ModulesManager('receiver', self.receiver.sync_manager,
-        #                                max_queue_size=getattr(self, 'max_queue_size', 0))
-        #
-        #             self.receiver.new_conf = satellite.cfg
-        #             if self.receiver.new_conf:
-        #                 self.receiver.setup_new_conf()
+            self._arbiter.dispatcher.check_reachable(test=True)
+            self._arbiter.dispatcher.check_dispatch()
+            print("-----\nConfiguration got dispatched.")
 
-        # Initialize the Receiver with no daemon configuration file
-        self.broker = Broker(None, False, False, False, False)
+            # Check that all the daemons links got a configuration
+            for sat_type in ('arbiters', 'schedulers', 'reactionners',
+                             'brokers', 'receivers', 'pollers'):
+                if verbose:
+                    print("- for %s:" % (sat_type))
+                for sat_link in getattr(self._arbiter.dispatcher, sat_type):
+                    if verbose:
+                        print(" - %s" % (sat_link))
+                    pushed_configuration = getattr(sat_link, 'unit_test_pushed_configuration', None)
+                    if pushed_configuration:
+                        # print("- %s / %s" % (sat_link.name, pushed_configuration))
+                        if verbose:
+                            print("   pushed configuration, contains:")
+                            for key in pushed_configuration:
+                                print("   . %s = %s" % (key, pushed_configuration[key]))
+                    # Update the test class satellites lists
+                    getattr(self, sat_type).update({sat_link.name: pushed_configuration})
+                if verbose:
+                    print("- my %s: %s" % (sat_type, getattr(self, sat_type).keys()))
 
-        # External commands manager default mode; default is tha pplyer (scheduler) mode
+            self.eca = None
+            # Initialize a Scheduler daemon
+            for scheduler in self._arbiter.dispatcher.schedulers:
+                print("-----\nGot a scheduler: %s (%s)" % (scheduler.name, scheduler))
+                # Simulate the scheduler daemon start
+                args = {
+                    'env_file': self.env_filename, 'daemon_name': scheduler.name,
+                }
+                self._scheduler_daemon = Alignak(**args)
+                self._scheduler_daemon.load_modules_manager()
+
+                # Simulate the scheduler daemon receiving the configuration from its arbiter
+                pushed_configuration = scheduler.unit_test_pushed_configuration
+                self._scheduler_daemon.new_conf = pushed_configuration
+                self._scheduler_daemon.setup_new_conf()
+                assert self._scheduler_daemon.new_conf == {}
+                self._schedulers[scheduler.name] = self._scheduler_daemon.sched
+
+                # Store the last scheduler object to get used in some other functions!
+                # this is the real scheduler, not the scheduler daemon!
+                self._scheduler = self._scheduler_daemon.sched
+                self._scheduler.my_daemon = self._scheduler_daemon
+                print("Got a default scheduler: %s\n-----" % self._scheduler)
+
+            # Initialize a Broker daemon
+            for broker in self._arbiter.dispatcher.brokers:
+                print("-----\nGot a broker: %s (%s)" % (broker.name, broker))
+                # Simulate the broker daemon start
+                args = {
+                    'env_file': self.env_filename, 'daemon_name': broker.name,
+                }
+                self._broker_daemon = Broker(**args)
+                self._broker_daemon.load_modules_manager()
+
+                # Simulate the scheduler daemon receiving the configuration from its arbiter
+                pushed_configuration = broker.unit_test_pushed_configuration
+                self._broker_daemon.new_conf = pushed_configuration
+                self._broker_daemon.setup_new_conf()
+                assert self._broker_daemon.new_conf == {}
+                print("Got a default broker daemon: %s\n-----" % self._broker_daemon)
+
+            # Get my first broker link
+            self._main_broker = None
+            if self._scheduler.my_daemon.brokers:
+                self._main_broker = [b for b in self._scheduler.my_daemon.brokers.values()][0]
+
+            # Initialize a Receiver daemon
+            self._receiver = None
+            for receiver in self._arbiter.dispatcher.receivers:
+                print("-----\nGot a receiver: %s (%s)" % (receiver.name, receiver))
+                # Simulate the receiver daemon start
+                args = {
+                    'env_file': self.env_filename, 'daemon_name': receiver.name,
+                }
+                self._receiver_daemon = Receiver(**args)
+                self._receiver_daemon.load_modules_manager()
+
+                # Simulate the scheduler daemon receiving the configuration from its arbiter
+                pushed_configuration = receiver.unit_test_pushed_configuration
+                self._receiver_daemon.new_conf = pushed_configuration
+                self._receiver_daemon.setup_new_conf()
+                assert self._receiver_daemon.new_conf == {}
+                self._receiver = receiver
+                print("Got a default receiver: %s\n-----" % self._receiver)
+
+                # for scheduler in self._receiver_daemon.schedulers.values():
+                #     scheduler.my_daemon = self._receiver_daemon
+
         self.ecm_mode = 'applyer'
 
-        # Now we create an external commands manager in dispatcher mode
-        self.arbiter.external_commands_manager = ExternalCommandManager(self.arbiter.conf,
-                                                                        'dispatcher',
-                                                                        self.arbiter,
-                                                                        accept_unknown=True)
-
-        # Now we get the external commands manager of our scheduler
-        self.eca = None
-        if 'scheduler-master' in self.schedulers:
-            self._sched = self.schedulers['scheduler-master'].sched
-            self.eca = self.schedulers['scheduler-master'].sched.external_commands_manager
-
         # Now we create an external commands manager in receiver mode
-        self.ecr = ExternalCommandManager(None, 'receiver', self.receiver,
-                                          accept_unknown=True)
-        self.receiver.external_commands_manager = self.ecr
+        self.ecr = None
+        if self._receiver:
+            self.ecr = ExternalCommandManager(None, 'receiver', self._receiver_daemon,
+                                              accept_unknown=True)
+            self._receiver.external_commands_manager = self.ecr
 
-        # and an external commands manager in dispatcher mode
-        self.ecd = ExternalCommandManager(self.arbiter.conf, 'dispatcher', self.arbiter,
+        # and an external commands manager in dispatcher mode for the arbiter
+        self.ecd = ExternalCommandManager(self._arbiter.conf, 'dispatcher', self._arbiter,
                                           accept_unknown=True)
+
+        self._arbiter.modules_manager.stop_all()
+        self._broker_daemon.modules_manager.stop_all()
+        self._scheduler_daemon.modules_manager.stop_all()
+        self._receiver_daemon.modules_manager.stop_all()
 
     def fake_check(self, ref, exit_status, output="OK"):
         """
@@ -282,15 +686,15 @@ class AlignakTest(unittest.TestCase):
         """
 
         now = time.time()
-        check = ref.schedule(self.schedulers['scheduler-master'].sched.hosts,
-                             self.schedulers['scheduler-master'].sched.services,
-                             self.schedulers['scheduler-master'].sched.timeperiods,
-                             self.schedulers['scheduler-master'].sched.macromodulations,
-                             self.schedulers['scheduler-master'].sched.checkmodulations,
-                             self.schedulers['scheduler-master'].sched.checks,
+        check = ref.schedule(self._scheduler.hosts,
+                             self._scheduler.services,
+                             self._scheduler.timeperiods,
+                             self._scheduler.macromodulations,
+                             self._scheduler.checkmodulations,
+                             self._scheduler.checks,
                              force=True, force_time=None)
         # now the check is scheduled and we get it in the action queue
-        self.schedulers['scheduler-master'].sched.add(check)  # check is now in sched.checks[]
+        self._scheduler.add(check)  # check is now in sched.checks[]
 
         # Allows to force check scheduling without setting its status nor output.
         # Useful for manual business rules rescheduling, for instance.
@@ -313,87 +717,111 @@ class AlignakTest(unittest.TestCase):
         check.status = 'waitconsume'
 
         # Put the check result in the waiting results for the scheduler ...
-        self.schedulers['scheduler-master'].sched.waiting_results.put(check)
+        self._scheduler.waiting_results.put(check)
 
-    def scheduler_loop(self, count, items, mysched=None):
+    def scheduler_loop(self, count, items, scheduler=None):
         """
-        Manage scheduler checks
+        Manage scheduler actions
 
-        @verified
-
-        :param count: number of checks to pass
+        :param count: number of loop turns to run
         :type count: int
         :param items: list of list [[object, exist_status, output]]
         :type items: list
-        :param mysched: The scheduler
-        :type mysched: None | object
+        :param scheduler: The scheduler
+        :type scheduler: None | object
         :return: None
         """
-        if mysched is None:
-            mysched = self.schedulers['scheduler-master']
+        if scheduler is None:
+            scheduler = self._scheduler
 
         macroresolver = MacroResolver()
-        macroresolver.init(mysched.conf)
+        macroresolver.init(scheduler.my_daemon.sched.pushed_conf)
 
         for num in range(count):
-            for item in items:
-                (obj, exit_status, output) = item
-                if len(obj.checks_in_progress) == 0:
-                    for i in mysched.sched.recurrent_works:
-                        (name, fun, nb_ticks) = mysched.sched.recurrent_works[i]
+            # print("Scheduler loop turn: %s" % num)
+            for (item, exit_status, output) in items:
+                # print("- item checks creation turn: %s" % item)
+                if len(item.checks_in_progress) == 0:
+                    # A first full scheduler loop turn to create the checks
+                    # if they do not yet exist!
+                    for i in scheduler.recurrent_works:
+                        (name, fun, nb_ticks) = scheduler.recurrent_works[i]
                         if nb_ticks == 1:
+                            # print(" . %s ...running." % name)
                             fun()
-                self.assertGreater(len(obj.checks_in_progress), 0)
-                chk = mysched.sched.checks[obj.checks_in_progress[0]]
+                        # else:
+                        #     print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
+                else:
+                    print("Check is still in progress for %s" % item)
+                self.assertGreater(len(item.checks_in_progress), 0)
+                chk = scheduler.checks[item.checks_in_progress[0]]
                 chk.set_type_active()
                 chk.check_time = time.time()
                 chk.wait_time = 0.0001
                 chk.last_poll = chk.check_time
                 chk.output = output
                 chk.exit_status = exit_status
-                mysched.sched.waiting_results.put(chk)
+                scheduler.waiting_results.put(chk)
 
-            for i in mysched.sched.recurrent_works:
-                (name, fun, nb_ticks) = mysched.sched.recurrent_works[i]
+            # print("-----\n- results fetching turn:")
+            for i in scheduler.recurrent_works:
+                (name, fun, nb_ticks) = scheduler.recurrent_works[i]
+                if nb_ticks == 1:
+                    # print(" . %s ...running." % name)
+                    fun()
+                # else:
+                #     print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
+
+    def manage_freshness_check(self, count=1, mysched=None):
+        """Run the scheduler loop for freshness_check
+
+        :param count: number of scheduler loop turns
+        :type count: int
+        :param mysched: a specific scheduler to get used
+        :type mysched: None | object
+        :return: n/a
+        """
+        checks = []
+        for num in range(count):
+            for i in self._scheduler.recurrent_works:
+                (name, fun, nb_ticks) = self._scheduler.recurrent_works[i]
                 if nb_ticks == 1:
                     fun()
+                if name == 'check_freshness':
+                    checks = sorted(self._scheduler.checks.values(),
+                                    key=lambda x: x.creation_time)
+                    checks = [chk for chk in checks if chk.freshness_expiry_check]
+        return len(checks)
 
     def manage_external_command(self, external_command, run=True):
         """Manage an external command.
 
         :return: result of external command resolution
         """
+        res = None
         ext_cmd = ExternalCommand(external_command)
         if self.ecm_mode == 'applyer':
             res = None
-            self._scheduler.run_external_command(external_command)
+            self._scheduler.run_external_commands([external_command])
             self.external_command_loop()
         if self.ecm_mode == 'dispatcher':
             res = self.ecd.resolve_command(ext_cmd)
             if res and run:
-                self.arbiter.broks = {}
-                self.arbiter.add(ext_cmd)
-                self.arbiter.push_external_commands_to_schedulers()
-                # Our scheduler
-                self._scheduler = self.schedulers['scheduler-master'].sched
-                # Our broker
-                self._broker = self._scheduler.brokers['broker-master']
-                for brok in self.arbiter.broks:
-                    print("Brok: %s : %s" % (brok, self.arbiter.broks[brok]))
-                    self._broker['broks'][brok] = self.arbiter.broks[brok]
+                self._arbiter.broks = {}
+                self._arbiter.add(ext_cmd)
+                self._arbiter.push_external_commands_to_schedulers()
         if self.ecm_mode == 'receiver':
             res = self.ecr.resolve_command(ext_cmd)
             if res and run:
-                self.receiver.broks = {}
-                self.receiver.add(ext_cmd)
-                self.receiver.push_external_commands_to_schedulers()
-                # Our scheduler
-                self._scheduler = self.schedulers['scheduler-master'].sched
-                # Our broker
-                self._broker = self._scheduler.brokers['broker-master']
-                for brok in self.receiver.broks:
-                    print("Brok: %s : %s" % (brok, self.receiver.broks[brok]))
-                    self._broker.broks[brok] = self.receiver.broks[brok]
+                self._receiver_daemon.broks = {}
+                self._receiver_daemon.add(ext_cmd)
+                # self._receiver_daemon.push_external_commands_to_schedulers()
+                # # Our scheduler
+                # self._scheduler = self.schedulers['scheduler-master'].sched
+                # Give broks to our broker
+                for brok in self._receiver_daemon.broks:
+                    print("Brok receiver: %s : %s" % (brok, self._receiver_daemon.broks[brok]))
+                    self._broker_daemon.external_broks[brok] = self._receiver_daemon.broks[brok]
         return res
 
     def external_command_loop(self):
@@ -402,27 +830,30 @@ class AlignakTest(unittest.TestCase):
         The scheduler is not an ECM 'dispatcher' but an 'applyer' ... so this function is on
         the external command execution side of the problem.
 
-        @verified
         :return:
         """
-        for i in self.schedulers['scheduler-master'].sched.recurrent_works:
-            (name, fun, nb_ticks) = self.schedulers['scheduler-master'].sched.recurrent_works[i]
+        print("Scheduler loop turn:")
+        for i in self._scheduler.recurrent_works:
+            (name, fun, nb_ticks) = self._scheduler.recurrent_works[i]
             if nb_ticks == 1:
+                print(" . %s ...running." % name)
                 fun()
+            else:
+                print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
         self.assert_no_log_match("External command Brok could not be sent to any daemon!")
 
     def worker_loop(self, verbose=True):
-        self.schedulers['scheduler-master'].sched.delete_zombie_checks()
-        self.schedulers['scheduler-master'].sched.delete_zombie_actions()
-        checks = self.schedulers['scheduler-master'].sched.get_to_run_checks(True, False, worker_name='tester')
-        actions = self.schedulers['scheduler-master'].sched.get_to_run_checks(False, True, worker_name='tester')
+        self._scheduler.delete_zombie_checks()
+        self._scheduler.delete_zombie_actions()
+        checks = self._scheduler.get_to_run_checks(True, False, worker_name='tester')
+        actions = self._scheduler.get_to_run_checks(False, True, worker_name='tester')
         if verbose is True:
             self.show_actions()
         for a in actions:
             a.status = 'inpoller'
             a.check_time = time.time()
             a.exit_status = 0
-            self.schedulers['scheduler-master'].sched.put_results(a)
+            self._scheduler.put_results(a)
         if verbose is True:
             self.show_actions()
 
@@ -430,9 +861,13 @@ class AlignakTest(unittest.TestCase):
         """ Launch an internal check for the business rule service provided """
         # Launch an internal check
         now = time.time()
-        self._sched.add(svc_br.launch_check(now - 1, self._sched.hosts, self._sched.services,
-                                            self._sched.timeperiods, self._sched.macromodulations,
-                                            self._sched.checkmodulations, self._sched.checks))
+        self._scheduler.add(svc_br.launch_check(now - 1,
+                                                self._scheduler.hosts,
+                                                self._scheduler.services,
+                                                self._scheduler.timeperiods,
+                                                self._scheduler.macromodulations,
+                                                self._scheduler.checkmodulations,
+                                                self._scheduler.checks))
         c = svc_br.actions[0]
         self.assertEqual(True, c.internal)
         self.assertTrue(c.is_launchable(now))
@@ -445,33 +880,29 @@ class AlignakTest(unittest.TestCase):
         # We should not have the check anymore
         self.assertEqual(0, len(svc_br.actions))
 
-    def show_logs(self, scheduler=False):
-        """
-        Show logs. Get logs collected by the collector handler and print them
-
-        @verified
-        :param scheduler:
-        :return:
-        """
-        print "--- logs <<<----------------------------------"
-        collector_h = [hand for hand in self.logger.handlers
-                       if isinstance(hand, CollectorHandler)][0]
-        for log in collector_h.collector:
-            safe_print(log)
-
-        print "--- logs >>>----------------------------------"
+    def show_logs(self):
+        """Show logs. Get logs collected by the unit tests collector handler and print them"""
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for handler in logger_.handlers:
+            if isinstance(handler, CollectorHandler):
+                print "--- logs <<<----------------------------------"
+                for log in handler.collector:
+                    self.safe_print(log)
+                print "--- logs >>>----------------------------------"
+                break
+        else:
+            assert False, "Alignak test Logger is not initialized correctly!"
 
     def show_actions(self):
         """"Show the inner actions"""
-        self._scheduler = self.schedulers['scheduler-master'].sched
-
         macroresolver = MacroResolver()
-        macroresolver.init(self._scheduler.conf)
+        macroresolver.init(self._scheduler_daemon.sched.pushed_conf)
 
-        print "--- actions <<<----------------------------------"
+        print("--- Scheduler: %s" % self._scheduler.my_daemon.name)
+        print("--- actions <<<----------------------------------")
         actions = sorted(self._scheduler.actions.values(), key=lambda x: (x.t_to_go, x.creation_time))
         for action in actions:
-            print("Time to launch action: %s, creation: %s" % (action.t_to_go, action.creation_time))
+            print("Time to launch action: %s, creation: %s, now: %s" % (action.t_to_go, action.creation_time, time.time()))
             if action.is_a == 'notification':
                 item = self._scheduler.find_item_by_id(action.ref)
                 if item.my_type == "host":
@@ -479,9 +910,10 @@ class AlignakTest(unittest.TestCase):
                 else:
                     hst = self._scheduler.find_item_by_id(item.host)
                     ref = "svc: %s/%s" % (hst.get_name(), item.get_name())
-                print "NOTIFICATION %s (%s - %s) [%s], created: %s for '%s': %s" \
+                print("NOTIFICATION %s (%s - %s) [%s], created: %s for '%s': %s"
                       % (action.type, action.uuid, action.status, ref,
-                         time.asctime(time.localtime(action.t_to_go)), action.contact_name, action.command)
+                         time.asctime(time.localtime(action.t_to_go)),
+                         action.contact_name, action.command))
             elif action.is_a == 'eventhandler':
                 print "EVENTHANDLER:", action
             else:
@@ -493,37 +925,25 @@ class AlignakTest(unittest.TestCase):
         Show checks from the scheduler
         :return:
         """
+        print "--- Scheduler: %s" % self._scheduler.my_daemon.name
         print "--- checks <<<--------------------------------"
-        checks = sorted(self.schedulers['scheduler-master'].sched.checks.values(), key=lambda x: x.creation_time)
+        checks = sorted(self._scheduler.checks.values(), key=lambda x: x.creation_time)
         for check in checks:
             print("- %s" % check)
         print "--- checks >>>--------------------------------"
-
-    def show_and_clear_logs(self):
-        """
-        Prints and then deletes the current logs stored in the log collector
-
-        @verified
-        :return:
-        """
-        self.show_logs()
-        self.clear_logs()
 
     def show_and_clear_actions(self):
         self.show_actions()
         self.clear_actions()
 
     def count_logs(self):
-        """
-        Count the log lines in the Arbiter broks.
-        If 'scheduler' is True, then uses the scheduler's broks list.
-
-        @verified
-        :return:
-        """
-        collector_h = [hand for hand in self.logger.handlers
-                       if isinstance(hand, CollectorHandler)][0]
-        return len(collector_h.collector)
+        """Count the logs collected by the unit tests collector handler and print them"""
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for handler in logger_.handlers:
+            if isinstance(handler, CollectorHandler):
+                return len(handler.collector)
+        else:
+            assert False, "Alignak test Logger is not initialized correctly!"
 
     def count_actions(self):
         """
@@ -532,7 +952,7 @@ class AlignakTest(unittest.TestCase):
         @verified
         :return:
         """
-        return len(self.schedulers['scheduler-master'].sched.actions.values())
+        return len(self._scheduler.actions.values())
 
     def clear_logs(self):
         """
@@ -541,9 +961,13 @@ class AlignakTest(unittest.TestCase):
         @verified
         :return:
         """
-        collector_h = [hand for hand in self.logger.handlers
-                       if isinstance(hand, CollectorHandler)][0]
-        collector_h.collector = []
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for handler in logger_.handlers:
+            if isinstance(handler, CollectorHandler):
+                handler.collector = []
+                break
+        else:
+            assert False, "Alignak test Logger is not initialized correctly!"
 
     def clear_actions(self):
         """
@@ -552,7 +976,29 @@ class AlignakTest(unittest.TestCase):
         @verified
         :return:
         """
-        self.schedulers['scheduler-master'].sched.actions = {}
+        self._scheduler.actions = {}
+
+    def check_monitoring_logs(self, expected_logs, dump=True):
+        """
+        Get the monitoring_log broks and check that they match with the expected_logs provided
+
+        :param expected_logs: expected monitoring logs
+        :param dump: True to print out the monitoring logs
+        :return:
+        """
+        # We got 'monitoring_log' broks for logging to the monitoring logs...
+        monitoring_logs = []
+        for brok in sorted(self._main_broker.broks.values(), key=lambda x: x.creation_time):
+            if brok.type == 'monitoring_log':
+                data = unserialize(brok.data)
+                monitoring_logs.append((data['level'], data['message']))
+        if dump:
+            print("Monitoring logs: %s" % monitoring_logs)
+
+        assert len(expected_logs) == len(monitoring_logs), monitoring_logs
+
+        for log_level, log_message in expected_logs:
+            assert (log_level, log_message) in monitoring_logs, log_message
 
     def assert_actions_count(self, number):
         """
@@ -566,10 +1012,9 @@ class AlignakTest(unittest.TestCase):
         """
         actions = []
         # I do this because sort take too times
-        if number != len(self.schedulers['scheduler-master'].sched.actions):
-            actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(),
-                             key=lambda x: x.creation_time)
-        self.assertEqual(number, len(self.schedulers['scheduler-master'].sched.actions),
+        if number != len(self._scheduler.actions):
+            actions = sorted(self._scheduler.actions.values(), key=lambda x: x.creation_time)
+        self.assertEqual(number, len(self._scheduler.actions),
                          "Not found expected number of actions:\nactions_logs=[[[\n%s\n]]]" %
                          ('\n'.join('\t%s = creation: %s, is_a: %s, type: %s, status: %s, '
                                     'planned: %s, command: %s' %
@@ -593,8 +1038,7 @@ class AlignakTest(unittest.TestCase):
         :return: None
         """
         regex = re.compile(pattern)
-        actions = sorted(self.schedulers['scheduler-master'].sched.actions.values(),
-                         key=lambda x: (x.t_to_go, x.creation_time))
+        actions = sorted(self._scheduler.actions.values(), key=lambda x: (x.t_to_go, x.creation_time))
         if index != -1:
             myaction = actions[index]
             self.assertTrue(regex.search(getattr(myaction, field)),
@@ -633,32 +1077,33 @@ class AlignakTest(unittest.TestCase):
         """
         self.assertIsNotNone(pattern, "Searched pattern can not be None!")
 
-        collector_h = [hand for hand in self.logger.handlers
-                       if isinstance(hand, CollectorHandler)][0]
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for handler in logger_.handlers:
+            if isinstance(handler, CollectorHandler):
+                regex = re.compile(pattern)
+                log_num = 0
 
-        regex = re.compile(pattern)
-        log_num = 0
+                found = False
+                for log in handler.collector:
+                    if index is None:
+                        if regex.search(log):
+                            found = True
+                            break
+                    elif index == log_num:
+                        if regex.search(log):
+                            found = True
+                            break
+                    log_num += 1
 
-        found = False
-        for log in collector_h.collector:
-            if index is None:
-                if regex.search(log):
-                    found = True
-                    break
-            elif index == log_num:
-                if regex.search(log):
-                    found = True
-                    break
-            log_num += 1
-
-        self.assertTrue(found,
-                        "Not found a matching log line in logs:\nindex=%s pattern=%r\n"
-                        "logs=[[[\n%s\n]]]" % (
-                            index, pattern, '\n'.join('\t%s=%s' % (idx, b.strip())
-                                                      for idx, b in enumerate(collector_h.collector)
-                                                      )
-                            )
-                        )
+                self.assertTrue(found,
+                                "Not found a matching log line in logs:\nindex=%s pattern=%r\n"
+                                "logs=[[[\n%s\n]]]"
+                                % (index, pattern, '\n'.join('\t%s=%s' % (idx, b.strip())
+                                                             for idx, b in
+                                                             enumerate(handler.collector))))
+                break
+        else:
+            assert False, "Alignak test Logger is not initialized correctly!"
 
     def assert_checks_count(self, number):
         """
@@ -670,7 +1115,7 @@ class AlignakTest(unittest.TestCase):
         :type number: int
         :return: None
         """
-        checks = sorted(self.schedulers['scheduler-master'].sched.checks.values(), key=lambda x: x.creation_time)
+        checks = sorted(self._scheduler.checks.values(), key=lambda x: x.creation_time)
         self.assertEqual(number, len(checks),
                          "Not found expected number of checks:\nchecks_logs=[[[\n%s\n]]]" %
                          ('\n'.join('\t%s = creation: %s, is_a: %s, type: %s, status: %s, planned: %s, '
@@ -693,7 +1138,7 @@ class AlignakTest(unittest.TestCase):
         :return: None
         """
         regex = re.compile(pattern)
-        checks = sorted(self.schedulers['scheduler-master'].sched.checks.values(), key=lambda x: x.creation_time)
+        checks = sorted(self._scheduler.checks.values(), key=lambda x: x.creation_time)
         mycheck = checks[index]
         self.assertTrue(regex.search(getattr(mycheck, field)),
                         "Not found a matching pattern in checks:\nindex=%s field=%s pattern=%r\n"
@@ -713,8 +1158,7 @@ class AlignakTest(unittest.TestCase):
         :return:
         """
         regex = re.compile(pattern)
-        checks = sorted(self.schedulers['scheduler-master'].sched.checks.values(),
-                        key=lambda x: x.creation_time)
+        checks = sorted(self._scheduler.checks.values(), key=lambda x: x.creation_time)
         for check in checks:
             if re.search(regex, getattr(check, field)):
                 self.assertTrue(not assert_not,
@@ -760,40 +1204,40 @@ class AlignakTest(unittest.TestCase):
         :param assert_not:
         :return:
         """
-        regex = re.compile(pattern)
+        self.assertIsNotNone(pattern, "Searched pattern can not be None!")
 
-        collector_h = [hand for hand in self.logger.handlers
-                       if isinstance(hand, CollectorHandler)][0]
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for handler in logger_.handlers:
+            if isinstance(handler, CollectorHandler):
+                regex = re.compile(pattern)
 
-        for log in collector_h.collector:
-            if re.search(regex, log):
-                self.assertTrue(not assert_not,
-                                "Found matching log line:\n"
-                                "pattern = %r\nbrok log = %r" % (pattern, log))
-                return
-
-        self.assertTrue(assert_not, "No matching log line found:\n"
-                                    "pattern = %r\n" "logs broks = %r" % (pattern,
-                                                                          collector_h.collector))
+                for log in handler.collector:
+                    if re.search(regex, log):
+                        self.assertTrue(not assert_not,
+                                        "Found matching log line, pattern: %r\nlog: %r"
+                                        % (pattern, log))
+                        break
+                else:
+                    for log in handler.collector:
+                        print(".%s" % log)
+                    self.assertTrue(assert_not,
+                                    "No matching log line found, pattern: %r\n" % pattern)
+                break
+        else:
+            assert False, "Alignak test Logger is not initialized correctly!"
 
     def assert_any_log_match(self, pattern):
-        """
-        Assert if any log (Arbiter or Scheduler if True) matches the pattern
+        """Assert if any of the collected log matches the pattern
 
-        @verified
         :param pattern:
-        :param scheduler:
         :return:
         """
         self._any_log_match(pattern, assert_not=False)
 
     def assert_no_log_match(self, pattern):
-        """
-        Assert if no log (Arbiter or Scheduler if True) matches the pattern
+        """Assert if no collected log matches the pattern
 
-        @verified
         :param pattern:
-        :param scheduler:
         :return:
         """
         self._any_log_match(pattern, assert_not=True)
@@ -810,8 +1254,11 @@ class AlignakTest(unittest.TestCase):
         """
         regex = re.compile(pattern)
 
+        my_broker = [b for b in self._scheduler.my_daemon.brokers.values()][0]
+
         monitoring_logs = []
-        for brok in self._sched.brokers['broker-master']['broks'].itervalues():
+        print("Broker broks: %s" % my_broker.broks)
+        for brok in my_broker.broks.values():
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -849,20 +1296,20 @@ class AlignakTest(unittest.TestCase):
         self._any_brok_match(pattern, level, assert_not=True)
 
     def get_log_match(self, pattern):
-        regex = re.compile(pattern)
-        res = []
-        collector_h = [hand for hand in self.logger.handlers
-                       if isinstance(hand, CollectorHandler)][0]
+        """Get the collected logs matching the provided pattern"""
+        self.assertIsNotNone(pattern, "Searched pattern can not be None!")
 
-        for log in collector_h.collector:
-            if re.search(regex, log):
-                res.append(log)
-        return res
-
-    def print_header(self):
-        print "\n" + "#" * 80 + "\n" + "#" + " " * 78 + "#"
-        print "#" + string.center(self.id(), 78) + "#"
-        print "#" + " " * 78 + "#\n" + "#" * 80 + "\n"
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for handler in logger_.handlers:
+            if isinstance(handler, CollectorHandler):
+                regex = re.compile(pattern)
+                res = []
+                for log in handler.collector:
+                    if re.search(regex, log):
+                        res.append(log)
+                return res
+        else:
+            assert False, "Alignak test Logger is not initialized correctly!"
 
     def show_configuration_logs(self):
         """
@@ -920,6 +1367,50 @@ class AlignakTest(unittest.TestCase):
         """
         self._any_cfg_log_match(pattern, assert_not=True)
 
+    def guess_sys_stdout_encoding(self):
+        ''' Return the best guessed encoding to be used for printing on sys.stdout. '''
+        return (
+               getattr(sys.stdout, 'encoding', None)
+            or getattr(sys.__stdout__, 'encoding', None)
+            or locale.getpreferredencoding()
+            or sys.getdefaultencoding()
+            or 'ascii'
+        )
 
-if __name__ == '__main__':
-    unittest.main()
+    def safe_print(self, *args, **kw):
+        """" "print" args to sys.stdout,
+        If some of the args aren't unicode then convert them first to unicode,
+            using keyword argument 'in_encoding' if provided (else default to UTF8)
+            and replacing bad encoded bytes.
+        Write to stdout using 'out_encoding' if provided else best guessed encoding,
+            doing xmlcharrefreplace on errors.
+        """
+        in_bytes_encoding = kw.pop('in_encoding', 'UTF-8')
+        out_encoding = kw.pop('out_encoding', self.guess_sys_stdout_encoding())
+        if kw:
+            raise ValueError('unhandled named/keyword argument(s): %r' % kw)
+        #
+        make_in_data_gen = lambda: ( a if isinstance(a, unicode)
+                                    else
+                                unicode(str(a), in_bytes_encoding, 'replace')
+                            for a in args )
+
+        possible_codings = ( out_encoding, )
+        if out_encoding != 'ascii':
+            possible_codings += ( 'ascii', )
+
+        for coding in possible_codings:
+            data = u' '.join(make_in_data_gen()).encode(coding, 'xmlcharrefreplace')
+            try:
+                sys.stdout.write(data)
+                break
+            except UnicodeError as err:
+                # there might still have some problem with the underlying sys.stdout.
+                # it might be a StringIO whose content could be decoded/encoded in this same process
+                # and have encode/decode errors because we could have guessed a bad encoding with it.
+                # in such case fallback on 'ascii'
+                if coding == 'ascii':
+                    raise
+                sys.stderr.write('Error on write to sys.stdout with %s encoding: err=%s\nTrying with ascii' % (
+                    coding, err))
+        sys.stdout.write(b'\n')

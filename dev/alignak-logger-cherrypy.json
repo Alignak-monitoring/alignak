@@ -1,0 +1,107 @@
+{
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+        "alignak": {
+            "format": "[%(asctime)s] %(levelname)s: [%(daemon)s.%(name)s] %(message)s"
+            ,"datefmt": "%Y-%m-%d %H:%M:%S"
+        },
+        "monitoring-log": {
+            "format": "[%(asctime)s] %(levelname)s: %(message)s"
+        ,"datefmt": "%Y-%m-%d %H:%M:%S"
+        },
+        "void": {
+            "format": ""
+        },
+        "standard": {
+            "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
+        }
+    },
+
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": "DEBUG",
+            "formatter": "alignak",
+            "stream": "ext://sys.stdout"
+        },
+        "color_console": {
+            "class": "alignak.log.ColorStreamHandler",
+            "level": "DEBUG",
+            "formatter": "alignak",
+            "stream": "ext://sys.stdout"
+        },
+        "daemons": {
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "level": "DEBUG",
+            "formatter": "alignak",
+            "filename": "%(logdir)s/%(daemon)s.log",
+            "when": "midnight",
+            "interval": 1,
+            "backupCount": 7,
+            "encoding": "utf8"
+        },
+        "monitoring_logs": {
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "level": "INFO",
+            "formatter": "monitoring-log",
+            "filename": "%(logdir)s/monitoring-logs.log",
+            "when": "midnight",
+            "interval": 1,
+            "backupCount": 365,
+            "encoding": "utf8"
+        },
+        "cherrypy_console": {
+            "level":"INFO",
+            "class":"logging.StreamHandler",
+            "formatter": "void",
+            "stream": "ext://sys.stdout"
+        },
+        "cherrypy_access": {
+            "level":"INFO",
+            "class": "logging.handlers.RotatingFileHandler",
+            "formatter": "void",
+            "filename": "%(logdir)s/x_access.log",
+            "maxBytes": 10485760,
+            "backupCount": 20,
+            "encoding": "utf8"
+        },
+        "cherrypy_error": {
+            "level":"INFO",
+            "class": "logging.handlers.RotatingFileHandler",
+            "formatter": "void",
+            "filename": "%(logdir)s/x_errors.log",
+            "maxBytes": 10485760,
+            "backupCount": 20,
+            "encoding": "utf8"
+        }
+    },
+
+    "loggers": {
+        "alignak": {
+            "level": "INFO",
+            "handlers": ["color_console", "daemons"],
+            "propagate": "no"
+        },
+        "monitoring-log": {
+            "level": "DEBUG",
+            "handlers": ["console", "monitoring_logs"],
+            "propagate": "no"
+        },
+        "cherrypy.access": {
+            "handlers": ["cherrypy_access"],
+            "level": "INFO",
+            "propagate": "no"
+        },
+        "cherrypy.error": {
+            "handlers": ["cherrypy_console", "cherrypy_error"],
+            "level": "INFO",
+            "propagate": "no"
+        }
+    },
+
+    "root": {
+        "level": "ERROR",
+        "handlers": []
+    }
+}

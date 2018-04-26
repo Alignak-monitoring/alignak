@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -100,7 +100,7 @@ class Metric:  # pylint: disable=R0903
                 self.min = 0
                 self.max = 100
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         string = "%s=%s%s" % (self.name, self.value, self.uom)
         if self.warning:
             string += ";%s" % (self.warning)

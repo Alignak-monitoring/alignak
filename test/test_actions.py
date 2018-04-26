@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -64,6 +64,8 @@ from alignak.eventhandler import EventHandler
 
 class TestAction(AlignakTest):
     def setUp(self):
+        super(TestAction, self).setUp()
+
         # Create and test an action object
         a = Action()
         assert a.env == {}
@@ -89,8 +91,6 @@ class TestAction(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         # Create an action without any parameters
         # Will fill only the default action properties
         action = Action()
@@ -214,8 +214,6 @@ class TestAction(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         a = Action()
 
         if os.name == 'nt':
@@ -242,8 +240,6 @@ class TestAction(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         a = Action()
         a.command = "echo $ALIGNAK_TEST_VARIABLE"
 
@@ -262,8 +258,6 @@ class TestAction(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         a = Action()
         a.command = "/usr/bin/env | grep ALIGNAK_TEST_VARIABLE"
 
@@ -282,8 +276,6 @@ class TestAction(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         class ActionWithoutPerfData(Action):
             def get_outputs(self, out, max_len):
                 """ For testing only... 
@@ -322,8 +314,6 @@ class TestAction(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         a = Action()
         a.command = "libexec/dummy_command_nobang.sh"
         assert False == a.got_shell_characters()
@@ -346,8 +336,6 @@ class TestAction(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         a = Action()
         a.command = "libexec/dummy_command_nobang.sh && echo finished ok"
 
@@ -370,8 +358,6 @@ class TestAction(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         a = Action()
         a.command = "libexec/dummy_command_nobang.sh | grep 'I will not match this search!'"
         assert True == a.got_shell_characters()
@@ -393,8 +379,6 @@ class TestAction(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         # https://github.com/naparuba/shinken/issues/155
         a = Action()
         a.command = "libexec/dummy_command_nobang.sh -a 'wwwwzzzzeeee"
@@ -430,8 +414,6 @@ class TestAction(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         # Set max output length
         max_output_length = 131072
 
@@ -495,8 +477,6 @@ class TestAction(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         a = Action()
         a.command = u"/bin/echo Wiadomo\u015b\u0107"
 
@@ -517,8 +497,6 @@ class TestAction(AlignakTest):
 
         :return: None
         """
-        self.print_header()
-
         a = Action()
         a.command = "echo Output to stderr >&2 ; exit 1"
 
@@ -533,7 +511,3 @@ class TestAction(AlignakTest):
         assert "Output to stderr" == a.output
         assert "" == a.long_output
         assert "" == a.perf_data
-
-
-if __name__ == '__main__':
-    AlignakTest.main()

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -31,6 +31,8 @@ class TestBrokCheckResult(AlignakTest):
     """
     This class test the check_result brok
     """
+    def setUp(self):
+        super(TestBrokCheckResult, self).setUp()
 
     def test_brok_checks_results(self):
         """Test broks checks results
@@ -39,13 +41,15 @@ class TestBrokCheckResult(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        my_broker = [b for b in self._scheduler.my_daemon.brokers.values()][0]
+        my_broker.broks = {}
+
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
-                                                                              "test_ok_0")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc.notification_interval = 0.001
         svc.checks_in_progress = []
@@ -56,10 +60,12 @@ class TestBrokCheckResult(AlignakTest):
         time.sleep(0.1)
         host_check_results = []
         service_check_results = []
-        for brok in self.schedulers['scheduler-master'].sched.brokers['broker-master']['broks'].itervalues():
+        for brok in my_broker.broks.values():
             if brok.type == 'host_check_result':
+                print("Brok %s: %s" % (brok.type, brok))
                 host_check_results.append(brok)
             elif brok.type == 'service_check_result':
+                print("Brok %s: %s" % (brok.type, brok))
                 service_check_results.append(brok)
 
         assert len(host_check_results) == 1

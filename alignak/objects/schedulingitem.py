@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -77,8 +77,7 @@ from alignak.dependencynode import DependencyNode
 from alignak.check import Check
 from alignak.property import (BoolProp, IntegerProp, FloatProp, SetProp,
                               CharProp, StringProp, ListProp, DictProp)
-from alignak.util import from_set_to_list, get_obj_name, \
-    format_t_into_dhms_format
+from alignak.util import from_set_to_list, format_t_into_dhms_format
 from alignak.notification import Notification
 from alignak.macroresolver import MacroResolver
 from alignak.eventhandler import EventHandler
@@ -212,12 +211,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'business_impact':
             IntegerProp(default=2, fill_brok=['full_status']),
 
-        # Load some triggers
-        'trigger_name':
-            StringProp(default=''),
-        'trigger_broker_raise_enabled':
-            BoolProp(default=False),
-
         # Trending
         'trending_policies':
             ListProp(default=[], fill_brok=['full_status'], merging='join'),
@@ -243,7 +236,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             IntegerProp(default=5),
 
         'realm':
-            StringProp(default='', fill_brok=['full_status'], conf_send_preparation=get_obj_name),
+            StringProp(default='', fill_brok=['full_status']),
     })
 
     running_properties = Item.running_properties.copy()
@@ -437,9 +430,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Set if the element just change its father/son topology
         'topology_change':
             BoolProp(default=False, fill_brok=['full_status']),
-        # Trigger list
-        'triggers':
-            ListProp(default=[]),
         # snapshots part
         'last_snapshot':
             IntegerProp(default=0, fill_brok=['full_status'], retention=True),
@@ -496,7 +486,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         for prop in ['check_command', 'event_handler', 'snapshot_command', 'business_rule',
                      'acknowledgement']:
-            if getattr(self, prop) is None:
+            if getattr(self, prop, None) is None:
                 res[prop] = None
             else:
                 res[prop] = getattr(self, prop).serialize()
@@ -529,32 +519,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return:
         """
         setattr(self, 'snapshot_command', CommandCall(command_params))
-
-    def linkify_with_triggers(self, triggers):
-        """
-        Link with triggers
-
-        :param triggers: Triggers object
-        :type triggers: alignak.objects.trigger.Triggers
-        :return: None
-        """
-        # Get our trigger string and trigger names in the same list
-        self.triggers.extend([self.trigger_name])
-
-        new_triggers = []
-        for tname in self.triggers:
-            if tname == '':
-                continue
-            trigger = triggers.find_by_name(tname)
-            if trigger:
-                setattr(trigger, 'trigger_broker_raise_enabled', self.trigger_broker_raise_enabled)
-                new_triggers.append(trigger.uuid)
-            else:
-                self.configuration_errors.append('the %s %s has an unknown trigger_name '
-                                                 '"%s"' % (self.__class__.my_type,
-                                                           self.get_full_name(),
-                                                           tname))
-        self.triggers = new_triggers
 
     def add_flapping_change(self, sample):
         """Add a flapping sample and keep cls.flap_history samples
@@ -662,7 +626,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         return self.attempt >= self.max_check_attempts
 
     def do_check_freshness(self, hosts, services, timeperiods, macromodulations, checkmodulations,
-                           checks):
+                           checks, when=None):
         # pylint: disable=too-many-nested-blocks
         """Check freshness and schedule a check now if necessary.
 
@@ -693,53 +657,53 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return: A check or None
         :rtype: None | object
         """
-        now = time.time()
+        now = when
+        if not now:
+            now = time.time()
         # Before, check if class (host or service) have check_freshness OK
         # Then check if item want freshness, then check freshness
         cls = self.__class__
-        if not self.in_checking and self.freshness_threshold != 0:
-            logger.debug("Checking freshness for %s, last state update: %s, now: %s.",
-                         self.get_full_name(), self.last_state_update, now)
-            # If we never check this item, we begin the freshness period
-            if self.last_state_update == 0.0:
+        if not self.in_checking and self.freshness_threshold and not self.freshness_expired:
+            # logger.debug("Checking freshness for %s, last state update: %s, now: %s.",
+            #              self.get_full_name(), self.last_state_update, now)
+            # If we never checked this item, we begin the freshness period
+            if not self.last_state_update:
                 self.last_state_update = now
             if self.last_state_update < now - \
                     (self.freshness_threshold + cls.additional_freshness_latency):
-                # Do not create a check if the item is already freshness_expired...
-                if not self.freshness_expired:
-                    timeperiod = timeperiods[self.check_period]
-                    if timeperiod is None or timeperiod.is_time_valid(now):
-                        # Create a new check for the scheduler
-                        chk = self.launch_check(now, hosts, services, timeperiods,
-                                                macromodulations, checkmodulations, checks)
-                        expiry_date = time.strftime("%Y-%m-%d %H:%M:%S %Z")
-                        chk.output = "Freshness period expired: %s" % expiry_date
-                        chk.set_type_passive()
-                        chk.freshness_expiry_check = True
-                        chk.check_time = time.time()
-                        if self.my_type == 'host':
-                            if self.freshness_state == 'o':
-                                chk.exit_status = 0
-                            elif self.freshness_state == 'd':
-                                chk.exit_status = 2
-                            elif self.freshness_state in ['u', 'x']:
-                                chk.exit_status = 4
-                        else:
-                            if self.freshness_state == 'o':
-                                chk.exit_status = 0
-                            elif self.freshness_state == 'w':
-                                chk.exit_status = 1
-                            elif self.freshness_state == 'c':
-                                chk.exit_status = 2
-                            elif self.freshness_state == 'u':
-                                chk.exit_status = 3
-                            elif self.freshness_state == 'x':
-                                chk.exit_status = 4
-
-                        return chk
+                timeperiod = timeperiods[self.check_period]
+                if timeperiod is None or timeperiod.is_time_valid(now):
+                    # Create a new check for the scheduler
+                    chk = self.launch_check(now, hosts, services, timeperiods,
+                                            macromodulations, checkmodulations, checks)
+                    chk.output = "Freshness period expired: %s" \
+                                 % time.strftime("%Y-%m-%d %H:%M:%S %Z")
+                    chk.set_type_passive()
+                    chk.freshness_expiry_check = True
+                    chk.check_time = time.time()
+                    if self.my_type == 'host':
+                        if self.freshness_state == 'o':
+                            chk.exit_status = 0
+                        elif self.freshness_state == 'd':
+                            chk.exit_status = 2
+                        elif self.freshness_state in ['u', 'x']:
+                            chk.exit_status = 4
                     else:
-                        logger.debug("Ignored freshness check for %s, because "
-                                     "we are not in the check period.", self.get_full_name())
+                        if self.freshness_state == 'o':
+                            chk.exit_status = 0
+                        elif self.freshness_state == 'w':
+                            chk.exit_status = 1
+                        elif self.freshness_state == 'c':
+                            chk.exit_status = 2
+                        elif self.freshness_state == 'u':
+                            chk.exit_status = 3
+                        elif self.freshness_state == 'x':
+                            chk.exit_status = 4
+
+                    return chk
+                else:
+                    logger.debug("Ignored freshness check for %s, because "
+                                 "we are not in the check period.", self.get_full_name())
         return None
 
     def set_myself_as_problem(self, hosts, services, timeperiods, bi_modulations):
@@ -915,7 +879,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         now = time.time()
         was_an_impact = self.is_impact
-        # Our father already look of he impacts us. So if we are here,
+        # Our father already look if he impacts us. So if we are here,
         # it's that we really are impacted
         self.is_impact = True
 
@@ -924,12 +888,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # problem list
         # TODO: remove this unused check
         if self.is_impact:
+            logger.debug("I am impacted: %s", self)
             # Maybe I was a problem myself, now I can say: not my fault!
             if self.is_problem:
                 self.no_more_a_problem(hosts, services, timeperiods, bi_modulations)
 
-            # Ok, we are now an impact, we should take the good state
-            # but only when we just go in impact state
+            # Ok, we are now impacted, we should take the good state
+            # but only when we just go to the impacted state
             if not was_an_impact:
                 self.set_impact_state()
 
@@ -937,14 +902,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             impacts.append(self.uuid)
             if prob.uuid not in self.source_problems:
                 self.source_problems.append(prob.uuid)
-            # we should send this problem to all potential impact that
+            # we should send this problem to all potential impacted that
             # depend on us
-            for (impact_id, status, timeperiod_id, _) in self.act_depend_of_me:
+            for (impacted_item_id, status, timeperiod_id, _) in self.act_depend_of_me:
                 # Check if the status is ok for impact
-                if impact_id in hosts:
-                    impact = hosts[impact_id]
+                if impacted_item_id in hosts:
+                    impact = hosts[impacted_item_id]
                 else:
-                    impact = services[impact_id]
+                    impact = services[impacted_item_id]
                 timeperiod = timeperiods[timeperiod_id]
                 for stat in status:
                     if self.is_state(stat):
@@ -1206,6 +1171,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         cls = self.__class__
         # if no active check and no force, no check
         if (not self.active_checks_enabled or not cls.execute_checks) and not force:
+            logger.debug("No check for %s", self.get_full_name())
             return None
 
         now = time.time()
@@ -1399,7 +1365,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # If we do not force and we are in downtime, bailout
         # if the no_event_handlers_during_downtimes is 1 in conf
         if not ext_cmd and self.in_scheduled_downtime and cls.no_event_handlers_during_downtimes:
-            logger.debug("Event handler wilkl not be launched. "
+            logger.debug("Event handler will not be launched. "
                          "The item %s is in a scheduled downtime", self.get_full_name())
             return
 
@@ -1553,7 +1519,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     def consume_result(self, chk, notif_period, hosts,
                        services, timeperiods, macromodulations, checkmodulations, bi_modulations,
-                       res_modulations, triggers, checks):
+                       res_modulations, checks):
         # pylint: disable=R0915,R0912,R0913,E1101
         """Consume a check return and send action in return
         main function of reaction of checks like raise notifications
@@ -1585,8 +1551,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type bi_modulations: alignak.object.businessimpactmodulation.Businessimpactmodulations
         :param res_modulations: result modulation are used to change the ouput of a check
         :type res_modulations: alignak.object.resultmodulation.Resultmodulations
-        :param triggers: triggers objects, also used to change the output/status of a check, or more
-        :type triggers: alignak.objects.trigger.Triggers
         :param checks: checks dict, used to get checks_in_progress for the object
         :type checks: dict
         :return: Dependent checks
@@ -1597,13 +1561,28 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if not chk.freshness_expiry_check:
             self.freshness_expired = False
 
-        if 'TEST_LOG_ACTIONS' in os.environ:
-            if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+        if 'ALIGNAK_LOG_ACTIONS' in os.environ:
+            if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                 logger.warning("Got check result: %d for '%s'",
                                chk.exit_status, self.get_full_name())
             else:
                 logger.info("Got check result: %d for '%s'",
                             chk.exit_status, self.get_full_name())
+
+        # Protect against bad type output
+        # if str, go in unicode
+        if isinstance(chk.output, str):
+            chk.output = chk.output.decode('utf8', 'ignore')
+            chk.long_output = chk.long_output.decode('utf8', 'ignore')
+
+        if isinstance(chk.perf_data, str):
+            chk.perf_data = chk.perf_data.decode('utf8', 'ignore')
+
+        if os.getenv('ALIGNAK_LOG_CHECKS', None):
+            level = ['info', 'warning', 'error', 'critical'][min(chk.exit_status, 3)]
+            func = getattr(logger, level)
+            func("Check result for '%s', exit: %d, output: %s",
+                 self.get_full_name(), chk.exit_status, chk.output)
 
         # ============ MANAGE THE CHECK ============ #
         # Not OK, waitconsume and have dependencies, put this check in waitdep, create if
@@ -1622,15 +1601,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 chk.depend_on.append(check_uuid)
             # we must wait dependent check checked and consumed
             return deps_checks['new']
-
-        # Protect against bad type output
-        # if str, go in unicode
-        if isinstance(chk.output, str):
-            chk.output = chk.output.decode('utf8', 'ignore')
-            chk.long_output = chk.long_output.decode('utf8', 'ignore')
-
-        if isinstance(chk.perf_data, str):
-            chk.perf_data = chk.perf_data.decode('utf8', 'ignore')
 
         # We check for stalking if necessary
         # so if check is here
@@ -1655,7 +1625,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.last_chk = int(chk.check_time)
         self.output = chk.output
         self.long_output = chk.long_output
-        # self.check_type = chk.check_type  # 0 => Active check, 1 => passive check
         if self.__class__.process_performance_data and self.process_perf_data:
             self.last_perf_data = self.perf_data
             self.perf_data = chk.perf_data
@@ -1702,7 +1671,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 # the check go in zombie state to be removed later
                 chk.status = 'zombie'
 
-        # print("Check: %s / %s / %s" % (chk.exit_status, self.last_state, self.get_full_name()))
         # from UP/OK/PENDING
         # to UP/OK
         if chk.exit_status == 0 and self.last_state in (ok_up, 'PENDING'):
@@ -1771,6 +1739,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # from UP/OK
         # to WARNING/CRITICAL/UNKNOWN/UNREACHABLE/DOWN
         elif chk.exit_status != 0 and self.last_state in (ok_up, 'PENDING'):
+            self.attempt = 1
             if self.is_max_attempts():
                 # Now we are in HARD
                 self.state_type = 'HARD'
@@ -1790,8 +1759,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             else:
                 # This is the first NON-OK result. Initiate the SOFT-sequence
                 # Also launch the event handler, he might fix it.
-                self.attempt = 1
                 self.state_type = 'SOFT'
+                if self.is_max_attempts():
+                    self.state_type = 'HARD'
                 self.raise_alert_log_entry()
                 self.get_event_handlers(hosts, macromodulations, timeperiods)
 
@@ -1885,6 +1855,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 (self.last_state_type == 'SOFT' or self.last_state != self.state):
             self.last_hard_state_change = int(time.time())
 
+        if self.state_type == 'HARD':
             # If the check is a freshness one, set freshness as expired
             if chk.freshness_expiry_check:
                 self.freshness_expired = True
@@ -1897,18 +1868,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.raise_freshness_log_entry(int(now - self.last_state_update -
                                                self.freshness_threshold))
 
-        # if self.freshness_expired and not self.freshness_log_raised:
-        #     self.raise_freshness_log_entry(int(now - self.last_state_update -
-        #                                        self.freshness_threshold))
-
-        # Now launch trigger if needed.
-        # If it's from a trigger raised check, do not raise a new one
-        if not chk.from_trigger:
-            self.eval_triggers(triggers)
-        if chk.from_trigger or not chk.from_trigger and \
-                sum(1 for t in self.triggers
-                    if triggers[t].trigger_broker_raise_enabled) == 0:
-            self.broks.append(self.get_check_result_brok())
+        self.broks.append(self.get_check_result_brok())
 
         self.get_perfdata_command(hosts, macromodulations, timeperiods)
         # Also snapshot if need :)
@@ -2346,10 +2306,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # the check is being forced, so we just replace next_chk time by now
         if force and self.in_checking:
-            now = time.time()
-            c_in_progress = checks[self.checks_in_progress[0]]
-            c_in_progress.t_to_go = now
-            return c_in_progress
+            try:
+                now = time.time()
+                c_in_progress = checks[self.checks_in_progress[0]]
+                c_in_progress.t_to_go = now
+                return c_in_progress
+            except KeyError:
+                pass
 
         # If I'm already in checking, Why launch a new check?
         # If ref_check_id is not None , this is a dependency_ check
@@ -2700,17 +2663,17 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 state = self.business_rule.get_state(hosts, services)
                 check.output = self.get_business_rule_output(hosts, services,
                                                              macromodulations, timeperiods)
-                if 'TEST_LOG_ACTIONS' in os.environ:
-                    if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+                if 'ALIGNAK_LOG_ACTIONS' in os.environ:
+                    if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                         logger.warning("Resolved BR for '%s', output: %s",
                                        self.get_full_name(), check.output)
                     else:
                         logger.info("Resolved BR for '%s', output: %s",
                                     self.get_full_name(), check.output)
 
-            except Exception, err:  # pylint: disable=W0703
+            except Exception as exp:  # pylint: disable=broad-except
                 # Notifies the error, and return an UNKNOWN state.
-                check.output = "Error while re-evaluating business rule: %s" % err
+                check.output = "Error while re-evaluating business rule: %s" % exp
                 logger.debug("[%s] Error while re-evaluating business rule:\n%s",
                              self.get_name(), traceback.format_exc())
                 state = 3
@@ -2719,8 +2682,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             state = 0
             check.execution_time = 0
             check.output = 'Host assumed to be UP'
-            if 'TEST_LOG_ACTIONS' in os.environ:
-                if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+            if 'ALIGNAK_LOG_ACTIONS' in os.environ:
+                if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                     logger.warning("Set host %s as UP (internal check)", self.get_full_name())
                 else:
                     logger.info("Set host %s as UP (internal check)", self.get_full_name())
@@ -2730,8 +2693,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             state = self.state_id
             check.execution_time = 0
             check.output = self.output
-            if 'TEST_LOG_ACTIONS' in os.environ:
-                if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+            if 'ALIGNAK_LOG_ACTIONS' in os.environ:
+                if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                     logger.warning("Echo the current state (%s - %d) for %s ",
                                    self.state, self.state_id, self.get_full_name())
                 else:
@@ -2741,23 +2704,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         check.long_output = check.output
         check.check_time = time.time()
         check.exit_status = state
-
-    def eval_triggers(self, triggers):
-        """Launch triggers
-
-        :param triggers: triggers objects, also used to change the output/status of a check, or more
-        :type triggers: alignak.objects.trigger.Triggers
-        :return: None
-        """
-        for trigger_id in self.triggers:
-            trigger = triggers[trigger_id]
-            try:
-                trigger.eval(self)
-            # pylint: disable=W0703
-            except Exception:  # pragma: no cover, simple protection
-                logger.error("We got an exception from a trigger on %s for %s",
-                             self.get_full_name().decode('utf8', 'ignore'),
-                             str(traceback.format_exc()))
 
     def fill_data_brok_from(self, data, brok_type):
         """Fill data brok dependent on the brok_type
@@ -2945,7 +2891,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         logger.warning("The freshness period of %s '%s' is expired by %s "
                        "(threshold=%s + %ss). Attempt: %s / %s. "
                        "I'm forcing the state to freshness state (%s / %s).",
-                       self.my_type, self.get_name(),
+                       self.my_type, self.get_full_name(),
                        format_t_into_dhms_format(t_stale_by),
                        format_t_into_dhms_format(self.freshness_threshold),
                        self.additional_freshness_latency,
@@ -3006,33 +2952,33 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
-    def get_data_for_checks(self):  # pragma: no cover, base function
-        """Get data for a check
-
-        :return: list containing the service and the linked host
-        :rtype: list
-        """
-        pass
-
-    def get_data_for_event_handler(self):  # pragma: no cover, base function
-        """Get data for an event handler
-
-        :return: list containing a single item (this one)
-        :rtype: list
-        """
-        pass
-
-    def get_data_for_notifications(self, contact, notif):  # pragma: no cover, base function
-        """Get data for a notification
-
-        :param contact: The contact to return
-        :type contact:
-        :param notif: the notification to return
-        :type notif:
-        :return: list
-        :rtype: list
-        """
-        pass
+    # def get_data_for_checks(self):  # pragma: no cover, base function
+    #     """Get data for a check
+    #
+    #     :return: list containing the service and the linked host
+    #     :rtype: list
+    #     """
+    #     pass
+    #
+    # def get_data_for_event_handler(self):  # pragma: no cover, base function
+    #     """Get data for an event handler
+    #
+    #     :return: list containing a single item (this one)
+    #     :rtype: list
+    #     """
+    #     pass
+    #
+    # def get_data_for_notifications(self, contact, notif):  # pragma: no cover, base function
+    #     """Get data for a notification
+    #
+    #     :param contact: The contact to return
+    #     :type contact:
+    #     :param notif: the notification to return
+    #     :type notif:
+    #     :return: list
+    #     :rtype: list
+    #     """
+    #     pass
 
     def set_impact_state(self):
         """We just go an impact, so we go unreachable
@@ -3042,6 +2988,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         cls = self.__class__
         if cls.enable_problem_impacts_states_change:
+            logger.debug("%s is impacted and goes UNREACHABLE", self)
+
             # Track the old state (problem occured before a new check)
             self.state_before_impact = self.state
             self.state_id_before_impact = self.state_id
@@ -3151,29 +3099,29 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if getattr(self, 'event_handler', None) and not self.event_handler.is_valid():
             msg = "[%s::%s] event_handler '%s' is invalid" \
                   % (self.my_type, self.get_name(), self.event_handler.command)
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             state = False
 
         if not hasattr(self, 'check_command'):
             msg = "[%s::%s] no check_command" % (self.my_type, self.get_name())
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             state = False
         # Ok got a command, but maybe it's invalid
         else:
             if not self.check_command.is_valid():
                 msg = "[%s::%s] check_command '%s' invalid" % (self.my_type, self.get_name(),
                                                                self.check_command.command)
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
                 state = False
             if self.got_business_rule:
                 if not self.business_rule.is_valid():
                     msg = "[%s::%s] business_rule invalid" % (
                         self.my_type, self.get_name()
                     )
-                    self.configuration_errors.append(msg)
+                    self.add_error(msg)
                     for bperror in self.business_rule.configuration_errors:
                         msg = "[%s::%s]: %s" % (self.my_type, self.get_name(), bperror)
-                        self.configuration_errors.append(msg)
+                        self.add_error(msg)
                     state = False
 
         if not hasattr(self, 'notification_interval') \
@@ -3181,7 +3129,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             msg = "[%s::%s] no notification_interval but notifications enabled" % (
                 self.my_type, self.get_name()
             )
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             state = False
 
         # if no check_period, means 24x7, like for services
@@ -3245,7 +3193,7 @@ class SchedulingItems(CommandCallItems):
             son = self[son_id]
         else:
             msg = "Dependency son (%s) unknown, configuration error" % son_id
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
         parent = self[parent_id]
         son.act_depend_of.append((parent_id, notif_failure_criteria, dep_period, inherits_parents))
         parent.act_depend_of_me.append((son_id, notif_failure_criteria, dep_period,
@@ -3341,14 +3289,3 @@ class SchedulingItems(CommandCallItems):
         for item in self:
             item.create_business_rules(hosts, services, hostgroups,
                                        servicegroups, macromodulations, timeperiods)
-
-    def linkify_with_triggers(self, triggers):
-        """
-        Link triggers
-
-        :param triggers: triggers object
-        :type triggers: alignak.objects.trigger.Triggers
-        :return: None
-        """
-        for i in self:
-            i.linkify_with_triggers(triggers)

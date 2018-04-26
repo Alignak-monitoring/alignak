@@ -2,3 +2,12 @@
 
 # Alignak backend (develop branch)
 -e git+git://github.com/Alignak-monitoring-contrib/alignak-backend.git@develop#egg=alignak-backend
+
+# Alignak backend module (develop branch)
+-e git+git://github.com/Alignak-monitoring-contrib/alignak-module-backend.git@develop#egg=alignak-module-backend
+
+# Alignak logs module (develop branch)
+-e git+git://github.com/Alignak-monitoring-contrib/alignak-module-logs.git@develop#egg=alignak-module-logs
+
+# Alignak ws module (develop+environment branch)
+-e git+git://github.com/Alignak-monitoring-contrib/alignak-module-ws.git@develop+environment#egg=alignak-module-ws

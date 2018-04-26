@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -44,11 +44,13 @@ def serialize(obj, no_dump=False):
        'content' : obj.serialize()}
     :rtype: dict | str
     """
+    # print("Serialize (%s): %s" % (no_dump, obj))
+
     if hasattr(obj, "serialize") and callable(obj.serialize):
-        o_cls = obj.__class__
-        o_dict = {'__sys_python_module__': '', 'content': {}}
-        o_dict['content'] = obj.serialize()
-        o_dict['__sys_python_module__'] = "%s.%s" % (o_cls.__module__, o_cls.__name__)
+        o_dict = {
+            '__sys_python_module__': "%s.%s" % (obj.__class__.__module__, obj.__class__.__name__),
+            'content': obj.serialize()
+        }
 
     elif isinstance(obj, dict):
         o_dict = {}
@@ -82,10 +84,13 @@ def unserialize(j_obj, no_load=False):
 
     :param j_obj: json object, dict
     :type j_obj: str (before loads)
-    :param no_load: if True, j_obj is a dict, otherwize it's a json and need loads it
+    :param no_load: if True, j_obj is a dict, otherwise it's a json and need loads it
     :type no_load: bool
     :return: un-serialized object
     """
+    if not j_obj:
+        return j_obj
+    # print("Unserialize (%s): %s" % (no_load, j_obj))
 
     if no_load:
         data = j_obj
@@ -95,20 +100,21 @@ def unserialize(j_obj, no_load=False):
     if isinstance(data, dict):
         if '__sys_python_module__' in data:
             cls = get_alignak_class(data['__sys_python_module__'])
-            if cls is None:
-                return {}
+            # Awful hack for external commands ... need to be refactored!
+            if data['__sys_python_module__'] in ['alignak.external_command.ExternalCommand']:
+                return cls(data['content']['cmd_line'], data['content']['creation_timestamp'])
+
             return cls(data['content'], parsing=False)
 
-        else:
-            data_dict = {}
-            for key, value in data.iteritems():
-                data_dict[key] = unserialize(value, True)
-            return data_dict
+        data_dict = {}
+        for key, value in data.iteritems():
+            data_dict[key] = unserialize(value, True)
+        return data_dict
 
     elif isinstance(data, list):
         return [unserialize(item, True) for item in data]
-    else:
-        return data
+
+    return data
 
 
 def get_alignak_class(python_path):
@@ -125,27 +131,29 @@ def get_alignak_class(python_path):
     :return: alignak class
     :raise AlignakClassLookupException
     """
-    module, a_class = python_path.rsplit('.', 1)
+    a_module, a_class = python_path.rsplit('.', 1)
 
-    if not module.startswith('alignak'):
+    if not a_module.startswith('alignak'):  # pragma: no cover - should never happen!
         raise AlignakClassLookupException("Can't recreate object in module: %s. "
-                                          "Not an Alignak module" % module)
+                                          "Not an Alignak module" % a_module)
 
-    if module not in sys.modules:
+    if a_module not in sys.modules:  # pragma: no cover - should never happen!
         raise AlignakClassLookupException("Can't recreate object in unknown module: %s. "
                                           "No such Alignak module. Alignak versions may mismatch" %
-                                          module)
+                                          a_module)
 
-    pymodule = sys.modules[module]
+    pymodule = sys.modules[a_module]
 
-    if not hasattr(pymodule, a_class):
+    if not hasattr(pymodule, a_class):  # pragma: no cover - should never happen!
         raise AlignakClassLookupException("Can't recreate object %s in %s module. "
                                           "Module does not have this attribute. "
-                                          "Alignak versions may mismatch" % (a_class, module))
+                                          "Alignak versions may mismatch" % (a_class, a_module))
 
-    if not isinstance(getattr(pymodule, a_class), type):
-        raise AlignakClassLookupException("Can't recreate object %s in %s module. "
-                                          "This type is not a class" % (a_class, module))
+    # Awful hack for external commands ... need to be refactored!
+    if a_class not in ['ExternalCommand']:
+        if not isinstance(getattr(pymodule, a_class), type):  # pragma: no cover - protection
+            raise AlignakClassLookupException("Can't recreate object %s in %s module. "
+                                              "This type is not a class" % (a_class, a_module))
 
     return getattr(pymodule, a_class)
 

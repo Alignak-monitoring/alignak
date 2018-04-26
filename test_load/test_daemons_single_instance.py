@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -31,34 +31,30 @@ from threading  import Thread
 
 from alignak_test import AlignakTest
 
-try:
-    from Queue import Queue, Empty
-except ImportError:
-    from queue import Queue, Empty  # python 3.x
-
-def enqueue_output(out, queue):
-    for line in iter(out.readline, b''):
-        queue.put(line)
-    out.close()
-
-
 class TestDaemonsSingleInstance(AlignakTest):
     def setUp(self):
-        # Alignak logs actions and results
-        # os.environ['TEST_LOG_ACTIONS'] = 'INFO'
+        """Test starting"""
+        super(TestDaemonsSingleInstance, self).setUp()
+
+        # Set an environment variable to activate the logging of checks execution
+        # With this the pollers/schedulers will raise INFO logs about the checks execution
+        os.environ['ALIGNAK_LOG_ACTIONS'] = 'INFO'
+
+        # Alignak daemons monitoring everay 3 seconds
+        os.environ['ALIGNAK_DAEMONS_MONITORING'] = '3'
+
+        # Alignak arbiter self-monitoring - report statistics every 5 loop counts
+        os.environ['ALIGNAK_SYSTEM_MONITORING'] = '5'
+
+        # Log daemons loop turn
+        os.environ['ALIGNAK_LOG_LOOP'] = 'INFO'
 
         # Alignak logs alerts and notifications
-        os.environ['TEST_LOG_ALERTS'] = 'WARNING'
-        os.environ['TEST_LOG_NOTIFICATIONS'] = 'WARNING'
-
-        # Alignak logs actions and results
-        os.environ['TEST_LOG_LOOP'] = 'Yes'
+        os.environ['ALIGNAK_LOG_ALERTS'] = 'INFO'
+        os.environ['ALIGNAK_LOG_NOTIFICATIONS'] = 'WARNING'
 
         # Alignak do not run plugins but only simulate
         # os.environ['TEST_FAKE_ACTION'] = 'Yes'
-
-        # Alignak scheduler self-monitoring - report statistics every 5 loop counts
-        os.environ['TEST_LOG_MONITORING'] = ''
 
         # Declare environment to send stats to a file
         # os.environ['ALIGNAK_STATS_FILE'] = '/tmp/alignak.stats'
@@ -66,69 +62,38 @@ class TestDaemonsSingleInstance(AlignakTest):
         os.environ['ALIGNAK_STATS_FILE_LINE_FMT'] = '[#date#] #counter# #value# #uom#\n'
         os.environ['ALIGNAK_STATS_FILE_DATE_FMT'] = '%Y-%m-%d %H:%M:%S'
 
-        self.procs = []
-
     def tearDown(self):
         # Let the daemons die...
         time.sleep(1)
         print("Test terminated!")
 
-    def checkDaemonsLogsForErrors(self, daemons_list):
-        """Check that the daemons log do not contain any ERROR log
-        Print the WARNING and ERROR logs
-        :return:
-        """
-        print("Get information from log files...")
-        nb_errors = 0
-        # Dump full arbiter log
-        for daemon in ['arbiter']:
-            assert os.path.exists('/tmp/%s.log' % daemon), '/tmp/%s.log does not exist!' % daemon
-            print("-----\n%s log file\n-----\n" % daemon)
-            with open('/tmp/%s.log' % daemon) as f:
-                for line in f:
-                    if 'ERROR:' in line or 'CRITICAL:' in line:
-                        print(line[:-1])
-                        nb_errors += 1
-        # Filter other daemons log
-        for daemon in daemons_list:
-            assert os.path.exists('/tmp/%s.log' % daemon), '/tmp/%s.log does not exist!' % daemon
-            daemon_errors = False
-            print("-----\n%s log file\n-----\n" % daemon)
-            with open('/tmp/%s.log' % daemon) as f:
-                for line in f:
-                    if 'WARNING:' in line or daemon_errors:
-                        print(line[:-1])
-                    if 'ERROR:' in line or 'CRITICAL:' in line:
-                        print(line[:-1])
-                        daemon_errors = True
-                        nb_errors += 1
-        if nb_errors == 0:
-            print("No error logs raised when checking the daemons log")
-
-        return nb_errors
-
-    def checkDaemonsLogsForAlerts(self, daemons_list):
+    def check_daemons_log_for_alerts(self, daemons_list):
         """Check that the daemons log contain ALERT and NOTIFICATION logs
-        Print the found logs
+        Print the found log lines
         :return:
         """
         nb_alerts = 0
         nb_notifications = 0
         nb_problems = 0
-        # Filter other daemons log
+
+        travis_run = 'TRAVIS' in os.environ
+
         for daemon in daemons_list:
-            print("-----\n%s log file\n-----\n" % daemon)
+            print("-----\n%s log file\n-----\n" % ('/tmp/%s.log' % daemon))
             with open('/tmp/%s.log' % daemon) as f:
                 for line in f:
-                    if 'SERVICE ALERT:' in line:
+                    if 'SERVICE ALERT:' in line or 'HOST ALERT:' in line:
                         nb_alerts += 1
-                        print(line[:-1])
-                    if 'SERVICE NOTIFICATION:' in line:
+                        if not travis_run:
+                            print(line[:-1])
+                    if 'SERVICE NOTIFICATION:' in line or 'HOST NOTIFICATION:' in line:
                         nb_notifications += 1
-                        print(line[:-1])
+                        if not travis_run:
+                            print(line[:-1])
                     if 'actions never came back for the satellite' in line:
                         nb_problems += 1
-                        print(line[:-1])
+                        if not travis_run:
+                            print(line[:-1])
         print("Found: %d service alerts" % nb_alerts)
         print("Found: %d service notifications" % nb_notifications)
         print("Found: %d problems" % nb_problems)
@@ -156,48 +121,6 @@ class TestDaemonsSingleInstance(AlignakTest):
                 outfile.write(hosts)
         print("Preparing hosts configuration duration: %d seconds" % (time.time() - start))
 
-    def kill_running_daemons(self):
-        """Kill the running daemons
-
-        :return:
-        """
-        print("Stopping the daemons...")
-        start = time.time()
-        for daemon in list(self.procs):
-            proc = daemon['pid']
-            name = daemon['name']
-            print("Asking %s (pid=%d) to end..." % (name, proc.pid))
-            try:
-                daemon_process = psutil.Process(proc.pid)
-            except psutil.NoSuchProcess:
-                print("not existing!")
-                continue
-            children = daemon_process.children(recursive=True)
-            daemon_process.terminate()
-            try:
-                daemon_process.wait(10)
-            except psutil.TimeoutExpired:
-                print("***** timeout 10 seconds...")
-                daemon_process.kill()
-            except psutil.NoSuchProcess:
-                print("not existing!")
-                pass
-            # for child in children:
-            #     try:
-            #         print("Asking %s child (pid=%d) to end..." % (child.name(), child.pid))
-            #         child.terminate()
-            #     except psutil.NoSuchProcess:
-            #         pass
-            # gone, still_alive = psutil.wait_procs(children, timeout=10)
-            # for process in still_alive:
-            #     try:
-            #         print("Killing %s (pid=%d)!" % (child.name(), child.pid))
-            #         process.kill()
-            #     except psutil.NoSuchProcess:
-            #         pass
-            print("%s terminated" % (name))
-        print("Stopping daemons duration: %d seconds" % (time.time() - start))
-
     def run_and_check_alignak_daemons(self, cfg_folder, runtime=10, hosts_count=10):
         """Start and stop the Alignak daemons
 
@@ -208,9 +131,7 @@ class TestDaemonsSingleInstance(AlignakTest):
 
         :return: the count of errors raised in the log files
         """
-        # Load and test the configuration
-        self.setup_with_file(cfg_folder + '/alignak.cfg')
-        assert self.conf_is_correct
+        shutil.copy(cfg_folder + '/check_command.sh', '/tmp/check_command.sh')
 
         if os.path.exists("/tmp/checks.log"):
             os.remove('/tmp/checks.log')
@@ -220,105 +141,60 @@ class TestDaemonsSingleInstance(AlignakTest):
             os.remove('/tmp/notifications.log')
             print("- removed /tmp/notifications.log")
 
-        self.procs = []
-        daemons_list = ['poller', 'reactionner', 'receiver', 'broker', 'scheduler']
 
-        print("Cleaning pid and log files...")
-        for daemon in ['arbiter'] + daemons_list:
-            if os.path.exists('/tmp/%s.pid' % daemon):
-                os.remove('/tmp/%s.pid' % daemon)
-                print("- removed /tmp/%s.pid" % daemon)
-            if os.path.exists('/tmp/%s.log' % daemon):
-                os.remove('/tmp/%s.log' % daemon)
-                print("- removed /tmp/%s.log" % daemon)
+        daemons_list = ['poller-master', 'reactionner-master', 'receiver-master',
+                        'broker-master', 'scheduler-master']
 
-        shutil.copy(cfg_folder + '/check_command.sh', '/tmp/check_command.sh')
+        self._run_alignak_daemons(cfg_folder=cfg_folder, run_folder='/tmp',
+                                  daemons_list=daemons_list, runtime=1)
 
-        print("Launching the daemons...")
-        start = time.time()
-        for daemon in daemons_list:
-            alignak_daemon = "../alignak/bin/alignak_%s.py" % daemon.split('-')[0]
+        time.sleep(runtime)
 
-            args = [alignak_daemon, "-c", cfg_folder + "/daemons/%s.ini" % daemon]
-            self.procs.append({
-                'name': daemon,
-                'pid': psutil.Popen(args)
-            })
-            print("%s: %s launched (pid=%d)" % (
-                  datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S %Z"),
-                  daemon, self.procs[-1]['pid'].pid))
-
-        # Let the daemons start quietly...
-        time.sleep(5)
-
-        print("Launching arbiter...")
-        args = ["../alignak/bin/alignak_arbiter.py",
-                "-c", cfg_folder + "/daemons/arbiter.ini",
-                "-a", cfg_folder + "/alignak.cfg"]
-        # Prepend the arbiter process into the list
-        self.procs= [{
-            'name': 'arbiter',
-            'pid': psutil.Popen(args)
-        }] + self.procs
-        print("%s: %s launched (pid=%d)" % (
-            datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S %Z"),
-            'arbiter', self.procs[-1]['pid'].pid))
-
-        time.sleep(1)
-
-        print("Testing daemons start")
-        for daemon in self.procs:
-            proc = daemon['pid']
-            name = daemon['name']
-            ret = proc.poll()
-            if ret is not None:
-                print("*** %s exited on start!" % (name))
-                for line in iter(proc.stdout.readline, b''):
-                    print(">>> " + line.rstrip())
-                for line in iter(proc.stderr.readline, b''):
-                    print(">>> " + line.rstrip())
-            daemon['started'] = ret
-            print("- %s running (pid=%d)" % (name, self.procs[-1]['pid'].pid))
-        print("Starting daemons duration: %d seconds" % (time.time() - start))
-        for daemon in self.procs:
-            started = daemon['started']
-            if started is not None:
-                self.kill_running_daemons()
-                assert False
-
-        # Let the arbiter build and dispatch its configuration
-        # Let the schedulers get their configuration and run the first checks
-        time.sleep(2)
-
-        # Start a communication thread with the scheduler
-        scheduler_stdout_queue = Queue()
-        process = None
-        for daemon in self.procs:
-            name = daemon['name']
-            if name == 'scheduler':
-                process = daemon['pid']
-                t = Thread(target=enqueue_output, args=(process.stdout, scheduler_stdout_queue))
-                t.daemon = True  # thread dies with the program
-                t.start()
-                break
-
-        duration = runtime
-        while duration > 0:
-            # read scheduler stdout without blocking
-            try:
-                line = scheduler_stdout_queue.get_nowait()
-            except Empty:
-                pass
-            else:  # got line
-                print(line[:-1])
-            time.sleep(0.01)
-            duration -= 0.01
+        self._stop_alignak_daemons(arbiter_only=True)
 
         # Check daemons log
-        errors_raised = self.checkDaemonsLogsForErrors(daemons_list)
+        # errors_raised = self.checkDaemonsLogsForErrors(daemons_list)
+        # Check daemons log files
+        ignored_warnings = [
+            # Action execution log
+            'Timeout raised for ',
+            'spent too much time:',
+            'Launch command',
+            'Check result',
+            'Performance data',
+            'Action',
+            'Got check result',
+            'Echo the current state',
+            'Set host',
+            # Monitoring Events
+            'HOST ALERT: ',
+            'SERVICE ALERT: ',
+            'HOST NOTIFICATION: ',
+            'SERVICE NOTIFICATION: ',
+            # todo: Temporary: because of unordered daemon stop !
+            # 'that we must be related with cannot be connected',
+            # 'Exception: Server not available',
+            # 'Setting the satellite ',
+            # 'Add failed attempt'
+            # Sometimes not killed during the test because of SIGTERM
+            'did not stopped, trying to kill',
+            'My Arbiter wants me to wait for a new configuration'
+        ]
+        ignored_errors = [
+        ]
+        (errors_raised, warnings_raised) = \
+            self._check_daemons_log_for_errors(daemons_list,
+                                               ignored_warnings=ignored_warnings,
+                                               ignored_errors=ignored_errors)
+
+        assert errors_raised == 0, "Error logs raised!"
+        print("No unexpected error logs raised by the daemons")
+
+        assert warnings_raised == 0, "Warning logs raised!"
+        print("No unexpected warning logs raised by the daemons")
 
         # Check daemons log for alerts and notifications
-        alerts, notifications, problems = self.checkDaemonsLogsForAlerts(['scheduler'])
+        alerts, notifications, problems = self.check_daemons_log_for_alerts(['scheduler-master'])
         print("Alerts: %d" % alerts)
         if alerts < 6 * hosts_count:
             print("***** Not enough alerts, expected: %d!" % 6 * hosts_count)
@@ -332,11 +208,9 @@ class TestDaemonsSingleInstance(AlignakTest):
         if not alerts or not notifications or problems:
             errors_raised += 1
 
-        self.kill_running_daemons()
-
         return errors_raised
 
-    @pytest.mark.skip("Only useful for local test - do not run on Travis build")
+    @pytest.mark.skip("Only useful for local test - not necessary to run on Travis build")
     def test_run_1_host_1mn(self):
         """Run Alignak with one host during 1 minute"""
 
@@ -345,9 +219,9 @@ class TestDaemonsSingleInstance(AlignakTest):
         hosts_count = 1
         self.prepare_alignak_configuration(cfg_folder, hosts_count)
         errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 60, hosts_count)
-        assert errors_raised == 0
+        # assert errors_raised == 0
 
-    @pytest.mark.skip("Only useful for local test - do not run on Travis build")
+    # @pytest.mark.skip("Only useful for local test - do not run on Travis build")
     def test_run_1_host_5mn(self):
         """Run Alignak with one host during 5 minutes"""
 
@@ -388,7 +262,7 @@ class TestDaemonsSingleInstance(AlignakTest):
                                   './cfg/default')
         hosts_count = 100
         self.prepare_alignak_configuration(cfg_folder, hosts_count)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 600, hosts_count)
         assert errors_raised == 0
 
     @pytest.mark.skip("Too much load - do not run on Travis build")
@@ -414,6 +288,17 @@ class TestDaemonsSingleInstance(AlignakTest):
         assert errors_raised == 0
 
     @pytest.mark.skip("Only useful for local test - do not run on Travis build")
+    def test_passive_daemons_1_host_1mn(self):
+        """Run Alignak with 1 host during 5 minutes - passive daemons"""
+
+        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  './cfg/passive_daemons')
+        hosts_count = 1
+        self.prepare_alignak_configuration(cfg_folder, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 60, hosts_count)
+        # assert errors_raised == 0
+
+    # @pytest.mark.skip("Only useful for local test - do not run on Travis build")
     def test_passive_daemons_1_host_5mn(self):
         """Run Alignak with 1 host during 5 minutes - passive daemons"""
 
@@ -436,14 +321,14 @@ class TestDaemonsSingleInstance(AlignakTest):
         assert errors_raised == 0
 
     # @pytest.mark.skip("Only useful for local test - do not run on Travis build")
-    def test_passive_daemons_100_host_5mn(self):
+    def test_passive_daemons_100_host_10mn(self):
         """Run Alignak with 100 hosts during 5 minutes - passive daemons"""
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/passive_daemons')
         hosts_count = 100
         self.prepare_alignak_configuration(cfg_folder, hosts_count)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 600, hosts_count)
         assert errors_raised == 0
 
     @pytest.mark.skip("Too much load - do not run on Travis build")

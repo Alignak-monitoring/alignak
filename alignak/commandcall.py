@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -121,7 +121,9 @@ class CommandCall(AlignakObject):
             if hasattr(self, prop):
                 res[prop] = getattr(self, prop)
 
-        res['command'] = self.command.serialize()
+        res['command'] = None
+        if self.command:
+            res['command'] = self.command.serialize()
         return res
 
     def get_command_and_args(self):
@@ -144,7 +146,7 @@ class CommandCall(AlignakObject):
         """
         return self.valid
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return str(self.__dict__)
 
     def get_name(self):

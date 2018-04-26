@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -58,9 +58,10 @@ from alignak_test import AlignakTest
 class TestBusinessCorrelator(AlignakTest):
 
     def setUp(self):
+        super(TestBusinessCorrelator, self).setUp()
         self.setup_with_file('cfg/cfg_business_correlator.cfg')
         assert self.conf_is_correct
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
     def launch_internal_check(self, svc_br):
         """ Launch an internal check for the business rule service provided """
@@ -86,8 +87,6 @@ class TestBusinessCorrelator(AlignakTest):
 
         :return:
         """
-        self.print_header()
-
         # Get the hosts
         host = self._sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -113,7 +112,7 @@ class TestBusinessCorrelator(AlignakTest):
         assert svc_cor.got_business_rule
         assert svc_cor.business_rule is not None
 
-        svc_cor2 = self.arbiter.conf.services.find_srv_by_name_and_hostname("test_host_0", "Simple_Or")
+        svc_cor2 = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_0", "Simple_Or")
         # Is a Business Rule, not a simple service...
         assert svc_cor2.got_business_rule
         assert svc_cor2.business_rule is not None
@@ -179,7 +178,6 @@ class TestBusinessCorrelator(AlignakTest):
 
         :return:
         """
-        self.print_header()
         now = time.time()
 
         # Get the hosts
@@ -322,7 +320,7 @@ class TestBusinessCorrelator(AlignakTest):
 
         # We acknowledge db2
         cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         assert True == svc_db2.problem_has_been_acknowledged
 
         # -----
@@ -335,11 +333,11 @@ class TestBusinessCorrelator(AlignakTest):
         # We unacknowledge then downtime db2
         duration = 300
         cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         assert False == svc_db2.problem_has_been_acknowledged
 
         cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         self.scheduler_loop(1, [[svc_cor, None, None]])
         assert svc_db2.scheduled_downtime_depth > 0
         assert True == svc_db2.in_scheduled_downtime
@@ -358,7 +356,6 @@ class TestBusinessCorrelator(AlignakTest):
 
         :return:
         """
-        self.print_header()
         now = time.time()
 
         # Get the hosts
@@ -545,7 +542,7 @@ class TestBusinessCorrelator(AlignakTest):
 
         # We acknowledge db2
         cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         assert True == svc_db2.problem_has_been_acknowledged
 
        # Must be OK
@@ -562,11 +559,11 @@ class TestBusinessCorrelator(AlignakTest):
         # db2 WARNING, db1 CRITICAL, we unacknowledge then downtime db2
         duration = 300
         cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         assert False == svc_db2.problem_has_been_acknowledged
 
         cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         self.scheduler_loop(1, [[svc_cor, None, None]])
         assert svc_db2.scheduled_downtime_depth > 0
         assert True == svc_db2.in_scheduled_downtime
@@ -589,7 +586,6 @@ class TestBusinessCorrelator(AlignakTest):
 
         :return:
         """
-        self.print_header()
         now = time.time()
 
         # Get the hosts
@@ -733,7 +729,7 @@ class TestBusinessCorrelator(AlignakTest):
 
         # We acknowledge db2
         cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         assert True == svc_db2.problem_has_been_acknowledged
 
         # -----
@@ -746,11 +742,11 @@ class TestBusinessCorrelator(AlignakTest):
         # We unacknowledge then downtime db2
         duration = 300
         cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         assert False == svc_db2.problem_has_been_acknowledged
 
         cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         self.scheduler_loop(1, [[svc_cor, None, None]])
         assert svc_db2.scheduled_downtime_depth > 0
         assert True == svc_db2.in_scheduled_downtime
@@ -769,7 +765,6 @@ class TestBusinessCorrelator(AlignakTest):
 
         :return:
         """
-        self.print_header()
         now = time.time()
 
         # Get the hosts
@@ -920,7 +915,7 @@ class TestBusinessCorrelator(AlignakTest):
         assert 2 == svc_db2.last_hard_state_id
 
         cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         assert True == svc_db2.problem_has_been_acknowledged
 
         # -----
@@ -933,11 +928,11 @@ class TestBusinessCorrelator(AlignakTest):
         # We unacknowledge then downtime db2
         duration = 300
         cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         assert False == svc_db2.problem_has_been_acknowledged
 
         cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         self.scheduler_loop(1, [[svc_cor, None, None]])
         assert svc_db2.scheduled_downtime_depth > 0
         assert True == svc_db2.in_scheduled_downtime
@@ -954,7 +949,6 @@ class TestBusinessCorrelator(AlignakTest):
 
         bp_rule!test_host_0,db1&!test_host_0,db2
         """
-        self.print_header()
         now = time.time()
 
         # Get the hosts
@@ -1115,7 +1109,7 @@ class TestBusinessCorrelator(AlignakTest):
         assert 2 == svc_db2.last_hard_state_id
 
         cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         assert True == svc_db2.problem_has_been_acknowledged
 
         # -----
@@ -1128,11 +1122,11 @@ class TestBusinessCorrelator(AlignakTest):
         # We unacknowledge then downtime db2
         duration = 300
         cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         assert False == svc_db2.problem_has_been_acknowledged
 
         cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         self.scheduler_loop(1, [[svc_cor, None, None]])
         assert svc_db2.scheduled_downtime_depth > 0
         assert True == svc_db2.in_scheduled_downtime
@@ -1179,7 +1173,6 @@ class TestBusinessCorrelator(AlignakTest):
         :param with_neg: True if a negation is set
         :return:
         """
-        self.print_header()
         now = time.time()
 
         # Get the hosts
@@ -1347,7 +1340,7 @@ class TestBusinessCorrelator(AlignakTest):
 
         # We acknowledge bd2
         cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         assert True == svc_db2.problem_has_been_acknowledged
 
         # -----
@@ -1360,11 +1353,11 @@ class TestBusinessCorrelator(AlignakTest):
         # We unacknowledge then downtime db2
         duration = 300
         cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         assert False == svc_db2.problem_has_been_acknowledged
 
         cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         self.scheduler_loop(1, [[svc_cor, None, None]])
         assert svc_db2.scheduled_downtime_depth > 0
         assert True == svc_db2.in_scheduled_downtime
@@ -1399,8 +1392,6 @@ class TestBusinessCorrelator(AlignakTest):
         :param with_neg: True if a negation is set
         :return:
         """
-        self.print_header()
-
         # Get the hosts
         host = self._sched.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -1485,7 +1476,6 @@ class TestBusinessCorrelator(AlignakTest):
 
         :return:
         """
-        self.print_header()
         now = time.time()
         
         # Get the hosts
@@ -1828,7 +1818,7 @@ class TestBusinessCorrelator(AlignakTest):
         assert 2 == svc_db2.last_hard_state_id
 
         cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % now
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         assert True == svc_db2.problem_has_been_acknowledged
 
         # -----
@@ -1842,11 +1832,11 @@ class TestBusinessCorrelator(AlignakTest):
         # We unacknowledge then downtime db2
         duration = 300
         cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         assert False == svc_db2.problem_has_been_acknowledged
 
         cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         self.scheduler_loop(1, [[svc_cor, None, None]])
         assert svc_db2.scheduled_downtime_depth > 0
         assert True == svc_db2.in_scheduled_downtime
@@ -1875,7 +1865,6 @@ class TestBusinessCorrelator(AlignakTest):
         :param with_pct: True if a percentage is set
         :return:
         """
-        self.print_header()
         now =time.time()
 
         # Get the hosts
@@ -2096,7 +2085,7 @@ class TestBusinessCorrelator(AlignakTest):
         # * 4,1,1 -> Critical (same as before)
         # * 4,1,2 -> Warning
         cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;B;2;1;1;lausser;blablub" % (now)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
 
         if with_pct == False:
             bp_rule.of_values = ('3', '5', '5')
@@ -2125,9 +2114,9 @@ class TestBusinessCorrelator(AlignakTest):
         # * 4,1,2 -> Warning
         duration = 300
         cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;B" % now
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;B;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         self.scheduler_loop(1, [[svc_cor, None, None]])
         if with_pct == False:
             bp_rule.of_values = ('3', '5', '5')
@@ -2158,7 +2147,6 @@ class TestBusinessCorrelator(AlignakTest):
         & test_router_0
         :return:
         """
-        self.print_header()
         now = time.time()
 
         # Get the hosts
@@ -2373,7 +2361,7 @@ class TestBusinessCorrelator(AlignakTest):
 
         # Acknowledge db2
         cmd = "[%lu] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;db2;2;1;1;lausser;blablub" % (now)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         assert True == svc_db2.problem_has_been_acknowledged
 
         # Must be OK
@@ -2383,11 +2371,11 @@ class TestBusinessCorrelator(AlignakTest):
         # Unacknowledge then downtime db2
         duration = 300
         cmd = "[%lu] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;db2" % now
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         assert False == svc_db2.problem_has_been_acknowledged
 
         cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;db2;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         self.scheduler_loop(1, [[svc_cor, None, None]])
         assert svc_db2.scheduled_downtime_depth > 0
 
@@ -2485,7 +2473,7 @@ class TestBusinessCorrelator(AlignakTest):
         assert 0 == B.last_hard_state_id
 
         cmd = "[%lu] ACKNOWLEDGE_HOST_PROBLEM;test_darthelmet_A;1;1;0;lausser;blablub" % now
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         assert 'DOWN' == A.state
         assert 'HARD' == A.state_type
         assert 1 == A.last_hard_state_id
@@ -2496,10 +2484,10 @@ class TestBusinessCorrelator(AlignakTest):
         # We unacknowledge then downtime A
         duration = 300
         cmd = "[%lu] REMOVE_HOST_ACKNOWLEDGEMENT;test_darthelmet_A" % now
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
 
         cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_darthelmet_A;%d;%d;1;0;%d;lausser;blablub" % (now, now, now + duration, duration)
-        self._sched.run_external_command(cmd)
+        self._sched.run_external_commands([cmd])
         self.scheduler_loop(1, [[B, None, None]])
         assert 'DOWN' == A.state
         assert 'HARD' == A.state_type

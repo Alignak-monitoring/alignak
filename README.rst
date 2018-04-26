@@ -17,11 +17,11 @@ Presentation of the Alignak project
     :alt: Development code tests coverage
 
 .. image:: https://readthedocs.org/projects/alignak-doc/badge/?version=latest
-    :target: http://alignak-doc.readthedocs.org/en/latest/?badge=latest
+    :target: http://alignak-doc.readthedocs.org/en/latest
     :alt: Lastest documentation Status
 
 .. image:: https://readthedocs.org/projects/alignak-doc/badge/?version=develop
-    :target: http://alignak-doc.readthedocs.org/en/update/?badge=develop
+    :target: http://alignak-doc.readthedocs.org/en/develop
     :alt: Development branch documentation Status
 
 .. image:: https://img.shields.io/badge/IRC-%23alignak-1e72ff.svg?style=flat

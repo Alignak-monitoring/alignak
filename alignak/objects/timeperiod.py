@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -121,7 +121,6 @@ action or not if we are in right period
 import logging
 import time
 import re
-import warnings
 
 from alignak.objects.item import Item, Items
 
@@ -520,22 +519,6 @@ class Timeperiod(Item):
             return periods[0][1]
         return original_t
 
-    def has(self, prop):
-        """
-        Check if self have prop attribute
-
-        :param prop: property name
-        :type prop: string
-        :return: true if self has this attribute
-        :rtype: bool
-        """
-        warnings.warn(
-            "{s.__class__.__name__} is deprecated, please use "
-            "`hasattr(your_object, attr)` instead. This has() method will "
-            "be removed in a later version.".format(s=self),
-            DeprecationWarning, stacklevel=2)
-        return hasattr(self, prop)
-
     def is_correct(self):
         """
         Check if this object configuration is correct ::
@@ -552,17 +535,17 @@ class Timeperiod(Item):
             good = daterange.is_correct()
             if not good:
                 msg = "[timeperiod::%s] invalid daterange '%s'" % (self.get_name(), daterange)
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
             state &= good
 
         # Warn about non correct entries
         for entry in self.invalid_entries:
             msg = "[timeperiod::%s] invalid entry '%s'" % (self.get_name(), entry)
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
 
         return super(Timeperiod, self).is_correct() and state
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         """
         Get readable object
 
@@ -890,7 +873,7 @@ class Timeperiod(Item):
                     new_exclude.append(timepriod.uuid)
                 else:
                     msg = "[timeentry::%s] unknown %s timeperiod" % (self.get_name(), tp_name)
-                    self.configuration_errors.append(msg)
+                    self.add_error(msg)
         self.exclude = new_exclude
 
     def check_exclude_rec(self):
@@ -902,7 +885,7 @@ class Timeperiod(Item):
         """
         if self.rec_tag:
             msg = "[timeentry::%s] is in a loop in exclude parameter" % (self.get_name())
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             return False
         self.rec_tag = True
         for timeperiod in self.exclude:
@@ -1017,7 +1000,7 @@ class Timeperiods(Items):
                 msg = "Configuration in %s::%s is incorrect; from: %s" % (
                     timeperiod.my_type, timeperiod.get_name(), source
                 )
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
 
             self.configuration_errors += timeperiod.configuration_errors
             self.configuration_warnings += timeperiod.configuration_warnings

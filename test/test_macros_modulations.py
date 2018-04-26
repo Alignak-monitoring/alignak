@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -52,16 +52,15 @@ from alignak_test import *
 class TestMacroModulations(AlignakTest):
 
     def setUp(self):
+        super(TestMacroModulations, self).setUp()
         self.setup_with_file('cfg/cfg_macros_modulation.cfg')
         assert self.conf_is_correct
 
         # Our scheduler
-        self._sched = self.schedulers['scheduler-master'].sched
+        self._sched = self._scheduler
 
     def test_macros_modulation(self):
         """ Test macros modulation """
-        self.print_header()
-
         # Get the host
         host = self._sched.hosts.find_by_name("modulated_host")
         assert host is not None

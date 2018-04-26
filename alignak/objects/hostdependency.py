@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -161,7 +161,7 @@ class Hostdependencies(Items):
                     if dephg is None:
                         err = "ERROR: the hostdependency got " \
                               "an unknown dependent_hostgroup_name '%s'" % dephg_name
-                        hostdep.configuration_errors.append(err)
+                        hostdep.add_error(err)
                         continue
                     dephnames.extend([m.strip() for m in dephg.get_hosts()])
 
@@ -177,7 +177,7 @@ class Hostdependencies(Items):
                     if hostgroup is None:
                         err = "ERROR: the hostdependency got" \
                               " an unknown hostgroup_name '%s'" % hg_name
-                        hostdep.configuration_errors.append(err)
+                        hostdep.add_error(err)
                         continue
                     hnames.extend([m.strip() for m in hostgroup.get_hosts()])
 
@@ -227,19 +227,19 @@ class Hostdependencies(Items):
                 host = hosts.find_by_name(h_name)
                 if host is None:
                     err = "Error: the host dependency got a bad host_name definition '%s'" % h_name
-                    hostdep.configuration_errors.append(err)
+                    hostdep.add_error(err)
                 dephost = hosts.find_by_name(dh_name)
                 if dephost is None:
                     err = "Error: the host dependency got " \
                           "a bad dependent_host_name definition '%s'" % dh_name
-                    hostdep.configuration_errors.append(err)
+                    hostdep.add_error(err)
                 if host:
                     hostdep.host_name = host.uuid
                 if dephost:
                     hostdep.dependent_host_name = dephost.uuid
             except AttributeError, exp:
                 err = "Error: the host dependency miss a property '%s'" % exp
-                hostdep.configuration_errors.append(err)
+                hostdep.add_error(err)
 
     def linkify_hd_by_tp(self, timeperiods):
         """Replace dependency_period by a real object in host dependency
@@ -309,7 +309,7 @@ class Hostdependencies(Items):
         loop = self.no_loop_in_parents("host_name", "dependent_host_name")
         if loop:
             msg = "Loop detected while checking host dependencies"
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             state = False
             for item in self:
                 for elem in loop:
@@ -317,11 +317,11 @@ class Hostdependencies(Items):
                         msg = "Host %s is parent host_name in dependency defined in %s" % (
                             item.host_name_string, item.imported_from
                         )
-                        self.configuration_errors.append(msg)
+                        self.add_error(msg)
                     elif elem == item.dependent_host_name:
                         msg = "Host %s is child host_name in dependency defined in %s" % (
                             item.dependent_host_name_string, item.imported_from
                         )
-                        self.configuration_errors.append(msg)
+                        self.add_error(msg)
 
         return super(Hostdependencies, self).is_correct() and state

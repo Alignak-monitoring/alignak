@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -124,5 +124,5 @@ class EventHandler(Action):
         """
         return timestamp >= self.t_to_go
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return "Check %s status:%s command:%s" % (self.uuid, self.status, self.command)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -240,6 +240,12 @@ class Service(SchedulingItem):
         'hostgroups':    'hostgroup_name',
     })
 
+    def __str__(self):  # pragma: no cover
+        return '<Service %s, uuid=%s, %s (%s), use: %s />' \
+               % (self.get_full_name(), self.uuid, self.state, self.state_type,
+                  getattr(self, 'use', None))
+    __repr__ = __str__
+
 #######
 #                   __ _                       _   _
 #                  / _(_)                     | | (_)
@@ -264,15 +270,6 @@ class Service(SchedulingItem):
             self.state = 'CRITICAL'
         elif self.initial_state == 'x':
             self.state = 'UNREACHABLE'
-
-    def __repr__(self):
-        return '<Service host_name=%r desc=%r name=%r use=%r />' % (
-            getattr(self, 'host_name', None),
-            getattr(self, 'service_description', None),
-            getattr(self, 'name', None),
-            getattr(self, 'use', None)
-        )
-    __str__ = __repr__
 
     @property
     def unique_key(self):  # actually only used for (un)indexitem() via name_property..
@@ -316,6 +313,18 @@ class Service(SchedulingItem):
             return self.name
         return 'SERVICE-DESCRIPTION-MISSING'
 
+    def get_full_name(self):
+        """Get the full name for debugging (host_name/service_description)
+
+        :return: service full name
+        :rtype: str
+        """
+        if self.is_tpl():
+            return "tpl-%s/%s" % (getattr(self, 'host_name', 'XxX'), self.name)
+        if hasattr(self, 'host_name') and hasattr(self, 'service_description'):
+            return "%s/%s" % (self.host_name, self.service_description)
+        return 'UNKNOWN-SERVICE'
+
     def get_servicegroups(self):
         """Accessor to servicegroups attribute
 
@@ -331,16 +340,6 @@ class Service(SchedulingItem):
         :rtype: str
         """
         return ','.join([sgs[sg].get_name() for sg in self.servicegroups])
-
-    def get_full_name(self):
-        """Get the full name for debugging (host_name/service_description)
-
-        :return: service full name
-        :rtype: str
-        """
-        if self.host_name and hasattr(self, 'service_description'):
-            return "%s/%s" % (self.host_name, self.service_description)
-        return 'UNKNOWN-SERVICE'
 
     def get_hostgroups(self, hosts):
         """Wrapper to access hostgroups attribute of host attribute
@@ -378,28 +377,28 @@ class Service(SchedulingItem):
         state = True
         cls = self.__class__
         # Set display_name if need
-        if getattr(self, 'display_name', '') == '':
+        if not getattr(self, 'display_name', ''):
             self.display_name = getattr(self, 'service_description', '')
 
         if not self.host_name:
             msg = "[%s::%s] not bound to any host." % (self.my_type, self.get_name())
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             state = False
         elif self.host is None:
-            msg = "[%s::%s] unknown host_name '%s'" % (
-                self.my_type, self.get_name(), self.host_name
-            )
-            self.configuration_errors.append(msg)
+            msg = "[%s::%s] unknown host_name '%s'" \
+                  % (self.my_type, self.get_name(), self.host_name)
+            self.add_error(msg)
             state = False
 
         if hasattr(self, 'service_description'):
             for char in cls.illegal_object_name_chars:
-                if char in self.service_description:
-                    msg = "[%s::%s] service_description got an illegal character: %s" % (
-                        self.my_type, self.get_name(), char
-                    )
-                    self.configuration_errors.append(msg)
-                    state = False
+                if char not in self.service_description:
+                    continue
+
+                msg = "[%s::%s] service_description got an illegal character: %s" \
+                      % (self.my_type, self.get_name(), char)
+                self.add_error(msg)
+                state = False
 
         return super(Service, self).is_correct() and state
 
@@ -444,7 +443,7 @@ class Service(SchedulingItem):
                 "host %(host)r is not a valid entry for a service generator: %(exc)s, "
                 "with entry=%(entry)r") % fmt_dict
             logger.warning(err)
-            host.configuration_errors.append(err)
+            host.add_error(err)
             return duplicates
 
         for key_value in key_values:
@@ -639,10 +638,9 @@ class Service(SchedulingItem):
             )
         )
         self.broks.append(brok)
-        self.broks.append(brok)
 
-        if 'TEST_LOG_ALERTS' in os.environ:
-            if os.environ['TEST_LOG_ALERTS'] == 'WARNING':
+        if 'ALIGNAK_LOG_ALERTS' in os.environ:
+            if os.environ['ALIGNAK_LOG_ALERTS'] == 'WARNING':
                 logger.warning('SERVICE ALERT: %s;%s;%s;%s;%d;%s', self.host_name, self.get_name(),
                                self.state, self.state_type, self.attempt, self.output)
             else:
@@ -707,8 +705,8 @@ class Service(SchedulingItem):
         )
         self.broks.append(brok)
 
-        if 'TEST_LOG_NOTIFICATIONS' in os.environ:
-            if os.environ['TEST_LOG_NOTIFICATIONS'] == 'WARNING':
+        if 'ALIGNAK_LOG_NOTIFICATIONS' in os.environ:
+            if os.environ['ALIGNAK_LOG_NOTIFICATIONS'] == 'WARNING':
                 logger.warning("SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s", contact.get_name(),
                                host_ref.get_name(), self.get_name(), state,
                                command.get_name(), self.output)
@@ -931,33 +929,33 @@ class Service(SchedulingItem):
         if need_stalk:
             logger.info("Stalking %s: %s", self.get_name(), check.output)
 
-    def get_data_for_checks(self):
-        """Get data for a check
-
-        :return: list containing the service and the linked host
-        :rtype: list
-        """
-        return [self.host, self]
-
-    def get_data_for_event_handler(self):
-        """Get data for an event handler
-
-        :return: list containing the service and the linked host
-        :rtype: list
-        """
-        return [self.host, self]
-
-    def get_data_for_notifications(self, contact, notif):
-        """Get data for a notification
-
-        :param contact: The contact to return
-        :type contact:
-        :param notif: the notification to return
-        :type notif:
-        :return: list containing the service, the host and the given parameters
-        :rtype: list
-        """
-        return [self.host, self, contact, notif]
+    # def get_data_for_checks(self):
+    #     """Get data for a check
+    #
+    #     :return: list containing the service and the linked host
+    #     :rtype: list
+    #     """
+    #     return [self.host, self]
+    #
+    # def get_data_for_event_handler(self):
+    #     """Get data for an event handler
+    #
+    #     :return: list containing the service and the linked host
+    #     :rtype: list
+    #     """
+    #     return [self.host, self]
+    #
+    # def get_data_for_notifications(self, contact, notif):
+    #     """Get data for a notification
+    #
+    #     :param contact: The contact to return
+    #     :type contact:
+    #     :param notif: the notification to return
+    #     :type notif:
+    #     :return: list containing the service, the host and the given parameters
+    #     :rtype: list
+    #     """
+    #     return [self.host, self, contact, notif]
 
     def notification_is_blocked_by_contact(self, notifways, timeperiods, notif, contact):
         """Check if the notification is blocked by this contact.
@@ -1069,6 +1067,8 @@ class Service(SchedulingItem):
         :rtype: bool
         TODO: Refactor this, a lot of code duplication with Host.notification_is_blocked_by_item
         """
+        logger.debug("Checking if a service %s (%s) notification is blocked...",
+                     self.get_full_name(), self.state)
         host = hosts[self.host]
         if t_wished is None:
             t_wished = time.time()
@@ -1097,19 +1097,19 @@ class Service(SchedulingItem):
             self.state == 'OK' and 'r' not in self.notification_options or
             self.state == 'UNREACHABLE' and 'x' not in self.notification_options
         ):  # pylint: disable=R0911
-            logger.debug("Service: %s, notification %s sending is blocked by options",
-                         self.get_name(), n_type)
+            logger.debug("Service: %s, notification %s sending is blocked by options: %s",
+                         self.get_name(), n_type, self.notification_options)
             return True
 
         if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED') and
                 'f' not in self.notification_options):
-            logger.debug("Service: %s, notification %s sending is blocked by options",
-                         n_type, self.get_name())
+            logger.debug("Service: %s, notification %s sending is blocked by options: %s",
+                         n_type, self.get_full_name(), self.notification_options)
             return True
         if (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED') and
                 's' not in self.notification_options):
-            logger.debug("Service: %s, notification %s sending is blocked by options",
-                         n_type, self.get_name())
+            logger.debug("Service: %s, notification %s sending is blocked by options: %s",
+                         n_type, self.get_full_name(), self.notification_options)
             return True
 
         # Acknowledgements make no sense when the status is ok/up
@@ -1241,11 +1241,11 @@ class Services(SchedulingItems):
         if not name and not hname:
             msg = "a %s template has been defined without name nor host_name. from: %s" \
                   % (objcls, tpl.imported_from)
-            tpl.configuration_errors.append(msg)
+            tpl.add_error(msg)
         elif not name and not sdesc:
             msg = "a %s template has been defined without name nor service_description. from: %s" \
                   % (objcls, tpl.imported_from)
-            tpl.configuration_errors.append(msg)
+            tpl.add_error(msg)
         elif not name:
             # If name is not defined, use the host_name_service_description as name (fix #791)
             setattr(tpl, 'name', "%s_%s" % (hname, sdesc))
@@ -1276,11 +1276,11 @@ class Services(SchedulingItems):
         if not hname and not hgname:
             msg = "a %s has been defined without " \
                   "host_name nor hostgroup_name, from: %s" % (objcls, item.imported_from)
-            item.configuration_errors.append(msg)
+            item.add_error(msg)
         if not sdesc:
             msg = "a %s has been defined without " \
                   "service_description, from: %s" % (objcls, item.imported_from)
-            item.configuration_errors.append(msg)
+            item.add_error(msg)
 
         if index is True:
             item = self.index_item(item)
@@ -1328,7 +1328,7 @@ class Services(SchedulingItems):
 
     def linkify(self, hosts, commands, timeperiods, contacts,  # pylint: disable=R0913
                 resultmodulations, businessimpactmodulations, escalations,
-                servicegroups, triggers, checkmodulations, macromodulations):
+                servicegroups, checkmodulations, macromodulations):
         """Create link between objects::
 
          * service -> host
@@ -1353,8 +1353,6 @@ class Services(SchedulingItems):
         :type escalations: alignak.objects.escalation.Escalations
         :param servicegroups: servicegroups to link
         :type servicegroups: alignak.objects.servicegroup.Servicegroups
-        :param triggers: triggers to link
-        :type triggers: alignak.objects.trigger.Triggers
         :param checkmodulations: checkmodulations to link
         :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
         :param macromodulations: macromodulations to link
@@ -1377,7 +1375,6 @@ class Services(SchedulingItems):
         # (just the escalation here, not serviceesca or hostesca).
         # This last one will be link in escalations linkify.
         self.linkify_with_escalations(escalations)
-        self.linkify_with_triggers(triggers)
         self.linkify_with_checkmodulations(checkmodulations)
         self.linkify_with_macromodulations(macromodulations)
 
@@ -1402,7 +1399,7 @@ class Services(SchedulingItems):
                 match = ovr_re.search(ovr)
                 if match is None:
                     err = "Error: invalid service override syntax: %s" % ovr
-                    host.configuration_errors.append(err)
+                    host.add_error(err)
                     continue
                 sdescr, prop, value = match.groups()
                 # Looks for corresponding service
@@ -1412,7 +1409,7 @@ class Services(SchedulingItems):
                 if service is None:
                     err = "Error: trying to override property '%s' on service '%s' " \
                           "but it's unknown for this host" % (prop, sdescr)
-                    host.configuration_errors.append(err)
+                    host.add_error(err)
                     continue
                 # Checks if override is allowed
                 excludes = ['host_name', 'service_description', 'use',
@@ -1421,7 +1418,7 @@ class Services(SchedulingItems):
                     err = "Error: trying to override '%s', " \
                           "a forbidden property for service '%s'" % \
                           (prop, sdescr)
-                    host.configuration_errors.append(err)
+                    host.add_error(err)
                     continue
 
                 # Pythonize the value because here value is str.
@@ -1484,7 +1481,7 @@ class Services(SchedulingItems):
                     else:
                         err = "Error: the servicegroup '%s' of the service '%s' is unknown" %\
                               (sg_name, serv.get_dbg_name())
-                        serv.configuration_errors.append(err)
+                        serv.add_error(err)
             serv.servicegroups = new_servicegroups
 
     def delete_services_by_id(self, ids):
@@ -1539,14 +1536,16 @@ class Services(SchedulingItems):
     def clean(self):
         """Remove services without host object linked to
 
+        Note that this sould not happen!
+
         :return: None
         """
         to_del = []
         for serv in self:
             if not serv.host:
                 to_del.append(serv.uuid)
-        for sid in to_del:
-            del self.items[sid]
+        for service_uuid in to_del:
+            del self.items[service_uuid]
 
     def explode_services_from_hosts(self, hosts, service, hnames):
         """
@@ -1589,7 +1588,7 @@ class Services(SchedulingItems):
             if host is None:
                 err = 'Error: The hostname %s is unknown for the service %s!' \
                       % (hname, service.get_name())
-                service.configuration_errors.append(err)
+                service.add_error(err)
                 continue
             if host.is_excluded_for(service):
                 continue
@@ -1612,7 +1611,7 @@ class Services(SchedulingItems):
         """
         host = hosts.find_by_name(host_name.strip())
         if host.is_excluded_for(service):
-            return
+            return None
         # Creates concrete instance
         new_s = service.copy()
         new_s.host_name = host_name
@@ -1667,7 +1666,7 @@ class Services(SchedulingItems):
         if host is None:
             err = 'Error: The hostname %s is unknown for the service %s!' \
                   % (hname, service.get_name())
-            service.configuration_errors.append(err)
+            service.add_error(err)
             return
 
         # Duplicate services

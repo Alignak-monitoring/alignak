@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -79,7 +79,7 @@ class Serviceescalation(Item):
         'escalation_period':
             StringProp(default=''),
         'escalation_options':
-            ListProp(default=['d', 'u', 'r', 'w', 'c'], split_on_coma=True),
+            ListProp(default=['w', 'x', 'c', 'r'], split_on_coma=True),
         'contacts':
             StringProp(),
         'contact_groups':
@@ -89,6 +89,15 @@ class Serviceescalation(Item):
         'last_notification_time':
             IntegerProp(),
     })
+
+    def __init__(self, params=None, parsing=True):
+        if params is None:
+            params = {}
+
+        for prop in ['escalation_options']:
+            if prop in params:
+                params[prop] = [p.replace('u', 'x') for p in params[prop]]
+        super(Serviceescalation, self).__init__(params, parsing=parsing)
 
 
 class Serviceescalations(Items):

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -74,10 +74,20 @@ class Itemgroup(Item):
         'unknown_members': ListProp(default=[]),
     })
 
+    def __repr__(self):  # pragma: no cover
+        if getattr(self, 'members', None) is None or not getattr(self, 'members'):
+            return '<%r %r, no members/>' % (self.__class__.__name__, self.get_name())
+        # Build a sorted list of unicode elements name or uuid, this to make it easier to compare ;)
+        dump_list = sorted([unicode(item.get_name()
+                                    if isinstance(item, Item) else item) for item in self])
+        return '<%r %r, %d members: %r/>' \
+               % (self.__class__.__name__, self.get_name(), len(self.members), dump_list)
+    __str__ = __repr__
+
     def copy_shell(self):
         """
-        Copy the groups properties EXCEPT the members.
-        Members need to be fill after manually
+        Copy the group properties EXCEPT the members.
+        Members need to be filled after manually
 
         :return: Itemgroup object
         :rtype: object
@@ -89,12 +99,12 @@ class Itemgroup(Item):
 
         # Copy all properties
         for prop in cls.properties:
-            if prop not in ['members']:
-                if hasattr(self, prop):
-                    val = getattr(self, prop)
-                    setattr(new_i, prop, val)
-        # but no members
-        new_i.members = []
+            if hasattr(self, prop):
+                if prop in ['members', 'unknown_members']:
+                    setattr(new_i, prop, [])
+                else:
+                    setattr(new_i, prop, getattr(self, prop))
+
         return new_i
 
     def replace_members(self, members):
@@ -106,18 +116,6 @@ class Itemgroup(Item):
         :return: None
         """
         self.members = members
-
-    def fill_default(self):
-        """
-        Put property and it default value for properties not defined and not required
-
-        :return: None
-        """
-        cls = self.__class__
-        for prop, entry in cls.properties.items():
-            if not hasattr(self, prop) and not entry.required:
-                value = entry.default
-                setattr(self, prop, value)
 
     def add_string_member(self, member):
         """
@@ -167,12 +165,16 @@ class Itemgroup(Item):
         """
         state = True
 
+        # Make members unique, remove duplicates
+        if self.members:
+            self.members = list(set(self.members))
+
         if self.unknown_members:
             for member in self.unknown_members:
                 msg = "[%s::%s] as %s, got unknown member '%s'" % (
                     self.my_type, self.get_name(), self.__class__.my_type, member
                 )
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
             state = False
 
         return super(Itemgroup, self).is_correct() and state
@@ -223,18 +225,8 @@ class Itemgroup(Item):
 class Itemgroups(Items):
     """
     Class to manage list of groups of items
-    An itemgroups is used to regroup items group
+    An itemgroup is used to regroup items group
     """
-
-    def fill_default(self):
-        """
-        Put property and it default value for properties not defined and not required in
-        each itemgroup
-
-        :return: None
-        """
-        for i in self:
-            i.fill_default()
 
     def add(self, itemgroup):
         """

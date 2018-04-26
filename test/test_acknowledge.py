@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2015: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -31,6 +31,8 @@ class TestAcknowledges(AlignakTest):
     """
     This class test acknowledge
     """
+    def setUp(self):
+        super(TestAcknowledges, self).setUp()
 
     def test_ack_host_sticky_ds_dh(self):
         """
@@ -38,15 +40,14 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
                                                                               "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -64,7 +65,7 @@ class TestAcknowledges(AlignakTest):
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n".\
             format(int(now), host.host_name, 2, 0, 1, 'darth vader', 'normal process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
@@ -91,20 +92,19 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.event_handler_enabled = False
         host.notifications_enabled = False
 
-        host_router = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_router_0")
+        host_router = self._scheduler.hosts.find_by_name("test_router_0")
         host_router.checks_in_progress = []
         host_router.event_handler_enabled = False
         host_router.notifications_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
                                                                               "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -132,7 +132,7 @@ class TestAcknowledges(AlignakTest):
         time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
-        assert "UP" == host.state
+        assert "UNREACHABLE" == host.state
         assert "HARD" == host.state_type
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
@@ -147,7 +147,7 @@ class TestAcknowledges(AlignakTest):
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n". \
             format(int(now), host.host_name, 2, 0, 1, 'darth vader', 'normal process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
@@ -199,15 +199,14 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
                                                                               "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -225,7 +224,7 @@ class TestAcknowledges(AlignakTest):
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n". \
             format(int(now), host.host_name, 1, 0, 1, 'darth vader', 'normal process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
@@ -252,21 +251,19 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.event_handler_enabled = False
         host.notifications_enabled = False
 
-        host_router = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_router_0")
+        host_router = self._scheduler.hosts.find_by_name("test_router_0")
         host_router.checks_in_progress = []
         host_router.event_handler_enabled = False
         host_router.notifications_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
-                                                                              "test_ok_0")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
@@ -293,7 +290,7 @@ class TestAcknowledges(AlignakTest):
         time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
-        assert "UP" == host.state
+        assert "UNREACHABLE" == host.state
         assert "HARD" == host.state_type
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
@@ -308,7 +305,7 @@ class TestAcknowledges(AlignakTest):
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n". \
             format(int(now), host.host_name, 1, 0, 1, 'darth vader', 'normal process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
@@ -361,15 +358,14 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
                                                                               "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -389,7 +385,7 @@ class TestAcknowledges(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
             format(int(now), host.host_name, svc.service_description, 2, 0, 1, 'darth vader',
                    'normal process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
@@ -421,15 +417,14 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
                                                                               "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -449,7 +444,7 @@ class TestAcknowledges(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
             format(int(now), host.host_name, svc.service_description, 2, 0, 1, 'darth vader',
                    'normal process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
@@ -475,15 +470,14 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
                                                                               "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -504,7 +498,7 @@ class TestAcknowledges(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n".\
             format(int(now), host.host_name, svc.service_description, 1, 0, 1, 'darth vader',
                    'normal process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
         time.sleep(0.1)
@@ -531,15 +525,14 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
                                                                               "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -560,7 +553,7 @@ class TestAcknowledges(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
             format(int(now), host.host_name, svc.service_description, 1, 0, 1, 'darth vader',
                    'normal process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
         assert svc.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
@@ -587,15 +580,14 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
                                                                               "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -615,7 +607,7 @@ class TestAcknowledges(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
             format(int(now), host.host_name, svc.service_description, 2, 0, 1, 'darth vader',
                    'normal process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
@@ -629,15 +621,14 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
                                                                               "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -658,7 +649,7 @@ class TestAcknowledges(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
             format(int(now), host.host_name, svc.service_description, 1, 0, 1, 'darth vader',
                    'normal process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.1)
@@ -672,15 +663,14 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
                                                                               "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -713,7 +703,7 @@ class TestAcknowledges(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM_EXPIRE;{1};{2};{3};{4};{5};{6};{7};{8}\n". \
             format(int(now), host.host_name, svc.service_description, 1, 0, 1, (now + 2), 'darth vader',
                    'normal process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
@@ -740,15 +730,14 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
                                                                               "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -778,7 +767,7 @@ class TestAcknowledges(AlignakTest):
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM_EXPIRE;{1};{2};{3};{4};{5};{6};{7}\n". \
             format(int(now), host.host_name, 1, 0, 1, (now + 2), 'darth vader', 'normal process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
@@ -799,15 +788,14 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
                                                                               "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -825,7 +813,7 @@ class TestAcknowledges(AlignakTest):
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n". \
             format(int(now), host.host_name, 1, 0, 1, 'darth vader', 'normal process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
@@ -842,7 +830,7 @@ class TestAcknowledges(AlignakTest):
         now = time.time()
         cmd = "[{0}] REMOVE_HOST_ACKNOWLEDGEMENT;{1}\n". \
             format(int(now), host.host_name)
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         assert not host.problem_has_been_acknowledged
 
@@ -852,15 +840,14 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.print_header()
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        host = self.schedulers['scheduler-master'].sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self.schedulers['scheduler-master'].sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
                                                                               "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
@@ -887,7 +874,7 @@ class TestAcknowledges(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
             format(int(now), host.host_name, svc.service_description, 1, 0, 1, 'darth vader',
                    'normal process')
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
@@ -898,6 +885,6 @@ class TestAcknowledges(AlignakTest):
         now = time.time()
         cmd = "[{0}] REMOVE_SVC_ACKNOWLEDGEMENT;{1};{2}\n". \
             format(int(now), host.host_name, svc.service_description)
-        self.schedulers['scheduler-master'].sched.run_external_command(cmd)
+        self._scheduler.run_external_commands([cmd])
 
         assert not svc.problem_has_been_acknowledged

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -55,22 +55,48 @@ macros solving, sorting, parsing, file handling, filters.
 """
 import time
 import re
-import sys
 import json
 import argparse
 import logging
-
-import numpy as np
-
 from alignak.version import VERSION
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
-
+# pylint: disable=unused-import
+NUMPY = True
 try:
-    SAFE_STDOUT = (sys.stdout.encoding == 'UTF-8')
-except AttributeError, exp:  # pragma: no cover, should not happen!
-    logger.error('Encoding detection error for stdout = %s', exp)
-    SAFE_STDOUT = False
+    # use numpy if installed
+    import numpy as np
+    from numpy import percentile as percentile
+except ImportError:  # pragma: no cover
+    import math
+    import functools
+
+    # Replace the numpy percentile function!
+    def percentile(N, percent, key=lambda x: x):
+        # pylint: disable=invalid-name
+        """
+        Find the percentile of a list of values.
+
+        @parameter N - is a list of values. Note N MUST BE already sorted.
+        @parameter percent - a float value from 0.0 to 1.0.
+        @parameter key - optional key function to compute value from each element of N.
+
+        @return - the percentile of the values
+        """
+        if not N:
+            return None
+        if percent > 1:
+            percent = percent / 100
+        k = (len(N)-1) * percent
+        f = math.floor(k)
+        c = math.ceil(k)
+        if f == c:
+            return key(N[int(k)])
+        d0 = key(N[int(f)]) * (c-k)
+        d1 = key(N[int(c)]) * (k-f)
+        return d0+d1
+
+
+logger = logging.getLogger(__name__)  # pylint: disable=C0103
 
 
 # ########## Strings #############
@@ -132,7 +158,7 @@ def split_semicolon(line, maxsplit=None):
     return split_line
 
 
-def jsonify_r(obj):
+def jsonify_r(obj):  # pragma: no cover, not for unit tests...
     """Convert an object into json (recursively on attribute)
 
     :param obj: obj to jsonify
@@ -142,7 +168,7 @@ def jsonify_r(obj):
     """
     res = {}
     cls = obj.__class__
-    if not hasattr(cls, 'properties'):  # pragma: no cover, should not happen, simple protection.
+    if not hasattr(cls, 'properties'):
         try:
             json.dumps(obj)
             return obj
@@ -210,20 +236,6 @@ def get_end_of_day(year, month_id, day):
     end_time = (year, month_id, day, 23, 59, 59, 0, 0, -1)
     end_time_epoch = time.mktime(end_time)
     return end_time_epoch
-
-
-def print_date(timestamp):
-    """Get date (local) in asc format from timestamp
-
-    example : 'Thu Jan  1 01:00:00 1970' (for timestamp=0 in a EUW server)
-
-    :param timestamp: timestamp
-    :type timestamp; int
-    :return: formatted time
-    :rtype: int
-    TODO: Missing timezone
-    """
-    return time.asctime(time.localtime(timestamp))
 
 
 def get_day(timestamp):
@@ -327,7 +339,8 @@ def merge_periods(data):
         if period[0] != end and period[0] != (end - 1):
             end = period[1]
 
-    dat = np.array(newdata)
+    # dat = np.array(newdata)
+    dat = newdata
     new_intervals = []
     cur_start = None
     cur_end = None
@@ -635,21 +648,6 @@ def to_svc_hst_distinct_lists(ref, tab):  # pragma: no cover, to be deprectaed?
     return res
 
 
-def get_obj_name(obj):
-    """Get object name (call get_name) if not a string
-
-    :param obj: obj we want the name
-    :type obj: object
-    :return: object name
-    :rtype: str
-    """
-    # Maybe we do not have a real object but already a string. If so
-    # return the string
-    if isinstance(obj, basestring):
-        return obj
-    return obj.get_name()
-
-
 def get_obj_name_two_args_and_void(obj, value):  # pylint: disable=W0613
     """Get value name (call get_name) if not a string
 
@@ -664,20 +662,6 @@ def get_obj_name_two_args_and_void(obj, value):  # pylint: disable=W0613
         return value.get_name()
     except AttributeError:
         return ''
-
-
-def get_obj_full_name(obj):
-    """Wrapper to call obj.get_full_name or obj.get_name
-
-    :param obj: object name
-    :type obj: object
-    :return: object name
-    :rtype: str
-    """
-    try:
-        return obj.get_full_name()
-    except AttributeError:
-        return obj.get_name()
 
 
 def get_customs_keys(dic):  # pragma: no cover, to be deprectaed?
@@ -727,6 +711,25 @@ def unique_value(val):
 
 
 # ##################### Sorting ################
+def master_then_spare(sat1, sat2):
+    """Compare two satellite links, master is preceding spare
+
+    :param sat1: first link to compare
+    :type sat1:
+    :param sat2: second link to compare
+    :type sat2:
+    :return: sat1 > sat2 (1) if sat1 is master
+             sat1 == sat2 (0) if both are master or spare
+             sat1 < sat2 (-1) if sat1 is spare and sat2 is master
+    :rtype: int
+    """
+    if sat1.spare == sat2.spare:
+        return 0
+    if sat1.spare and not sat2.spare:
+        return -1
+    return 1
+
+
 def alive_then_spare_then_deads(sat1, sat2):
     """Compare two satellite link
     based on alive attribute then spare attribute
@@ -745,24 +748,6 @@ def alive_then_spare_then_deads(sat1, sat2):
     if not sat2.alive or (sat2.alive and sat2.spare and sat1.alive):
         return -1
     return 1
-
-
-def sort_by_ids(x00, y00):
-    """Compare x00, y00 base on their id
-
-    :param x00: first elem to compare
-    :type x00: int
-    :param y00: second elem to compare
-    :type y00: int
-    :return: x00 > y00 (1) if x00.uuid > y00.uuid, x00 == y00 (0) if id equals, x00 < y00 (-1) else
-    :rtype: int
-    """
-    if x00.uuid < y00.uuid:
-        return -1
-    if x00.uuid > y00.uuid:
-        return 1
-    # So is equal
-    return 0
 
 
 def sort_by_number_values(x00, y00):
@@ -793,15 +778,13 @@ def average_percentile(values):
     :return: tuple containing average, min and max value
     :rtype: tuple
     """
-    length = len(values)
-
-    if length == 0:
+    if not values:
         return None, None, None
 
-    value_avg = round(float(sum(values)) / length, 2)
+    value_avg = round(float(sum(values)) / len(values), 2)
     # pylint: disable=E1101
-    value_max = round(np.percentile(values, 95), 2)
-    value_min = round(np.percentile(values, 5), 2)
+    value_max = round(percentile(values, 95), 2)
+    value_min = round(percentile(values, 5), 2)
     return value_avg, value_min, value_max
 
 
@@ -1274,55 +1257,109 @@ def is_complex_expr(expr):
 def parse_daemon_args(arbiter=False):
     """Generic parsing function for daemons
 
+    All daemons:
+        '-n', "--name": Set the name of the daemon to pick in the configuration files.
+        This allows an arbiter to find its own configuration in the whole Alignak configuration
+        Using this parameter is mandatory for all the daemons except for the arbiter
+        (defaults to arbiter-master). If several arbiters are existing in the
+        configuration this will allow to determine which one is the master/spare.
+        The spare arbiter must be launched with this parameter!
+
+        '-e', '--environment': Alignak environment file - the most important and mandatory
+        parameter to define the name of the alignak.ini configuration file
+
+        '-c', '--config': Daemon configuration file (ini file) - deprecated!
+        '-d', '--daemon': Run as a daemon
+        '-r', '--replace': Replace previous running daemon
+        '-f', '--debugfile': File to dump debug logs.
+
+        These parameters allow to override the one defined in the Alignak configuration file:
+            '-o', '--host': interface the daemon will listen to
+            '-p', '--port': port the daemon will listen to
+
+            '-l', '--log_file': set the daemon log file name
+            '-i', '--pid_file': set the daemon pid file name
+
     Arbiter only:
             "-a", "--arbiter": Monitored configuration file(s),
             (multiple -a can be used, and they will be concatenated to make a global configuration
-            file)
+            file) - Note that this parameter is not necessary anymore
             "-V", "--verify-config": Verify configuration file(s) and exit
-            "-n", "--config-name": Set the name of the arbiter to pick in the configuration files.
-            This allows an arbiter to find its own configuration in the whole Alignak configuration
-            Using this parameter is mandatory when several arbiters are existing in the
-            configuration to determine which one is the master/spare. The spare arbiter must be
-            launched with this parameter!
 
-    All daemons:
-        '-c', '--config': Daemon configuration file (ini file)
-        '-d', '--daemon': Run as a daemon
-        '-r', '--replace': Replace previous running daemon
-        '-f', '--debugfile': File to dump debug logs
 
 
     :param arbiter: Do we parse args for arbiter?
     :type arbiter: bool
     :return: args
     """
-    parser = argparse.ArgumentParser(version='%(prog)s ' + VERSION)
+    parser = argparse.ArgumentParser(version='%(prog)s ' + VERSION,
+                                     description="Alignak daemon launching",
+                                     epilog="And that's it!")
     if arbiter:
-        parser.add_argument('-a', '--arbiter', action='append', required=True,
+        parser.add_argument('-a', '--arbiter', action='append',
                             dest='monitoring_files',
-                            help='Monitored configuration file(s), '
-                                 '(multiple -a can be used, and they will be concatenated '
-                                 'to make a global configuration file)')
-        parser.add_argument('-V', '--verify-config', dest='verify_only', action='store_true',
-                            help='Verify configuration file(s) and exit')
-        parser.add_argument('-k', '--alignak-name', dest='alignak_name',
-                            default='arbiter-master',
-                            help='Set the name of the arbiter to pick in the configuration files '
-                                 'For a spare arbiter, this parameter must contain its name!')
+                            help='Monitored configuration file(s). '
+                                 'This option is still available but is is preferable to declare '
+                                 'the monitored objects files in the alignak-configuration section '
+                                 'of the environment file specified with the -e option.'
+                                 'Multiple -a can be used, and they will be concatenated '
+                                 'to make a global configuration file.')
 
-    parser.add_argument('-n', '--name', dest='daemon_name',
-                        help='Daemon unique name. Must be unique for the same daemon type.')
+        parser.add_argument('-V', '--verify-config', dest='verify_only', action='store_true',
+                            help='Verify the configuration file(s) and exit')
+
+        parser.add_argument('-k', '--alignak-name', dest='alignak_name',
+                            default='My Alignak',
+                            help='Set the name of the Alignak instance. If not set, the arbiter '
+                                 'name will be used in place. Note that if an alignak_name '
+                                 'variable is defined in the configuration, it will overwrite '
+                                 'this parameter.'
+                                 'For a spare arbiter, this parameter must contain its name!')
+        parser.add_argument('-n', '--name', dest='daemon_name',
+                            default='arbiter-master',
+                            help='Daemon unique name. Must be unique for the same daemon type.')
+    else:
+        parser.add_argument('-n', '--name', dest='daemon_name', required=True,
+                            help='Daemon unique name. Must be unique for the same daemon type.')
+
     parser.add_argument('-c', '--config', dest='config_file',
-                        help='Daemon configuration file')
-    parser.add_argument('-d', '--daemon', dest='is_daemon', action='store_true',
-                        help='Run as a daemon')
-    parser.add_argument('-r', '--replace', dest='do_replace', action='store_true',
-                        help='Replace previous running daemon')
+                        help='Daemon configuration file. '
+                             'Deprecated parameter, do not use it anymore!')
+
+    parser.add_argument('-d', '--daemon', dest='is_daemon', default=False, action='store_true',
+                        help='Run as a daemon. Fork the launched process and daemonize.')
+
+    parser.add_argument('-r', '--replace', dest='do_replace', default=False, action='store_true',
+                        help='Replace previous running daemon if any pid file is found.')
+
     parser.add_argument('-f', '--debugfile', dest='debug_file',
-                        help='File to dump debug logs')
+                        help='File to dump debug logs. Not of any interest, will be deprecated!')
+
+    parser.add_argument('-o', '--host', dest='host',
+                        help='Host interface used by the daemon. '
+                             'Default is 0.0.0.0 (all interfaces).')
+
     parser.add_argument('-p', '--port', dest='port',
-                        help='Port used by the daemon')
-    parser.add_argument('-l', '--local_log', dest='local_log',
-                        help='File to use for daemon log')
+                        help='Port used by the daemon. '
+                             'Default is set according to the daemon type.')
+
+    parser.add_argument('-l', '--log_file', dest='log_filename',
+                        help='File used for the daemon log. Set as empty to disable log file.')
+
+    parser.add_argument('-i', '--pid_file', dest='pid_filename',
+                        help='File used to store the daemon pid')
+
+    parser.add_argument('-e', '--environment', dest='env_file', required=True,
+                        default='../../etc/alignak.ini',
+                        help='Alignak global environment file. '
+                             'This file defines all the daemons of this Alignak '
+                             'instance and their configuration. Each daemon configuration '
+                             'is defined in a specifc section of this file.')
+
+    # parser.add_argument('env_file',
+    #                     help='Alignak global environment file. '
+    #                          'This file defines all the daemons of this Alignak '
+    #                          'instance and their configuration. Each daemon configuration '
+    #                          'is defined in a specifc section of this file.')
 
     return parser.parse_args()
