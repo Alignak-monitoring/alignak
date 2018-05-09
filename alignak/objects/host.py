@@ -72,6 +72,7 @@ import logging
 
 from alignak.objects.schedulingitem import SchedulingItem, SchedulingItems
 
+# from alignak.util import brok_last_time
 from alignak.autoslots import AutoSlots
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, CharProp
 from alignak.log import make_monitoring_log
@@ -172,6 +173,15 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'last_time_unreachable':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+        # 'last_time_up':
+        #     IntegerProp(default=0, fill_brok=['full_status', 'check_result'],
+        #                 brok_transformation=brok_last_time, retention=True),
+        # 'last_time_down':
+        #     IntegerProp(default=0, fill_brok=['full_status', 'check_result'],
+        #                 brok_transformation=brok_last_time, retention=True),
+        # 'last_time_unreachable':
+        #     IntegerProp(default=0, fill_brok=['full_status', 'check_result'],
+        #                 brok_transformation=brok_last_time, retention=True),
         # no brok, too much links...
         'services':
             StringProp(default=[]),
@@ -515,21 +525,25 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             self.state = u'UP'
             self.state_id = 0
             self.last_time_up = int(self.last_state_update)
+            # self.last_time_up = self.last_state_update
             state_code = 'u'
         elif status in (2, 3):
             self.state = u'DOWN'
             self.state_id = 1
             self.last_time_down = int(self.last_state_update)
+            # self.last_time_down = self.last_state_update
             state_code = 'd'
         elif status == 4:
             self.state = u'UNREACHABLE'
             self.state_id = 4
             self.last_time_unreachable = int(self.last_state_update)
+            # self.last_time_unreachable = self.last_state_update
             state_code = 'x'
         else:
             self.state = u'DOWN'  # exit code UNDETERMINED
             self.state_id = 1
-            self.last_time_down = int(self.last_state_update)
+            # self.last_time_down = int(self.last_state_update)
+            self.last_time_down = self.last_state_update
             state_code = 'd'
         if state_code in self.flap_detection_options:
             self.add_flapping_change(self.state != self.last_state)
@@ -566,11 +580,13 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: self.last_time_down if self.last_time_down > self.last_time_up, 0 otherwise
         :rtype: int
         """
-        if self.last_time_down > self.last_time_up:
-            last_time_non_up = self.last_time_down
+        non_ok_times = [x for x in [self.last_time_down]
+                        if x > self.last_time_up]
+        if not non_ok_times:
+            last_time_non_ok = 0  # todo: program_start would be better?
         else:
-            last_time_non_up = 0
-        return last_time_non_up
+            last_time_non_ok = min(non_ok_times)
+        return last_time_non_ok
 
     def raise_check_result(self):
         """Raise ACTIVE CHECK RESULT entry

@@ -76,8 +76,9 @@ class TestNotifications(AlignakTest):
         assert 0 == svc.current_notification_number, 'Ok HARD, no notifications'
         self.assert_actions_count(0)
 
-    def test_1_nonotif_enablewithcmd(self):
-        """ Test notification disabled in service definition but enable after with external command
+    def test_1_nonotif_enable_with_extcmd(self):
+        """ Test notification disabled in service definition but enabled later
+        with an external command
 
         :return: None
         """
@@ -89,57 +90,77 @@ class TestNotifications(AlignakTest):
 
         svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")
-        # To make notifications not being re-sent, set this to 0
-        svc.notification_interval = 0
+
+        # notification_interval is in minute, configure to have one per minute
+        svc.notification_interval = 1
+
+        # No notifications enabled by configuration!
+        assert not svc.notifications_enabled
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         svc.event_handler_enabled = False
 
-        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
-        assert 0 == svc.current_notification_number, 'All OK no notifications'
-        self.assert_actions_count(0)
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2018, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
 
-        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
-        assert "SOFT" == svc.state_type
-        assert 0 == svc.current_notification_number, 'Critical SOFT, no notifications'
-        self.assert_actions_count(0)
+            self.scheduler_loop(2, [[host, 0, 'UP'], [svc, 0, 'OK']])
+            assert 0 == svc.current_notification_number, 'All OK no notifications'
+            self.assert_actions_count(0)
 
-        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
-        assert "HARD" == svc.state_type
-        assert 0 == svc.current_notification_number, 'Critical HARD, no notifications'
-        self.assert_actions_count(0)
-        assert not svc.notifications_enabled
+            # Time warp
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
 
-        now = int(time.time())
-        cmd = "[{0}] ENABLE_SVC_NOTIFICATIONS;{1};{2}\n".format(now, svc.host_name,
-                                                                svc.service_description)
-        self._scheduler.run_external_commands([cmd])
-        self.external_command_loop()
-        assert svc.notifications_enabled
-        assert "HARD" == svc.state_type
-        assert "CRITICAL" == svc.state
-        time.sleep(0.2)
-        self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
-        assert "HARD" == svc.state_type
-        assert "CRITICAL" == svc.state
-        assert 1 == svc.current_notification_number, 'Critical HARD, must have 1 ' \
-                                                             'notification'
-        self.assert_actions_count(1)
-        self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            assert "SOFT" == svc.state_type
+            assert 0 == svc.current_notification_number, 'Critical SOFT, no notifications'
+            self.assert_actions_count(0)
 
-        self.scheduler_loop(1, [[svc, 0, 'OK']])
-        time.sleep(0.1)
-        assert 0 == svc.current_notification_number, 'Ok HARD, no notifications'
-        self.assert_actions_count(2)
-        self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
-        self.assert_actions_match(1, 'serviceoutput OK', 'command')
+            # Time warp
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
 
-        self.assert_actions_count(2)
-        self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
-        self.assert_actions_match(1, 'serviceoutput OK', 'command')
+            self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
+            assert "HARD" == svc.state_type
+            assert 0 == svc.current_notification_number, 'Critical HARD, no notifications'
+            # No raised notification !
+            self.show_actions()
+            self.assert_actions_count(0)
+
+            # External command to enable the notifications for the service
+            now = int(time.time())
+            cmd = "[{0}] ENABLE_SVC_NOTIFICATIONS;{1};{2}\n".format(now, svc.host_name,
+                                                                    svc.service_description)
+            self._scheduler.run_external_commands([cmd])
+            self.external_command_loop()
+            assert svc.notifications_enabled
+            assert "HARD" == svc.state_type
+            assert "CRITICAL" == svc.state
+
+            # Time warp
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
+
+            self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
+            self.show_actions()
+            assert "HARD" == svc.state_type
+            assert "CRITICAL" == svc.state
+            # Notification !
+            assert 1 == svc.current_notification_number, 'Critical HARD, must have 1 ' \
+                                                                 'notification'
+            self.assert_actions_count(1)
+            self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
+
+            self.scheduler_loop(1, [[svc, 0, 'OK']])
+            time.sleep(0.1)
+            assert 0 == svc.current_notification_number, 'Ok HARD, no notifications'
+            self.assert_actions_count(2)
+            self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
+            self.assert_actions_match(1, 'serviceoutput OK', 'command')
+
+            self.assert_actions_count(2)
+            self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
+            self.assert_actions_match(1, 'serviceoutput OK', 'command')
 
     # @pytest.mark.skip("To be restored!!!")
     def test_1_notifications_service_with_no_contacts(self):
@@ -263,8 +284,8 @@ class TestNotifications(AlignakTest):
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         svc.event_handler_enabled = False
 
-        # notification_interval is in minute, to have 1 per second:
-        svc.notification_interval = 1 / 60
+        # notification_interval is in minute, configure to have one per minute
+        svc.notification_interval = 1
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(1)
@@ -277,103 +298,143 @@ class TestNotifications(AlignakTest):
         assert svc.current_notification_number == 0, 'Critical SOFT, no notifications'
         self.assert_actions_count(0)
 
-        # create master notification + create first notification
-        self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
-        assert "HARD" == svc.state_type
-        # 2 actions
-        # * 1 - VOID = notification master
-        # * 2 - notifier.pl to test_contact
-        self.show_actions()
-        self.assert_actions_count(2)
-        assert svc.current_notification_number == 1, 'Critical HARD, must have 1 notification'
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2018, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
 
-        # no changes, because we do not need yet to create a second notification
-        time.sleep(0.1)
-        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        assert "HARD" == svc.state_type
-        self.assert_actions_count(2)
+            # create master notification + create first notification
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
 
-        # second notification creation
-        time.sleep(1.1)
-        self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
-        self.assert_actions_count(3)
-        assert svc.current_notification_number == 2
-        time.sleep(1)
-        self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
-        self.assert_actions_count(4)
-        assert svc.current_notification_number == 3
-        self.show_actions()
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
 
-        # Too soon for a new one
-        self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
-        self.assert_actions_count(4)
-        assert svc.current_notification_number == 3
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            assert "HARD" == svc.state_type
+            # 2 actions
+            # * 1 - VOID = notification master
+            # * 2 - notifier.pl to test_contact
+            self.show_actions()
+            self.assert_actions_count(2)
+            assert svc.current_notification_number == 1, 'Critical HARD, must have 1 notification'
 
-        # Simulate the first notification is sent ...
-        actions = sorted(list(self._scheduler.actions.values()), key=lambda x: x.creation_time)
-        action = copy.copy(actions[1])
-        action.exit_status = 0
-        action.status = 'launched'
-        # and return to the scheduler
-        self._scheduler.put_results(action)
-        # re-loop scheduler to manage this
-        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        # One less notification ... because sent !
-        self.assert_actions_count(3)
-        # But still the same notification number
-        assert svc.current_notification_number == 3
+            # no changes, because we do not need yet to create a second notification
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            assert "HARD" == svc.state_type
+            self.assert_actions_count(2)
 
-        # Disable the contact notification
-        cmd = "[%lu] DISABLE_CONTACT_SVC_NOTIFICATIONS;test_contact" % time.time()
-        self._scheduler.run_external_commands([cmd])
+            # Time warp 1 minute 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
 
-        time.sleep(1.1)
-        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        # Not one more notification ...
-        self.assert_actions_count(3)
-        assert svc.current_notification_number == 3
+            # notification #2
+            self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
+            self.assert_actions_count(3)
+            assert svc.current_notification_number == 2
 
-        time.sleep(1.1)
-        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        # Not one more notification ...
-        self.assert_actions_count(3)
-        assert svc.current_notification_number == 3
+            # Time warp 1 minute 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
 
-        cmd = "[%lu] ENABLE_CONTACT_SVC_NOTIFICATIONS;test_contact" % time.time()
-        self._scheduler.run_external_commands([cmd])
-        time.sleep(1.1)
-        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        self.assert_actions_count(4)
-        assert svc.current_notification_number == 4
+            # notification #3
+            self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
+            self.assert_actions_count(4)
+            assert svc.current_notification_number == 3
 
-        self.show_actions()
-        # 1st notification for service critical => sent !
-        # self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
-        # self.assert_actions_match(0, 'HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+            # Too soon for a new one
+            self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
+            self.assert_actions_count(4)
+            assert svc.current_notification_number == 3
 
-        # 2nd notification for service critical
-        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
-        self.assert_actions_match(0, 'HOSTNOTIFICATIONNUMBER=2, SERVICENOTIFICATIONNUMBER=2', 'command')
+            # Simulate the first notification is sent ...
+            self.show_actions()
+            actions = sorted(list(self._scheduler.actions.values()), key=lambda x: x.creation_time)
+            action = copy.copy(actions[1])
+            action.exit_status = 0
+            action.status = 'launched'
+            # and return to the scheduler
+            self._scheduler.put_results(action)
+            # re-loop scheduler to manage this
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            # One less notification ... because sent !
+            self.assert_actions_count(3)
+            # But still the same notification number
+            assert svc.current_notification_number == 3
 
-        # 3rd notification for service critical
-        self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
-        self.assert_actions_match(1, 'HOSTNOTIFICATIONNUMBER=3, SERVICENOTIFICATIONNUMBER=3', 'command')
+            # Disable the contact notification
+            # -----
+            cmd = "[%lu] DISABLE_CONTACT_SVC_NOTIFICATIONS;test_contact" % time.time()
+            self._scheduler.run_external_commands([cmd])
 
-        # 4th notification for service critical
-        self.assert_actions_match(2, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
-        self.assert_actions_match(2, 'HOSTNOTIFICATIONNUMBER=4, SERVICENOTIFICATIONNUMBER=4', 'command')
+            # Time warp 1 minute 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
+
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            # Not one more notification ...
+            self.assert_actions_count(3)
+            assert svc.current_notification_number == 3
+
+            # Time warp 1 minute 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
+
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            # Not one more notification ...
+            self.assert_actions_count(3)
+            assert svc.current_notification_number == 3
+
+            # Enable the contact notification
+            # -----
+            cmd = "[%lu] ENABLE_CONTACT_SVC_NOTIFICATIONS;test_contact" % time.time()
+            self._scheduler.run_external_commands([cmd])
+
+            # Time warp 1 minute 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
+
+            # 2 loop turns this time ...
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+
+            self.assert_actions_count(4)
+            assert svc.current_notification_number == 4
+
+            self.show_actions()
+            # 1st notification for service critical => sent !
+            # self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+            # self.assert_actions_match(0, 'HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+
+            # 2nd notification for service critical
+            self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+            self.assert_actions_match(0, 'HOSTNOTIFICATIONNUMBER=2, SERVICENOTIFICATIONNUMBER=2', 'command')
+
+            # 3rd notification for service critical
+            self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+            self.assert_actions_match(1, 'HOSTNOTIFICATIONNUMBER=3, SERVICENOTIFICATIONNUMBER=3', 'command')
+
+            # 4th notification for service critical
+            self.assert_actions_match(2, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
+            self.assert_actions_match(2, 'HOSTNOTIFICATIONNUMBER=4, SERVICENOTIFICATIONNUMBER=4', 'command')
 
 
-        time.sleep(1.1)
-        self.scheduler_loop(1, [[svc, 0, 'OK']])
-        assert 0 == svc.current_notification_number
-        self.assert_actions_count(5)
-        self.show_actions()
+            self.scheduler_loop(1, [[svc, 0, 'OK']])
 
-        # 1st recovery notification for service recovery
-        self.assert_actions_match(4, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype RECOVERY --servicestate OK --serviceoutput OK', 'command')
-        self.assert_actions_match(4, 'NOTIFICATIONTYPE=RECOVERY', 'command')
-        self.assert_actions_match(4, 'HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+
+            self.scheduler_loop(1, [[svc, 0, 'OK']])
+
+            # The service recovered, the current notification number is reset !
+            assert svc.current_notification_number == 0
+
+            # Actions count did not changed because:
+            # 1/ a new recovery notification is created
+            # 2/ the master problem notification is removed
+            self.assert_actions_count(4)
+            self.show_actions()
+
+            # 1st recovery notification for service recovery
+            self.assert_actions_match(3, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype RECOVERY --servicestate OK --serviceoutput OK', 'command')
+            self.assert_actions_match(3, 'NOTIFICATIONTYPE=RECOVERY', 'command')
+            self.assert_actions_match(3, 'HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
 
     def test_3_notifications(self):
         """ Test notifications of service states OK -> WARNING -> CRITICAL -> OK
@@ -406,7 +467,7 @@ class TestNotifications(AlignakTest):
         assert 0 == svc.current_notification_number, 'Warning SOFT, no notifications'
         self.assert_actions_count(0)
 
-        self.scheduler_loop(1, [[svc, 1, 'WARNING']])
+        self.scheduler_loop(2, [[svc, 1, 'WARNING']])
         assert "WARNING" == svc.state
         assert "HARD" == svc.state_type
         assert 1 == svc.current_notification_number, 'Warning HARD, must have 1 notification'

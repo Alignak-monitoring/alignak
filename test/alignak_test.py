@@ -754,6 +754,7 @@ class AlignakTest(unittest2.TestCase):
         macroresolver = MacroResolver()
         macroresolver.init(scheduler.my_daemon.sched.pushed_conf)
 
+        print("*** Scheduler loop turn:")
         for num in range(count):
             # print("Scheduler loop turn: %s" % num)
             for (item, exit_status, output) in items:
@@ -849,11 +850,14 @@ class AlignakTest(unittest2.TestCase):
 
         :return:
         """
-        print("Scheduler loop turn:")
+        macroresolver = MacroResolver()
+        macroresolver.init(self._scheduler.my_daemon.sched.pushed_conf)
+
+        print("*** Scheduler external command loop turn:")
         for i in self._scheduler.recurrent_works:
             (name, fun, nb_ticks) = self._scheduler.recurrent_works[i]
             if nb_ticks == 1:
-                print(" . %s ...running." % name)
+                # print(" . %s ...running." % name)
                 fun()
             else:
                 print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
@@ -1037,7 +1041,9 @@ class AlignakTest(unittest2.TestCase):
                                     'planned: %s, command: %s' %
                                     (idx, b.creation_time, b.is_a, b.type,
                                      b.status, b.t_to_go, b.command)
-                                    for idx, b in enumerate(sorted(self._scheduler.actions.values(), key=lambda x: (x.t_to_go, x.creation_time))))))
+                                    for idx, b in enumerate(sorted(self._scheduler.actions.values(),
+                                                                   key=lambda x: (x.creation_time,
+                                                                                  x.t_to_go))))))
 
     def assert_actions_match(self, index, pattern, field):
         """

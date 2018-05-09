@@ -152,6 +152,7 @@ class TestDowntime(AlignakTest):
         cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;%d;%d;1;0;%d;" \
               "downtime author;downtime comment" % (now, now, now + duration, duration)
         self._sched.run_external_commands([cmd])
+        time.sleep(1.0)
         self.external_command_loop()
         # A downtime exist for the service
         assert len(svc.downtimes) == 1
@@ -438,6 +439,7 @@ class TestDowntime(AlignakTest):
         # run the service again to get a hard critical status
         # check if the downtime is active now
         #----------------------------------------------------------------
+        time.sleep(1.0)
         self.scheduler_loop(1, [[svc, 2, 'BAD']])
         assert "HARD" == svc.state_type
         assert "CRITICAL" == svc.state
@@ -566,6 +568,7 @@ class TestDowntime(AlignakTest):
         cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_host_0;%d;%d;1;;%d;" \
               "downtime author;downtime comment" % (now, now, now + duration, duration)
         self._sched.run_external_commands([cmd])
+        time.sleep(1.0)
         self.external_command_loop()
         # A downtime exist for the host
         assert len(host.downtimes) == 1
@@ -598,7 +601,7 @@ class TestDowntime(AlignakTest):
         assert 1 == len(host.comments)
 
         # Make the host be OK after a while
-        # time.sleep(1)
+        time.sleep(1.0)
         self.scheduler_loop(2, [[host, 0, 'UP']])
         assert "HARD" == host.state_type
         assert "UP" == host.state
@@ -790,6 +793,7 @@ class TestDowntime(AlignakTest):
         cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_host_0;%d;%d;1;;%d;" \
               "downtime author;downtime comment" % (now, now, now + duration, duration)
         self._sched.run_external_commands([cmd])
+        time.sleep(1.0)
         self.external_command_loop()
         # A downtime exist for the host
         assert len(host.downtimes) == 1

@@ -569,6 +569,19 @@ def from_float_to_int(val):  # pragma: no cover, to be deprecated?
 # ref is the item like a service, and value
 # if the value to preprocess
 
+def brok_last_time(ref, val):
+    """Convert float to int
+
+    :param ref: Not used
+    :type ref:
+    :param val: value to convert
+    :type val: float
+    :return: int(val)
+    :rtype: int
+    """
+    return int(val)
+
+
 def to_list_string_of_names(ref, tab):  # pragma: no cover, to be deprecated?
     """Convert list into a comma separated list of element name
 

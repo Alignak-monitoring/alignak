@@ -1905,7 +1905,7 @@ class Daemon(object):
                 fun(self)
             except Exception as exp:  # pylint: disable=broad-except
                 logger.warning('The instance %s raised an exception %s. I disabled it,'
-                               'and set it to restart later', module.name, str(exp))
+                               ' and set it to restart later', module.name, str(exp))
                 logger.exception('Exception %s', exp)
                 self.modules_manager.set_to_restart(module)
             else:
