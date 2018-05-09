@@ -2120,24 +2120,33 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return: None
         """
         cls = self.__class__
+        print("--- Create a new notification: %s" % self)
         # t_wished==None for the first notification launch after consume
         # here we must look at the self.notification_period
         if t_wished is None:
             now = time.time()
-            t_wished = now
+            print("now: %s" % now)
+            t_wished = int(now) + 1
+            print("t_wished: %s" % t_wished)
             # if first notification, we must add first_notification_delay
             if self.current_notification_number == 0 and n_type == 'PROBLEM':
                 last_time_non_ok_or_up = self.last_time_non_ok_or_up()
-                if last_time_non_ok_or_up == 0:
-                    # this happens at initial
-                    t_wished = now + self.first_notification_delay * cls.interval_length
-                else:
-                    t_wished = last_time_non_ok_or_up + \
-                        self.first_notification_delay * cls.interval_length
+                if last_time_non_ok_or_up:
+                    t_wished = last_time_non_ok_or_up + 1
+                t_wished = t_wished + self.first_notification_delay * cls.interval_length
+                #
+                # if last_time_non_ok_or_up == 0:
+                #     # This for the very first notification
+                #     t_wished = t_wished + self.first_notification_delay * cls.interval_length
+                # else:
+                #     t_wished = last_time_non_ok_or_up + \
+                #         self.first_notification_delay * cls.interval_length
+
             if notification_period is None:
-                new_t = now
+                new_t = t_wished
             else:
                 new_t = notification_period.get_next_valid_time_from_t(t_wished)
+                print("now: %s, new_t: %s, t_wished: %s" % (now, new_t, t_wished))
         else:
             # We follow our order
             new_t = t_wished
@@ -2149,6 +2158,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # and repeated notifications are not configured,
             # we can silently drop this one
             return
+
         if n_type == 'PROBLEM':
             # Create the notification with an incremented notification_number.
             # The current_notification_number  of the item itself will only
@@ -2166,7 +2176,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         data = {
             'status': u'scheduled',
             'type': n_type,
-            'command': 'VOID',
+            'command': u'VOID',
             'ref': self.uuid,
             't_to_go': new_t,
             'timeout': cls.notification_timeout,
@@ -2179,6 +2189,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         notif = Notification(data)
         logger.debug("Created a %s notification: %s", self.my_type, n_type)
+        print("--- Created a %s notification: %s" % (self.my_type, n_type))
 
         # Keep a trace in our notifications queue
         self.notifications_in_progress[notif.uuid] = notif
@@ -2263,7 +2274,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 recipients = ','.join([contacts[c_uuid].contact_name for c_uuid in notif_contacts])
                 data = {
                     'type': notif.type,
-                    'command': 'VOID',
+                    'command': u'VOID',
                     'command_call': cmd,
                     'ref': self.uuid,
                     'contact': contact.uuid,

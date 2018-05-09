@@ -519,6 +519,7 @@ class Service(SchedulingItem):
         else:  # standard case
             self.last_state = self.state
 
+        # The last times are kept as integer values rather than float... no need for ms!
         if status == 0:
             self.state = u'OK'
             self.state_id = 0

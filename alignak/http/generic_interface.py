@@ -76,6 +76,7 @@ class GenericInterface(object):
             try:
                 spec = inspect.getfullargspec(getattr(self, fun))
             except Exception:  # pylint: disable=broad-except
+                # pylint: disable=deprecated-method
                 spec = inspect.getargspec(getattr(self, fun))
             args = [a for a in spec.args if a != 'self']
             if spec.defaults:

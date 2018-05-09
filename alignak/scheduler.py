@@ -432,52 +432,57 @@ class Scheduler(object):  # pylint: disable=R0902
     def dump_objects(self):
         """Dump scheduler objects into a dump (temp) file
 
-        todo: never used - check this function if necessary!
-
         :return: None
         """
-        temp_d = tempfile.gettempdir()
-        path = os.path.join(temp_d, 'scheduler-obj-dump-%d' % time.time())
-        logger.info('Opening the DUMP FILE %s', path)
+        path = os.path.join(tempfile.gettempdir(),
+                            'scheduler-%s-obj-dump-%d' % (self.name, time.time()))
+
+        logger.info('Opened the objects dump file: %s', path)
         try:
             file_h = open(path, 'w')
-            file_h.write('Scheduler DUMP at %d\n' % time.time())
+            output = 'Scheduler objects dump at %d\n' % time.time()
+            file_h.write(output.encode('utf-8'))
             for chk in list(self.checks.values()):
-                string = 'CHECK: %s:%s:%s:%s:%s:%s\n' % \
-                         (chk.uuid, chk.status, chk.t_to_go,
-                          chk.poller_tag, chk.command, chk.my_worker)
-                file_h.write(string)
+                output = 'CHECK: %s:%s:%s:%s:%s:%s\n' \
+                         % (chk.uuid, chk.status, chk.t_to_go, chk.poller_tag,
+                            chk.command, chk.my_worker)
+                file_h.write(output.encode('utf-8'))
+            logger.info('- dumped checks')
             for act in list(self.actions.values()):
-                string = '%s: %s:%s:%s:%s:%s:%s\n' % \
-                    (act.__class__.my_type.upper(), act.uuid, act.status,
-                     act.t_to_go, act.reactionner_tag, act.command, act.my_worker)
-                file_h.write(string)
+                output = '%s: %s:%s:%s:%s:%s:%s\n'\
+                         % (act.__class__.my_type.upper(), act.uuid, act.status,
+                            act.t_to_go, act.reactionner_tag, act.command, act.my_worker)
+                file_h.write(output.encode('utf-8'))
+            logger.info('- dumped actions')
             broks = {}
             for broker in list(self.my_daemon.brokers.values()):
                 for brok_uuid in broker.broks:
                     broks[brok_uuid] = broker.broks[brok_uuid]
             for brok in list(broks.values()):
-                string = 'BROK: %s:%s\n' % (brok.uuid, brok.type)
-                file_h.write(string)
+                output = 'BROK: %s:%s\n' % (brok.uuid, brok.type)
+                file_h.write(output.encode('utf-8'))
+            logger.info('- dumped broks')
             file_h.close()
+            logger.info('Closed the dump file: %s', path)
         except OSError as exp:  # pragma: no cover, should never happen...
             logger.critical("Error when writing the objects dump file %s : %s", path, str(exp))
 
     def dump_config(self):
-        """Dump scheduler config into a dump (temp) file
-
-        todo: never used - check this function if necessary!
+        """Dump scheduler configuration into a dump (temp) file
 
         :return: None
         """
-        temp_d = tempfile.gettempdir()
-        path = os.path.join(temp_d, 'scheduler-conf-dump-%d' % time.time())
-        logger.info('Opening the DUMP FILE %s', path)
+        path = os.path.join(tempfile.gettempdir(),
+                            'scheduler-%s-cfg-dump-%d' % (self.name, time.time()))
+
+        logger.info('Opened the configuration dump file: %s', path)
         try:
             file_h = open(path, 'w')
-            file_h.write('Scheduler config DUMP at %d\n' % time.time())
+            output = 'Scheduler configuration dump at %d\n' % time.time()
+            file_h.write(output.encode('utf-8'))
             self.pushed_conf.dump(file_h)
             file_h.close()
+            logger.info('Closed the dump file: %s', path)
         except (OSError, IndexError) as exp:  # pragma: no cover, should never happen...
             logger.critical("Error when writing the config dump file %s : %s", path, str(exp))
 
@@ -538,6 +543,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type notification: alignak.notification.Notification
         :return: None
         """
+        print("--- Add a notification: %s" % notification)
         if notification.uuid in self.actions:
             logger.warning("Already existing notification: %s", notification)
             return
@@ -634,27 +640,23 @@ class Scheduler(object):  # pylint: disable=R0902
         :return:None
         TODO: find a way to merge this and the version in daemon.py
         """
-        _t0 = time.time()
-        for instance in self.my_daemon.modules_manager.instances:
+        for module in self.my_daemon.modules_manager.instances:
+            _ts = time.time()
             full_hook_name = 'hook_' + hook_name
-            logger.debug("hook_point: %s: %s %s",
-                         instance.name, str(hasattr(instance, full_hook_name)), hook_name)
+            if not hasattr(module, full_hook_name):
+                continue
 
-            if hasattr(instance, full_hook_name):
-                fun = getattr(instance, full_hook_name)
-                try:
-                    fun(self)
-                # pylint: disable=broad-except
-                except Exception as exp:  # pragma: no cover, never happen during unit tests...
-                    logger.error("The instance %s raise an exception %s."
-                                 "I disable it and set it to restart it later",
-                                 instance.name, str(exp))
-                    output = io.StringIO()
-                    traceback.print_exc(file=output)
-                    logger.error("Exception trace follows: %s", output.getvalue())
-                    output.close()
-                    self.my_daemon.modules_manager.set_to_restart(instance)
-        statsmgr.timer('core.hook.%s' % hook_name, time.time() - _t0)
+            fun = getattr(module, full_hook_name)
+            try:
+                fun(self)
+            # pylint: disable=broad-except
+            except Exception as exp:  # pragma: no cover, never happen during unit tests...
+                logger.error("The instance %s raised an exception %s. I disabled it,"
+                             " and set it to restart later", module.name, str(exp))
+                logger.exception('Exception %s', exp)
+                self.my_daemon.modules_manager.set_to_restart(instance)
+            else:
+                statsmgr.timer('hook.%s.%s' % (module.name, hook_name), time.time() - _ts)
 
     def clean_queues(self):
         # pylint: disable=too-many-locals
@@ -811,37 +813,34 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         now = time.time()
-        for act in list(self.actions.values()):
-            # We only want notifications
-            if act.is_a != u'notification':
-                continue
-            # And only the scheduler ones...
-            if act.status != u'scheduled':
-                continue
-            # ... that are immediately launchable!
-            if not act.is_launchable(now):
-                continue
-            # Avoid the one which have a contact ... they are child notifications!
-            if act.contact:
-                continue
-
-            logger.debug("Scheduler got a master notification: %s", repr(act))
+        # notifications = list(self.actions.values())
+        # We only want the master scheduled notifications that are immediately launchable
+        notifications = [a for a in self.actions.values()
+                         if a.is_a == u'notification' and a.status == u'scheduled'
+                         and not a.contact and a.is_launchable(now)]
+        if len(notifications):
+            logger.debug("Scatter master notification: %d notifications",
+                         len(notifications))
+            print("--- Scatter master notification: %s, %d notifications"
+                  % (now, len(notifications)))
+        for notification in notifications:
+            logger.debug("Scheduler got a master notification: %s", notification)
             logger.debug("No contact for this notification")
+            print("--- got a master notification: %s" % notification)
 
-            # This is a "master" notification created by create_notifications.
-
+            # This is a "master" notification created by an host/service.
             # We use it to create children notifications (for the contacts and
             # notification_commands) which are executed in the reactionner.
-            item = self.find_item_by_id(act.ref)
+            item = self.find_item_by_id(notification.ref)
             children = []
-            notif_period = self.timeperiods[item.notification_period]
-            if not item.is_blocking_notifications(notif_period, self.hosts, self.services,
-                                                  act.type, now):
+            notification_period = self.timeperiods[item.notification_period]
+            if not item.is_blocking_notifications(notification_period,
+                                                  self.hosts, self.services, notification.type, now):
                 # If it is possible to send notifications
                 # of this type at the current time, then create
                 # a single notification for each contact of this item.
                 children = item.scatter_notification(
-                    act, self.contacts, self.notificationways, self.timeperiods,
+                    notification, self.contacts, self.notificationways, self.timeperiods,
                     self.macromodulations, self.escalations,
                     self.find_item_by_id(getattr(item, "host", None))
                 )
@@ -853,16 +852,16 @@ class Scheduler(object):  # pylint: disable=R0902
 
             # If we have notification_interval then schedule
             # the next notification (problems only)
-            if act.type == u'PROBLEM':
+            if notification.type == u'PROBLEM':
                 # Update the ref notif number after raise the one of the notification
                 if children:
                     # notif_nb of the master notification
                     # was already current_notification_number+1.
                     # If notifications were sent,
                     # then host/service-counter will also be incremented
-                    item.current_notification_number = act.notif_nb
+                    item.current_notification_number = notification.notif_nb
 
-                if item.notification_interval and act.t_to_go is not None:
+                if item.notification_interval and notification.t_to_go is not None:
                     # We must continue to send notifications.
                     # Just leave it in the actions list and set it to "scheduled"
                     # and it will be found again later
@@ -870,21 +869,24 @@ class Scheduler(object):  # pylint: disable=R0902
                     # a.t_to_go + item.notification_interval*item.__class__.interval_length
                     # or maybe before because we have an
                     # escalation that need to raise up before
-                    act.t_to_go = item.get_next_notification_time(act, self.escalations,
+                    notification.t_to_go = item.get_next_notification_time(notification, self.escalations,
                                                                   self.timeperiods)
 
-                    act.notif_nb = item.current_notification_number + 1
-                    logger.debug("Repeat master notification: %s", str(act))
+                    notification.notif_nb = item.current_notification_number + 1
+                    logger.debug("Repeat master notification: %s", notification)
+                    print("--- repeat master notification: %s" % notification)
                 else:
                     # Wipe out this master notification. It is a master one
-                    item.remove_in_progress_notification(act)
-                    logger.debug("Remove master notification (no repeat): %s", str(act))
+                    item.remove_in_progress_notification(notification)
+                    logger.debug("Remove master notification (no repeat): %s", notification)
+                    print("--- remove master notification (no repeat): %s" % notification)
 
             else:
                 # Wipe out this master notification.
-                logger.debug("Remove master notification (no problem): %s", str(act))
+                logger.debug("Remove master notification (no more a problem): %s",notification)
                 # We don't repeat recover/downtime/flap/etc...
-                item.remove_in_progress_notification(act)
+                item.remove_in_progress_notification(notification)
+                print("--- remove master notification (no more a problem): %s" % notification)
 
     def get_to_run_checks(self, do_checks=False, do_actions=False,
                           poller_tags=None, reactionner_tags=None,
