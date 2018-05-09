@@ -566,9 +566,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: self.last_time_down if self.last_time_down > self.last_time_up, 0 otherwise
         :rtype: int
         """
-        non_ok_times = [x for x in [self.last_time_down,
-                                    self.last_time_unknown]
-                        if x > self.last_time_ok]
+        non_ok_times = [x for x in [self.last_time_down]
+                        if x > self.last_time_up]
         if not non_ok_times:
             last_time_non_ok = 0  # todo: program_start would be better?
         else:

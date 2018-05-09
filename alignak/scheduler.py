@@ -821,12 +821,9 @@ class Scheduler(object):  # pylint: disable=R0902
         if len(notifications):
             logger.debug("Scatter master notification: %d notifications",
                          len(notifications))
-            print("--- Scatter master notification: %s, %d notifications"
-                  % (now, len(notifications)))
         for notification in notifications:
             logger.debug("Scheduler got a master notification: %s", notification)
             logger.debug("No contact for this notification")
-            print("--- got a master notification: %s" % notification)
 
             # This is a "master" notification created by an host/service.
             # We use it to create children notifications (for the contacts and
@@ -835,7 +832,8 @@ class Scheduler(object):  # pylint: disable=R0902
             children = []
             notification_period = self.timeperiods[item.notification_period]
             if not item.is_blocking_notifications(notification_period,
-                                                  self.hosts, self.services, notification.type, now):
+                                                  self.hosts, self.services,
+                                                  notification.type, now):
                 # If it is possible to send notifications
                 # of this type at the current time, then create
                 # a single notification for each contact of this item.
@@ -869,24 +867,21 @@ class Scheduler(object):  # pylint: disable=R0902
                     # a.t_to_go + item.notification_interval*item.__class__.interval_length
                     # or maybe before because we have an
                     # escalation that need to raise up before
-                    notification.t_to_go = item.get_next_notification_time(notification, self.escalations,
-                                                                  self.timeperiods)
+                    notification.t_to_go = item.get_next_notification_time(notification,
+                                                                           self.escalations,
+                                                                           self.timeperiods)
 
                     notification.notif_nb = item.current_notification_number + 1
                     logger.debug("Repeat master notification: %s", notification)
-                    print("--- repeat master notification: %s" % notification)
                 else:
                     # Wipe out this master notification. It is a master one
                     item.remove_in_progress_notification(notification)
                     logger.debug("Remove master notification (no repeat): %s", notification)
-                    print("--- remove master notification (no repeat): %s" % notification)
-
             else:
                 # Wipe out this master notification.
-                logger.debug("Remove master notification (no more a problem): %s",notification)
+                logger.debug("Remove master notification (no more a problem): %s", notification)
                 # We don't repeat recover/downtime/flap/etc...
                 item.remove_in_progress_notification(notification)
-                print("--- remove master notification (no more a problem): %s" % notification)
 
     def get_to_run_checks(self, do_checks=False, do_actions=False,
                           poller_tags=None, reactionner_tags=None,
