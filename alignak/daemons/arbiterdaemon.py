@@ -870,12 +870,21 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """
         logger.info("  launching a daemon for: %s/%s...", satellite.type, satellite.name)
 
+        # The daemon startup script location may be defined in the configuration
+        daemon_script_location = getattr(self.conf, 'daemons_script_location', self.bindir)
+        if not daemon_script_location:
+            daemon_script_location = "alignak-%s" % satellite.type
+        else:
+            daemon_script_location = "%s/alignak-%s" % (daemon_script_location, satellite.type)
+
         # Some extra arguments may be defined in the Alignak configuration
         daemon_arguments = getattr(self.conf, 'daemons_arguments', '')
 
-        args = ["alignak-%s" % satellite.type, "--name", satellite.name,
+        args = [daemon_script_location,
+                "--name", satellite.name,
                 "--environment", self.env_filename,
-                "--host", str(satellite.host), "--port", str(satellite.port)]
+                "--host", str(satellite.host),
+                "--port", str(satellite.port)]
         if daemon_arguments:
             args.append(daemon_arguments)
         logger.info("  ... with some arguments: %s", args)
@@ -885,6 +894,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             time.sleep(0.1)
         except Exception as exp:  # pylint: disable=broad-except
             logger.error("Error when launching %s: %s", satellite.name, exp)
+            logger.error("Command: %s", args)
             return False
 
         logger.info("  %s launched (pid=%d, gids=%s)",

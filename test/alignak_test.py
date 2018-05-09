@@ -283,8 +283,8 @@ class AlignakTest(unittest2.TestCase):
         files = ['%s/alignak.ini' % cfg_folder]
         replacements = {
             'user=alignak': ';user=alignak',
-            'group=alignak': ';group=alignak'
-
+            'group=alignak': ';group=alignak',
+            'bindir=%(_dist_BIN)s': 'bindir='
         }
         print("Commenting user/group in alignak.ini...")
         self._files_update(files, replacements)

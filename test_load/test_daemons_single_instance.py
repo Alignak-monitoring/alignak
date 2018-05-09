@@ -254,15 +254,14 @@ class TestDaemonsSingleInstance(AlignakTest):
         errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300, hosts_count)
         assert errors_raised == 0
 
-    # @pytest.mark.skip("Only useful for local test - do not run on Travis build")
-    def test_run_100_host_10mn(self):
+    def test_run_100_host_5mn(self):
         """Run Alignak with 100 hosts during 5 minutes"""
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/default')
         hosts_count = 100
         self.prepare_alignak_configuration(cfg_folder, hosts_count)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 600, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300, hosts_count)
         assert errors_raised == 0
 
     @pytest.mark.skip("Too much load - do not run on Travis build")
@@ -328,7 +327,7 @@ class TestDaemonsSingleInstance(AlignakTest):
                                   './cfg/passive_daemons')
         hosts_count = 100
         self.prepare_alignak_configuration(cfg_folder, hosts_count)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 600, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 60, hosts_count)
         assert errors_raised == 0
 
     @pytest.mark.skip("Too much load - do not run on Travis build")

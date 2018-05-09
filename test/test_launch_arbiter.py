@@ -58,13 +58,17 @@ class TestLaunchArbiter(AlignakTest):
         if os.path.exists('/tmp/monitoring-logs.log'):
             os.remove('/tmp/monitoring-logs.log')
 
+        if os.path.exists('/tmp/monitoring-log/monitoring-logs.log'):
+            os.remove('/tmp/monitoring-log/monitoring-logs.log')
+
         print("Preparing configuration...")
         shutil.copytree('../etc', '/tmp/etc/alignak')
         files = ['/tmp/etc/alignak/alignak.ini']
         replacements = {
             '_dist=/usr/local/': '_dist=/tmp',
             'user=alignak': ';user=alignak',
-            'group=alignak': ';group=alignak'
+            'group=alignak': ';group=alignak',
+            'bindir=%(_dist_BIN)s': 'bindir='
         }
         self._files_update(files, replacements)
 
@@ -301,6 +305,8 @@ class TestLaunchArbiter(AlignakTest):
             'daemons_stop_timeout=10': 'daemons_stop_timeout=5',
             ';daemons_start_timeout=0': 'daemons_start_timeout=0',
             ';daemons_dispatch_timeout=0': 'daemons_dispatch_timeout=0',
+
+            'bindir=%(_dist_BIN)s': 'bindir=',
 
             'user=alignak': ';user=alignak',
             'group=alignak': ';group=alignak',

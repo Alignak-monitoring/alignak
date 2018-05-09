@@ -62,8 +62,8 @@ import traceback
 import threading
 import logging
 
-from multiprocessing import active_children
-
+# from multiprocessing import active_children
+#
 # pylint: disable=wildcard-import,unused-wildcard-import
 # This import, despite not used, is necessary to include all Alignak objects modules
 from alignak.objects import *

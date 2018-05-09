@@ -249,9 +249,6 @@ class Daemon(object):
         'env_filename':
             StringProp(default=u''),
 
-        # Deprecated - not used anywhere
-        # 'use_log_file':
-        #     BoolProp(default=True),
         'log_loop':         # Set True to log the daemon loop activity
             BoolProp(default=False),
 
@@ -267,6 +264,8 @@ class Daemon(object):
             PathProp(default=DEFAULT_WORK_DIR),
         'logdir':   # /usr/local/var/log/alignak
             PathProp(default=DEFAULT_WORK_DIR),
+        'bindir':   # Default is empty
+            PathProp(default=''),
 
         # Interface the daemon will listen to
         'host':
@@ -420,7 +419,10 @@ class Daemon(object):
                 if entry.default == DEFAULT_WORK_DIR:
                     setattr(self, prop, os.getcwd())
                 else:
-                    setattr(self, prop, os.path.abspath(entry.pythonize(entry.default)))
+                    if not entry.default:
+                        setattr(self, prop, '')
+                    else:
+                        setattr(self, prop, os.path.abspath(entry.pythonize(entry.default)))
             else:
                 if hasattr(entry.default, '__iter__'):
                     setattr(self, prop, copy(entry.default))
@@ -592,11 +594,11 @@ class Daemon(object):
         # print("Daemon '%s' logger configuration file: %s"
         #       % (self.name, self.logger_configuration))
 
-        # Make my paths properties be absolute paths
-        for prop, entry in list(my_properties.items()):
-            # Set absolute paths for
-            if isinstance(my_properties[prop], PathProp):
-                setattr(self, prop, os.path.abspath(getattr(self, prop)))
+        # # Make my paths properties be absolute paths
+        # for prop, entry in list(my_properties.items()):
+        #     # Set absolute paths for
+        #     if isinstance(my_properties[prop], PathProp):
+        #         setattr(self, prop, os.path.abspath(getattr(self, prop)))
 
         # Log file...
         self.log_filename = PathProp().pythonize("%s.log" % self.name)

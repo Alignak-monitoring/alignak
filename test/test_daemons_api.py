@@ -134,7 +134,7 @@ class TestDaemonsApi(AlignakTest):
                  '%s/alignak-logger.json' % cfg_folder]
         replacements = {
             '_dist=/usr/local/': '_dist=%s' % cfg_folder,
-            '%(_dist)s/bin': cfg_folder,
+            '%(_dist)s/bin': '',
             '%(_dist)s/etc/alignak': cfg_folder,
             '%(_dist)s/var/lib/alignak': cfg_folder,
             '%(_dist)s/var/run/alignak': cfg_folder,
