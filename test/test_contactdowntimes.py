@@ -202,5 +202,7 @@ class TestContactDowntime(AlignakTest):
         # Now we want this contact to be really notify!
         # Ok, we define the downtime like we should, now look at if it does the job: do not
         # raise notif during a downtime for this contact
-        self.scheduler_loop(3, [[svc, 2, 'CRITICAL']])
+        self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
+        # time.sleep(1)
+        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         self.assert_any_brok_match('SERVICE NOTIFICATION.*;CRITICAL')

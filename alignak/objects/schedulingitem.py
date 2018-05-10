@@ -2124,32 +2124,23 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # t_wished==None for the first notification launch after consume
         # here we must look at the self.notification_period
         if t_wished is None:
-            now = time.time()
-            print("now: %s" % now)
-            t_wished = int(now) + 1
-            print("t_wished: %s" % t_wished)
+            t_wished = time.time()
             # if first notification, we must add first_notification_delay
             if self.current_notification_number == 0 and n_type == 'PROBLEM':
                 last_time_non_ok_or_up = self.last_time_non_ok_or_up()
                 if last_time_non_ok_or_up:
+                    # last_time_non_ok_or_up is an integer value - set the next second
                     t_wished = last_time_non_ok_or_up + 1
                 t_wished = t_wished + self.first_notification_delay * cls.interval_length
-                #
-                # if last_time_non_ok_or_up == 0:
-                #     # This for the very first notification
-                #     t_wished = t_wished + self.first_notification_delay * cls.interval_length
-                # else:
-                #     t_wished = last_time_non_ok_or_up + \
-                #         self.first_notification_delay * cls.interval_length
 
             if notification_period is None:
                 new_t = t_wished
             else:
                 new_t = notification_period.get_next_valid_time_from_t(t_wished)
-                print("now: %s, new_t: %s, t_wished: %s" % (now, new_t, t_wished))
         else:
             # We follow our order
             new_t = t_wished
+        print("new_t: %s, t_wished: %s" % (new_t, t_wished))
 
         if self.is_blocking_notifications(notification_period, hosts, services,
                                           n_type, t_wished) and \

@@ -1015,7 +1015,7 @@ class TestDaemonsApi(AlignakTest):
                 #     {'cmd_line': 'TEST;user_name;p1;p2;p3', 'creation_timestamp': 1525239402.3564115, 'my_type': 'externalcommand'}
                 # ]
                 assert 'creation_timestamp' in data[0]
-                assert data[0]['cmd_line'] == 'TEST'
+                assert data[1]['cmd_line'] == 'TEST;host_name;p1;p2;p3'
                 assert data[0]['my_type'] == 'externalcommand'
                 assert 'creation_timestamp' in data[1]
                 assert data[1]['cmd_line'] == 'TEST;host_name;p1;p2;p3'

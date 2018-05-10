@@ -654,7 +654,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 logger.error("The instance %s raised an exception %s. I disabled it,"
                              " and set it to restart later", module.name, str(exp))
                 logger.exception('Exception %s', exp)
-                self.my_daemon.modules_manager.set_to_restart(instance)
+                self.my_daemon.modules_manager.set_to_restart(module)
             else:
                 statsmgr.timer('hook.%s.%s' % (module.name, hook_name), time.time() - _ts)
 
@@ -818,7 +818,7 @@ class Scheduler(object):  # pylint: disable=R0902
         notifications = [a for a in self.actions.values()
                          if a.is_a == u'notification' and a.status == u'scheduled'
                          and not a.contact and a.is_launchable(now)]
-        if len(notifications):
+        if notifications:
             logger.debug("Scatter master notification: %d notifications",
                          len(notifications))
         for notification in notifications:

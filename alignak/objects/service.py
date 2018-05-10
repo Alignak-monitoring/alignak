@@ -172,6 +172,21 @@ class Service(SchedulingItem):
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'last_time_unreachable':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+        # 'last_time_ok':
+        #     IntegerProp(default=0, fill_brok=['full_status', 'check_result'],
+        #                 brok_transformation=brok_last_time, retention=True),
+        # 'last_time_warning':
+        #     IntegerProp(default=0, fill_brok=['full_status', 'check_result'],
+        #                 brok_transformation=brok_last_time, retention=True),
+        # 'last_time_critical':
+        #     IntegerProp(default=0, fill_brok=['full_status', 'check_result'],
+        #                 brok_transformation=brok_last_time, retention=True),
+        # 'last_time_unknown':
+        #     IntegerProp(default=0, fill_brok=['full_status', 'check_result'],
+        #                 brok_transformation=brok_last_time, retention=True),
+        # 'last_time_unreachable':
+        #     IntegerProp(default=0, fill_brok=['full_status', 'check_result'],
+        #                 brok_transformation=brok_last_time, retention=True),
         'host':
             StringProp(default=None),
         'state_before_hard_unknown_reach_phase': StringProp(default=u'OK', retention=True),
@@ -214,6 +229,7 @@ class Service(SchedulingItem):
         'LASTSERVICEOK':          'last_time_ok',
         'LASTSERVICEWARNING':     'last_time_warning',
         'LASTSERVICEUNKNOWN':     'last_time_unknown',
+        'LASTSERVICEUNREACHABLE': 'last_time_unreachable',
         'LASTSERVICECRITICAL':    'last_time_critical',
         'SERVICEOUTPUT':          'output',
         'LONGSERVICEOUTPUT':      'long_output',
@@ -524,31 +540,37 @@ class Service(SchedulingItem):
             self.state = u'OK'
             self.state_id = 0
             self.last_time_ok = int(self.last_state_update)
+            # self.last_time_ok = self.last_state_update
             state_code = 'o'
         elif status == 1:
             self.state = u'WARNING'
             self.state_id = 1
             self.last_time_warning = int(self.last_state_update)
+            # self.last_time_warning = self.last_state_update
             state_code = 'w'
         elif status == 2:
             self.state = u'CRITICAL'
             self.state_id = 2
             self.last_time_critical = int(self.last_state_update)
+            # self.last_time_critical = self.last_state_update
             state_code = 'c'
         elif status == 3:
             self.state = u'UNKNOWN'
             self.state_id = 3
             self.last_time_unknown = int(self.last_state_update)
+            # self.last_time_unknown = self.last_state_update
             state_code = 'u'
         elif status == 4:
             self.state = u'UNREACHABLE'
             self.state_id = 4
             self.last_time_unreachable = int(self.last_state_update)
+            # self.last_time_unreachable = self.last_state_update
             state_code = 'x'
         else:
             self.state = u'CRITICAL'  # exit code UNDETERMINED
             self.state_id = 2
             self.last_time_critical = int(self.last_state_update)
+            # self.last_time_critical = self.last_state_update
             state_code = 'c'
 
         if state_code in self.flap_detection_options:
@@ -587,7 +609,7 @@ class Service(SchedulingItem):
     def last_time_non_ok_or_up(self):
         """Get the last time the service was in a non-OK state
 
-        :return: self.last_time_down if self.last_time_down > self.last_time_up, otherwise 0
+        :return: the nearest last time the service was not ok
         :rtype: int
         """
         non_ok_times = [x for x in [self.last_time_warning,
