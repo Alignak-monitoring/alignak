@@ -799,15 +799,17 @@ class TestDependencies(AlignakTest):
 
         # Router is UP
         print("====================== router UP ===================")
-        time.sleep(1.0)
         self.scheduler_loop(1, [[router_00, 0, 'UP']])
+        time.sleep(1.0)
+        self.scheduler_loop(1)
         self.show_checks()
         assert "UP" == router_00.state
         assert "DOWN" == host.state
         assert "UNREACHABLE" == svc.state
         assert 0 == svc.current_notification_number, 'No notifications'
         assert 1 == host.current_notification_number, '1 host notification'
-        self.assert_checks_count(9)
+        # Re-scheduled 3 checks
+        self.assert_checks_count(12)
         self.show_checks()
         self.assert_actions_count(1)
         self.show_actions()
@@ -829,6 +831,11 @@ class TestDependencies(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_dependencies.cfg')
+        # 4 hosts:
+        # test_router_0
+        # test_host_0
+        # test_host_00
+        # test_host_11
         assert self.conf_is_correct
 
         router_00 = self._scheduler.hosts.find_by_name("test_router_00")
@@ -849,8 +856,8 @@ class TestDependencies(AlignakTest):
         svc.max_check_attempts = 1
         svc.event_handler_enabled = False
 
-        # Host is UP
-        self.scheduler_loop(1, [[router_00, 0, 'UP'], [host, 0, 'UP'], [svc, 0, 'OK']])
+        # Host router is UP
+        self.scheduler_loop(3, [[router_00, 0, 'UP'], [host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
         assert "UP" == router_00.state
         assert "UP" == host.state
@@ -858,18 +865,26 @@ class TestDependencies(AlignakTest):
         assert 0 == svc.current_notification_number, 'All OK no notifications'
         assert 0 == host.current_notification_number, 'All OK no notifications'
         self.assert_actions_count(0)
+        # 9 checks:
+        # 2 hosts
+        # 7 services, but not our checked service ! Before we check the hosts dependencies !
         self.assert_checks_count(9)
+        self.show_checks()
 
-        # Service is CRITICAL
+        # Host service is CRITICAL
         print("====================== svc CRITICAL ===================")
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         assert "UP" == router_00.state
         assert "UP" == host.state
+        # The service remains OK, despite the critical, because we raise dependencies checks
         assert "OK" == svc.state
+        # assert "SOFT" == svc.state_type
         assert 0 == svc.current_notification_number, 'No notifications'
         self.assert_actions_count(0)
-        # New host check
+        # Some more checks
+        # test_host_0 and test_router_0
+        # The service itself is now checked
         self.assert_checks_count(12)
         self.show_checks()
 
@@ -878,19 +893,22 @@ class TestDependencies(AlignakTest):
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
         assert "UP" == router_00.state
+        # The host remains UP because we need to check the router dependency
         assert "UP" == host.state
         assert "OK" == svc.state
         assert 0 == svc.current_notification_number, 'No notifications'
         assert 0 == host.current_notification_number, 'No notifications'
         assert 0 == router_00.current_notification_number, 'No notifications'
         self.assert_actions_count(0)
+        # Still the same checks count
         self.assert_checks_count(12)
         self.show_checks()
 
-        # Router is UP
+        # Router is now DOWN
         print("====================== router DOWN ===================")
-        time.sleep(1.0)
         self.scheduler_loop(1, [[router_00, 2, 'DOWN']])
+        time.sleep(1.0)
+        self.scheduler_loop(1)
         self.show_checks()
         assert "DOWN" == router_00.state
         assert "UNREACHABLE" == host.state
@@ -898,7 +916,8 @@ class TestDependencies(AlignakTest):
         assert 0 == svc.current_notification_number, 'No notifications'
         assert 0 == host.current_notification_number, 'No notification'
         assert 1 == router_00.current_notification_number, '1 host notifications'
-        self.assert_checks_count(9)
+        # Re-scheduled 3 checks
+        self.assert_checks_count(12)
         self.show_checks()
         self.assert_actions_count(1)
         self.show_actions()
@@ -958,8 +977,9 @@ class TestDependencies(AlignakTest):
         self.assert_checks_match(9, 'hostname test_host_00', 'command')
 
         print("====================== host UP ===================")
-        time.sleep(1.0)
         self.scheduler_loop(1, [[host, 0, 'UP']])
+        time.sleep(1.0)
+        self.scheduler_loop(1)
         assert "UP" == host.state
         assert "CRITICAL" == svc1.state
         assert "CRITICAL" == svc2.state

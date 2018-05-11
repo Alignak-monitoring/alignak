@@ -151,7 +151,7 @@ class TestRetention(AlignakTest):
         assert 0 == len(hostn.comments)
         assert 0 == len(hostn.notifications_in_progress)
 
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         self._scheduler.restore_retention_data(retention)
 
         assert hostn.last_state == 'DOWN'

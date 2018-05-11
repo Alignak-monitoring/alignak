@@ -72,8 +72,7 @@ class TestMultibroker(AlignakTest):
             print(("Broker %s:" % (my_scheduler.my_daemon.brokers[broker_link_uuid])))
             for brok in my_scheduler.my_daemon.brokers[broker_link_uuid].broks:
                 broker_broks_count[my_scheduler.my_daemon.brokers[broker_link_uuid].name] += 1
-                print(("- %s: %s"
-                      % (brok, my_scheduler.my_daemon.brokers[broker_link_uuid].broks[brok])))
+                print("- %s" % brok)
 
         # Same list of broks in the two brokers
         self.assertItemsEqual(my_scheduler.my_daemon.brokers[broker1_link_uuid].broks,
@@ -242,7 +241,7 @@ class TestMultibroker(AlignakTest):
             print(("Broker %s:" % (my_first_scheduler.my_daemon.brokers[broker_link_uuid])))
             for brok in my_first_scheduler.my_daemon.brokers[broker_link_uuid].broks:
                 broker_broks_count[broker_link_uuid] += 1
-                print(("- %s: %s" % (brok, my_first_scheduler.my_daemon.brokers[broker_link_uuid].broks[brok])))
+                print("- %s" % brok)
 
         for broker_link_uuid in my_first_scheduler.my_daemon.brokers:
             assert broker_broks_count[broker_link_uuid] == ref_broks_count
@@ -263,7 +262,7 @@ class TestMultibroker(AlignakTest):
             print(("Broker %s:" % (my_second_scheduler.my_daemon.brokers[broker_link_uuid])))
             for brok in my_second_scheduler.my_daemon.brokers[broker_link_uuid].broks:
                 broker_broks_count[broker_link_uuid] += 1
-                print(("- %s: %s" % (brok, my_second_scheduler.my_daemon.brokers[broker_link_uuid].broks[brok])))
+                print("- %s" % brok)
 
         for broker_link_uuid in my_second_scheduler.my_daemon.brokers:
             assert broker_broks_count[broker_link_uuid] == ref_broks_count

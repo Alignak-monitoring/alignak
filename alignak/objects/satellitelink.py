@@ -235,7 +235,7 @@ class SatelliteLink(Item):
         logger.debug("Initialize a %s, params: %s", self.__class__.__name__, params)
 
         # My interface context
-        self.broks = {}
+        self.broks = []
         self.actions = {}
         self.wait_homerun = {}
         self.pushed_commands = []
@@ -363,7 +363,7 @@ class SatelliteLink(Item):
         :rtype: list
         """
         res = (self.broks, self.actions, self.wait_homerun, self.pushed_commands)
-        self.broks = {}
+        self.broks = []
         self.actions = {}
         self.wait_homerun = {}
         self.pushed_commands = []
@@ -376,7 +376,7 @@ class SatelliteLink(Item):
         :rtype: list
         """
         res = self.broks
-        self.broks = {}
+        self.broks = []
         return res
 
     def prepare_for_conf(self):
@@ -516,8 +516,7 @@ class SatelliteLink(Item):
         # We came from dead to alive! We must propagate the good news
         if not was_alive:
             logger.info("Setting %s satellite as alive :)", self.name)
-            brok = self.get_update_status_brok()
-            self.broks[brok.uuid] = brok
+            self.broks.append(self.get_update_status_brok())
 
     def set_dead(self):
         """Set the satellite into dead state:
@@ -535,8 +534,7 @@ class SatelliteLink(Item):
         # We are dead now! We must propagate the sad news...
         if was_alive and not self.stopping:
             logger.warning("Setting the satellite %s as dead :(", self.name)
-            brok = self.get_update_status_brok()
-            self.broks[brok.uuid] = brok
+            self.broks.append(self.get_update_status_brok())
 
     def add_failed_check_attempt(self, reason=''):
         """Set the daemon as unreachable and add a failed attempt
@@ -733,8 +731,7 @@ class SatelliteLink(Item):
         self.last_check = time.time()
 
         # Update the state of this element
-        brok = self.get_update_status_brok()
-        self.broks[brok.uuid] = brok
+        self.broks.append(self.get_update_status_brok())
 
         return self.cfg_managed
 
@@ -907,8 +904,6 @@ class SatelliteLink(Item):
         and THEN Send a HTTP request to the satellite (POST /put_results)
         Send actions results to the satellite
 
-        The first ping ensure the satellite is there to avoid a big timeout
-
         :param results: Results list to send
         :type results: list
         :param scheduler_name: Scheduler name
@@ -917,8 +912,10 @@ class SatelliteLink(Item):
         :rtype: bool
         """
         logger.debug("[%s] Pushing %d results", self.name, len(results))
-        return self.con.post('put_results', {'results': results, 'from': scheduler_name},
-                             wait='long')
+        result = self.con.post('put_results', {'results': results, 'from': scheduler_name},
+                               wait='long')
+        logger.error("[%s] Push results: %s", result)
+        return result
 
     @valid_connection()
     @communicate()

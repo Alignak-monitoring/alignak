@@ -26,6 +26,15 @@ from copy import copy
 from alignak.property import NONE_OBJECT, SetProp
 
 
+def get_a_new_object_id():
+    """
+    Get a new Alignak object identifier. Uses the uuid version 1 generator
+
+    :rtype uuid: bytes
+    :return: uuid
+    """
+    return str(uuid.uuid4())
+
 class AlignakObject(object):
     """This class provides a generic way to instantiate alignak objects.
     Attributes are serialized dynamically, whether we un-serialize
@@ -54,7 +63,7 @@ class AlignakObject(object):
         if parsing:
             # Do not manage anything in the properties, it is the job of the Item __init__ function
             if not hasattr(self, 'uuid'):
-                self.uuid = uuid.uuid4().hex
+                self.uuid = get_a_new_object_id()
             # else:
             #     print("AlignakObject: parsing but already have an uuid! Parameters: %s" % params)
             return
@@ -67,7 +76,7 @@ class AlignakObject(object):
 
         if 'uuid' not in params:
             # print("AlignakObject: no parsing but do not provide an uuid! Parameters: %s" % params)
-            self.uuid = uuid.uuid4().hex
+            self.uuid = get_a_new_object_id()
 
         all_props = {}
         all_props.update(getattr(self, "properties", {}))

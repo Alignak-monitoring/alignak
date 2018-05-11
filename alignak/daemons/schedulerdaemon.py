@@ -126,18 +126,18 @@ class Alignak(BaseSatellite):
         :rtype: dict[alignak.brok.Brok]
         """
         logger.debug("Broker %s requests my broks list", broker_name)
-        res = {}
-
+        res = []
         if not broker_name:
             return res
 
         for broker_link in list(self.brokers.values()):
             if broker_name == broker_link.name:
-                to_send = [b for b in list(self.brokers[broker_link.uuid].broks.values())
-                           if getattr(b, 'sent_to_externals', False)]
-                for brok in to_send:
-                    res[brok.uuid] = self.brokers[broker_link.uuid].broks.pop(brok.uuid)
-                logger.debug("Providing %d broks to %s", len(to_send), broker_name)
+                for brok in sorted(broker_link.broks, key=lambda x: x.creation_time):
+                    if getattr(brok, 'sent_to_externals', False):
+                        res.append(brok)
+                        brok.got = True
+                broker_link.broks = [b for b in broker_link.broks if getattr(b, 'got', False)]
+                logger.debug("Providing %d broks to %s", len(res), broker_name)
                 break
         else:
             logger.warning("Got a brok request from an unknown broker: %s", broker_name)
@@ -362,7 +362,7 @@ class Alignak(BaseSatellite):
 
                     # Must look if we already had a configuration and save our broks
                     already_got = rs_conf['instance_id'] in my_satellites
-                    broks = {}
+                    broks = []
                     actions = {}
                     wait_homerun = {}
                     external_commands = {}

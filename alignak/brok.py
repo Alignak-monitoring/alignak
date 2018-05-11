@@ -49,8 +49,10 @@ Brok are filled depending on their type (check_result, initial_state ...)
 
 """
 import time
+from datetime import datetime
 import uuid
 
+from alignak.alignakobject import get_a_new_object_id
 from alignak.misc.serialization import serialize, unserialize, AlignakClassLookupException
 
 
@@ -85,25 +87,28 @@ class Brok(object):
     my_type = 'brok'
 
     def __init__(self, params, parsing=True):
-        if not parsing:
-            if params is None:
-                return
-            for key, value in params.items():
-                setattr(self, key, value)
-
-            if not hasattr(self, 'uuid'):
-                self.uuid = uuid.uuid4().hex
-            return
-        self.uuid = params.get('uuid', uuid.uuid4().hex)
-        self.type = params['type']
+        """
+        :param params: initialization parameters
+        :type params: dict
+        :param parsing: not used but necessary for serialization/unserialization
+        :type parsing: bool
+        """
+        self.uuid = params.get('uuid', get_a_new_object_id())
+        self.prepared = params.get('prepared', False)
+        self.creation_time = params.get('creation_time', time.time())
+        self.type = params.get('type', u'unknown')
         self.instance_id = params.get('instance_id', None)
-        # Again need to behave differently when un-serializing
+
+        # Need to behave differently when un-serializing
         if 'uuid' in params:
             self.data = params['data']
         else:
             self.data = serialize(params['data'])
-        self.prepared = params.get('prepared', False)
-        self.creation_time = params.get('creation_time', time.time())
+
+    def __repr__(self):  # pragma: no cover
+        ct = datetime.fromtimestamp(self.creation_time).strftime("%Y-%m-%d %H:%M:%S.%f")
+        return "Brok %s (%s) '%s': %s" % (self.uuid, ct, self.type, self.data)
+    __str__ = __repr__
 
     def serialize(self):
         """This function serialize into a simple dict object.
@@ -114,12 +119,11 @@ class Brok(object):
         :return: json representation of a Brok
         :rtype: dict
         """
-        return {"type": self.type, "instance_id": self.instance_id, "data": self.data,
-                "prepared": self.prepared, "creation_time": self.creation_time, "uuid": self.uuid}
-
-    def __repr__(self):  # pragma: no cover
-        return "Brok %s: %s" % (self.type, self.data)
-    __str__ = __repr__
+        return {
+            "uuid": self.uuid, "type": self.type, "instance_id": self.instance_id,
+            "prepared": self.prepared, "creation_time": self.creation_time,
+            "data": self.data
+        }
 
     def prepare(self):
         """Un-serialize data from data attribute and add instance_id key if necessary

@@ -2771,6 +2771,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         comm = None
         logger.debug("Acknowledge requested for %s %s.", self.my_type, self.get_name())
+        print("Acknowledge requested for %s %s.", self.my_type, self.get_name())
 
         if self.state != self.ok_up:
             # case have yet an acknowledge
@@ -2784,17 +2785,22 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.problem_has_been_acknowledged = True
             sticky = sticky == 2
 
-            data = {'ref': self.uuid, 'sticky': sticky, 'author': author, 'comment': comment,
-                    'end_time': end_time, 'notify': notify}
+            data = {
+                'ref': self.uuid, 'sticky': sticky, 'author': author, 'comment': comment,
+                    'end_time': end_time, 'notify': notify
+            }
             ack = Acknowledge(data)
             self.acknowledgement = ack
             if self.my_type == 'host':
                 comment_type = 1
-                self.broks.append(self.acknowledgement.get_raise_brok(self.get_name()))
+                brok = self.acknowledgement.get_raise_brok(self.get_name())
+                print("Ack brok: %s" % brok)
+                self.broks.append(brok)
             else:
                 comment_type = 2
-                self.broks.append(self.acknowledgement.get_raise_brok(self.host_name,
-                                                                      self.get_name()))
+                brok = self.acknowledgement.get_raise_brok(self.host_name, self.get_name())
+                print("Ack brok: %s" % brok)
+                self.broks.append(brok)
             data = {
                 'author': author, 'comment': comment, 'comment_type': comment_type, 'entry_type': 4,
                 'source': 0, 'expires': False, 'ref': self.uuid
@@ -2813,9 +2819,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             for service_uuid in self.services:
                 if service_uuid not in services:
                     continue
-                services[service_uuid].acknowledge_problem(notification_period,
-                                                           hosts, services, sticky, notify,
-                                                           author, comment, end_time)
+                services[service_uuid].acknowledge_problem(notification_period, hosts, services,
+                                                           sticky, notify, author, comment,
+                                                           end_time)
         return comm
 
     def check_for_expire_acknowledge(self):

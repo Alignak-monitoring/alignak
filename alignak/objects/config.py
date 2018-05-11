@@ -79,6 +79,7 @@ import logging
 from io import StringIO
 import json
 
+from alignak.alignakobject import get_a_new_object_id
 from alignak.misc.serialization import serialize
 
 from alignak.commandcall import CommandCall
@@ -2663,8 +2664,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         self.parts[part_index].config_name, self.parts[part_index])
 
             # Copy the configuration objects lists. We need a deepcopy because each configuration
-            # will have some new groups... but we keep the same uuid
-            self.parts[part_index].uuid = uuid.uuid4().hex
+            # will have some new groups... but we create a new uuid
+            self.parts[part_index].uuid = get_a_new_object_id()
 
             types_creations = self.__class__.types_creations
             for o_type in types_creations:

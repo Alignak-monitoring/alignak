@@ -65,12 +65,12 @@ class TestSchedulerCleanQueue(AlignakTest):
         broks_limit += 1
         print(("Broks limit is %d broks" % (broks_limit)))
 
-        broks = {}
+        broks = []
         for broker in list(self._scheduler.my_daemon.brokers.values()):
-            print(("Broker: %s has %d broks" % (broker, len(broker.broks))))
+            print("Broker: %s has %d broks" % (broker, len(broker.broks)))
             for brok in broks:
-                print(("- %s: %s" % (brok, broks[brok].type)))
-            broks.update(broker.broks)
+                print("- %s" % brok)
+            broks.append(brok)
             assert len(broker.broks) < broks_limit
         # Limit is not yet reached... 9 broks raised!
         assert len(broks) < broks_limit
@@ -94,12 +94,12 @@ class TestSchedulerCleanQueue(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
 
-        broks = {}
+        broks = []
         for broker in list(self._scheduler.my_daemon.brokers.values()):
-            print(("Broker: %s has %d broks" % (broker, len(broker.broks))))
-            for brok in broks:
-                print(("- %s: %s" % (brok, broks[brok].type)))
-            broks.update(broker.broks)
+            print("Broker: %s has %d broks" % (broker, len(broker.broks)))
+            for brok in broker.broks:
+                print("- %s" % brok)
+            broks.extend(broker.broks)
             assert len(broker.broks) < broks_limit
         # Limit is not yet reached... 9 broks raised!
         assert len(broks) < broks_limit

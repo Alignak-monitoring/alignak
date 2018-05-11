@@ -296,7 +296,7 @@ class BaseSatellite(Daemon):
 
                     # Must look if we already had a configuration and save our broks
                     already_got = rs_conf['instance_id'] in my_satellites
-                    broks = {}
+                    broks = []
                     actions = {}
                     wait_homerun = {}
                     external_commands = {}
@@ -386,7 +386,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         super(Satellite, self).__init__(name, **kwargs)
 
         # Keep broks so they can be eaten by a broker
-        self.broks = {}
+        self.broks = []
         self.broks_lock = threading.RLock()
 
         self.workers = {}   # dict of active workers
@@ -574,7 +574,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # For brok, we TAG brok with our instance_id
             elt.instance_id = self.instance_id
             with self.broks_lock:
-                self.broks[elt.uuid] = elt
+                self.broks.append(elt)
             statsmgr.counter('broks.added', 1)
         elif isinstance(elt, ExternalCommand):
             logger.debug("Queuing an external command '%s'", str(elt.__dict__))
@@ -589,7 +589,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         :rtype: list
         """
         res = copy.copy(self.broks)
-        self.broks.clear()
+        del self.broks[:]
         return res
 
     def check_and_del_zombie_workers(self):  # pragma: no cover, not with unit tests...
@@ -815,7 +815,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         super(Satellite, self).clean_previous_run()
 
         # Clean my lists
-        self.broks.clear()
+        del self.broks[:]
 
     def do_loop_turn(self):  # pylint: disable=too-many-branches
         """Satellite main loop::

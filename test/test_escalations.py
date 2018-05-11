@@ -49,6 +49,8 @@
 """
 
 import time
+import datetime
+from freezegun import freeze_time
 from alignak.misc.serialization import unserialize
 from alignak.objects.escalation import Escalation
 from alignak.objects.serviceescalation import Serviceescalation
@@ -88,7 +90,7 @@ class TestEscalations(AlignakTest):
 
     def test_simple_escalation(self):
         """ Test a simple escalation (NAGIOS legacy) """
-        self._main_broker.broks.clear()
+        del self._main_broker.broks[:]
 
         # Check freshness on each scheduler tick
         self._scheduler.update_recurrent_works_tick({'tick_manage_internal_checks': 10})
@@ -115,204 +117,204 @@ class TestEscalations(AlignakTest):
 
         tolevel2 = self._scheduler.escalations.find_by_name('ToLevel2')
         assert tolevel2 is not None
-        # Todo: do not match any of both assertions ... wtf?
-        # self.assertIs(tolevel2, Serviceescalation)
-        # self.assertIs(tolevel2, Escalation)
+        print("Esc: %s / %s" % (type(tolevel2), tolevel2))
+        self.assertIsInstance(tolevel2, Escalation)
         assert tolevel2.uuid in svc.escalations
 
         tolevel3 = self._scheduler.escalations.find_by_name('ToLevel3')
         assert tolevel3 is not None
-        # Todo: do not match any of both assertions ... wtf?
-        # self.assertIs(tolevel3, Serviceescalation)
-        # self.assertIs(tolevel3, Escalation)
+        self.assertIsInstance(tolevel3, Escalation)
         assert tolevel3.uuid in svc.escalations
 
-        # To make tests quicker we make notifications sent very quickly
-        svc.notification_interval = 0.001
+        # 1 notification pet minute
+        svc.notification_interval = 1
 
-        #--------------------------------------------------------------
-        # initialize host/service state
-        #--------------------------------------------------------------
-        self.scheduler_loop(1, [
-            [host, 0, 'UP'], [svc, 0, 'OK']
-        ])
-        assert "HARD" == host.state_type
-        assert "UP" == host.state
-        assert 0 == host.current_notification_number
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2018, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
 
-        assert "HARD" == svc.state_type
-        assert "OK" == svc.state
-        assert 0 == svc.current_notification_number
+            #--------------------------------------------------------------
+            # initialize host/service state
+            #--------------------------------------------------------------
+            self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+            assert "HARD" == host.state_type
+            assert "UP" == host.state
+            assert 0 == host.current_notification_number
 
-        # Service goes to CRITICAL/SOFT
-        self.scheduler_loop(1, [[svc, 2, 'BAD']])
-        assert "SOFT" == svc.state_type
-        assert "CRITICAL" == svc.state
-        # No notification...
-        assert 0 == svc.current_notification_number
+            assert "HARD" == svc.state_type
+            assert "OK" == svc.state
+            assert 0 == svc.current_notification_number
 
-        # ---
-        # 1/
-        # ---
-        # Service goes to CRITICAL/HARD
-        time.sleep(1)
-        self.scheduler_loop(1, [[svc, 2, 'BAD']])
-        assert "HARD" == svc.state_type
-        assert "CRITICAL" == svc.state
-        # Service notification number must be 1
-        assert 1 == svc.current_notification_number
-        cnn = svc.current_notification_number
+            # Time warp
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
 
-        # We did not yet got an escalated notification
-        assert 0 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
-
-        # We should have had 2 ALERT and a NOTIFICATION to the service defined contact
-        # We also have a notification to level1 contact which is a contact defined for the host
-        expected_logs = [
-            ('info',
-             'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;OK;HARD;1;OK'),
-            ('info',
-             'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;UP'),
-            ('error',
-             'SERVICE ALERT: test_host_0_esc;test_svc_esc;CRITICAL;SOFT;1;BAD'),
-            ('error',
-             'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;SOFT;1;BAD'),
-            ('error',
-             'SERVICE ALERT: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
-            ('error',
-             'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
-            ('error',
-             'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc;CRITICAL;notify-service;BAD'),
-            ('error',
-             'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc;CRITICAL;notify-service;BAD'),
-        ]
-        # travis_got = [
-        #     (u'info', u'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;UP'),
-        #     (u'info', u'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;OK;HARD;1;OK'),
-        #     (u'error', u'SERVICE ALERT: test_host_0_esc;test_svc_esc;CRITICAL;SOFT;1;BAD'),
-        #     (u'error', u'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;SOFT;1;BAD'),
-        #     (u'info', u'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;Host assumed to be UP'),
-        #     (u'error', u'SERVICE ALERT: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
-        #     (u'error', u'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
-        #     (u'error', u'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc;CRITICAL;notify-service;BAD'),
-        #     (u'error', u'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc;CRITICAL;notify-service;BAD')
-        # ]
-        self.check_monitoring_logs(expected_logs)
-
-        # ---
-        # 2/
-        # ---
-        # Service is still CRITICAL/HARD
-        time.sleep(1)
-        self.scheduler_loop(1, [[svc, 2, 'BAD']])
-
-        # Service notification number increased
-        assert 2 == svc.current_notification_number
-
-        # We got an escalated notification
-        assert 1 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
-
-        # Now also notified to the level2
-        expected_logs += [
-            ('error',
-             'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
-            ('error',
-             'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;CRITICAL;notify-service;BAD')
-        ]
-        self.check_monitoring_logs(expected_logs)
-
-        # ---
-        # 3/
-        # ---
-        # Service is still CRITICAL/HARD
-        time.sleep(1)
-        self.scheduler_loop(1, [[svc, 2, 'BAD']])
-
-        # Service notification number increased
-        assert 3 == svc.current_notification_number
-
-        # We got one more escalated notification
-        assert 2 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
-        expected_logs += [
-            ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
-            ('error', 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
-                       'CRITICAL;notify-service;BAD')
-        ]
-        self.check_monitoring_logs(expected_logs)
-
-        # ---
-        # 4/
-        # ---
-        # Service is still CRITICAL/HARD
-        time.sleep(1)
-        self.scheduler_loop(1, [[svc, 2, 'BAD']])
-
-        # Service notification number increased
-        assert 4 == svc.current_notification_number
-
-        # We got one more escalated notification
-        assert 3 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
-        expected_logs += [
-            ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
-            ('error', 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
-                       'CRITICAL;notify-service;BAD')
-        ]
-        self.check_monitoring_logs(expected_logs)
-
-        # ---
-        # 5/
-        # ---
-        # Service is still CRITICAL/HARD
-        time.sleep(1)
-        self.scheduler_loop(1, [[svc, 2, 'BAD']])
-
-        # Service notification number increased
-        assert 5 == svc.current_notification_number
-
-        # We got one more escalated notification
-        assert 4 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
-        expected_logs += [
-            ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
-            ('error', 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
-                       'CRITICAL;notify-service;BAD'),
-        ]
-        self.check_monitoring_logs(expected_logs)
-
-        # ---
-        # 6/
-        # ---
-        # Service is still CRITICAL/HARD
-        time.sleep(1)
-        self.scheduler_loop(1, [[svc, 2, 'BAD']])
-
-        # Service notification number increased
-        assert 6 == svc.current_notification_number
-
-        # We got one more escalated notification but we notified level 3 !
-        assert 5 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
-        expected_logs += [
-            ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
-            ('error', 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc;'
-                       'CRITICAL;notify-service;BAD')
-        ]
-        self.check_monitoring_logs(expected_logs)
-
-        # ---
-        # 7/
-        # ---
-        # Now we send 10 more alerts and we are still always notifying only level3
-        for i in range(10):
-            # Service is still CRITICAL/HARD
-            time.sleep(.2)
+            # Service goes to CRITICAL/SOFT
             self.scheduler_loop(1, [[svc, 2, 'BAD']])
+            assert "SOFT" == svc.state_type
+            assert "CRITICAL" == svc.state
+            # No notification...
+            assert 0 == svc.current_notification_number
+
+            # Time warp
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
+            # ---
+            # 1/
+            # ---
+            # Service goes to CRITICAL/HARD
+            self.scheduler_loop(1, [[svc, 2, 'BAD']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "HARD" == svc.state_type
+            assert "CRITICAL" == svc.state
+            # Service notification number must be 1
+            assert 1 == svc.current_notification_number
+            cnn = svc.current_notification_number
+
+            # We did not yet got an escalated notification
+            assert 0 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
+
+            # We should have had 2 ALERT and a NOTIFICATION to the service defined contact
+            # We also have a notification to level1 contact which is a contact defined for the host
+            expected_logs = [
+                ('info',
+                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;OK;HARD;1;OK'),
+                ('info',
+                 'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;UP'),
+                ('error',
+                 'SERVICE ALERT: test_host_0_esc;test_svc_esc;CRITICAL;SOFT;1;BAD'),
+                ('error',
+                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;SOFT;1;BAD'),
+                ('error',
+                 'SERVICE ALERT: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
+                ('error',
+                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
+                ('error',
+                 'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc;CRITICAL;notify-service;BAD'),
+                ('error',
+                 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc;CRITICAL;notify-service;BAD'),
+            ]
+            self.check_monitoring_logs(expected_logs)
+
+            # ---
+            # 2/
+            # ---
+            # Time warp
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
+            # Service is now CRITICAL/HARD
+            self.scheduler_loop(1, [[svc, 2, 'BAD']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
 
             # Service notification number increased
-            assert 7 + i == svc.current_notification_number
+            assert 2 == svc.current_notification_number
+
+            # We got an escalated notification
+            assert 1 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
+
+            # Now also notified to the level2
+            expected_logs += [
+                ('error',
+                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
+                ('error',
+                 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;CRITICAL;notify-service;BAD')
+            ]
+            self.check_monitoring_logs(expected_logs)
+
+            # ---
+            # 3/
+            # ---
+            # Time warp
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
+            # Service is still CRITICAL/HARD
+            self.scheduler_loop(1, [[svc, 2, 'BAD']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+
+            # Service notification number increased
+            assert 3 == svc.current_notification_number
 
             # We got one more escalated notification
-            assert 6 + i == \
-                             len([n.escalated for n in
-                                  list(self._scheduler.actions.values()) if n.escalated])
+            assert 2 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
+            expected_logs += [
+                ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
+                ('error', 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
+                           'CRITICAL;notify-service;BAD')
+            ]
+            self.check_monitoring_logs(expected_logs)
+
+            # ---
+            # 4/
+            # ---
+            # Time warp
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
+            # Service is still CRITICAL/HARD
+            self.scheduler_loop(1, [[svc, 2, 'BAD']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+
+            # Service notification number increased
+            assert 4 == svc.current_notification_number
+
+            # We got one more escalated notification
+            assert 3 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
+            expected_logs += [
+                ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
+                ('error', 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
+                           'CRITICAL;notify-service;BAD')
+            ]
+            self.check_monitoring_logs(expected_logs)
+
+            # ---
+            # 5/
+            # ---
+            # Time warp
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
+            # Service is still CRITICAL/HARD
+            self.scheduler_loop(1, [[svc, 2, 'BAD']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+
+            # Service notification number increased
+            assert 5 == svc.current_notification_number
+
+            # We got one more escalated notification
+            assert 4 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
+            expected_logs += [
+                ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
+                ('error', 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
+                           'CRITICAL;notify-service;BAD'),
+            ]
+            self.check_monitoring_logs(expected_logs)
+
+            # ---
+            # 6/
+            # ---
+            # Time warp
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
+            # Service is still CRITICAL/HARD
+            self.scheduler_loop(1, [[svc, 2, 'BAD']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+
+            # Service notification number increased
+            assert 6 == svc.current_notification_number
+
+            # We got one more escalated notification but we notified level 3 !
+            assert 5 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
             expected_logs += [
                 ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
                 ('error', 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc;'
@@ -320,29 +322,62 @@ class TestEscalations(AlignakTest):
             ]
             self.check_monitoring_logs(expected_logs)
 
-        # ---
-        # 8/
-        # ---
-        # The service recovers, all the notified contact will be contacted
-        self.scheduler_loop(2, [[svc, 0, 'OK']])
-        expected_logs += [
-            ('info', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;OK;HARD;1;OK'),
-            ('info', 'SERVICE ALERT: test_host_0_esc;test_svc_esc;OK;HARD;2;OK'),
-            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc;'
-                      'OK;notify-service;OK'),
-            ('info', 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
-                      'OK;notify-service;OK'),
-            ('info', 'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc;'
-                      'OK;notify-service;OK'),
-            ('info', 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc;'
-                      'OK;notify-service;OK'),
-            ('info', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;OK;HARD;1;OK')
-        ]
-        self.check_monitoring_logs(expected_logs)
+            # ---
+            # 7/
+            # ---
+            # Now we send 10 more alerts and we are still always notifying only level3
+            for i in range(10):
+                # Time warp
+                frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
+                # Service is still CRITICAL/HARD
+                # time.sleep(.2)
+                self.scheduler_loop(1, [[svc, 2, 'BAD']])
+                # The notifications are created to be launched in the next second when they happen !
+                # Time warp 1 second
+                frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+                self.scheduler_loop(1)
+
+                # Service notification number increased
+                assert 7 + i == svc.current_notification_number
+
+                # We got one more escalated notification
+                assert 6 + i == \
+                                 len([n.escalated for n in
+                                      list(self._scheduler.actions.values()) if n.escalated])
+                expected_logs += [
+                    ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
+                    ('error', 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc;'
+                               'CRITICAL;notify-service;BAD')
+                ]
+                self.check_monitoring_logs(expected_logs)
+
+            # ---
+            # 8/
+            # ---
+            # The service recovers, all the notified contact will be contacted
+            self.scheduler_loop(2, [[svc, 0, 'OK']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            expected_logs += [
+                ('info', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;OK;HARD;1;OK'),
+                ('info', 'SERVICE ALERT: test_host_0_esc;test_svc_esc;OK;HARD;2;OK'),
+                ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc;'
+                          'OK;notify-service;OK'),
+                ('info', 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
+                          'OK;notify-service;OK'),
+                ('info', 'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc;'
+                          'OK;notify-service;OK'),
+                ('info', 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc;'
+                          'OK;notify-service;OK'),
+                ('info', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;OK;HARD;1;OK')
+            ]
+            self.check_monitoring_logs(expected_logs)
 
     def test_time_based_escalation(self):
         """ Time based escalations """
-        self._main_broker.broks.clear()
+        del self._main_broker.broks[:]
 
         # Get host and services
         host = self._scheduler.hosts.find_by_name("test_host_0_esc")
@@ -366,196 +401,185 @@ class TestEscalations(AlignakTest):
 
         tolevel2 = self._scheduler.escalations.find_by_name('ToLevel2-time')
         assert tolevel2 is not None
-        # Todo: do not match any of both assertions ... wtf?
-        # self.assertIs(tolevel2, Serviceescalation)
-        # self.assertIs(tolevel2, Escalation)
+        print("Esc: %s / %s" % (type(tolevel2), tolevel2))
+        self.assertIsInstance(tolevel2, Escalation)
         assert tolevel2.uuid in svc.escalations
 
         tolevel3 = self._scheduler.escalations.find_by_name('ToLevel3-time')
         assert tolevel3 is not None
-        # Todo: do not match any of both assertions ... wtf?
-        # self.assertIs(tolevel3, Serviceescalation)
-        # self.assertIs(tolevel3, Escalation)
+        self.assertIsInstance(tolevel3, Escalation)
         assert tolevel3.uuid in svc.escalations
 
-        # To make tests quicker we make notifications sent very quickly
-        svc.notification_interval = 0.001
+        # 1 notification pet minute
+        svc.notification_interval = 1
 
-        #--------------------------------------------------------------
-        # initialize host/service state
-        #--------------------------------------------------------------
-        self.scheduler_loop(1, [
-            [host, 0, 'UP'], [svc, 0, 'OK']
-        ])
-        assert "HARD" == host.state_type
-        assert "UP" == host.state
-        assert 0 == host.current_notification_number
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2018, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
 
-        assert "HARD" == svc.state_type
-        assert "OK" == svc.state
-        assert 0 == svc.current_notification_number
+            #--------------------------------------------------------------
+            # initialize host/service state
+            #--------------------------------------------------------------
+            self.scheduler_loop(1, [
+                [host, 0, 'UP'], [svc, 0, 'OK']
+            ])
+            assert "HARD" == host.state_type
+            assert "UP" == host.state
+            assert 0 == host.current_notification_number
 
-        # Service goes to CRITICAL/SOFT
-        self.scheduler_loop(1, [[svc, 2, 'BAD']])
-        assert "SOFT" == svc.state_type
-        assert "CRITICAL" == svc.state
-        # No notification...
-        assert 0 == svc.current_notification_number
+            assert "HARD" == svc.state_type
+            assert "OK" == svc.state
+            assert 0 == svc.current_notification_number
 
-        # ---
-        # 1/
-        # ---
-        # Service goes to CRITICAL/HARD
-        time.sleep(1)
-        self.scheduler_loop(1, [[svc, 2, 'BAD']])
-        assert "HARD" == svc.state_type
-        assert "CRITICAL" == svc.state
-        # Service notification number must be 1
-        assert 1 == svc.current_notification_number
-        cnn = svc.current_notification_number
+            # Time warp
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
 
-        # We did not yet got an escalated notification
-        assert 0 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
-
-        # We should have had 2 ALERT and a NOTIFICATION to the service defined contact
-        # We also have a notification to level1 contact which is a contact defined for the host
-        expected_logs = [
-            ('info',
-             'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;UP'),
-            ('info',
-             'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;OK;HARD;1;OK'),
-            ('error',
-             'SERVICE ALERT: test_host_0_esc;test_svc_esc_time;CRITICAL;SOFT;1;BAD'),
-            ('error',
-             'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;SOFT;1;BAD'),
-            ('error',
-             'SERVICE ALERT: test_host_0_esc;test_svc_esc_time;CRITICAL;HARD;2;BAD'),
-            ('error',
-             'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;HARD;2;BAD'),
-            ('error',
-             'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc_time;CRITICAL;notify-service;BAD'),
-            ('error',
-             'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;CRITICAL;notify-service;BAD'),
-        ]
-        self.check_monitoring_logs(expected_logs)
-
-        # ---
-        # time warp :)
-        # ---
-        # For the test, we hack the notification value because we do not want to wait 1 hour!
-        for n in list(svc.notifications_in_progress.values()):
-            # We say that it's already 3600 seconds since the last notification
-            svc.notification_interval = 3600
-            # and we say that there is still 1 hour since the notification creation
-            # so it will say the notification time is huge, and it will escalade
-            n.creation_time = n.creation_time - 3600
-
-        # ---
-        # 2/
-        # ---
-        # Service is still CRITICAL/HARD
-        time.sleep(1)
-        self.scheduler_loop(1, [[svc, 2, 'BAD']])
-
-        # Service notification number increased
-        assert 2 == svc.current_notification_number
-
-        # Todo: check if it should be ok - test_contact notification is considered escalated.
-        # We got 2 escalated notifications!
-        assert 2 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
-
-        # Now also notified to the level2 and a second notification to the service defined contact
-        expected_logs += [
-            ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;'
-                       'CRITICAL;HARD;2;BAD'),
-            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;'
-                       'CRITICAL;notify-service;BAD'),
-            ('error', 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc_time;'
-                       'CRITICAL;notify-service;BAD')
-        ]
-        self.check_monitoring_logs(expected_logs)
-
-        # ---
-        # time warp :)
-        # ---
-        # For the test, we hack the notification value because we do not want to wait 1 hour!
-        for n in list(svc.notifications_in_progress.values()):
-            # Notifications must be raised now...
-            n.t_to_go = time.time()
-
-        # ---
-        # 3/
-        # ---
-        # Service is still CRITICAL/HARD
-        time.sleep(1)
-        self.scheduler_loop(1, [[svc, 2, 'BAD']])
-
-        # Service notification number increased
-        assert 3 == svc.current_notification_number
-
-        # We got 2 more escalated notification
-        assert 4 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
-        expected_logs += [
-            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;'
-                       'CRITICAL;notify-service;BAD'),
-            ('error', 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc_time;'
-                       'CRITICAL;notify-service;BAD'),
-            ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;'
-                       'CRITICAL;HARD;2;BAD')
-        ]
-        self.check_monitoring_logs(expected_logs)
-
-        # ---
-        # time warp :)
-        # ---
-        # Now we go for level3, so again we say: he, in fact we start one hour earlyer,
-        # so the total notification duration is near 2 hour, so we will raise level3
-        for n in list(svc.notifications_in_progress.values()):
-            # We say that it's already 3600 seconds since the last notification
-            n.t_to_go = time.time()
-            n.creation_time = n.creation_time - 3600
-
-        # ---
-        # 4/
-        # ---
-        # Service is still CRITICAL/HARD
-        time.sleep(1)
-        self.scheduler_loop(1, [[svc, 2, 'BAD']])
-
-        # Service notification number increased
-        assert 4 == svc.current_notification_number
-
-        # We got one more escalated notification
-        assert 5 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
-        expected_logs += [
-            ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;'
-                       'CRITICAL;HARD;2;BAD'),
-            ('error', 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;'
-                       'CRITICAL;notify-service;BAD')
-        ]
-        self.check_monitoring_logs(expected_logs)
-
-        # ---
-        # 5/
-        # ---
-        # Now we send 10 more alerts and we are still always notifying only level3
-        for i in range(10):
-            # And still a time warp :)
-            for n in list(svc.notifications_in_progress.values()):
-                # We say that it's already 3600 seconds since the last notification
-                n.t_to_go = time.time()
-
-            # Service is still CRITICAL/HARD
-            time.sleep(.1)
+            # Service goes to CRITICAL/SOFT
             self.scheduler_loop(1, [[svc, 2, 'BAD']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "SOFT" == svc.state_type
+            assert "CRITICAL" == svc.state
+            # No notification...
+            assert 0 == svc.current_notification_number
+
+            # ---
+            # 1/
+            # ---
+            # Service goes to CRITICAL/HARD
+            time.sleep(1)
+            self.scheduler_loop(1, [[svc, 2, 'BAD']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "HARD" == svc.state_type
+            assert "CRITICAL" == svc.state
+            # Service notification number must be 1
+            assert 1 == svc.current_notification_number
+            cnn = svc.current_notification_number
+
+            # We did not yet got an escalated notification
+            assert 0 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
+
+            # We should have had 2 ALERT and a NOTIFICATION to the service defined contact
+            # We also have a notification to level1 contact which is a contact defined for the host
+            expected_logs = [
+                ('info',
+                 'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;UP'),
+                ('info',
+                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;OK;HARD;1;OK'),
+                ('error',
+                 'SERVICE ALERT: test_host_0_esc;test_svc_esc_time;CRITICAL;SOFT;1;BAD'),
+                ('error',
+                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;SOFT;1;BAD'),
+                ('error',
+                 'SERVICE ALERT: test_host_0_esc;test_svc_esc_time;CRITICAL;HARD;2;BAD'),
+                ('error',
+                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;HARD;2;BAD'),
+                ('error',
+                 'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc_time;CRITICAL;notify-service;BAD'),
+                ('error',
+                 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;CRITICAL;notify-service;BAD'),
+            ]
+            self.check_monitoring_logs(expected_logs)
+
+            # ---
+            # time warp :)
+            # ---
+            frozen_datetime.tick(delta=datetime.timedelta(hours=1, seconds=1))
+
+            # # For the test, we hack the notification value because we do not want to wait 1 hour!
+            # for n in list(svc.notifications_in_progress.values()):
+            #     # We say that it's already 3600 seconds since the last notification
+            #     svc.notification_interval = 3600
+            #     # and we say that there is still 1 hour since the notification creation
+            #     # so it will say the notification time is huge, and it will escalade
+            #     n.creation_time = n.creation_time - 3600
+            #
+            # ---
+            # 2/
+            # ---
+            # Service is still CRITICAL/HARD
+            self.scheduler_loop(1, [[svc, 2, 'BAD']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
 
             # Service notification number increased
-            assert 5 + i == svc.current_notification_number
+            assert 2 == svc.current_notification_number
+
+            # We got 2 escalated notifications!
+            # - one notification to level2 contact
+            # -one more notification for test_contact that is now considered as escalated.
+            assert 2 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
+
+            # Now also notified to the level2 and a second notification to the service defined contact
+            expected_logs += [
+                ('error',
+                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;HARD;2;BAD'),
+                ('info',
+                 'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;Host assumed to be UP'),
+                ('error',
+                 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc_time;CRITICAL;notify-service;BAD'),
+                ('error',
+                 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;CRITICAL;notify-service;BAD')
+            ]
+            self.check_monitoring_logs(expected_logs)
+
+            # ---
+            # time warp :)
+            # ---
+            frozen_datetime.tick(delta=datetime.timedelta(hours=1, seconds=1))
+
+            # ---
+            # 3/
+            # ---
+            # Service is still CRITICAL/HARD
+            self.scheduler_loop(1, [[svc, 2, 'BAD']])
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+
+            # Service notification number increased
+            assert 3 == svc.current_notification_number
+
+            # We got 2 more escalated notification
+            assert 3 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
+            expected_logs += [
+                ('info',
+                 'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;Host assumed to be UP'),
+                ('error',
+                 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;CRITICAL;notify-service;BAD'),
+                ('error',
+                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;HARD;2;BAD')
+            ]
+            self.check_monitoring_logs(expected_logs)
+
+            # ---
+            # time warp :)
+            # ---
+            frozen_datetime.tick(delta=datetime.timedelta(hours=1, seconds=1))
+
+            # ---
+            # 4/
+            # ---
+            # Service is still CRITICAL/HARD
+            self.scheduler_loop(1, [[svc, 2, 'BAD']])
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+
+            # Service notification number increased
+            assert 4 == svc.current_notification_number
 
             # We got one more escalated notification
-            assert 6 + i == \
-                             len([n.escalated for n in
-                                  list(self._scheduler.actions.values()) if n.escalated])
+            assert 5 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
             expected_logs += [
                 ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;'
                            'CRITICAL;HARD;2;BAD'),
@@ -564,22 +588,56 @@ class TestEscalations(AlignakTest):
             ]
             self.check_monitoring_logs(expected_logs)
 
-        # ---
-        # 6/
-        # ---
-        # The service recovers, all the notified contact will be contacted
-        self.scheduler_loop(2, [[svc, 0, 'OK']])
-        expected_logs += [
-            ('info', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;OK;HARD;1;OK'),
-            ('info', 'SERVICE ALERT: test_host_0_esc;test_svc_esc_time;OK;HARD;2;OK'),
-            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;'
-                      'OK;notify-service;OK'),
-            ('info', 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc_time;'
-                      'OK;notify-service;OK'),
-            ('info', 'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc_time;'
-                      'OK;notify-service;OK'),
-            ('info', 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;'
-                      'OK;notify-service;OK'),
-            ('info', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;OK;HARD;1;OK')
-        ]
-        self.check_monitoring_logs(expected_logs)
+            # ---
+            # 5/
+            # ---
+            # Now we send 10 more alerts and we are still always notifying only level3
+            for i in range(10):
+                # ---
+                # time warp :)
+                # ---
+                frozen_datetime.tick(delta=datetime.timedelta(hours=1, seconds=1))
+
+                # Service is still CRITICAL/HARD
+                self.scheduler_loop(1, [[svc, 2, 'BAD']])
+                # Time warp 1 second
+                frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+                self.scheduler_loop(1)
+
+                # Service notification number increased
+                assert 5 + i == svc.current_notification_number
+
+                # We got one more escalated notification
+                assert 6 + i == \
+                                 len([n.escalated for n in
+                                      list(self._scheduler.actions.values()) if n.escalated])
+                expected_logs += [
+                    ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;'
+                               'CRITICAL;HARD;2;BAD'),
+                    ('error', 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;'
+                               'CRITICAL;notify-service;BAD')
+                ]
+                self.check_monitoring_logs(expected_logs)
+
+            # ---
+            # 6/
+            # ---
+            # The service recovers, all the notified contact will be contacted
+            self.scheduler_loop(2, [[svc, 0, 'OK']])
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            expected_logs += [
+                ('info', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;OK;HARD;1;OK'),
+                ('info', 'SERVICE ALERT: test_host_0_esc;test_svc_esc_time;OK;HARD;2;OK'),
+                ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;'
+                          'OK;notify-service;OK'),
+                ('info', 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc_time;'
+                          'OK;notify-service;OK'),
+                ('info', 'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc_time;'
+                          'OK;notify-service;OK'),
+                ('info', 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;'
+                          'OK;notify-service;OK'),
+                ('info', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;OK;HARD;1;OK')
+            ]
+            self.check_monitoring_logs(expected_logs)

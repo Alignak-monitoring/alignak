@@ -519,7 +519,7 @@ class TestDaemonsApi(AlignakTest):
             print(("%s, get_broks raw_data: %s" % (name, raw_data.text)))
             data = raw_data.json()
             print(("%s, broks: %s" % (name, data)))
-            assert isinstance(data, dict), "Data is not a dict!"
+            assert isinstance(data, list), "Data is not a list!"
         # -----
 
         # -----

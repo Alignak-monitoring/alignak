@@ -533,7 +533,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
 
         # Clear logs and broks
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         # The scheduler receives a known host but unknown service service_check_result
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;unknownservice;1;' \
                 'Service is WARNING|rtt=9999;5;10;0;10000' % time.time()
@@ -543,10 +543,10 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         broks = []
         # Broks from my scheduler brokers
         for broker_link_uuid in self._scheduler.my_daemon.brokers:
-            broks.extend([b for b in list(self._scheduler.my_daemon.brokers[broker_link_uuid].values())])
+            broks.extend([b for b in self._scheduler.my_daemon.brokers[broker_link_uuid].broks])
 
         for b in broks:
-            print(("Brok: %s" % b))
+            print("Brok: %s" % b)
 
         broks = [b for b in broks if b.type == 'unknown_service_check_result']
         assert len(broks) == 1
@@ -555,29 +555,27 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
 
         # Clear logs and broks
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         # The scheduler receives and unknown host and service service_check_result
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;unknownhost;unknownservice;1;' \
                 'Service is WARNING|rtt=9999;5;10;0;10000' % time.time()
         self._scheduler.run_external_commands([excmd])
 
         # We get an 'unknown_service_check_result'...
-        broks = [b for b in list(self._main_broker.broks.values())
-                 if b.type == 'unknown_service_check_result']
+        broks = [b for b in self._main_broker.broks if b.type == 'unknown_service_check_result']
         assert len(broks) == 1
         # ...but no logs
         assert 0 == self.count_logs()
 
         # Clear logs and broks
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         # The scheduler receives an unknown host host_check_result
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;unknownhost;' \
                 '1;Host is UP|rtt=9999;5;10;0;10000' % time.time()
         self._scheduler.run_external_commands([excmd])
         # A brok...
-        broks = [b for b in list(self._main_broker.broks.values())
-                 if b.type == 'unknown_host_check_result']
+        broks = [b for b in self._main_broker.broks if b.type == 'unknown_host_check_result']
         assert len(broks) == 1
         # ...but no logs
         assert 0 == self.count_logs()
@@ -589,15 +587,14 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
 
         # Clear logs and broks
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         # The scheduler receives a known host but unknown service service_check_result
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;unknownservice;1;' \
                 'Service is WARNING|rtt=9999;5;10;0;10000' % time.time()
         self._scheduler.run_external_commands([excmd])
 
         # No brok...
-        broks = [b for b in list(self._main_broker.broks.values())
-                 if b.type == 'unknown_service_check_result']
+        broks = [b for b in self._main_broker.broks if b.type == 'unknown_service_check_result']
         assert len(broks) == 0
 
         # ...but a log
@@ -608,15 +605,14 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
 
         # Clear logs and broks
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         # The scheduler receives an unknown host and service service_check_result
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;unknownhost;unknownservice;1;' \
                 'Service is WARNING|rtt=9999;5;10;0;10000' % time.time()
         self._scheduler.run_external_commands([excmd])
 
         # No brok...
-        broks = [b for b in list(self._main_broker.broks.values())
-                 if b.type == 'unknown_service_check_result']
+        broks = [b for b in self._main_broker.broks if b.type == 'unknown_service_check_result']
         assert len(broks) == 0
 
         # ...but a log
@@ -627,15 +623,14 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
 
         # Clear logs and broks
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         # The scheduler receives an unknown host host_check_result
         excmd = '[%d] PROCESS_HOST_CHECK_RESULT;unknownhost;' \
                 '1;Host is UP|rtt=9999;5;10;0;10000' % time.time()
         self._scheduler.run_external_commands([excmd])
 
         # No brok...
-        broks = [b for b in list(self._main_broker.broks.values())
-                 if b.type == 'unknown_host_check_result']
+        broks = [b for b in self._main_broker.broks if b.type == 'unknown_host_check_result']
         assert len(broks) == 0
 
         # ...but a log
@@ -661,7 +656,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
 
         # Clear logs and broks
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         # The receiver receives an unknown service external command
         excmd = ExternalCommand('[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;unknownservice;'
                                 '1;Service is WARNING|rtt=9999;5;10;0;10000' % time.time())
@@ -678,7 +673,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         for b in broks:
             print(("Brok: %s" % b))
 
-        # for brok in sorted(self._main_broker.broks.values(), key=lambda x: x.creation_time):
+        # for brok in self._main_broker.broks, key=lambda x: x.creation_time):
         #     print("Brok: %s" % brok)
 
         for brok in sorted(list(self._receiver_daemon.broks.values()), key=lambda x: x.creation_time):
@@ -699,15 +694,14 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
 
         # Clear logs and broks
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         # The receiver receives an unknown service external command
         excmd = ExternalCommand('[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;unknownservice;'
                                 '1;Service is WARNING|rtt=9999;5;10;0;10000' % time.time())
         self._receiver.unprocessed_external_commands.append(excmd)
         self._receiver.push_external_commands_to_schedulers()
         # No brok...
-        broks = [b for b in list(self._main_broker.broks.values())
-                 if b.type == 'unknown_service_check_result']
+        broks = [b for b in self._main_broker.broks if b.type == 'unknown_service_check_result']
         assert len(broks) == 0
         # ...but a log
         self.show_logs()

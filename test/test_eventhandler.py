@@ -138,7 +138,7 @@ class TestEventhandler(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(list(my_broker.broks.values()), key=lambda x: x.creation_time):
+        for brok in sorted(my_broker.broks, key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))

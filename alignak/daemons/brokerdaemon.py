@@ -248,11 +248,11 @@ class Broker(BaseSatellite):
                                        % (satellite_link.name), len(tmp_broks))
                         statsmgr.timer('get-new-broks-time.%s'
                                        % (satellite_link.name), time.time() - _t0)
-                        for brok in list(tmp_broks.values()):
+                        for brok in tmp_broks:
                             brok.instance_id = satellite_link.instance_id
 
                         # Add the broks to our global list
-                        self.external_broks.extend(list(tmp_broks.values()))
+                        self.external_broks.extend(tmp_broks)
 
     # def do_stop(self):
     #     """Stop all children of this process
@@ -300,7 +300,7 @@ class Broker(BaseSatellite):
 
                     # Must look if we already had a configuration and save our broks
                     already_got = rs_conf['instance_id'] in my_satellites
-                    broks = {}
+                    broks = []
                     actions = {}
                     wait_homerun = {}
                     external_commands = {}

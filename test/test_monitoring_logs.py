@@ -45,7 +45,7 @@ class TestMonitoringLogs(AlignakTest):
         """
         # Get my first broker link
         my_broker = [b for b in list(self._scheduler.my_daemon.brokers.values())][0]
-        my_broker.broks = {}
+        my_broker.broks = []
 
         self.scheduler_loop(1, [[item, state_id, state]])
         time.sleep(0.1)

@@ -53,7 +53,7 @@ class TestBrokAckDowntime(AlignakTest):
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         svc.event_handler_enabled = False
 
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 2, 'CRITICAL']])
         time.sleep(0.1)
@@ -66,8 +66,8 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_ack_raise = []
         brok_ack_expire = []
-        for brok in list(self._main_broker.broks.values()):
-            print(("Brok: %s" % brok))
+        for brok in self._main_broker.broks:
+            print("Brok: %s" % brok)
             if brok.type == 'acknowledge_raise':
                 brok_ack_raise.append(brok)
             elif brok.type == 'acknowledge_expire':
@@ -82,11 +82,11 @@ class TestBrokAckDowntime(AlignakTest):
         assert hdata['comment'] == 'normal process'
 
         # return service in OK mode, so the acknowledge will be removed by the scheduler
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         self.scheduler_loop(2, [[host, 0, 'UP'], [svc, 0, 'OK']])
         brok_ack_raise = []
         brok_ack_expire = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'acknowledge_raise':
                 brok_ack_raise.append(brok)
             elif brok.type == 'acknowledge_expire':
@@ -100,7 +100,7 @@ class TestBrokAckDowntime(AlignakTest):
         assert hdata['service'] == 'test_ok_0'
 
         # Do the same but remove acknowledge  with external commands:
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 2, 'CRITICAL']])
         time.sleep(0.1)
 
@@ -117,7 +117,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_ack_raise = []
         brok_ack_expire = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             print(("Brok: %s" % brok))
             if brok.type == 'acknowledge_raise':
                 brok_ack_raise.append(brok)
@@ -139,17 +139,14 @@ class TestBrokAckDowntime(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self._scheduler.services.find_srv_by_name_and_hostname(
-            "test_host_0",
-            "test_ok_0")
-        # To make tests quicker we make notifications send very quickly
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         svc.event_handler_enabled = False
@@ -161,14 +158,23 @@ class TestBrokAckDowntime(AlignakTest):
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM_EXPIRE;{1};{2};{3};{4};{5};{6};{7}\n". \
             format(int(now), 'test_host_0', 1, 0, 1, (now + 2), 'darth vader', 'normal process')
         self._scheduler.run_external_commands([cmd])
-        self.scheduler_loop(3, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
+        self.external_command_loop(2)
+        # self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
 
         brok_ack = []
-        for brok in list(self._main_broker.broks.values()):
-            print(("Brok: %s" % brok))
+        print("Broker uuid: %s" % self._main_broker.uuid)
+        print("Broker broks: %s" % self._main_broker.broks)
+        for brok in self._main_broker.broks:
+            print("Broker brok: %s" % brok)
             if brok.type == 'acknowledge_raise':
-                print(("Brok: %s" % brok))
+                print("Brok: %s" % brok)
                 brok_ack.append(brok)
+
+        print("***Scheduler: %s" % self._scheduler)
+        print("***Scheduler daemon: %s" % self._scheduler.my_daemon)
+        print("***Scheduler daemon brokers: %s" % self._scheduler.my_daemon.brokers)
+        for broker_link_uuid in self._scheduler.my_daemon.brokers:
+            print("*** %s - broks: %s" % (broker_link_uuid, self._scheduler.my_daemon.brokers[broker_link_uuid].broks))
 
         # Got one brok for the host ack and one brok for the service ack
         assert len(brok_ack) == 2
@@ -194,11 +200,11 @@ class TestBrokAckDowntime(AlignakTest):
         assert host_brok and service_brok
 
         # return host in UP mode, so the acknowledge will be removed by the scheduler
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         self.scheduler_loop(2, [[host, 0, 'UP'], [svc, 0, 'OK']])
         brok_ack_raise = []
         brok_ack_expire = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'acknowledge_raise':
                 brok_ack_raise.append(brok)
             elif brok.type == 'acknowledge_expire':
@@ -228,7 +234,7 @@ class TestBrokAckDowntime(AlignakTest):
         assert host_brok and service_brok
 
         # Do the same but remove acknowledge with external commands:
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
         time.sleep(0.1)
 
@@ -245,8 +251,8 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_ack_raise = []
         brok_ack_expire = []
-        for brok in list(self._main_broker.broks.values()):
-            print(("Brok: %s" % brok))
+        for brok in self._main_broker.broks:
+            print("Brok: %s" % brok)
             if brok.type == 'acknowledge_raise':
                 brok_ack_raise.append(brok)
             elif brok.type == 'acknowledge_expire':
@@ -266,7 +272,7 @@ class TestBrokAckDowntime(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -296,7 +302,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -311,13 +317,13 @@ class TestBrokAckDowntime(AlignakTest):
         assert hdata['comment'] == 'downtime comment'
 
         # expire downtime
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         time.sleep(5)
         self.scheduler_loop(2, [[host, 0, 'UP'], [svc, 2, 'CRITICAL']])
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -338,7 +344,7 @@ class TestBrokAckDowntime(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -368,7 +374,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -382,13 +388,13 @@ class TestBrokAckDowntime(AlignakTest):
         assert 'service' not in hdata
 
         # expire downtime
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         time.sleep(5)
         self.scheduler_loop(2, [[host, 0, 'UP'], [svc, 2, 'CRITICAL']])
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -408,7 +414,7 @@ class TestBrokAckDowntime(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -437,7 +443,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -447,10 +453,10 @@ class TestBrokAckDowntime(AlignakTest):
         assert len(brok_downtime_expire) == 0
 
         time.sleep(1)
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         self.scheduler_loop(3, [[host, 0, 'UP'], [svc, 2, 'CRITICAL']])
 
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -470,7 +476,7 @@ class TestBrokAckDowntime(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -489,7 +495,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -500,14 +506,14 @@ class TestBrokAckDowntime(AlignakTest):
 
         # External command: delete all host downtime
         now = int(time.time())
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         cmd = '[%d] DEL_ALL_SVC_DOWNTIMES;test_host_0;test_ok_0' % now
         self._scheduler.run_external_commands([cmd])
         self.external_command_loop()
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -527,7 +533,7 @@ class TestBrokAckDowntime(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -546,7 +552,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':
@@ -557,14 +563,14 @@ class TestBrokAckDowntime(AlignakTest):
 
         # External command: delete all host downtime
         now = int(time.time())
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         cmd = '[%d] DEL_ALL_HOST_DOWNTIMES;test_host_0' % now
         self._scheduler.run_external_commands([cmd])
         self.external_command_loop()
 
         brok_downtime_raise = []
         brok_downtime_expire = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'downtime_raise':
                 brok_downtime_raise.append(brok)
             elif brok.type == 'downtime_expire':

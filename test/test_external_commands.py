@@ -135,7 +135,7 @@ class TestExternalCommands(AlignakTest):
         # ---
         # Lowercase command is allowed
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         excmd = '[%d] command' % (now)
         res = self.manage_external_command(excmd)
         # Resolve command result is None because the command is not recognized
@@ -148,7 +148,7 @@ class TestExternalCommands(AlignakTest):
         # ---
         # Some commands are not implemented
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         excmd = '[%d] shutdown_program' % (now)
         res = self.manage_external_command(excmd)
         if self.ecm_mode == 'applyer':
@@ -165,7 +165,7 @@ class TestExternalCommands(AlignakTest):
         # ---
         # Command may not have a timestamp
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         excmd = 'shutdown_program'
         res = self.manage_external_command(excmd)
         if self.ecm_mode == 'applyer':
@@ -181,7 +181,7 @@ class TestExternalCommands(AlignakTest):
         # ---
         # Timestamp must be an integer
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         excmd = '[fake] shutdown_program'
         res = self.manage_external_command(excmd)
         # Resolve command result is not None because the command is recognized
@@ -194,13 +194,13 @@ class TestExternalCommands(AlignakTest):
         # ---
         # Malformed command
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         excmd = '[%d] MALFORMED COMMAND' % now
         res = self.manage_external_command(excmd)
         assert res is None
         if self.ecm_mode == 'applyer':
             # We get 'monitoring_log' broks for logging to the monitoring logs...
-            broks = [b for b in list(self._main_broker.broks.values())
+            broks = [b for b in self._main_broker.broks
                      if b.type == 'monitoring_log']
             assert len(broks) == 1
         # ...and some logs
@@ -211,12 +211,12 @@ class TestExternalCommands(AlignakTest):
         # ---
         # Malformed command
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         excmd = '[%d] ADD_HOST_COMMENT;test_host_0;1;qdsqd' % now
         res = self.manage_external_command(excmd)
         if self.ecm_mode == 'applyer':
             # We get an 'monitoring_log' brok for logging to the monitoring logs...
-            broks = [b for b in list(self._main_broker.broks.values())
+            broks = [b for b in self._main_broker.broks
                      if b.type == 'monitoring_log']
             assert len(broks) == 1
             # ...and some logs
@@ -225,12 +225,12 @@ class TestExternalCommands(AlignakTest):
         # ---
         # Unknown command
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         excmd = '[%d] UNKNOWN_COMMAND' % now
         res = self.manage_external_command(excmd)
         if self.ecm_mode == 'applyer':
             # We get an 'monitoring_log' brok for logging to the monitoring logs...
-            broks = [b for b in list(self._main_broker.broks.values())
+            broks = [b for b in self._main_broker.broks
                      if b.type == 'monitoring_log']
             assert len(broks) == 1
             # ...and some logs
@@ -243,13 +243,13 @@ class TestExternalCommands(AlignakTest):
         #  ---
         # External command: unknown host
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         excmd = '[%d] DISABLE_HOST_CHECK;not_found_host' % time.time()
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         if self.ecm_mode == 'applyer':
             # No 'monitoring_log' brok
-            broks = [b for b in list(self._main_broker.broks.values())
+            broks = [b for b in self._main_broker.broks
                      if b.type == 'monitoring_log']
             assert len(broks) == 0
             # ...but an unknown check result brok is raised...
@@ -302,7 +302,7 @@ class TestExternalCommands(AlignakTest):
         assert svc.notifications_enabled
 
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         excmd = '[%d] DISABLE_HOST_NOTIFICATIONS;test_host_0' % time.time()
         res = self.manage_external_command(excmd)
         print(("Result (mode=%s): %s" % (self.ecm_mode, res)))
@@ -318,7 +318,7 @@ class TestExternalCommands(AlignakTest):
 
         # Clear logs and broks
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
 
         # Unknown command
         excmds = []
@@ -329,7 +329,7 @@ class TestExternalCommands(AlignakTest):
         self._scheduler.run_external_commands(excmds)
         self.external_command_loop()
         # We get an 'monitoring_log' brok for logging to the monitoring logs...
-        broks = [b for b in list(self._main_broker.broks.values())
+        broks = [b for b in self._main_broker.broks
                  if b.type == 'monitoring_log']
         assert len(broks) == 2
 
@@ -899,7 +899,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -992,7 +992,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -1079,7 +1079,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -1168,7 +1168,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -1301,7 +1301,7 @@ class TestExternalCommands(AlignakTest):
 
             # We got 'monitoring_log' broks for logging to the monitoring logs...
             monitoring_logs = []
-            for brok in list(self._main_broker.broks.values()):
+            for brok in self._main_broker.broks:
                 if brok.type == 'monitoring_log':
                     data = unserialize(brok.data)
                     monitoring_logs.append((data['level'], data['message']))
@@ -1467,7 +1467,7 @@ class TestExternalCommands(AlignakTest):
 
             # We got 'monitoring_log' broks for logging to the monitoring logs...
             monitoring_logs = []
-            for brok in list(self._main_broker.broks.values()):
+            for brok in self._main_broker.broks:
                 if brok.type == 'monitoring_log':
                     data = unserialize(brok.data)
                     monitoring_logs.append((data['level'], data['message']))
@@ -1625,7 +1625,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -1738,7 +1738,7 @@ class TestExternalCommands(AlignakTest):
     
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -1836,7 +1836,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -2523,7 +2523,7 @@ class TestExternalCommands(AlignakTest):
         """
         # Clear logs and broks
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
 
         now = int(time.time())
 
@@ -2536,7 +2536,7 @@ class TestExternalCommands(AlignakTest):
         # self.assert_any_log_match('I awoke after sleeping 3 seconds')
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -2552,7 +2552,7 @@ class TestExternalCommands(AlignakTest):
 
         # Clear logs and broks
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
 
         # RELOAD_CONFIG
         excmd = '[%d] RELOAD_CONFIG' % now
@@ -2563,7 +2563,7 @@ class TestExternalCommands(AlignakTest):
         # self.assert_any_log_match('I awoke after sleeping 2 seconds')
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -2587,7 +2587,7 @@ class TestExternalCommands(AlignakTest):
         """
         # Clear logs and broks
         self.clear_logs()
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
 
         now = int(time.time())
 
@@ -2597,7 +2597,7 @@ class TestExternalCommands(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -2612,146 +2612,146 @@ class TestExternalCommands(AlignakTest):
             assert (log_level, log_message) in monitoring_logs
 
         # Clear broks
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         now = int(time.time())
         excmd = '[%d] SET_HOST_NOTIFICATION_NUMBER;test_host_0;0' % (now)
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in list(self._main_broker.broks.values())
+        broks = [b for b in self._main_broker.broks
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         now = int(time.time())
         excmd = '[%d] SET_SVC_NOTIFICATION_NUMBER;test_host_0;test_ok_0;1' % (now)
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in list(self._main_broker.broks.values())
+        broks = [b for b in self._main_broker.broks
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         now = int(time.time())
         excmd = '[%d] SEND_CUSTOM_HOST_NOTIFICATION;test_host_0;100;' \
                 'test_contact;My notification' % (now)
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in list(self._main_broker.broks.values())
+        broks = [b for b in self._main_broker.broks
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         now = int(time.time())
         excmd = '[%d] SEND_CUSTOM_SVC_NOTIFICATION;test_host_0;test_ok_0;100;' \
                 'test_contact;My notification' % (now)
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in list(self._main_broker.broks.values())
+        broks = [b for b in self._main_broker.broks
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         now = int(time.time())
         excmd = '[%d] SCHEDULE_AND_PROPAGATE_HOST_DOWNTIME;test_host_0;%s;%s;' \
                 '1;0;1200;test_contact;My downtime' % (now, now + 120, now + 1200)
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in list(self._main_broker.broks.values())
+        broks = [b for b in self._main_broker.broks
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         now = int(time.time())
         excmd = '[%d] SCHEDULE_AND_PROPAGATE_TRIGGERED_HOST_DOWNTIME;test_host_0;%s;%s;' \
                 '1;0;1200;test_contact;My downtime' % (now, now + 120, now + 1200)
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in list(self._main_broker.broks.values())
+        broks = [b for b in self._main_broker.broks
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         excmd = '[%d] SAVE_STATE_INFORMATION' % int(time.time())
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in list(self._main_broker.broks.values())
+        broks = [b for b in self._main_broker.broks
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         excmd = '[%d] READ_STATE_INFORMATION' % int(time.time())
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in list(self._main_broker.broks.values())
+        broks = [b for b in self._main_broker.broks
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         excmd = '[%d] PROCESS_FILE;file;1' % int(time.time())
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in list(self._main_broker.broks.values())
+        broks = [b for b in self._main_broker.broks
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         excmd = '[%d] ENABLE_HOST_AND_CHILD_NOTIFICATIONS;test_host_0' % int(time.time())
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in list(self._main_broker.broks.values())
+        broks = [b for b in self._main_broker.broks
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         excmd = '[%d] DISABLE_HOST_AND_CHILD_NOTIFICATIONS;test_host_0' % int(time.time())
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in list(self._main_broker.broks.values())
+        broks = [b for b in self._main_broker.broks
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         excmd = '[%d] DISABLE_ALL_NOTIFICATIONS_BEYOND_HOST;test_host_0' % int(time.time())
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in list(self._main_broker.broks.values())
+        broks = [b for b in self._main_broker.broks
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         excmd = '[%d] ENABLE_ALL_NOTIFICATIONS_BEYOND_HOST;test_host_0' % int(time.time())
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in list(self._main_broker.broks.values())
+        broks = [b for b in self._main_broker.broks
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         excmd = '[%d] CHANGE_GLOBAL_HOST_EVENT_HANDLER;check-host-alive' % int(time.time())
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in list(self._main_broker.broks.values())
+        broks = [b for b in self._main_broker.broks
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
 
         # Clear broks
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         excmd = '[%d] CHANGE_GLOBAL_SVC_EVENT_HANDLER;check-host-alive' % int(time.time())
         self._scheduler.run_external_commands([excmd])
         self.assert_any_log_match('is not currently implemented in Alignak')
-        broks = [b for b in list(self._main_broker.broks.values())
+        broks = [b for b in self._main_broker.broks
                  if b.type == 'monitoring_log']
         assert 2 == len(broks)
