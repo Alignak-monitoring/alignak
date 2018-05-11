@@ -1111,14 +1111,21 @@ class Service(SchedulingItem):
         # Block if notifications are program-wide disabled
         # Block if notifications are disabled for this service
         # Block if the current status is in the notification_options w,u,c,r,f,s
-        # Does the notification period allow sending out this notification?
         if not self.enable_notifications or \
                 not self.notifications_enabled or \
-                (notification_period is not None and
-                 not notification_period.is_time_valid(t_wished)) or \
                 'n' in self.notification_options:
+            logger.debug("Service: %s, notification %s sending is blocked by configuration",
+                         self.get_name(), n_type)
+            print("Service: %s, notification %s sending is blocked by configuration"
+                  % (self.get_name(), n_type))
+            return True
+
+        # Does the notification period allow sending out this notification?
+        if notification_period is not None and not notification_period.is_time_valid(t_wished):
             logger.debug("Service: %s, notification %s sending is blocked by globals",
                          self.get_name(), n_type)
+            print("Service: %s, notification %s sending is blocked by notification period"
+                  % (self.get_name(), n_type))
             return True
 
         if n_type in (u'PROBLEM', u'RECOVERY') and (

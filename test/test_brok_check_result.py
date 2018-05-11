@@ -41,8 +41,7 @@ class TestBrokCheckResult(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_default.cfg')
 
-        my_broker = [b for b in list(self._scheduler.my_daemon.brokers.values())][0]
-        my_broker.broks = {}
+        self._main_broker.broks = []
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -60,7 +59,7 @@ class TestBrokCheckResult(AlignakTest):
         time.sleep(0.1)
         host_check_results = []
         service_check_results = []
-        for brok in list(my_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'host_check_result':
                 print(("Brok %s: %s" % (brok.type, brok)))
                 host_check_results.append(brok)

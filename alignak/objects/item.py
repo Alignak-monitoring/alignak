@@ -151,8 +151,7 @@ class Item(AlignakObject):
             return
 
         super(Item, self).__init__(params, parsing)
-        # The new Alignak object identifier is set by the base AlignakObject class...
-        # self.uuid = uuid.uuid4().hex
+        # The new Alignak object unique identifier is set by the base AlignakObject class...
         logger.debug("New %s: %s", self.__class__.my_type, self.uuid)
 
         # For custom variables

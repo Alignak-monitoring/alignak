@@ -160,7 +160,8 @@ class SchedulerInterface(GenericInterface):
             return {}
 
         # Now get the broks for this specific broker
-        res = self.app.get_broks(broker_name)
+        with self.app.broks_lock:
+            res = self.app.get_broks(broker_name)
 
         return serialize(res, True)
 

@@ -288,6 +288,8 @@ class TestDowntime(AlignakTest):
         # Make the service be CRITICAL/HARD
         time.sleep(1)
         self.scheduler_loop(2, [[svc, 2, 'BAD']])
+        time.sleep(1.0)
+        self.scheduler_loop(1)
         assert "HARD" == svc.state_type
         assert "CRITICAL" == svc.state
 
@@ -308,7 +310,7 @@ class TestDowntime(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(iter(self._main_broker.broks.values()), key=lambda x: x.creation_time):
+        for brok in sorted(self._main_broker.broks, key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -477,6 +479,8 @@ class TestDowntime(AlignakTest):
         # Wait for a while, the service is still CRITICAL but after the downtime expiry time
         time.sleep(5)
         self.scheduler_loop(2, [[svc, 2, 'BAD']])
+        time.sleep(1.0)
+        self.scheduler_loop(1)
         assert "HARD" == svc.state_type
         assert "CRITICAL" == svc.state
 
@@ -510,7 +514,7 @@ class TestDowntime(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(iter(self._main_broker.broks.values()), key=lambda x: x.creation_time):
+        for brok in sorted(self._main_broker.broks, key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -666,7 +670,8 @@ class TestDowntime(AlignakTest):
         # Wait for a while, the service is back to OK but after the downtime expiry time
         time.sleep(5)
         self.scheduler_loop(2, [[host, 0, 'UP']])
-        assert "HARD" == host.state_type
+        time.sleep(1.0)
+        self.scheduler_loop(1)
         assert "UP" == host.state
 
         # No more downtime for the service nor the scheduler
@@ -700,8 +705,9 @@ class TestDowntime(AlignakTest):
         self.clear_actions()
 
         # Make the host be DOWN/HARD
-        time.sleep(1)
         self.scheduler_loop(3, [[host, 2, 'DOWN']])
+        time.sleep(1.0)
+        self.scheduler_loop(1)
         assert "HARD" == host.state_type
         assert "DOWN" == host.state
 
@@ -721,7 +727,7 @@ class TestDowntime(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(list(self._main_broker.broks.values()), key=lambda x: x.creation_time):
+        for brok in sorted(self._main_broker.broks, key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -904,7 +910,7 @@ class TestDowntime(AlignakTest):
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(iter(self._main_broker.broks.values()), key=lambda x: x.creation_time):
+        for brok in sorted(self._main_broker.broks, key=lambda x: x.creation_time):
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))

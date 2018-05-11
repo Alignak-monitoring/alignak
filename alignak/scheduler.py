@@ -454,11 +454,11 @@ class Scheduler(object):  # pylint: disable=R0902
                             act.t_to_go, act.reactionner_tag, act.command, act.my_worker)
                 file_h.write(output.encode('utf-8'))
             logger.info('- dumped actions')
-            broks = {}
+            broks = []
             for broker in list(self.my_daemon.brokers.values()):
-                for brok_uuid in broker.broks:
-                    broks[brok_uuid] = broker.broks[brok_uuid]
-            for brok in list(broks.values()):
+                for brok in broker.broks:
+                    broks.append(brok)
+            for brok in broks:
                 output = 'BROK: %s:%s\n' % (brok.uuid, brok.type)
                 file_h.write(output.encode('utf-8'))
             logger.info('- dumped broks')
@@ -517,6 +517,10 @@ class Scheduler(object):  # pylint: disable=R0902
         :type broker_uuid: str
         :return: None
         """
+        # print("Scheduler, for %s, add brok: %s" % (broker_uuid, brok))
+        if brok.type == 'monitoring_log' and not self.pushed_conf.monitoring_log_broks:
+            return
+
         # We tag the brok with our instance_id
         brok.instance_id = self.instance_id
         if broker_uuid:
@@ -526,14 +530,14 @@ class Scheduler(object):  # pylint: disable=R0902
             broker_link = self.my_daemon.brokers[broker_uuid]
             logger.debug("Adding a brok %s for: %s", brok.type, broker_uuid)
             # it's just for one broker
-            self.my_daemon.brokers[broker_link.uuid].broks[brok.uuid] = brok
+            self.my_daemon.brokers[broker_link.uuid].broks.append(brok)
             self.nb_broks += 1
         else:
             logger.debug("Adding a brok %s to all brokers", brok.type)
             # add brok to all brokers
             for broker_link_uuid in self.my_daemon.brokers:
                 logger.debug("- adding to %s", self.my_daemon.brokers[broker_link_uuid])
-                self.my_daemon.brokers[broker_link_uuid].broks[brok.uuid] = brok
+                self.my_daemon.brokers[broker_link_uuid].broks.append(brok)
                 self.nb_broks += 1
 
     def add_notification(self, notification):
@@ -543,7 +547,6 @@ class Scheduler(object):  # pylint: disable=R0902
         :type notification: alignak.notification.Notification
         :return: None
         """
-        print("--- Add a notification: %s" % notification)
         if notification.uuid in self.actions:
             logger.warning("Already existing notification: %s", notification)
             return
@@ -712,13 +715,11 @@ class Scheduler(object):  # pylint: disable=R0902
                 logger.warning("I have to drop some broks (%d > %d) for the broker %s "
                                "..., sorry :(", len(broker_link.broks), max_broks, broker_link)
 
-                to_del_broks = [c for c in list(broker_link.broks.values())]
-                to_del_broks.sort(key=lambda x: x.creation_time)
-                to_del_broks = to_del_broks[:-max_broks]
-                self.nb_broks_dropped = len(to_del_broks)
-                for brok in to_del_broks:
-                    logger.warning("- dropped a %s brok", brok.type)
-                    del broker_link.broks[brok.uuid]
+                kept_broks = sorted(broker_link.broks, key=lambda x: x.creation_time)
+                # Delete the oldest broks to keep the max_broks most recent...
+                # todo: is it a good choice !
+                broker_link.broks = kept_broks[0:max_broks]
+                print(len(broker_link.broks))
 
         self.nb_actions_dropped = 0
         if max_actions and len(self.actions) > max_actions:
@@ -1113,10 +1114,8 @@ class Scheduler(object):  # pylint: disable=R0902
 
                 if action.status == u'timeout':
                     ref = self.find_item_by_id(self.checks[action.uuid].ref)
-                    action.output = "(%s %s check timed out)" % (
-                        ref.my_type, ref.get_full_name()
-                    )  # pylint: disable=E1101
                     action.long_output = action.output
+                    action.output = "(%s %s check timed out)" % (ref.my_type, ref.get_full_name())
                     action.exit_status = self.pushed_conf.timeout_exit_status
 
                     self.nb_checks_results_timeout += 1
@@ -1792,12 +1791,14 @@ class Scheduler(object):  # pylint: disable=R0902
                                                  self.businessimpactmodulations,
                                                  self.resultmodulations, self.checks)
 
+                # Raise the log only when the check got consumed!
+                # Else the item information are not up-to-date :/
+                if self.pushed_conf.log_active_checks and not chk.passive_check:
+                    item.raise_check_result()
+
                 for check in dep_checks:
                     logger.debug("-> raised a dependency check: %s", chk)
                     self.add(check)
-
-                if self.pushed_conf.log_active_checks and not chk.passive_check:
-                    item.raise_check_result()
 
         # loop to resolve dependencies
         have_resolved_checks = True
@@ -1878,11 +1879,13 @@ class Scheduler(object):  # pylint: disable=R0902
                 if timeperiod.is_time_valid(now):
                     start_dt = timeperiod.get_next_valid_time_from_t(now)
                     end_dt = timeperiod.get_next_invalid_time_from_t(start_dt + 1) - 1
-                    data = {'ref': elt.uuid, 'ref_type': elt.my_type, 'start_time': start_dt,
-                            'end_time': end_dt, 'fixed': 1, 'trigger_id': '',
-                            'duration': 0, 'author': "Alignak",
-                            'comment': "This downtime was automatically scheduled by Alignak "
-                                       "because of a maintenance period."}
+                    data = {
+                        'ref': elt.uuid, 'ref_type': elt.my_type, 'start_time': start_dt,
+                        'end_time': end_dt, 'fixed': 1, 'trigger_id': '',
+                        'duration': 0, 'author': "Alignak",
+                        'comment': "This downtime was automatically scheduled by Alignak "
+                                   "because of a maintenance period."
+                    }
                     downtime = Downtime(data)
                     self.add(downtime.add_automatic_comment(elt))
                     elt.add_downtime(downtime)
@@ -1960,9 +1963,9 @@ class Scheduler(object):  # pylint: disable=R0902
         self.hook_point('get_new_actions')
         # ask for service and hosts their next check
         for elt in self.all_my_hosts_and_services():
-            for act in elt.actions:
-                logger.debug("Got a new action for %s: %s", elt, act)
-                self.add(act)
+            for action in elt.actions:
+                logger.debug("Got a new action for %s: %s", elt, action)
+                self.add(action)
             # We take all, we can clear it
             elt.actions = []
 
@@ -1975,18 +1978,15 @@ class Scheduler(object):  # pylint: disable=R0902
         # be eaten
         for elt in self.all_my_hosts_and_services():
             for brok in elt.broks:
-                if brok.type == 'monitoring_log' and not self.pushed_conf.monitoring_log_broks:
-                    continue
                 self.add(brok)
-            # We take all, we can clear it
+            # We got all, clear item broks list
             elt.broks = []
 
         # Also fetch broks from contact (like contactdowntime)
         for contact in self.contacts:
             for brok in contact.broks:
-                if brok.type == 'monitoring_log' and not self.pushed_conf.monitoring_log_broks:
-                    continue
                 self.add(brok)
+            # We got all, clear contact broks list
             contact.broks = []
 
     def check_freshness(self):
@@ -2102,11 +2102,12 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         t00 = time.time()
         nb_sent = 0
-        broks = {}
+        broks = []
         for broker_link in list(self.my_daemon.brokers.values()):
-            for brok in list(broker_link.broks.values()):
+            for brok in broker_link.broks:
                 if not getattr(brok, 'sent_to_externals', False):
-                    broks[brok.uuid] = brok
+                    brok.to_send = True
+                    broks.append(brok)
         if not broks:
             return
         logger.debug("sending %d broks to modules...", len(broks))
@@ -2115,17 +2116,16 @@ class Scheduler(object):  # pylint: disable=R0902
             logger.debug("Look for sending to module %s", mod.get_name())
             module_queue = mod.to_q
             if module_queue:
-                to_send = [b for b in list(broks.values()) if mod.want_brok(b)]
+                to_send = [b for b in broks if mod.want_brok(b)]
                 module_queue.put(to_send)
                 nb_sent += len(to_send)
 
         # No more need to send them
-        for brok in list(broks.values()):
-            for broker_link in list(self.my_daemon.brokers.values()):
-                try:
-                    broker_link.broks[brok.uuid].sent_to_externals = True
-                except KeyError:
-                    logger.debug("Issue #959 - should not have happened")
+        for broker_link in list(self.my_daemon.brokers.values()):
+            for brok in broker_link.broks:
+                if not getattr(brok, 'sent_to_externals', False):
+                    brok.to_send = False
+                    brok.sent_to_externals = True
         logger.debug("Time to send %d broks (after %d secs)", nb_sent, time.time() - t00)
 
     def get_objects_from_from_queues(self):

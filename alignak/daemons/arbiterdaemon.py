@@ -171,7 +171,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             except ValueError:  # pragma: no cover, simple protection
                 pass
 
-        self.broks = {}
+        self.broks = []
         self.broks_lock = threading.RLock()
         self.is_master = False
         self.link_to_myself = None
@@ -210,7 +210,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         if isinstance(elt, Brok):
             elt.instance_id = self.instance_id
             with self.broks_lock:
-                self.broks[elt.uuid] = elt
+                self.broks.append(elt)
             statsmgr.counter('broks.added', 1)
         elif isinstance(elt, ExternalCommand):
             logger.debug("Queuing an external command '%s'", str(elt.__dict__))
@@ -266,7 +266,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         if not someone_is_concerned or sent:
             # No one is anymore interested with...
-            self.broks.clear()
+            del self.broks[:]
 
     def push_external_commands_to_schedulers(self):  # pragma: no cover - not used!
         """Send external commands to schedulers
@@ -1178,7 +1178,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
                 # Must look if we already had a configuration and save our broks
                 already_got = rs_conf['instance_id'] in my_satellites
-                broks = {}
+                broks = []
                 actions = {}
                 wait_homerun = {}
                 external_commands = {}

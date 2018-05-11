@@ -833,7 +833,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     impact = hosts[impact_id]
                 else:
                     impact = services[impact_id]
-                impact.deregister_a_problem(self)
+                impact.unregister_a_problem(self)
 
             # we can just drop our impacts list
             self.impacts = []
@@ -924,7 +924,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # now we return all impacts (can be void of course)
         return impacts
 
-    def deregister_a_problem(self, prob):
+    def unregister_a_problem(self, prob):
         """Remove the problem from our problems list
         and check if we are still 'impacted'
 
@@ -1158,9 +1158,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type force_time: None | int
         :return: None
         """
-        # if last_chk == 0 put in a random way so all checks
-        # are not in the same time
-
         # next_chk il already set, do not change
         # unless we force the check or the time
         if self.in_checking and not (force or force_time):
@@ -1174,8 +1171,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         now = time.time()
 
-        # If check_interval is 0, we should not add it for a service
-        # but suppose a 5min sched for hosts
+        # If check_interval is 0, we should not add a check for a service
+        # but suppose a 5 min check interval for an host
         if self.check_interval == 0 and not force:
             if cls.my_type == 'service':
                 return None
@@ -1186,14 +1183,15 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # If the retry is 0, take the normal value
         if self.state_type == 'HARD' or self.retry_interval == 0:
             interval = self.check_interval * cls.interval_length
-        else:  # TODO: if no retry_interval?
+        else:
             interval = self.retry_interval * cls.interval_length
 
         # Determine when a new check (randomize and distribute next check time)
         # or recurring check should happen.
         if self.next_chk == 0:
             # At the start, we cannot have an interval more than cls.max_check_spread
-            # is service_max_check_spread or host_max_check_spread in config
+            # Global service_max_check_spread or host_max_check_spread in configuration
+            # is set as max_check_spread in the objects.
             interval = min(interval, cls.max_check_spread * cls.interval_length)
             time_add = interval * random.uniform(0.0, 1.0)
         else:
@@ -1213,19 +1211,17 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 self.next_chk = now
 
             # If the neck_chk is already in the future, do not touch it.
-            # But if ==0, means was 0 in fact, schedule it too
+            # But if == 0, means was 0 in fact, schedule it too
             if self.next_chk <= now:
                 # maybe we do not have a check_period, if so, take always good (24x7)
                 if check_period:
                     self.next_chk = check_period.get_next_valid_time_from_t(
-                        self.next_chk + time_add
-                    )
+                        self.next_chk + time_add)
                 else:
                     self.next_chk = int(self.next_chk + time_add)
 
-            # Maybe we load next_chk from retention and  the
-            # value of the next_chk is still the past even
-            # after add an interval
+            # Maybe we load next_chk from retention and the
+            # value of the next_chk is still in the past even after adding an interval
             if self.next_chk < now:
                 interval = min(interval, cls.max_check_spread * cls.interval_length)
                 time_add = interval * random.uniform(0.0, 1.0)
@@ -1245,6 +1241,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             return None
 
         logger.debug("-> schedule: %s / %s (interval: %d, added: %d)",
+                     self.get_full_name(),
+                     datetime.datetime.fromtimestamp(self.next_chk).strftime('%Y-%m-%d %H:%M:%S'),
+                     interval, time_add)
+        print("-> schedule: %s / %s (interval: %d, added: %d)",
                      self.get_full_name(),
                      datetime.datetime.fromtimestamp(self.next_chk).strftime('%Y-%m-%d %H:%M:%S'),
                      interval, time_add)
@@ -2120,7 +2120,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return: None
         """
         cls = self.__class__
-        print("--- Create a new notification: %s" % self)
         # t_wished==None for the first notification launch after consume
         # here we must look at the self.notification_period
         if t_wished is None:
@@ -2140,7 +2139,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         else:
             # We follow our order
             new_t = t_wished
-        print("new_t: %s, t_wished: %s" % (new_t, t_wished))
 
         if self.is_blocking_notifications(notification_period, hosts, services,
                                           n_type, t_wished) and \
@@ -2180,7 +2178,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         notif = Notification(data)
         logger.debug("Created a %s notification: %s", self.my_type, n_type)
-        print("--- Created a %s notification: %s" % (self.my_type, n_type))
 
         # Keep a trace in our notifications queue
         self.notifications_in_progress[notif.uuid] = notif
@@ -2432,6 +2429,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.checks_in_progress.append(chk.uuid)
 
         self.update_in_checking()
+        print("Check: %s" % chk)
 
         # We need to put this new check in our actions queue
         # so scheduler can take it
@@ -2784,10 +2782,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.problem_has_been_acknowledged = True
             sticky = sticky == 2
 
-            data = {'ref': self.uuid, 'sticky': sticky, 'author': author, 'comment': comment,
-                    'end_time': end_time, 'notify': notify}
-            ack = Acknowledge(data)
-            self.acknowledgement = ack
+            data = {
+                'ref': self.uuid, 'sticky': sticky, 'author': author, 'comment': comment,
+                'end_time': end_time, 'notify': notify
+            }
+            self.acknowledgement = Acknowledge(data)
             if self.my_type == 'host':
                 comment_type = 1
                 self.broks.append(self.acknowledgement.get_raise_brok(self.get_name()))
@@ -2813,9 +2812,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             for service_uuid in self.services:
                 if service_uuid not in services:
                     continue
-                services[service_uuid].acknowledge_problem(notification_period,
-                                                           hosts, services, sticky, notify,
-                                                           author, comment, end_time)
+                services[service_uuid].acknowledge_problem(notification_period, hosts, services,
+                                                           sticky, notify, author, comment,
+                                                           end_time)
         return comm
 
     def check_for_expire_acknowledge(self):
@@ -2983,34 +2982,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return: None
         """
         pass
-
-    # def get_data_for_checks(self):  # pragma: no cover, base function
-    #     """Get data for a check
-    #
-    #     :return: list containing the service and the linked host
-    #     :rtype: list
-    #     """
-    #     pass
-    #
-    # def get_data_for_event_handler(self):  # pragma: no cover, base function
-    #     """Get data for an event handler
-    #
-    #     :return: list containing a single item (this one)
-    #     :rtype: list
-    #     """
-    #     pass
-    #
-    # def get_data_for_notifications(self, contact, notif):  # pragma: no cover, base function
-    #     """Get data for a notification
-    #
-    #     :param contact: The contact to return
-    #     :type contact:
-    #     :param notif: the notification to return
-    #     :type notif:
-    #     :return: list
-    #     :rtype: list
-    #     """
-    #     pass
 
     def set_impact_state(self):
         """We just go an impact, so we go unreachable

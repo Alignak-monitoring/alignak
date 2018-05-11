@@ -107,8 +107,8 @@ class AlignakTest(unittest2.TestCase):
         self.former_log_level = None
         setup_logger(logger_configuration_file, log_dir=None, process_name='', log_file='')
         self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
-        self.logger_.info("Test: %s", self.id())
         self.set_unit_tests_logger_level(logging.WARNING)
+        self.logger_.warning("Test: %s", self.id())
 
         # To make sure that no running daemon exist
         print("Checking Alignak running daemons...")
@@ -283,8 +283,8 @@ class AlignakTest(unittest2.TestCase):
         files = ['%s/alignak.ini' % cfg_folder]
         replacements = {
             'user=alignak': ';user=alignak',
-            'group=alignak': ';group=alignak'
-
+            'group=alignak': ';group=alignak',
+            'bindir=%(_dist_BIN)s': 'bindir='
         }
         print("Commenting user/group in alignak.ini...")
         self._files_update(files, replacements)
@@ -446,7 +446,7 @@ class AlignakTest(unittest2.TestCase):
         :type verbose: bool
         :return: None
         """
-        self.broks = {}
+        self.broks = []
 
         # Our own satellites lists ...
         self.arbiters = {}
@@ -651,6 +651,7 @@ class AlignakTest(unittest2.TestCase):
             self._main_broker = None
             if self._scheduler.my_daemon.brokers:
                 self._main_broker = [b for b in list(self._scheduler.my_daemon.brokers.values())][0]
+            print("Main broker: %s" % self._main_broker)
 
             # Initialize a Receiver daemon
             self._receiver = None
@@ -736,7 +737,7 @@ class AlignakTest(unittest2.TestCase):
         # Put the check result in the waiting results for the scheduler ...
         self._scheduler.waiting_results.put(check)
 
-    def scheduler_loop(self, count, items, scheduler=None):
+    def scheduler_loop(self, count, items=None, scheduler=None):
         """
         Manage scheduler actions
 
@@ -750,6 +751,9 @@ class AlignakTest(unittest2.TestCase):
         """
         if scheduler is None:
             scheduler = self._scheduler
+
+        if items is None:
+            items = []
 
         macroresolver = MacroResolver()
         macroresolver.init(scheduler.my_daemon.sched.pushed_conf)
@@ -788,6 +792,7 @@ class AlignakTest(unittest2.TestCase):
                     fun()
                 # else:
                 #     print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
+        self.assert_no_log_match("External command Brok could not be sent to any daemon!")
 
     def manage_freshness_check(self, count=1, mysched=None):
         """Run the scheduler loop for freshness_check
@@ -824,24 +829,24 @@ class AlignakTest(unittest2.TestCase):
         if self.ecm_mode == 'dispatcher':
             res = self.ecd.resolve_command(ext_cmd)
             if res and run:
-                self._arbiter.broks = {}
+                self._arbiter.broks = []
                 self._arbiter.add(ext_cmd)
                 self._arbiter.push_external_commands_to_schedulers()
         if self.ecm_mode == 'receiver':
             res = self.ecr.resolve_command(ext_cmd)
             if res and run:
-                self._receiver_daemon.broks = {}
+                self._receiver_daemon.broks = []
                 self._receiver_daemon.add(ext_cmd)
                 # self._receiver_daemon.push_external_commands_to_schedulers()
                 # # Our scheduler
                 # self._scheduler = self.schedulers['scheduler-master'].sched
                 # Give broks to our broker
                 for brok in self._receiver_daemon.broks:
-                    print("Brok receiver: %s : %s" % (brok, self._receiver_daemon.broks[brok]))
-                    self._broker_daemon.external_broks[brok] = self._receiver_daemon.broks[brok]
+                    print("Brok receiver: %s" % brok)
+                    self._broker_daemon.external_broks.append(brok)
         return res
 
-    def external_command_loop(self):
+    def external_command_loop(self, count=1):
         """Execute the scheduler actions for external commands.
 
         The scheduler is not an ECM 'dispatcher' but an 'applyer' ... so this function is on
@@ -849,15 +854,19 @@ class AlignakTest(unittest2.TestCase):
 
         :return:
         """
-        print("Scheduler loop turn:")
-        for i in self._scheduler.recurrent_works:
-            (name, fun, nb_ticks) = self._scheduler.recurrent_works[i]
-            if nb_ticks == 1:
-                print(" . %s ...running." % name)
-                fun()
-            else:
-                print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
-        self.assert_no_log_match("External command Brok could not be sent to any daemon!")
+        self.scheduler_loop(count=count)
+        # macroresolver = MacroResolver()
+        # macroresolver.init(self._scheduler.my_daemon.sched.pushed_conf)
+        #
+        # print("*** Scheduler external command loop turn:")
+        # for i in self._scheduler.recurrent_works:
+        #     (name, fun, nb_ticks) = self._scheduler.recurrent_works[i]
+        #     if nb_ticks == 1:
+        #         # print(" . %s ...running." % name)
+        #         fun()
+        #     else:
+        #         print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
+        # self.assert_no_log_match("External command Brok could not be sent to any daemon!")
 
     def worker_loop(self, verbose=True):
         self._scheduler.delete_zombie_checks()
@@ -990,10 +999,17 @@ class AlignakTest(unittest2.TestCase):
         """
         Clear the actions in the scheduler's actions.
 
-        @verified
         :return:
         """
         self._scheduler.actions = {}
+
+    def clear_checks(self):
+        """
+        Clear the checks in the scheduler's checks.
+
+        :return:
+        """
+        self._scheduler.checks = {}
 
     def check_monitoring_logs(self, expected_logs, dump=True):
         """
@@ -1005,17 +1021,27 @@ class AlignakTest(unittest2.TestCase):
         """
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []
-        for brok in sorted(list(self._main_broker.broks.values()), key=lambda x: x.creation_time):
-            if brok.type == 'monitoring_log':
-                data = unserialize(brok.data)
-                monitoring_logs.append((data['level'], data['message']))
         if dump:
-            print("Monitoring logs: %s" % monitoring_logs)
+            print("Monitoring logs: ")
+        # Sort broks by ascending uuid
+        index = 0
+        for brok in sorted(self._main_broker.broks, key=lambda x: x.creation_time):
+            if brok.type not in ['monitoring_log']:
+                continue
 
-        assert len(expected_logs) == len(monitoring_logs), monitoring_logs
+            data = unserialize(brok.data)
+            monitoring_logs.append((data['level'], data['message']))
+            if dump:
+                print("- %s" % brok)
+                # print("- %d: %s - %s: %s" % (index, brok.creation_time,
+                #                              data['level'], data['message']))
+                index+=1
+
+        assert len(expected_logs) == len(monitoring_logs), "Length do not match: %d" \
+                                                           % len(monitoring_logs)
 
         for log_level, log_message in expected_logs:
-            assert (log_level, log_message) in monitoring_logs, log_message
+            assert (log_level, log_message) in monitoring_logs, "No found :%s" % log_message
 
     def assert_actions_count(self, number):
         """
@@ -1037,7 +1063,9 @@ class AlignakTest(unittest2.TestCase):
                                     'planned: %s, command: %s' %
                                     (idx, b.creation_time, b.is_a, b.type,
                                      b.status, b.t_to_go, b.command)
-                                    for idx, b in enumerate(sorted(self._scheduler.actions.values(), key=lambda x: (x.t_to_go, x.creation_time))))))
+                                    for idx, b in enumerate(sorted(self._scheduler.actions.values(),
+                                                                   key=lambda x: (x.creation_time,
+                                                                                  x.t_to_go))))))
 
     def assert_actions_match(self, index, pattern, field):
         """
@@ -1285,7 +1313,7 @@ class AlignakTest(unittest2.TestCase):
 
         monitoring_logs = []
         print("Broker broks: %s" % my_broker.broks)
-        for brok in list(my_broker.broks.values()):
+        for brok in my_broker.broks:
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))

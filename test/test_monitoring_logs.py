@@ -34,24 +34,24 @@ class TestMonitoringLogs(AlignakTest):
     def setUp(self):
         super(TestMonitoringLogs, self).setUp()
 
-    def check(self, item, state_id, state, expected_logs):
+    def check(self, item, state_id, output, expected_logs):
         """
 
         :param item: concerned item
         :param state_id: state identifier
-        :param state: state text
+        :param output: state text
         :param expected_logs: expected monitoring logs
         :return:
         """
         # Get my first broker link
         my_broker = [b for b in list(self._scheduler.my_daemon.brokers.values())][0]
-        my_broker.broks = {}
+        my_broker.broks = []
 
-        self.scheduler_loop(1, [[item, state_id, state]])
+        self.scheduler_loop(1, [[item, state_id, output]])
         time.sleep(0.1)
         monitoring_logs = []
-        for brok in list(my_broker.broks.values()):
-            print(("Brok: %s" % brok))
+        for brok in my_broker.broks:
+            print("Brok: %s" % brok)
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -83,10 +83,10 @@ class TestMonitoringLogs(AlignakTest):
 
         # Host active checks
         self.check(host, 0, 'Host is UP',
-                   [('info', 'ACTIVE HOST CHECK: test_host_0;UP;HARD;1;Host is UP')])
+                   [('info', u'ACTIVE HOST CHECK: test_host_0;UP;HARD;1;Host is UP')])
 
         self.check(host, 0, 'Host is UP',
-                   [('info', 'ACTIVE HOST CHECK: test_host_0;UP;HARD;1;Host is UP')])
+                   [('info', u'ACTIVE HOST CHECK: test_host_0;UP;HARD;1;Host is UP')])
 
         # Host goes DOWN / SOFT
         self.check(host, 2, 'Host is DOWN',
@@ -395,7 +395,7 @@ class TestMonitoringLogs(AlignakTest):
         my_broker = [b for b in list(self._scheduler.my_daemon.brokers.values())][0]
         # Extract monitoring logs
         monitoring_logs = []
-        for brok in list(my_broker.broks.values()):
+        for brok in my_broker.broks:
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -441,21 +441,23 @@ class TestMonitoringLogs(AlignakTest):
         now = int(time.time())
 
         # Receive passive host check Down
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now
+        excmd = u'[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         assert 'DOWN' == host.state
         assert 'SOFT' == host.state_type
         assert 'Host is dead' == host.output
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now
+        excmd = u'[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         assert 'DOWN' == host.state
         assert 'SOFT' == host.state_type
         assert 'Host is dead' == host.output
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now
+        excmd = u'[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % now
         self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
+        self.external_command_loop(1)
+        time.sleep(1.0)
+        self.external_command_loop(1)
         assert 'DOWN' == host.state
         assert 'HARD' == host.state_type
         assert 'Host is dead' == host.output
@@ -464,7 +466,7 @@ class TestMonitoringLogs(AlignakTest):
         my_broker = [b for b in list(self._scheduler.my_daemon.brokers.values())][0]
         # Extract monitoring logs
         monitoring_logs = []
-        for brok in list(my_broker.broks.values()):
+        for brok in my_broker.broks:
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -552,15 +554,15 @@ class TestMonitoringLogs(AlignakTest):
         # Passive checks for host and service
         # ---------------------------------------------
         # Receive passive host check Up
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is UP' % time.time()
+        excmd = u'[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is UP' % time.time()
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         assert 'UP' == host.state
         assert 'Host is UP' == host.output
 
         # Service is going ok ...
-        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;' \
-                'Service is OK|rtt=9999;5;10;0;10000' % now
+        excmd = u'[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;' \
+                u'Service is OK|rtt=9999;5;10;0;10000' % now
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         assert 'OK' == svc.state
@@ -573,7 +575,9 @@ class TestMonitoringLogs(AlignakTest):
                 u'|rtt=9999;5;10;0;10000' \
                 u'\r\nLong output... also some specials: àéèüäï' % now
         self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
+        self.external_command_loop(1)
+        time.sleep(1.0)
+        self.external_command_loop(1)
         assert 'OK' == svc.state
         assert u'Service is OK and have some special characters: àéèüäï' == svc.output
         assert u'rtt=9999;5;10;0;10000' == svc.perf_data
@@ -583,7 +587,7 @@ class TestMonitoringLogs(AlignakTest):
         my_broker = [b for b in list(self._scheduler.my_daemon.brokers.values())][0]
         # Extract monitoring logs
         monitoring_logs = []
-        for brok in list(my_broker.broks.values()):
+        for brok in my_broker.broks:
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -657,7 +661,7 @@ class TestMonitoringLogs(AlignakTest):
         # my_broker = [b for b in self._scheduler.my_daemon.brokers.values()][0]
         # Extract monitoring logs
         monitoring_logs = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
@@ -700,7 +704,7 @@ class TestMonitoringLogs(AlignakTest):
         my_broker = [b for b in list(self._scheduler.my_daemon.brokers.values())][0]
         # Extract monitoring logs
         monitoring_logs = []
-        for brok in list(self._main_broker.broks.values()):
+        for brok in self._main_broker.broks:
             if brok.type == 'monitoring_log':
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))

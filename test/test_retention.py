@@ -147,27 +147,45 @@ class TestRetention(AlignakTest):
         svcn.act_depend_of = []  # no hostchecks on critical checkresults
 
         self.scheduler_loop(1, [[hostn, 0, 'UP'], [svcn, 1, 'WARNING']])
-        time.sleep(0.1)
+        time.sleep(1.0)
+        self.scheduler_loop(1)
         assert 0 == len(hostn.comments)
         assert 0 == len(hostn.notifications_in_progress)
 
-        self._main_broker.broks = {}
+        self._main_broker.broks = []
         self._scheduler.restore_retention_data(retention)
 
         assert hostn.last_state == 'DOWN'
         assert svcn.last_state == 'CRITICAL'
 
+        # Not the same identifier
         assert host.uuid != hostn.uuid
 
         # check downtimes (only for host and not for service)
+        print("Host downtimes: ")
+        for downtime in host.downtimes:
+            print('- %s' % (downtime))
+        print("HostN downtimes: ")
+        for downtime in hostn.downtimes:
+            print('- %s' % (downtime))
         assert list(host.downtimes) == list(hostn.downtimes)
         for down_uuid, downtime in hostn.downtimes.items():
             assert 'My downtime' == downtime.comment
 
         # check notifications
+        print("Host notifications: ")
+        for notif_uuid in host.notifications_in_progress:
+            print('- %s / %s' % (notif_uuid, host.notifications_in_progress[notif_uuid]))
+        print("HostN notifications: ")
+        for notif_uuid in hostn.notifications_in_progress:
+            print('- %s / %s' % (notif_uuid, hostn.notifications_in_progress[notif_uuid]))
         for notif_uuid, notification in hostn.notifications_in_progress.items():
+            print(notif_uuid, notification)
+            if notif_uuid in host.notifications_in_progress:
+                continue
+            assert notif_uuid in host.notifications_in_progress[notif_uuid]
             assert host.notifications_in_progress[notif_uuid].command == \
-                             notification.command
+                   notification.command
             assert host.notifications_in_progress[notif_uuid].t_to_go == \
                              notification.t_to_go
         # Notifications: host ack, service ack, host downtime

@@ -48,6 +48,8 @@
 #
 
 import time
+import datetime
+from freezegun import freeze_time
 from .alignak_test import AlignakTest
 
 
@@ -145,64 +147,103 @@ class TestContactDowntime(AlignakTest):
         # consume a bad result
         # downtime must be active
         # no notification must be found in broks
-        duration = 600
-        now = time.time()
-        # downtime valid for the next 2 minutes
-        test_contact = self._sched.contacts.find_by_name('test_contact')
-        cmd = "[%lu] SCHEDULE_CONTACT_DOWNTIME;test_contact;%d;%d;lausser;blablub" % (now, now, now + duration)
-        self._sched.run_external_commands([cmd])
+
+        host = self._sched.hosts.find_by_name("test_host_0")
+        host.act_depend_of = []  # ignore the router
 
         svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
         # Change the notif interval, so we can notify as soon as we want
+        # Not 0 because it will disable the notifications
         svc.notification_interval = 0.001
 
-        host = self._sched.hosts.find_by_name("test_host_0")
-        host.act_depend_of = []  # ignore the router
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2018, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
 
-        # We loop, the downtime wil be check and activate
-        self.scheduler_loop(1, [[svc, 0, 'OK'], [host, 0, 'UP']])
+            now = time.time()
+            duration = 600
 
-        self.assert_any_brok_match('CONTACT DOWNTIME ALERT.*;STARTED')
+            # downtime valid for the next 2 minutes
+            test_contact = self._sched.contacts.find_by_name('test_contact')
+            cmd = "[%lu] SCHEDULE_CONTACT_DOWNTIME;test_contact;%d;%d;me;blablabla" \
+                  % (now, now, now + duration)
+            self._sched.run_external_commands([cmd])
 
-        print("downtime was scheduled. check its activity and the comment")
-        assert len(test_contact.downtimes) == 1
+            # We loop, the downtime wil be check and activate
+            self.scheduler_loop(1, [[svc, 0, 'OK'], [host, 0, 'UP']])
 
-        downtime = list(test_contact.downtimes.values())[0]
-        assert downtime.is_in_effect
-        assert not downtime.can_be_deleted
+            self.assert_any_brok_match('CONTACT DOWNTIME ALERT.*;STARTED')
 
-        time.sleep(1)
-        # Ok, we define the downtime like we should, now look at if it does the job: do not
-        # raise notif during a downtime for this contact
-        self.scheduler_loop(3, [[svc, 2, 'CRITICAL']])
+            print("downtime was scheduled. check its activity and the comment")
+            assert len(test_contact.downtimes) == 1
 
-        # We should NOT see any service notification
-        self.assert_no_brok_match('SERVICE NOTIFICATION.*;CRITICAL')
+            downtime = list(test_contact.downtimes.values())[0]
+            assert downtime.is_in_effect
+            assert not downtime.can_be_deleted
 
-        downtime_id = list(test_contact.downtimes)[0]
-        # OK, Now we cancel this downtime, we do not need it anymore
-        cmd = "[%lu] DEL_CONTACT_DOWNTIME;%s" % (now, downtime_id)
-        self._sched.run_external_commands([cmd])
+            # Time warp
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1))
 
-        # We check if the downtime is tag as to remove
-        assert downtime.can_be_deleted
+            # Ok, we define the downtime like we should, now look at if it does the job: do not
+            # raise notifications during a downtime for this contact
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=5))
 
-        # We really delete it
-        self.scheduler_loop(1, [])
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=5))
 
-        # So we should be out now, with a log
-        self.assert_any_brok_match('CONTACT DOWNTIME ALERT.*;CANCELLED')
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=5))
 
-        print("Downtime was cancelled")
-        assert len(test_contact.downtimes) == 0
+            # We should NOT see any service notification
+            self.assert_no_brok_match('SERVICE NOTIFICATION.*;CRITICAL')
 
-        time.sleep(1)
-        # Now we want this contact to be really notify!
-        # Ok, we define the downtime like we should, now look at if it does the job: do not
-        # raise notif during a downtime for this contact
-        self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
-        # time.sleep(1)
-        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        self.assert_any_brok_match('SERVICE NOTIFICATION.*;CRITICAL')
+            # Time warp
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1))
+
+            downtime_id = list(test_contact.downtimes)[0]
+            # OK, Now we cancel this downtime, we do not need it anymore
+            cmd = "[%lu] DEL_CONTACT_DOWNTIME;%s" % (now, downtime_id)
+            self._sched.run_external_commands([cmd])
+
+            # We check if the downtime is tag as to remove
+            assert downtime.can_be_deleted
+
+            # We really delete it
+            self.scheduler_loop(1, [])
+
+            # So we should be out now, with a log
+            self.assert_any_brok_match('CONTACT DOWNTIME ALERT.*;CANCELLED')
+
+            print("Downtime was cancelled")
+            assert len(test_contact.downtimes) == 0
+
+            time.sleep(1)
+            # Now we want this contact to be really notified
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            self.show_actions()
+            # 2 because it is the second notification, the 1st one was hidden by the downtime !
+            assert 2 == svc.current_notification_number, 'CRITICAL HARD, but no notifications !'
+
+            # Time warp 5 minutes
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=5))
+
+            # The service recovers
+            self.scheduler_loop(1, [[svc, 0, 'OK']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert 0 == svc.current_notification_number, 'Ok HARD, no notifications'
+
+            self.assert_any_brok_match('SERVICE NOTIFICATION.*;OK')
+
+            self.assert_any_brok_match('SERVICE NOTIFICATION.*;CRITICAL')

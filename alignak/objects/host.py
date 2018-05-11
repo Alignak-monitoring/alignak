@@ -1002,12 +1002,15 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         # Block if notifications are program-wide disabled
         # Block if notifications are disabled for this host
         # Block if the current status is in the notification_options d,u,r,f,s
-        # Does the notification period allow sending out this notification?
         if not self.enable_notifications or \
                 not self.notifications_enabled or \
-                'n' in self.notification_options or \
-                (notification_period is not None and
-                 not notification_period.is_time_valid(t_wished)):
+                'n' in self.notification_options:
+            logger.debug("Host: %s, notification %s sending is blocked by globals",
+                         self.get_name(), n_type)
+            return True
+
+        # Does the notification period allow sending out this notification?
+        if notification_period is not None and not notification_period.is_time_valid(t_wished):
             logger.debug("Host: %s, notification %s sending is blocked by globals",
                          self.get_name(), n_type)
             return True

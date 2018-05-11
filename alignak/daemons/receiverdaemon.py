@@ -124,7 +124,7 @@ class Receiver(Satellite):
             # We tag the broks with our instance_id
             elt.instance_id = self.instance_id
             with self.broks_lock:
-                self.broks[elt.uuid] = elt
+                self.broks.append(elt)
             statsmgr.counter('broks.added', 1)
         elif isinstance(elt, ExternalCommand):
             logger.debug("Queuing an external command: %s", str(ExternalCommand.__dict__))

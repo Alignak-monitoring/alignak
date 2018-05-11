@@ -44,5 +44,4 @@ class BrokerInterface(GenericInterface):
         data = cherrypy.request.json
         with self.app.arbiter_broks_lock:
             logger.debug("Pushing %d broks", len(data['broks']))
-            self.app.arbiter_broks.extend([unserialize(elem, True) for
-                                           elem in list(data['broks'].values())])
+            self.app.arbiter_broks.extend([unserialize(elem, True) for elem in data['broks']])
