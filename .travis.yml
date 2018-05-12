@@ -2,6 +2,7 @@ language: python
 sudo: required
 python:
   - "2.7"
+  - "3.5"
   - "3.6"
 env:
   - TEST_SUITE=unit_tests
@@ -53,7 +54,7 @@ script:
       # Dump the 10 slowest tests
       # Do not print log synthesis on test end
       echo "Starting tests..."
-      travis_wait 60 pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
+      pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
       cd ..
       cp test/.coverage .
       # codecov

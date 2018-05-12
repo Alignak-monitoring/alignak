@@ -2784,10 +2784,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
             data = {
                 'ref': self.uuid, 'sticky': sticky, 'author': author, 'comment': comment,
-                    'end_time': end_time, 'notify': notify
+                'end_time': end_time, 'notify': notify
             }
-            ack = Acknowledge(data)
-            self.acknowledgement = ack
+            self.acknowledgement = Acknowledge(data)
             if self.my_type == 'host':
                 comment_type = 1
                 self.broks.append(self.acknowledgement.get_raise_brok(self.get_name()))

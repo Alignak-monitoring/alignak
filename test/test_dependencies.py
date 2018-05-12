@@ -24,6 +24,9 @@ This file test the dependencies between services, hosts
 
 import re
 import time
+import datetime
+from freezegun import freeze_time
+
 from copy import copy
 from .alignak_test import AlignakTest
 import pytest

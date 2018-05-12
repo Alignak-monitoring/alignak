@@ -107,8 +107,8 @@ class AlignakTest(unittest2.TestCase):
         self.former_log_level = None
         setup_logger(logger_configuration_file, log_dir=None, process_name='', log_file='')
         self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
-        self.logger_.info("Test: %s", self.id())
         self.set_unit_tests_logger_level(logging.WARNING)
+        self.logger_.warning("Test: %s", self.id())
 
         # To make sure that no running daemon exist
         print("Checking Alignak running daemons...")

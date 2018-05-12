@@ -35,6 +35,7 @@ def get_a_new_object_id():
     """
     return str(uuid.uuid4())
 
+
 class AlignakObject(object):
     """This class provides a generic way to instantiate alignak objects.
     Attributes are serialized dynamically, whether we un-serialize

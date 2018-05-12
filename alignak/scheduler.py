@@ -2105,7 +2105,7 @@ class Scheduler(object):  # pylint: disable=R0902
         for broker_link in list(self.my_daemon.brokers.values()):
             for brok in broker_link.broks:
                 if not getattr(brok, 'sent_to_externals', False):
-                    brok.to_send= True
+                    brok.to_send = True
                     broks.append(brok)
         if not broks:
             return
