@@ -2120,7 +2120,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return: None
         """
         cls = self.__class__
-        print("--- Create a new notification: %s" % self)
         # t_wished==None for the first notification launch after consume
         # here we must look at the self.notification_period
         if t_wished is None:
@@ -2140,7 +2139,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         else:
             # We follow our order
             new_t = t_wished
-        print("new_t: %s, t_wished: %s" % (new_t, t_wished))
 
         if self.is_blocking_notifications(notification_period, hosts, services,
                                           n_type, t_wished) and \
@@ -2180,7 +2178,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         notif = Notification(data)
         logger.debug("Created a %s notification: %s", self.my_type, n_type)
-        print("--- Created a %s notification: %s" % (self.my_type, n_type))
 
         # Keep a trace in our notifications queue
         self.notifications_in_progress[notif.uuid] = notif
@@ -2793,14 +2790,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.acknowledgement = ack
             if self.my_type == 'host':
                 comment_type = 1
-                brok = self.acknowledgement.get_raise_brok(self.get_name())
-                print("Ack brok: %s" % brok)
-                self.broks.append(brok)
+                self.broks.append(self.acknowledgement.get_raise_brok(self.get_name()))
             else:
                 comment_type = 2
-                brok = self.acknowledgement.get_raise_brok(self.host_name, self.get_name())
-                print("Ack brok: %s" % brok)
-                self.broks.append(brok)
+                self.broks.append(self.acknowledgement.get_raise_brok(self.host_name,
+                                                                      self.get_name()))
             data = {
                 'author': author, 'comment': comment, 'comment_type': comment_type, 'entry_type': 4,
                 'source': 0, 'expires': False, 'ref': self.uuid

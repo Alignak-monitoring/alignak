@@ -181,23 +181,23 @@ class TestEscalations(AlignakTest):
             # We also have a notification to level1 contact which is a contact defined for the host
             expected_logs = [
                 ('info',
-                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;OK;HARD;1;OK'),
-                ('info',
                  'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;UP'),
-                ('error',
-                 'SERVICE ALERT: test_host_0_esc;test_svc_esc;CRITICAL;SOFT;1;BAD'),
+                ('info',
+                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;OK;HARD;1;OK'),
                 ('error',
                  'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;SOFT;1;BAD'),
                 ('error',
-                 'SERVICE ALERT: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
+                 'SERVICE ALERT: test_host_0_esc;test_svc_esc;CRITICAL;SOFT;1;BAD'),
                 ('error',
                  'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
                 ('error',
-                 'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc;CRITICAL;notify-service;BAD'),
+                 'SERVICE ALERT: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
                 ('error',
                  'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc;CRITICAL;notify-service;BAD'),
+                ('error',
+                 'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc;CRITICAL;notify-service;BAD'),
             ]
-            self.check_monitoring_logs(expected_logs)
+            self.check_monitoring_logs(expected_logs, dump=True)
 
             # ---
             # 2/

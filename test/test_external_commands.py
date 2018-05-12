@@ -1176,27 +1176,26 @@ class TestExternalCommands(AlignakTest):
         print(monitoring_logs)
         expected_logs = [
             ('info',
-             u'ACTIVE HOST CHECK: test_host_0;UP;HARD;1;Host is UP'),
+             u'RETENTION LOAD: scheduler-master scheduler'),
             ('warning',
              u'PASSIVE SERVICE CHECK: test_host_0;test_ok_0;1;Service is WARNING;;'),
+            ('info',
+             u'ACTIVE HOST CHECK: test_host_0;UP;HARD;0;'),
+
             ('warning',
              u'SERVICE ALERT: test_host_0;test_ok_0;WARNING;SOFT;1;Service is WARNING'),
 
             ('info',
-             u'EXTERNAL COMMAND: [%s] ACKNOWLEDGE_SVC_PROBLEM;'
-             u'test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % now),
+             u'EXTERNAL COMMAND: [%s] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % now),
 
             ('info',
-             u'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;STARTED; '
-             u'Service problem has been acknowledged'),
+             u'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;STARTED; Service problem has been acknowledged'),
             ('info',
-             u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-             u'ACKNOWLEDGEMENT (WARNING);notify-service;Service is WARNING'),
+             u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;ACKNOWLEDGEMENT (WARNING);notify-service;Service is WARNING'),
             ('info',
              u'EXTERNAL COMMAND: [%s] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;test_ok_0' % now),
             ('info',
-             u'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;EXPIRED;'
-             u' Service problem acknowledge expired')
+             u'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;EXPIRED; Service problem acknowledge expired')
         ]
         for log_level, log_message in expected_logs:
             print("Last checked log %s: %s" % (log_level, log_message))

@@ -499,9 +499,6 @@ class Scheduler(object):  # pylint: disable=R0902
         try:
             _t0 = time.time()
             logger.debug("Scheduler '%s' got %d commands", self.name, len(cmds))
-            print("***Scheduler: %s" % self)
-            print("***Scheduler daemon: %s" % self.my_daemon)
-            print("***Scheduler daemon brokers: %s" % self.my_daemon.brokers)
             for command in cmds:
                 self.external_commands_manager.resolve_command(ExternalCommand(command))
             statsmgr.counter('external_commands.got.count', len(cmds))
@@ -550,7 +547,6 @@ class Scheduler(object):  # pylint: disable=R0902
         :type notification: alignak.notification.Notification
         :return: None
         """
-        print("--- Add a notification: %s" % notification)
         if notification.uuid in self.actions:
             logger.warning("Already existing notification: %s", notification)
             return

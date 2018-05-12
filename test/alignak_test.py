@@ -758,7 +758,6 @@ class AlignakTest(unittest2.TestCase):
         macroresolver = MacroResolver()
         macroresolver.init(scheduler.my_daemon.sched.pushed_conf)
 
-        print("*** Scheduler loop turn:")
         for num in range(count):
             # print("Scheduler loop turn: %s" % num)
             for (item, exit_status, output) in items:
@@ -1033,15 +1032,16 @@ class AlignakTest(unittest2.TestCase):
             data = unserialize(brok.data)
             monitoring_logs.append((data['level'], data['message']))
             if dump:
-                print(brok)
+                print("- %s" % brok)
                 # print("- %d: %s - %s: %s" % (index, brok.creation_time,
                 #                              data['level'], data['message']))
                 index+=1
 
-        assert len(expected_logs) == len(monitoring_logs), monitoring_logs
+        assert len(expected_logs) == len(monitoring_logs), "Length do not match: %d" \
+                                                           % len(monitoring_logs)
 
         for log_level, log_message in expected_logs:
-            assert (log_level, log_message) in monitoring_logs, log_message
+            assert (log_level, log_message) in monitoring_logs, "No found :%s" % log_message
 
     def assert_actions_count(self, number):
         """

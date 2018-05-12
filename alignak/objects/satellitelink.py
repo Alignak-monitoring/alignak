@@ -911,10 +911,9 @@ class SatelliteLink(Item):
         :return: True on success, False on failure
         :rtype: bool
         """
-        logger.debug("[%s] Pushing %d results", self.name, len(results))
+        logger.debug("Pushing %d results", len(results))
         result = self.con.post('put_results', {'results': results, 'from': scheduler_name},
                                wait='long')
-        logger.error("[%s] Push results: %s", result)
         return result
 
     @valid_connection()
