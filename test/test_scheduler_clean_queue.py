@@ -63,14 +63,14 @@ class TestSchedulerCleanQueue(AlignakTest):
         broks_limit = 5 * (len(self._scheduler.hosts) +
                           len(self._scheduler.services))
         broks_limit += 1
-        print(("Broks limit is %d broks" % (broks_limit)))
+        print("Broks limit is %d broks" % (broks_limit))
+        assert broks_limit == 16
 
         broks = []
         for broker in list(self._scheduler.my_daemon.brokers.values()):
             print("Broker: %s has %d broks" % (broker, len(broker.broks)))
-            for brok in broks:
-                print("- %s" % brok)
-            broks.append(brok)
+            for brok in broker.broks:
+                broks.append(brok)
             assert len(broker.broks) < broks_limit
         # Limit is not yet reached... 9 broks raised!
         assert len(broks) < broks_limit
@@ -82,7 +82,7 @@ class TestSchedulerCleanQueue(AlignakTest):
             time.sleep(0.1)
 
         for broker in list(self._scheduler.my_daemon.brokers.values()):
-            broks.update(broker.broks)
+            broks.extend(broker.broks)
             # Broker has too much broks!
             assert len(broker.broks) > broks_limit
         # Limit is reached!
@@ -92,13 +92,11 @@ class TestSchedulerCleanQueue(AlignakTest):
         self._scheduler.pushed_conf.tick_clean_queues = 1
         self._scheduler.update_recurrent_works_tick({'tick_clean_queues': 1})
 
-        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 1, 'WARNING']])
+        self.scheduler_loop(1)
 
         broks = []
         for broker in list(self._scheduler.my_daemon.brokers.values()):
             print("Broker: %s has %d broks" % (broker, len(broker.broks)))
-            for brok in broker.broks:
-                print("- %s" % brok)
             broks.extend(broker.broks)
             assert len(broker.broks) < broks_limit
         # Limit is not yet reached... 9 broks raised!

@@ -55,6 +55,7 @@ This module provide Alignak which is the main scheduling daemon class
 import time
 import traceback
 import logging
+import threading
 
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.scheduler import Scheduler
@@ -112,6 +113,8 @@ class Alignak(BaseSatellite):
         self.reactionners = {}
         self.receivers = {}
 
+        self.broks_lock = threading.RLock()
+
         # Modules are only loaded one time
         self.have_modules = False
 
@@ -133,10 +136,11 @@ class Alignak(BaseSatellite):
         for broker_link in list(self.brokers.values()):
             if broker_name == broker_link.name:
                 for brok in sorted(broker_link.broks, key=lambda x: x.creation_time):
+                    # Only provide broks that did not yet sent to our external modules
                     if getattr(brok, 'sent_to_externals', False):
                         res.append(brok)
                         brok.got = True
-                broker_link.broks = [b for b in broker_link.broks if getattr(b, 'got', False)]
+                broker_link.broks = [b for b in broker_link.broks if not getattr(b, 'got', False)]
                 logger.debug("Providing %d broks to %s", len(res), broker_name)
                 break
         else:

@@ -718,7 +718,8 @@ class Scheduler(object):  # pylint: disable=R0902
                 kept_broks = sorted(broker_link.broks, key=lambda x: x.creation_time)
                 # Delete the oldest broks to keep the max_broks most recent...
                 # todo: is it a good choice !
-                broker_link.broks = kept_broks[:-max_broks]
+                broker_link.broks = kept_broks[0:max_broks]
+                print(len(broker_link.broks))
 
         self.nb_actions_dropped = 0
         if max_actions and len(self.actions) > max_actions:
@@ -1113,10 +1114,8 @@ class Scheduler(object):  # pylint: disable=R0902
 
                 if action.status == u'timeout':
                     ref = self.find_item_by_id(self.checks[action.uuid].ref)
-                    action.output = "(%s %s check timed out)" % (
-                        ref.my_type, ref.get_full_name()
-                    )  # pylint: disable=E1101
                     action.long_output = action.output
+                    action.output = "(%s %s check timed out)" % (ref.my_type, ref.get_full_name())
                     action.exit_status = self.pushed_conf.timeout_exit_status
 
                     self.nb_checks_results_timeout += 1
@@ -1785,15 +1784,17 @@ class Scheduler(object):  # pylint: disable=R0902
                 logger.debug("Consuming: %s", chk)
                 item = self.find_item_by_id(chk.ref)
 
-                if self.pushed_conf.log_active_checks and not chk.passive_check:
-                    item.raise_check_result()
-
                 notification_period = self.timeperiods[item.notification_period]
                 dep_checks = item.consume_result(chk, notification_period, self.hosts,
                                                  self.services, self.timeperiods,
                                                  self.macromodulations, self.checkmodulations,
                                                  self.businessimpactmodulations,
                                                  self.resultmodulations, self.checks)
+
+                # Raise the log only when the check got consumed!
+                # Else the item information are not up-to-date :/
+                if self.pushed_conf.log_active_checks and not chk.passive_check:
+                    item.raise_check_result()
 
                 for check in dep_checks:
                     logger.debug("-> raised a dependency check: %s", chk)

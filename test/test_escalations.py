@@ -552,12 +552,12 @@ class TestEscalations(AlignakTest):
             # We got 2 more escalated notification
             assert 3 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
             expected_logs += [
-                ('info',
-                 'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;Host assumed to be UP'),
+                ('error',
+                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;HARD;2;BAD'),
                 ('error',
                  'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;CRITICAL;notify-service;BAD'),
-                ('error',
-                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;HARD;2;BAD')
+                ('info',
+                 'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;Host assumed to be UP'),
             ]
             self.check_monitoring_logs(expected_logs)
 

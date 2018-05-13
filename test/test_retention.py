@@ -147,7 +147,8 @@ class TestRetention(AlignakTest):
         svcn.act_depend_of = []  # no hostchecks on critical checkresults
 
         self.scheduler_loop(1, [[hostn, 0, 'UP'], [svcn, 1, 'WARNING']])
-        time.sleep(0.1)
+        time.sleep(1.0)
+        self.scheduler_loop(1)
         assert 0 == len(hostn.comments)
         assert 0 == len(hostn.notifications_in_progress)
 
@@ -165,7 +166,10 @@ class TestRetention(AlignakTest):
             assert 'My downtime' == downtime.comment
 
         # check notifications
+        print("Host not: %s" % host.notifications_in_progress)
+        print("HostN not: %s" % hostn.notifications_in_progress)
         for notif_uuid, notification in hostn.notifications_in_progress.items():
+            print(notif_uuid, notification)
             assert host.notifications_in_progress[notif_uuid].command == \
                              notification.command
             assert host.notifications_in_progress[notif_uuid].t_to_go == \

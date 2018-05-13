@@ -84,7 +84,8 @@ class TestMultibroker(AlignakTest):
 
         # Test broker-master that gets its broks from the scheduler
         # Get the scheduler broks to be sent ...
-        to_send = [b for b in list(my_scheduler.my_daemon.brokers[broker1_link_uuid].broks.values())
+        print("Broks to be sent:")
+        to_send = [b for b in my_scheduler.my_daemon.brokers[broker1_link_uuid].broks
                    if getattr(b, 'sent_to_externals', False)]
         for brok in to_send:
             print(("- %s" % (brok)))
@@ -97,18 +98,15 @@ class TestMultibroker(AlignakTest):
 
         # No more broks to get
         # Get the scheduler broks to be sent ...
-        to_send = [b for b in list(my_scheduler.my_daemon.brokers[broker1_link_uuid].broks.values())
-                   if getattr(b, 'sent_to_externals', False)]
-        for brok in to_send:
-            print(("- %s" % (brok)))
+        to_send = [b for b in my_scheduler.my_daemon.brokers[broker1_link_uuid].broks
+                   if not getattr(b, 'got', False)]
         assert 0 == len(to_send), "Still some broks to be sent!"
-
-
 
         # Test broker-master 2 that gets its broks from the scheduler
         # Get the scheduler broks to be sent ...
-        to_send = [b for b in list(my_scheduler.my_daemon.brokers[broker2_link_uuid].broks.values())
+        to_send = [b for b in my_scheduler.my_daemon.brokers[broker2_link_uuid].broks
                    if getattr(b, 'sent_to_externals', False)]
+        print("Broks to be sent:")
         for brok in to_send:
             print(("- %s" % (brok)))
         assert 6 == len(to_send)
@@ -120,10 +118,8 @@ class TestMultibroker(AlignakTest):
 
         # No more broks to get
         # Get the scheduler broks to be sent ...
-        to_send = [b for b in list(my_scheduler.my_daemon.brokers[broker2_link_uuid].broks.values())
-                   if getattr(b, 'sent_to_externals', False)]
-        for brok in to_send:
-            print(("- %s" % (brok)))
+        to_send = [b for b in my_scheduler.my_daemon.brokers[broker2_link_uuid].broks
+                   if not getattr(b, 'got', False)]
         assert 0 == len(to_send), "Still some broks to be sent!"
 
         # Test unknown broker that gets its broks from the scheduler
