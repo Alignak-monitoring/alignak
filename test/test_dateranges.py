@@ -269,8 +269,8 @@ class TestDateRanges(AlignakTest):
                 print("Date: %s" % date_now)
                 ret = caldate.get_start_and_end_time()
                 print("* %s / %s" % (ret[0], ret[1]))
-                assert data[date_now]['start'] == ret[0]
-                assert data[date_now]['end'] == ret[1]
+                assert data[date_now]['start'] == int(ret[0])
+                assert data[date_now]['end'] == int(ret[1])
 
     def test_weekdaydaterange_start_end_time(self):
         """ Test WeekDayDaterange.get_start_and_end_time to get start and end date of date range

@@ -1244,10 +1244,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                      self.get_full_name(),
                      datetime.datetime.fromtimestamp(self.next_chk).strftime('%Y-%m-%d %H:%M:%S'),
                      interval, time_add)
-        print("-> schedule: %s / %s (interval: %d, added: %d)",
-                     self.get_full_name(),
-                     datetime.datetime.fromtimestamp(self.next_chk).strftime('%Y-%m-%d %H:%M:%S'),
-                     interval, time_add)
         # Get the command to launch, and put it in queue
         return self.launch_check(self.next_chk, hosts, services, timeperiods, macromodulations,
                                  checkmodulations, checks, force=force)
@@ -1526,7 +1522,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     def consume_result(self, chk, notif_period, hosts,
                        services, timeperiods, macromodulations, checkmodulations, bi_modulations,
-                       res_modulations, checks):
+                       res_modulations, checks, raise_log):
         # pylint: disable=too-many-locals, too-many-arguments
         # pylint: disable=too-many-branches, too-many-statements
         """Consume a check return and send action in return
@@ -1661,6 +1657,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         self.last_state_type = self.state_type
         self.return_code = chk.exit_status
+
+        # Raise the log only when the item information are up-to-date :/
+        if raise_log:
+            self.raise_check_result()
 
         # we change the state, do whatever we are or not in
         # an impact mode, we can put it
@@ -1889,6 +1889,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.get_perfdata_command(hosts, macromodulations, timeperiods)
         # Also snapshot if need :)
         self.get_snapshot(hosts, macromodulations, timeperiods)
+
         return []
 
     def update_event_and_problem_id(self):
@@ -2429,7 +2430,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.checks_in_progress.append(chk.uuid)
 
         self.update_in_checking()
-        print("Check: %s" % chk)
 
         # We need to put this new check in our actions queue
         # so scheduler can take it

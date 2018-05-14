@@ -600,9 +600,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         elif self.state == 'UNREACHABLE':
             log_level = 'warning'
         brok = make_monitoring_log(
-            log_level, 'ACTIVE HOST CHECK: %s;%s;%s;%d;%s' % (
-                self.get_name(), self.state, self.state_type, self.attempt, self.output
-            )
+            log_level, 'ACTIVE HOST CHECK: %s;%s;%d;%s' % (self.get_name(), self.state,
+                                                           self.attempt, self.output)
         )
         self.broks.append(brok)
 

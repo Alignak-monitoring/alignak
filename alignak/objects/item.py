@@ -237,7 +237,7 @@ class Item(AlignakObject):
 
     # Simply moved all the __ functions near the initialization
     def __str__(self):  # pragma: no cover
-        return '<%s name=%r />' % (self.__class__.__name__, self.get_name())
+        return '<%s name=%s />' % (self.__class__.__name__, self.get_name())
     __repr__ = __str__
 
     def init_running_properties(self):

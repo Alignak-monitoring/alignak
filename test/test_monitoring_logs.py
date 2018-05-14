@@ -44,22 +44,26 @@ class TestMonitoringLogs(AlignakTest):
         :return:
         """
         # Get my first broker link
-        my_broker = [b for b in list(self._scheduler.my_daemon.brokers.values())][0]
-        my_broker.broks = []
+        # my_broker = [b for b in list(self._scheduler.my_daemon.brokers.values())][0]
+        # my_broker.broks = []
+        self._main_broker.broks = []
 
         self.scheduler_loop(1, [[item, state_id, output]])
-        time.sleep(0.1)
-        monitoring_logs = []
-        for brok in my_broker.broks:
-            print("Brok: %s" % brok)
-            if brok.type == 'monitoring_log':
-                data = unserialize(brok.data)
-                monitoring_logs.append((data['level'], data['message']))
+        time.sleep(1.0)
+        self.scheduler_loop(1)
 
-        for log_level, log_message in expected_logs:
-            assert (log_level, log_message) in monitoring_logs
-
-        assert len(expected_logs) == len(monitoring_logs), monitoring_logs
+        self.check_monitoring_logs(expected_logs)
+        # monitoring_logs = []
+        # for brok in my_broker.broks:
+        #     if brok.type == 'monitoring_log':
+        #         print("Brok: %s" % brok)
+        #         data = unserialize(brok.data)
+        #         monitoring_logs.append((data['level'], data['message']))
+        #
+        # for log_level, log_message in expected_logs:
+        #     assert (log_level, log_message) in monitoring_logs
+        #
+        # assert len(expected_logs) == len(monitoring_logs), monitoring_logs
         time.sleep(0.1)
 
     def test_logs_hosts(self):
@@ -75,59 +79,60 @@ class TestMonitoringLogs(AlignakTest):
         self._scheduler.pushed_conf.log_passive_checks = True
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
-        # Make notifications sent very quickly
-        host.notification_interval = 10.0
+        # Make notifications interval set to 5 minutes
+        host.notification_interval = 5
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = True
 
         # Host active checks
         self.check(host, 0, 'Host is UP',
-                   [('info', u'ACTIVE HOST CHECK: test_host_0;UP;HARD;1;Host is UP')])
+                   [('info', u'ACTIVE HOST CHECK: test_host_0;UP;0;Host is UP')])
 
         self.check(host, 0, 'Host is UP',
-                   [('info', u'ACTIVE HOST CHECK: test_host_0;UP;HARD;1;Host is UP')])
+                   [('info', u'ACTIVE HOST CHECK: test_host_0;UP;1;Host is UP')])
 
         # Host goes DOWN / SOFT
         self.check(host, 2, 'Host is DOWN',
-                   [('error', 'HOST ALERT: test_host_0;DOWN;SOFT;1;Host is DOWN'),
+                   [('error', 'ACTIVE HOST CHECK: test_host_0;DOWN;1;Host is DOWN'),
+                    ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;1;Host is DOWN'),
                     ('error', 'HOST EVENT HANDLER: test_host_0;DOWN;SOFT;1;eventhandler'),
-                    ('error', 'ACTIVE HOST CHECK: test_host_0;DOWN;SOFT;1;Host is DOWN')])
+                    ])
 
         self.check(host, 2, 'Host is DOWN',
-                   [('error', 'HOST EVENT HANDLER: test_host_0;DOWN;SOFT;2;eventhandler'),
-                    ('error', 'ACTIVE HOST CHECK: test_host_0;DOWN;SOFT;2;Host is DOWN'),
-                    ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;2;Host is DOWN')])
+                   [('error', 'ACTIVE HOST CHECK: test_host_0;DOWN;1;Host is DOWN'),
+                    ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;2;Host is DOWN'),
+                    ('error', 'HOST EVENT HANDLER: test_host_0;DOWN;SOFT;2;eventhandler')])
 
         # Host goes DOWN / HARD
         self.check(host, 2, 'Host is DOWN',
-                   [('error', 'ACTIVE HOST CHECK: test_host_0;DOWN;HARD;3;Host is DOWN'), (
-                       'error',
-                       'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;Host is DOWN'),
+                   [('error', 'ACTIVE HOST CHECK: test_host_0;DOWN;2;Host is DOWN'),
                     ('error', 'HOST ALERT: test_host_0;DOWN;HARD;3;Host is DOWN'),
-                    ('error', 'HOST EVENT HANDLER: test_host_0;DOWN;HARD;3;eventhandler')])
+                    ('error', 'HOST EVENT HANDLER: test_host_0;DOWN;HARD;3;eventhandler'),
+                    ('error', 'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;Host is DOWN')])
 
-        # Host notification raised
+        # Notification not raised - too soon!
         self.check(host, 2, 'Host is DOWN',
-                   [('error', 'ACTIVE HOST CHECK: test_host_0;DOWN;HARD;3;Host is DOWN'), ])
+                   [('error', 'ACTIVE HOST CHECK: test_host_0;DOWN;3;Host is DOWN')])
 
+        # Notification not raised - too soon!
         self.check(host, 2, 'Host is DOWN',
-                   [('error', 'ACTIVE HOST CHECK: test_host_0;DOWN;HARD;3;Host is DOWN')])
+                   [('error', 'ACTIVE HOST CHECK: test_host_0;DOWN;3;Host is DOWN')])
 
         # Host goes UP / HARD
         # Get an host check, an alert and a notification
         self.check(host, 0, 'Host is UP',
-                   [('info',
-                     'HOST NOTIFICATION: test_contact;test_host_0;UP;notify-host;Host is UP'),
-                    ('info', 'HOST EVENT HANDLER: test_host_0;UP;HARD;3;eventhandler'),
+                   [('info', 'ACTIVE HOST CHECK: test_host_0;UP;3;Host is UP'),
                     ('info', 'HOST ALERT: test_host_0;UP;HARD;3;Host is UP'),
-                    ('info', 'ACTIVE HOST CHECK: test_host_0;UP;HARD;1;Host is UP')])
+                    ('info', 'HOST EVENT HANDLER: test_host_0;UP;HARD;3;eventhandler'),
+                    ('info', 'HOST NOTIFICATION: test_contact;test_host_0;UP;notify-host;Host is UP')
+                    ])
 
         self.check(host, 0, 'Host is UP',
-                   [('info', 'ACTIVE HOST CHECK: test_host_0;UP;HARD;1;Host is UP')])
+                   [('info', 'ACTIVE HOST CHECK: test_host_0;UP;1;Host is UP')])
 
         self.check(host, 0, 'Host is UP',
-                   [('info', 'ACTIVE HOST CHECK: test_host_0;UP;HARD;1;Host is UP')])
+                   [('info', 'ACTIVE HOST CHECK: test_host_0;UP;1;Host is UP')])
 
     def test_logs_services(self):
         """ Test logs for active / passive checks for hosts
@@ -147,113 +152,110 @@ class TestMonitoringLogs(AlignakTest):
         host.event_handler_enabled = True
 
         svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
-        # Make notifications sent very quickly
-        svc.notification_interval = 10.0
+        # Make notifications interval set to 5 minutes
+        svc.notification_interval = 5
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         svc.event_handler_enabled = True
 
         # Get sure that host is UP
         self.check(host, 0, 'Host is UP',
-                   [('info', 'ACTIVE HOST CHECK: test_host_0;UP;HARD;1;Host is UP')])
+                   [('info', 'ACTIVE HOST CHECK: test_host_0;UP;0;Host is UP')])
 
         # Service is ok
         self.check(svc, 0, 'Service is OK',
-                   [('info',
-                     'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;HARD;1;'
-                     'Service is OK')])
+                   [('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;0;Service is OK')])
         self.check(svc, 0, 'Service is OK',
-                   [('info',
-                     'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;HARD;1;'
-                     'Service is OK')])
+                   [('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Service is OK')])
 
         # Service goes warning / SOFT
         self.check(svc, 1, 'Service is WARNING',
                    [('warning',
-                     'SERVICE EVENT HANDLER: test_host_0;test_ok_0;WARNING;SOFT;1;eventhandler'), (
-                        'warning',
-                        'SERVICE ALERT: test_host_0;test_ok_0;WARNING;SOFT;1;Service is WARNING'), (
-                        'warning',
-                        'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;WARNING;SOFT;1;'
-                        'Service is WARNING')])
+                     'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;WARNING;1;Service is WARNING'),
+                    ('warning',
+                     'SERVICE EVENT HANDLER: test_host_0;test_ok_0;WARNING;SOFT;1;eventhandler'),
+                    ('warning',
+                     'SERVICE ALERT: test_host_0;test_ok_0;WARNING;SOFT;1;Service is WARNING'),
+                    ])
 
         # Service goes warning / HARD
         # Get a service check, an alert and a notification
         self.check(svc, 1, 'Service is WARNING',
                    [('warning',
-                     'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;WARNING;HARD;2;'
-                     'Service is WARNING'),
+                     'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;WARNING;1;Service is WARNING'),
                     ('warning',
-                     'SERVICE ALERT: test_host_0;test_ok_0;WARNING;HARD;2;'
-                     'Service is WARNING'), (
-                        'warning',
-                        'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                        'WARNING;notify-service;Service is WARNING'),
+                     'SERVICE ALERT: test_host_0;test_ok_0;WARNING;HARD;2;Service is WARNING'),
                     ('warning',
-                     'SERVICE EVENT HANDLER: test_host_0;test_ok_0;WARNING;HARD;2;eventhandler')])
+                     'SERVICE EVENT HANDLER: test_host_0;test_ok_0;WARNING;HARD;2;eventhandler'),
+                    ('warning',
+                     'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                     'WARNING;notify-service;Service is WARNING'),
+                    ])
 
-        # Service notification raised
+        # Notification not raised - too soon!
         self.check(svc, 1, 'Service is WARNING',
                    [('warning',
-                     'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;WARNING;HARD;2;'
-                     'Service is WARNING')])
+                     'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;WARNING;2;Service is WARNING')])
 
+        # Notification not raised - too soon!
         self.check(svc, 1, 'Service is WARNING',
                    [('warning',
-                     'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;WARNING;HARD;2;'
-                     'Service is WARNING')])
+                     'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;WARNING;2;Service is WARNING')])
 
         # Service goes OK
         self.check(svc, 0, 'Service is OK',
                    [('info',
-                     'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;notify-service;'
-                     'Service is OK'),
+                     'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;2;Service is OK'),
                     ('info',
-                     'SERVICE EVENT HANDLER: test_host_0;test_ok_0;OK;HARD;2;eventhandler'), (
-                        'info',
-                        'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;HARD;1;Service is OK'),
-                    ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Service is OK')])
+                     'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Service is OK'),
+                    ('info',
+                     'SERVICE EVENT HANDLER: test_host_0;test_ok_0;OK;HARD;2;eventhandler'),
+                    ('info',
+                     'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;notify-service;'
+                     'Service is OK')
+                    ])
 
         self.check(svc, 0, 'Service is OK',
                    [('info',
-                     'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;HARD;1;Service is OK')])
+                     'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Service is OK')])
 
         # Service goes CRITICAL
         self.check(svc, 2, 'Service is CRITICAL',
                    [('error',
-                     'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Service is CRITICAL'), (
-                        'error',
-                        'SERVICE EVENT HANDLER: test_host_0;test_ok_0;CRITICAL;SOFT;1;eventhandler'), (
-                        'error',
-                        'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;SOFT;1;'
-                        'Service is CRITICAL')])
+                     'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Service is CRITICAL'),
+                    ('error',
+                     'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Service is CRITICAL'),
+                    ('error',
+                     'SERVICE EVENT HANDLER: test_host_0;test_ok_0;CRITICAL;SOFT;1;eventhandler'),
+                    ])
 
         self.check(svc, 2, 'Service is CRITICAL',
                    [('error',
-                     'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Service is CRITICAL'), (
-                        'error',
-                        'SERVICE EVENT HANDLER: test_host_0;test_ok_0;CRITICAL;HARD;2;eventhandler'), (
-                        'error',
-                        'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                        'CRITICAL;notify-service;Service is CRITICAL'),
+                     'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Service is CRITICAL'),
                     ('error',
-                     'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;HARD;2;'
-                     'Service is CRITICAL')])
+                     'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Service is CRITICAL'),
+                    ('error',
+                     'SERVICE EVENT HANDLER: test_host_0;test_ok_0;CRITICAL;HARD;2;eventhandler'),
+                    ('error',
+                     'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                        'CRITICAL;notify-service;Service is CRITICAL')
+                    ])
 
         # Service goes OK
         self.check(svc, 0, 'Service is OK',
                    [('info',
-                     'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                     'OK;notify-service;Service is OK'),
-                    ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Service is OK'), (
-                        'info',
-                        'SERVICE EVENT HANDLER: test_host_0;test_ok_0;OK;HARD;2;eventhandler'), (
-                        'info',
-                        'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;HARD;1;Service is OK')])
+                     'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;2;Service is OK'),
+                    ('info',
+                     'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Service is OK'),
+                    ('info',
+                     'SERVICE EVENT HANDLER: test_host_0;test_ok_0;OK;HARD;2;eventhandler'),
+                    ('info',
+                     'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;notify-service;Service is OK')
+                    ])
 
 
         self.check(svc, 0, 'Service OK',
-                   [('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;HARD;1;Service OK')])
+                   [('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Service OK')])
 
     def test_logs_hosts_disabled(self):
         """ Test disabled logs for active / passive checks for hosts

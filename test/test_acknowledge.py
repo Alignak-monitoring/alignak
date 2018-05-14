@@ -64,7 +64,7 @@ class TestAcknowledges(AlignakTest):
 
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n".\
-            format(int(now), host.host_name, 2, 0, 1, 'darth vader', 'normal process')
+            format(int(now), host.host_name, 2, 0, 1, 'dark vador', 'normal process')
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
@@ -111,6 +111,10 @@ class TestAcknowledges(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [host_router, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
+        assert "UP" == host_router.state
+        assert "HARD" == host_router.state_type
+        assert "UP" == host.state
+        assert "HARD" == host.state_type
         assert not host.problem_has_been_acknowledged
         self.assert_actions_count(0)
 
@@ -118,6 +122,7 @@ class TestAcknowledges(AlignakTest):
         time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "SOFT" == host_router.state_type
+        # Unchanged
         assert "UP" == host.state
         assert "HARD" == host.state_type
 
@@ -125,6 +130,7 @@ class TestAcknowledges(AlignakTest):
         time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "SOFT" == host_router.state_type
+        # Unchanged
         assert "UP" == host.state
         assert "HARD" == host.state_type
 
@@ -132,6 +138,7 @@ class TestAcknowledges(AlignakTest):
         time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
+        # Goes unreachable hard
         assert "UNREACHABLE" == host.state
         assert "HARD" == host.state_type
 
@@ -141,12 +148,13 @@ class TestAcknowledges(AlignakTest):
         time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
+        # Unchanged
         assert "UNREACHABLE" == host.state
         assert "SOFT" == host.state_type
 
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n". \
-            format(int(now), host.host_name, 2, 0, 1, 'darth vader', 'normal process')
+            format(int(now), host.host_name, 2, 0, 1, 'dark vador', 'normal process')
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
@@ -223,7 +231,7 @@ class TestAcknowledges(AlignakTest):
 
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n". \
-            format(int(now), host.host_name, 1, 0, 1, 'darth vader', 'normal process')
+            format(int(now), host.host_name, 1, 0, 1, 'dark vador', 'normal process')
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
@@ -269,6 +277,10 @@ class TestAcknowledges(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [host_router, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.1)
+        assert "UP" == host_router.state
+        assert "HARD" == host_router.state_type
+        assert "UP" == host.state
+        assert "HARD" == host.state_type
         assert not host.problem_has_been_acknowledged
         self.assert_actions_count(0)
 
@@ -276,6 +288,7 @@ class TestAcknowledges(AlignakTest):
         time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "SOFT" == host_router.state_type
+        # Unchanged
         assert "UP" == host.state
         assert "HARD" == host.state_type
 
@@ -283,6 +296,7 @@ class TestAcknowledges(AlignakTest):
         time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "SOFT" == host_router.state_type
+        # Unchanged
         assert "UP" == host.state
         assert "HARD" == host.state_type
 
@@ -290,6 +304,7 @@ class TestAcknowledges(AlignakTest):
         time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
+        # Goes unreachable hard
         assert "UNREACHABLE" == host.state
         assert "HARD" == host.state_type
 
@@ -299,12 +314,13 @@ class TestAcknowledges(AlignakTest):
         time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
+        # Unchanged
         assert "UNREACHABLE" == host.state
         assert "SOFT" == host.state_type
 
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n". \
-            format(int(now), host.host_name, 1, 0, 1, 'darth vader', 'normal process')
+            format(int(now), host.host_name, 1, 0, 1, 'dark vador', 'normal process')
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
@@ -383,7 +399,7 @@ class TestAcknowledges(AlignakTest):
 
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
-            format(int(now), host.host_name, svc.service_description, 2, 0, 1, 'darth vader',
+            format(int(now), host.host_name, svc.service_description, 2, 0, 1, 'dark vador',
                    'normal process')
         self._scheduler.run_external_commands([cmd])
 
@@ -442,7 +458,7 @@ class TestAcknowledges(AlignakTest):
 
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
-            format(int(now), host.host_name, svc.service_description, 2, 0, 1, 'darth vader',
+            format(int(now), host.host_name, svc.service_description, 2, 0, 1, 'dark vador',
                    'normal process')
         self._scheduler.run_external_commands([cmd])
 
@@ -496,7 +512,7 @@ class TestAcknowledges(AlignakTest):
 
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n".\
-            format(int(now), host.host_name, svc.service_description, 1, 0, 1, 'darth vader',
+            format(int(now), host.host_name, svc.service_description, 1, 0, 1, 'dark vador',
                    'normal process')
         self._scheduler.run_external_commands([cmd])
 
@@ -551,7 +567,7 @@ class TestAcknowledges(AlignakTest):
 
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
-            format(int(now), host.host_name, svc.service_description, 1, 0, 1, 'darth vader',
+            format(int(now), host.host_name, svc.service_description, 1, 0, 1, 'dark vador',
                    'normal process')
         self._scheduler.run_external_commands([cmd])
         assert svc.problem_has_been_acknowledged
@@ -605,7 +621,7 @@ class TestAcknowledges(AlignakTest):
 
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
-            format(int(now), host.host_name, svc.service_description, 2, 0, 1, 'darth vader',
+            format(int(now), host.host_name, svc.service_description, 2, 0, 1, 'dark vador',
                    'normal process')
         self._scheduler.run_external_commands([cmd])
 
@@ -647,7 +663,7 @@ class TestAcknowledges(AlignakTest):
 
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
-            format(int(now), host.host_name, svc.service_description, 1, 0, 1, 'darth vader',
+            format(int(now), host.host_name, svc.service_description, 1, 0, 1, 'dark vador',
                    'normal process')
         self._scheduler.run_external_commands([cmd])
 
@@ -701,7 +717,7 @@ class TestAcknowledges(AlignakTest):
 
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM_EXPIRE;{1};{2};{3};{4};{5};{6};{7};{8}\n". \
-            format(int(now), host.host_name, svc.service_description, 1, 0, 1, (now + 2), 'darth vader',
+            format(int(now), host.host_name, svc.service_description, 1, 0, 1, (now + 2), 'dark vador',
                    'normal process')
         self._scheduler.run_external_commands([cmd])
 
@@ -766,7 +782,7 @@ class TestAcknowledges(AlignakTest):
 
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM_EXPIRE;{1};{2};{3};{4};{5};{6};{7}\n". \
-            format(int(now), host.host_name, 1, 0, 1, (now + 2), 'darth vader', 'normal process')
+            format(int(now), host.host_name, 1, 0, 1, (now + 2), 'dark vador', 'normal process')
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
@@ -812,7 +828,7 @@ class TestAcknowledges(AlignakTest):
 
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n". \
-            format(int(now), host.host_name, 1, 0, 1, 'darth vader', 'normal process')
+            format(int(now), host.host_name, 1, 0, 1, 'dark vador', 'normal process')
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
@@ -872,7 +888,7 @@ class TestAcknowledges(AlignakTest):
 
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_SVC_PROBLEM;{1};{2};{3};{4};{5};{6};{7}\n". \
-            format(int(now), host.host_name, svc.service_description, 1, 0, 1, 'darth vader',
+            format(int(now), host.host_name, svc.service_description, 1, 0, 1, 'dark vador',
                    'normal process')
         self._scheduler.run_external_commands([cmd])
 

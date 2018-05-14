@@ -634,11 +634,9 @@ class Service(SchedulingItem):
         elif self.state == 'CRITICAL':
             log_level = 'error'
         brok = make_monitoring_log(
-            log_level, 'ACTIVE SERVICE CHECK: %s;%s;%s;%s;%d;%s' % (
-                self.host_name, self.get_name(),
-                self.state, self.state_type,
-                self.attempt, self.output
-            )
+            log_level, 'ACTIVE SERVICE CHECK: %s;%s;%s;%d;%s' % (self.host_name, self.get_name(),
+                                                                 self.state, self.attempt,
+                                                                 self.output)
         )
         self.broks.append(brok)
 
