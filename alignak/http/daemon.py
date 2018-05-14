@@ -101,7 +101,8 @@ class HTTPDaemon(object):
         # - socket_queue_size
         cherrypy.config.update({'engine.autoreload.on': False,
                                 'server.thread_pool': thread_pool_size,
-                                'server.socket_host': self.host.encode('utf-8'),
+                                # 'server.socket_host': self.host.encode('utf-8'),
+                                'server.socket_host': self.host,
                                 'server.socket_port': self.port})
 
         # Default is to disable CherryPy logging

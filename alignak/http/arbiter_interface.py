@@ -246,6 +246,29 @@ class ArbiterInterface(GenericInterface):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
+    def get_alignak_status(self, details=False):
+        """Get the overall alignak status
+
+        Returns a list of the satellites as in:
+        {
+            'scheduler': ['Scheduler1']
+            'poller': ['Poller1', 'Poller2']
+            ...
+        }
+
+        :param details: Details are required (different from 0)
+        :type details str
+
+        :return: dict with key *daemon_type* and value list of daemon name
+        :rtype: dict
+        """
+        if details is not False:
+            details = bool(details)
+
+        return self.app.push_passive_check(details=details)
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
     def get_satellites_list(self, daemon_type=''):
         """Get the arbiter satellite names sorted by type
 

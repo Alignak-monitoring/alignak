@@ -392,7 +392,7 @@ class TestDependencies(AlignakTest):
         print(("Dep: %s" % host1.act_depend_of[0]))
         assert ['d', 'x'] == host1.act_depend_of[0][1]
 
-    def test_c_notright1(self):
+    def test_conf_not_correct_1(self):
         """ Test that the arbiter raises an error when there is orphan dependency in config files
         in hostdependency, dependent_host_name is unknown
 
@@ -413,7 +413,7 @@ class TestDependencies(AlignakTest):
         assert len(self.configuration_errors) == 3
         assert len(self.configuration_warnings) == 0
 
-    def test_c_notright2(self):
+    def test_conf_not_correct_2(self):
         """ Test that the arbiter raises an error when we have an orphan dependency in config files
         in hostdependency, host_name unknown
 
@@ -434,7 +434,7 @@ class TestDependencies(AlignakTest):
         assert len(self.configuration_errors) == 3
         assert len(self.configuration_warnings) == 0
 
-    def test_c_notright3(self):
+    def test_conf_not_correct_3(self):
         """ Test that the arbiter raises an error when we have an orphan dependency in config files
         in host definition, the parent is unknown
 
@@ -452,7 +452,7 @@ class TestDependencies(AlignakTest):
         assert len(self.configuration_errors) == 2
         assert len(self.configuration_warnings) == 8
 
-    def test_c_notright4(self):
+    def test_conf_not_correct_4(self):
         """ Test that the arbiter raises an error when there is orphan dependency in config files
         in servicedependency, dependent_service_description is unknown
 
@@ -470,7 +470,7 @@ class TestDependencies(AlignakTest):
         assert len(self.configuration_errors) == 2
         assert len(self.configuration_warnings) == 0
 
-    def test_c_notright5(self):
+    def test_conf_not_correct_5(self):
         """ Test that the arbiter raises an error when there is orphan dependency in config files
         in servicedependency, dependent_host_name is unknown
 
@@ -488,7 +488,7 @@ class TestDependencies(AlignakTest):
         assert len(self.configuration_errors) == 2
         assert len(self.configuration_warnings) == 0
 
-    def test_c_notright6(self):
+    def test_conf_not_correct_6(self):
         """ Test that the arbiter raises an error when there is orphan dependency in config files
         in servicedependency, host_name unknown
 
@@ -506,7 +506,7 @@ class TestDependencies(AlignakTest):
         assert len(self.configuration_errors) == 2
         assert len(self.configuration_warnings) == 0
 
-    def test_c_notright7(self):
+    def test_conf_not_correct_7(self):
         """ Test that the arbiter raises an error when there is orphan dependency in config files
         in servicedependency, service_description unknown
 
@@ -528,7 +528,7 @@ class TestDependencies(AlignakTest):
         assert len(self.configuration_errors) == 3
         assert len(self.configuration_warnings) == 0
 
-    def test_c_notright8(self):
+    def test_conf_not_correct_8(self):
         """ Test that the arbiter raises an error when there is orphan dependency in config files
         in hostdependency, dependent_hostgroup_name is unknown
 
@@ -570,59 +570,75 @@ class TestDependencies(AlignakTest):
         host.event_handler_enabled = False
 
         svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_0")
-        # To make tests quicker we make notifications send very quickly
-        svc.notification_interval = 0.001
         svc.max_check_attempts = 1
         svc.checks_in_progress = []
         svc.event_handler_enabled = False
 
-        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(1.0)
-        self.scheduler_loop(1)
-        assert 0 == svc.current_notification_number, 'All OK no notifications'
-        self.assert_actions_count(0)
-        self.assert_checks_count(12)
+        # notification_interval is in minute, configure to have one per minute
+        svc.notification_interval = 1
 
-        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(1.0)
-        self.scheduler_loop(1)
-        assert "HARD" == svc.state_type
-        assert "OK" == svc.state
-        self.assert_actions_count(0)
-        assert 0 == svc.current_notification_number, 'Critical HARD, but check first host'
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2018, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
 
-        # previous 10 + 2 checks: 1 for svc in waitdep and 1 scheduled for
-        # test_host_00 (parent/dependent)
-        self.assert_checks_count(12)
-        self.assert_checks_match(10, 'test_hostcheck.pl', 'command')
-        self.assert_checks_match(10, 'hostname test_host_00', 'command')
-        self.assert_checks_match(10, 'scheduled', 'status')
-        self.assert_checks_match(11, 'waitdep', 'status')
+            self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert 0 == svc.current_notification_number, 'All OK no notifications'
+            self.assert_actions_count(0)
+            self.assert_checks_count(12)
 
-        self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(1.0)
-        self.scheduler_loop(1)
-        assert "HARD" == svc.state_type
-        assert "CRITICAL" == svc.state
-        assert 1 == svc.current_notification_number, 'Critical HARD'
-        self.assert_actions_count(2)
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "HARD" == svc.state_type
+            assert "OK" == svc.state
+            self.assert_actions_count(0)
+            assert 0 == svc.current_notification_number, 'Critical HARD, but check first host'
 
-        self.assert_actions_match(0,
-                                  'notifier.pl --hostname test_host_00 --servicedesc test_ok_0 '
-                                  '--notificationtype PROBLEM --servicestate CRITICAL '
-                                  '--serviceoutput CRITICAL',
-                                  'command')
-        self.assert_actions_match(0,
-                                  'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, '
-                                  'NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, '
-                                  'NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, '
-                                  'NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, '
-                                  'SERVICENOTIFICATIONNUMBER=1',
-                                  'command')
+            # previous 10 + 2 checks: 1 for svc in waitdep and 1 scheduled for
+            # test_host_00 (parent/dependent)
+            self.assert_checks_count(12)
+            # Order is not guaranteed...
+            # self.assert_checks_match(10, 'test_hostcheck.pl', 'command')
+            # self.assert_checks_match(10, 'hostname test_host_00', 'command')
+            # self.assert_checks_match(10, 'scheduled', 'status')
+            # self.assert_checks_match(11, 'waitdep', 'status')
+            self.assert_any_check_match('scheduled', 'status')
+            self.assert_any_check_match('waitdep', 'status')
 
-        self.assert_actions_match(1, 'VOID', 'command')
+            self.scheduler_loop(1, [[host, 0, 'UP']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "HARD" == svc.state_type
+            assert "CRITICAL" == svc.state
+            assert 1 == svc.current_notification_number, 'Critical HARD'
+            self.assert_actions_count(2)
 
-        self.assert_checks_count(12)
+            self.assert_actions_match(0,
+                                      'notifier.pl --hostname test_host_00 --servicedesc test_ok_0 '
+                                      '--notificationtype PROBLEM --servicestate CRITICAL '
+                                      '--serviceoutput CRITICAL',
+                                      'command')
+            self.assert_actions_match(0,
+                                      'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, '
+                                      'NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, '
+                                      'NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, '
+                                      'NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, '
+                                      'SERVICENOTIFICATIONNUMBER=1',
+                                      'command')
+
+            self.assert_actions_match(1, 'VOID', 'command')
+
+            self.assert_checks_count(12)
 
     def test_a_s_service_host_down(self):
         """ Test dependency (checks and notifications) between the service and the host (case 2)
@@ -653,42 +669,68 @@ class TestDependencies(AlignakTest):
         svc.checks_in_progress = []
         svc.event_handler_enabled = False
 
-        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
-        assert 0 == svc.current_notification_number, 'All OK no notifications'
-        self.assert_actions_count(0)
-        self.assert_checks_count(10)
+        # notification_interval is in minute, configure to have one per minute
+        svc.notification_interval = 1
 
-        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
-        assert "HARD" == svc.state_type
-        assert "OK" == svc.state
-        self.assert_actions_count(0)
-        assert 0 == svc.current_notification_number, 'Critical HARD, but check first host'
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2018, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
 
-        # previous 10 + 2 checks: 1 for svc in waitdep and 1 scheduled for
-        # test_host_00 (parent/dependent)
-        self.assert_checks_count(12)
-        self.assert_checks_match(10, 'test_hostcheck.pl', 'command')
-        self.assert_checks_match(10, 'hostname test_host_00', 'command')
-        self.assert_checks_match(10, 'scheduled', 'status')
-        self.assert_checks_match(11, 'waitdep', 'status')
+            self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert 0 == svc.current_notification_number, 'All OK no notifications'
+            self.assert_actions_count(0)
+            self.show_checks()
+            self.assert_checks_count(12)
 
-        self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
-        assert "DOWN" == host.state
-        assert "HARD" == svc.state_type
-        assert "UNREACHABLE" == svc.state
-        assert 0 == svc.current_notification_number, 'No notif, unreachable HARD'
-        assert 1 == host.current_notification_number, '1 notif, down HARD'
-        self.assert_actions_count(1)
-        self.assert_actions_match(0, '--hostname test_host_00 --notificationtype PROBLEM --hoststate DOWN', 'command')
-        self.assert_checks_count(10)
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "HARD" == svc.state_type
+            assert "OK" == svc.state
+            self.assert_actions_count(0)
+            assert 0 == svc.current_notification_number, 'Critical HARD, but check first host'
 
-        # test service keep in UNREACHABLE
-        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
-        assert "UNREACHABLE" == svc.state
+            # previous 10 + 2 checks: 1 for svc in waitdep and 1 scheduled for
+            # test_host_00 (parent/dependent)
+            self.show_checks()
+            self.assert_checks_count(12)
+            # Order is not guaranteed...
+            # self.assert_checks_match(11, 'test_hostcheck.pl', 'command')
+            # self.assert_checks_match(11, 'hostname test_host_00', 'command')
+            # self.assert_checks_match(11, 'scheduled', 'status')
+            # self.assert_checks_match(10, 'waitdep', 'status')
+            self.assert_any_check_match('scheduled', 'status')
+            self.assert_any_check_match('waitdep', 'status')
+
+            self.scheduler_loop(1, [[host, 2, 'DOWN']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "DOWN" == host.state
+            assert "HARD" == svc.state_type
+            assert "UNREACHABLE" == svc.state
+            assert 0 == svc.current_notification_number, 'No notif, unreachable HARD'
+            assert 1 == host.current_notification_number, '1 notif, down HARD'
+            self.assert_actions_count(1)
+            self.assert_actions_match(0, '--hostname test_host_00 --notificationtype PROBLEM --hoststate DOWN', 'command')
+            self.assert_checks_count(12)
+
+            # test service keep in UNREACHABLE
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "UNREACHABLE" == svc.state
 
     def test_a_s_host_host(self):
         """ Test the dependency between 2 hosts
@@ -714,30 +756,48 @@ class TestDependencies(AlignakTest):
         router_00.max_check_attempts = 1
         router_00.event_handler_enabled = False
 
-        self.scheduler_loop(1, [[host_00, 0, 'UP'], [router_00, 0, 'UP']])
-        time.sleep(0.1)
-        self.assert_actions_count(0)
-        self.assert_checks_count(10)
+        # # notification_interval is in minute, configure to have one per minute
+        # svc.notification_interval = 1
 
-        self.scheduler_loop(1, [[host_00, 2, 'DOWN']])
-        time.sleep(0.1)
-        assert "UP" == host_00.state
-        assert "UP" == router_00.state
-        self.assert_actions_count(0)
-        self.assert_checks_count(12)
-        # self.assert_checks_match(10, 'test_hostcheck.pl', 'command')
-        # self.assert_checks_match(10, 'hostname test_host_00', 'command')
-        # self.assert_checks_match(10, 'waitdep', 'status')
-        # self.assert_checks_match(11, 'scheduled', 'status')
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2018, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
 
-        self.scheduler_loop(1, [[router_00, 0, 'UP']])
-        time.sleep(0.1)
-        assert "DOWN" == host_00.state
-        assert "UP" == router_00.state
-        assert 1 == host_00.current_notification_number, 'Critical HARD'
-        self.assert_actions_count(1)
-        self.assert_actions_match(0, 'hostname test_host_00', 'command')
-        self.assert_checks_count(10)
+            self.scheduler_loop(1, [[host_00, 0, 'UP'], [router_00, 0, 'UP']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            self.assert_actions_count(0)
+            self.assert_checks_count(12)
+
+            self.scheduler_loop(1, [[host_00, 2, 'DOWN']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "UP" == host_00.state
+            assert "UP" == router_00.state
+            self.assert_actions_count(0)
+            self.assert_checks_count(12)
+            # self.assert_checks_match(10, 'test_hostcheck.pl', 'command')
+            # self.assert_checks_match(10, 'hostname test_host_00', 'command')
+            # self.assert_checks_match(10, 'waitdep', 'status')
+            # self.assert_checks_match(11, 'scheduled', 'status')
+
+            self.scheduler_loop(1, [[router_00, 0, 'UP']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "DOWN" == host_00.state
+            assert "UP" == router_00.state
+            assert 1 == host_00.current_notification_number, 'Critical HARD'
+            self.assert_actions_count(1)
+            self.assert_actions_match(0, 'hostname test_host_00', 'command')
+            self.assert_checks_count(12)
 
     def test_a_m_service_host_host_up(self):
         """ Test the dependencies between service -> host -> host
@@ -769,66 +829,85 @@ class TestDependencies(AlignakTest):
 
         svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_00", "test_ok_0")
-        # To make tests quicker we make notifications send very quickly
-        svc.notification_interval = 0.001
         svc.checks_in_progress = []
         svc.max_check_attempts = 1
         svc.event_handler_enabled = False
 
-        # Host is UP
-        self.scheduler_loop(1, [[router_00, 0, 'UP'], [host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
-        assert "UP" == router_00.state
-        assert "UP" == host.state
-        assert "OK" == svc.state
-        assert 0 == svc.current_notification_number, 'All OK no notifications'
-        assert 0 == host.current_notification_number, 'All OK no notifications'
-        self.assert_actions_count(0)
-        self.assert_checks_count(9)
+        # notification_interval is in minute, configure to have one per minute
+        svc.notification_interval = 1
 
-        # Service is CRITICAL
-        print("====================== svc CRITICAL ===================")
-        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
-        assert "UP" == router_00.state
-        assert "UP" == host.state
-        assert "OK" == svc.state
-        assert 0 == svc.current_notification_number, 'No notifications'
-        self.assert_actions_count(0)
-        # New host check
-        self.assert_checks_count(12)
-        self.show_checks()
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2018, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
 
-        # Host is DOWN
-        print("====================== host DOWN ===================")
-        self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
-        assert "UP" == router_00.state
-        assert "UP" == host.state
-        assert "OK" == svc.state
-        assert 0 == svc.current_notification_number, 'No notifications'
-        assert 0 == host.current_notification_number, 'No notifications'
-        self.assert_actions_count(0)
-        self.assert_checks_count(12)
-        self.show_checks()
+            # Host is UP
+            self.scheduler_loop(1, [[router_00, 0, 'UP'], [host, 0, 'UP'], [svc, 0, 'OK']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "UP" == router_00.state
+            assert "UP" == host.state
+            assert "OK" == svc.state
+            assert 0 == svc.current_notification_number, 'All OK no notifications'
+            assert 0 == host.current_notification_number, 'All OK no notifications'
+            self.assert_actions_count(0)
+            self.assert_checks_count(12)
 
-        # Router is UP
-        print("====================== router UP ===================")
-        self.scheduler_loop(1, [[router_00, 0, 'UP']])
-        time.sleep(0.1)
-        self.scheduler_loop(1)
-        self.show_checks()
-        assert "UP" == router_00.state
-        assert "DOWN" == host.state
-        assert "UNREACHABLE" == svc.state
-        assert 0 == svc.current_notification_number, 'No notifications'
-        assert 1 == host.current_notification_number, '1 host notification'
-        # Re-scheduled 3 checks
-        self.assert_checks_count(12)
-        self.show_checks()
-        self.assert_actions_count(1)
-        self.show_actions()
-        self.assert_actions_match(0, 'notifier.pl --hostname test_host_00 --notificationtype PROBLEM --hoststate DOWN', 'command')
+            # Service is CRITICAL
+            print("====================== svc CRITICAL ===================")
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "UP" == router_00.state
+            assert "UP" == host.state
+            assert "OK" == svc.state
+            assert 0 == svc.current_notification_number, 'No notifications'
+            self.assert_actions_count(0)
+            # New host check
+            self.assert_checks_count(12)
+            self.show_checks()
+
+            # Host is DOWN
+            print("====================== host DOWN ===================")
+            self.scheduler_loop(1, [[host, 2, 'DOWN']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "UP" == router_00.state
+            assert "UP" == host.state
+            assert "OK" == svc.state
+            assert 0 == svc.current_notification_number, 'No notifications'
+            assert 0 == host.current_notification_number, 'No notifications'
+            self.assert_actions_count(0)
+            self.assert_checks_count(12)
+            self.show_checks()
+
+            # Router is UP
+            print("====================== router UP ===================")
+            self.scheduler_loop(1, [[router_00, 0, 'UP']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            self.scheduler_loop(1)
+            self.show_checks()
+            assert "UP" == router_00.state
+            assert "DOWN" == host.state
+            assert "UNREACHABLE" == svc.state
+            assert 0 == svc.current_notification_number, 'No notifications'
+            assert 1 == host.current_notification_number, '1 host notification'
+            # Re-scheduled 3 checks
+            self.assert_checks_count(12)
+            self.show_checks()
+            self.assert_actions_count(1)
+            self.show_actions()
+            self.assert_actions_match(0, 'notifier.pl --hostname test_host_00 --notificationtype PROBLEM --hoststate DOWN', 'command')
 
     def test_a_m_service_host_host_critical(self):
         """ Test the dependencies between service -> host -> host
@@ -865,78 +944,97 @@ class TestDependencies(AlignakTest):
 
         svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_00", "test_ok_0")
-        # To make tests quicker we make notifications send very quickly
-        svc.notification_interval = 0.001
         svc.checks_in_progress = []
         svc.max_check_attempts = 1
         svc.event_handler_enabled = False
 
-        # Host router is UP
-        self.scheduler_loop(3, [[router_00, 0, 'UP'], [host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
-        assert "UP" == router_00.state
-        assert "UP" == host.state
-        assert "OK" == svc.state
-        assert 0 == svc.current_notification_number, 'All OK no notifications'
-        assert 0 == host.current_notification_number, 'All OK no notifications'
-        self.assert_actions_count(0)
-        # 9 checks:
-        # 2 hosts
-        # 7 services, but not our checked service ! Before we check the hosts dependencies !
-        self.assert_checks_count(9)
-        self.show_checks()
+        # notification_interval is in minute, configure to have one per minute
+        svc.notification_interval = 1
 
-        # Host service is CRITICAL
-        print("====================== svc CRITICAL ===================")
-        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
-        assert "UP" == router_00.state
-        assert "UP" == host.state
-        # The service remains OK, despite the critical, because we raise dependencies checks
-        assert "OK" == svc.state
-        # assert "SOFT" == svc.state_type
-        assert 0 == svc.current_notification_number, 'No notifications'
-        self.assert_actions_count(0)
-        # Some more checks
-        # test_host_0 and test_router_0
-        # The service itself is now checked
-        self.assert_checks_count(12)
-        self.show_checks()
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2018, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
 
-        # Host is DOWN
-        print("====================== host DOWN ===================")
-        self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
-        assert "UP" == router_00.state
-        # The host remains UP because we need to check the router dependency
-        assert "UP" == host.state
-        assert "OK" == svc.state
-        assert 0 == svc.current_notification_number, 'No notifications'
-        assert 0 == host.current_notification_number, 'No notifications'
-        assert 0 == router_00.current_notification_number, 'No notifications'
-        self.assert_actions_count(0)
-        # Still the same checks count
-        self.assert_checks_count(12)
-        self.show_checks()
+            # Host router is UP
+            self.scheduler_loop(1, [[router_00, 0, 'UP'], [host, 0, 'UP'], [svc, 0, 'OK']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "UP" == router_00.state
+            assert "UP" == host.state
+            assert "OK" == svc.state
+            assert 0 == svc.current_notification_number, 'All OK no notifications'
+            assert 0 == host.current_notification_number, 'All OK no notifications'
+            self.assert_actions_count(0)
+            # 9 checks:
+            # 2 hosts
+            # 7 services, but not our checked service ! Before we check the hosts dependencies !
+            # 3 more checks because of the time warp!
+            self.show_checks()
+            self.assert_checks_count(12)
 
-        # Router is now DOWN
-        print("====================== router DOWN ===================")
-        self.scheduler_loop(1, [[router_00, 2, 'DOWN']])
-        time.sleep(1.0)
-        self.scheduler_loop(1)
-        self.show_checks()
-        assert "DOWN" == router_00.state
-        assert "UNREACHABLE" == host.state
-        assert "UNREACHABLE" == svc.state
-        assert 0 == svc.current_notification_number, 'No notifications'
-        assert 0 == host.current_notification_number, 'No notification'
-        assert 1 == router_00.current_notification_number, '1 host notifications'
-        # Re-scheduled 3 checks
-        self.assert_checks_count(12)
-        self.show_checks()
-        self.assert_actions_count(1)
-        self.show_actions()
-        self.assert_actions_match(0, 'notifier.pl --hostname test_router_00 --notificationtype PROBLEM --hoststate DOWN', 'command')
+            # Host service is CRITICAL
+            print("====================== svc CRITICAL ===================")
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "UP" == router_00.state
+            assert "UP" == host.state
+            # The service remains OK, despite the critical, because we raise dependencies checks
+            assert "OK" == svc.state
+            # assert "SOFT" == svc.state_type
+            assert 0 == svc.current_notification_number, 'No notifications'
+            self.assert_actions_count(0)
+            # Some more checks
+            # test_host_0 and test_router_0
+            # The service itself is now checked
+            self.assert_checks_count(12)
+            self.show_checks()
+
+            # Host is DOWN
+            print("====================== host DOWN ===================")
+            self.scheduler_loop(1, [[host, 2, 'DOWN']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "UP" == router_00.state
+            # The host remains UP because we need to check the router dependency
+            assert "UP" == host.state
+            assert "OK" == svc.state
+            assert 0 == svc.current_notification_number, 'No notifications'
+            assert 0 == host.current_notification_number, 'No notifications'
+            assert 0 == router_00.current_notification_number, 'No notifications'
+            self.assert_actions_count(0)
+            # Still the same checks count
+            self.assert_checks_count(12)
+            self.show_checks()
+
+            # Router is now DOWN
+            print("====================== router DOWN ===================")
+            self.scheduler_loop(1, [[router_00, 2, 'DOWN']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            self.show_checks()
+            assert "DOWN" == router_00.state
+            assert "UNREACHABLE" == host.state
+            assert "UNREACHABLE" == svc.state
+            assert 0 == svc.current_notification_number, 'No notifications'
+            assert 0 == host.current_notification_number, 'No notification'
+            assert 1 == router_00.current_notification_number, '1 host notifications'
+            # Re-scheduled 3 checks
+            self.assert_checks_count(12)
+            self.show_checks()
+            self.assert_actions_count(1)
+            self.show_actions()
+            self.assert_actions_match(0, 'notifier.pl --hostname test_router_00 --notificationtype PROBLEM --hoststate DOWN', 'command')
 
     def test_a_m_services(self):
         """ Test when multiple services dependency the host
@@ -967,70 +1065,88 @@ class TestDependencies(AlignakTest):
         svc2.max_check_attempts = 1
         svc2.event_handler_enabled = False
 
-        self.scheduler_loop(1, [[host, 0, 'UP'], [svc1, 0, 'OK'], [svc2, 0, 'OK']])
-        time.sleep(0.1)
-        self.scheduler_loop(1, [[host, 0, 'UP'], [svc1, 0, 'OK'], [svc2, 0, 'OK']])
-        time.sleep(0.1)
-        assert "HARD" == svc1.state_type
-        assert "OK" == svc1.state
-        assert "HARD" == svc2.state_type
-        assert "OK" == svc2.state
-        assert "HARD" == host.state_type
-        assert "UP" == host.state
-        self.assert_actions_count(0)
-        self.assert_checks_count(9)
+        # # notification_interval is in minute, configure to have one per minute
+        # svc.notification_interval = 1
 
-        print("====================== svc1 && svc2 CRITICAL ===================")
-        self.scheduler_loop(1, [[svc1, 2, 'CRITICAL'], [svc2, 2, 'CRITICAL']])
-        time.sleep(0.1)
-        self.assert_actions_count(0)
-        self.assert_checks_count(12)
-        assert "UP" == host.state
-        assert "OK" == svc1.state
-        assert "OK" == svc2.state
-        self.assert_checks_match(9, 'test_hostcheck.pl', 'command')
-        self.assert_checks_match(9, 'hostname test_host_00', 'command')
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2018, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
 
-        print("====================== host UP ===================")
-        self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(1.0)
-        self.scheduler_loop(1)
-        assert "UP" == host.state
-        assert "CRITICAL" == svc1.state
-        assert "CRITICAL" == svc2.state
-        self.show_actions()
-        assert 0 == host.current_notification_number, 'No notifications'
-        assert 1 == svc1.current_notification_number, '1 notification'
-        assert 1 == svc2.current_notification_number, '1 notification'
-        self.assert_actions_count(4)
+            self.scheduler_loop(1, [[host, 0, 'UP'], [svc1, 0, 'OK'], [svc2, 0, 'OK']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            self.scheduler_loop(1, [[host, 0, 'UP'], [svc1, 0, 'OK'], [svc2, 0, 'OK']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "HARD" == svc1.state_type
+            assert "OK" == svc1.state
+            assert "HARD" == svc2.state_type
+            assert "OK" == svc2.state
+            assert "HARD" == host.state_type
+            assert "UP" == host.state
+            self.assert_actions_count(0)
+            self.assert_checks_count(12)
 
-        # Both services have a notification
-        self.assert_actions_match(-1,
-                                  'notifier.pl --hostname test_host_00 --servicedesc test_ok_0 '
-                                  '--notificationtype PROBLEM --servicestate CRITICAL '
-                                  '--serviceoutput CRITICAL',
-                                  'command')
-        self.assert_actions_match(-1,
-                                  'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact',
-                                  'command')
-        self.assert_actions_match(-1,
-                                  'HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1',
-                                  'command')
+            print("====================== svc1 && svc2 CRITICAL ===================")
+            self.scheduler_loop(1, [[svc1, 2, 'CRITICAL'], [svc2, 2, 'CRITICAL']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            self.assert_actions_count(0)
+            self.assert_checks_count(12)
+            assert "UP" == host.state
+            assert "OK" == svc1.state
+            assert "OK" == svc2.state
 
-        self.assert_actions_match(-1,
-                                  'notifier.pl --hostname test_host_00 --servicedesc test_ok_1 '
-                                  '--notificationtype PROBLEM --servicestate CRITICAL '
-                                  '--serviceoutput CRITICAL',
-                                  'command')
-        self.assert_actions_match(-1,
-                                  'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact',
-                                  'command')
-        self.assert_actions_match(-1,
-                                  'HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1',
-                                  'command')
+            print("====================== host UP ===================")
+            self.scheduler_loop(1, [[host, 0, 'UP']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "UP" == host.state
+            assert "CRITICAL" == svc1.state
+            assert "CRITICAL" == svc2.state
+            self.show_actions()
+            assert 0 == host.current_notification_number, 'No notifications'
+            assert 1 == svc1.current_notification_number, '1 notification'
+            assert 1 == svc2.current_notification_number, '1 notification'
+            self.assert_actions_count(4)
 
-        self.assert_actions_match(2, 'VOID', 'command')
-        self.assert_actions_match(3, 'VOID', 'command')
+            # Both services have a notification
+            self.assert_actions_match(-1,
+                                      'notifier.pl --hostname test_host_00 --servicedesc test_ok_0 '
+                                      '--notificationtype PROBLEM --servicestate CRITICAL '
+                                      '--serviceoutput CRITICAL',
+                                      'command')
+            self.assert_actions_match(-1,
+                                      'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact',
+                                      'command')
+            self.assert_actions_match(-1,
+                                      'HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1',
+                                      'command')
+
+            self.assert_actions_match(-1,
+                                      'notifier.pl --hostname test_host_00 --servicedesc test_ok_1 '
+                                      '--notificationtype PROBLEM --servicestate CRITICAL '
+                                      '--serviceoutput CRITICAL',
+                                      'command')
+            self.assert_actions_match(-1,
+                                      'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact',
+                                      'command')
+            self.assert_actions_match(-1,
+                                      'HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1',
+                                      'command')
+
+            self.assert_actions_match(2, 'VOID', 'command')
+            self.assert_actions_match(3, 'VOID', 'command')
 
     def test_p_s_service_not_check_passive_host(self):
         """ Test passive service critical not check the dependent host (passive)
@@ -1051,69 +1167,89 @@ class TestDependencies(AlignakTest):
         assert svc.max_check_attempts == 3
         assert 0 == len(svc.act_depend_of)
 
-        # Set host and service as OK
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;0;Host is UP' % time.time()
-        self._scheduler.run_external_commands([excmd])
-        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;0;Service is OK' % time.time()
-        self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
-        time.sleep(0.1)
-        assert "UP" == host.state
-        assert "HARD" == host.state_type
-        assert "OK" == svc.state
-        assert "HARD" == svc.state_type
-        self.assert_actions_count(0)
+        # notification_interval is in minute, configure to have one per minute
+        svc.notification_interval = 1
 
-        # Set host DOWN
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;2;Host is DOWN' % time.time()
-        self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
-        time.sleep(0.1)
-        assert "DOWN" == host.state
-        # SOFT state type on 1st attempt
-        assert "SOFT" == host.state_type
-        self.assert_actions_count(0)
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2018, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
 
-        # Set host DOWN
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;2;Host is DOWN' % time.time()
-        self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
-        time.sleep(0.1)
-        assert "DOWN" == host.state
-        # HARD state type on 2nd attempt
-        assert "HARD" == host.state_type
-        # and an action is raised (PROBLEM notification)
-        self.assert_actions_count(1)
+            # Set host and service as OK
+            excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;0;Host is UP' % time.time()
+            self._scheduler.run_external_commands([excmd])
+            excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;0;Service is OK' % time.time()
+            self._scheduler.run_external_commands([excmd])
+            self.external_command_loop()
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "UP" == host.state
+            assert "HARD" == host.state_type
+            assert "OK" == svc.state
+            assert "HARD" == svc.state_type
+            self.assert_actions_count(0)
 
-        # Set host UP
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;0;Host is UP' % time.time()
-        self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
-        time.sleep(0.1)
-        assert "UP" == host.state
-        assert "HARD" == host.state_type
-        self.assert_actions_count(2)
+            # Set host DOWN
+            excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;2;Host is DOWN' % time.time()
+            self._scheduler.run_external_commands([excmd])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "DOWN" == host.state
+            # SOFT state type on 1st attempt
+            assert "SOFT" == host.state_type
+            self.assert_actions_count(0)
 
-        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
-        self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
-        assert "CRITICAL" == svc.state
-        assert "SOFT" == svc.state_type
-        self.assert_actions_count(2)
-        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
-        self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
-        assert "CRITICAL" == svc.state
-        assert "SOFT" == svc.state_type
-        self.assert_actions_count(2)
-        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
-        self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
-        assert "CRITICAL" == svc.state
-        # Need 3 attempts for the HARD state
-        assert "HARD" == svc.state_type
-        self.assert_actions_count(3)
-        self.assert_checks_count(12)
+            # Set host DOWN
+            excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;2;Host is DOWN' % time.time()
+            self._scheduler.run_external_commands([excmd])
+            self.external_command_loop()
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "DOWN" == host.state
+            # HARD state type on 2nd attempt
+            assert "HARD" == host.state_type
+            # and an action is raised (PROBLEM notification)
+            self.assert_actions_count(1)
+
+            # Set host UP
+            excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_E;0;Host is UP' % time.time()
+            self._scheduler.run_external_commands([excmd])
+            self.external_command_loop()
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "UP" == host.state
+            assert "HARD" == host.state_type
+            self.assert_actions_count(2)
+
+            excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
+            self._scheduler.run_external_commands([excmd])
+            self.external_command_loop()
+            assert "CRITICAL" == svc.state
+            assert "SOFT" == svc.state_type
+            self.assert_actions_count(2)
+            excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
+            self._scheduler.run_external_commands([excmd])
+            self.external_command_loop()
+            assert "CRITICAL" == svc.state
+            assert "SOFT" == svc.state_type
+            self.assert_actions_count(2)
+            excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_E;test_ok_0;2;Service is CRITICAL' % time.time()
+            self._scheduler.run_external_commands([excmd])
+            self.external_command_loop()
+            assert "CRITICAL" == svc.state
+            # Need 3 attempts for the HARD state
+            assert "HARD" == svc.state_type
+            self.assert_actions_count(3)
+            self.assert_checks_count(12)
 
     def test_ap_s_passive_service_check_active_host(self):
         """ Test passive service critical check the dependent host (active)
@@ -1131,39 +1267,59 @@ class TestDependencies(AlignakTest):
 
         assert 1 == len(svc.act_depend_of)
 
-        self.scheduler_loop(1, [[host, 0, 'UP']])
-        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;host_A;service_P;0;Service is OK' % time.time()
-        self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
-        time.sleep(0.1)
-        assert "UP" == host.state
-        assert "OK" == svc.state
+        # notification_interval is in minute, configure to have one per minute
+        svc.notification_interval = 1
 
-        excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;host_A;service_P;2;Service is CRITICAL' % time.time()
-        self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
-        assert "UP" == host.state
-        assert "OK" == svc.state
-        self.assert_actions_count(0)
-        self.assert_checks_count(11)
-        # checks_logs=[[[
-        # 	0 = creation: 1477557942.18, is_a: check, type: , status: scheduled, planned: 1477557954, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=down --failchance=2% --previous-state=UP --state-duration=0 --hostname host_A_P
-        # 	1 = creation: 1477557942.19, is_a: check, type: , status: scheduled, planned: 1477557944, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=down --failchance=2% --previous-state=UP --state-duration=0 --hostname host_o_B
-        # 	2 = creation: 1477557942.19, is_a: check, type: , status: scheduled, planned: 1477557949, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=flap --failchance=2% --previous-state=UP --state-duration=0 --hostname test_router_0
-        # 	3 = creation: 1477557942.19, is_a: check, type: , status: scheduled, planned: 1477557945, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=down --failchance=2% --previous-state=UP --state-duration=0 --hostname host_A_0
-        # 	4 = creation: 1477557942.2, is_a: check, type: , status: scheduled, planned: 1477557994, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=down --failchance=2% --previous-state=UP --state-duration=0 --hostname host_o_A
-        # 	5 = creation: 1477557942.2, is_a: check, type: , status: scheduled, planned: 1477557951, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=up --failchance=2% --previous-state=UP --state-duration=0 --parent-state=UP --hostname test_host_0
-        # 	6 = creation: 1477557942.21, is_a: check, type: , status: scheduled, planned: 1477557974, command: /tmp/dependencies/plugins/test_servicecheck.pl --type=ok --failchance=5% --previous-state=OK --state-duration=0 --total-critical-on-host=0 --total-warning-on-host=0 --hostname test_host_0 --servicedesc test_ok_0
-        # 	7 = creation: 1477557942.21, is_a: check, type: , status: scheduled, planned: 1477557946, command: /tmp/dependencies/plugins/test_servicecheck.pl --type=ok --failchance=5% --previous-state=OK --state-duration=0 --total-critical-on-host=0 --total-warning-on-host=0 --hostname host_P --servicedesc service_A
-        # 	8 = creation: 1477557942.21, is_a: check, type: , status: scheduled, planned: 1477557980, command: /tmp/dependencies/plugins/test_servicecheck.pl --type=ok --failchance=5% --previous-state=OK --state-duration=0 --total-critical-on-host=0 --total-warning-on-host=0 --hostname host_A --servicedesc service_A
-        # 	9 = creation: 1477557942.24, is_a: check, type: , status: scheduled, planned: 1477557995, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=down --failchance=2% --previous-state=UP --state-duration=1477557942 --hostname host_A
-        # 	10 = creation: 1477557942.37, is_a: check, type: , status: waitdep, planned: 1477557942.36, command: /tmp/dependencies/plugins/test_servicecheck.pl --type=ok --failchance=5% --previous-state=OK --state-duration=1477557942 --total-critical-on-host=0 --total-warning-on-host=0 --hostname host_A --servicedesc service_P
-        # ]]]
-        self.assert_checks_match(10, 'waitdep', 'status')
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2018, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
 
-        self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        assert "DOWN" == host.state
-        assert "UNREACHABLE" == svc.state
+            self.scheduler_loop(1, [[host, 0, 'UP']])
+            excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;host_A;service_P;0;Service is OK' % time.time()
+            self._scheduler.run_external_commands([excmd])
+            self.external_command_loop()
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "UP" == host.state
+            assert "OK" == svc.state
+
+            excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;host_A;service_P;2;Service is CRITICAL' % time.time()
+            self._scheduler.run_external_commands([excmd])
+            self.external_command_loop()
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "UP" == host.state
+            assert "OK" == svc.state
+            self.assert_actions_count(0)
+            self.assert_checks_count(11)
+            # checks_logs=[[[
+            # 	0 = creation: 1477557942.18, is_a: check, type: , status: scheduled, planned: 1477557954, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=down --failchance=2% --previous-state=UP --state-duration=0 --hostname host_A_P
+            # 	1 = creation: 1477557942.19, is_a: check, type: , status: scheduled, planned: 1477557944, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=down --failchance=2% --previous-state=UP --state-duration=0 --hostname host_o_B
+            # 	2 = creation: 1477557942.19, is_a: check, type: , status: scheduled, planned: 1477557949, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=flap --failchance=2% --previous-state=UP --state-duration=0 --hostname test_router_0
+            # 	3 = creation: 1477557942.19, is_a: check, type: , status: scheduled, planned: 1477557945, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=down --failchance=2% --previous-state=UP --state-duration=0 --hostname host_A_0
+            # 	4 = creation: 1477557942.2, is_a: check, type: , status: scheduled, planned: 1477557994, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=down --failchance=2% --previous-state=UP --state-duration=0 --hostname host_o_A
+            # 	5 = creation: 1477557942.2, is_a: check, type: , status: scheduled, planned: 1477557951, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=up --failchance=2% --previous-state=UP --state-duration=0 --parent-state=UP --hostname test_host_0
+            # 	6 = creation: 1477557942.21, is_a: check, type: , status: scheduled, planned: 1477557974, command: /tmp/dependencies/plugins/test_servicecheck.pl --type=ok --failchance=5% --previous-state=OK --state-duration=0 --total-critical-on-host=0 --total-warning-on-host=0 --hostname test_host_0 --servicedesc test_ok_0
+            # 	7 = creation: 1477557942.21, is_a: check, type: , status: scheduled, planned: 1477557946, command: /tmp/dependencies/plugins/test_servicecheck.pl --type=ok --failchance=5% --previous-state=OK --state-duration=0 --total-critical-on-host=0 --total-warning-on-host=0 --hostname host_P --servicedesc service_A
+            # 	8 = creation: 1477557942.21, is_a: check, type: , status: scheduled, planned: 1477557980, command: /tmp/dependencies/plugins/test_servicecheck.pl --type=ok --failchance=5% --previous-state=OK --state-duration=0 --total-critical-on-host=0 --total-warning-on-host=0 --hostname host_A --servicedesc service_A
+            # 	9 = creation: 1477557942.24, is_a: check, type: , status: scheduled, planned: 1477557995, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=down --failchance=2% --previous-state=UP --state-duration=1477557942 --hostname host_A
+            # 	10 = creation: 1477557942.37, is_a: check, type: , status: waitdep, planned: 1477557942.36, command: /tmp/dependencies/plugins/test_servicecheck.pl --type=ok --failchance=5% --previous-state=OK --state-duration=1477557942 --total-critical-on-host=0 --total-warning-on-host=0 --hostname host_A --servicedesc service_P
+            # ]]]
+            self.assert_checks_match(10, 'waitdep', 'status')
+
+            self.scheduler_loop(1, [[host, 2, 'DOWN']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "DOWN" == host.state
+            assert "UNREACHABLE" == svc.state
 
     def test_c_h_hostdep_withno_depname(self):
         """ Test for host dependency dispatched on all hosts of an hostgroup

@@ -74,7 +74,6 @@ import itertools
 import time
 import random
 import tempfile
-import uuid
 import logging
 from io import StringIO
 import json

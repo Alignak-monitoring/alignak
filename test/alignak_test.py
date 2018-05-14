@@ -108,7 +108,7 @@ class AlignakTest(unittest2.TestCase):
         self.former_log_level = None
         setup_logger(logger_configuration_file, log_dir=None, process_name='', log_file='')
         self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
-        self.set_unit_tests_logger_level(logging.WARNING)
+        # self.set_unit_tests_logger_level(logging.WARNING)
         self.logger_.warning("Test: %s", self.id())
 
         # To make sure that no running daemon exist
@@ -244,20 +244,19 @@ class AlignakTest(unittest2.TestCase):
         print("Killing remaining processes...")
         for daemon in ['broker', 'poller', 'reactionner', 'receiver', 'scheduler', 'arbiter']:
             for proc in psutil.process_iter():
-                if daemon not in proc.name():
-                    continue
-                if getattr(self, 'my_pid', None) and proc.pid == self.my_pid:
-                    continue
-                print("- killing %s" % (proc.name()))
                 try:
+                    if daemon not in proc.name():
+                        continue
+                    if getattr(self, 'my_pid', None) and proc.pid == self.my_pid:
+                        continue
+
+                    print("- killing %s" % (proc.name()))
                     daemon_process = psutil.Process(proc.pid)
+                    daemon_process.terminate()
+                    daemon_process.wait(10)
                 except psutil.NoSuchProcess:
                     print("not existing!")
                     continue
-
-                daemon_process.terminate()
-                try:
-                    daemon_process.wait(10)
                 except psutil.TimeoutExpired:
                     print("***** timeout 10 seconds, force-killing the daemon...")
                     daemon_process.kill()
@@ -303,7 +302,7 @@ class AlignakTest(unittest2.TestCase):
 
         self._stop_alignak_daemons()
 
-        # Some script comands may exist in the test folder ...
+        # Some script commands may exist in the test folder ...
         if os.path.exists(cfg_folder + '/dummy_command.sh'):
             shutil.copy(cfg_folder + '/dummy_command.sh', '/tmp/dummy_command.sh')
         if os.path.exists(cfg_folder + '/check_command.sh'):
@@ -781,7 +780,6 @@ class AlignakTest(unittest2.TestCase):
                     print("Check is still in progress for %s" % (item.get_full_name()))
                 self.assertGreater(len(item.checks_in_progress), 0)
                 chk = scheduler.checks[item.checks_in_progress[0]]
-                print("Check p: %s" % (chk))
                 chk.set_type_active()
                 chk.check_time = time.time()
                 chk.wait_time = 0.0001
@@ -934,7 +932,7 @@ class AlignakTest(unittest2.TestCase):
         macroresolver.init(self._scheduler_daemon.sched.pushed_conf)
 
         print("--- Scheduler: %s" % self._scheduler.my_daemon.name)
-        print("--- actions <<<----------------------------------")
+        print("--- actions >>>")
         actions = sorted(list(self._scheduler.actions.values()), key=lambda x: (x.t_to_go, x.creation_time))
         for action in actions:
             print("Time to launch action: %s, creation: %s, now: %s" % (action.t_to_go, action.creation_time, time.time()))
@@ -953,7 +951,7 @@ class AlignakTest(unittest2.TestCase):
                 print("EVENTHANDLER:", action)
             else:
                 print("ACTION:", action)
-        print("--- actions >>>----------------------------------")
+        print("<<< actions ---")
 
     def show_checks(self):
         """
@@ -961,11 +959,11 @@ class AlignakTest(unittest2.TestCase):
         :return:
         """
         print("--- Scheduler: %s" % self._scheduler.my_daemon.name)
-        print("--- checks <<<--------------------------------")
+        print("--- checks >>>")
         checks = sorted(list(self._scheduler.checks.values()), key=lambda x: x.creation_time)
         for check in checks:
             print("- %s" % check)
-        print("--- checks >>>--------------------------------")
+        print("<<< checks ---")
 
     def show_and_clear_actions(self):
         self.show_actions()

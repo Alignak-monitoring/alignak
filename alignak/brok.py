@@ -50,7 +50,6 @@ Brok are filled depending on their type (check_result, initial_state ...)
 """
 import time
 from datetime import datetime
-import uuid
 
 from alignak.alignakobject import get_a_new_object_id
 from alignak.misc.serialization import serialize, unserialize, AlignakClassLookupException
@@ -87,6 +86,7 @@ class Brok(object):
     my_type = 'brok'
 
     def __init__(self, params, parsing=True):
+        # pylint: disable=unused-argument
         """
         :param params: initialization parameters
         :type params: dict

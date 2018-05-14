@@ -125,7 +125,7 @@ class TestDaemonsApi(AlignakTest):
         if os.path.exists(cfg_folder):
             shutil.rmtree(cfg_folder)
 
-        print(("Copy run configuration (../etc) to %s..." % cfg_folder))
+        print("Copy run configuration (../etc) to %s..." % cfg_folder)
         # Copy the default Alignak shipped configuration to the run directory
         shutil.copytree('../etc', cfg_folder)
 
@@ -156,7 +156,7 @@ class TestDaemonsApi(AlignakTest):
             ';is_daemon=0': 'is_daemon=0',
             ';do_replace=0': 'do_replace=1',
 
-            '"level": "INFO"': '"level": "WARNING"'
+            # '"level": "INFO"': '"level": "WARNING"'
         }
         self._files_update(files, replacements)
 
@@ -182,7 +182,7 @@ class TestDaemonsApi(AlignakTest):
         for name, port in list(satellite_map.items()):
             if name == 'arbiter':   # No self ping!
                 continue
-            print(("- ping %s: %s://localhost:%s/ping" % (name, scheme, port)))
+            print("- ping %s: %s://localhost:%s/ping" % (name, scheme, port))
             raw_data = req.get("%s://localhost:%s/ping" % (scheme, port), verify=False)
             data = raw_data.json()
             assert data == 'pong', "Daemon %s  did not ping back!" % name
@@ -203,14 +203,45 @@ class TestDaemonsApi(AlignakTest):
                              'poller': GenericInterface,
                              'reactionner': GenericInterface,
                              'receiver': GenericInterface}
+        doc = []
+        doc.append(".. _alignak_features/daemons_api:")
+        doc.append("")
+        doc.append("===================")
+        doc.append("Alignak daemons API")
+        doc.append("===================")
         for name, port in list(satellite_map.items()):
             raw_data = req.get("%s://localhost:%s/api" % (scheme, port), verify=False)
             print("%s, api: %s" % (name, raw_data.text))
             assert raw_data.status_code == 200
             data = raw_data.json()
             print("API data: %s" % data)
+            assert 'doc' in data
+            assert 'api' in data
+            doc.append("Daemon: %s" % name)
+            doc.append("-" * len("Daemon: %s" % name))
+            for endpoint in data['api']:
+                print(endpoint)
+                assert 'name' in endpoint
+                assert 'doc' in endpoint
+                assert 'args' in endpoint
+                doc.append("/%s" % endpoint['name'])
+                doc.append("~" * len("/%s" % endpoint['name']))
+                doc.append("::\n\t%s" % endpoint['doc'])
+                doc.append("\n")
+
             expected_data = set(name_to_interface[name](None).api())
             assert set(data) == expected_data, "Daemon %s has a bad API!" % name
+        print('\n')
+        print('\n')
+        print('\n')
+        print('\n')
+        print('\n')
+        print('\n'.join(doc))
+        print('\n')
+        print('\n')
+        print('\n')
+        print('\n')
+        print('\n')
         # -----
 
         # -----
@@ -219,7 +250,7 @@ class TestDaemonsApi(AlignakTest):
             raw_data = req.get("%s://localhost:%s/get_id" % (scheme, port), verify=False)
             assert raw_data.status_code == 200
             data = raw_data.json()
-            print(("%s, my id: %s" % (name, json.dumps(data))))
+            print("%s, my id: %s" % (name, json.dumps(data)))
             assert isinstance(data, dict), "Data is not a dict!"
             assert 'alignak' in data
             assert 'type' in data
@@ -233,8 +264,14 @@ class TestDaemonsApi(AlignakTest):
             raw_data = req.get("%s://localhost:%s/get_start_time" % (scheme, port), verify=False)
             assert raw_data.status_code == 200
             data = raw_data.json()
-            print(("%s, my start time: %s" % (name, data)))
-            # assert isinstance(data, unicode), "Data is not an unicode!"
+            print("%s, my start time: %s" % (name, data['start_time']))
+            # Same as get_id
+            assert 'alignak' in data
+            assert 'type' in data
+            assert 'name' in data
+            assert 'version' in data
+            # +
+            assert 'start_time' in data
         # -----
 
         # -----
@@ -244,7 +281,14 @@ class TestDaemonsApi(AlignakTest):
             assert raw_data.status_code == 200
             data = raw_data.json()
             assert "running_id" in data
-            print(("%s, my running id: %s" % (name, data['running_id'])))
+            print("%s, my running id: %s" % (name, data['running_id']))
+            # Same as get_id
+            assert 'alignak' in data
+            assert 'type' in data
+            assert 'name' in data
+            assert 'version' in data
+            # +
+            assert 'running_id' in data
         # -----
 
         # -----
@@ -260,31 +304,107 @@ class TestDaemonsApi(AlignakTest):
                          "receiver": ["receiver-master"],
                          "poller": ["poller-master"]}
         data = raw_data.json()
-        print(("Satellites: %s" % json.dumps(data)))
+        print("Satellites: %s" % json.dumps(data))
         assert isinstance(data, dict), "Data is not a dict!"
         for k, v in expected_data.items():
             assert set(data[k]) == set(v)
         # -----
 
         # -----
+        print("Testing get_get_alignak_status")
+        # Arbiter only
+        raw_data = req.get("%s://localhost:%s/get_alignak_status" %
+                           (scheme, satellite_map['arbiter']), verify=False)
+        assert raw_data.status_code == 200
+        expected_data = {"reactionner": ["reactionner-master"],
+                         "broker": ["broker-master"],
+                         "arbiter": ["arbiter-master"],
+                         "scheduler": ["scheduler-master"],
+                         "receiver": ["receiver-master"],
+                         "poller": ["poller-master"]}
+        data = raw_data.json()
+        print("Overall status: %s" % json.dumps(data))
+        assert "template" in data
+        assert "livestate" in data
+        assert "services" in data
+        assert isinstance(data['services'], list)
+        for service in data['services']:
+            assert "name" in service
+            assert service['name'] in ['arbiter-master', 'broker-master', 'poller-master',
+                                       'scheduler-master', 'reactionner-master', 'receiver-master']
+            assert "livestate" in service
+            livestate = service['livestate']
+            assert "timestamp" in livestate
+            assert "state" in livestate
+            assert "output" in livestate
+            assert "long_output" in livestate
+            assert "perf_data" in livestate
+        # -----
+
+        # -----
         print("Testing get_stats")
         for name, port in list(satellite_map.items()):
-            print(("- for %s" % (name)))
+            print("- for %s" % (name))
             raw_data = req.get("%s://localhost:%s/get_stats" % (scheme, port), verify=False)
             print("%s, my stats: %s" % (name, raw_data.text))
             assert raw_data.status_code == 200
             data = raw_data.json()
-            print(("%s, my stats: %s" % (name, json.dumps(data))))
+            print("%s, my stats: %s" % (name, json.dumps(data)))
+
+            # Same as start_time
+            assert 'alignak' in data
+            assert 'type' in data
+            assert 'name' in data
+            assert 'version' in data
+            assert 'start_time' in data
+            # +
+            assert "program_start" in data
+            assert "load" in data
+            assert "metrics" in data    # To be deprecated...
+            assert "modules" in data
+            assert "counters" in data
+
+            if name in ['arbiter-master']:
+                assert "livestate" in data
+                livestate = data['livestate']
+                assert "timestamp" in livestate
+                assert "state" in livestate
+                assert "output" in livestate
+                assert "daemons" in livestate
+                for daemon_state in livestate['daemons']:
+                    assert daemon_state == 0
+
+                assert "daemons_state" in data
+                daemons_state = data['daemons_state']
+                for daemon_name, port in list(satellite_map.items()):
+                    assert daemon_name in daemon_state
+                    daemon_state = daemons_state[daemon_name]
+                    assert "type" in daemon_state
+                    assert "name" in daemon_state
+                    assert "realm_name" in daemon_state
+                    assert "manage_sub_realms" in daemon_state
+                    assert "uri" in daemon_state
+                    assert "alive" in daemon_state
+                    assert "passive" in daemon_state
+                    assert "reachable" in daemon_state
+                    assert "active" in daemon_state
+                    assert "spare" in daemon_state
+                    assert "polling_interval" in daemon_state
+                    assert "configuration_sent" in daemon_state
+                    assert "max_check_attempts" in daemon_state
+                    assert "last_check" in daemon_state
+                    assert "live_state" in daemon_state
+                    assert "live_output" in daemon_state
 
         print("Testing get_stats (detailed)")
         for name, port in list(satellite_map.items()):
-            print(("- for %s" % (name)))
+            print("- for %s" % (name))
             raw_data = req.get("%s://localhost:%s/get_stats?details=1" % (scheme, port), verify=False)
             print("%s, my stats: %s" % (name, raw_data.text))
             assert raw_data.status_code == 200
             # print("%s, my stats: %s" % (name, raw_data.text))
             data = raw_data.json()
-            print(("%s, my stats: %s" % (name, json.dumps(data))))
+            print("%s, my stats: %s" % (name, json.dumps(data)))
             # Too complex to check all this stuff
             # expected = {
             #     "alignak": "My Alignak", "type": "arbiter", "name": "Default-arbiter",
@@ -343,7 +463,7 @@ class TestDaemonsApi(AlignakTest):
             raw_data = req.get("%s://localhost:%s/have_conf" % (scheme, satellite_map[daemon]), verify=False)
             assert raw_data.status_code == 200
             data = raw_data.json()
-            print(("%s, have_conf: %s" % (daemon, data)))
+            print("%s, have_conf: %s" % (daemon, data))
             assert data == True, "Daemon %s should have a conf!" % daemon
 
             # raw_data = req.get("%s://localhost:%s/have_conf?magic_hash=1234567890" % (http, satellite_map[daemon]), verify=False)
@@ -359,7 +479,7 @@ class TestDaemonsApi(AlignakTest):
                            (scheme, satellite_map['arbiter']), verify=False)
         assert raw_data.status_code == 200
         data = raw_data.json()
-        print(("%s, do_not_run: %s" % (name, data)))
+        print("%s, do_not_run: %s" % (name, data))
         # Arbiter master returns False, spare returns True
         assert data is False
         # -----
@@ -380,11 +500,11 @@ class TestDaemonsApi(AlignakTest):
         # -----
         print("Testing get_managed_configurations")
         for name, port in list(satellite_map.items()):
-            print(("%s, what I manage?" % (name)))
+            print("%s, what I manage?" % (name))
             raw_data = req.get("%s://localhost:%s/get_managed_configurations" % (scheme, port), verify=False)
             assert raw_data.status_code == 200
             data = raw_data.json()
-            print(("%s, what I manage: %s" % (name, data)))
+            print("%s, what I manage: %s" % (name, data))
             assert isinstance(data, dict), "Data is not a dict!"
             if name != 'arbiter':
                 assert 1 == len(data), "The dict must have 1 key/value!"
@@ -401,7 +521,7 @@ class TestDaemonsApi(AlignakTest):
         for name, port in list(satellite_map.items()):
             raw_data = req.get("%s://localhost:%s/get_external_commands" % (scheme, port), verify=False)
             assert raw_data.status_code == 200
-            print(("%s get_external_commands, got (raw): %s" % (name, raw_data.content)))
+            print("%s get_external_commands, got (raw): %s" % (name, raw_data.content))
             data = raw_data.json()
             assert isinstance(data, list), "Data is not a list!"
         # -----
@@ -411,12 +531,12 @@ class TestDaemonsApi(AlignakTest):
         print("Testing get_log_level")
         for name, port in list(satellite_map.items()):
             raw_data = req.get("%s://localhost:%s/get_log_level" % (scheme, port), verify=False)
-            print(("%s, raw: %s" % (name, raw_data.content)))
+            print("%s, raw: %s" % (name, raw_data.content))
             data = raw_data.json()
-            print(("%s, log level: %s" % (name, data)))
+            print("%s, log level: %s" % (name, data))
             # Initially forced the WARNING log level
-            assert data['log_level'] == 30
-            assert data['log_level_name'] == 'WARNING'
+            assert data['log_level'] == 20
+            assert data['log_level_name'] == 'INFO'
 
         # todo: currently not fully functional ! Looks like it breaks the arbiter damon !
         print("Testing set_log_level")
@@ -432,9 +552,9 @@ class TestDaemonsApi(AlignakTest):
                                 data=json.dumps({'log_level': 'DEBUG'}),
                                 headers={'Content-Type': 'application/json'},
                                 verify=False)
-            print(("%s, raw_data: %s" % (name, raw_data.text)))
+            print("%s, raw_data: %s" % (name, raw_data.text))
             data = raw_data.json()
-            print(("%s, log level set as : %s" % (name, data)))
+            print("%s, log level set as : %s" % (name, data))
             assert data['log_level'] == 10
             assert data['log_level_name'] == 'DEBUG'
 
@@ -444,7 +564,7 @@ class TestDaemonsApi(AlignakTest):
                 continue
             raw_data = req.get("%s://localhost:%s/get_log_level" % (scheme, port), verify=False)
             data = raw_data.json()
-            print(("%s, log level: %s" % (name, data)))
+            print("%s, log level: %s" % (name, data))
             if name in ['arbiter']:
                 assert data['log_level'] == 20
             else:
@@ -461,10 +581,10 @@ class TestDaemonsApi(AlignakTest):
         assert isinstance(data, dict), "Data is not a dict!"
         for daemon_type in data:
             daemons = data[daemon_type]
-            print(("Got Alignak state for: %ss / %d instances" % (daemon_type, len(daemons))))
+            print("Got Alignak state for: %ss / %d instances" % (daemon_type, len(daemons)))
             for daemon in daemons:
-                print((" - %s: %s", daemon['%s_name' % daemon_type], daemon['alive']))
-                print((" - %s: %s", daemon['%s_name' % daemon_type], daemon))
+                print(" - %s: %s", daemon['%s_name' % daemon_type], daemon['alive'])
+                print(" - %s: %s", daemon['%s_name' % daemon_type], daemon)
                 assert daemon['alive']
                 assert 'realms' not in daemon
                 assert 'confs' not in daemon
@@ -502,7 +622,7 @@ class TestDaemonsApi(AlignakTest):
                            (scheme, satellite_map['scheduler']),
                            params={'broker_name': 'broker-master'}, verify=False)
         assert raw_data.status_code == 200
-        print(("fill_initial_broks, raw_data: %s" % (raw_data.text)))
+        print("fill_initial_broks, raw_data: %s" % (raw_data.text))
         data = raw_data.json()
         assert data == 0, "Data must be 0 - no broks!"
         # -----
@@ -516,9 +636,9 @@ class TestDaemonsApi(AlignakTest):
             raw_data = req.get("%s://localhost:%s/get_broks" % (scheme, port),
                                params={'broker_name': 'broker-master'}, verify=False)
             assert raw_data.status_code == 200
-            print(("%s, get_broks raw_data: %s" % (name, raw_data.text)))
+            print("%s, get_broks raw_data: %s" % (name, raw_data.text))
             data = raw_data.json()
-            print(("%s, broks: %s" % (name, data)))
+            print("%s, broks: %s" % (name, data))
             assert isinstance(data, list), "Data is not a list!"
         # -----
 
@@ -530,7 +650,7 @@ class TestDaemonsApi(AlignakTest):
                                (scheme, satellite_map[name]),
                                params={'scheduler_instance_id': 'XxX'}, verify=False)
             assert raw_data.status_code == 200
-            print(("%s, get_returns raw_data: %s" % (name, raw_data.text)))
+            print("%s, get_returns raw_data: %s" % (name, raw_data.text))
             data = raw_data.json()
             assert isinstance(data, list), "Data is not a list!"
 
@@ -547,11 +667,11 @@ class TestDaemonsApi(AlignakTest):
         print("Testing signals")
         for name, proc in list(self.procs.items()):
             # SIGUSR1: memory dump
-            print(("%s, send signal SIGUSR1" % (name)))
+            print("%s, send signal SIGUSR1" % (name))
             self.procs[name].send_signal(signal.SIGUSR1)
             time.sleep(1.0)
             # SIGUSR2: objects dump
-            print(("%s, send signal SIGUSR2" % (name)))
+            print("%s, send signal SIGUSR2" % (name))
             self.procs[name].send_signal(signal.SIGUSR2)
             time.sleep(1.0)
             # SIGHUP: reload configuration
@@ -605,7 +725,7 @@ class TestDaemonsApi(AlignakTest):
         if os.path.exists(cfg_folder):
             shutil.rmtree(cfg_folder)
 
-        print(("Copy run configuration (../etc) to %s..." % cfg_folder))
+        print("Copy run configuration (../etc) to %s..." % cfg_folder)
         # Copy the default Alignak shipped configuration to the run directory
         shutil.copytree('../etc', cfg_folder)
 
@@ -661,10 +781,10 @@ class TestDaemonsApi(AlignakTest):
         print("--- get_running_id")
         for name, port in list(satellite_map.items()):
             raw_data = req.get("%s://localhost:%s/get_running_id" % (scheme, port), verify=False)
-            print(("Got (raw): %s" % raw_data))
+            print("Got (raw): %s" % raw_data)
             data = raw_data.json()
             assert "running_id" in data
-            print(("%s, my running id: %s" % (name, data['running_id'])))
+            print("%s, my running id: %s" % (name, data['running_id']))
         # -----
 
         # -----
@@ -675,9 +795,9 @@ class TestDaemonsApi(AlignakTest):
             if name == 'arbiter-master':
                 continue
             raw_data = req.get("%s://localhost:%s/have_conf" % (scheme, port), verify=False)
-            print(("have_conf, got (raw): %s" % raw_data))
+            print("have_conf, got (raw): %s" % raw_data)
             data = raw_data.json()
-            print(("%s, have_conf: %s" % (name, data)))
+            print("%s, have_conf: %s" % (name, data))
             assert data == True, "Daemon %s should have a conf!" % name
 
         # -----
@@ -687,7 +807,7 @@ class TestDaemonsApi(AlignakTest):
             if name == 'arbiter-master':
                 continue
             raw_data = req.get("%s://localhost:%s/wait_new_conf" % (scheme, port), verify=False)
-            print(("wait_new_conf, got (raw): %s" % raw_data))
+            print("wait_new_conf, got (raw): %s" % raw_data)
             data = raw_data.json()
             assert data == None
         # -----
@@ -700,9 +820,9 @@ class TestDaemonsApi(AlignakTest):
             if name == 'arbiter-master':
                 continue
             raw_data = req.get("%s://localhost:%s/have_conf" % (scheme, port), verify=False)
-            print(("have_conf, got (raw): %s" % raw_data))
+            print("have_conf, got (raw): %s" % raw_data)
             data = raw_data.json()
-            print(("%s, have_conf: %s" % (name, data)))
+            print("%s, have_conf: %s" % (name, data))
             assert data == False, "Daemon %s should not have a conf!" % name
 
         # This function will only send a SIGTERM to the arbiter daemon
@@ -740,7 +860,7 @@ class TestDaemonsApi(AlignakTest):
         if os.path.exists(cfg_folder):
             shutil.rmtree(cfg_folder)
 
-        print(("Copy run configuration (../etc) to %s..." % cfg_folder))
+        print("Copy run configuration (../etc) to %s..." % cfg_folder)
         # Copy the default Alignak shipped configuration to the run directory
         shutil.copytree('../etc', cfg_folder)
 
@@ -793,10 +913,10 @@ class TestDaemonsApi(AlignakTest):
         for name, port in list(satellite_map.items()):
             raw_data = req.get("http://localhost:%s/get_running_id" % port, verify=False)
             assert raw_data.status_code == 200
-            print(("Got (raw): %s" % raw_data))
+            print("Got (raw): %s" % raw_data)
             data = raw_data.json()
             assert "running_id" in data
-            print(("%s, my running id: %s" % (name, data['running_id'])))
+            print("%s, my running id: %s" % (name, data['running_id']))
         # -----
 
         # -----
@@ -807,17 +927,17 @@ class TestDaemonsApi(AlignakTest):
         # Only Scheduler daemon
         raw_data = req.get("http://localhost:7768/get_host?host_name=localhost", verify=False)
         assert raw_data.status_code == 200
-        print(("get_host, got (raw): %s" % raw_data))
+        print("get_host, got (raw): %s" % raw_data)
         host = unserialize(raw_data.json(), True)
-        print(("Got: %s" % host))
+        print("Got: %s" % host)
         assert host.__class__ == Host
         assert host.get_name() == 'localhost'
 
         raw_data = req.get("http://localhost:7768/get_host?host_name=unknown_host", verify=False)
         assert raw_data.status_code == 200
-        print(("get_host, got (raw): %s" % raw_data))
+        print("get_host, got (raw): %s" % raw_data)
         host = unserialize(raw_data.json(), True)
-        print(("Got: %s" % host))
+        print("Got: %s" % host)
         assert host is None
 
         # This function will only send a SIGTERM to the arbiter daemon
@@ -833,7 +953,7 @@ class TestDaemonsApi(AlignakTest):
         if os.path.exists(cfg_folder):
             shutil.rmtree(cfg_folder)
 
-        print(("Copy run configuration (../etc) to %s..." % cfg_folder))
+        print("Copy run configuration (../etc) to %s..." % cfg_folder)
         # Copy the default Alignak shipped configuration to the run directory
         shutil.copytree('../etc', cfg_folder)
 
@@ -886,16 +1006,16 @@ class TestDaemonsApi(AlignakTest):
         for name, port in list(satellite_map.items()):
             raw_data = req.get("http://localhost:%s/get_running_id" % port, verify=False)
             assert raw_data.status_code == 200
-            print(("Got (raw): %s" % raw_data))
+            print("Got (raw): %s" % raw_data)
             data = raw_data.json()
             assert "running_id" in data
-            print(("%s, my running id: %s" % (name, data['running_id'])))
+            print("%s, my running id: %s" % (name, data['running_id']))
         # -----
 
         # -----
         # 2/ notify an external command to the arbiter (as the receiver does).
         raw_data = req.post("http://localhost:7770/push_external_command",
-                            data=json.dumps({'command': 'test'}),
+                            data=json.dumps({'command': 'disable_notifications'}),
                             headers={'Content-Type': 'application/json'},
                             verify=False)
         print("push_external_commands, got (raw): %s" % (raw_data.content))
@@ -903,15 +1023,25 @@ class TestDaemonsApi(AlignakTest):
         data = raw_data.json()
         print("Got: %s" % data)
         assert data['_status'] == 'OK'
-        assert data['_message'] == 'Got command: TEST'
-        assert data['command'] == 'TEST'
+        assert data['_message'] == 'Got command: DISABLE_NOTIFICATIONS'
+        assert data['command'] == 'DISABLE_NOTIFICATIONS'
+
+        raw_data = req.get("http://localhost:7770/get_external_commands")
+        assert raw_data.status_code == 200
+        print("%s get_external_commands, got (raw): %s" % (name, raw_data))
+        data = raw_data.json()
+        print("---Got: %s" % data)
+        assert len(data) == 1
+        assert 'creation_timestamp' in data[0]
+        assert data[0]['cmd_line'] == 'DISABLE_NOTIFICATIONS'
+        assert data[0]['my_type'] == 'externalcommand'
 
         # -----
         # 3/ notify an external command to the arbiter (WS interface).
         # For an host
         raw_data = req.post("http://localhost:7770/command",
                             data=json.dumps({
-                                'command': 'test',
+                                'command': 'disable_passive_host_checks',
                                 'element': 'host_name',
                                 'parameters': 'p1;p2;p3'
                             }),
@@ -922,8 +1052,18 @@ class TestDaemonsApi(AlignakTest):
         data = raw_data.json()
         print("Got: %s" % data)
         assert data['_status'] == 'OK'
-        assert data['_message'] == 'Got command: TEST;host_name;p1;p2;p3'
-        assert data['command'] == 'TEST;host_name;p1;p2;p3'
+        assert data['_message'] == 'Got command: DISABLE_PASSIVE_HOST_CHECKS;host_name;p1;p2;p3'
+        assert data['command'] == 'DISABLE_PASSIVE_HOST_CHECKS;host_name;p1;p2;p3'
+
+        raw_data = req.get("http://localhost:7770/get_external_commands")
+        assert raw_data.status_code == 200
+        print("%s get_external_commands, got (raw): %s" % (name, raw_data))
+        data = raw_data.json()
+        print("---Got: %s" % data)
+        assert len(data) == 1
+        assert 'creation_timestamp' in data[0]
+        assert data[0]['cmd_line'] == 'DISABLE_PASSIVE_HOST_CHECKS;host_name;p1;p2;p3'
+        assert data[0]['my_type'] == 'externalcommand'
 
         raw_data = req.post("http://localhost:7770/command",
                             data=json.dumps({
@@ -998,6 +1138,8 @@ class TestDaemonsApi(AlignakTest):
         assert data['_message'] == 'Got command: TEST;user_name;p1;p2;p3'
         assert data['command'] == 'TEST;user_name;p1;p2;p3'
 
+        time.sleep(5)
+
         # -----
         # Get external commands from all the daemons
         for name, port in list(satellite_map.items()):
@@ -1006,35 +1148,36 @@ class TestDaemonsApi(AlignakTest):
             print("%s get_external_commands, got (raw): %s" % (name, raw_data))
             data = raw_data.json()
             print("Got: %s" % data)
-            if name in 'arbiter':
-                # expected = [
-                #     {'cmd_line': 'TEST;host_name;p1;p2;p3', 'creation_timestamp': 1525239402.3044384, 'my_type': 'externalcommand'},
-                #     {'cmd_line': 'TEST;host_name;service;p1;p2;p3', 'creation_timestamp': 1525239402.3165898, 'my_type': 'externalcommand'},
-                #     {'cmd_line': 'TEST;host_name;service;p1;p2;p3', 'creation_timestamp': 1525239402.3312771, 'my_type': 'externalcommand'},
-                #     {'cmd_line': 'TEST;user_name;p1;p2;p3', 'creation_timestamp': 1525239402.338769, 'my_type': 'externalcommand'},
-                #     {'cmd_line': 'TEST;user_name;p1;p2;p3', 'creation_timestamp': 1525239402.3564115, 'my_type': 'externalcommand'}
-                # ]
-                assert 'creation_timestamp' in data[0]
-                assert data[1]['cmd_line'] == 'TEST;host_name;p1;p2;p3'
-                assert data[0]['my_type'] == 'externalcommand'
-                assert 'creation_timestamp' in data[1]
-                assert data[1]['cmd_line'] == 'TEST;host_name;p1;p2;p3'
-                assert data[1]['my_type'] == 'externalcommand'
-                assert 'creation_timestamp' in data[2]
-                assert data[2]['cmd_line'] == 'TEST;host_name;p1;p2;p3'
-                assert data[2]['my_type'] == 'externalcommand'
-                assert 'creation_timestamp' in data[3]
-                assert data[3]['cmd_line'] == 'TEST;host_name;service;p1;p2;p3'
-                assert data[3]['my_type'] == 'externalcommand'
-                assert 'creation_timestamp' in data[4]
-                assert data[4]['cmd_line'] == 'TEST;host_name;service;p1;p2;p3'
-                assert data[4]['my_type'] == 'externalcommand'
-                assert 'creation_timestamp' in data[5]
-                assert data[5]['cmd_line'] == 'TEST;user_name;p1;p2;p3'
-                assert data[5]['my_type'] == 'externalcommand'
-                assert 'creation_timestamp' in data[6]
-                assert data[6]['cmd_line'] == 'TEST;user_name;p1;p2;p3'
-                assert data[6]['my_type'] == 'externalcommand'
+            # External commands got consumed by the daemons
+            assert len(data) == 0
+            # if name in 'arbiter':
+            #     #         e = [
+            #     #             {'my_type': 'externalcommand', 'cmd_line': 'TEST;host_name;service;p1;p2;p3', 'creation_timestamp': 1526479441.683431},
+            #     #             {'my_type': 'externalcommand', 'cmd_line': 'TEST;user_name;p1;p2;p3', 'creation_timestamp': 1526479441.689507},
+            #     #             {'my_type': 'externalcommand', 'cmd_line': 'TEST;user_name;p1;p2;p3', 'creation_timestamp': 1526479441.695691}
+            #     #         ]
+            #
+            #     assert 'creation_timestamp' in data[0]
+            #     assert data[0]['cmd_line'] == 'TEST;host_name;p1;p2;p3'
+            #     assert data[0]['my_type'] == 'externalcommand'
+            #     assert 'creation_timestamp' in data[1]
+            #     assert data[1]['cmd_line'] == 'TEST;host_name;p1;p2;p3'
+            #     assert data[1]['my_type'] == 'externalcommand'
+            #     assert 'creation_timestamp' in data[2]
+            #     assert data[2]['cmd_line'] == 'TEST;host_name;p1;p2;p3'
+            #     assert data[2]['my_type'] == 'externalcommand'
+            #     assert 'creation_timestamp' in data[3]
+            #     assert data[3]['cmd_line'] == 'TEST;host_name;service;p1;p2;p3'
+            #     assert data[3]['my_type'] == 'externalcommand'
+            #     assert 'creation_timestamp' in data[4]
+            #     assert data[4]['cmd_line'] == 'TEST;host_name;service;p1;p2;p3'
+            #     assert data[4]['my_type'] == 'externalcommand'
+            #     assert 'creation_timestamp' in data[5]
+            #     assert data[5]['cmd_line'] == 'TEST;user_name;p1;p2;p3'
+            #     assert data[5]['my_type'] == 'externalcommand'
+            #     assert 'creation_timestamp' in data[6]
+            #     assert data[6]['cmd_line'] == 'TEST;user_name;p1;p2;p3'
+            #     assert data[6]['my_type'] == 'externalcommand'
 
         # This function will only send a SIGTERM to the arbiter daemon
         self._stop_alignak_daemons(arbiter_only=True)

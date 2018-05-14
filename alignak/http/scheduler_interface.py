@@ -120,7 +120,6 @@ class SchedulerInterface(GenericInterface):
 
         for result in results:
             logger.debug("-> result: %s", result)
-            result.set_type_active()
 
             # Update scheduler counters
             self.app.sched.counters[result.is_a]["total"]["results"]["total"] += 1

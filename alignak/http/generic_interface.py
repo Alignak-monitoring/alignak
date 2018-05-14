@@ -67,11 +67,16 @@ class GenericInterface(object):
         functions = [x[0]for x in inspect.getmembers(self, predicate=inspect.ismethod)
                      if not x[0].startswith('__')]
 
-        full_api = {}
+        full_api = {
+            'doc': u"When posting data you have to use the JSON format.",
+            'api': []
+        }
         for fun in functions:
-            full_api[fun] = {}
-            full_api[fun]["doc"] = getattr(self, fun).__doc__
-            full_api[fun]["args"] = {}
+            endpoint = {
+                'name': fun,
+                'doc': getattr(self, fun).__doc__,
+                'args': {}
+            }
 
             try:
                 spec = inspect.getfullargspec(getattr(self, fun))
@@ -84,9 +89,8 @@ class GenericInterface(object):
             else:
                 a_dict = dict(list(zip(args, ("No default value",) * len(args))))
 
-            full_api[fun]["args"] = a_dict
-
-        full_api["side_note"] = "When posting data you have to use the JSON format."
+            endpoint["args"] = a_dict
+            full_api['api'].append(endpoint)
 
         return full_api
 
@@ -124,6 +128,22 @@ class GenericInterface(object):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
+    def get_id(self):
+        """Get the daemon identity
+
+        This will return an object containing some properties:
+        - alignak: the Alignak instance name
+        - version: the Alignak version
+        - type: the daemon type
+        - name: the daemon name
+
+        :return: daemon identity
+        :rtype: dict
+        """
+        return self.app.get_id()
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
     def get_start_time(self):
         """Get the start time of the daemon
 
@@ -138,22 +158,6 @@ class GenericInterface(object):
         res = self.get_id()
         res.update({"start_time": self.start_time})
         return res
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def get_id(self):
-        """Get the daemon identity
-
-        This will return an object containing some properties:
-        - alignak: the Alignak instance name
-        - version: the Alignak version
-        - type: the daemon type
-        - name: the daemon name
-
-        :return: daemon identity
-        :rtype: dict
-        """
-        return self.app.get_id()
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -371,16 +375,17 @@ class GenericInterface(object):
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
     def get_stats(self, details=False):
-        """Get stats from the daemon
+        """Get statistics and information from the daemon
 
         Returns an object with the daemon identity, the daemon start_time
         and some extra properties depending upon the daemon type.
+
         All daemons provide these ones:
-        program_start: the Alignak start timestamp
-        spare: to indicate if the daemon is a spare one
-        load: the daemon load
-        modules: the daemon modules information
-        counters: the specific daemon counters
+        - program_start: the Alignak start timestamp
+        - spare: to indicate if the daemon is a spare one
+        - load: the daemon load
+        - modules: the daemon modules information
+        - counters: the specific daemon counters
 
         :param details: Details are required (different from 0)
         :type details str
@@ -392,5 +397,5 @@ class GenericInterface(object):
             details = bool(details)
         res = self.get_id()
         res.update(self.get_start_time())
-        res.update(self.app.get_daemon_stats(details))
+        res.update(self.app.get_daemon_stats(details=details))
         return res

@@ -75,8 +75,6 @@ class Notification(Action):  # pylint: disable=R0902
     properties.update({
         'is_a':
             StringProp(default=u'notification'),
-        'notification_type':
-            IntegerProp(default=0, fill_brok=['full_status']),
         'start_time':
             IntegerProp(default=0, fill_brok=['full_status']),
         'end_time':
@@ -147,8 +145,8 @@ class Notification(Action):  # pylint: disable=R0902
         self.fill_default()
 
     def __str__(self):  # pragma: no cover
-        return "Notification %s, item: %s, status: %s, command:'%s'" \
-               % (self.uuid, self.ref, self.status, self.command)
+        return "Notification %s, item: %s, type: %s, status: %s, command:'%s'" \
+               % (self.uuid, self.ref, self.type, self.status, self.command)
 
     def is_launchable(self, timestamp):
         """Check if this notification can be launched based on current time

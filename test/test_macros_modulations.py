@@ -56,43 +56,40 @@ class TestMacroModulations(AlignakTest):
         self.setup_with_file('cfg/cfg_macros_modulation.cfg')
         assert self.conf_is_correct
 
-        # Our scheduler
-        self._sched = self._scheduler
-
     def test_macros_modulation(self):
         """ Test macros modulation """
         # Get the host
-        host = self._sched.hosts.find_by_name("modulated_host")
+        host = self._scheduler.hosts.find_by_name("modulated_host")
         assert host is not None
         assert host.macromodulations is not None
 
         # Get its macros modulations
-        mod = self._sched.macromodulations.find_by_name("MODULATION")
+        mod = self._scheduler.macromodulations.find_by_name("MODULATION")
         assert mod is not None
         assert mod.get_name() == "MODULATION"
-        assert mod.is_active(self._sched.timeperiods)
+        assert mod.is_active(self._scheduler.timeperiods)
         assert mod.uuid in host.macromodulations
 
-        mod2 = self._sched.macromodulations.find_by_name("MODULATION2")
+        mod2 = self._scheduler.macromodulations.find_by_name("MODULATION2")
         assert mod2 is not None
         assert mod2.get_name() == "MODULATION2"
-        assert mod2.is_active(self._sched.timeperiods)
+        assert mod2.is_active(self._scheduler.timeperiods)
         assert mod2.uuid in host.macromodulations
 
         # Get the host service
-        svc = self._sched.services.find_srv_by_name_and_hostname("modulated_host",
-                                                                 "modulated_service")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("modulated_host",
+                                                                     "modulated_service")
 
         # Service is going CRITICAL/HARD ... this forces an host check!
+        assert len(host.checks_in_progress) == 0
         self.scheduler_loop(1, [[svc, 2, 'BAD']])
+        self.show_checks()
         assert len(host.checks_in_progress) == 1
+        for c in host.checks_in_progress:
+            print("Check: %s / %s" % (c, self._scheduler.checks[c]))
         for c in host.checks_in_progress:
             # The host has a custom macro defined as UNCHANGED
             # The host has 2 attached modulations impacting this macro value.
             # The first one with the value MODULATED and the second with NOT_THE_GOOD.
             # Both are currently active, but we want to get the first one
-            assert 'plugins/nothing MODULATED' == self._sched.checks[c].command
-
-
-if __name__ == '__main__':
-    AlignakTest.main()
+            assert 'plugins/nothing MODULATED' == self._scheduler.checks[c].command

@@ -202,7 +202,7 @@ class Escalation(Item):
         :return: timestamp for next notification or None
         :rtype: int | None
         """
-        small_states = {u'WARNING': 'w', u'UNKNOWN': 'u', u'CRITICAL': 'c',
+        short_states = {u'WARNING': 'w', u'UNKNOWN': 'u', u'CRITICAL': 'c',
                         u'RECOVERY': 'r', u'FLAPPING': 'f', u'DOWNTIME': 's',
                         u'DOWN': 'd', u'UNREACHABLE': 'u', u'OK': 'o', u'UP': 'o'}
 
@@ -211,7 +211,7 @@ class Escalation(Item):
             return None
 
         # Check if we are valid
-        if status in small_states and small_states[status] not in self.escalation_options:
+        if status in short_states and short_states[status] not in self.escalation_options:
             return None
 
         # Look for the min of our future validity
@@ -332,7 +332,7 @@ class Escalations(Items):
         """
         for escalation in self:
             # If no host, no hope of having a service
-            if not (hasattr(escalation, 'host_name')):
+            if not hasattr(escalation, 'host_name'):
                 continue
 
             es_hname, sdesc = escalation.host_name, escalation.service_description

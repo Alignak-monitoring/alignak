@@ -667,9 +667,9 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         log_level = 'info'
         command = notif.command_call
-        if notif.type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'CUSTOM',
-                          'ACKNOWLEDGEMENT', 'FLAPPINGSTART', 'FLAPPINGSTOP',
-                          'FLAPPINGDISABLED'):
+        if notif.type in (u'DOWNTIMESTART', u'DOWNTIMEEND', u'DOWNTIMECANCELLED',
+                          u'CUSTOM', u'ACKNOWLEDGEMENT',
+                          u'FLAPPINGSTART', u'FLAPPINGSTOP', u'FLAPPINGDISABLED'):
             state = '%s (%s)' % (notif.type, self.state)
         else:
             state = self.state

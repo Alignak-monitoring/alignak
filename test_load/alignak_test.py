@@ -29,6 +29,7 @@ import time
 import string
 import re
 import locale
+import traceback
 
 from six import string_types
 
@@ -107,7 +108,7 @@ class AlignakTest(unittest2.TestCase):
         self.former_log_level = None
         setup_logger(logger_configuration_file, log_dir=None, process_name='', log_file='')
         self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
-        self.set_unit_tests_logger_level(logging.WARNING)
+        # self.set_unit_tests_logger_level(logging.WARNING)
         self.logger_.warning("Test: %s", self.id())
 
         # To make sure that no running daemon exist
@@ -243,20 +244,19 @@ class AlignakTest(unittest2.TestCase):
         print("Killing remaining processes...")
         for daemon in ['broker', 'poller', 'reactionner', 'receiver', 'scheduler', 'arbiter']:
             for proc in psutil.process_iter():
-                if daemon not in proc.name():
-                    continue
-                if getattr(self, 'my_pid', None) and proc.pid == self.my_pid:
-                    continue
-                print("- killing %s" % (proc.name()))
                 try:
+                    if daemon not in proc.name():
+                        continue
+                    if getattr(self, 'my_pid', None) and proc.pid == self.my_pid:
+                        continue
+
+                    print("- killing %s" % (proc.name()))
                     daemon_process = psutil.Process(proc.pid)
+                    daemon_process.terminate()
+                    daemon_process.wait(10)
                 except psutil.NoSuchProcess:
                     print("not existing!")
                     continue
-
-                daemon_process.terminate()
-                try:
-                    daemon_process.wait(10)
                 except psutil.TimeoutExpired:
                     print("***** timeout 10 seconds, force-killing the daemon...")
                     daemon_process.kill()
@@ -302,7 +302,7 @@ class AlignakTest(unittest2.TestCase):
 
         self._stop_alignak_daemons()
 
-        # Some script comands may exist in the test folder ...
+        # Some script commands may exist in the test folder ...
         if os.path.exists(cfg_folder + '/dummy_command.sh'):
             shutil.copy(cfg_folder + '/dummy_command.sh', '/tmp/dummy_command.sh')
         if os.path.exists(cfg_folder + '/check_command.sh'):
@@ -768,12 +768,16 @@ class AlignakTest(unittest2.TestCase):
                     for i in scheduler.recurrent_works:
                         (name, fun, nb_ticks) = scheduler.recurrent_works[i]
                         if nb_ticks == 1:
-                            # print(" . %s ...running." % name)
-                            fun()
-                        # else:
+                            try:
+                                # print(" . %s ...running." % name)
+                                fun()
+                            except Exception as exp:
+                                print("Exception: %s\n%s" % (exp, traceback.format_exc()))
+
+                    # else:
                         #     print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
                 else:
-                    print("Check is still in progress for %s" % item)
+                    print("Check is still in progress for %s" % (item.get_full_name()))
                 self.assertGreater(len(item.checks_in_progress), 0)
                 chk = scheduler.checks[item.checks_in_progress[0]]
                 chk.set_type_active()
@@ -788,8 +792,11 @@ class AlignakTest(unittest2.TestCase):
             for i in scheduler.recurrent_works:
                 (name, fun, nb_ticks) = scheduler.recurrent_works[i]
                 if nb_ticks == 1:
-                    # print(" . %s ...running." % name)
-                    fun()
+                    try:
+                        # print(" . %s ...running." % name)
+                        fun()
+                    except Exception as exp:
+                        print("Exception: %s\n%s" % (exp, traceback.format_exc()))
                 # else:
                 #     print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
         self.assert_no_log_match("External command Brok could not be sent to any daemon!")
