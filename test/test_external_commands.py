@@ -1378,20 +1378,38 @@ class TestExternalCommands(AlignakTest):
             excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % time.time()
             self._scheduler.run_external_commands([excmd])
             self.external_command_loop()
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+
             assert 'DOWN' == host.state
             assert 'HARD' == host.state_type
             assert 'Host is dead' == host.output
 
             # Time warp 1 second
-            frozen_datetime.tick()
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
 
             self.external_command_loop()
             # Host problem only...
             self.show_actions()
             self.assert_actions_count(2)
             # The host problem is notified
-            self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --notificationtype PROBLEM --hoststate DOWN --hostoutput Host is dead ', 'command')
-            self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+            self.assert_actions_match(0,
+                                      'notifier.pl --hostname test_host_0 '
+                                      '--notificationtype PROBLEM --hoststate DOWN '
+                                      '--hostoutput Host is dead ',
+                                      'command')
+            self.assert_actions_match(0,
+                                      'NOTIFICATIONTYPE=PROBLEM, '
+                                      'NOTIFICATIONRECIPIENTS=test_contact, '
+                                      'NOTIFICATIONISESCALATED=False, '
+                                      'NOTIFICATIONAUTHOR=n/a, '
+                                      'NOTIFICATIONAUTHORNAME=n/a, '
+                                      'NOTIFICATIONAUTHORALIAS=n/a, '
+                                      'NOTIFICATIONCOMMENT=n/a, '
+                                      'HOSTNOTIFICATIONNUMBER=1, '
+                                      'SERVICENOTIFICATIONNUMBER=1',
+                                      'command')
 
             self.assert_actions_match(1, 'VOID', 'command')
 
