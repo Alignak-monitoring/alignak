@@ -178,8 +178,22 @@ class TestDowntime(AlignakTest):
         self.assert_actions_count(1)
         self.show_actions()
         # 1st notification for downtime start
-        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype DOWNTIMESTART --servicestate OK --serviceoutput OK', 'command')
-        self.assert_actions_match(0, 'NOTIFICATIONTYPE=DOWNTIMESTART, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=downtime author, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=downtime comment, HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
+        self.assert_actions_match(0,
+                                  'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 '
+                                  '--notificationtype DOWNTIMESTART --servicestate OK '
+                                  '--serviceoutput OK',
+                                  'command')
+        self.assert_actions_match(0,
+                                  'NOTIFICATIONTYPE=DOWNTIMESTART, '
+                                  'NOTIFICATIONRECIPIENTS=test_contact, '
+                                  'NOTIFICATIONISESCALATED=False, '
+                                  'NOTIFICATIONAUTHOR=downtime author, '
+                                  'NOTIFICATIONAUTHORNAME=Not available, '
+                                  'NOTIFICATIONAUTHORALIAS=Not available, '
+                                  'NOTIFICATIONCOMMENT=downtime comment, '
+                                  'HOSTNOTIFICATIONNUMBER=0, '
+                                  'SERVICENOTIFICATIONNUMBER=0',
+                                  'command')
 
         # A comment exist in our service
         assert 1 == len(svc.comments)
@@ -598,8 +612,22 @@ class TestDowntime(AlignakTest):
         self.assert_actions_count(1)
         # The downtime started
         self.show_actions()
-        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMESTART --hoststate UP --hostoutput UP', 'command')
-        self.assert_actions_match(0, 'NOTIFICATIONTYPE=DOWNTIMESTART, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=downtime author, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=downtime comment, HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
+        self.assert_actions_match(0,
+                                  'notifier.pl --hostname test_host_0 '
+                                  '--notificationtype DOWNTIMESTART '
+                                  '--hoststate UP --hostoutput UP',
+                                  'command')
+        self.assert_actions_match(0,
+                                  'NOTIFICATIONTYPE=DOWNTIMESTART, '
+                                  'NOTIFICATIONRECIPIENTS=test_contact, '
+                                  'NOTIFICATIONISESCALATED=False, '
+                                  'NOTIFICATIONAUTHOR=downtime author, '
+                                  'NOTIFICATIONAUTHORNAME=Not available, '
+                                  'NOTIFICATIONAUTHORALIAS=Not available, '
+                                  'NOTIFICATIONCOMMENT=downtime comment, '
+                                  'HOSTNOTIFICATIONNUMBER=0, '
+                                  'SERVICENOTIFICATIONNUMBER=0',
+                                  'command')
 
         # A comment exists in our host
         assert 1 == len(host.comments)

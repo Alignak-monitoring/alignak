@@ -569,8 +569,7 @@ class TestDependencies(AlignakTest):
         host.max_check_attempts = 1
         host.event_handler_enabled = False
 
-        svc = self._scheduler.services.find_srv_by_name_and_hostname(
-            "test_host_00", "test_ok_0")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc.notification_interval = 0.001
         svc.max_check_attempts = 1
@@ -578,13 +577,15 @@ class TestDependencies(AlignakTest):
         svc.event_handler_enabled = False
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
+        time.sleep(1.0)
+        self.scheduler_loop(1)
         assert 0 == svc.current_notification_number, 'All OK no notifications'
         self.assert_actions_count(0)
-        self.assert_checks_count(10)
+        self.assert_checks_count(12)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
+        time.sleep(1.0)
+        self.scheduler_loop(1)
         assert "HARD" == svc.state_type
         assert "OK" == svc.state
         self.assert_actions_count(0)
@@ -599,18 +600,29 @@ class TestDependencies(AlignakTest):
         self.assert_checks_match(11, 'waitdep', 'status')
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(0.1)
+        time.sleep(1.0)
+        self.scheduler_loop(1)
         assert "HARD" == svc.state_type
         assert "CRITICAL" == svc.state
         assert 1 == svc.current_notification_number, 'Critical HARD'
         self.assert_actions_count(2)
 
-        self.assert_actions_match(0, 'notifier.pl --hostname test_host_00 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
-        self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+        self.assert_actions_match(0,
+                                  'notifier.pl --hostname test_host_00 --servicedesc test_ok_0 '
+                                  '--notificationtype PROBLEM --servicestate CRITICAL '
+                                  '--serviceoutput CRITICAL',
+                                  'command')
+        self.assert_actions_match(0,
+                                  'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, '
+                                  'NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, '
+                                  'NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, '
+                                  'NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, '
+                                  'SERVICENOTIFICATIONNUMBER=1',
+                                  'command')
 
         self.assert_actions_match(1, 'VOID', 'command')
 
-        self.assert_checks_count(10)
+        self.assert_checks_count(12)
 
     def test_a_s_service_host_down(self):
         """ Test dependency (checks and notifications) between the service and the host (case 2)
@@ -981,7 +993,7 @@ class TestDependencies(AlignakTest):
 
         print("====================== host UP ===================")
         self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(0.1)
+        time.sleep(1.0)
         self.scheduler_loop(1)
         assert "UP" == host.state
         assert "CRITICAL" == svc1.state
@@ -993,11 +1005,29 @@ class TestDependencies(AlignakTest):
         self.assert_actions_count(4)
 
         # Both services have a notification
-        self.assert_actions_match(-1, 'notifier.pl --hostname test_host_00 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
-        self.assert_actions_match(-1, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+        self.assert_actions_match(-1,
+                                  'notifier.pl --hostname test_host_00 --servicedesc test_ok_0 '
+                                  '--notificationtype PROBLEM --servicestate CRITICAL '
+                                  '--serviceoutput CRITICAL',
+                                  'command')
+        self.assert_actions_match(-1,
+                                  'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact',
+                                  'command')
+        self.assert_actions_match(-1,
+                                  'HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1',
+                                  'command')
 
-        self.assert_actions_match(-1, 'notifier.pl --hostname test_host_00 --servicedesc test_ok_1 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput CRITICAL', 'command')
-        self.assert_actions_match(-1, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+        self.assert_actions_match(-1,
+                                  'notifier.pl --hostname test_host_00 --servicedesc test_ok_1 '
+                                  '--notificationtype PROBLEM --servicestate CRITICAL '
+                                  '--serviceoutput CRITICAL',
+                                  'command')
+        self.assert_actions_match(-1,
+                                  'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact',
+                                  'command')
+        self.assert_actions_match(-1,
+                                  'HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1',
+                                  'command')
 
         self.assert_actions_match(2, 'VOID', 'command')
         self.assert_actions_match(3, 'VOID', 'command')

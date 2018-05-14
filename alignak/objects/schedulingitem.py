@@ -2244,7 +2244,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 notification_contacts = self.contacts
 
         recipients = []
-        recipients_names = []
+        recipients_names = set()
         for contact_uuid in notification_contacts:
             # We do not want to notify again a contact with notification interval == 0
             # if has been already notified except if the item hard state changed!
@@ -2253,11 +2253,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if notif.type == u'PROBLEM' and self.notification_interval == 0 \
                     and self.state_type == 'HARD' and self.last_state_type == self.state_type \
                     and self.state == self.last_state \
-                    and contact.uuid in self.notified_contacts:
+                    and contact_uuid in self.notified_contacts:
                 # Do not send notification
                 continue
             recipients.append(contact_uuid)
-            recipients_names.append(contacts[contact_uuid].contact_name)
+            recipients_names.add(contacts[contact_uuid].contact_name)
 
         for contact_uuid in recipients:
             contact = contacts[contact_uuid]
@@ -2274,7 +2274,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     'ref': self.uuid,
                     'contact': contact.uuid,
                     'contact_name': contact.contact_name,
-                    'recipients': recipients_names,
+                    'recipients': ','.join(recipients_names),
                     't_to_go': notif.t_to_go,
                     'escalated': escalated,
                     'timeout': cls.notification_timeout,

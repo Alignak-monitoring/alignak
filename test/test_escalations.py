@@ -75,7 +75,7 @@ class TestEscalations(AlignakTest):
     def test_wildcard_in_service_description(self):
         """ Test wildcards in service description """
         self_generated = [e for e in self._scheduler.pushed_conf.escalations
-                          if e.escalation_name.startswith('Generated-ServiceEscalation-')]
+                          if e.escalation_name.startswith('Generated-SE-')]
         host_services = self._scheduler.services.find_srvs_by_hostname("test_host_0_esc")
 
         # Todo: confirm this assertion
@@ -101,7 +101,7 @@ class TestEscalations(AlignakTest):
         host.act_depend_of = []  # ignore the router
 
         svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0_esc",
-                                                                 "test_svc_esc")
+                                                                     "test_svc_esc")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # ignore the host
         svc.event_handler_enabled = False
