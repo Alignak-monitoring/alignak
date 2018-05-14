@@ -382,10 +382,18 @@ class TestEscalations(AlignakTest):
         # Get host and services
         host = self._scheduler.hosts.find_by_name("test_host_0_esc")
         host.checks_in_progress = []
-        host.act_depend_of = []  # ignore the router
+        host.act_depend_of = []  # ignore the default router
+        host.passive_checks_enabled = False
+        print("Host check: %s / %s / %s / %s"
+              % (host.active_checks_enabled, host.passive_checks_enabled,
+                 host.check_freshness, host.freshness_threshold))
+        host.check_interval = 3600
+        host.retry_interval = 3600
+        print("Host check: %s / %s / %s"
+              % (host.check_period, host.check_interval, host.retry_interval))
 
         svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0_esc",
-                                                                 "test_svc_esc_time")
+                                                                     "test_svc_esc_time")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # ignore the host
         svc.event_handler_enabled = False
@@ -410,7 +418,7 @@ class TestEscalations(AlignakTest):
         self.assertIsInstance(tolevel3, Escalation)
         assert tolevel3.uuid in svc.escalations
 
-        # 1 notification pet minute
+        # 1 notification per minute
         svc.notification_interval = 1
 
         # Freeze the time !
@@ -422,9 +430,7 @@ class TestEscalations(AlignakTest):
             #--------------------------------------------------------------
             # initialize host/service state
             #--------------------------------------------------------------
-            self.scheduler_loop(1, [
-                [host, 0, 'UP'], [svc, 0, 'OK']
-            ])
+            self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
             assert "HARD" == host.state_type
             assert "UP" == host.state
             assert 0 == host.current_notification_number
@@ -432,6 +438,16 @@ class TestEscalations(AlignakTest):
             assert "HARD" == svc.state_type
             assert "OK" == svc.state
             assert 0 == svc.current_notification_number
+
+            # We should have had 2 ALERT and a NOTIFICATION to the service defined contact
+            # We also have a notification to level1 contact which is a contact defined for the host
+            expected_logs = [
+                ('info',
+                 'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;UP'),
+                ('info',
+                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;OK;HARD;1;OK'),
+            ]
+            self.check_monitoring_logs(expected_logs)
 
             # Time warp
             frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
@@ -446,6 +462,16 @@ class TestEscalations(AlignakTest):
             assert "CRITICAL" == svc.state
             # No notification...
             assert 0 == svc.current_notification_number
+
+            # We should have had 2 ALERT and a NOTIFICATION to the service defined contact
+            # We also have a notification to level1 contact which is a contact defined for the host
+            expected_logs += [
+                ('error',
+                 'SERVICE ALERT: test_host_0_esc;test_svc_esc_time;CRITICAL;SOFT;1;BAD'),
+                ('error',
+                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;SOFT;1;BAD')
+            ]
+            self.check_monitoring_logs(expected_logs)
 
             # ---
             # 1/
@@ -468,19 +494,11 @@ class TestEscalations(AlignakTest):
 
             # We should have had 2 ALERT and a NOTIFICATION to the service defined contact
             # We also have a notification to level1 contact which is a contact defined for the host
-            expected_logs = [
-                ('info',
-                 'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;UP'),
-                ('info',
-                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;OK;HARD;1;OK'),
+            expected_logs += [
                 ('error',
                  'SERVICE ALERT: test_host_0_esc;test_svc_esc_time;CRITICAL;SOFT;1;BAD'),
                 ('error',
                  'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;SOFT;1;BAD'),
-                ('error',
-                 'SERVICE ALERT: test_host_0_esc;test_svc_esc_time;CRITICAL;HARD;2;BAD'),
-                ('error',
-                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;HARD;2;BAD'),
                 ('error',
                  'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc_time;CRITICAL;notify-service;BAD'),
                 ('error',
@@ -489,18 +507,10 @@ class TestEscalations(AlignakTest):
             self.check_monitoring_logs(expected_logs)
 
             # ---
-            # time warp :)
+            # time warp ... 5 minutes later !
             # ---
-            frozen_datetime.tick(delta=datetime.timedelta(hours=1, seconds=1))
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=5, seconds=1))
 
-            # # For the test, we hack the notification value because we do not want to wait 1 hour!
-            # for n in list(svc.notifications_in_progress.values()):
-            #     # We say that it's already 3600 seconds since the last notification
-            #     svc.notification_interval = 3600
-            #     # and we say that there is still 1 hour since the notification creation
-            #     # so it will say the notification time is huge, and it will escalade
-            #     n.creation_time = n.creation_time - 3600
-            #
             # ---
             # 2/
             # ---
@@ -514,28 +524,24 @@ class TestEscalations(AlignakTest):
             # Service notification number increased
             assert 2 == svc.current_notification_number
 
-            # We got 2 escalated notifications!
-            # - one notification to level2 contact
-            # -one more notification for test_contact that is now considered as escalated.
-            assert 2 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
+            # We got 1 escalated notification
+            assert 1 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
 
-            # Now also notified to the level2 and a second notification to the service defined contact
+            # Now also notified to the level2
             expected_logs += [
                 ('error',
                  'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;HARD;2;BAD'),
-                ('info',
-                 'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;Host assumed to be UP'),
+                # ('info',
+                #  'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;Host assumed to be UP'),
                 ('error',
                  'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc_time;CRITICAL;notify-service;BAD'),
-                ('error',
-                 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;CRITICAL;notify-service;BAD')
             ]
             self.check_monitoring_logs(expected_logs)
 
             # ---
-            # time warp :)
+            # time warp ... 5 minutes later !
             # ---
-            frozen_datetime.tick(delta=datetime.timedelta(hours=1, seconds=1))
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=5, seconds=1))
 
             # ---
             # 3/
@@ -549,22 +555,22 @@ class TestEscalations(AlignakTest):
             # Service notification number increased
             assert 3 == svc.current_notification_number
 
-            # We got 2 more escalated notification
-            assert 3 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
+            # We got 1 more escalated notification
+            assert 2 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
             expected_logs += [
+                # ('info',
+                #  'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;Host assumed to be UP'),
                 ('error',
                  'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;HARD;2;BAD'),
                 ('error',
                  'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;CRITICAL;notify-service;BAD'),
-                ('info',
-                 'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;Host assumed to be UP'),
             ]
             self.check_monitoring_logs(expected_logs)
 
             # ---
-            # time warp :)
+            # time warp ... 5 minutes later !
             # ---
-            frozen_datetime.tick(delta=datetime.timedelta(hours=1, seconds=1))
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=5, seconds=1))
 
             # ---
             # 4/
@@ -579,12 +585,14 @@ class TestEscalations(AlignakTest):
             assert 4 == svc.current_notification_number
 
             # We got one more escalated notification
-            assert 5 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
+            assert 3 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
             expected_logs += [
                 ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;'
                            'CRITICAL;HARD;2;BAD'),
                 ('error', 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;'
-                           'CRITICAL;notify-service;BAD')
+                           'CRITICAL;notify-service;BAD'),
+                # ('info',
+                #  'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;Host assumed to be UP'),
             ]
             self.check_monitoring_logs(expected_logs)
 
@@ -594,9 +602,9 @@ class TestEscalations(AlignakTest):
             # Now we send 10 more alerts and we are still always notifying only level3
             for i in range(10):
                 # ---
-                # time warp :)
+                # time warp ... 5 minutes later !
                 # ---
-                frozen_datetime.tick(delta=datetime.timedelta(hours=1, seconds=1))
+                frozen_datetime.tick(delta=datetime.timedelta(minutes=5, seconds=1))
 
                 # Service is still CRITICAL/HARD
                 self.scheduler_loop(1, [[svc, 2, 'BAD']])
@@ -608,14 +616,15 @@ class TestEscalations(AlignakTest):
                 assert 5 + i == svc.current_notification_number
 
                 # We got one more escalated notification
-                assert 6 + i == \
-                                 len([n.escalated for n in
-                                      list(self._scheduler.actions.values()) if n.escalated])
+                assert 4 + i == len([n.escalated for n in
+                                     list(self._scheduler.actions.values()) if n.escalated])
                 expected_logs += [
                     ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;'
                                'CRITICAL;HARD;2;BAD'),
                     ('error', 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;'
-                               'CRITICAL;notify-service;BAD')
+                               'CRITICAL;notify-service;BAD'),
+                    # ('info',
+                    #  'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;Host assumed to be UP'),
                 ]
                 self.check_monitoring_logs(expected_logs)
 

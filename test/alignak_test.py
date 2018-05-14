@@ -29,6 +29,7 @@ import time
 import string
 import re
 import locale
+import traceback
 
 from six import string_types
 
@@ -768,14 +769,19 @@ class AlignakTest(unittest2.TestCase):
                     for i in scheduler.recurrent_works:
                         (name, fun, nb_ticks) = scheduler.recurrent_works[i]
                         if nb_ticks == 1:
-                            # print(" . %s ...running." % name)
-                            fun()
-                        # else:
+                            try:
+                                # print(" . %s ...running." % name)
+                                fun()
+                            except Exception as exp:
+                                print("Exception: %s\n%s" % (exp, traceback.format_exc()))
+
+                    # else:
                         #     print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
                 else:
-                    print("Check is still in progress for %s" % item)
+                    print("Check is still in progress for %s" % (item.get_full_name()))
                 self.assertGreater(len(item.checks_in_progress), 0)
                 chk = scheduler.checks[item.checks_in_progress[0]]
+                print("Check p: %s" % (chk))
                 chk.set_type_active()
                 chk.check_time = time.time()
                 chk.wait_time = 0.0001
@@ -788,8 +794,11 @@ class AlignakTest(unittest2.TestCase):
             for i in scheduler.recurrent_works:
                 (name, fun, nb_ticks) = scheduler.recurrent_works[i]
                 if nb_ticks == 1:
-                    # print(" . %s ...running." % name)
-                    fun()
+                    try:
+                        # print(" . %s ...running." % name)
+                        fun()
+                    except Exception as exp:
+                        print("Exception: %s\n%s" % (exp, traceback.format_exc()))
                 # else:
                 #     print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
         self.assert_no_log_match("External command Brok could not be sent to any daemon!")
