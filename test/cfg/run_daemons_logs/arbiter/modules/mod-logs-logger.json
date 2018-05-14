@@ -1,0 +1,61 @@
+{
+    "version": 1,
+    "disable_existing_loggers": false,
+    "formatters": {
+        "local": {
+            "format": "[%(asctime)s] %(levelname)s: [%(name)s] %(message)s"
+        }
+    },
+
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+            "level": "DEBUG",
+            "formatter": "local",
+            "stream": "ext://sys.stdout"
+        },
+        "rotating_file_handler": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "level": "INFO",
+            "formatter": "local",
+            "filename": "ALIGNAKLOG/rotating-monitoring.log",
+            "when": "midnight",
+            "interval": 1,
+            "backupCount": 7,
+            "encoding": "utf8"
+        },
+        "timed_rotating_file_handler": {
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "level": "INFO",
+            "formatter": "local",
+            "filename": "ALIGNAKLOG/timed-rotating-monitoring.log",
+            "when": "midnight",
+            "interval": 1,
+            "backupCount": 7,
+            "encoding": "utf8"
+        },
+        "monitoring_logs": {
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "level": "INFO",
+            "formatter": "local",
+            "filename": "ALIGNAKLOG/monitoring-logs.log",
+            "when": "midnight",
+            "interval": 1,
+            "backupCount": 30,
+            "encoding": "utf8"
+        }
+    },
+
+    "loggers": {
+        "monitoring-logs": {
+            "level": "INFO",
+            "handlers": ["monitoring_logs"],
+            "propagate": "no"
+        }
+    },
+
+    "root": {
+        "level": "INFO",
+        "handlers": ["console", "timed_rotating_file_handler"]
+    }
+}

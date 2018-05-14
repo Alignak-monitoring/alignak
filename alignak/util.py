@@ -680,20 +680,6 @@ def get_obj_name_two_args_and_void(obj, value):
         return ''
 
 
-def get_customs_keys(dic):  # pragma: no cover, to be deprecated?
-    """Get a list of keys of the custom dict
-    without the first char
-
-    Used for macros (_name key)
-
-    :param dic: dict to parse
-    :type dic: dict
-    :return: list of keys
-    :rtype: list
-    """
-    return [k[1:] for k in list(dic.keys())]
-
-
 def unique_value(val):
     """Get last element of a value if it is a list else returns the value
 
@@ -762,7 +748,7 @@ def alive_then_spare_then_deads(data):
     return rdata
 
 
-def sort_by_number_values(x00, y00):
+def sort_by_number_values(x00, y00):  # pragma: no cover, looks like not used!
     """Compare x00, y00 base on number of values
 
     :param x00: first elem to compare
@@ -780,6 +766,7 @@ def sort_by_number_values(x00, y00):
     return 0
 
 
+# ##################### Statistics ################
 def average_percentile(values):
     """
     Get the average, min percentile (5%) and
@@ -801,19 +788,19 @@ def average_percentile(values):
 
 # #################### Cleaning ##############
 def strip_and_uniq(tab):
-    """Strip every element of a list and keep unique values
+    """Strip every element of a list and keep a list of ordered unique values
 
     :param tab: list to strip
     :type tab: list
     :return: stripped list with unique values
     :rtype: list
     """
-    new_tab = set()
+    _list = []
     for elt in tab:
         val = elt.strip()
-        if val != '':
-            new_tab.add(val)
-    return list(new_tab)
+        if val and val not in _list:
+            _list.append(val)
+    return _list
 
 
 # ################### Pattern change application (mainly for host) #######

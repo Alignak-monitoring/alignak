@@ -50,6 +50,9 @@
 """
 
 import time
+import datetime
+from freezegun import freeze_time
+
 from alignak.misc.serialization import unserialize
 from alignak.downtime import Downtime
 
@@ -68,9 +71,6 @@ class TestDowntime(AlignakTest):
 
         self.setup_with_file('cfg/cfg_default.cfg')
         assert self.conf_is_correct
-
-        # Our scheduler
-        self._sched = self._scheduler
 
         # No error messages
         assert len(self.configuration_errors) == 0
@@ -129,7 +129,7 @@ class TestDowntime(AlignakTest):
     def test_schedule_fixed_svc_downtime(self):
         """ Schedule a fixed downtime for a service """
         # Get the service
-        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         # Not any downtime yet !
@@ -151,7 +151,7 @@ class TestDowntime(AlignakTest):
         # downtime valid for 5 seconds from now
         cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;%d;%d;1;0;%d;" \
               "downtime author;downtime comment" % (now, now, now + duration, duration)
-        self._sched.run_external_commands([cmd])
+        self._scheduler.run_external_commands([cmd])
         time.sleep(1.0)
         self.external_command_loop()
         # A downtime exist for the service
@@ -360,7 +360,7 @@ class TestDowntime(AlignakTest):
     def test_schedule_flexible_svc_downtime(self):
         """ Schedule a flexible downtime for a service """
         # Get the service
-        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         # Not any downtime yet !
@@ -385,7 +385,7 @@ class TestDowntime(AlignakTest):
         now = int(time.time())
         cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;%d;%d;0;0;%d;" \
               "downtime author;downtime comment" % (now, now, now + 3600, duration)
-        self._sched.run_external_commands([cmd])
+        self._scheduler.run_external_commands([cmd])
         self.external_command_loop()
         # A downtime exist for the service
         assert len(svc.downtimes) == 1
@@ -560,7 +560,7 @@ class TestDowntime(AlignakTest):
     def test_schedule_fixed_host_downtime(self):
         """ Schedule a fixed downtime for an host """
         # Get the host
-        host = self._sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []
         assert host.enable_notifications
@@ -576,221 +576,262 @@ class TestDowntime(AlignakTest):
         host.notification_interval = 0.001
         host.event_handler_enabled = False
 
-        # Make the host be OK
-        self.scheduler_loop(1, [[host, 0, 'UP']])
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2018, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
 
-        # schedule a 5 seconds downtime
-        duration = 5
-        now = int(time.time())
-        # downtime valid for 5 seconds from now
-        cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_host_0;%d;%d;1;;%d;" \
-              "downtime author;downtime comment" % (now, now, now + duration, duration)
-        self._sched.run_external_commands([cmd])
-        time.sleep(1.0)
-        self.external_command_loop()
-        # A downtime exist for the host
-        assert len(host.downtimes) == 1
-        downtime = list(host.downtimes.values())[0]
-        assert downtime.comment == "downtime comment"
-        assert downtime.author == "downtime author"
-        assert downtime.start_time == now
-        assert downtime.end_time == now + duration
-        assert downtime.duration == duration
-        # Fixed
-        assert downtime.fixed
-        # Already active
-        assert downtime.is_in_effect
-        # Cannot be deleted
-        assert not downtime.can_be_deleted
-        assert downtime.trigger_id == ""
-        # Get host scheduled downtime depth
-        scheduled_downtime_depth = host.scheduled_downtime_depth
-        assert host.scheduled_downtime_depth == 1
+            # Make the host be OK
+            self.scheduler_loop(1, [[host, 0, 'UP']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
 
-        assert 0 == host.current_notification_number, 'Should not have any notification'
-        # Notification: downtime start
-        self.assert_actions_count(1)
-        # The downtime started
-        self.show_actions()
-        self.assert_actions_match(0,
-                                  'notifier.pl --hostname test_host_0 '
-                                  '--notificationtype DOWNTIMESTART '
-                                  '--hoststate UP --hostoutput UP',
-                                  'command')
-        self.assert_actions_match(0,
-                                  'NOTIFICATIONTYPE=DOWNTIMESTART, '
-                                  'NOTIFICATIONRECIPIENTS=test_contact, '
-                                  'NOTIFICATIONISESCALATED=False, '
-                                  'NOTIFICATIONAUTHOR=downtime author, '
-                                  'NOTIFICATIONAUTHORNAME=Not available, '
-                                  'NOTIFICATIONAUTHORALIAS=Not available, '
-                                  'NOTIFICATIONCOMMENT=downtime comment, '
-                                  'HOSTNOTIFICATIONNUMBER=0, '
-                                  'SERVICENOTIFICATIONNUMBER=0',
-                                  'command')
+            # Time warp 1 minutes
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1))
 
-        # A comment exists in our host
-        assert 1 == len(host.comments)
+            # schedule a 15 minutes downtime
+            now = int(time.time())
+            duration = 15 * 60
+            # downtime valid for 5 seconds from now
+            cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_host_0;%d;%d;1;;%d;" \
+                  "downtime author;downtime comment" % (now, now, now + duration, duration)
+            self._scheduler.run_external_commands([cmd])
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            # A downtime exist for the host
+            assert len(host.downtimes) == 1
+            downtime = list(host.downtimes.values())[0]
+            assert downtime.comment == "downtime comment"
+            assert downtime.author == "downtime author"
+            assert downtime.start_time == now
+            assert downtime.end_time == now + duration
+            assert downtime.duration == duration
+            # Fixed
+            assert downtime.fixed
+            # Already active
+            assert downtime.is_in_effect
+            # Cannot be deleted
+            assert not downtime.can_be_deleted
+            assert downtime.trigger_id == ""
+            # Get host scheduled downtime depth
+            scheduled_downtime_depth = host.scheduled_downtime_depth
+            assert host.scheduled_downtime_depth == 1
 
-        # Make the host be OK after a while
-        time.sleep(1.0)
-        self.scheduler_loop(2, [[host, 0, 'UP']])
-        assert "HARD" == host.state_type
-        assert "UP" == host.state
+            assert 0 == host.current_notification_number, 'Should not have any notification'
 
-        assert 0 == host.current_notification_number, 'Should not have any notification'
-        # Still only 1
-        self.assert_actions_count(1)
+            # The host is currently in a downtime period
+            assert host.in_scheduled_downtime
+            assert downtime.fixed
+            assert downtime.is_in_effect
+            assert not downtime.can_be_deleted
 
-        # The downtime still exist in our host
-        assert 1 == len(host.downtimes)
-        downtime = list(host.downtimes.values())[0]
-        # The host is currently in a downtime period
-        assert host.in_scheduled_downtime
-        assert downtime.fixed
-        assert downtime.is_in_effect
-        assert not downtime.can_be_deleted
+            # Notification: downtime start
+            self.show_actions()
+            self.assert_actions_count(1)
+            self.assert_actions_match(0,
+                                      'notifier.pl --hostname test_host_0 '
+                                      '--notificationtype DOWNTIMESTART '
+                                      '--hoststate UP --hostoutput UP',
+                                      'command')
+            self.assert_actions_match(0,
+                                      'NOTIFICATIONTYPE=DOWNTIMESTART, '
+                                      'NOTIFICATIONRECIPIENTS=test_contact, '
+                                      'NOTIFICATIONISESCALATED=False, '
+                                      'NOTIFICATIONAUTHOR=downtime author, '
+                                      'NOTIFICATIONAUTHORNAME=Not available, '
+                                      'NOTIFICATIONAUTHORALIAS=Not available, '
+                                      'NOTIFICATIONCOMMENT=downtime comment, '
+                                      'HOSTNOTIFICATIONNUMBER=0, '
+                                      'SERVICENOTIFICATIONNUMBER=0',
+                                      'command')
 
-        # Make the host be DOWN/SOFT
-        time.sleep(1)
-        self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        assert "SOFT" == host.state_type
-        assert "DOWN" == host.state
+            # A comment exists in our host
+            assert 1 == len(host.comments)
 
-        assert 0 == host.current_notification_number, 'Should not have any notification'
-        # Still only 1
-        self.assert_actions_count(1)
+            # Time warp 1 minutes
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1))
 
-        assert 1 == len(host.downtimes)
-        downtime = list(host.downtimes.values())[0]
-        # The host is still in a downtime period
-        assert host.in_scheduled_downtime
-        assert downtime.fixed
-        assert downtime.is_in_effect
-        assert not downtime.can_be_deleted
+            # Raise an host check
+            self.scheduler_loop(2, [[host, 0, 'UP']])
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "HARD" == host.state_type
+            assert "UP" == host.state
 
-        # Make the host be DOWN/HARD
-        time.sleep(1)
-        self.scheduler_loop(2, [[host, 2, 'DOWN']])
-        assert "HARD" == host.state_type
-        assert "DOWN" == host.state
+            assert 0 == host.current_notification_number, 'Should not have any notification'
+            # Still only 1 action
+            self.show_actions()
+            self.assert_actions_count(1)
 
-        assert 0 == host.current_notification_number, 'Should not have any notification'
-        # Now 2 actions because the service is a problem
-        self.assert_actions_count(2)
-        # The downtime started
-        self.assert_actions_match(0, '/notifier.pl', 'command')
-        self.assert_actions_match(0, 'DOWNTIMESTART', 'type')
-        self.assert_actions_match(0, 'scheduled', 'status')
-        # The service is now a problem...
-        self.assert_actions_match(1, 'VOID', 'command')
-        self.assert_actions_match(1, 'PROBLEM', 'type')
-        self.assert_actions_match(1, 'scheduled', 'status')
+            # The downtime still exist in our host
+            assert 1 == len(host.downtimes)
+            downtime = list(host.downtimes.values())[0]
 
-        assert 1 == len(host.downtimes)
-        downtime = list(host.downtimes.values())[0]
-        # The service is still in a downtime period
-        assert host.in_scheduled_downtime
-        assert downtime.fixed
-        assert downtime.is_in_effect
-        assert not downtime.can_be_deleted
+            # The host is currently in a downtime period
+            assert host.in_scheduled_downtime
+            assert downtime.fixed
+            assert downtime.is_in_effect
+            assert not downtime.can_be_deleted
 
-        # Wait for a while, the service is back to OK but after the downtime expiry time
-        time.sleep(5)
-        self.scheduler_loop(2, [[host, 0, 'UP']])
-        time.sleep(1.0)
-        self.scheduler_loop(1)
-        assert "UP" == host.state
+            # Time warp 1 minutes
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1))
 
-        # No more downtime for the service nor the scheduler
-        assert 0 == len(host.downtimes)
-        # The service is not anymore in a scheduled downtime period
-        assert not host.in_scheduled_downtime
-        assert host.scheduled_downtime_depth < scheduled_downtime_depth
-        # No more comment for the host
-        assert 0 == len(host.comments)
+            # Make the host be DOWN/SOFT
+            self.scheduler_loop(1, [[host, 2, 'DOWN']])
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "SOFT" == host.state_type
+            assert "DOWN" == host.state
 
-        assert 0 == host.current_notification_number, 'Should not have any notification'
-        # Now 4 actions because the service is no more a problem and the downtime ended
-        self.show_actions()
-        self.assert_actions_count(4)
-        # The downtime started
-        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMESTART --hoststate UP --hostoutput UP', 'command')
-        self.assert_actions_match(0, 'NOTIFICATIONTYPE=DOWNTIMESTART, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=downtime author, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=downtime comment, HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
-        # The host is now a problem...
-        self.assert_actions_match(1, '/notifier.pl', 'command')
-        self.assert_actions_match(1, 'PROBLEM', 'type')
-        self.assert_actions_match(1, 'scheduled', 'status')
-        # The downtime ended
-        self.assert_actions_match(2, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMEEND --hoststate DOWN --hostoutput DOWN', 'command')
-        self.assert_actions_match(2, 'NOTIFICATIONTYPE=DOWNTIMEEND, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=downtime author, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=downtime comment, HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
-        # The host is no more a problem...
-        self.assert_actions_match(3, '/notifier.pl', 'command')
-        self.assert_actions_match(3, 'RECOVERY', 'type')
-        self.assert_actions_match(3, 'scheduled', 'status')
+            assert 0 == host.current_notification_number, 'Should not have any notification'
+            # Still only 1 action
+            self.show_actions()
+            self.assert_actions_count(1)
 
-        # Clear actions
-        self.clear_actions()
+            assert 1 == len(host.downtimes)
+            downtime = list(host.downtimes.values())[0]
+            # The host is still in a downtime period
+            assert host.in_scheduled_downtime
+            assert downtime.fixed
+            assert downtime.is_in_effect
+            assert not downtime.can_be_deleted
 
-        # Make the host be DOWN/HARD
-        self.scheduler_loop(3, [[host, 2, 'DOWN']])
-        time.sleep(1.0)
-        self.scheduler_loop(1)
-        assert "HARD" == host.state_type
-        assert "DOWN" == host.state
+            # Time warp 1 minutes
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1))
 
-        # 2 actions because the host is a problem and a notification is raised
-        self.show_actions()
-        self.assert_actions_count(2)
+            # Make the host be DOWN/HARD
+            self.scheduler_loop(2, [[host, 2, 'DOWN']])
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "HARD" == host.state_type
+            assert "DOWN" == host.state
 
-        # The host is now a problem...
-        # A problem notification is now raised...
-        self.assert_actions_match(0, 'notification', 'is_a')
-        self.assert_actions_match(0, '/notifier.pl', 'command')
-        self.assert_actions_match(0, 'PROBLEM', 'type')
-        self.assert_actions_match(0, 'scheduled', 'status')
-        self.assert_actions_match(1, 'VOID', 'command')
-        self.assert_actions_match(1, 'PROBLEM', 'type')
-        self.assert_actions_match(1, 'scheduled', 'status')
+            assert 0 == host.current_notification_number, 'Should not have any notification'
+            # Still only 1 action and a master problem notification
+            self.show_actions()
+            self.assert_actions_count(2)
 
-        # We got 'monitoring_log' broks for logging to the monitoring logs...
-        monitoring_logs = []
-        for brok in sorted(self._main_broker.broks, key=lambda x: x.creation_time):
-            if brok.type == 'monitoring_log':
-                data = unserialize(brok.data)
-                monitoring_logs.append((data['level'], data['message']))
+            # The downtime started
+            self.assert_actions_match(0, '/notifier.pl', 'command')
+            self.assert_actions_match(0, 'DOWNTIMESTART', 'type')
+            self.assert_actions_match(0, 'scheduled', 'status')
+            # The host is now a problem... master notification
+            self.assert_actions_match(1, 'VOID', 'command')
+            self.assert_actions_match(1, 'PROBLEM', 'type')
+            self.assert_actions_match(1, 'scheduled', 'status')
 
-        print(("Monitoring logs: %s" % monitoring_logs))
-        expected_logs = [
-            ('info', 'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;;%s;'
-                      'downtime author;downtime comment' % (
-                now, now, now + duration, duration)),
-            ('info', 'HOST DOWNTIME ALERT: test_host_0;STARTED; '
-                      'Host has entered a period of scheduled downtime'),
-            ('info', 'HOST NOTIFICATION: test_contact;test_host_0;'
-                      'DOWNTIMESTART (UP);notify-host;UP'),
-            ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN'),
-            ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;2;DOWN'),
-            ('error', 'HOST ALERT: test_host_0;DOWN;HARD;3;DOWN'),
-            ('info', 'HOST DOWNTIME ALERT: test_host_0;STOPPED; '
-                      'Host has exited from a period of scheduled downtime'),
-            ('info', 'HOST NOTIFICATION: test_contact;test_host_0;'
-                      'DOWNTIMEEND (DOWN);notify-host;DOWN'),
-            ('error', 'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;DOWN'),
-            ('info', 'HOST ALERT: test_host_0;UP;HARD;3;UP'),
-            ('info', 'HOST NOTIFICATION: test_contact;test_host_0;UP;notify-host;UP'),
-            ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN'),
-            ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;2;DOWN'),
-            ('error', 'HOST ALERT: test_host_0;DOWN;HARD;3;DOWN'),
-            ('error', 'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;DOWN')
-        ]
-        for log_level, log_message in expected_logs:
-            assert (log_level, log_message) in monitoring_logs
+            assert 1 == len(host.downtimes)
+            downtime = list(host.downtimes.values())[0]
+            # The host is still in a downtime period
+            assert host.in_scheduled_downtime
+            assert downtime.fixed
+            assert downtime.is_in_effect
+            assert not downtime.can_be_deleted
+
+            # Wait for a while, the host is now OK but after the downtime expiry time
+            # Time warp 15 minutes
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=15))
+
+            self.scheduler_loop(1, [[host, 0, 'UP']])
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "UP" == host.state
+            # Still only 1 action
+            self.show_actions()
+            self.assert_actions_count(2)
+            # The downtime started
+            self.assert_actions_match(0, '/notifier.pl', 'command')
+            self.assert_actions_match(0, 'DOWNTIMESTART', 'type')
+            self.assert_actions_match(0, 'scheduled', 'status')
+            # The downtime ended
+            self.assert_actions_match(1, '/notifier.pl', 'command')
+            self.assert_actions_match(1, 'DOWNTIMEEND', 'type')
+            self.assert_actions_match(1, 'scheduled', 'status')
+
+            # No more downtime for the host nor the scheduler
+            assert 0 == len(host.downtimes)
+            # No more comment for the host
+            assert 0 == len(host.comments)
+            # The host is not anymore in a scheduled downtime period
+            assert not host.in_scheduled_downtime
+            assert host.scheduled_downtime_depth < scheduled_downtime_depth
+
+            assert 0 == host.current_notification_number, 'Should not have any notification'
+
+            # Now 4 actions because the host is no more a problem and the downtime ended
+            # Only 2 notifications because the other ones got removed because of the state changing
+            self.show_actions()
+            self.assert_actions_count(2)
+            # The downtime started
+            self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMESTART --hoststate UP --hostoutput UP', 'command')
+            # # The downtime ended
+            self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMEEND --hoststate UP --hostoutput UP', 'command')
+
+            # Clear actions
+            self.clear_actions()
+
+            # Make the host be DOWN/HARD
+            self.scheduler_loop(3, [[host, 2, 'DOWN']])
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "HARD" == host.state_type
+            assert "DOWN" == host.state
+
+            # 2 actions because the host is a problem and a notification is raised
+            self.show_actions()
+            self.assert_actions_count(2)
+
+            # The host is now a problem...
+            # A problem notification is now raised...
+            self.assert_actions_match(0, 'notification', 'is_a')
+            self.assert_actions_match(0, '/notifier.pl', 'command')
+            self.assert_actions_match(0, 'PROBLEM', 'type')
+            self.assert_actions_match(0, 'scheduled', 'status')
+            self.assert_actions_match(1, 'VOID', 'command')
+            self.assert_actions_match(1, 'PROBLEM', 'type')
+            self.assert_actions_match(1, 'scheduled', 'status')
+
+            # We got 'monitoring_log' broks for logging to the monitoring logs...
+            monitoring_logs = []
+            for brok in sorted(self._main_broker.broks, key=lambda x: x.creation_time):
+                if brok.type == 'monitoring_log':
+                    data = unserialize(brok.data)
+                    monitoring_logs.append((data['level'], data['message']))
+
+            print("Monitoring logs: %s" % monitoring_logs)
+            expected_logs = [
+                ('info', 'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;;%s;'
+                          'downtime author;downtime comment' % (
+                    now, now, now + duration, duration)),
+                ('info', 'HOST DOWNTIME ALERT: test_host_0;STARTED; '
+                          'Host has entered a period of scheduled downtime'),
+                ('info', 'HOST NOTIFICATION: test_contact;test_host_0;'
+                          'DOWNTIMESTART (UP);notify-host;UP'),
+                ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN'),
+                ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;2;DOWN'),
+                ('error', 'HOST ALERT: test_host_0;DOWN;HARD;3;DOWN'),
+                ('info', 'HOST DOWNTIME ALERT: test_host_0;STOPPED; '
+                          'Host has exited from a period of scheduled downtime'),
+                # ('info', 'HOST NOTIFICATION: test_contact;test_host_0;'
+                #           'DOWNTIMEEND (DOWN);notify-host;DOWN'),
+                ('error', 'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;DOWN'),
+                ('info', 'HOST ALERT: test_host_0;UP;HARD;3;UP'),
+                # ('info', 'HOST NOTIFICATION: test_contact;test_host_0;UP;notify-host;UP'),
+                ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN'),
+                ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;2;DOWN'),
+                ('error', 'HOST ALERT: test_host_0;DOWN;HARD;3;DOWN'),
+                ('error', 'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;DOWN')
+            ]
+            for log_level, log_message in expected_logs:
+                assert (log_level, log_message) in monitoring_logs, "Not found: %s" % log_message
 
     def test_schedule_fixed_host_downtime_with_service(self):
         """ Schedule a downtime for an host - services changes are not notified """
         # Get the host
-        host = self._sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []
         # Not any downtime yet !
@@ -804,7 +845,7 @@ class TestDowntime(AlignakTest):
         host.event_handler_enabled = False
 
         # Get the service
-        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
         # Not any downtime yet !
@@ -826,7 +867,7 @@ class TestDowntime(AlignakTest):
         # downtime valid for 5 seconds from now
         cmd = "[%lu] SCHEDULE_HOST_DOWNTIME;test_host_0;%d;%d;1;;%d;" \
               "downtime author;downtime comment" % (now, now, now + duration, duration)
-        self._sched.run_external_commands([cmd])
+        self._scheduler.run_external_commands([cmd])
         time.sleep(1.0)
         self.external_command_loop()
         # A downtime exist for the host
@@ -891,7 +932,7 @@ class TestDowntime(AlignakTest):
         assert 0 == len(svc.downtimes)
         assert not svc.in_scheduled_downtime
         # The host is still in a scheduled downtime
-        assert self._sched.find_item_by_id(svc.host).in_scheduled_downtime
+        assert self._scheduler.find_item_by_id(svc.host).in_scheduled_downtime
 
         assert 0 == host.current_notification_number, 'Should not have any notification'
         assert 0 == svc.current_notification_number, 'Should not have any notification'
@@ -943,7 +984,7 @@ class TestDowntime(AlignakTest):
                 data = unserialize(brok.data)
                 monitoring_logs.append((data['level'], data['message']))
 
-        print(("Monitoring logs: %s" % monitoring_logs))
+        print("Monitoring logs: %s" % monitoring_logs)
         expected_logs = [
             ('info', 'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;'
                       '%s;%s;1;;%s;downtime author;downtime comment' % (

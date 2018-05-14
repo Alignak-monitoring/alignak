@@ -184,7 +184,9 @@ class TestConfig(AlignakTest):
         assert self._arbiter.conf.alignak_name == 'My Alignak'
 
         # Default Alignak daemons start/stop configuration
-        assert self._arbiter.conf.daemons_start_timeout == 1
+        # assert self._arbiter.conf.daemons_start_timeout == 1
+        # Changed to 5 seconds for tests purpose
+        assert self._arbiter.conf.daemons_start_timeout == 5
         assert self._arbiter.conf.daemons_stop_timeout == 30
 
     def test_config_conf_inner_properties_named_alignak(self):

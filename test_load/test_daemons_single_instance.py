@@ -109,6 +109,10 @@ class TestDaemonsSingleInstance(AlignakTest):
         if os.path.exists(filename):
             file = open(filename, "r")
             host_pattern = file.read()
+            try:
+                host_pattern = host_pattern.decode('utf-8')
+            except AttributeError:
+                pass
 
             hosts = ""
             for index in range(hosts_count):
@@ -121,7 +125,8 @@ class TestDaemonsSingleInstance(AlignakTest):
                 outfile.write(hosts)
         print("Preparing hosts configuration duration: %d seconds" % (time.time() - start))
 
-    def run_and_check_alignak_daemons(self, cfg_folder, runtime=10, hosts_count=10):
+    def run_and_check_alignak_daemons(self, cfg_folder, runtime=10, hosts_count=10,
+                                      run_folder='/tmp'):
         """Start and stop the Alignak daemons
 
         Let the daemons run for the number of seconds defined in the runtime parameter and
@@ -131,21 +136,22 @@ class TestDaemonsSingleInstance(AlignakTest):
 
         :return: the count of errors raised in the log files
         """
-        shutil.copy(cfg_folder + '/check_command.sh', '/tmp/check_command.sh')
+        # os.makedirs(run_folder)
+        shutil.copy(cfg_folder + '/check_command.sh', '%s/check_command.sh' % run_folder)
 
-        if os.path.exists("/tmp/checks.log"):
-            os.remove('/tmp/checks.log')
-            print("- removed /tmp/checks.log")
+        if os.path.exists("%s/checks.log" % run_folder):
+            os.remove('%s/checks.log' % run_folder)
+            print("- removed %s/checks.log" % run_folder)
 
-        if os.path.exists("/tmp/notifications.log"):
-            os.remove('/tmp/notifications.log')
-            print("- removed /tmp/notifications.log")
+        if os.path.exists("%s/notifications.log" % run_folder):
+            os.remove('%s/notifications.log' % run_folder)
+            print("- removed %s/notifications.log" % run_folder)
 
 
         daemons_list = ['poller-master', 'reactionner-master', 'receiver-master',
                         'broker-master', 'scheduler-master']
 
-        self._run_alignak_daemons(cfg_folder=cfg_folder, run_folder='/tmp',
+        self._run_alignak_daemons(cfg_folder=cfg_folder, run_folder=run_folder,
                                   daemons_list=daemons_list, runtime=1)
 
         time.sleep(runtime)
@@ -227,9 +233,12 @@ class TestDaemonsSingleInstance(AlignakTest):
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/default')
+        # run_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+        #                           './run/active_1_5')
+        run_folder = '/tmp'
         hosts_count = 1
         self.prepare_alignak_configuration(cfg_folder, hosts_count)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300, hosts_count, run_folder)
         assert errors_raised == 0
 
     @pytest.mark.skip("Only useful for local test - do not run on Travis build")
@@ -259,9 +268,12 @@ class TestDaemonsSingleInstance(AlignakTest):
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/default')
+        run_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                  './run/active_100_5')
+
         hosts_count = 100
         self.prepare_alignak_configuration(cfg_folder, hosts_count)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 300, hosts_count, run_folder)
         assert errors_raised == 0
 
     @pytest.mark.skip("Too much load - do not run on Travis build")
@@ -327,7 +339,7 @@ class TestDaemonsSingleInstance(AlignakTest):
                                   './cfg/passive_daemons')
         hosts_count = 100
         self.prepare_alignak_configuration(cfg_folder, hosts_count)
-        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 60, hosts_count)
+        errors_raised = self.run_and_check_alignak_daemons(cfg_folder, 600, hosts_count)
         assert errors_raised == 0
 
     @pytest.mark.skip("Too much load - do not run on Travis build")

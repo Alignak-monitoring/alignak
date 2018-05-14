@@ -592,7 +592,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # We also raise a log entry
             self.raise_flapping_stop_log_entry(res, low_flap_threshold)
             # and a notification
-            self.remove_in_progress_notifications_master()
+            self.remove_in_progress_notifications(master=True)
             self.create_notifications('FLAPPINGSTOP', notif_period, hosts, services)
             # And update our status for modules
             self.broks.append(self.get_update_status_brok())
@@ -602,7 +602,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # We also raise a log entry
             self.raise_flapping_start_log_entry(res, high_flap_threshold)
             # and a notification
-            self.remove_in_progress_notifications_master()
+            self.remove_in_progress_notifications(master=True)
             self.create_notifications('FLAPPINGSTART', notif_period, hosts, services)
             # And update our status for modules
             self.broks.append(self.get_update_status_brok())
@@ -675,7 +675,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                                             macromodulations, checkmodulations, checks)
                     chk.output = "Freshness period expired: %s" \
                                  % time.strftime("%Y-%m-%d %H:%M:%S %Z")
-                    chk.set_type_passive()
                     chk.freshness_expiry_check = True
                     chk.check_time = time.time()
                     if self.my_type == 'host':
@@ -1302,34 +1301,37 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         self.in_checking = (len(self.checks_in_progress) != 0)
 
-    def remove_in_progress_notification(self, notif):
+    def remove_in_progress_notification(self, notification):
         """
         Remove a notification and mark them as zombie
 
-        :param notif: the notification to remove
-        :type notif:
+        :param notification: the notification to remove
+        :type notification: alignak.notification.Notification
         :return: None
         """
-        if notif.uuid in self.notifications_in_progress:
-            notif.status = u'zombie'
-            del self.notifications_in_progress[notif.uuid]
+        if notification.uuid in self.notifications_in_progress:
+            notification.status = u'zombie'
+            del self.notifications_in_progress[notification.uuid]
 
-    def remove_in_progress_notifications(self):
+    def remove_in_progress_notifications(self, master=True, force=False):
         """Remove all notifications from notifications_in_progress
 
+        Preserves some specific notifications (downtime, ...)
+
+        :param master: remove master notifications only if True (default value)
+        :type master: bool
+        :param force: force remove all notifications except if False
+        :type force: bool
         :return:None
         """
-        for notif in list(self.notifications_in_progress.values()):
-            self.remove_in_progress_notification(notif)
-
-    def remove_in_progress_notifications_master(self):
-        """Remove only the master notifications
-
-        :return: None
-        """
-        for notif in list(self.notifications_in_progress.values()):
-            if notif.is_a == 'notification' and not notif.contact:
-                self.remove_in_progress_notification(notif)
+        for notification in list(self.notifications_in_progress.values()):
+            if master and notification.contact:
+                continue
+            # Do not remove some specific notifications
+            if notification.type in [u'DOWNTIMESTART', u'DOWNTIMEEND', u'DOWNTIMECANCELLED',
+                                     u'CUSTOM', u'ACKNOWLEDGEMENT']:
+                continue
+            self.remove_in_progress_notification(notification)
 
     def get_event_handlers(self, hosts, macromodulations, timeperiods, ext_cmd=False):
         """Raise event handlers if NONE of the following conditions is met::
@@ -1520,7 +1522,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if self.state != self.state_before_hard_unknown_reach_phase:
                 self.was_in_hard_unknown_reach_phase = False
 
-    def consume_result(self, chk, notif_period, hosts,
+    def consume_result(self, chk, notification_period, hosts,
                        services, timeperiods, macromodulations, checkmodulations, bi_modulations,
                        res_modulations, checks, raise_log):
         # pylint: disable=too-many-locals, too-many-arguments
@@ -1539,8 +1541,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :param chk: check to handle
         :type chk: alignak.objects.check.Check
-        :param notif_period: notification period for this host/service
-        :type notif_period: alignak.objects.timeperiod.Timeperiod
+        :param notification_period: notification period for this host/service
+        :type notification_period: alignak.objects.timeperiod.Timeperiod
         :param hosts: hosts objects, used for almost every operation
         :type hosts: alignak.objects.host.Hosts
         :param services: services objects, used for almost every operation
@@ -1653,12 +1655,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if chk.exit_status == 1 and self.__class__.my_type == 'host':
                 chk.exit_status = 2
 
-        self.set_state_from_exit_status(chk.exit_status, notif_period, hosts, services)
+        self.set_state_from_exit_status(chk.exit_status, notification_period, hosts, services)
 
         self.last_state_type = self.state_type
         self.return_code = chk.exit_status
 
-        # Raise the log only when the item information are up-to-date :/
+        # Raise the log only when the item information are up-to-date :/
         if raise_log:
             self.raise_check_result()
 
@@ -1720,9 +1722,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 self.raise_alert_log_entry()
                 # Eventhandler and notifications get OK;HARD;maxattempts
                 # Ok, so current notifications are not needed, we 'zombie' them
-                self.remove_in_progress_notifications_master()
+                self.remove_in_progress_notifications(master=True)
                 if enable_action:
-                    self.create_notifications('RECOVERY', notif_period, hosts, services)
+                    self.create_notifications('RECOVERY', notification_period, hosts, services)
                 self.get_event_handlers(hosts, macromodulations, timeperiods)
                 # We stay in HARD
                 self.attempt = 1
@@ -1741,9 +1743,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # it is smarter to log error before notification)
             self.raise_alert_log_entry()
             self.check_for_flexible_downtime(timeperiods, hosts, services)
-            self.remove_in_progress_notifications_master()
+            self.remove_in_progress_notifications(master=True)
             if enable_action:
-                self.create_notifications('PROBLEM', notif_period, hosts, services)
+                self.create_notifications('PROBLEM', notification_period, hosts, services)
             # Ok, event handlers here too
             self.get_event_handlers(hosts, macromodulations, timeperiods)
 
@@ -1760,10 +1762,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 # Now we are in HARD
                 self.state_type = 'HARD'
                 self.raise_alert_log_entry()
-                self.remove_in_progress_notifications_master()
+                self.remove_in_progress_notifications(master=True)
                 self.check_for_flexible_downtime(timeperiods, hosts, services)
                 if enable_action:
-                    self.create_notifications('PROBLEM', notif_period, hosts, services)
+                    self.create_notifications('PROBLEM', notification_period, hosts, services)
                 # Oh? This is the typical go for a event handler :)
                 self.get_event_handlers(hosts, macromodulations, timeperiods)
 
@@ -1796,10 +1798,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     # Ok here is when we just go to the hard state
                     self.state_type = 'HARD'
                     self.raise_alert_log_entry()
-                    self.remove_in_progress_notifications_master()
+                    self.remove_in_progress_notifications(master=True)
                     self.check_for_flexible_downtime(timeperiods, hosts, services)
                     if enable_action:
-                        self.create_notifications('PROBLEM', notif_period, hosts, services)
+                        self.create_notifications('PROBLEM', notification_period, hosts, services)
                     # So event handlers here too
                     self.get_event_handlers(hosts, macromodulations, timeperiods)
 
@@ -1823,18 +1825,20 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                             self.was_in_hard_unknown_reach_phase:
                         self.unacknowledge_problem_if_not_sticky()
                         self.raise_alert_log_entry()
-                        self.remove_in_progress_notifications_master()
+                        self.remove_in_progress_notifications(master=True)
                         if enable_action:
-                            self.create_notifications('PROBLEM', notif_period, hosts, services)
+                            self.create_notifications('PROBLEM', notification_period,
+                                                      hosts, services)
                         self.get_event_handlers(hosts, macromodulations, timeperiods)
 
                 elif self.in_scheduled_downtime_during_last_check is True:
-                    # during the last check i was in a downtime. but now
+                    # during the last check I was in a downtime. but now
                     # the status is still critical and notifications
                     # are possible again. send an alert immediately
-                    self.remove_in_progress_notifications_master()
+                    self.remove_in_progress_notifications(master=True)
                     if enable_action:
-                        self.create_notifications('PROBLEM', notif_period, hosts, services)
+                        self.create_notifications('PROBLEM', notification_period,
+                                                  hosts, services)
 
                 # PROBLEM/IMPACT
                 # Forces problem/impact registration even if no state change
@@ -1848,8 +1852,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 # enable notifications with external command)
                 if enable_action and self.notifications_enabled and \
                         self.current_notification_number == 0:
-                    self.remove_in_progress_notifications_master()
-                    self.create_notifications('PROBLEM', notif_period, hosts, services)
+                    self.remove_in_progress_notifications(master=True)
+                    self.create_notifications('PROBLEM', notification_period,
+                                              hosts, services)
 
         self.update_hard_unknown_phase_state()
         # Reset this flag. If it was true, actions were already taken
@@ -2035,7 +2040,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             escalation = escalations[escalation_id]
             escalation_period = timeperiods[escalation.escalation_period]
             if escalation.is_eligible(notif.t_to_go, self.state, notif.notif_nb,
-                                 in_notif_time, cls.interval_length, escalation_period):
+                                      in_notif_time, cls.interval_length, escalation_period):
                 if escalation.notification_interval != -1 and \
                         escalation.notification_interval < notification_interval:
                     notification_interval = escalation.notification_interval
@@ -2151,13 +2156,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # we can silently drop this one
             return
 
-        if n_type == 'PROBLEM':
+        if n_type == u'PROBLEM':
             # Create the notification with an incremented notification_number.
             # The current_notification_number  of the item itself will only
             # be incremented when this notification (or its children)
             # have actually been sent.
             next_notif_nb = self.current_notification_number + 1
-        elif n_type == 'RECOVERY':
+        elif n_type == u'RECOVERY':
             # Recovery resets the notification counter to zero
             self.current_notification_number = 0
             next_notif_nb = self.current_notification_number
@@ -2176,7 +2181,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             'host_name': getattr(self, 'host_name', ''),
             'service_description': getattr(self, 'service_description', ''),
         }
-        if author_data and n_type in ['DOWNTIMESTART', 'DOWNTIMEEND']:
+        if author_data and n_type in [u'DOWNTIMESTART', u'DOWNTIMEEND']:
             data.update(author_data)
 
         notif = Notification(data)
@@ -2397,8 +2402,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 macrodata = [hosts[self.host], self]
             else:
                 macrodata = [self]
-            command_line = macroresolver.resolve_command(check_command, macrodata, macromodulations,
-                                                         timeperiods)
+            command_line = macroresolver.resolve_command(check_command, macrodata,
+                                                         macromodulations, timeperiods)
 
             # remember it, for pure debugging purpose
             self.last_check_command = command_line

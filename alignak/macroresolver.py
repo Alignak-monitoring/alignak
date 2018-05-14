@@ -372,24 +372,25 @@ class MacroResolver(Borg):
                         if '_' + macro_name in elt.customs:
                             macros[macro]['val'] = elt.customs['_' + macro_name]
                         logger.debug("   : macro %s = %s", macro, macros[macro]['val'])
+
                         # Then look on the macromodulations, in reverse order, so
-                        # the last to set, will be the first to have. (yes, don't want to play
-                        # with break and such things sorry...)
+                        # the last defined will be the first applied
                         mms = getattr(elt, 'macromodulations', [])
-                        for macromod_id in mms[::-1]:
-                            macromod = macromodulations[macromod_id]
+                        for macromodulation_id in mms[::-1]:
+                            macromodulation = macromodulations[macromodulation_id]
+                            if not macromodulation.is_active(timeperiods):
+                                continue
                             # Look if the modulation got the value,
                             # but also if it's currently active
-                            if '_' + macro_name in macromod.customs and \
-                                    macromod.is_active(timeperiods):
-                                macros[macro]['val'] = macromod.customs['_' + macro_name]
+                            if "_%s" % macro_name in macromodulation.customs:
+                                macros[macro]['val'] = macromodulation.customs["_%s" % macro_name]
                 # If on-demand type, get value from an dynamic provided data objects
                 if macros[macro]['type'] == 'ONDEMAND':
                     macros[macro]['val'] = self._resolve_ondemand(macro, data)
 
             # We resolved all we can, now replace the macros in the command call
             for macro in macros:
-                c_line = c_line.replace('$' + macro + '$', "%s" % (macros[macro]['val']))
+                c_line = c_line.replace("$%s$" % macro, "%s" % (macros[macro]['val']))
 
             # A $$ means we want a $, it's not a macro!
             # We replace $$ by a big dirty thing to be sure to not misinterpret it

@@ -69,7 +69,6 @@ The major part of monitoring "intelligence" is in this module.
 # pylint: disable=R0904
 import time
 import os
-import io
 import logging
 import tempfile
 import traceback
@@ -523,7 +522,6 @@ class Scheduler(object):  # pylint: disable=R0902
         :type broker_uuid: str
         :return: None
         """
-        # print("Scheduler, for %s, add brok: %s" % (broker_uuid, brok))
         if brok.type == 'monitoring_log' and not self.pushed_conf.monitoring_log_broks:
             return
 
@@ -557,10 +555,11 @@ class Scheduler(object):  # pylint: disable=R0902
             logger.warning("Already existing notification: %s", notification)
             return
 
+        logger.debug("Adding a notification: %s", notification)
         self.actions[notification.uuid] = notification
         self.nb_notifications += 1
 
-        # A notification ask for a brok
+        # A notification which is not a master one asks for a brok
         if notification.contact is not None:
             self.add(notification.get_initial_status_brok())
 
@@ -685,7 +684,8 @@ class Scheduler(object):  # pylint: disable=R0902
 
         max_checks = MULTIPLIER_MAX_CHECKS * (len(self.hosts) + len(self.services))
         max_broks = MULTIPLIER_MAX_BROKS * (len(self.hosts) + len(self.services))
-        max_actions = MULTIPLIER_MAX_ACTIONS * len(self.contacts) * (len(self.hosts) + len(self.services))
+        max_actions = MULTIPLIER_MAX_ACTIONS * len(self.contacts) * (len(self.hosts) +
+                                                                     len(self.services))
 
         # For checks, it's not very simple:
         # For checks, they may be referred to their host/service
@@ -821,7 +821,6 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         now = time.time()
-        # notifications = list(self.actions.values())
         # We only want the master scheduled notifications that are immediately launchable
         notifications = [a for a in self.actions.values()
                          if a.is_a == u'notification' and a.status == u'scheduled'
@@ -831,7 +830,6 @@ class Scheduler(object):  # pylint: disable=R0902
                          len(notifications))
         for notification in notifications:
             logger.debug("Scheduler got a master notification: %s", notification)
-            logger.debug("No contact for this notification")
 
             # This is a "master" notification created by an host/service.
             # We use it to create children notifications (for the contacts and
@@ -1264,7 +1262,6 @@ class Scheduler(object):  # pylint: disable=R0902
 
                 for result in results:
                     logger.debug("-> result: %s", result)
-                    result.set_type_passive()
 
                     # Update scheduler counters
                     self.counters[result.is_a]["total"]["results"]["total"] += 1
@@ -1789,8 +1786,8 @@ class Scheduler(object):  # pylint: disable=R0902
             if chk.status == 'waitconsume':
                 logger.debug("Consuming: %s", chk)
                 item = self.find_item_by_id(chk.ref)
-
                 notification_period = self.timeperiods[item.notification_period]
+
                 dep_checks = item.consume_result(chk, notification_period, self.hosts,
                                                  self.services, self.timeperiods,
                                                  self.macromodulations, self.checkmodulations,
@@ -1881,7 +1878,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # Check maintenance periods
         for elt in self.all_my_hosts_and_services():
-            if elt.maintenance_period == r'':
+            if not elt.maintenance_period:
                 continue
 
             if elt.in_maintenance == -1:
@@ -1917,19 +1914,20 @@ class Scheduler(object):  # pylint: disable=R0902
         # which were marked for deletion (mostly by dt.exit())
         for elt in self.all_my_hosts_and_services():
             for downtime in list(elt.downtimes.values()):
-                if downtime.can_be_deleted is True:
-                    logger.info("Downtime to delete: %s", downtime.__dict__)
-                    ref = self.find_item_by_id(downtime.ref)
-                    elt.del_downtime(downtime.uuid)
-                    broks.append(ref.get_update_status_brok())
+                if not downtime.can_be_deleted:
+                    continue
+
+                logger.debug("Downtime to delete: %s", downtime.__dict__)
+                elt.del_downtime(downtime.uuid)
+                broks.append(elt.get_update_status_brok())
 
         # Same for contact downtimes:
         for elt in self.contacts:
             for downtime in list(elt.downtimes.values()):
-                if downtime.can_be_deleted is True:
-                    ref = self.find_item_by_id(downtime.ref)
-                    elt.del_downtime(downtime.uuid)
-                    broks.append(ref.get_update_status_brok())
+                if not downtime.can_be_deleted:
+                    continue
+                elt.del_downtime(downtime.uuid)
+                broks.append(elt.get_update_status_brok())
 
         # Check start and stop times
         for elt in self.all_my_hosts_and_services():

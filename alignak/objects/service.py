@@ -708,9 +708,9 @@ class Service(SchedulingItem):
 
         log_level = 'info'
         command = notif.command_call
-        if notif.type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED',
-                          'CUSTOM', 'ACKNOWLEDGEMENT', 'FLAPPINGSTART',
-                          'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
+        if notif.type in [u'DOWNTIMESTART', u'DOWNTIMEEND', u'DOWNTIMECANCELLED',
+                          u'CUSTOM', u'ACKNOWLEDGEMENT',
+                          u'FLAPPINGSTART', u'FLAPPINGSTOP', u'FLAPPINGDISABLED']:
             state = '%s (%s)' % (notif.type, self.state)
         else:
             state = self.state
@@ -1132,19 +1132,19 @@ class Service(SchedulingItem):
                          self.get_name(), n_type, self.notification_options)
             return True
 
-        if (n_type in (u'FLAPPINGSTART', u'FLAPPINGSTOP', u'FLAPPINGDISABLED') and
+        if (n_type in [u'FLAPPINGSTART', u'FLAPPINGSTOP', u'FLAPPINGDISABLED'] and
                 'f' not in self.notification_options):
             logger.debug("Service: %s, notification %s sending is blocked by options: %s",
                          n_type, self.get_full_name(), self.notification_options)
             return True
-        if (n_type in (u'DOWNTIMESTART', u'DOWNTIMEEND', u'DOWNTIMECANCELLED') and
+        if (n_type in [u'DOWNTIMESTART', u'DOWNTIMEEND', u'DOWNTIMECANCELLED'] and
                 's' not in self.notification_options):
             logger.debug("Service: %s, notification %s sending is blocked by options: %s",
                          n_type, self.get_full_name(), self.notification_options)
             return True
 
         # Acknowledgements make no sense when the status is ok/up
-        if n_type == u'ACKNOWLEDGEMENT' and self.state == self.ok_up:
+        if n_type in [u'ACKNOWLEDGEMENT'] and self.state == self.ok_up:
             logger.debug("Host: %s, notification %s sending is blocked by current state",
                          self.get_name(), n_type)
             return True
@@ -1157,15 +1157,16 @@ class Service(SchedulingItem):
 
         # When in deep downtime, only allow end-of-downtime notifications
         # In depth 1 the downtime just started and can be notified
-        if self.scheduled_downtime_depth > 1 and n_type not in ('DOWNTIMEEND', 'DOWNTIMECANCELLED'):
+        if self.scheduled_downtime_depth > 1 and n_type not in (u'DOWNTIMEEND',
+                                                                u'DOWNTIMECANCELLED'):
             logger.debug("Service: %s, notification %s sending is blocked by deep downtime",
                          self.get_name(), n_type)
             return True
 
         # Block if in a scheduled downtime and a problem arises, or flapping event
         if self.scheduled_downtime_depth > 0 and n_type in \
-                (u'PROBLEM', u'RECOVERY', u'ACKNOWLEDGEMENT',
-                 u'FLAPPINGSTART', u'FLAPPINGSTOP', u'FLAPPINGDISABLED'):
+                [u'PROBLEM', u'RECOVERY', u'ACKNOWLEDGEMENT',
+                 u'FLAPPINGSTART', u'FLAPPINGSTOP', u'FLAPPINGDISABLED']:
             logger.debug("Service: %s, notification %s sending is blocked by downtime",
                          self.get_name(), n_type)
             return True
@@ -1176,9 +1177,9 @@ class Service(SchedulingItem):
         # Block if host is down
         if self.state_type == u'SOFT' and n_type == u'PROBLEM' or \
                 self.problem_has_been_acknowledged and n_type != u'ACKNOWLEDGEMENT' or \
-                self.is_flapping and n_type not in (u'FLAPPINGSTART',
+                self.is_flapping and n_type not in [u'FLAPPINGSTART',
                                                     u'FLAPPINGSTOP',
-                                                    u'FLAPPINGDISABLED') or \
+                                                    u'FLAPPINGDISABLED'] or \
                 host.state != host.ok_up:
             logger.debug("Service: %s, notification %s sending is blocked by soft state, "
                          "acknowledgement, flapping or host DOWN", self.get_name(), n_type)

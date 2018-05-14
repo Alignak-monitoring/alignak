@@ -231,35 +231,37 @@ class Downtime(AlignakObject):
             item = hosts[self.ref]
         else:
             item = services[self.ref]
+
         broks = []
+        # If not is_in_effect means that ot was probably a flexible downtime which was
+        # not triggered. In this case, nothing special to do...
         if self.is_in_effect is True:
             # This was a fixed or a flexible+triggered downtime
             self.is_in_effect = False
             item.scheduled_downtime_depth -= 1
             if item.scheduled_downtime_depth == 0:
                 item.raise_exit_downtime_log_entry()
-                notif_period = timeperiods[item.notification_period]
+                notification_period = timeperiods[item.notification_period]
                 # Notification author data
                 # todo: note that alias and name are not implemented yet
                 author_data = {
-                    'author': self.author, u'author_name': 'Not available',
+                    'author': self.author, 'author_name': u'Not available',
                     'author_alias': u'Not available', 'author_comment': self.comment
                 }
-                item.create_notifications('DOWNTIMEEND', notif_period, hosts, services,
+                item.create_notifications(u'DOWNTIMEEND', notification_period, hosts, services,
                                           author_data=author_data)
                 item.in_scheduled_downtime = False
                 if self.ref in hosts:
                     broks.append(self.get_expire_brok(item.get_name()))
                 else:
                     broks.append(self.get_expire_brok(item.host_name, item.get_name()))
-        else:
-            # This was probably a flexible downtime which was not triggered
-            # In this case it silently disappears
-            pass
+
         item.del_comment(self.comment_id)
         self.can_be_deleted = True
-        # when a downtime ends and the service was critical
-        # a notification is sent with the next critical check
+
+        # when a downtime ends and the concerned item was a problem
+        # a notification should be sent with the next critical check
+
         # So we should set a flag here which informs the consume_result function
         # to send a notification
         item.in_scheduled_downtime_during_last_check = True
