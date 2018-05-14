@@ -126,11 +126,11 @@ ALIGNAK_PASSIVE_SERVICE_CHECK %{ALIGNAK_TYPE_PASSIVE_SERVICE_CHECK:[alignak][eve
 # [1510562862] INFO: PASSIVE HOST CHECK: simulated_host_0;0;;;
 ALIGNAK_PASSIVE_HOST_CHECK %{ALIGNAK_TYPE_PASSIVE_HOST_CHECK:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][check_result]}
 
-# [1510614124] INFO: ACTIVE SERVICE CHECK: simulated_host_35;soft_KioskShell;OK;HARD;1;
-ALIGNAK_ACTIVE_SERVICE_CHECK %{ALIGNAK_TYPE_ACTIVE_SERVICE_CHECK:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{DATA:[alignak][state_type]};%{GREEDYDATA:[alignak][check_result]}
+# [1510614124] INFO: ACTIVE SERVICE CHECK: simulated_host_35;soft_KioskShell;OK;1;Output ...
+ALIGNAK_ACTIVE_SERVICE_CHECK %{ALIGNAK_TYPE_ACTIVE_SERVICE_CHECK:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{NUMBER:[alignak][attempt]};%{GREEDYDATA:[alignak][check_result]}
 
 # [1510614020] INFO: ACTIVE HOST CHECK: simulated_host_149;UP;HARD;1;Host assumed to be UP
-ALIGNAK_ACTIVE_HOST_CHECK %{ALIGNAK_TYPE_ACTIVE_HOST_CHECK:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{DATA:[alignak][state_type]};%{GREEDYDATA:[alignak][check_result]}
+ALIGNAK_ACTIVE_HOST_CHECK %{ALIGNAK_TYPE_ACTIVE_HOST_CHECK:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{NUMBER:[alignak][attempt]};%{GREEDYDATA:[alignak][check_result]}
 
 # host;service;state;state type;current attempt;command;output
 ALIGNAK_SERVICE_EVENT_HANDLER %{ALIGNAK_TYPE_SERVICE_EVENT_HANDLER:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{DATA:[alignak][state_type]};%{NUMBER:[alignak][attempt]};%{DATA:[alignak][command]}

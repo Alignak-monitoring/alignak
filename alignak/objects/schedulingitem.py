@@ -1978,12 +1978,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if cls.enable_environment_macros or notif.enable_environment_macros:
             notif.env = macrosolver.get_env_macros(data)
 
-    def is_escalable(self, notif, escalations, timeperiods):
+    def is_escalable(self, notification, escalations, timeperiods):
         """Check if a notification can be escalated.
         Basically call is_eligible for each escalation
 
-        :param notif: notification we would like to escalate
-        :type notif: alignak.objects.notification.Notification
+        :param notification: notification we would like to escalate
+        :type notification: alignak.objects.notification.Notification
         :param escalations: Esclations objects, used to get escalation objects (period)
         :type escalations: alignak.objects.escalation.Escalations
         :param timeperiods: Timeperiods objects, used to get escalation period
@@ -1995,14 +1995,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # We search since when we are in notification for escalations
         # that are based on time
-        in_notif_time = time.time() - notif.creation_time
+        in_notif_time = time.time() - notification.creation_time
 
         # Check is an escalation match the current_notification_number
-        for escal_id in self.escalations:
-            escal = escalations[escal_id]
-            escal_period = timeperiods[escal.escalation_period]
-            if escal.is_eligible(notif.t_to_go, self.state, notif.notif_nb,
-                                 in_notif_time, cls.interval_length, escal_period):
+        for escalation_id in self.escalations:
+            escalation = escalations[escalation_id]
+            escalation_period = timeperiods[escalation.escalation_period]
+            if escalation.is_eligible(notification.t_to_go, self.state, notification.notif_nb,
+                                      in_notif_time, cls.interval_length, escalation_period):
                 return True
 
         return False
@@ -2031,14 +2031,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # and then look for currently active notifications, and take notification_interval
         # if filled and less than the self value
         in_notif_time = time.time() - notif.creation_time
-        for escal_id in self.escalations:
-            escal = escalations[escal_id]
-            escal_period = timeperiods[escal.escalation_period]
-            if escal.is_eligible(notif.t_to_go, self.state, notif.notif_nb,
-                                 in_notif_time, cls.interval_length, escal_period):
-                if escal.notification_interval != -1 and \
-                        escal.notification_interval < notification_interval:
-                    notification_interval = escal.notification_interval
+        for escalation_id in self.escalations:
+            escalation = escalations[escalation_id]
+            escalation_period = timeperiods[escalation.escalation_period]
+            if escalation.is_eligible(notif.t_to_go, self.state, notif.notif_nb,
+                                 in_notif_time, cls.interval_length, escalation_period):
+                if escalation.notification_interval != -1 and \
+                        escalation.notification_interval < notification_interval:
+                    notification_interval = escalation.notification_interval
 
         # So take the by default time
         std_time = notif.t_to_go + notification_interval * cls.interval_length
@@ -2055,13 +2055,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         creation_time = notif.creation_time
         in_notif_time = now - notif.creation_time
 
-        for escal_id in self.escalations:
-            escal = escalations[escal_id]
+        for escalation_id in self.escalations:
+            escalation = escalations[escalation_id]
             # If the escalation was already raised, we do not look for a new "early start"
-            if escal.get_name() not in notif.already_start_escalations:
-                escal_period = timeperiods[escal.escalation_period]
-                next_t = escal.get_next_notif_time(std_time, self.state,
-                                                   creation_time, cls.interval_length, escal_period)
+            if escalation.get_name() not in notif.already_start_escalations:
+                escalation_period = timeperiods[escalation.escalation_period]
+                next_t = escalation.get_next_notif_time(std_time, self.state,
+                                                        creation_time, cls.interval_length,
+                                                        escalation_period)
                 # If we got a real result (time base escalation), we add it
                 if next_t is not None and now < next_t < res:
                     res = next_t
@@ -2069,11 +2070,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # And we take the minimum of this result. Can be standard or escalation asked
         return res
 
-    def get_escalable_contacts(self, notif, escalations, timeperiods):
+    def get_escalable_contacts(self, notification, escalations, timeperiods):
         """Get all contacts (uniq) from eligible escalations
 
-        :param notif: Notification to get data from (notif number...)
-        :type notif: alignak.objects.notification.Notification
+        :param notification: Notification to get data from (notif number...)
+        :type notification: alignak.objects.notification.Notification
         :param escalations: Esclations objects, used to get escalation objects (contact, period)
         :type escalations: alignak.objects.escalation.Escalations
         :param timeperiods: Timeperiods objects, used to get escalation period
@@ -2086,17 +2087,18 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # We search since when we are in notification for escalations
         # that are based on this time
-        in_notif_time = time.time() - notif.creation_time
+        in_notif_time = time.time() - notification.creation_time
 
         contacts = set()
-        for escal_id in self.escalations:
-            escal = escalations[escal_id]
-            escal_period = timeperiods[escal.escalation_period]
-            if escal.is_eligible(notif.t_to_go, self.state, notif.notif_nb,
-                                 in_notif_time, cls.interval_length, escal_period):
-                contacts.update(escal.contacts)
+        for escalation_id in self.escalations:
+            escalation = escalations[escalation_id]
+
+            escalation_period = timeperiods[escalation.escalation_period]
+            if escalation.is_eligible(notification.t_to_go, self.state, notification.notif_nb,
+                                      in_notif_time, cls.interval_length, escalation_period):
+                contacts.update(escalation.contacts)
                 # And we tag this escalations as started now
-                notif.already_start_escalations.add(escal.get_name())
+                notification.already_start_escalations.add(escalation.get_name())
 
         return list(contacts)
 
@@ -2220,47 +2222,51 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         cls = self.__class__
         childnotifications = []
         escalated = False
-        notif_contacts = []
+        notification_contacts = []
         if notif.type == u'RECOVERY':
             if self.first_notification_delay != 0 and not self.notified_contacts:
                 # Recovered during first_notification_delay. No notifications
                 # have been sent yet, so we keep quiet
-                notif_contacts = []
+                notification_contacts = []
             else:
                 # The old way. Only send recover notifications to those contacts
                 # who also got problem notifications
-                notif_contacts = [c_id for c_id in self.notified_contacts]
+                notification_contacts = [c_id for c_id in self.notified_contacts]
             self.notified_contacts.clear()
         else:
             # Check is an escalation match. If yes, get all contacts from escalations
             if self.is_escalable(notif, escalations, timeperiods):
-                notif_contacts = self.get_escalable_contacts(notif, escalations, timeperiods)
+                notification_contacts = self.get_escalable_contacts(notif, escalations, timeperiods)
                 escalated = True
             # else take normal contacts
             else:
                 # notif_contacts = [contacts[c_id] for c_id in self.contacts]
-                notif_contacts = self.contacts
+                notification_contacts = self.contacts
 
-        for contact_id in notif_contacts:
-            contact = contacts[contact_id]
+        recipients = []
+        recipients_names = []
+        for contact_uuid in notification_contacts:
             # We do not want to notify again a contact with notification interval == 0
             # if has been already notified except if the item hard state changed!
             # This can happen when a service exits a downtime and it is still in
             # critical/warning (and not acknowledge)
-            if notif.type == u'PROBLEM' and \
-                    self.notification_interval == 0 \
+            if notif.type == u'PROBLEM' and self.notification_interval == 0 \
                     and self.state_type == 'HARD' and self.last_state_type == self.state_type \
                     and self.state == self.last_state \
                     and contact.uuid in self.notified_contacts:
                 # Do not send notification
                 continue
+            recipients.append(contact_uuid)
+            recipients_names.append(contacts[contact_uuid].contact_name)
+
+        for contact_uuid in recipients:
+            contact = contacts[contact_uuid]
+
             # Get the property name for notification commands, like
             # service_notification_commands for service
             notif_commands = contact.get_notification_commands(notifways, cls.my_type)
 
             for cmd in notif_commands:
-                # Get the notification recipients list
-                recipients = ','.join([contacts[c_uuid].contact_name for c_uuid in notif_contacts])
                 data = {
                     'type': notif.type,
                     'command': u'VOID',
@@ -2268,7 +2274,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     'ref': self.uuid,
                     'contact': contact.uuid,
                     'contact_name': contact.contact_name,
-                    'recipients': recipients,
+                    'recipients': recipients_names,
                     't_to_go': notif.t_to_go,
                     'escalated': escalated,
                     'timeout': cls.notification_timeout,

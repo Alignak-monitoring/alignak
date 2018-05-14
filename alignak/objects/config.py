@@ -1577,8 +1577,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # Serviceescalations hostescalations will create new escalations
         self.serviceescalations.explode(self.escalations)
         self.hostescalations.explode(self.escalations)
-        self.escalations.explode(self.hosts, self.hostgroups,
-                                 self.contactgroups)
+        self.escalations.explode(self.hosts, self.hostgroups, self.contactgroups)
 
         # Now the architecture part
         self.realms.explode()

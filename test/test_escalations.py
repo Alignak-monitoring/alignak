@@ -381,8 +381,8 @@ class TestEscalations(AlignakTest):
         """ Time based escalations """
         del self._main_broker.broks[:]
 
-        self._scheduler.pushed_conf.tick_manage_internal_checks = 3600
-        self._scheduler.update_recurrent_works_tick({'tick_manage_internal_checks': 3600})
+        self._scheduler.pushed_conf.tick_manage_internal_checks = 7200
+        self._scheduler.update_recurrent_works_tick({'tick_manage_internal_checks': 7200})
 
         # Get host and services
         host = self._scheduler.hosts.find_by_name("test_host_0_esc")
@@ -392,12 +392,12 @@ class TestEscalations(AlignakTest):
         print("Host check: %s / %s / %s / %s"
               % (host.active_checks_enabled, host.passive_checks_enabled,
                  host.check_freshness, host.freshness_threshold))
-        host.check_interval = 3600
-        host.retry_interval = 3600
+        host.check_interval = 7200
+        host.retry_interval = 7200
         print("Host check: %s / %s / %s"
               % (host.check_period, host.check_interval, host.retry_interval))
         print("Host check command: %s" % (host.check_command))
-        host.notification_interval = 120
+        host.notification_interval = 1200
         print("Host notifications: %s / %s / %s"
               % (host.notification_interval, host.notification_period, host.notification_options))
 
@@ -567,8 +567,6 @@ class TestEscalations(AlignakTest):
             # We got 1 more escalated notification
             assert 2 == len([n.escalated for n in list(self._scheduler.actions.values()) if n.escalated])
             expected_logs += [
-                # ('info',
-                #  'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;Host assumed to be UP'),
                 ('error',
                  'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;2;BAD'),
                 ('error',
@@ -623,22 +621,52 @@ class TestEscalations(AlignakTest):
                 # Service notification number increased
                 assert 5 + i == svc.current_notification_number
 
-                # # We got one more escalated notification
-                # assert 4 + i == len([n.escalated for n in
-                #                      list(self._scheduler.actions.values()) if n.escalated])
+                # We got one more escalated notification
+                assert 4 + i == len([n.escalated for n in
+                                     list(self._scheduler.actions.values()) if n.escalated])
                 expected_logs += [
                     ('error',
                      'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;2;BAD'),
                     ('error',
                      'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;'
                      'CRITICAL;notify-service;BAD'),
-                    # ('info',
-                    #  'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;Host assumed to be UP'),
                 ]
                 self.check_monitoring_logs(expected_logs)
 
             # ---
-            # 6/
+            # 6/ 1 hour later!
+            # ---
+            # ---
+            # time warp ... 5 minutes later !
+            # ---
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=60))
+
+            # Service is still CRITICAL/HARD
+            self.scheduler_loop(1, [[svc, 2, 'BAD']])
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+
+            # Service notification number increased
+            assert 15 == svc.current_notification_number
+
+            # We got one more escalated notification
+            assert 15 == len([n.escalated for n in
+                              list(self._scheduler.actions.values()) if n.escalated])
+            expected_logs += [
+                ('error',
+                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;2;BAD'),
+                ('error',
+                 'SERVICE NOTIFICATION: all_services_1_hour;test_host_0_esc;test_svc_esc_time;'
+                 'CRITICAL;notify-service;BAD'),
+                ('error',
+                 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;'
+                 'CRITICAL;notify-service;BAD'),
+            ]
+            self.check_monitoring_logs(expected_logs)
+
+            # ---
+            # 7/
             # ---
             # ---
             # time warp ... 5 minutes later !
@@ -651,15 +679,24 @@ class TestEscalations(AlignakTest):
             frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
             self.scheduler_loop(1)
             expected_logs += [
-                ('info', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;OK;2;OK'),
-                ('info', 'SERVICE ALERT: test_host_0_esc;test_svc_esc_time;OK;HARD;2;OK'),
-                ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;'
-                         'OK;notify-service;OK'),
-                ('info', 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;'
-                         'OK;notify-service;OK'),
-                ('info', 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc_time;'
-                          'OK;notify-service;OK'),
-                ('info', 'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc_time;'
-                          'OK;notify-service;OK')
+                ('info',
+                 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;OK;2;OK'),
+                ('info',
+                 'SERVICE ALERT: test_host_0_esc;test_svc_esc_time;OK;HARD;2;OK'),
+                ('error',
+                 'SERVICE NOTIFICATION: all_services_1_hour;test_host_0_esc;test_svc_esc_time;'
+                 'CRITICAL;notify-service;BAD'),
+                ('info',
+                 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;OK;'
+                 'notify-service;OK'),
+                ('info',
+                 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;OK;'
+                 'notify-service;OK'),
+                ('info',
+                 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc_time;'
+                 'OK;notify-service;OK'),
+                ('info',
+                 'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc_time;'
+                 'OK;notify-service;OK')
             ]
             self.check_monitoring_logs(expected_logs)
