@@ -61,15 +61,41 @@ class TestRetention(AlignakTest):
         self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
         time.sleep(0.1)
         self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
+        time.sleep(1.0)
+        self.scheduler_loop(1)
 
-        now = time.time()
+        now = int(time.time())
         # downtime host
         excmd = '[%d] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;test_contact;My downtime' \
                 % (now, now, now + 1200)
-        time.sleep(1)
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
+        time.sleep(1.0)
+        expected_logs = [
+            ("info", "RETENTION LOAD: scheduler-master scheduler"),
+            ("error", "ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;0;CRITICAL"),
+            ("error", "SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;CRITICAL"),
+            ("error", "SERVICE EVENT HANDLER: test_host_0;test_ok_0;CRITICAL;SOFT;1;eventhandler"),
+            ("error", "ACTIVE HOST CHECK: test_host_0;DOWN;0;DOWN"),
+            ("error", "HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN"),
+            ("error", "ACTIVE HOST CHECK: test_host_0;DOWN;1;DOWN"),
+            ("error", "HOST ALERT: test_host_0;DOWN;SOFT;2;DOWN"),
+            ("error", "ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;CRITICAL"),
+            ("error", "SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;CRITICAL"),
+            ("error", "SERVICE EVENT HANDLER: test_host_0;test_ok_0;CRITICAL;HARD;2;eventhandler"),
+            ("error", "ACTIVE HOST CHECK: test_host_0;DOWN;2;DOWN"),
+            ("error", "HOST ALERT: test_host_0;DOWN;HARD;3;DOWN"),
+            ("error", "ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;2;CRITICAL"),
+            ("error", "HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;DOWN"),
+            ("info", "EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;test_contact;My downtime" % (now, now, now + 1200)),
+            ("info", "HOST DOWNTIME ALERT: test_host_0;STARTED; Host has entered a period of scheduled downtime"),
+            ("info", "HOST ACKNOWLEDGE ALERT: test_host_0;STARTED; Host problem has been acknowledged"),
+            ("info", "SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;STARTED; Service problem has been acknowledged"),
+            ("info", "HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (DOWN);notify-host;DOWN")
+        ]
+        self.check_monitoring_logs(expected_logs)
+        assert 2 == len(host.comments)
+        assert 3 == len(host.notifications_in_progress)
 
         # # Acknowledge service
         # No more necessary because scheduling a downtime for an host acknowledges its services
@@ -78,16 +104,18 @@ class TestRetention(AlignakTest):
         # self.schedulers['scheduler-master'].sched.run_external_command(excmd)
         # self.external_command_loop()
 
-        commentsh = []
+        host_comments = []
         ack_comment_uuid = ''
         for comm_uuid, comment in host.comments.items():
-            commentsh.append(comment.comment)
+            host_comments.append(comment.comment)
+        print("Comments: %s" % host_comments)
 
-        commentss = []
+        service_comments = []
         for comm_uuid, comment in svc.comments.items():
-            commentss.append(comment.comment)
+            service_comments.append(comment.comment)
             if comment.entry_type == 4:
                 ack_comment_uuid = comment.uuid
+        print("Comments (service): %s" % service_comments)
 
         assert True == svc.problem_has_been_acknowledged
         assert svc.acknowledgement.__dict__ == {
@@ -127,7 +155,7 @@ class TestRetention(AlignakTest):
             assert "downtimes" in t
             assert "acknowledgement" in t
 
-        # Test after get retention not have broken something
+        # Test that after get retention does not have broke anything
         self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
         time.sleep(0.1)
 
@@ -181,9 +209,8 @@ class TestRetention(AlignakTest):
             print('- %s / %s' % (notif_uuid, hostn.notifications_in_progress[notif_uuid]))
         for notif_uuid, notification in hostn.notifications_in_progress.items():
             print(notif_uuid, notification)
-            if notif_uuid in host.notifications_in_progress:
+            if notif_uuid not in host.notifications_in_progress:
                 continue
-            assert notif_uuid in host.notifications_in_progress[notif_uuid]
             assert host.notifications_in_progress[notif_uuid].command == \
                    notification.command
             assert host.notifications_in_progress[notif_uuid].t_to_go == \
@@ -197,14 +224,14 @@ class TestRetention(AlignakTest):
         for comm_uuid, comment in hostn.comments.items():
             commentshn.append(comment.comment)
         # Compare sorted comments because dictionairies are not ordered
-        assert sorted(commentsh) == sorted(commentshn)
+        assert sorted(host_comments) == sorted(commentshn)
 
         # check comments for service
         assert len(svc.comments) == len(svcn.comments)
         commentssn = []
         for comm_uuid, comment in svcn.comments.items():
             commentssn.append(comment.comment)
-        assert commentss == commentssn
+        assert service_comments == commentssn
 
         # check notified_contacts
         assert isinstance(hostn.notified_contacts, set)

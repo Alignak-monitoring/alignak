@@ -275,19 +275,20 @@ class Worker(object):
         """
         # queue
         for chk in self.checks:
-            if chk.status == u'queue':
-                logger.debug("Launch check: %s", chk.uuid)
-                self._idletime = 0
-                self.actions_launched += 1
-                process = chk.execute()
-                # Maybe we got a true big problem in the action launching
-                if process == 'toomanyopenfiles':
-                    # We should die as soon as we return all checks
-                    logger.error("I am dying because of too many open files: %s", chk)
-                    self.i_am_dying = True
-                else:
-                    if not isinstance(process, string_types):
-                        logger.debug("Launched check: %s, pid=%d", chk.uuid, process.pid)
+            if chk.status not in [u'queue']:
+                continue
+            logger.debug("Launch check: %s", chk.uuid)
+            self._idletime = 0
+            self.actions_launched += 1
+            process = chk.execute()
+            # Maybe we got a true big problem in the action launching
+            if process == 'toomanyopenfiles':
+                # We should die as soon as we return all checks
+                logger.error("I am dying because of too many open files: %s", chk)
+                self.i_am_dying = True
+            else:
+                if not isinstance(process, string_types):
+                    logger.debug("Launched check: %s, pid=%d", chk.uuid, process.pid)
 
     def manage_finished_checks(self, queue):
         """Check the status of checks

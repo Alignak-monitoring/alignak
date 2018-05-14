@@ -93,6 +93,11 @@ from alignak.misc.serialization import unserialize
 from alignak.acknowledge import Acknowledge
 from alignak.log import make_monitoring_log
 
+# Multiplier for the maximum count of broks, checks and actions
+MULTIPLIER_MAX_CHECKS = 5
+MULTIPLIER_MAX_BROKS = 5
+MULTIPLIER_MAX_ACTIONS = 5
+
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
@@ -318,8 +323,8 @@ class Scheduler(object):  # pylint: disable=R0902
         logger.info("Scheduling loop reset")
         with self.waiting_results.mutex:
             self.waiting_results.queue.clear()
-        for my_lists in self.checks, self.actions:
-            my_lists.clear()
+        self.checks.clear()
+        self.actions.clear()
 
     def all_my_hosts_and_services(self):
         """Create an iterator for all my known hosts and services
@@ -442,16 +447,17 @@ class Scheduler(object):  # pylint: disable=R0902
             file_h = open(path, 'w')
             output = 'Scheduler objects dump at %d\n' % time.time()
             file_h.write(output.encode('utf-8'))
-            for chk in list(self.checks.values()):
+            for check in list(self.checks.values()):
                 output = 'CHECK: %s:%s:%s:%s:%s:%s\n' \
-                         % (chk.uuid, chk.status, chk.t_to_go, chk.poller_tag,
-                            chk.command, chk.my_worker)
+                         % (check.uuid, check.status, check.t_to_go, check.poller_tag,
+                            check.command, check.my_worker)
                 file_h.write(output.encode('utf-8'))
             logger.info('- dumped checks')
-            for act in list(self.actions.values()):
+            for action in list(self.actions.values()):
                 output = '%s: %s:%s:%s:%s:%s:%s\n'\
-                         % (act.__class__.my_type.upper(), act.uuid, act.status,
-                            act.t_to_go, act.reactionner_tag, act.command, act.my_worker)
+                         % (action.__class__.my_type.upper(), action.uuid, action.status,
+                            action.t_to_go, action.reactionner_tag, action.command,
+                            action.my_worker)
                 file_h.write(output.encode('utf-8'))
             logger.info('- dumped actions')
             broks = []
@@ -609,10 +615,12 @@ class Scheduler(object):  # pylint: disable=R0902
 
     def add(self, elt):
         """Generic function to add objects into the scheduler daemon internal lists::
-
-        Brok -> self.brokers
+        Brok -> self.broks
         Check -> self.checks
         Notification -> self.actions
+        EventHandler -> self.actions
+
+        For an ExternalCommand, tries to resolve the command
 
         :param elt: element to add
         :type elt:
@@ -675,9 +683,9 @@ class Scheduler(object):  # pylint: disable=R0902
             logger.debug("No queues cleaning...")
             return
 
-        max_checks = 5 * (len(self.hosts) + len(self.services))
-        max_broks = 5 * (len(self.hosts) + len(self.services))
-        max_actions = 5 * len(self.contacts) * (len(self.hosts) + len(self.services))
+        max_checks = MULTIPLIER_MAX_CHECKS * (len(self.hosts) + len(self.services))
+        max_broks = MULTIPLIER_MAX_BROKS * (len(self.hosts) + len(self.services))
+        max_actions = MULTIPLIER_MAX_ACTIONS * len(self.contacts) * (len(self.hosts) + len(self.services))
 
         # For checks, it's not very simple:
         # For checks, they may be referred to their host/service
@@ -719,7 +727,6 @@ class Scheduler(object):  # pylint: disable=R0902
                 # Delete the oldest broks to keep the max_broks most recent...
                 # todo: is it a good choice !
                 broker_link.broks = kept_broks[0:max_broks]
-                print(len(broker_link.broks))
 
         self.nb_actions_dropped = 0
         if max_actions and len(self.actions) > max_actions:
@@ -890,9 +897,8 @@ class Scheduler(object):  # pylint: disable=R0902
         # pylint: disable=too-many-branches
         """Get actions/checks for reactionner/poller
 
-        Can get checks and actions (notifications and co)
-
-        Called by the poller to get checks and by the reactionner to get actions
+        Called by the poller to get checks (do_checks=True) and
+        by the reactionner (do_actions=True) to get actions
 
         :param do_checks: do we get checks ?
         :type do_checks: bool
@@ -1789,13 +1795,15 @@ class Scheduler(object):  # pylint: disable=R0902
                                                  self.services, self.timeperiods,
                                                  self.macromodulations, self.checkmodulations,
                                                  self.businessimpactmodulations,
-                                                 self.resultmodulations, self.checks)
+                                                 self.resultmodulations, self.checks,
+                                                 self.pushed_conf.log_active_checks and
+                                                 not chk.passive_check)
 
-                # Raise the log only when the check got consumed!
-                # Else the item information are not up-to-date :/
-                if self.pushed_conf.log_active_checks and not chk.passive_check:
-                    item.raise_check_result()
-
+                # # Raise the log only when the check got consumed!
+                # # Else the item information are not up-to-date :/
+                # if self.pushed_conf.log_active_checks and not chk.passive_check:
+                #     item.raise_check_result()
+                #
                 for check in dep_checks:
                     logger.debug("-> raised a dependency check: %s", chk)
                     self.add(check)
@@ -1823,7 +1831,9 @@ class Scheduler(object):  # pylint: disable=R0902
                                                      self.services, self.timeperiods,
                                                      self.macromodulations, self.checkmodulations,
                                                      self.businessimpactmodulations,
-                                                     self.resultmodulations, self.checks)
+                                                     self.resultmodulations, self.checks,
+                                                     self.pushed_conf.log_active_checks and
+                                                     not chk.passive_check)
                     for check in dep_checks:
                         self.add(check)
 

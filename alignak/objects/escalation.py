@@ -330,25 +330,27 @@ class Escalations(Items):
         :type services: alignak.objects.service.Services
         :return: None
         """
-        for escal in self:
+        for escalation in self:
             # If no host, no hope of having a service
-            if not (hasattr(escal, 'host_name') and hasattr(escal, 'service_description')):
+            if not (hasattr(escalation, 'host_name')):
                 continue
-            es_hname, sdesc = escal.host_name, escal.service_description
-            if '' in (es_hname.strip(), sdesc.strip()):
+
+            es_hname, sdesc = escalation.host_name, escalation.service_description
+            if not es_hname.strip() or not sdesc.strip():
                 continue
+
             for hname in strip_and_uniq(es_hname.split(',')):
                 if sdesc.strip() == '*':
                     slist = services.find_srvs_by_hostname(hname)
                     if slist is not None:
                         slist = [services[serv] for serv in slist]
                         for serv in slist:
-                            serv.escalations.append(escal.uuid)
+                            serv.escalations.append(escalation.uuid)
                 else:
                     for sname in strip_and_uniq(sdesc.split(',')):
                         serv = services.find_srv_by_name_and_hostname(hname, sname)
                         if serv is not None:
-                            serv.escalations.append(escal.uuid)
+                            serv.escalations.append(escalation.uuid)
 
     def linkify_es_by_h(self, hosts):
         """Add each escalation object into host.escalation attribute

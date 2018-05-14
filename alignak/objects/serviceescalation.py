@@ -120,7 +120,7 @@ class Serviceescalations(Items):
             host_name = getattr(escalation, 'host_name', '')
             creation_dict = {
                 'escalation_name':
-                    'Generated-ServiceEscalation-%s-%s' % (host_name, escalation.uuid)
+                    'Generated-SE-%s-%s' % (host_name, escalation.uuid)
             }
             for prop in properties:
                 if hasattr(escalation, prop):

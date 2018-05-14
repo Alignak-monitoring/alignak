@@ -1110,6 +1110,8 @@ class TestExternalCommands(AlignakTest):
         """ Test the acknowledges for services
         :return: None
         """
+        self._main_broker.broks = []
+
         # Get host
         host = self._scheduler.hosts.find_by_name('test_host_0')
         host.checks_in_progress = []
@@ -1175,28 +1177,28 @@ class TestExternalCommands(AlignakTest):
 
         print(monitoring_logs)
         expected_logs = [
-            ('info',
-             u'RETENTION LOAD: scheduler-master scheduler'),
+            # ('info',
+            #  'RETENTION LOAD: scheduler-master scheduler'),
             ('warning',
-             u'PASSIVE SERVICE CHECK: test_host_0;test_ok_0;1;Service is WARNING;;'),
+             'PASSIVE SERVICE CHECK: test_host_0;test_ok_0;1;Service is WARNING;;'),
             ('info',
-             u'ACTIVE HOST CHECK: test_host_0;UP;HARD;0;'),
+             'ACTIVE HOST CHECK: test_host_0;UP;0;Host is UP'),
 
             ('warning',
-             u'SERVICE ALERT: test_host_0;test_ok_0;WARNING;SOFT;1;Service is WARNING'),
+             'SERVICE ALERT: test_host_0;test_ok_0;WARNING;SOFT;1;Service is WARNING'),
 
             ('info',
-             u'EXTERNAL COMMAND: [%s] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % now),
-
+             'EXTERNAL COMMAND: [%s] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % now),
             ('info',
-             u'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;STARTED; Service problem has been acknowledged'),
+             'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;STARTED; Service problem has been acknowledged'),
             ('info',
-             u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;ACKNOWLEDGEMENT (WARNING);notify-service;Service is WARNING'),
+             'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;ACKNOWLEDGEMENT (WARNING);notify-service;Service is WARNING'),
             ('info',
-             u'EXTERNAL COMMAND: [%s] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;test_ok_0' % now),
+             'EXTERNAL COMMAND: [%s] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;test_ok_0' % now),
             ('info',
-             u'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;EXPIRED; Service problem acknowledge expired')
+             'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;EXPIRED; Service problem acknowledge expired')
         ]
+        self.check_monitoring_logs(expected_logs)
         for log_level, log_message in expected_logs:
             print("Last checked log %s: %s" % (log_level, log_message))
             assert (log_level, log_message) in monitoring_logs

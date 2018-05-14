@@ -776,8 +776,8 @@ class TestDependencies(AlignakTest):
 
         # Service is CRITICAL
         print("====================== svc CRITICAL ===================")
-        time.sleep(1.0)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
         assert "UP" == router_00.state
         assert "UP" == host.state
         assert "OK" == svc.state
@@ -789,8 +789,8 @@ class TestDependencies(AlignakTest):
 
         # Host is DOWN
         print("====================== host DOWN ===================")
-        time.sleep(1.0)
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
+        time.sleep(0.1)
         assert "UP" == router_00.state
         assert "UP" == host.state
         assert "OK" == svc.state
@@ -803,7 +803,7 @@ class TestDependencies(AlignakTest):
         # Router is UP
         print("====================== router UP ===================")
         self.scheduler_loop(1, [[router_00, 0, 'UP']])
-        time.sleep(1.0)
+        time.sleep(0.1)
         self.scheduler_loop(1)
         self.show_checks()
         assert "UP" == router_00.state
@@ -969,8 +969,8 @@ class TestDependencies(AlignakTest):
         self.assert_checks_count(9)
 
         print("====================== svc1 && svc2 CRITICAL ===================")
-        time.sleep(1.0)
         self.scheduler_loop(1, [[svc1, 2, 'CRITICAL'], [svc2, 2, 'CRITICAL']])
+        time.sleep(0.1)
         self.assert_actions_count(0)
         self.assert_checks_count(12)
         assert "UP" == host.state
@@ -981,7 +981,7 @@ class TestDependencies(AlignakTest):
 
         print("====================== host UP ===================")
         self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(1.0)
+        time.sleep(0.1)
         self.scheduler_loop(1)
         assert "UP" == host.state
         assert "CRITICAL" == svc1.state
