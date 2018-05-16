@@ -299,12 +299,15 @@ class TestDaemonsApi(AlignakTest):
         assert isinstance(data['services'], list)
         for service in data['services']:
             assert "name" in service
-            assert "state" in service
-            assert "output" in service
-            assert "long_output" in service
-            assert "perf_data" in service
             assert service['name'] in ['arbiter-master', 'broker-master', 'poller-master',
                                        'scheduler-master', 'reactionner-master', 'receiver-master']
+            assert "livestate" in service
+            livestate = service['livestate']
+            assert "timestamp" in livestate
+            assert "state" in livestate
+            assert "output" in livestate
+            assert "long_output" in livestate
+            assert "perf_data" in livestate
         # -----
 
         # -----
@@ -316,6 +319,51 @@ class TestDaemonsApi(AlignakTest):
             assert raw_data.status_code == 200
             data = raw_data.json()
             print("%s, my stats: %s" % (name, json.dumps(data)))
+
+            # Same as start_time
+            assert 'alignak' in data
+            assert 'type' in data
+            assert 'name' in data
+            assert 'version' in data
+            assert 'start_time' in data
+            # +
+            assert "program_start" in data
+            assert "load" in data
+            assert "metrics" in data    # To be deprecated...
+            assert "modules" in data
+            assert "counters" in data
+
+            if name in ['arbiter-master']:
+                assert "livestate" in data
+                livestate = data['livestate']
+                assert "timestamp" in livestate
+                assert "state" in livestate
+                assert "output" in livestate
+                assert "daemons" in livestate
+                for daemon_state in livestate['daemons']:
+                    assert daemon_state == 0
+
+                assert "daemons_state" in data
+                daemons_state = data['daemons_state']
+                for daemon_name, port in list(satellite_map.items()):
+                    assert daemon_name in daemon_state
+                    daemon_state = daemons_state[daemon_name]
+                    assert "type" in daemon_state
+                    assert "name" in daemon_state
+                    assert "realm_name" in daemon_state
+                    assert "manage_sub_realms" in daemon_state
+                    assert "uri" in daemon_state
+                    assert "alive" in daemon_state
+                    assert "passive" in daemon_state
+                    assert "reachable" in daemon_state
+                    assert "active" in daemon_state
+                    assert "spare" in daemon_state
+                    assert "polling_interval" in daemon_state
+                    assert "configuration_sent" in daemon_state
+                    assert "max_check_attempts" in daemon_state
+                    assert "last_check" in daemon_state
+                    assert "live_state" in daemon_state
+                    assert "live_output" in daemon_state
 
         print("Testing get_stats (detailed)")
         for name, port in list(satellite_map.items()):
