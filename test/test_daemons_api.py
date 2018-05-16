@@ -209,6 +209,16 @@ class TestDaemonsApi(AlignakTest):
             assert raw_data.status_code == 200
             data = raw_data.json()
             print("API data: %s" % data)
+            assert 'doc' in data
+            assert 'api' in data
+            doc = []
+            for endpoint in data['api']:
+                print(endpoint, data['api'][endpoint])
+                assert 'doc' in data['api'][endpoint]
+                doc.append(data['api'][endpoint]['doc'])
+                assert 'args' in data['api'][endpoint]
+            print('\n'.join(doc))
+
             expected_data = set(name_to_interface[name](None).api())
             assert set(data) == expected_data, "Daemon %s has a bad API!" % name
         # -----

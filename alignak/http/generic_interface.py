@@ -67,11 +67,15 @@ class GenericInterface(object):
         functions = [x[0]for x in inspect.getmembers(self, predicate=inspect.ismethod)
                      if not x[0].startswith('__')]
 
-        full_api = {}
+        full_api = {
+            'doc': u"When posting data you have to use the JSON format.",
+            'api': {}
+        }
         for fun in functions:
-            full_api[fun] = {}
-            full_api[fun]["doc"] = getattr(self, fun).__doc__
-            full_api[fun]["args"] = {}
+            full_api['api'][fun] = {
+                'doc': getattr(self, fun).__doc__,
+                'args': {}
+            }
 
             try:
                 spec = inspect.getfullargspec(getattr(self, fun))
@@ -84,9 +88,7 @@ class GenericInterface(object):
             else:
                 a_dict = dict(list(zip(args, ("No default value",) * len(args))))
 
-            full_api[fun]["args"] = a_dict
-
-        full_api["side_note"] = "When posting data you have to use the JSON format."
+            full_api['api'][fun]["args"] = a_dict
 
         return full_api
 
