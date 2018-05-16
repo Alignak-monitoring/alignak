@@ -507,6 +507,8 @@ class Alignak(BaseSatellite):
         res.update({'name': self.name, 'type': self.type, 'monitored_objects': {}})
 
         counters = res['counters']
+
+        # Satellites counters
         counters['brokers'] = len(self.brokers)
         counters['pollers'] = len(self.pollers)
         counters['reactionners'] = len(self.reactionners)
@@ -514,6 +516,12 @@ class Alignak(BaseSatellite):
 
         if not self.sched:
             return res
+
+        # Hosts/services problems counters
+        counters['hosts_problems'] = m_solver._get_total_host_problems()
+        counters['hosts_unhandled_problems'] = m_solver._get_total_host_problems_unhandled()
+        counters['services_problems'] = m_solver._get_total_service_problems()
+        counters['services_unhandled_problems'] = m_solver._get_total_service_problems_unhandled()
 
         # Get statistics from the scheduler
         scheduler_stats = self.sched.get_scheduler_stats(details=details)

@@ -203,6 +203,12 @@ class TestDaemonsApi(AlignakTest):
                              'poller': GenericInterface,
                              'reactionner': GenericInterface,
                              'receiver': GenericInterface}
+        doc = []
+        doc.append(".. _alignak_features/daemons_api:")
+        doc.append("")
+        doc.append("===================")
+        doc.append("Alignak daemons API")
+        doc.append("===================")
         for name, port in list(satellite_map.items()):
             raw_data = req.get("%s://localhost:%s/api" % (scheme, port), verify=False)
             print("%s, api: %s" % (name, raw_data.text))
@@ -211,20 +217,31 @@ class TestDaemonsApi(AlignakTest):
             print("API data: %s" % data)
             assert 'doc' in data
             assert 'api' in data
-            doc = []
+            doc.append("Daemon: %s" % name)
+            doc.append("-" * len("Daemon: %s" % name))
             for endpoint in data['api']:
                 print(endpoint)
                 assert 'name' in endpoint
                 assert 'doc' in endpoint
                 assert 'args' in endpoint
-                doc.append("Endpoint: %s" % endpoint['name'])
-                doc.append(endpoint['doc'])
-            print("-----")
-            print("Daemon: %s" % name)
-            print('\n'.join(doc))
+                doc.append("/%s" % endpoint['name'])
+                doc.append("~" * len("/%s" % endpoint['name']))
+                doc.append("::\n\t%s" % endpoint['doc'])
+                doc.append("\n")
 
             expected_data = set(name_to_interface[name](None).api())
             assert set(data) == expected_data, "Daemon %s has a bad API!" % name
+        print('\n')
+        print('\n')
+        print('\n')
+        print('\n')
+        print('\n')
+        print('\n'.join(doc))
+        print('\n')
+        print('\n')
+        print('\n')
+        print('\n')
+        print('\n')
         # -----
 
         # -----
@@ -998,7 +1015,7 @@ class TestDaemonsApi(AlignakTest):
         # -----
         # 2/ notify an external command to the arbiter (as the receiver does).
         raw_data = req.post("http://localhost:7770/push_external_command",
-                            data=json.dumps({'command': 'test'}),
+                            data=json.dumps({'command': 'disable_notifications'}),
                             headers={'Content-Type': 'application/json'},
                             verify=False)
         print("push_external_commands, got (raw): %s" % (raw_data.content))
@@ -1006,15 +1023,25 @@ class TestDaemonsApi(AlignakTest):
         data = raw_data.json()
         print("Got: %s" % data)
         assert data['_status'] == 'OK'
-        assert data['_message'] == 'Got command: TEST'
-        assert data['command'] == 'TEST'
+        assert data['_message'] == 'Got command: DISABLE_NOTIFICATIONS'
+        assert data['command'] == 'DISABLE_NOTIFICATIONS'
+
+        raw_data = req.get("http://localhost:7770/get_external_commands")
+        assert raw_data.status_code == 200
+        print("%s get_external_commands, got (raw): %s" % (name, raw_data))
+        data = raw_data.json()
+        print("---Got: %s" % data)
+        assert len(data) == 1
+        assert 'creation_timestamp' in data[0]
+        assert data[0]['cmd_line'] == 'DISABLE_NOTIFICATIONS'
+        assert data[0]['my_type'] == 'externalcommand'
 
         # -----
         # 3/ notify an external command to the arbiter (WS interface).
         # For an host
         raw_data = req.post("http://localhost:7770/command",
                             data=json.dumps({
-                                'command': 'test',
+                                'command': 'disable_passive_host_checks',
                                 'element': 'host_name',
                                 'parameters': 'p1;p2;p3'
                             }),
@@ -1025,8 +1052,18 @@ class TestDaemonsApi(AlignakTest):
         data = raw_data.json()
         print("Got: %s" % data)
         assert data['_status'] == 'OK'
-        assert data['_message'] == 'Got command: TEST;host_name;p1;p2;p3'
-        assert data['command'] == 'TEST;host_name;p1;p2;p3'
+        assert data['_message'] == 'Got command: DISABLE_PASSIVE_HOST_CHECKS;host_name;p1;p2;p3'
+        assert data['command'] == 'DISABLE_PASSIVE_HOST_CHECKS;host_name;p1;p2;p3'
+
+        raw_data = req.get("http://localhost:7770/get_external_commands")
+        assert raw_data.status_code == 200
+        print("%s get_external_commands, got (raw): %s" % (name, raw_data))
+        data = raw_data.json()
+        print("---Got: %s" % data)
+        assert len(data) == 1
+        assert 'creation_timestamp' in data[0]
+        assert data[0]['cmd_line'] == 'DISABLE_PASSIVE_HOST_CHECKS;host_name;p1;p2;p3'
+        assert data[0]['my_type'] == 'externalcommand'
 
         raw_data = req.post("http://localhost:7770/command",
                             data=json.dumps({
@@ -1101,6 +1138,8 @@ class TestDaemonsApi(AlignakTest):
         assert data['_message'] == 'Got command: TEST;user_name;p1;p2;p3'
         assert data['command'] == 'TEST;user_name;p1;p2;p3'
 
+        time.sleep(5)
+
         # -----
         # Get external commands from all the daemons
         for name, port in list(satellite_map.items()):
@@ -1109,35 +1148,36 @@ class TestDaemonsApi(AlignakTest):
             print("%s get_external_commands, got (raw): %s" % (name, raw_data))
             data = raw_data.json()
             print("Got: %s" % data)
-            if name in 'arbiter':
-                # expected = [
-                #     {'cmd_line': 'TEST;host_name;p1;p2;p3', 'creation_timestamp': 1525239402.3044384, 'my_type': 'externalcommand'},
-                #     {'cmd_line': 'TEST;host_name;service;p1;p2;p3', 'creation_timestamp': 1525239402.3165898, 'my_type': 'externalcommand'},
-                #     {'cmd_line': 'TEST;host_name;service;p1;p2;p3', 'creation_timestamp': 1525239402.3312771, 'my_type': 'externalcommand'},
-                #     {'cmd_line': 'TEST;user_name;p1;p2;p3', 'creation_timestamp': 1525239402.338769, 'my_type': 'externalcommand'},
-                #     {'cmd_line': 'TEST;user_name;p1;p2;p3', 'creation_timestamp': 1525239402.3564115, 'my_type': 'externalcommand'}
-                # ]
-                assert 'creation_timestamp' in data[0]
-                assert data[1]['cmd_line'] == 'TEST;host_name;p1;p2;p3'
-                assert data[0]['my_type'] == 'externalcommand'
-                assert 'creation_timestamp' in data[1]
-                assert data[1]['cmd_line'] == 'TEST;host_name;p1;p2;p3'
-                assert data[1]['my_type'] == 'externalcommand'
-                assert 'creation_timestamp' in data[2]
-                assert data[2]['cmd_line'] == 'TEST;host_name;p1;p2;p3'
-                assert data[2]['my_type'] == 'externalcommand'
-                assert 'creation_timestamp' in data[3]
-                assert data[3]['cmd_line'] == 'TEST;host_name;service;p1;p2;p3'
-                assert data[3]['my_type'] == 'externalcommand'
-                assert 'creation_timestamp' in data[4]
-                assert data[4]['cmd_line'] == 'TEST;host_name;service;p1;p2;p3'
-                assert data[4]['my_type'] == 'externalcommand'
-                assert 'creation_timestamp' in data[5]
-                assert data[5]['cmd_line'] == 'TEST;user_name;p1;p2;p3'
-                assert data[5]['my_type'] == 'externalcommand'
-                assert 'creation_timestamp' in data[6]
-                assert data[6]['cmd_line'] == 'TEST;user_name;p1;p2;p3'
-                assert data[6]['my_type'] == 'externalcommand'
+            # External commands got consumed by the daemons
+            assert len(data) == 0
+            # if name in 'arbiter':
+            #     #         e = [
+            #     #             {'my_type': 'externalcommand', 'cmd_line': 'TEST;host_name;service;p1;p2;p3', 'creation_timestamp': 1526479441.683431},
+            #     #             {'my_type': 'externalcommand', 'cmd_line': 'TEST;user_name;p1;p2;p3', 'creation_timestamp': 1526479441.689507},
+            #     #             {'my_type': 'externalcommand', 'cmd_line': 'TEST;user_name;p1;p2;p3', 'creation_timestamp': 1526479441.695691}
+            #     #         ]
+            #
+            #     assert 'creation_timestamp' in data[0]
+            #     assert data[0]['cmd_line'] == 'TEST;host_name;p1;p2;p3'
+            #     assert data[0]['my_type'] == 'externalcommand'
+            #     assert 'creation_timestamp' in data[1]
+            #     assert data[1]['cmd_line'] == 'TEST;host_name;p1;p2;p3'
+            #     assert data[1]['my_type'] == 'externalcommand'
+            #     assert 'creation_timestamp' in data[2]
+            #     assert data[2]['cmd_line'] == 'TEST;host_name;p1;p2;p3'
+            #     assert data[2]['my_type'] == 'externalcommand'
+            #     assert 'creation_timestamp' in data[3]
+            #     assert data[3]['cmd_line'] == 'TEST;host_name;service;p1;p2;p3'
+            #     assert data[3]['my_type'] == 'externalcommand'
+            #     assert 'creation_timestamp' in data[4]
+            #     assert data[4]['cmd_line'] == 'TEST;host_name;service;p1;p2;p3'
+            #     assert data[4]['my_type'] == 'externalcommand'
+            #     assert 'creation_timestamp' in data[5]
+            #     assert data[5]['cmd_line'] == 'TEST;user_name;p1;p2;p3'
+            #     assert data[5]['my_type'] == 'externalcommand'
+            #     assert 'creation_timestamp' in data[6]
+            #     assert data[6]['cmd_line'] == 'TEST;user_name;p1;p2;p3'
+            #     assert data[6]['my_type'] == 'externalcommand'
 
         # This function will only send a SIGTERM to the arbiter daemon
         self._stop_alignak_daemons(arbiter_only=True)
