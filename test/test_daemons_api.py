@@ -213,11 +213,12 @@ class TestDaemonsApi(AlignakTest):
             assert 'api' in data
             doc = []
             for endpoint in data['api']:
-                # print(endpoint, data['api'][endpoint])
-                assert 'doc' in data['api'][endpoint]
-                doc.append("Endpoint: %s" % endpoint)
-                doc.append(data['api'][endpoint]['doc'])
-                assert 'args' in data['api'][endpoint]
+                print(endpoint)
+                assert 'name' in endpoint
+                assert 'doc' in endpoint
+                assert 'args' in endpoint
+                doc.append("Endpoint: %s" % endpoint['name'])
+                doc.append(endpoint['doc'])
             print("-----")
             print("Daemon: %s" % name)
             print('\n'.join(doc))

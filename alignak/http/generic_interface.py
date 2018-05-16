@@ -69,11 +69,11 @@ class GenericInterface(object):
 
         full_api = {
             'doc': u"When posting data you have to use the JSON format.",
-            'api': {}
+            'api': []
         }
         for fun in functions:
             endpoint = {
-                'endpoint': fun,
+                'name': fun,
                 'doc': getattr(self, fun).__doc__,
                 'args': {}
             }
