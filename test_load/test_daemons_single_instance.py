@@ -268,8 +268,9 @@ class TestDaemonsSingleInstance(AlignakTest):
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   './cfg/default')
-        run_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                                  './run/active_100_5')
+        # run_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
+        #                           './run/active_100_5')
+        run_folder = '/tmp'
 
         hosts_count = 100
         self.prepare_alignak_configuration(cfg_folder, hosts_count)

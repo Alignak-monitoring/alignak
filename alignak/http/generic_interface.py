@@ -72,7 +72,8 @@ class GenericInterface(object):
             'api': {}
         }
         for fun in functions:
-            full_api['api'][fun] = {
+            endpoint = {
+                'endpoint': fun,
                 'doc': getattr(self, fun).__doc__,
                 'args': {}
             }
@@ -88,7 +89,8 @@ class GenericInterface(object):
             else:
                 a_dict = dict(list(zip(args, ("No default value",) * len(args))))
 
-            full_api['api'][fun]["args"] = a_dict
+            endpoint["args"] = a_dict
+            full_api['api'].append(endpoint)
 
         return full_api
 
