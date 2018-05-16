@@ -124,6 +124,22 @@ class GenericInterface(object):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
+    def get_id(self):
+        """Get the daemon identity
+
+        This will return an object containing some properties:
+        - alignak: the Alignak instance name
+        - version: the Alignak version
+        - type: the daemon type
+        - name: the daemon name
+
+        :return: daemon identity
+        :rtype: dict
+        """
+        return self.app.get_id()
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
     def get_start_time(self):
         """Get the start time of the daemon
 
@@ -138,22 +154,6 @@ class GenericInterface(object):
         res = self.get_id()
         res.update({"start_time": self.start_time})
         return res
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def get_id(self):
-        """Get the daemon identity
-
-        This will return an object containing some properties:
-        - alignak: the Alignak instance name
-        - version: the Alignak version
-        - type: the daemon type
-        - name: the daemon name
-
-        :return: daemon identity
-        :rtype: dict
-        """
-        return self.app.get_id()
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -371,16 +371,17 @@ class GenericInterface(object):
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
     def get_stats(self, details=False):
-        """Get stats from the daemon
+        """Get statistics and information from the daemon
 
         Returns an object with the daemon identity, the daemon start_time
         and some extra properties depending upon the daemon type.
+
         All daemons provide these ones:
-        program_start: the Alignak start timestamp
-        spare: to indicate if the daemon is a spare one
-        load: the daemon load
-        modules: the daemon modules information
-        counters: the specific daemon counters
+        - program_start: the Alignak start timestamp
+        - spare: to indicate if the daemon is a spare one
+        - load: the daemon load
+        - modules: the daemon modules information
+        - counters: the specific daemon counters
 
         :param details: Details are required (different from 0)
         :type details str
@@ -392,5 +393,5 @@ class GenericInterface(object):
             details = bool(details)
         res = self.get_id()
         res.update(self.get_start_time())
-        res.update(self.app.get_daemon_stats(details))
+        res.update(self.app.get_daemon_stats(details=details))
         return res

@@ -971,11 +971,15 @@ class TestDowntime(AlignakTest):
         assert 0 == svc.current_notification_number, 'Should not have any notification'
 
         # Only 1 action because the host downtime start
-        self.assert_actions_count(1)
+        self.assert_actions_count(2)
         # The downtime started
         self.assert_actions_match(0, '/notifier.pl', 'command')
         self.assert_actions_match(0, 'DOWNTIMESTART', 'type')
         self.assert_actions_match(0, 'scheduled', 'status')
+        # The downtime ended
+        self.assert_actions_match(1, '/notifier.pl', 'command')
+        self.assert_actions_match(1, 'DOWNTIMEEND', 'type')
+        self.assert_actions_match(1, 'scheduled', 'status')
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
         monitoring_logs = []

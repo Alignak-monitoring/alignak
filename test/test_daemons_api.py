@@ -233,8 +233,14 @@ class TestDaemonsApi(AlignakTest):
             raw_data = req.get("%s://localhost:%s/get_start_time" % (scheme, port), verify=False)
             assert raw_data.status_code == 200
             data = raw_data.json()
-            print("%s, my start time: %s" % (name, data))
-            # assert isinstance(data, unicode), "Data is not an unicode!"
+            print("%s, my start time: %s" % (name, data['start_time']))
+            # Same as get_id
+            assert 'alignak' in data
+            assert 'type' in data
+            assert 'name' in data
+            assert 'version' in data
+            # +
+            assert 'start_time' in data
         # -----
 
         # -----
@@ -245,6 +251,13 @@ class TestDaemonsApi(AlignakTest):
             data = raw_data.json()
             assert "running_id" in data
             print("%s, my running id: %s" % (name, data['running_id']))
+            # Same as get_id
+            assert 'alignak' in data
+            assert 'type' in data
+            assert 'name' in data
+            assert 'version' in data
+            # +
+            assert 'running_id' in data
         # -----
 
         # -----
@@ -264,6 +277,34 @@ class TestDaemonsApi(AlignakTest):
         assert isinstance(data, dict), "Data is not a dict!"
         for k, v in expected_data.items():
             assert set(data[k]) == set(v)
+        # -----
+
+        # -----
+        print("Testing get_get_alignak_status")
+        # Arbiter only
+        raw_data = req.get("%s://localhost:%s/get_alignak_status" %
+                           (scheme, satellite_map['arbiter']), verify=False)
+        assert raw_data.status_code == 200
+        expected_data = {"reactionner": ["reactionner-master"],
+                         "broker": ["broker-master"],
+                         "arbiter": ["arbiter-master"],
+                         "scheduler": ["scheduler-master"],
+                         "receiver": ["receiver-master"],
+                         "poller": ["poller-master"]}
+        data = raw_data.json()
+        print("Overall status: %s" % json.dumps(data))
+        assert "template" in data
+        assert "livestate" in data
+        assert "services" in data
+        assert isinstance(data['services'], list)
+        for service in data['services']:
+            assert "name" in service
+            assert "state" in service
+            assert "output" in service
+            assert "long_output" in service
+            assert "perf_data" in service
+            assert service['name'] in ['arbiter-master', 'broker-master', 'poller-master',
+                                       'scheduler-master', 'reactionner-master', 'receiver-master']
         # -----
 
         # -----
