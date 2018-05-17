@@ -206,6 +206,8 @@ class TestDaemonsApi(AlignakTest):
         doc = []
         doc.append(".. _alignak_features/daemons_api:")
         doc.append("")
+        doc.append(".. Built from the test_daemons_api.py unit test last run!")
+        doc.append("")
         doc.append("===================")
         doc.append("Alignak daemons API")
         doc.append("===================")
@@ -217,31 +219,32 @@ class TestDaemonsApi(AlignakTest):
             print("API data: %s" % data)
             assert 'doc' in data
             assert 'api' in data
-            doc.append("Daemon: %s" % name)
-            doc.append("-" * len("Daemon: %s" % name))
+            doc.append("Daemon type: %s" % name)
+            doc.append("-" * len("Daemon type: %s" % name))
             for endpoint in data['api']:
-                print(endpoint)
                 assert 'name' in endpoint
                 assert 'doc' in endpoint
                 assert 'args' in endpoint
                 doc.append("/%s" % endpoint['name'])
                 doc.append("~" * len("/%s" % endpoint['name']))
-                doc.append("::\n\t%s" % endpoint['doc'])
-                doc.append("\n")
+                doc.append("")
+                doc.append("Python source code documentation\n ::\n")
+                doc.append("    %s" % endpoint['doc'])
+                doc.append("")
 
             expected_data = set(name_to_interface[name](None).api())
             assert set(data) == expected_data, "Daemon %s has a bad API!" % name
-        print('\n')
-        print('\n')
-        print('\n')
-        print('\n')
-        print('\n')
         print('\n'.join(doc))
-        print('\n')
-        print('\n')
-        print('\n')
-        print('\n')
-        print('\n')
+
+        rst_write = None
+        rst_file = "daemons_api.rst"
+        if os.path.exists("../doc/source/api"):
+            rst_write = "../doc/source/api/%s" % rst_file
+        if os.path.exists("../../alignak-doc/source/07_alignak_features/api"):
+            rst_write = "../../alignak-doc/source/07_alignak_features/api/%s" % rst_file
+        if rst_write:
+            with open(rst_write, mode='wt', encoding='utf-8') as out:
+                out.write('\n'.join(doc))
         # -----
 
         # -----
@@ -311,17 +314,11 @@ class TestDaemonsApi(AlignakTest):
         # -----
 
         # -----
-        print("Testing get_get_alignak_status")
+        print("Testing get_alignak_status")
         # Arbiter only
         raw_data = req.get("%s://localhost:%s/get_alignak_status" %
                            (scheme, satellite_map['arbiter']), verify=False)
         assert raw_data.status_code == 200
-        expected_data = {"reactionner": ["reactionner-master"],
-                         "broker": ["broker-master"],
-                         "arbiter": ["arbiter-master"],
-                         "scheduler": ["scheduler-master"],
-                         "receiver": ["receiver-master"],
-                         "poller": ["poller-master"]}
         data = raw_data.json()
         print("Overall status: %s" % json.dumps(data))
         assert "template" in data
@@ -339,10 +336,42 @@ class TestDaemonsApi(AlignakTest):
             assert "output" in livestate
             assert "long_output" in livestate
             assert "perf_data" in livestate
+
+        doc = []
+        doc.append(".. _alignak_features/alignak_status:")
+        doc.append(".. Built from the test_daemons_api.py unit test last run!")
+        doc.append("")
+        doc.append("======================")
+        doc.append("Alignak overall status")
+        doc.append("======================")
+        doc.append("An Alignak overall status example:")
+        doc.append("")
+        doc.append("::")
+        doc.append("")
+        doc.append("    %s" % json.dumps(data, sort_keys=True, indent=4))
+        doc.append("")
+
+        rst_write = None
+        rst_file = "alignak_status.rst"
+        if os.path.exists("../doc/source/api"):
+            rst_write = "../doc/source/api/%s" % rst_file
+        if os.path.exists("../../alignak-doc/source/07_alignak_features/api"):
+            rst_write = "../../alignak-doc/source/07_alignak_features/api/%s" % rst_file
+        if rst_write:
+            with open(rst_write, mode='wt', encoding='utf-8') as out:
+                out.write('\n'.join(doc))
         # -----
 
         # -----
         print("Testing get_stats")
+
+        doc = []
+        doc.append(".. _alignak_features/daemons_stats:")
+        doc.append(".. Built from the test_daemons_api.py unit test last run!")
+        doc.append("")
+        doc.append("==========================")
+        doc.append("Alignak daemons statistics")
+        doc.append("==========================")
         for name, port in list(satellite_map.items()):
             print("- for %s" % (name))
             raw_data = req.get("%s://localhost:%s/get_stats" % (scheme, port), verify=False)
@@ -350,6 +379,14 @@ class TestDaemonsApi(AlignakTest):
             assert raw_data.status_code == 200
             data = raw_data.json()
             print("%s, my stats: %s" % (name, json.dumps(data)))
+
+            doc.append("")
+            doc.append("Daemon type: %s" % name)
+            doc.append("-" * len("Daemon type: %s" % name))
+            doc.append("")
+            doc.append("A %s daemon statistics example:\n ::\n" % name)
+            doc.append("    %s" % json.dumps(data, sort_keys=True, indent=4))
+            doc.append("")
 
             # Same as start_time
             assert 'alignak' in data
@@ -364,7 +401,7 @@ class TestDaemonsApi(AlignakTest):
             assert "modules" in data
             assert "counters" in data
 
-            if name in ['arbiter-master']:
+            if name in ['arbiter']:
                 assert "livestate" in data
                 livestate = data['livestate']
                 assert "timestamp" in livestate
@@ -372,12 +409,11 @@ class TestDaemonsApi(AlignakTest):
                 assert "output" in livestate
                 assert "daemons" in livestate
                 for daemon_state in livestate['daemons']:
-                    assert daemon_state == 0
+                    assert livestate['daemons'][daemon_state] == 0
 
-                assert "daemons_state" in data
-                daemons_state = data['daemons_state']
-                for daemon_name, port in list(satellite_map.items()):
-                    assert daemon_name in daemon_state
+                assert "daemons_states" in data
+                daemons_state = data['daemons_states']
+                for daemon_name in daemons_state:
                     daemon_state = daemons_state[daemon_name]
                     assert "type" in daemon_state
                     assert "name" in daemon_state
@@ -393,8 +429,18 @@ class TestDaemonsApi(AlignakTest):
                     assert "configuration_sent" in daemon_state
                     assert "max_check_attempts" in daemon_state
                     assert "last_check" in daemon_state
-                    assert "live_state" in daemon_state
-                    assert "live_output" in daemon_state
+                    assert "livestate" in daemon_state
+                    assert "livestate_output" in daemon_state
+
+        rst_write = None
+        rst_file = "daemons_stats.rst"
+        if os.path.exists("../doc/source/api"):
+            rst_write = "../doc/source/api/%s" % rst_file
+        if os.path.exists("../../alignak-doc/source/07_alignak_features/api"):
+            rst_write = "../../alignak-doc/source/07_alignak_features/api/%s" % rst_file
+        if rst_write:
+            with open(rst_write, mode='wt', encoding='utf-8') as out:
+                out.write('\n'.join(doc))
 
         print("Testing get_stats (detailed)")
         for name, port in list(satellite_map.items()):
@@ -1178,6 +1224,189 @@ class TestDaemonsApi(AlignakTest):
             #     assert 'creation_timestamp' in data[6]
             #     assert data[6]['cmd_line'] == 'TEST;user_name;p1;p2;p3'
             #     assert data[6]['my_type'] == 'externalcommand'
+
+        # This function will only send a SIGTERM to the arbiter daemon
+        self._stop_alignak_daemons(arbiter_only=True)
+
+    def test_get_stats(self):
+        """ Running all the Alignak daemons - get daemons statistics
+
+        :return:
+        """
+        print("Clean former run...")
+        cfg_folder = os.path.abspath('./run/test_launch_daemons')
+        if os.path.exists(cfg_folder):
+            shutil.rmtree(cfg_folder)
+
+        print("Copy run configuration (../etc) to %s..." % cfg_folder)
+        # Copy the default Alignak shipped configuration to the run directory
+        shutil.copytree('../etc', cfg_folder)
+
+        # Update monitoring configuration parameters
+        files = ['%s/alignak.ini' % cfg_folder]
+        replacements = {
+            '_dist=/usr/local/': '_dist=%s' % cfg_folder,
+            '%(_dist)s/bin': cfg_folder,
+            '%(_dist)s/etc/alignak': cfg_folder,
+            '%(_dist)s/var/lib/alignak': cfg_folder,
+            '%(_dist)s/var/run/alignak': cfg_folder,
+            '%(_dist)s/var/log/alignak': cfg_folder,
+
+            ';CFG=%(etcdir)s/alignak.cfg': 'CFG=%s/alignak.cfg' % cfg_folder,
+            # ';log_cherrypy=1': 'log_cherrypy=1',
+
+            'polling_interval=5': '',
+            'daemons_check_period=5': '',
+            'daemons_stop_timeout=10': 'daemons_stop_timeout=5',
+            ';daemons_start_timeout=0': 'daemons_start_timeout=5',
+            ';daemons_dispatch_timeout=0': 'daemons_dispatch_timeout=0',
+
+            'user=alignak': ';user=alignak',
+            'group=alignak': ';group=alignak',
+
+            ';alignak_launched=1': 'alignak_launched=1',
+            ';is_daemon=1': 'is_daemon=0'
+        }
+        self._files_update(files, replacements)
+
+        satellite_map = {
+            'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
+            'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
+        }
+
+        daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
+                        'receiver-master', 'scheduler-master']
+
+        self._run_alignak_daemons(cfg_folder=cfg_folder,
+                                  daemons_list=daemons_list, runtime=5)
+
+        req = requests.Session()
+
+        # Here the daemons got started by the arbiter and the arbiter dispatched a configuration
+
+        # -----
+        # 1/ get the running identifier (confirm the daemon is running)
+        print("--- get_running_id")
+        for name, port in list(satellite_map.items()):
+            raw_data = req.get("http://localhost:%s/get_running_id" % port, verify=False)
+            assert raw_data.status_code == 200
+            print("Got (raw): %s" % raw_data)
+            data = raw_data.json()
+            assert "running_id" in data
+            print("%s, my running id: %s" % (name, data['running_id']))
+        # -----
+
+        # -----
+        # 2/ get the daemons statistics
+        print("--- get_stats")
+        for name, port in list(satellite_map.items()):
+            print("- for %s" % (name))
+            raw_data = req.get("http://localhost:%s/get_stats" % port, verify=False)
+            print("%s, my stats: %s" % (name, raw_data.text))
+            assert raw_data.status_code == 200
+            data = raw_data.json()
+            print("%s, my stats: %s" % (name, json.dumps(data)))
+
+            # Same as start_time
+            assert 'alignak' in data
+            assert 'type' in data
+            assert 'name' in data
+            assert 'version' in data
+            assert 'start_time' in data
+            # +
+            assert "program_start" in data
+            assert "load" in data
+            assert "metrics" in data    # To be deprecated...
+            assert "modules" in data
+            assert "counters" in data
+
+            if name in ['arbiter']:
+                assert "livestate" in data
+                livestate = data['livestate']
+                assert "timestamp" in livestate
+                assert "state" in livestate
+                assert "output" in livestate
+                assert "daemons" in livestate
+                for daemon_state in livestate['daemons']:
+                    assert livestate['daemons'][daemon_state] == 0
+
+                assert "daemons_states" in data
+                daemons_state = data['daemons_states']
+                for daemon_name in daemons_state:
+                    daemon_state = daemons_state[daemon_name]
+                    assert "type" in daemon_state
+                    assert "name" in daemon_state
+                    assert "realm_name" in daemon_state
+                    assert "manage_sub_realms" in daemon_state
+                    assert "uri" in daemon_state
+                    assert "alive" in daemon_state
+                    assert "passive" in daemon_state
+                    assert "reachable" in daemon_state
+                    assert "active" in daemon_state
+                    assert "spare" in daemon_state
+                    assert "polling_interval" in daemon_state
+                    assert "configuration_sent" in daemon_state
+                    assert "max_check_attempts" in daemon_state
+                    assert "last_check" in daemon_state
+                    assert "livestate" in daemon_state
+                    assert "livestate_output" in daemon_state
+
+        time.sleep(5)
+
+        # -----
+        # 3/ once again, get the daemons statistics
+        print("--- get_stats")
+        for name, port in list(satellite_map.items()):
+            print("- for %s" % (name))
+            raw_data = req.get("http://localhost:%s/get_stats" % port, verify=False)
+            print("%s, my stats: %s" % (name, raw_data.text))
+            assert raw_data.status_code == 200
+            data = raw_data.json()
+            print("%s, my stats: %s" % (name, json.dumps(data)))
+
+            # Same as start_time
+            assert 'alignak' in data
+            assert 'type' in data
+            assert 'name' in data
+            assert 'version' in data
+            assert 'start_time' in data
+            # +
+            assert "program_start" in data
+            assert "load" in data
+            assert "metrics" in data    # To be deprecated...
+            assert "modules" in data
+            assert "counters" in data
+
+            if name in ['arbiter']:
+                assert "livestate" in data
+                livestate = data['livestate']
+                assert "timestamp" in livestate
+                assert "state" in livestate
+                assert "output" in livestate
+                assert "daemons" in livestate
+                for daemon_state in livestate['daemons']:
+                    assert livestate['daemons'][daemon_state] == 0
+
+                assert "daemons_states" in data
+                daemons_state = data['daemons_states']
+                for daemon_name in daemons_state:
+                    daemon_state = daemons_state[daemon_name]
+                    assert "type" in daemon_state
+                    assert "name" in daemon_state
+                    assert "realm_name" in daemon_state
+                    assert "manage_sub_realms" in daemon_state
+                    assert "uri" in daemon_state
+                    assert "alive" in daemon_state
+                    assert "passive" in daemon_state
+                    assert "reachable" in daemon_state
+                    assert "active" in daemon_state
+                    assert "spare" in daemon_state
+                    assert "polling_interval" in daemon_state
+                    assert "configuration_sent" in daemon_state
+                    assert "max_check_attempts" in daemon_state
+                    assert "last_check" in daemon_state
+                    assert "livestate" in daemon_state
+                    assert "livestate_output" in daemon_state
 
         # This function will only send a SIGTERM to the arbiter daemon
         self._stop_alignak_daemons(arbiter_only=True)

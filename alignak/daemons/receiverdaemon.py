@@ -326,7 +326,7 @@ class Receiver(Satellite):
 
         counters = res['counters']
         counters['external-commands'] = len(self.external_commands)
-        counters['unprocessed-external-commands'] = len(self.unprocessed_external_commands)
+        counters['external-commands-unprocessed'] = len(self.unprocessed_external_commands)
 
         return res
 

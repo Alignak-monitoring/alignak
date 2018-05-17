@@ -77,6 +77,8 @@ from collections import defaultdict
 from six import string_types
 
 from alignak.objects.item import Item
+from alignak.macroresolver import MacroResolver
+
 from alignak.external_command import ExternalCommand
 from alignak.check import Check
 from alignak.notification import Notification
@@ -1457,7 +1459,7 @@ class Scheduler(object):  # pylint: disable=R0902
                             val = fun(serv, val)
                         s_dict[prop] = val
             # manage special properties: the notifications
-            if 'notifications_in_progress' in s_dict and s_dict['notifications_in_progress'] != {}:
+            if 'notifications_in_progress' in s_dict and s_dict['notifications_in_progress']:
                 notifs = {}
                 for notif_uuid, notification in s_dict['notifications_in_progress'].items():
                     notifs[notif_uuid] = notification.serialize()
@@ -2156,45 +2158,80 @@ class Scheduler(object):  # pylint: disable=R0902
                          {'external': {'name': "MYMODULE2", 'state': 'stopped'},
                         ]
              'latency':  {'avg': lat_avg, 'min': lat_min, 'max': lat_max}
-             'host': len(self.hosts),
+             'hosts': len(self.hosts),
              'services': len(self.services),
              'commands': [{'cmd': c, 'u_time': u_time, 's_time': s_time}, ...] (10 first)
            }
 
         :rtype: dict
         """
+        m_solver = MacroResolver()
+
         res = {
             'counters': {},
             'latency': self.stats['latency'],
             'monitored_objects': {},
+            'livesynthesis': {}
         }
 
         checks_status_counts = self.get_checks_status_counts()
+        print("Checks: %s" % checks_status_counts)
 
-        for status in (u'scheduled', u'in_poller', u'zombie'):
-            res['counters']['scheduler.checks.%s' % status] = checks_status_counts[status]
-
+        # Checks / actions counters
         for what in (u'actions', u'checks'):
-            res['counters']['scheduler.%s.queue' % what] = len(getattr(self, what))
+            res['counters']['%s.count' % what] = len(getattr(self, what))
+            for status in (u'scheduled', u'in_poller', u'zombie'):
+                res['counters']['%s.%s' % (what, status)] = checks_status_counts[status]
 
         if self.pushed_conf:
             for _, _, strclss, _, _ in list(self.pushed_conf.types_creations.values()):
                 # Internal statistics
-                res['counters'][strclss] = len(getattr(self, strclss, []))
+                res['monitored_objects'][strclss] = len(getattr(self, strclss, []))
+
+            # Hosts/services problems counters
+            res['livesynthesis'] = {
+                'hosts_total': m_solver._get_total_hosts(),
+                'hosts_not_monitored': m_solver._get_total_hosts_not_monitored(),
+                'hosts_up_hard': m_solver._get_total_hosts_up(u'HARD'),
+                'hosts_up_soft': m_solver._get_total_hosts_up(u'SOFT'),
+                'hosts_down_hard': m_solver._get_total_hosts_down(u'HARD'),
+                'hosts_down_soft': m_solver._get_total_hosts_down(u'SOFT'),
+                'hosts_unreachable_hard': m_solver._get_total_hosts_unreachable(u'HARD'),
+                'hosts_unreachable_soft': m_solver._get_total_hosts_unreachable(u'SOFT'),
+                'hosts_acknowledged': m_solver._get_total_hosts_problems_handled(),
+                'hosts_in_downtime': m_solver._get_total_hosts_downtimed(),
+                'hosts_flapping': m_solver._get_total_hosts_flapping(),
+
+                'services_total': m_solver._get_total_services(),
+                'services_not_monitored': m_solver._get_total_services_not_monitored(),
+                'services_ok_hard': m_solver._get_total_services_ok(u'HARD'),
+                'services_ok_soft': m_solver._get_total_services_ok(u'SOFT'),
+                'services_warning_hard': m_solver._get_total_services_warning(u'HARD'),
+                'services_warning_soft': m_solver._get_total_services_warning(u'SOFT'),
+                'services_critical_hard': m_solver._get_total_services_critical(u'HARD'),
+                'services_critical_soft': m_solver._get_total_services_critical(u'SOFT'),
+                'services_unknown_hard': m_solver._get_total_services_unknown(u'HARD'),
+                'services_unknown_soft': m_solver._get_total_services_unknown(u'SOFT'),
+                'services_unreachable_hard': m_solver._get_total_services_unreachable(u'HARD'),
+                'services_unreachable_soft': m_solver._get_total_services_unreachable(u'SOFT'),
+                'services_acknowledged': m_solver._get_total_services_problems_handled(),
+                'services_in_downtime': m_solver._get_total_services_downtimed(),
+                'services_flapping': m_solver._get_total_services_flapping()
+            }
 
             all_commands = {}
-            # compute some stats
+            # Some checks statistics: user/system time
             for elt in self.all_my_hosts_and_services():
                 last_cmd = elt.last_check_command
                 if not last_cmd:
                     continue
-                interval = elt.check_interval
-                if interval == 0:
-                    interval = 1
                 cmd = os.path.split(last_cmd.split(' ', 1)[0])[1]
                 u_time = elt.u_time
                 s_time = elt.s_time
                 old_u_time, old_s_time = all_commands.get(cmd, (0.0, 0.0))
+                interval = elt.check_interval
+                if not interval:
+                    interval = 1
                 old_u_time += u_time / interval
                 old_s_time += s_time / interval
                 all_commands[cmd] = (old_u_time, old_s_time)
