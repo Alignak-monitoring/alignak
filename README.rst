@@ -33,14 +33,49 @@ Presentation of the Alignak project
     :alt: License AGPL v3
 
 
-`Alignak <http://www.alignak.net>`_ is a modern monitoring framework based on Shinken.
+Alignak Project
+---------------
+
+`Alignak <http://www.alignak.net>`_ is an open source monitoring framework written in Python under the terms of the `GNU Affero General Public License <http://www.gnu.org/licenses/agpl.txt>`_ .
 
 Its main goal is to give users a flexible and complete solution for their monitoring system. Alignak is designed to scale to large environments.
 
-Alignak is backwards-compatible with the Nagios/Shinken configuration standard and plugins. It works on any operating system and architecture that supports Python, which includes Windows (not yet), GNU/Linux and FreeBSD.
+The project started in 2015 from a fork of the Shinken project. Since the project creation, we achieved a huge code documentation and cleaning, we tested the application in several environments and we developed some new features.
 
-Alignak is licensed under the Gnu Affero General Public Licence version 3 (AGPLv3). Unless specified by another header, this licence applies to all the files in this repository.
 
+The main idea when developing Alignak is the flexibility which is our definition of framework. We target the following goals:
+
+   * Easy to install: we will always deliver packages (OS and Python) installation.
+      You can install Alignak with OS packages, Python PIP apckages or *setup.py* directly..
+
+   * Easy for new users: this documentation should help you to discover Alignak.
+      This documentation shows simple use-cases and helps building more complex configurations.
+
+   * Easy to migrate from Nagios: Nagios flat-files configuration and plugins will work with Alignak.
+      We try to keep as much as possible an ascending compatibility with former Nagios configuration...
+
+   * Multi-platform: python is available in a lot of Operating Systems.
+      We try to write generic code to keep this possible. However, Linux and FreeBSD are the most tested OSes so far.
+      As of now, Alignak is tested with Python 2.7, 3.5 and 3.6 versions but will work with Pypy in the future.
+
+   * UTF-8 compliant: whatever you language, we take care of it.
+      We are testing Alignak I/O with several languages and take care of localization.
+
+   * Independent from other monitoring solution:
+      Alignak is a framework that can integrate with other applications through standard interfaces.
+      Flexibility first!
+
+   * Flexible: in an architecture point of view.
+      Alignak may be distributed across several servers, datacenters to suit the monitoring needs and constrints.
+      It is our scalability wish!
+
+   * Easy to contribute: contribution has to be an easy process.
+      Alignak follow pycodestyle (former pep8), pylint and pep257 coding standards to ease code readability.
+      Step by step help to contribute to the project can be found in :ref:`Contributing <contributing/index>`
+
+This is basically what Alignak is made of. May be add the *keep it simple* Linux principle and it's perfect.
+
+There is nothing we don't want, we consider every features / ideas. Feel free to join `by mail <mailto:contact@alignak.net>`_ or on `the IRC #alignak <http://webchat.freenode.net/?channels=%23alignak>`_ to discuss or ask for more information
 
 Documentation
 -------------

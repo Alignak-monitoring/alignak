@@ -76,6 +76,8 @@ class MacroResolver(Borg):
 
     # Global macros
     macros = {
+        'TOTALHOSTS':
+            '_get_total_hosts',
         'TOTALHOSTSUP':
             '_get_total_hosts_up',
         'TOTALHOSTSDOWN':
@@ -87,9 +89,11 @@ class MacroResolver(Borg):
         'TOTALHOSTSUNREACHABLEUNHANDLED':
             '_get_total_hosts_unreachable_unhandled',
         'TOTALHOSTPROBLEMS':
-            '_get_total_host_problems',
+            '_get_total_hosts_problems',
         'TOTALHOSTPROBLEMSUNHANDLED':
-            '_get_total_host_problems_unhandled',
+            '_get_total_hosts_problems_unhandled',
+        'TOTALSERVICES':
+            '_get_total_services',
         'TOTALSERVICESOK':
             '_get_total_services_ok',
         'TOTALSERVICESWARNING':
@@ -98,6 +102,8 @@ class MacroResolver(Borg):
             '_get_total_services_critical',
         'TOTALSERVICESUNKNOWN':
             '_get_total_services_unknown',
+        'TOTALSERVICESUNREACHABLE':
+            '_get_total_services_unreachable',
         'TOTALSERVICESWARNINGUNHANDLED':
             '_get_total_services_warning_unhandled',
         'TOTALSERVICESCRITICALUNHANDLED':
@@ -105,9 +111,9 @@ class MacroResolver(Borg):
         'TOTALSERVICESUNKNOWNUNHANDLED':
             '_get_total_services_unknown_unhandled',
         'TOTALSERVICEPROBLEMS':
-            '_get_total_service_problems',
+            '_get_total_services_problems',
         'TOTALSERVICEPROBLEMSUNHANDLED':
-            '_get_total_service_problems_unhandled',
+            '_get_total_services_problems_unhandled',
         'LONGDATETIME':
             '_get_long_date_time',
         'SHORTDATETIME':
@@ -230,7 +236,7 @@ class MacroResolver(Borg):
                 real_args.append(getattr(self, arg, None))
             return value(*real_args)
         except AttributeError:
-            # Todo: there are many unresolved macros and this log is spamming :/
+            # Commented because there are many unresolved macros and this log is spamming :/
             # # Raise a warning and return a strange value when macro cannot be resolved
             # warnings.warn(
             #     'Error when getting the property value for a macro: %s',
@@ -305,6 +311,10 @@ class MacroResolver(Borg):
         :type c_line: str
         :param data: objects list, use to look for a specific macro
         :type data:
+        :param macromodulations: the available macro modulations
+        :type macromodulations: dict
+        :param timeperiods: the available timeperiods
+        :type timeperiods: dict
         :param args: args given to the command line, used to get "ARGN" macros.
         :type args:
         :return: command line with '$MACRO$' replaced with values
@@ -412,6 +422,10 @@ class MacroResolver(Borg):
         :param data: objects list, used to search for a specific macro (custom or object related)
         :type data:
         :return: command line with '$MACRO$' replaced with values
+        :param macromodulations: the available macro modulations
+        :type macromodulations: dict
+        :param timeperiods: the available timeperiods
+        :type timeperiods: dict
         :rtype: str
         """
         logger.debug("Resolving: macros in: %s, arguments: %s",
@@ -431,8 +445,8 @@ class MacroResolver(Borg):
         _HOSTTOTO -> HOST CUSTOM MACRO TOTO
         SERVICESTATEID:srv-1:Load$ -> MACRO SERVICESTATEID of the service Load of host srv-1
 
-        :param macros: macros list
-        :type macros: list[str]
+        :param macros: macros list in a dictionary
+        :type macros: dict
         :param objs: objects list, used to tag object macros
         :type objs: list
         :return: None
@@ -619,15 +633,20 @@ class MacroResolver(Borg):
         """
         return str(int(time.time()))
 
-    def _tot_hosts_by_state(self, state):
+    def _tot_hosts_by_state(self, state=None, state_type=None):
         """Generic function to get the number of host in the specified state
 
         :param state: state to filter on
-        :type state:
+        :type state: str
+        :param state_type: state type to filter on (HARD, SOFT)
+        :type state_type: str
         :return: number of host in state *state*
         :rtype: int
-        TODO: Should be moved
         """
+        if state is None and state_type is None:
+            return len(self.hosts)
+        if state_type:
+            return sum(1 for h in self.hosts if h.state == state and h.state_type == state_type)
         return sum(1 for h in self.hosts if h.state == state)
 
     def _tot_unhandled_hosts_by_state(self, state):
@@ -638,26 +657,35 @@ class MacroResolver(Borg):
         :return: number of host in state *state* and which are not acknowledged problems
         :rtype: int
         """
-        return sum(1 for h in self.hosts if h.state == state and
+        return sum(1 for h in self.hosts if h.state == state and h.state_type == u'HARD' and
                    h.is_problem and not h.problem_has_been_acknowledged)
 
-    def _get_total_hosts_up(self):
+    def _get_total_hosts(self, state_type=None):
+        """
+        Get the number of hosts
+
+        :return: number of hosts
+        :rtype: int
+        """
+        return self._tot_hosts_by_state(None, state_type=state_type)
+
+    def _get_total_hosts_up(self, state_type=None):
         """
         Get the number of hosts up
 
         :return: number of hosts
         :rtype: int
         """
-        return self._tot_hosts_by_state(u'UP')
+        return self._tot_hosts_by_state(u'UP', state_type=state_type)
 
-    def _get_total_hosts_down(self):
+    def _get_total_hosts_down(self, state_type=None):
         """
         Get the number of hosts down
 
         :return: number of hosts
         :rtype: int
         """
-        return self._tot_hosts_by_state(u'DOWN')
+        return self._tot_hosts_by_state(u'DOWN', state_type=state_type)
 
     def _get_total_hosts_down_unhandled(self):
         """
@@ -668,14 +696,14 @@ class MacroResolver(Borg):
         """
         return self._tot_unhandled_hosts_by_state(u'DOWN')
 
-    def _get_total_hosts_unreachable(self):
+    def _get_total_hosts_unreachable(self, state_type=None):
         """
         Get the number of hosts unreachable
 
         :return: number of hosts
         :rtype: int
         """
-        return self._tot_hosts_by_state(u'UNREACHABLE')
+        return self._tot_hosts_by_state(u'UNREACHABLE', state_type=state_type)
 
     def _get_total_hosts_unreachable_unhandled(self):
         """
@@ -686,7 +714,7 @@ class MacroResolver(Borg):
         """
         return self._tot_unhandled_hosts_by_state(u'UNREACHABLE')
 
-    def _get_total_host_problems(self):
+    def _get_total_hosts_problems(self):
         """Get the number of hosts that are a problem
 
         :return: number of hosts with is_problem attribute True
@@ -694,7 +722,7 @@ class MacroResolver(Borg):
         """
         return sum(1 for h in self.hosts if h.is_problem)
 
-    def _get_total_host_problems_unhandled(self):
+    def _get_total_hosts_problems_unhandled(self):
         """
         Get the number of host problems not handled
 
@@ -703,15 +731,58 @@ class MacroResolver(Borg):
         """
         return sum(1 for h in self.hosts if h.is_problem and not h.problem_has_been_acknowledged)
 
-    def _tot_services_by_state(self, state):
+    def _get_total_hosts_problems_handled(self):
+        """
+        Get the number of host problems not handled
+
+        :return: Number of hosts which are problems and not handled
+        :rtype: int
+        """
+        return sum(1 for h in self.hosts if h.is_problem and h.problem_has_been_acknowledged)
+
+    def _get_total_hosts_downtimed(self):
+        """
+        Get the number of host in a scheduled downtime
+
+        :return: Number of hosts which are downtimed
+        :rtype: int
+        """
+        return sum(1 for h in self.hosts if h.in_scheduled_downtime)
+
+    def _get_total_hosts_not_monitored(self):
+        """
+        Get the number of host not monitored (active and passive checks disabled)
+
+        :return: Number of hosts which are not monitored
+        :rtype: int
+        """
+        return sum(1 for h in self.hosts if not h.active_checks_enabled and
+                   not h.passive_checks_enabled)
+
+    def _get_total_hosts_flapping(self):
+        """
+        Get the number of hosts currently flapping
+
+        :return: Number of hosts which are not monitored
+        :rtype: int
+        """
+        return sum(1 for h in self.hosts if h.is_flapping)
+
+    def _tot_services_by_state(self, state=None, state_type=None):
         """Generic function to get the number of services in the specified state
 
         :param state: state to filter on
-        :type state:
-        :return: number of service in state *state*
+        :type state: str
+        :param state_type: state type to filter on (HARD, SOFT)
+        :type state_type: str
+        :return: number of host in state *state*
         :rtype: int
         TODO: Should be moved
         """
+        if state is None and state_type is None:
+            return len(self.services)
+        if state_type:
+            return sum(1 for s in self.services if s.state == state and s.state_type == state_type)
         return sum(1 for s in self.services if s.state == state)
 
     def _tot_unhandled_services_by_state(self, state):
@@ -725,41 +796,59 @@ class MacroResolver(Borg):
         return sum(1 for s in self.services if s.state == state and
                    s.is_problem and not s.problem_has_been_acknowledged)
 
-    def _get_total_services_ok(self):
+    def _get_total_services(self, state_type=None):
+        """
+        Get the number of services
+
+        :return: number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state(None, state_type=state_type)
+
+    def _get_total_services_ok(self, state_type=None):
         """
         Get the number of services ok
 
         :return: number of services
         :rtype: int
         """
-        return self._tot_services_by_state(u'OK')
+        return self._tot_services_by_state(u'OK', state_type=state_type)
 
-    def _get_total_services_warning(self):
+    def _get_total_services_warning(self, state_type=None):
         """
         Get the number of services warning
 
         :return: number of services
         :rtype: int
         """
-        return self._tot_services_by_state(u'WARNING')
+        return self._tot_services_by_state(u'WARNING', state_type=state_type)
 
-    def _get_total_services_critical(self):
+    def _get_total_services_critical(self, state_type=None):
         """
         Get the number of services critical
 
         :return: number of services
         :rtype: int
         """
-        return self._tot_services_by_state(u'CRITICAL')
+        return self._tot_services_by_state(u'CRITICAL', state_type=state_type)
 
-    def _get_total_services_unknown(self):
+    def _get_total_services_unknown(self, state_type=None):
         """
         Get the number of services unknown
 
         :return: number of services
         :rtype: int
         """
-        return self._tot_services_by_state(u'UNKNOWN')
+        return self._tot_services_by_state(u'UNKNOWN', state_type=state_type)
+
+    def _get_total_services_unreachable(self, state_type=None):
+        """
+        Get the number of services unreachable
+
+        :return: number of services
+        :rtype: int
+        """
+        return self._tot_services_by_state(u'UNREACHABLE', state_type=state_type)
 
     def _get_total_services_warning_unhandled(self):
         """
@@ -788,7 +877,7 @@ class MacroResolver(Borg):
         """
         return self._tot_unhandled_services_by_state(u'UNKNOWN')
 
-    def _get_total_service_problems(self):
+    def _get_total_services_problems(self):
         """Get the number of services that are a problem
 
         :return: number of services with is_problem attribute True
@@ -796,13 +885,50 @@ class MacroResolver(Borg):
         """
         return sum(1 for s in self.services if s.is_problem)
 
-    def _get_total_service_problems_unhandled(self):
+    def _get_total_services_problems_unhandled(self):
         """Get the number of services that are a problem and that are not acknowledged
 
         :return: number of problem services which are not acknowledged
         :rtype: int
         """
         return sum(1 for s in self.services if s.is_problem and not s.problem_has_been_acknowledged)
+
+    def _get_total_services_problems_handled(self):
+        """
+        Get the number of service problems not handled
+
+        :return: Number of services which are problems and not handled
+        :rtype: int
+        """
+        return sum(1 for s in self.services if s.is_problem and s.problem_has_been_acknowledged)
+
+    def _get_total_services_downtimed(self):
+        """
+        Get the number of service in a scheduled downtime
+
+        :return: Number of services which are downtimed
+        :rtype: int
+        """
+        return sum(1 for s in self.services if s.in_scheduled_downtime)
+
+    def _get_total_services_not_monitored(self):
+        """
+        Get the number of service not monitored (active and passive checks disabled)
+
+        :return: Number of services which are not monitored
+        :rtype: int
+        """
+        return sum(1 for s in self.services if not s.active_checks_enabled and
+                   not s.passive_checks_enabled)
+
+    def _get_total_services_flapping(self):
+        """
+        Get the number of services currently flapping
+
+        :return: Number of services which are not monitored
+        :rtype: int
+        """
+        return sum(1 for s in self.services if s.is_flapping)
 
     @staticmethod
     def _get_process_start_time():

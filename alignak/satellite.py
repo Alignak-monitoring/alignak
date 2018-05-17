@@ -350,8 +350,8 @@ class BaseSatellite(Daemon):
 
         counters = res['counters']
         counters['external-commands'] = len(self.external_commands)
-        counters['arbiters'] = len(self.arbiters)
-        counters['schedulers'] = len(self.schedulers)
+        counters['satellites.arbiters'] = len(self.arbiters)
+        counters['satellites.schedulers'] = len(self.schedulers)
 
         return res
 
@@ -1057,7 +1057,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         counters = res['counters']
         counters['broks'] = len(self.broks)
-        counters['workers'] = len(self.workers)
+        counters['satellites.workers'] = len(self.workers)
 
         return res
 

@@ -1,5 +1,7 @@
 # Still needing future for the CarbonIFace lib and some other stuff (queues, ...)
+# Needing six for python 2.7/3 compatibility
 future
+six
 
 # Alignak supports the most recent CherryPy
 CherryPy

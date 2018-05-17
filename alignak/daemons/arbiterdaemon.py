@@ -1662,7 +1662,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 # Get the information to be published for a satellite
                 res['daemons_states'][satellite.name] = satellite.give_satellite_json()
 
-            res['live_state'] = {
+            res['livestate'] = {
                 "timestamp": now,
                 "daemons": {}
             }
@@ -1671,18 +1671,18 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 if satellite == self.link_to_myself:
                     continue
 
-                live_state = 0
+                livestate = 0
                 if satellite.active:
                     if not satellite.reachable:
-                        live_state = 1
+                        livestate = 1
                     elif not satellite.alive:
-                        live_state = 2
-                    state = max(state, live_state)
+                        livestate = 2
+                    state = max(state, livestate)
                 else:
-                    live_state = 3
+                    livestate = 3
 
-                res['live_state']['daemons'][satellite.name] = live_state
-            res['live_state'].update({
+                res['livestate']['daemons'][satellite.name] = livestate
+            res['livestate'].update({
                 "state": state,
                 "output": [
                     "all daemons are up and running.",
@@ -1771,16 +1771,16 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         }
 
         # Create self arbiter service - I am now considered as a service for my Alignak monitor!
-        if 'live_state' in inner_stats:
-            live_state = inner_stats['live_state']
+        if 'livestate' in inner_stats:
+            livestate = inner_stats['livestate']
             res['services'].append({
                 "name": inner_stats['name'],
                 "livestate": {
                     "timestamp": now,
-                    "state": ["ok", "warning", "critical", "unknown"][live_state['state']],
-                    "output": live_state['output'],
-                    "long_output": live_state['long_output'] if 'long_output' in live_state else "",
-                    "perf_data": live_state['perf_data'] if 'perf_data' in live_state else ""
+                    "state": ["ok", "warning", "critical", "unknown"][livestate['state']],
+                    "output": livestate['output'],
+                    "long_output": livestate['long_output'] if 'long_output' in livestate else "",
+                    "perf_data": livestate['perf_data'] if 'perf_data' in livestate else ""
                 }
             })
 
@@ -1809,23 +1809,23 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     "livestate": {
                         "timestamp": now,
                         "name": "%s_%s" % (daemon['type'], daemon['name']),
-                        "state": ["ok", "warning", "critical", "unknown"][daemon['live_state']],
+                        "state": ["ok", "warning", "critical", "unknown"][daemon['livestate']],
                         "output": [
                             u"daemon is alive and reachable.",
                             u"daemon is not reachable.",
                             u"daemon is not alive."
-                        ][daemon['live_state']],
+                        ][daemon['livestate']],
                         "long_output": "Realm: %s (%s). Listening on: %s"
                                        % (daemon['realm_name'], daemon['manage_sub_realms'],
                                           daemon['uri']),
                         "perf_data": "last_check=%.2f" % daemon['last_check']
                     }
                 })
-                state = max(state, daemon['live_state'])
+                state = max(state, daemon['livestate'])
                 long_output.append(
                     "%s - %s" % (daemon_id, [u"daemon is alive and reachable.",
                                              u"daemon is not reachable.",
-                                             u"daemon is not alive."][daemon['live_state']]))
+                                             u"daemon is not alive."][daemon['livestate']]))
 
             res['livestate'].update({
                 "state": "up",  # Always Up ;)

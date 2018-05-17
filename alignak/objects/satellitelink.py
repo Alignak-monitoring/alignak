@@ -309,7 +309,7 @@ class SatelliteLink(Item):
         cls = get_alignak_class('alignak.objects.%slink.%sLink' % (sat_type, sat_type.capitalize()))
         return cls(params=sat_dict, parsing=False)
 
-    def get_live_state(self):
+    def get_livestate(self):
         """Get the SatelliteLink live state.
 
         The live state is a tuple information containing a state identifier and a message, where:
@@ -321,23 +321,23 @@ class SatelliteLink(Item):
 
         :return: tuple
         """
-        live_state = 0
+        livestate = 0
         if self.active:
             if not self.reachable:
-                live_state = 1
+                livestate = 1
             elif not self.alive:
-                live_state = 2
+                livestate = 2
         else:
-            live_state = 3
+            livestate = 3
 
-        live_output = "%s/%s is %s" % (self.type, self.name, [
+        livestate_output = "%s/%s is %s" % (self.type, self.name, [
             "up and running.",
             "warning because not reachable.",
             "critical because not responding.",
             "not active by configuration."
-        ][live_state])
+        ][livestate])
 
-        return (live_state, live_output)
+        return (livestate, livestate_output)
 
     def set_arbiter_satellite_map(self, satellite_map=None):
         """
@@ -423,10 +423,10 @@ class SatelliteLink(Item):
                              'active', 'reachable', 'alive', 'passive',
                              'last_check', 'polling_interval', 'max_check_attempts']
 
-        (live_state, live_output) = self.get_live_state()
+        (livestate, livestate_output) = self.get_livestate()
         res = {
-            "live_state": live_state,
-            "live_output": live_output
+            "livestate": livestate,
+            "livestate_output": livestate_output
         }
         for sat_prop in daemon_properties:
             res[sat_prop] = getattr(self, sat_prop, 'not_yet_defined')

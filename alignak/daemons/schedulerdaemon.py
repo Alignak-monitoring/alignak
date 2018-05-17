@@ -517,11 +517,12 @@ class Alignak(BaseSatellite):
         if not self.sched:
             return res
 
-        # Hosts/services problems counters
-        counters['hosts_problems'] = m_solver._get_total_host_problems()
-        counters['hosts_unhandled_problems'] = m_solver._get_total_host_problems_unhandled()
-        counters['services_problems'] = m_solver._get_total_service_problems()
-        counters['services_unhandled_problems'] = m_solver._get_total_service_problems_unhandled()
+        # # Hosts/services problems counters
+        # m_solver = MacroResolver()
+        # counters['hosts_problems'] = m_solver._get_total_host_problems()
+        # counters['hosts_unhandled_problems'] = m_solver._get_total_host_problems_unhandled()
+        # counters['services_problems'] = m_solver._get_total_service_problems()
+        # counters['services_unhandled_problems'] = m_solver._get_total_service_problems_unhandled()
 
         # Get statistics from the scheduler
         scheduler_stats = self.sched.get_scheduler_stats(details=details)

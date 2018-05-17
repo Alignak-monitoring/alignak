@@ -509,12 +509,12 @@ class Broker(BaseSatellite):
         res.update({'name': self.name, 'type': self.type})
 
         counters = res['counters']
-        counters['external-broks'] = len(self.external_broks)
-        counters['internal-broks'] = len(self.internal_broks)
-        counters['arbiter-broks'] = len(self.arbiter_broks)
-        counters['pollers'] = len(self.pollers)
-        counters['reactionners'] = len(self.reactionners)
-        counters['receivers'] = len(self.receivers)
+        counters['broks-external'] = len(self.external_broks)
+        counters['broks-internal'] = len(self.internal_broks)
+        counters['broks-arbiter'] = len(self.arbiter_broks)
+        counters['satellites.pollers'] = len(self.pollers)
+        counters['satellites.reactionners'] = len(self.reactionners)
+        counters['satellites.receivers'] = len(self.receivers)
 
         return res
 
