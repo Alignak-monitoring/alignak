@@ -958,10 +958,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :rtype: bool
         """
         # Use to know if notification is raise or not
-        enable_notif = False
+        enable_action = False
         for (dep_id, status, _, _) in self.act_depend_of:
             if 'n' in status:
-                enable_notif = True
+                enable_action = True
             else:
                 if dep_id in hosts:
                     dep = hosts[dep_id]
@@ -973,8 +973,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 if True in dep_match:
                     p_is_down = True
                 if not p_is_down:
-                    enable_notif = True
-        return enable_notif
+                    enable_action = True
+        return enable_action
 
     def check_and_set_unreachability(self, hosts, services):
         """

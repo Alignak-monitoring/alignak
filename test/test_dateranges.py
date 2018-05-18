@@ -19,9 +19,10 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-This file is used to test dateranges
+This file is used to test the date ranges management
 
-We make timestamp with time.mktime because timestamp not same is you are in timezone UTC or Paris
+We make timestamp with time.mktime because the timestamp is not the same
+dependening upon the timezone
 """
 # pylint: disable=R0904
 
@@ -50,7 +51,7 @@ class TestDateRanges(AlignakTest):
         """
         now = time.localtime()
         start = time.mktime((2015, 7, 26, 0, 0, 0, 0, 0, now.tm_isdst))
-        timestamp = alignak.util.get_start_of_day(2015, 7, 26)
+        timestamp = alignak.daterange.get_start_of_day(2015, 7, 26)
         # time.timezone is the offset related of the current timezone of the system
         print("Start: %s, timestamp: %s" % (start, timestamp))
         if start != timestamp:
@@ -69,7 +70,7 @@ class TestDateRanges(AlignakTest):
         start = time.mktime((now.tm_year, now.tm_mon, now.tm_mday, 0, 0, 0, 0, 0, -1))
         print("Start: %s" % start)
         # Alignak returns the start of day ts in local time
-        timestamp = alignak.util.get_start_of_day(now.tm_year, now.tm_mon, now.tm_mday)
+        timestamp = alignak.daterange.get_start_of_day(now.tm_year, now.tm_mon, now.tm_mday)
         print("Timestamp: %s" % timestamp)
         # time.timezone is the offset related of the current timezone of the system
         if start != timestamp:
@@ -82,7 +83,7 @@ class TestDateRanges(AlignakTest):
         """
         now = time.localtime()
         start = time.mktime((2016, 8, 20, 23, 59, 59, 0, 0, now.tm_isdst))
-        timestamp = alignak.util.get_end_of_day(2016, 8, 20)
+        timestamp = alignak.daterange.get_end_of_day(2016, 8, 20)
         print("Start: %s, timestamp: %s" % (start, timestamp))
         # time.timezone is the offset related of the current timezone of the system
         if start != timestamp:
@@ -182,10 +183,14 @@ class TestDateRanges(AlignakTest):
         caldate = StandardDaterange({'day': 'friday', 'other': '00:00-24:00'})
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
-                ret = caldate.get_start_and_end_time()
-                print("* %s" % date_now)
-                assert data[date_now]['start'] == ret[0]
-                assert data[date_now]['end'] == ret[1]
+                # ret = caldate.get_start_and_end_time()
+                # print("* %s" % date_now)
+                # assert data[date_now]['start'] == ret[0]
+                # assert data[date_now]['end'] == ret[1]
+                start, end = caldate.get_start_and_end_time()
+                print("-> res: %s (%s) - %s (%s)" % (start, type(start), end, type(end)))
+                assert data[date_now]['start'] == start
+                assert data[date_now]['end'] == end
 
     def test_monthweekdaydaterange_start_end_time(self):
         """ Test MonthWeekDayDaterange.get_start_and_end_time to get start and end date of date range
@@ -242,6 +247,7 @@ class TestDateRanges(AlignakTest):
             local_hour_offset = "-%02d" % local_hour_offset
         else:
             local_hour_offset = "+%02d" % -local_hour_offset
+
         data = {
             '2015-07-20 01:50:00 %s' % local_hour_offset: {
                 'start': 1437868800 + local_offset,
@@ -266,12 +272,18 @@ class TestDateRanges(AlignakTest):
         caldate = MonthDateDaterange(params)
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
-                print("Date: %s" % date_now)
-                ret = caldate.get_start_and_end_time()
-                print("* %s / %s" % (type(ret[0]), type(data[date_now]['start'])))
-                print("* %s / %s" % (int(ret[0]), int(ret[1])))
-                assert data[date_now]['start'] == int(ret[0])
-                assert data[date_now]['end'] == int(ret[1])
+                print("Date: %s: %s" % (date_now, data[date_now]))
+                start, end = caldate.get_start_and_end_time()
+                print("-> res: %s (%s) - %s (%s)" % (start, type(start), end, type(end)))
+                assert data[date_now]['start'] == start
+                assert data[date_now]['end'] == end
+
+                # ret = caldate.get_start_and_end_time()
+                # print("-> res: %s" % ret)
+                # print("* %s / %s" % (type(ret[0]), type(ret[1])))
+                # print("* %s / %s" % (int(ret[0]), int(ret[1])))
+                # assert data[date_now]['start'] == int(ret[0])
+                # assert data[date_now]['end'] == int(ret[1])
 
     def test_weekdaydaterange_start_end_time(self):
         """ Test WeekDayDaterange.get_start_and_end_time to get start and end date of date range
