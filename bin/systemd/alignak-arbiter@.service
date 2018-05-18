@@ -4,22 +4,21 @@ PartOf=alignak.service
 
 [Service]
 # Environment variables
-Environment=ALIGNAKCFG=/applis/Smoove/smoove/etc/alignak/alignak.cfg
-Environment=ALIGNAKDAEMONS=/applis/Smoove/smoove/etc/alignak/daemons
+Environment=ALIGNAK_CONFIGURATION_FILE=/usr/local/etc/alignak/alignak.ini
 
 Type=forking
 
 # Execution
-ExecStartPre=/bin/mkdir -p /usr/var/log/alignak
-ExecStartPre=/bin/chown alignak:alignak /usr/var/log/alignak
-ExecStartPre=/bin/mkdir -p /usr/var/run/alignak
-ExecStartPre=/bin/chown alignak:alignak /usr/var/run/alignak
+ExecStartPre=/bin/mkdir -p /usr/local/var/log/alignak
+ExecStartPre=/bin/chown alignak:alignak /usr/local/var/log/alignak
+ExecStartPre=/bin/mkdir -p /usr/local/var/run/alignak
+ExecStartPre=/bin/chown alignak:alignak /usr/local/var/run/alignak
 
 # PID file as declared in daemon ini configuration file
-PIDFile=/usr/var/run/alignak/arbiter-%i.pid
+PIDFile=/usr/local/var/run/alignak/arbiter-%i.pid
 
-ExecStartPre=/bin/echo Alignak starting arbiter %i - /usr/bin/alignak-arbiter -d -c ${ALIGNAKDAEMONS}/arbiter-%i.ini -a ${ALIGNAKCFG}
-ExecStart=/usr/bin/alignak-arbiter -d -c ${ALIGNAKDAEMONS}/arbiter-%i.ini -a ${ALIGNAKCFG}
+ExecStartPre=/bin/echo Alignak starting arbiter %i - /usr/bin/alignak-arbiter -d -n arbiter-%i -e "${ALIGNAK_CONFIGURATION_FILE}"
+ExecStart=/usr/bin/alignak-arbiter -d -n arbiter-%i -e "${ALIGNAK_CONFIGURATION_FILE}"
 
 KillSignal=SIGINT
 ExecReload=/bin/kill -HUP $MAINPID

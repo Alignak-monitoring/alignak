@@ -1044,11 +1044,11 @@ class AlignakTest(unittest2.TestCase):
                 #                              data['level'], data['message']))
                 index+=1
 
+        for log_level, log_message in expected_logs:
+            assert (log_level, log_message) in monitoring_logs, "Not found :%s" % log_message
+
         assert len(expected_logs) == len(monitoring_logs), "Length do not match: %d" \
                                                            % len(monitoring_logs)
-
-        for log_level, log_message in expected_logs:
-            assert (log_level, log_message) in monitoring_logs, "No found :%s" % log_message
 
     def assert_actions_count(self, number):
         """

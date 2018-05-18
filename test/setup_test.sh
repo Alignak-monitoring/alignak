@@ -30,6 +30,7 @@ sudo addgroup --system alignak
 sudo adduser --system alignak --ingroup alignak
 
 # install prog AND tests requirements :
+pip install --upgrade -r requirements.txt
 pip install -e .
 pip install --upgrade -r test/requirements.txt
 

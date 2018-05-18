@@ -2,16 +2,23 @@
 # -*- coding: utf-8 -*-
 
 import os
-import setuptools
+import sys
+import re
 
-
-# Fix for debian 7 python that raise error on at_exit at the end of setup.py
-# (cf http://bugs.python.org/issue15881 + http://bugs.python.org/msg170215)
 try:
-    import multiprocessing  # pylint: disable=W0611
+    from setuptools import setup, find_packages
 except ImportError:
-    pass
+    from distutils.core import setup, find_packages
 
+try:
+    with open('README.rst') as f:
+        long_description = f.read()
+except IOError:
+    try:
+        import pypandoc
+        long_description = pypandoc.convert('README.md', 'rst')
+    except (IOError, ImportError):
+        long_description = "Python Alignak"
 
 # Better to use exec to load the VERSION from alignak/version.py
 # so to not have to import the alignak package:
@@ -20,18 +27,71 @@ with open(os.path.join('alignak', 'version.py')) as fh:
     exec(fh.read(), ns)
     VERSION = ns['VERSION']
 
-os.environ['PBR_VERSION'] = VERSION
+# Get default configuration files recursively
+data_files = []
+for subdir, dirs, files in os.walk('./etc'):
+    # Configuration directory
+    target = os.path.join('etc/alignak', re.sub(r"^(%s\/|%s$)" % ('./etc', './etc'), "", subdir))
 
-# Ask pbr to not generate AUTHORS file if environment variable does not require it
-if not os.environ.get('SKIP_GENERATE_AUTHORS'):
-    os.environ['SKIP_GENERATE_AUTHORS'] = '1'
+    package_files = [os.path.join(subdir, file) for file in files]
+    if package_files:
+        data_files.append((target, package_files))
 
-# Ask pbr to not generate ChangeLog file if environment variable does not require it
-if not os.environ.get('SKIP_WRITE_GIT_CHANGELOG'):
-    os.environ['SKIP_WRITE_GIT_CHANGELOG'] = '1'
-
-setuptools.setup(
-    setup_requires=['pbr'],
+setup(
+    name='alignak',
     version=VERSION,
-    pbr=True,
+    url='https://github.com/alignak-monitoring/alignak',
+    license='GNU Affero General Public License',
+    author="Alignak Team",
+    author_email="contact@alignak.net",
+    description='Alignak is a monitoring framework compatible with Nagios configuration and plugins',
+    long_description=long_description,
+
+    # Package data
+    packages=find_packages(),
+    include_package_data=True,
+
+    # Where to install distributed files
+    data_files=data_files,
+
+    # Unzip Egg
+    zip_safe=False,
+    platforms='any',
+
+    # Dependencies (if some) ...
+    install_requires=[
+        'CherryPy', 'requests', 'termcolor', 'setproctitle',
+        'ujson', 'numpy', 'docopt', 'psutil'
+    ],
+    dependency_links=[
+        "https://pypi.python.org/simple/",
+    ],
+
+    # Entry points (if some) ...
+    entry_points={
+        "console_scripts": [
+            "alignak-environment = alignak.bin.alignak_environment:main",
+            "alignak-arbiter = alignak.bin.alignak_arbiter:main",
+            "alignak-broker = alignak.bin.alignak_broker:main",
+            "alignak-receiver = alignak.bin.alignak_receiver:main",
+            "alignak-reactionner = alignak.bin.alignak_reactionner:main",
+            "alignak-poller = alignak.bin.alignak_poller:main",
+            "alignak-scheduler = alignak.bin.alignak_scheduler:main"
+        ]
+    },
+    classifiers=[
+        'Development Status :: 5 - Production/Stable',
+        'Intended Audience :: Customer Service',
+        'Intended Audience :: Information Technology',
+        'Intended Audience :: System Administrators',
+        'Operating System :: POSIX',
+        'Operating System :: POSIX :: Linux',
+        'Topic :: System :: Monitoring',
+        'Topic :: System :: Networking :: Monitoring',
+        'Programming Language :: Python :: 2',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
+    ]
 )

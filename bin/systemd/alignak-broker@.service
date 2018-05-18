@@ -4,21 +4,21 @@ PartOf=alignak.service
 
 [Service]
 # Environment variables
-Environment=ALIGNAKDAEMONS=/applis/Smoove/smoove/etc/alignak/daemons
+Environment=ALIGNAK_CONFIGURATION_FILE=/usr/local/etc/alignak/alignak.ini
 
 Type=forking
 
 # Execution
-ExecStartPre=/bin/mkdir -p /usr/var/log/alignak
-ExecStartPre=/bin/chown alignak:alignak /usr/var/log/alignak
-ExecStartPre=/bin/mkdir -p /usr/var/run/alignak
-ExecStartPre=/bin/chown alignak:alignak /usr/var/run/alignak
+ExecStartPre=/bin/mkdir -p /usr/local/var/log/alignak
+ExecStartPre=/bin/chown alignak:alignak /usr/local/var/log/alignak
+ExecStartPre=/bin/mkdir -p /usr/local/var/run/alignak
+ExecStartPre=/bin/chown alignak:alignak /usr/local/var/run/alignak
 
 # PID file as declared in daemon ini configuration file
-PIDFile=/usr/var/run/alignak/broker-%i.pid
+PIDFile=/usr/local/var/run/alignak/broker-%i.pid
 
-ExecStartPre=/bin/echo Alignak starting broker %i - /usr/bin/alignak-broker -d -c ${ALIGNAKDAEMONS}/broker-%i.ini
-ExecStart=/usr/bin/alignak-broker -n broker-%i -d -c ${ALIGNAKDAEMONS}/broker-%i.ini
+ExecStartPre=/bin/echo Alignak starting broker %i - /usr/bin/alignak-broker -d -n broker-%i -e "${ALIGNAK_CONFIGURATION_FILE}"
+ExecStart=/usr/bin/alignak-broker -d -n broker-%i -e "${ALIGNAK_CONFIGURATION_FILE}"
 
 KillSignal=SIGINT
 ExecReload=/bin/kill -HUP $MAINPID
