@@ -961,7 +961,7 @@ class TestDowntime(AlignakTest):
 
         # Make the host be UP/HARD
         time.sleep(1)
-        self.scheduler_loop(1, [[host, 0, 'UP']])
+        self.scheduler_loop(2, [[host, 0, 'UP']])
         assert "HARD" == host.state_type
         assert "UP" == host.state
         assert "HARD" == svc.state_type
@@ -970,7 +970,8 @@ class TestDowntime(AlignakTest):
         assert 0 == host.current_notification_number, 'Should not have any notification'
         assert 0 == svc.current_notification_number, 'Should not have any notification'
 
-        # Only 1 action because the host downtime start
+        # Only 2 actions: host downtime start and end. Former host problem and recovery are
+        # master notifications that have been removed on downtime end
         self.assert_actions_count(2)
         # The downtime started
         self.assert_actions_match(0, '/notifier.pl', 'command')
