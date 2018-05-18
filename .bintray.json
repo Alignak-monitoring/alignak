@@ -3,11 +3,15 @@
 		"name": "python-alignak",
 		"repo": "alignak_deb-testing",
 		"subject": "ddurieux",
+		"desc": "Alignak monitoring framework",
 		"vcs_url": "https://github.com/Alignak-monitoring/alignak",
+		"website_url": "http://alignak.net",
+		"labels": ["alignak", "nagios", "monitoring"],
 		"licenses": ["AGPL-V3"]
 	},
 	"version": {
-		"name": "dev"
+		"name": "dev_version",
+		"desc": "Development version"
 	},
 	"files": [
 		{

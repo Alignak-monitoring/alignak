@@ -96,4 +96,6 @@ See the requirements file in the repository's root
 Installing Alignak
 ------------------
 
-See the `installation documentation <https://alignak-doc.readthedocs.org/en/latest/02_installation/index.html>`_.
+Alignak Deb / Rpm packaging is built thanks to the bintray service. Get the package for your Linux distribution here: [ ![Download](https://api.bintray.com/packages/ddurieux/alignak_deb-testing/python-alignak/images/download.svg) ](https://bintray.com/ddurieux/alignak_deb-testing/python-alignak/_latestVersion)
+
+See the `installation documentation <https://alignak-doc.readthedocs.org/en/latest/02_installation/index.html>`_ for more information on the different installation possibilities offered by Alignak.
