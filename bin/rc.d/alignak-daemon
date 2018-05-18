@@ -63,7 +63,7 @@
 #   Default is empty to get this parameter in the configuration file
 #
 # -------------------------------------------------------------------------------------------------
-# alignak_daemon rc.d script supports is able to start several alignak daemons instances
+# alignak_daemon rc.d script is able to operate on several alignak daemons instances
 # Defining which daemons are to be started is made thanks to these configuration variables:
 #
 # alignak_daemon_types (string list):

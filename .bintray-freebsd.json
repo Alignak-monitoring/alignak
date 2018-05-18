@@ -1,0 +1,28 @@
+{
+  "package": {
+    "name": "python-alignak",
+    "repo": "sed_version_repo",
+    "subject": "alignak",
+    "desc": "Alignak monitoring framework",
+    "vcs_url": "https://github.com/Alignak-monitoring/alignak.git",
+    "website_url": "http://alignak.net",
+    "issue_tracker_url": "https://github.com/Alignak-monitoring/alignak/issues",
+    "labels": ["alignak", "nagios", "monitoring"],
+    "licenses": ["AGPL-V3"]
+  },
+  "version": {
+    "name": "sed_version_name",
+    "desc": "sed_version_desc",
+    "released": "sed_version_released"
+  },
+  "files": [
+    {
+      "includePattern": "./bin/(.*\\.txz)",
+      "uploadPattern": "$1",
+      "matrixParams": {
+        "override": 1
+      }
+    }
+  ],
+  "publish": true
+}

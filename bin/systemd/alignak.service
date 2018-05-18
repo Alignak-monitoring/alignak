@@ -8,10 +8,10 @@ Wants=alignak-broker@master.service alignak-poller@master.service alignak-reacti
 
 [Service]
 # Execution
-ExecStartPre=/bin/mkdir -p /usr/var/log/alignak
-ExecStartPre=/bin/chown alignak:alignak /usr/var/log/alignak
-ExecStartPre=/bin/mkdir -p /usr/var/run/alignak
-ExecStartPre=/bin/chown alignak:alignak /usr/var/run/alignak
+ExecStartPre=/bin/mkdir -p /usr/local/var/log/alignak
+ExecStartPre=/bin/chown alignak:alignak /usr/local/var/log/alignak
+ExecStartPre=/bin/mkdir -p /usr/local/var/run/alignak
+ExecStartPre=/bin/chown alignak:alignak /usr/local/var/run/alignak
 ExecStart=/bin/echo Starting Alignak daemons...
 
 [Install]

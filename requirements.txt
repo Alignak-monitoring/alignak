@@ -1,29 +1,36 @@
+# Application deployment requirements
+# Including dependencies version which Alignak was tested with
+# ----------
+
+# This is an implicit value, here for clarity
+--index-url https://pypi.python.org/simple/
+
 # Still needing future for the CarbonIFace lib and some other stuff (queues, ...)
 # Needing six for python 2.7/3 compatibility
-future
-six
+future==0.16.0
+six==1.11.0
 
 # Alignak supports the most recent CherryPy
-CherryPy
+CherryPy==15.0.0
 
 # Requests to communicate between the daemons
-requests
+requests==2.18.4
 
 # importlib is used to import modules used by the daemons
 importlib; python_version == '2.7'
 
 # Colored console log
-termcolor
+termcolor==1.1.0
 
 # Set process titles
-setproctitle
+setproctitle==1.1.10
 
 # ujson is used for the internal objects serialization
-ujson
+ujson==1.35
 
 # numpy for date and percentile computation - needs a compiler on the installation target system!
 # Comment to use an internal implementation of percentile function
-numpy
+numpy==1.14.3
 
 # SSL between the daemons
 # This requirement is only a requirement if you intend to use SLL for the inter-daemons
@@ -32,9 +39,9 @@ numpy
 # pyopenssl
 
 # docopt is used by the alignak_environment script
-docopt
+docopt==0.6.2
 
 # Use psutil for daemons memory monitoring (env ALIGNAK_DAEMONS_MONITORING)
 # Use psutil for scheduler ALIGNAK_LOG_MONITORING
 # Use psutil for launching daemons from the Arbiter
-psutil
+psutil==5.4.5

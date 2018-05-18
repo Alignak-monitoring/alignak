@@ -876,7 +876,7 @@ class TestExternalCommands(AlignakTest):
 
         #  ---
         # External command: delete an host comment (unknown comment)
-        excmd = '[%d] DEL_HOST_COMMENT;qsdqszerzerzd' % now
+        excmd = '[%d] DEL_HOST_COMMENT;unknown_id' % now
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         self.scheduler_loop(1, [])
@@ -915,9 +915,9 @@ class TestExternalCommands(AlignakTest):
              u'EXTERNAL COMMAND: [%s] ADD_HOST_COMMENT;'
              u'test_host_0;1;test_contact;My accented é"{|:âàç comment' % now),
             ('info',
-             u'EXTERNAL COMMAND: [%s] DEL_HOST_COMMENT;qsdqszerzerzd' % now),
+             u'EXTERNAL COMMAND: [%s] DEL_HOST_COMMENT;unknown_id' % now),
             ('warning',
-             u'DEL_HOST_COMMENT: comment id: qsdqszerzerzd does not exist and cannot be deleted.'),
+             u'DEL_HOST_COMMENT: comment id: unknown_id does not exist and cannot be deleted.'),
             ('info',
              u'EXTERNAL COMMAND: [%s] DEL_ALL_HOST_COMMENTS;test_host_0' % now),
         ]
@@ -969,7 +969,7 @@ class TestExternalCommands(AlignakTest):
 
         #  ---
         # External command: delete an host comment (unknown comment)
-        excmd = '[%d] DEL_SVC_COMMENT;qsdqszerzerzd' % now
+        excmd = '[%d] DEL_SVC_COMMENT;unknown_id' % now
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         self.scheduler_loop(1, [])
@@ -1008,9 +1008,9 @@ class TestExternalCommands(AlignakTest):
              u'EXTERNAL COMMAND: [%s] ADD_SVC_COMMENT;'
              u'test_host_0;test_ok_0;1;test_contact;My accented é"{|:âàç comment' % now),
             ('info',
-             u'EXTERNAL COMMAND: [%s] DEL_SVC_COMMENT;qsdqszerzerzd' % now),
+             u'EXTERNAL COMMAND: [%s] DEL_SVC_COMMENT;unknown_id' % now),
             ('warning',
-             u'DEL_SVC_COMMENT: comment id: qsdqszerzerzd does not exist and cannot be deleted.'),
+             u'DEL_SVC_COMMENT: comment id: unknown_id does not exist and cannot be deleted.'),
             ('info',
              u'EXTERNAL COMMAND: [%s] DEL_ALL_SVC_COMMENTS;test_host_0;test_ok_0' % now),
         ]
@@ -1534,7 +1534,7 @@ class TestExternalCommands(AlignakTest):
                 assert (log_level, log_message) in monitoring_logs
 
     def test_host_downtimes_host_delete(self):
-        """ Test the downtime for hosts - host is DOWN
+        """ Test the downtime for hosts - host is DOWN - create and delete downtimes
         :return: None
         """
         # An host...
@@ -1542,6 +1542,7 @@ class TestExternalCommands(AlignakTest):
         host.act_depend_of = []  # ignore the host which we depend of
         host.checks_in_progress = []
         host.event_handler_enabled = False
+        host.notifications_interval = 720
         assert host.downtimes == {}
 
         # Its service
@@ -1549,141 +1550,222 @@ class TestExternalCommands(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []  # ignore the host which we depend of
         svc.event_handler_enabled = False
+        svc.notifications_interval = 720
 
-        now = int(time.time())
+        # Clean broks to delete scheduler retention load message
+        self._main_broker.broks = []
 
-        # Passive checks for hosts
-        # ---------------------------------------------
-        # Receive passive host check Down
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % time.time()
-        self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
-        assert 'DOWN' == host.state
-        assert 'SOFT' == host.state_type
-        assert 'Host is dead' == host.output
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % time.time()
-        self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
-        assert 'DOWN' == host.state
-        assert 'SOFT' == host.state_type
-        assert 'Host is dead' == host.output
-        excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % time.time()
-        self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
-        assert 'DOWN' == host.state
-        assert 'HARD' == host.state_type
-        assert 'Host is dead' == host.output
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2017, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
 
-        #  ---
-        # External command: add another host downtime
-        # Simulate that the host is now a problem but the downtime starts in some seconds
-        host.is_problem = True
-        host.problem_has_been_acknowledged = False
-        # Host service is now a problem
-        svc.is_problem = True
-        svc.problem_has_been_acknowledged = False
-        svc.state_id = 2
-        svc.state = 'CRITICAL'
-        # and the problem is not acknowledged
-        assert False == host.problem_has_been_acknowledged
-        excmd = '[%d] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;' \
-                'test_contact;My first downtime' % (now, now+2, now + 4)
-        self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
+            # Passive checks for hosts
+            # ---------------------------------------------
+            # Receive passive host check Up
+            excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;0;Host is alive' % int(time.time())
+            self._scheduler.run_external_commands([excmd])
+            self.external_command_loop()
+            assert 'UP' == host.state
+            assert 'HARD' == host.state_type
+            assert 'Host is alive' == host.output
 
-        # Host is a problem -
-        assert True == host.is_problem
-        assert False == host.problem_has_been_acknowledged
-        # Host service is neither impacted
-        assert True == svc.is_problem
-        assert False == svc.problem_has_been_acknowledged
-        assert len(host.downtimes) == 1
-        downtime = list(host.downtimes.values())[0]
-        assert downtime.comment == "My first downtime"
-        assert downtime.author == "test_contact"
-        assert downtime.start_time == now + 2
-        assert downtime.end_time == now + 4
-        assert downtime.duration == 2
-        assert downtime.fixed == True
-        assert downtime.trigger_id == "0"
+            # Time warp 1 minute
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1))
 
-        time.sleep(1)
-        self.external_command_loop()
+            # Receive passive host check Down
+            excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % int(time.time())
+            self._scheduler.run_external_commands([excmd])
+            self.external_command_loop()
+            assert 'DOWN' == host.state
+            assert 'SOFT' == host.state_type
+            assert 'Host is dead' == host.output
 
-        #  ---
-        # External command: yet another host downtime
-        excmd = '[%d] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;test_contact;' \
-                'My accented é"{|:âàç downtime' % (now, now + 180, now + 360)
-        self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
-        assert len(host.downtimes) == 2
+            # Time warp 1 minute
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1))
 
-        #  ---
-        # External command: delete an host downtime (unknown downtime)
-        excmd = '[%d] DEL_HOST_DOWNTIME;qsdqszerzerzd' % now
-        self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
-        self.scheduler_loop(1, [])
-        assert len(host.downtimes) == 2
+            excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % int(time.time())
+            self._scheduler.run_external_commands([excmd])
+            self.external_command_loop()
+            assert 'DOWN' == host.state
+            assert 'SOFT' == host.state_type
+            assert 'Host is dead' == host.output
 
-        #  ---
-        # External command: delete an host downtime
-        downtime = list(host.downtimes.values())[0]
-        excmd = '[%d] DEL_HOST_DOWNTIME;%s' % (now, downtime.uuid)
-        self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
-        self.scheduler_loop(1, [])
-        assert len(host.downtimes) == 1
+            # Time warp 1 minute
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1))
 
-        #  ---
-        # External command: delete all host downtime
-        excmd = '[%d] DEL_ALL_HOST_DOWNTIMES;test_host_0' % now
-        self._scheduler.run_external_commands([excmd])
-        self.external_command_loop()
-        assert len(host.downtimes) == 0
+            excmd = '[%d] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is dead' % int(time.time())
+            self._scheduler.run_external_commands([excmd])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.external_command_loop()
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.external_command_loop()
 
-        # We got 'monitoring_log' broks for logging to the monitoring logs...
-        monitoring_logs = []
-        for brok in self._main_broker.broks:
-            if brok.type == 'monitoring_log':
-                data = unserialize(brok.data)
-                monitoring_logs.append((data['level'], data['message']))
+            self.external_command_loop()
+            assert 'DOWN' == host.state
+            assert 'HARD' == host.state_type
+            assert 'Host is dead' == host.output
 
-        print(monitoring_logs)
-        expected_logs = [
-            ('warning',
-             u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
-            ('warning',
-             u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
-            ('warning',
-             u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
+            # Time warp 1 minutes
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1))
 
-            ('error',
-             u'HOST ALERT: test_host_0;DOWN;SOFT;1;Host is dead'),
-            ('error',
-             u'HOST ALERT: test_host_0;DOWN;SOFT;2;Host is dead'),
-            ('error',
-             u'HOST ALERT: test_host_0;DOWN;HARD;3;Host is dead'),
+            #  ---
+            # External command: add an host downtime
+            # Simulate that the host is now a problem but the downtime starts in some seconds
+            host.is_problem = True
+            host.problem_has_been_acknowledged = False
+            # Host service is now a problem
+            svc.is_problem = True
+            svc.problem_has_been_acknowledged = False
+            svc.state_id = 2
+            svc.state = 'CRITICAL'
+            # and the problem is not acknowledged
+            assert False == host.problem_has_been_acknowledged
+            # Schedule a downtime for the host - 15 minutes downtime
+            now = int(time.time())
+            excmd = '[%d] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;' \
+                    'test_contact;My first downtime' % (now, now+2, now + 15*60)
+            self._scheduler.run_external_commands([excmd])
 
-            ('error',
-             u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;Host is dead'),
+            # Time warp 1 second - the downtime is not yet started
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.external_command_loop()
 
-            ('info',
-             u'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;'
-             u'test_contact;My first downtime' % (now, now + 2, now + 4)),
-            ('info',
-             u'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;'
-             u'test_contact;My accented é"{|:âàç downtime' % (now, now + 180, now + 360)),
+            # Host is a problem -
+            assert True == host.is_problem
+            assert False == host.problem_has_been_acknowledged
+            # Host service is neither impacted
+            assert True == svc.is_problem
+            assert False == svc.problem_has_been_acknowledged
+            assert len(host.downtimes) == 1
+            downtime = list(host.downtimes.values())[0]
+            assert downtime.comment == "My first downtime"
+            assert downtime.author == "test_contact"
+            assert downtime.start_time == now + 2
+            assert downtime.end_time == now + 15*60
+            assert downtime.duration == 15*60 -2
+            assert downtime.fixed == True
+            assert downtime.trigger_id == "0"
 
-            ('info',
-             u'EXTERNAL COMMAND: [%s] DEL_HOST_DOWNTIME;qsdqszerzerzd' % now),
-            ('warning',
-             u'DEL_HOST_DOWNTIME: downtime_id id: qsdqszerzerzd '
-             u'does not exist and cannot be deleted.'),
-        ]
-        for log_level, log_message in expected_logs:
-            print(log_message)
-            assert (log_level, log_message) in monitoring_logs
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1))
+            # Time warp 1 minute- the downtime is started now!
+            self.external_command_loop()
+
+            #  ---
+            # External command: yet another host downtime
+            excmd = '[%d] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;test_contact;' \
+                    u'My accented é"{|:âàç downtime' % (now + 10, now + 180, now + 360)
+            self._scheduler.run_external_commands([excmd])
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.external_command_loop()
+
+            # Time warp 1 second - the new downtime is now started
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.external_command_loop()
+
+            assert len(host.downtimes) == 2
+
+            #  ---
+            # External command: delete an host downtime (unknown downtime)
+            excmd = '[%d] DEL_HOST_DOWNTIME;unknown_id' % (now + 100)
+            self._scheduler.run_external_commands([excmd])
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.external_command_loop()
+            # Still remaining 2 downtimes
+            assert len(host.downtimes) == 2
+
+            #  ---
+            # External command: delete an host downtime
+            downtime = list(host.downtimes.values())[0]
+            excmd = '[%d] DEL_HOST_DOWNTIME;%s' % (now + 200, downtime.uuid)
+            self._scheduler.run_external_commands([excmd])
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.external_command_loop()
+            assert len(host.downtimes) == 1
+
+            #  ---
+            # External command: delete all host downtime
+            excmd = '[%d] DEL_ALL_HOST_DOWNTIMES;test_host_0' % (now + 300)
+            self._scheduler.run_external_commands([excmd])
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.external_command_loop()
+            assert len(host.downtimes) == 0
+
+            # We got 'monitoring_log' broks for logging to the monitoring logs...
+            # monitoring_logs = []
+            # for brok in self._main_broker.broks:
+            #     if brok.type == 'monitoring_log':
+            #         data = unserialize(brok.data)
+            #         monitoring_logs.append((data['level'], data['message']))
+            #
+            # print(monitoring_logs)
+            # el = [
+            #     ('info', 'EXTERNAL COMMAND: [1496342582] DEL_HOST_DOWNTIME;unknown_id'), ('warning', 'DEL_HOST_DOWNTIME: downtime_id id: unknown_id does not exist and cannot be deleted.'), ('info', 'EXTERNAL COMMAND: [1496342582] DEL_HOST_DOWNTIME;02dc73b6-6cb2-4c56-84ec-f98f3a8ebe59'), ('info', 'HOST DOWNTIME ALERT: test_host_0;CANCELLED; Scheduled downtime for host has been cancelled.'), ('info', 'EXTERNAL COMMAND: [1496342582] DEL_ALL_HOST_DOWNTIMES;test_host_0')
+            # ]
+            expected_logs = [
+                ('info',
+                 u'PASSIVE HOST CHECK: test_host_0;0;Host is alive;;'),
+
+                ('warning',
+                 u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
+                ('error',
+                 u'HOST ALERT: test_host_0;DOWN;SOFT;1;Host is dead'),
+
+                ('warning',
+                 u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
+                ('error',
+                 u'HOST ALERT: test_host_0;DOWN;SOFT;2;Host is dead'),
+
+                ('warning',
+                 u'PASSIVE HOST CHECK: test_host_0;2;Host is dead;;'),
+                ('error',
+                 u'HOST ALERT: test_host_0;DOWN;HARD;3;Host is dead'),
+
+                ('error',
+                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;Host is dead'),
+
+                ('info',
+                 u'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;'
+                 u'test_contact;My first downtime' % (now, now + 2, now + 15*60)),
+                ('error',
+                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;Host is dead'),
+
+                ('info',
+                 u'HOST DOWNTIME ALERT: test_host_0;STARTED; Host has entered a period of scheduled downtime'),
+                ('info',
+                 u'HOST ACKNOWLEDGE ALERT: test_host_0;STARTED; Host problem has been acknowledged'),
+                ('info',
+                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (DOWN);notify-host;Host is dead'),
+                ('info',
+                 u'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;STARTED; Service problem has been acknowledged'),
+
+                ('info',
+                 u'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;'
+                 u'test_contact;My accented é"{|:âàç downtime' % (now + 10, now + 180, now + 360)),
+
+                ('info',
+                 u'EXTERNAL COMMAND: [%s] DEL_HOST_DOWNTIME;unknown_id' % (now + 100)),
+                ('warning',
+                 u'DEL_HOST_DOWNTIME: downtime_id id: unknown_id '
+                 u'does not exist and cannot be deleted.'),
+
+                ('info',
+                 u'EXTERNAL COMMAND: [%s] DEL_HOST_DOWNTIME;%s' % (now + 200, downtime.uuid)),
+                ('info',
+                 u'HOST DOWNTIME ALERT: test_host_0;CANCELLED; Scheduled downtime for host has been cancelled.'),
+
+                ('info',
+                 u'EXTERNAL COMMAND: [%s] DEL_ALL_HOST_DOWNTIMES;test_host_0' % (now + 300)),
+            ]
+            self.check_monitoring_logs(expected_logs)
 
     def test_service_downtimes(self):
         """ Test the downtimes for services
@@ -1734,7 +1816,7 @@ class TestExternalCommands(AlignakTest):
 
         #  ---
         # External command: delete a service downtime (unknown downtime)
-        excmd = '[%d] DEL_SVC_DOWNTIME;qsdqszerzerzd' % now
+        excmd = '[%d] DEL_SVC_DOWNTIME;unknown_id' % now
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         self.scheduler_loop(1, [])
@@ -1774,9 +1856,9 @@ class TestExternalCommands(AlignakTest):
              u'%s;%s;1;0;1200;test_contact;My accented é"{|:âàç downtime' % (
              now, now + 2120, now + 21200)),
             ('info',
-             u'EXTERNAL COMMAND: [%s] DEL_SVC_DOWNTIME;qsdqszerzerzd' % now),
+             u'EXTERNAL COMMAND: [%s] DEL_SVC_DOWNTIME;unknown_id' % now),
             ('warning',
-             u'DEL_SVC_DOWNTIME: downtime_id id: qsdqszerzerzd does '
+             u'DEL_SVC_DOWNTIME: downtime_id id: unknown_id does '
              u'not exist and cannot be deleted.'),
             ('info',
              u'EXTERNAL COMMAND: [%s] DEL_SVC_DOWNTIME;%s' % (now, downtime_id)),
@@ -1832,7 +1914,7 @@ class TestExternalCommands(AlignakTest):
 
         #  ---
         # External command: delete a contact downtime (unknown downtime)
-        excmd = '[%d] DEL_CONTACT_DOWNTIME;qsdqszerzerzd' % now
+        excmd = '[%d] DEL_CONTACT_DOWNTIME;unknown_id' % now
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         self.scheduler_loop(1, [])
@@ -1871,9 +1953,9 @@ class TestExternalCommands(AlignakTest):
              u'EXTERNAL COMMAND: [%s] SCHEDULE_CONTACT_DOWNTIME;test_contact;'
              u'%s;%s;test_contact;My accented é"{|:âàç downtime' % (now, now + 2120, now + 21200)),
             ('info',
-             u'EXTERNAL COMMAND: [%s] DEL_CONTACT_DOWNTIME;qsdqszerzerzd' % now),
+             u'EXTERNAL COMMAND: [%s] DEL_CONTACT_DOWNTIME;unknown_id' % now),
             ('warning',
-             u'DEL_CONTACT_DOWNTIME: downtime_id id: qsdqszerzerzd does '
+             u'DEL_CONTACT_DOWNTIME: downtime_id id: unknown_id does '
              u'not exist and cannot be deleted.'),
             ('info',
              u'EXTERNAL COMMAND: [%s] DEL_CONTACT_DOWNTIME;%s' % (now, downtime_id)),
