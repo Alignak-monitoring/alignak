@@ -63,16 +63,6 @@ script:
       cp test_load/.coverage .
       # codecov
       bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
-
-      # Run load tests and code dynamic analysis
-      # cd test_run
-      # # Run test suite with py.test running its coverage plugin
-      # # Dump the 10 slowest tests - do not capture to have some activity in Travis
-      # travis_wait 60 pytest --durations=10 --no-print-logs --capture=no -s --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
-      # cd ..
-      # cp test_run/.coverage .
-      # # codecov
-      # bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
     fi
 
 after_success:
