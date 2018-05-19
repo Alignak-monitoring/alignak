@@ -1,29 +1,30 @@
 {
-	"package": {
-		"name": "python-alignak",
-		"repo": "alignak_deb-testing",
-		"subject": "ddurieux",
-		"desc": "Alignak monitoring framework",
-		"vcs_url": "https://github.com/Alignak-monitoring/alignak",
-		"website_url": "http://alignak.net",
-		"labels": ["alignak", "nagios", "monitoring"],
-		"licenses": ["AGPL-V3"]
-	},
-	"version": {
-		"name": "dev_version",
-		"desc": "Development version"
-	},
-	"files": [
-		{
-			"includePattern": "./(.*\\.deb)",
-			"uploadPattern": "$1",
-			"matrixParams": {
-				"override": 1,
-				"deb_distribution": "jessie,Stretch,Trusty,xenial,Yakkety,Zesty,Artful",
-				"deb_component": "main",
-				"deb_architecture": "all"
-			}
-		}
-	],
-	"publish": true
+  "package": {
+    "name": "python-alignak",
+    "repo": "alignak_deb-testing",
+    "subject": "ddurieux",
+    "desc": "Alignak monitoring framework",
+    "vcs_url": "https://github.com/Alignak-monitoring/alignak",
+    "website_url": "http://alignak.net",
+    "labels": ["alignak", "nagios", "monitoring"],
+    "licenses": ["AGPL-V3"]
+  },
+  "version": {
+    "name": "sed_version_name",
+    "desc": "sed_version_desc",
+    "released": "sed_version_released"
+  },
+  "files": [
+    {
+      "includePattern": "./(.*\\.deb)",
+      "uploadPattern": "$1",
+      "matrixParams": {
+        "override": 1,
+        "deb_distribution": "jessie,Stretch,Trusty,xenial,Yakkety,Zesty,Artful",
+        "deb_component": "main",
+        "deb_architecture": "all"
+      }
+    }
+  ],
+  "publish": true
 }
