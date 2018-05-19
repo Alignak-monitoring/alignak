@@ -27,6 +27,7 @@ set -ev
 # Default is branch develop, python 3.5
 git_branch=$1
 python_version=$2
+output_type=$3
 if [ $# -eq 0 ]; then
    git_branch="develop"
    python_version="3.5"
@@ -43,14 +44,14 @@ fi
 echo "Installing fpm..."
 gem install --no-ri --no-rdoc fpm
 
-echo "Building packages for branch ${git_branch}, python version ${python_version}"
+echo "Installing rpm..."
+apt-get install rpm
+
+echo "Building ${output_type} package for branch ${git_branch}, python version ${python_version}"
 
 # Package information
 version=`python -c "from alignak import __version__;print(__version__)"`
 version_date=`date "+%Y-%m-%d%"`
-
-# Output for Debian
-output_type="deb"
 
 if [ "$1" = "master" ]; then
    # Updating deploy script for Alignak stable version
@@ -84,6 +85,7 @@ fi
 # Use python dependencies - all Alignak python packages
 # are packaged in the main distros so it will use the
 # distro packages rather than the python one
+# Use the python version as a prefix for the package name
 fpm \
    --verbose \
    --force \
@@ -95,6 +97,7 @@ fpm \
    --version ${version} \
    --vendor "Alignak Team (contact@alignak.net)" \
    --maintainer "Alignak Team (contact@alignak.net)" \
+   --python-package-name-prefix "python${python_version}" \
    --python-scripts-executable "/usr/bin/python" \
    --python-install-lib "/usr/lib/python${python_version}/dist-packages" \
    --python-install-data '/usr/local' \
@@ -107,4 +110,5 @@ fpm \
    --deb-systemd ./bin/systemd/alignak-receiver@.service \
    --deb-systemd ./bin/systemd/alignak-scheduler@.service \
    --deb-systemd ./bin/systemd/alignak.service \
-   --deb-no-default-config-files ./setup.py
+   --deb-no-default-config-files \
+   ./setup.py
