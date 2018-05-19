@@ -80,8 +80,11 @@ fi
 
 # Run fpm:
 # - verbose mode to have information
-# - from python to deb packages, for all
-fpm
+# - from python to deb packages, for all architectures
+# Use python dependencies - all Alignak python packages
+# are packaged in the main distros so it will use the
+# distro packages rather than the python one
+fpm \
    --verbose \
    --force \
    --input-type python \
