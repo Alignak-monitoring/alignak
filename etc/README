@@ -1,0 +1,15 @@
+# =================================================================================
+# The configuration located in this directory is a sample configuration.
+# =================================================================================
+#
+# alignak.ini
+# -------------
+# Defines a global Alignak configuration based on one instance of each Alignak daemons
+# the following items:
+#
+# alignak.cfg
+# -------------
+# It only defines the following items:
+# - one host 'localhost' that is always UP because it is checked with the Alignak internal command host UP
+# - two user: 'admin' and 'guest' Store your KPI/Certs in this directory as it is referenced in the daemons
+# configuration files
