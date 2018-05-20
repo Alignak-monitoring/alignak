@@ -69,7 +69,7 @@ if [ "${git_branch}" = "master" ]; then
    sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray.json
 
    # Stable repo
-   sed -i -e "s/sed_version_repo/alignak_deb-stable/g" .bintray.json
+   sed -i -e "s/sed_version_repo/alignak-deb-stable/g" .bintray.json
 elif [ "${git_branch}" = "develop" ]; then
    # Updating deploy script for Alignak develop version
    sed -i -e "s|\"sed_version_name\"|\"${version_date}\"|g" .bintray.json
@@ -77,7 +77,7 @@ elif [ "${git_branch}" = "develop" ]; then
    sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray.json
 
    # Testing repo
-   sed -i -e "s/sed_version_repo/alignak_deb-testing/g" .bintray.json
+   sed -i -e "s/sed_version_repo/alignak-deb-testing/g" .bintray.json
 
    # Version
    version="${version}-dev"
@@ -88,7 +88,7 @@ else
    sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray.json
 
    # Testing repo
-   sed -i -e "s/sed_version_repo/alignak_deb-testing/g" .bintray.json
+   sed -i -e "s/sed_version_repo/alignak-deb-testing/g" .bintray.json
 
    # Version
    version="${version}-dev_${git_branch}"
