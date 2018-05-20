@@ -49,11 +49,19 @@ echo "Installing rpm..."
 
 echo "Building ${output_type} package for branch ${git_branch}, python version ${python_version}"
 
+# Python prefix
+python_prefix="python"
+if [ "${python_version]" = "3.5" ]; then
+   python_prefix="python3"
+elif [ "${python_version]" = "3.5" ]; then
+   python_prefix="python3"
+fi
+
 # Package information
 version=`python -c "from alignak import __version__;print(__version__)"`
 version_date=`date "+%Y-%m-%d%"`
 
-if [ "$1" = "master" ]; then
+if [ "${git_branch]" = "master" ]; then
    # Updating deploy script for Alignak stable version
    sed -i -e "s|\"sed_version_name\"|\"${version}\"|g" .bintray.json
    sed -i -e "s|\"sed_version_name\"|\"Stable version\"|g" .bintray.json
@@ -61,7 +69,7 @@ if [ "$1" = "master" ]; then
 
    # Stable repo
    sed -i -e s/alignak_deb-testing/alignak_deb-stable/g .bintray.json
-elif [ "$1" = "develop" ]; then
+elif [ "${git_branch]" = "develop" ]; then
    # Updating deploy script for Alignak develop version
    sed -i -e "s|\"sed_version_name\"|\"${version_date}\"|g" .bintray.json
    sed -i -e "s|\"sed_version_name\"|\"Development version\"|g" .bintray.json
@@ -97,7 +105,7 @@ fpm \
    --version ${version} \
    --vendor "Alignak Team (contact@alignak.net)" \
    --maintainer "Alignak Team (contact@alignak.net)" \
-   --python-package-name-prefix "python${python_version}" \
+   --python-package-name-prefix "${python_prefix}" \
    --python-scripts-executable "/usr/bin/python" \
    --python-install-lib "/usr/lib/python${python_version}/dist-packages" \
    --python-install-data '/usr/local' \
