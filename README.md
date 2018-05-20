@@ -3,37 +3,15 @@
 *Alignak project - modern Nagios compatible monitoring framework*
 
 
-[![Develop branch build status](https://img.shields.io/travis/Alignak-monitoring/alignak/develop.svg)](https://github.com/Alignak-monitoring/alignak)
+[![Master branch build status](https://img.shields.io/travis/Alignak-monitoring/alignak/master.svg?label=master)](https://github.com/Alignak-monitoring/alignak)
+[![Develop branch build status](https://img.shields.io/travis/Alignak-monitoring/alignak/develop.svg?label=develop)](https://github.com/Alignak-monitoring/alignak)
+[![Develop branch code quality](https://landscape.io/github/Alignak-monitoring/alignak/develop/landscape.svg?style=flat)](https://landscape.io/github/Alignak-monitoring/alignak/develop)
+[![Develop branch code coverage](https://img.shields.io/codecov/c/github/codecov/example-python/master.svg)](https://codecov.io/gh/Alignak-monitoring/alignak/branch/develop)
 
-[![Master branch build status](https://img.shields.io/travis/Alignak-monitoring/alignak/develop.svg)](https://github.com/Alignak-monitoring/alignak)
-
-.. image:: https://api.travis-ci.org/Alignak-monitoring/alignak.svg?branch=develop
-    :target: https://travis-ci.org/Alignak-monitoring/alignak
-    :alt: Develop branch build status
-
-.. image:: https://landscape.io/github/Alignak-monitoring/alignak/develop/landscape.svg?style=flat
-    :target: https://landscape.io/github/Alignak-monitoring/alignak/develop
-    :alt: Development code static analysis
-
-.. image:: https://coveralls.io/repos/Alignak-monitoring/alignak/badge.svg?branch=develop
-    :target: https://coveralls.io/r/Alignak-monitoring/alignak
-    :alt: Development code tests coverage
-
-.. image:: https://readthedocs.org/projects/alignak-doc/badge/?version=latest
-    :target: http://alignak-doc.readthedocs.org/en/latest
-    :alt: Lastest documentation Status
-
-.. image:: https://readthedocs.org/projects/alignak-doc/badge/?version=develop
-    :target: http://alignak-doc.readthedocs.org/en/develop
-    :alt: Development branch documentation Status
-
-.. image:: https://img.shields.io/badge/IRC-%23alignak-1e72ff.svg?style=flat
-    :target: http://webchat.freenode.net/?channels=%23alignak
-    :alt: Join the chat #alignak on freenode.net
-
-.. image:: https://img.shields.io/badge/License-AGPL%20v3-blue.svg
-    :target: http://www.gnu.org/licenses/agpl-3.0
-    :alt: License AGPL v3
+[![Read the Docs (stable)](https://img.shields.io/readthedocs/pip/stable.svg?label=doc-stable)](http://docs.alignak.net/en/master/)
+[![Read the Docs (develop)](https://img.shields.io/readthedocs/pip/stable.svg?label=doc-develop)](http://docs.alignak.net/en/develop/)
+[![Join the chat #alignak on freenode.net](https://img.shields.io/badge/IRC-%23alignak-1e72ff.svg?style=flat)](http://webchat.freenode.net/?channels=%23alignak)
+[![License AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](http://www.gnu.org/licenses/agpl-3.0)
 
 
 Alignak Project

@@ -99,7 +99,6 @@ fi
 # distro packages rather than the python one
 # Use the python version as a prefix for the package name
 fpm \
-   --verbose \
    --force \
    --input-type python \
    --output-type ${output_type} \
