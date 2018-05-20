@@ -4,6 +4,12 @@
 # This script is building packages for Alignak thanks to the fpm
 # application (https://github.com/jordansissel/fpm)
 # -----
+# This script updates the .bintray.json file to update:
+# - the target repo, replacing sed_version_repo with the appropriate
+#  repository name: alignak-deb-testing or alignak-deb-stable
+# - the version name, description and release date, replacing
+#  sed_version_name, sed_version_desc and sed_version_released
+# -----
 # Using this script and fpm requires:
 # sudo apt-get install ruby ruby-dev rubygems build-essential
 # -----
@@ -63,12 +69,15 @@ if [ "${git_branch}" = "master" ]; then
    sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray.json
 
    # Stable repo
-   sed -i -e s/alignak_deb-testing/alignak_deb-stable/g .bintray.json
+   sed -i -e "s/sed_version_repo/alignak_deb-stable/g" .bintray.json
 elif [ "${git_branch}" = "develop" ]; then
    # Updating deploy script for Alignak develop version
    sed -i -e "s|\"sed_version_name\"|\"${version_date}\"|g" .bintray.json
    sed -i -e "s|\"sed_version_name\"|\"Development version\"|g" .bintray.json
    sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray.json
+
+   # Testing repo
+   sed -i -e "s/sed_version_repo/alignak_deb-testing/g" .bintray.json
 
    # Version
    version="${version}-dev"

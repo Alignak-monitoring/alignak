@@ -1,11 +1,12 @@
 {
   "package": {
     "name": "python-alignak",
-    "repo": "alignak_deb-testing",
-    "subject": "ddurieux",
+    "repo": "sed_version_repo",
+    "subject": "alignak",
     "desc": "Alignak monitoring framework",
-    "vcs_url": "https://github.com/Alignak-monitoring/alignak",
+    "vcs_url": "https://github.com/Alignak-monitoring/alignak.git",
     "website_url": "http://alignak.net",
+    "issue_tracker_url": "https://github.com/Alignak-monitoring/alignak/issues",
     "labels": ["alignak", "nagios", "monitoring"],
     "licenses": ["AGPL-V3"]
   },
@@ -16,7 +17,7 @@
   },
   "files": [
     {
-      "includePattern": "./(.*\\.deb)",
+      "includePattern": "./bin/(.*\\.deb)",
       "uploadPattern": "$1",
       "matrixParams": {
         "override": 1,
