@@ -87,6 +87,9 @@ else
    sed -i -e "s|\"sed_version_name\"|\"Branch $1 version\"|g" .bintray.json
    sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray.json
 
+   # Testing repo
+   sed -i -e "s/sed_version_repo/alignak_deb-testing/g" .bintray.json
+
    # Version
    version="${version}-dev_${git_branch}"
 fi
