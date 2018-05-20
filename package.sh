@@ -45,7 +45,7 @@ echo "Installing fpm..."
 gem install --no-ri --no-rdoc fpm
 
 echo "Installing rpm..."
-apt-get install rpm
+# apt-get install rpm
 
 echo "Building ${output_type} package for branch ${git_branch}, python version ${python_version}"
 

@@ -142,220 +142,256 @@ class TestDowntime(AlignakTest):
         svc.notification_interval = 0.001
         svc.event_handler_enabled = False
 
-        # Make the service be OK
-        self.scheduler_loop(1, [[svc, 0, 'OK']])
+        # Clean broks to delete scheduler retention load message
+        self._main_broker.broks = []
 
-        # schedule a 5 seconds downtime
-        duration = 5
-        now = int(time.time())
-        # downtime valid for 5 seconds from now
-        cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;%d;%d;1;0;%d;" \
-              "downtime author;downtime comment" % (now, now, now + duration, duration)
-        self._scheduler.run_external_commands([cmd])
-        time.sleep(1.0)
-        self.external_command_loop()
-        # A downtime exist for the service
-        assert len(svc.downtimes) == 1
-        downtime = list(svc.downtimes.values())[0]
-        assert downtime.comment == "downtime comment"
-        assert downtime.author == "downtime author"
-        assert downtime.start_time == now
-        assert downtime.end_time == now + duration
-        assert downtime.duration == duration
-        # Fixed
-        assert downtime.fixed
-        # Already active
-        assert downtime.is_in_effect
-        # Cannot be deleted
-        assert not downtime.can_be_deleted
-        assert downtime.trigger_id == "0"
-        # Get service scheduled downtime depth
-        scheduled_downtime_depth = svc.scheduled_downtime_depth
-        assert svc.scheduled_downtime_depth == 1
+        # Freeze the time !
+        initial_datetime = datetime.datetime(year=2018, month=6, day=1,
+                                             hour=18, minute=30, second=0)
+        with freeze_time(initial_datetime) as frozen_datetime:
+            assert frozen_datetime() == initial_datetime
 
-        assert 0 == svc.current_notification_number, 'Should not have any notification'
-        # Notification: downtime start
-        self.assert_actions_count(1)
-        self.show_actions()
-        # 1st notification for downtime start
-        self.assert_actions_match(0,
-                                  'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 '
-                                  '--notificationtype DOWNTIMESTART --servicestate OK '
-                                  '--serviceoutput OK',
-                                  'command')
-        self.assert_actions_match(0,
-                                  'NOTIFICATIONTYPE=DOWNTIMESTART, '
-                                  'NOTIFICATIONRECIPIENTS=test_contact, '
-                                  'NOTIFICATIONISESCALATED=False, '
-                                  'NOTIFICATIONAUTHOR=downtime author, '
-                                  'NOTIFICATIONAUTHORNAME=Not available, '
-                                  'NOTIFICATIONAUTHORALIAS=Not available, '
-                                  'NOTIFICATIONCOMMENT=downtime comment, '
-                                  'HOSTNOTIFICATIONNUMBER=0, '
-                                  'SERVICENOTIFICATIONNUMBER=0',
-                                  'command')
+            # Make the service be OK
+            self.scheduler_loop(1, [[svc, 0, 'OK']])
+            # The notifications are created to be launched in the next second when they happen !
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
 
-        # A comment exist in our service
-        assert 1 == len(svc.comments)
+            # Time warp 1 minutes
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1))
 
-        # Make the service be OK after a while
-        # time.sleep(1)
-        self.scheduler_loop(2, [[svc, 0, 'OK']])
-        assert "HARD" == svc.state_type
-        assert "OK" == svc.state
+            # schedule a 15 minutes downtime
+            now = int(time.time())
+            duration = 15 * 60
+            # downtime valid for 15 minutes from now
+            cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;%d;%d;1;0;%d;" \
+                  "downtime author;downtime comment" % (now, now, now + duration, duration)
+            self._scheduler.run_external_commands([cmd])
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.external_command_loop(1)
 
-        assert 0 == svc.current_notification_number, 'Should not have any notification'
-        # Still only 1
-        self.assert_actions_count(1)
+            # A downtime exist for the service
+            assert len(svc.downtimes) == 1
+            downtime = list(svc.downtimes.values())[0]
+            assert downtime.comment == "downtime comment"
+            assert downtime.author == "downtime author"
+            assert downtime.start_time == now
+            assert downtime.end_time == now + duration
+            assert downtime.duration == duration
+            # Fixed
+            assert downtime.fixed
+            # Already active
+            assert downtime.is_in_effect
+            # Cannot be deleted
+            assert not downtime.can_be_deleted
+            assert downtime.trigger_id == "0"
+            # Get service scheduled downtime depth
+            scheduled_downtime_depth = svc.scheduled_downtime_depth
+            assert svc.scheduled_downtime_depth == 1
 
-        # The downtime still exist in our service
-        assert 1 == len(svc.downtimes)
-        # The service is currently in a downtime period
-        assert svc.in_scheduled_downtime
-        downtime = list(svc.downtimes.values())[0]
+            assert 0 == svc.current_notification_number, 'Should not have any notification'
+            # Notification: downtime start
+            self.assert_actions_count(1)
+            self.show_actions()
+            # 1st notification for downtime start
+            self.assert_actions_match(0,
+                                      'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 '
+                                      '--notificationtype DOWNTIMESTART --servicestate OK '
+                                      '--serviceoutput OK',
+                                      'command')
+            self.assert_actions_match(0,
+                                      'NOTIFICATIONTYPE=DOWNTIMESTART, '
+                                      'NOTIFICATIONRECIPIENTS=test_contact, '
+                                      'NOTIFICATIONISESCALATED=False, '
+                                      'NOTIFICATIONAUTHOR=downtime author, '
+                                      'NOTIFICATIONAUTHORNAME=Not available, '
+                                      'NOTIFICATIONAUTHORALIAS=Not available, '
+                                      'NOTIFICATIONCOMMENT=downtime comment, '
+                                      'HOSTNOTIFICATIONNUMBER=0, '
+                                      'SERVICENOTIFICATIONNUMBER=0',
+                                      'command')
 
-        assert downtime.fixed
-        assert downtime.is_in_effect
-        assert not downtime.can_be_deleted
+            # A comment exist in our service
+            assert 1 == len(svc.comments)
 
-        # Make the service be CRITICAL/SOFT
-        time.sleep(1)
-        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        assert "SOFT" == svc.state_type
-        assert "CRITICAL" == svc.state
+            # Make the service be OK after a while
+            # Time warp 1 minutes
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1))
 
-        assert 0 == svc.current_notification_number, 'Should not have any notification'
-        # Still only 1
-        self.assert_actions_count(1)
+            self.scheduler_loop(1, [[svc, 0, 'OK']])
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "HARD" == svc.state_type
+            assert "OK" == svc.state
 
-        assert 1 == len(svc.downtimes)
-        # The service is still in a downtime period
-        assert svc.in_scheduled_downtime
-        downtime = list(svc.downtimes.values())[0]
-        assert downtime.fixed
-        assert downtime.is_in_effect
-        assert not downtime.can_be_deleted
+            assert 0 == svc.current_notification_number, 'Should not have any notification'
+            # Still only 1
+            self.assert_actions_count(1)
 
-        # Make the service be CRITICAL/HARD
-        time.sleep(1)
-        self.scheduler_loop(1, [[svc, 2, 'BAD']])
-        assert "HARD" == svc.state_type
-        assert "CRITICAL" == svc.state
+            # The downtime still exist in our service
+            assert 1 == len(svc.downtimes)
+            # The service is currently in a downtime period
+            assert svc.in_scheduled_downtime
+            downtime = list(svc.downtimes.values())[0]
 
-        assert 0 == svc.current_notification_number, 'Should not have any notification'
-        # Now 2 actions because the service is a problem
-        self.assert_actions_count(2)
-        # The downtime started
-        self.assert_actions_match(0, '/notifier.pl', 'command')
-        self.assert_actions_match(0, 'DOWNTIMESTART', 'type')
-        self.assert_actions_match(0, 'scheduled', 'status')
-        # The service is now a problem...
-        self.assert_actions_match(1, 'VOID', 'command')
-        self.assert_actions_match(1, 'PROBLEM', 'type')
-        self.assert_actions_match(1, 'scheduled', 'status')
-        self.show_actions()
+            assert downtime.fixed
+            assert downtime.is_in_effect
+            assert not downtime.can_be_deleted
 
-        assert 1 == len(svc.downtimes)
-        # The service is still in a downtime period
-        assert svc.in_scheduled_downtime
-        downtime = list(svc.downtimes.values())[0]
-        assert downtime.fixed
-        assert downtime.is_in_effect
-        assert not downtime.can_be_deleted
+            # Make the service be CRITICAL/SOFT
+            # Time warp 1 minutes
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1))
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "SOFT" == svc.state_type
+            assert "CRITICAL" == svc.state
 
-        # Wait for a while, the service is back to OK but after the downtime expiry time
-        time.sleep(5)
-        self.scheduler_loop(2, [[svc, 0, 'OK']])
-        assert "HARD" == svc.state_type
-        assert "OK" == svc.state
+            assert 0 == svc.current_notification_number, 'Should not have any notification'
+            # Still only 1
+            self.assert_actions_count(1)
 
-        # No more downtime for the service nor the scheduler
-        assert 0 == len(svc.downtimes)
-        # The service is not anymore in a scheduled downtime period
-        assert not svc.in_scheduled_downtime
-        assert svc.scheduled_downtime_depth < scheduled_downtime_depth
-        # No more comment for the service
-        assert 0 == len(svc.comments)
+            assert 1 == len(svc.downtimes)
+            # The service is still in a downtime period
+            assert svc.in_scheduled_downtime
+            downtime = list(svc.downtimes.values())[0]
+            assert downtime.fixed
+            assert downtime.is_in_effect
+            assert not downtime.can_be_deleted
 
-        assert 0 == svc.current_notification_number, 'Should not have any notification'
-        # Now 4 actions because the service is no more a problem and the downtime ended
-        self.show_actions()
-        self.assert_actions_count(4)
-        # 1st notification for downtime start
-        self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype DOWNTIMESTART --servicestate OK --serviceoutput OK', 'command')
-        self.assert_actions_match(0, 'NOTIFICATIONTYPE=DOWNTIMESTART, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=downtime author, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=downtime comment, HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
-        # The service is now a problem...
-        self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype PROBLEM --servicestate CRITICAL --serviceoutput BAD', 'command')
-        self.assert_actions_match(1, 'PROBLEM', 'type')
-        self.assert_actions_match(1, 'scheduled', 'status')
-        # 1st notification for downtime start
-        self.assert_actions_match(-1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype DOWNTIMEEND --servicestate CRITICAL --serviceoutput BAD', 'command')
-        self.assert_actions_match(-1, 'NOTIFICATIONTYPE=DOWNTIMEEND, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=downtime author, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=downtime comment, HOSTNOTIFICATIONNUMBER=0, SERVICENOTIFICATIONNUMBER=0', 'command')
-        # The service is no more a problem...
-        self.assert_actions_match(-1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype RECOVERY --servicestate OK --serviceoutput OK', 'command')
-        self.assert_actions_match(-1, 'RECOVERY', 'type')
-        self.assert_actions_match(-1, 'scheduled', 'status')
+            # Make the service be CRITICAL/HARD
+            # Time warp 1 minutes
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=1))
+            self.scheduler_loop(1, [[svc, 2, 'BAD']])
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "HARD" == svc.state_type
+            assert "CRITICAL" == svc.state
 
-        # Clear actions
-        self.clear_actions()
+            assert 0 == svc.current_notification_number, 'Should not have any notification'
+            # Now 2 actions because the service is a problem
+            self.assert_actions_count(2)
+            # The downtime started
+            self.assert_actions_match(0, '/notifier.pl', 'command')
+            self.assert_actions_match(0, 'DOWNTIMESTART', 'type')
+            self.assert_actions_match(0, 'scheduled', 'status')
+            # The service is now a problem...
+            self.assert_actions_match(1, 'VOID', 'command')
+            self.assert_actions_match(1, 'PROBLEM', 'type')
+            self.assert_actions_match(1, 'scheduled', 'status')
+            self.show_actions()
 
-        # Make the service be CRITICAL/HARD
-        time.sleep(1)
-        self.scheduler_loop(2, [[svc, 2, 'BAD']])
-        time.sleep(1.0)
-        self.scheduler_loop(1)
-        assert "HARD" == svc.state_type
-        assert "CRITICAL" == svc.state
+            assert 1 == len(svc.downtimes)
+            # The service is still in a downtime period
+            assert svc.in_scheduled_downtime
+            downtime = list(svc.downtimes.values())[0]
+            assert downtime.fixed
+            assert downtime.is_in_effect
+            assert not downtime.can_be_deleted
 
-        # 2 actions because the service is a problem and a notification is raised
-        self.show_actions()
-        self.assert_actions_count(2)
+            # Wait for a while, the service is back to OK but after the downtime expiry time
+            # Time warp 1 minutes
+            frozen_datetime.tick(delta=datetime.timedelta(minutes=15))
+            self.scheduler_loop(1, [[svc, 0, 'OK']])
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "HARD" == svc.state_type
+            assert "OK" == svc.state
 
-        # The service is now a problem...
-        # A problem notification is now raised...
-        self.assert_actions_match(0, 'notification', 'is_a')
-        self.assert_actions_match(0, '/notifier.pl', 'command')
-        self.assert_actions_match(0, 'PROBLEM', 'type')
-        self.assert_actions_match(0, 'scheduled', 'status')
-        # VOID notification
-        self.assert_actions_match(1, 'VOID', 'command')
-        self.assert_actions_match(1, 'PROBLEM', 'type')
-        self.assert_actions_match(1, 'scheduled', 'status')
+            # No more downtime for the service nor the scheduler
+            assert 0 == len(svc.downtimes)
+            # The service is not anymore in a scheduled downtime period
+            assert not svc.in_scheduled_downtime
+            assert svc.scheduled_downtime_depth < scheduled_downtime_depth
+            # No more comment for the service
+            assert 0 == len(svc.comments)
 
-        # We got 'monitoring_log' broks for logging to the monitoring logs...
-        monitoring_logs = []
-        for brok in sorted(self._main_broker.broks, key=lambda x: x.creation_time):
-            if brok.type == 'monitoring_log':
-                data = unserialize(brok.data)
-                monitoring_logs.append((data['level'], data['message']))
+            assert 0 == svc.current_notification_number, 'Should not have any notification'
+            # Only 2 actions because of the downtime - no notifications raised
+            self.show_actions()
+            self.assert_actions_count(2)
+            # 1st notification for downtime start
+            self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype DOWNTIMESTART --servicestate OK --serviceoutput OK', 'command')
+            self.assert_actions_match(0, 'NOTIFICATIONTYPE=DOWNTIMESTART, NOTIFICATIONRECIPIENTS=test_contact', 'command')
+            # 2nd notification for downtime end
+            self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --servicedesc test_ok_0 --notificationtype DOWNTIMEEND --servicestate OK --serviceoutput OK', 'command')
+            self.assert_actions_match(1, 'NOTIFICATIONTYPE=DOWNTIMEEND, NOTIFICATIONRECIPIENTS=test_contact', 'command')
 
-        print(("Monitoring logs: %s" % monitoring_logs))
-        expected_logs = [
-            ('info', 'EXTERNAL COMMAND: [%s] SCHEDULE_SVC_DOWNTIME;test_host_0;'
-                      'test_ok_0;%s;%s;1;0;%s;downtime author;downtime comment' % (
-                now, now, now + duration, duration)),
-            ('info', 'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STARTED; '
-                      'Service has entered a period of scheduled downtime'),
-            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      'DOWNTIMESTART (OK);notify-service;OK'),
-            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;CRITICAL'),
-            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;BAD'),
-            ('info', 'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STOPPED; '
-                      'Service has exited from a period of scheduled downtime'),
-            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      'DOWNTIMEEND (CRITICAL);notify-service;BAD'),
-            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                       'CRITICAL;notify-service;BAD'),
-            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;OK'),
-            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;'
-                      'notify-service;OK'),
-            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;BAD'),
-            ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;BAD'),
-            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                       'CRITICAL;notify-service;BAD')
-        ]
-        for log_level, log_message in expected_logs:
-            assert (log_level, log_message) in monitoring_logs
+            # Clear actions
+            self.clear_actions()
+
+            # Make the service be CRITICAL/HARD
+            self.scheduler_loop(2, [[svc, 2, 'BAD']])
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "HARD" == svc.state_type
+            assert "CRITICAL" == svc.state
+
+            # 2 actions because the service is a problem and a notification is raised
+            self.show_actions()
+            self.assert_actions_count(2)
+
+            # The service is now a problem...
+            # A problem notification is now raised...
+            self.assert_actions_match(0, 'notification', 'is_a')
+            self.assert_actions_match(0, '/notifier.pl', 'command')
+            self.assert_actions_match(0, 'PROBLEM', 'type')
+            self.assert_actions_match(0, 'scheduled', 'status')
+            # VOID notification
+            self.assert_actions_match(1, 'VOID', 'command')
+            self.assert_actions_match(1, 'PROBLEM', 'type')
+            self.assert_actions_match(1, 'scheduled', 'status')
+
+            # We got 'monitoring_log' broks for logging to the monitoring logs...
+            monitoring_logs = []
+            for brok in sorted(self._main_broker.broks, key=lambda x: x.creation_time):
+                if brok.type == 'monitoring_log':
+                    data = unserialize(brok.data)
+                    monitoring_logs.append((data['level'], data['message']))
+
+            print(("Monitoring logs: %s" % monitoring_logs))
+            expected_logs = [
+                ('info',
+                 u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;0;OK'),
+                ('info',
+                 u'EXTERNAL COMMAND: [1527877861] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;1527877861;1527878761;1;0;900;downtime author;downtime comment'),
+                ('info',
+                 u'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STARTED; Service has entered a period of scheduled downtime'),
+                ('info',
+                 u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;DOWNTIMESTART (OK);notify-service;OK'),
+                ('info',
+                 u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;OK'),
+                ('error',
+                 u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;CRITICAL'),
+                ('error',
+                 u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;CRITICAL'),
+                ('error',
+                 u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;BAD'),
+                ('error',
+                 u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;BAD'),
+                ('info',
+                 u'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STOPPED; Service has exited from a period of scheduled downtime'),
+                ('info',
+                 u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;2;OK'),
+                ('info',
+                 u'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;OK'),
+                ('info',
+                 u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;DOWNTIMEEND (OK);notify-service;OK'),
+                ('error',
+                 u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;BAD'),
+                ('error',
+                 u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;BAD'),
+                ('error',
+                 u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;BAD'),
+                ('error',
+                 u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;BAD'),
+                ('error',
+                 u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;notify-service;BAD')
+            ]
+            self.check_monitoring_logs(expected_logs)
+            # for log_level, log_message in expected_logs:
+            #     assert (log_level, log_message) in monitoring_logs
 
     def test_schedule_flexible_svc_downtime(self):
         """ Schedule a flexible downtime for a service """
