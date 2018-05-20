@@ -88,7 +88,7 @@ else
    sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray.json
 
    # Version
-   version="${version}-dev-${git_branch}"
+   version="${version}-dev_${git_branch}"
 fi
 
 # Run fpm:

@@ -19,9 +19,9 @@ Alignak Project
 
 `Alignak <http://www.alignak.net>`_ is an open source monitoring framework written in Python under the terms of the `GNU Affero General Public License <http://www.gnu.org/licenses/agpl.txt>`_ .
 
-Its main goal is to give users a flexible and complete solution for their monitoring system. Alignak is designed to scale to large environments.
+Its main goal is to give users a flexible and complete solution for their monitoring system. Alignak is designed to scale to large and heterogeneous environments.
 
-The project started in 2015 from a fork of the Shinken project. Since the project creation, we achieved a huge code documentation and cleaning, we tested the application in several environments and we developed some new features.
+The project started in 2015 with a fork of the Shinken project. Since the project creation, we achieved a huge code documentation and cleaning, we tested the application in several environments and developed some new features.
 
 
 The main idea when developing Alignak is the flexibility which is our definition of framework. We target the following goals:
