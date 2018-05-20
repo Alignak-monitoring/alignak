@@ -44,24 +44,19 @@ fi
 echo "Installing fpm..."
 gem install --no-ri --no-rdoc fpm
 
-echo "Installing rpm..."
-# apt-get install rpm
-
 echo "Building ${output_type} package for branch ${git_branch}, python version ${python_version}"
 
 # Python prefix
-python_prefix="python"
-if [ "${python_version]" = "3.5" ]; then
-   python_prefix="python3"
-elif [ "${python_version]" = "3.5" ]; then
-   python_prefix="python3"
+python_prefix="python3"
+if [ "${python_version}" = "2.7" ]; then
+   python_prefix="python"
 fi
 
 # Package information
 version=`python -c "from alignak import __version__;print(__version__)"`
 version_date=`date "+%Y-%m-%d%"`
 
-if [ "${git_branch]" = "master" ]; then
+if [ "${git_branch}" = "master" ]; then
    # Updating deploy script for Alignak stable version
    sed -i -e "s|\"sed_version_name\"|\"${version}\"|g" .bintray.json
    sed -i -e "s|\"sed_version_name\"|\"Stable version\"|g" .bintray.json
@@ -69,7 +64,7 @@ if [ "${git_branch]" = "master" ]; then
 
    # Stable repo
    sed -i -e s/alignak_deb-testing/alignak_deb-stable/g .bintray.json
-elif [ "${git_branch]" = "develop" ]; then
+elif [ "${git_branch}" = "develop" ]; then
    # Updating deploy script for Alignak develop version
    sed -i -e "s|\"sed_version_name\"|\"${version_date}\"|g" .bintray.json
    sed -i -e "s|\"sed_version_name\"|\"Development version\"|g" .bintray.json
