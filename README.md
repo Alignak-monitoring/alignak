@@ -17,7 +17,7 @@
 Alignak Project
 ---------------
 
-`Alignak <http://www.alignak.net>`_ is an open source monitoring framework written in Python under the terms of the `GNU Affero General Public License <http://www.gnu.org/licenses/agpl.txt>`_ .
+[Alignak Web Site](http://www.alignak.net) is an open source monitoring framework written in Python under the terms of the [GNU Affero General Public License](http://www.gnu.org/licenses/agpl.txt).
 
 Its main goal is to give users a flexible and complete solution for their monitoring system. Alignak is designed to scale to large and heterogeneous environments.
 
@@ -52,18 +52,18 @@ The main idea when developing Alignak is the flexibility which is our definition
 
    * Easy to contribute: contribution has to be an easy process.
       Alignak follow pycodestyle (former pep8), pylint and pep257 coding standards to ease code readability.
-      Step by step help to contribute to the project can be found in :ref:`Contributing <contributing/index>`
+      Step by step help to contribute to the project can be found in the documentation.
 
 This is basically what Alignak is made of. May be add the *keep it simple* Linux principle and it's perfect.
 
-There is nothing we don't want, we consider every features / ideas. Feel free to join `by mail <mailto:contact@alignak.net>`_ or on `the IRC #alignak <http://webchat.freenode.net/?channels=%23alignak>`_ to discuss or ask for more information
+There is nothing we don't want, we consider every features / ideas. Feel free to join [by mail](mailto:contact@alignak.net) or on [the IRC #alignak channel](http://webchat.freenode.net/?channels=%23alignak) to discuss or ask for more information
 
 Documentation
 -------------
 
-`Alignak Web Site <http://www.alignak.net>`_ includes much documentation and introduces the Alignak main features, such as the backend, the webui, the tight integration with timeseries databases, ...
+[Alignak Web Site ](http://www.alignak.net) includes much documentation and introduces the Alignak main features, such as the Backend, the WebUI, the desktop Applet, the tight integration with timeseries databases, ...
 
-Alignak project has `an online documentation page <http://alignak-monitoring.github.io/documentation/>`_. We try to have as much documentation as possible and to keep this documentation simple and understandable. For sure the documentation is not yet complete, but you can help us ;)
+Alignak project has [an online documentation site](http://alignak-monitoring.github.io/documentation/). We try to have as much documentation as possible and to keep this documentation simple and understandable. For sure the documentation is not yet complete, but you can help us ;)
 
 Click on one of the docs badges on this page to browse the documentation.
 
@@ -79,4 +79,4 @@ Installing Alignak
 
 Alignak Deb / Rpm packaging is built thanks to the bintray service. Get the package for your Linux distribution here: [ ![Download](https://api.bintray.com/packages/ddurieux/alignak_deb-testing/python-alignak/images/download.svg) ](https://bintray.com/ddurieux/alignak_deb-testing/python-alignak/_latestVersion)
 
-See the `installation documentation <https://alignak-doc.readthedocs.org/en/latest/02_installation/index.html>`_ for more information on the different installation possibilities offered by Alignak.
+See the [installation documentation](https://alignak-doc.readthedocs.org/en/latest/02_installation/index.html) for more information on the different installation possibilities offered by Alignak.
