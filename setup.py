@@ -60,6 +60,7 @@ setup(
 
     # Dependencies (if some) ...
     install_requires=[
+        'future', 'six', 'importlib',
         'CherryPy', 'requests', 'termcolor', 'setproctitle',
         'ujson', 'numpy', 'docopt', 'psutil'
     ],
