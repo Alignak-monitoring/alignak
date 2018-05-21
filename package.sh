@@ -40,6 +40,7 @@
 # Default is branch develop, python 3.5
 git_branch=$1
 python_version=$2
+input_type="python"
 output_type=$3
 if [ $# -eq 0 ]; then
    git_branch="develop"
@@ -121,8 +122,7 @@ if [ "${output_type}" = "deb" ]; then
    fpm \
       --force \
       --verbose \
-      --input-type virtualenv \
-      --virtualenv-pypi https://pypi.python.org/simple \
+      --input-type ${input_type} \
       --output-type ${output_type} \
       --package "./bin" \
       --architecture all \
@@ -138,6 +138,8 @@ if [ "${output_type}" = "deb" ]; then
       --python-install-lib "/usr/lib/python${python_version}/dist-packages" \
       --python-install-data '/usr/local' \
       --python-install-bin '/usr/local/bin' \
+      --no-python-dependencies \
+      --after-install './bin/post-install.sh' \
       --deb-no-default-config-files \
       --deb-systemd ./bin/systemd/alignak-arbiter@.service \
       --deb-systemd ./bin/systemd/alignak-broker@.service \
@@ -147,13 +149,13 @@ if [ "${output_type}" = "deb" ]; then
       --deb-systemd ./bin/systemd/alignak-scheduler@.service \
       --deb-systemd ./bin/systemd/alignak.service \
       --deb-no-default-config-files \
-      .
+      ./setup.py
 elif [ "${output_type}" = "rpm" ]; then
    fpm \
       --force \
       --verbose \
       --input-type virtualenv \
-      --virtualenv-pypi https://pypi.python.org/simple \
+      --input-type ${input_type} \
       --output-type ${output_type} \
       --package "./bin" \
       --architecture all \
@@ -170,13 +172,13 @@ elif [ "${output_type}" = "rpm" ]; then
       --python-install-data '/usr/local' \
       --python-install-bin '/usr/local/bin' \
       --python-dependencies \
-      .
+      ./setup.py
 else
    fpm \
       --force \
       --verbose \
       --input-type virtualenv \
-      --virtualenv-pypi https://pypi.python.org/simple \
+      --input-type ${input_type} \
       --output-type ${output_type} \
       --package "./bin" \
       --architecture all \
@@ -193,5 +195,5 @@ else
       --python-install-data '/usr/local' \
       --python-install-bin '/usr/local/bin' \
       --python-dependencies \
-      .
+      ./setup.py
 fi

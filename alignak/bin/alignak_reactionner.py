@@ -55,7 +55,8 @@
  schedulers (and the associated actions) and take the new ones instead.
 """
 
-from __future__ import print_function
+import sys
+import traceback
 
 from alignak.daemons.reactionnerdaemon import Reactionner
 from alignak.util import parse_daemon_args
@@ -71,7 +72,8 @@ def main():
         daemon = Reactionner(debug=args.debug_file is not None, **args.__dict__)
         daemon.main()
     except Exception as exp:  # pylint: disable=broad-except
-        print(("*** Daemon exited because: %s" % str(exp)))
+        sys.stderr.write("*** Daemon exited because: %s" % str(exp))
+        traceback.print_exc()
         exit(1)
 
 

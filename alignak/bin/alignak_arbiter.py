@@ -51,7 +51,8 @@ For example, if a scheduler dies, it sends the late scheduler's conf
 to another scheduler available.
 It also reads orders form users (nagios.cmd) and sends them to schedulers.
 """
-from __future__ import print_function
+import sys
+import traceback
 
 from alignak.daemons.arbiterdaemon import Arbiter
 from alignak.util import parse_daemon_args
@@ -73,7 +74,8 @@ def main():
                 break
             daemon = None
     except Exception as exp:  # pylint: disable=broad-except
-        print(("*** Daemon exited because: %s" % str(exp)))
+        sys.stderr.write("*** Daemon exited because: %s" % str(exp))
+        traceback.print_exc()
         exit(1)
 
 

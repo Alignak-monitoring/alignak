@@ -756,6 +756,17 @@ class SatelliteLink(Item):
 
     @valid_connection()
     @communicate()
+    def get_daemon_stats(self):
+        """Send a HTTP request to the satellite (GET /get_daemon_stats)
+
+        :return: Daemon statistics
+        :rtype: dict
+        """
+        logger.debug("Get daemon statistics for %s, %s %s", self.name, self.alive, self.reachable)
+        return self.con.get('get_daemon_stats')
+
+    @valid_connection()
+    @communicate()
     def get_initial_broks(self, broker_name):
         """Send a HTTP request to the satellite (GET /fill_initial_broks)
 

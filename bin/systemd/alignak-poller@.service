@@ -14,11 +14,11 @@ ExecStartPre=/bin/chown alignak:alignak /usr/local/var/log/alignak
 ExecStartPre=/bin/mkdir -p /usr/local/var/run/alignak
 ExecStartPre=/bin/chown alignak:alignak /usr/local/var/run/alignak
 
-# PID file as declared in daemon ini configuration file
+# PID file as declared in daemon configuration
 PIDFile=/usr/local/var/run/alignak/poller-%i.pid
 
-ExecStartPre=/bin/echo Alignak starting poller %i - /usr/bin/alignak-poller -d -n poller-%i -e "${ALIGNAK_CONFIGURATION_FILE}"
-ExecStart=/usr/bin/alignak-poller -d -n poller-%i -e "${ALIGNAK_CONFIGURATION_FILE}"
+ExecStartPre=/bin/echo Alignak starting poller %i - /usr/local/bin/alignak-poller -d -n poller-%i -e "${ALIGNAK_CONFIGURATION_FILE}"
+ExecStart=/usr/local/bin/alignak-poller -d -n poller-%i -e "${ALIGNAK_CONFIGURATION_FILE}"
 
 KillSignal=SIGINT
 ExecReload=/bin/kill -HUP $MAINPID

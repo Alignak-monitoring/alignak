@@ -33,8 +33,7 @@ class SchedulerInterface(GenericInterface):
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def get_checks(self, do_checks=False, do_actions=False, poller_tags=None,
-                   reactionner_tags=None, worker_name='none',
-                   module_types=None):
+                   reactionner_tags=None, worker_name='none', module_types=None):
         """Get checks from scheduler, used by poller or reactionner when they are
         in active mode (passive = False)
 

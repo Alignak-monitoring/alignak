@@ -194,15 +194,15 @@ class TestLaunchDaemons(AlignakTest):
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
-        # Waiting for arbiter to parse the configuration
-        sleep(60)
+        # Waiting for arbiter to check for the missing daemons
+        sleep(30)
 
         ret = arbiter.poll()
         assert ret is not None, "Arbiter is still running!"
         print("*** Arbiter exited with code: %d" % ret)
         stdout = arbiter.stdout.read()
-        assert b"Daemon 'arbiter-master' is started with an environment " \
-               b"file: /tmp/etc/alignak/alignak.ini" in stdout
+        print("Stdout: %s" % stdout)
+        assert b"Sorry, I bail out, exit code: 4" in stdout
         stderr = arbiter.stderr.read()
         print(stderr)
         # assert "The Alignak environment file is not existing or do not " \

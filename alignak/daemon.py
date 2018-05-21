@@ -844,10 +844,13 @@ class Daemon(object):
         :return: None
         """
         # Log an error message if exit code is not 0
+        # Force output to stderr
         if exit_code:
             if message:
                 logger.error(message)
+                sys.stderr.write(message)
             logger.error("Sorry, I bail out, exit code: %d", exit_code)
+            sys.stderr.write("Sorry, I bail out, exit code: %d", exit_code)
         else:
             if message:
                 logger.info(message)
