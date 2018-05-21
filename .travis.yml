@@ -10,6 +10,10 @@ env:
 - TEST_SUITE=codingstandard
 install:
 - unset PYTHONWARNINGS
+# For packaging with fpm
+- sudo apt-get install rpm
+- sudo pip install virtualenv virtualenv-tools
+- sudo pip install --upgrade distribute
 # For tests
 - "./test/setup_test.sh"
 script:
@@ -57,10 +61,6 @@ script:
 after_success:
 - |
   if [[ $TEST_SUITE == 'unit_tests' ]]; then
-    # For packaging with fpm
-    sudo apt-get install rpm
-    sudo pip install virtualenv virtualenv-tools
-    sudo pip install --upgrade distribute
     ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION deb;
     ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION rpm;
     ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION freebsd;
