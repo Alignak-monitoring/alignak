@@ -286,6 +286,40 @@ class Dispatcher(object):
 
         return all_ok
 
+    def check_status(self, forced=False, test=False):
+        # pylint: disable=too-many-branches
+        """Check all daemons state (reachable or not)
+
+        If test parameter is True, do not really send but simulate only for testing purpose...
+
+        TODO: The update_infos function returns None when no ping has been executed
+        (too early...), or True / False according to the real ping and get managed
+        configuration result. So, if the result is None, consider as not valid,
+        else compute the global result...
+
+        :return: True if all daemons are reachable
+        """
+        all_ok = True
+        statistics = {}
+        for daemon_link in self.all_daemons_links:
+            if daemon_link == self.arbiter_link:
+                # I exclude myself from the polling, sure I am reachable ;)
+                continue
+
+            if not daemon_link.active:
+                # I exclude the daemons that are not active
+                continue
+
+            result = None
+            try:
+                result = daemon_link.get_daemon_stats()
+                statistics[daemon_link.name] = result
+            except LinkError:
+                all_ok = False
+                logger.warning("Daemon connection failed, I could not get statistics.")
+
+        return statistics
+
     def check_dispatch(self):
         """Check that all active satellites have a configuration dispatched
 
