@@ -60,7 +60,7 @@ setup(
 
     # Dependencies (if some) ...
     install_requires=[
-        'future', 'six', 'importlib',
+        'future', 'six', 'importlib' if sys.version_info <= (2,7) else '',
         'CherryPy', 'requests', 'termcolor', 'setproctitle',
         'ujson', 'numpy', 'docopt', 'psutil'
     ],
