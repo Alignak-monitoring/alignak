@@ -56,18 +56,16 @@ echo "Building ${output_type} package for branch ${git_branch}, python version $
 python_prefix="python3"
 if [ "${python_version}" = "2.7" ]; then
    python_prefix="python"
-else
-   if [ "${output_type}" = "deb" ]; then
-      # Package a 'python3-' prefixed version of CherryPy
-      fpm -s python -t deb --package "./bin" --python-package-name-prefix "${python_prefix}" cherrypy
-   fi
+#else
+#   if [ "${output_type}" = "deb" ]; then
+#      # Package a 'python3-' prefixed version of CherryPy
+#      fpm -s python -t deb --force --package "./bin" --python-package-name-prefix "${python_prefix}" cherrypy
+#   fi
 fi
 
 # Package information
 version=`python -c "from alignak import __version__;print(__version__)"`
 version_date=`date "+%Y-%m-%d%"`
-
-if [ "${git_branch}" = "master" ]; then
 
 if [ "${git_branch}" = "master" ]; then
    # Updating deploy script for Alignak stable version
@@ -127,6 +125,7 @@ if [ "${output_type}" = "deb" ]; then
       --python-dependencies \
       --python-disable-dependency cherrypy \
       --depends python-cherrypy \
+      --deb-no-default-config-files \
       --deb-systemd ./bin/systemd/alignak-arbiter@.service \
       --deb-systemd ./bin/systemd/alignak-broker@.service \
       --deb-systemd ./bin/systemd/alignak-poller@.service \
