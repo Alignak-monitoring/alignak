@@ -70,7 +70,7 @@ version_date=`date "+%Y-%m-%d%"`
 if [ "${git_branch}" = "master" ]; then
    # Updating deploy script for Alignak stable version
    sed -i -e "s|\"sed_version_name\"|\"${version}\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_name\"|\"Stable version\"|g" .bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_desc\"|\"Stable version\"|g" .bintray-${output_type}.json
    sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray-${output_type}.json
 
    # Stable repo
@@ -78,7 +78,7 @@ if [ "${git_branch}" = "master" ]; then
 elif [ "${git_branch}" = "develop" ]; then
    # Updating deploy script for Alignak develop version
    sed -i -e "s|\"sed_version_name\"|\"${version_date}\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_name\"|\"Development version\"|g" .bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_desc\"|\"Development version\"|g" .bintray-${output_type}.json
    sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray-${output_type}.json
 
    # Testing repo
@@ -89,7 +89,7 @@ elif [ "${git_branch}" = "develop" ]; then
 else
    # Updating deploy script for any other branch / tag
    sed -i -e "s|\"sed_version_name\"|\"$1\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_name\"|\"Branch $1 version\"|g" .bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_desc\"|\"Branch $1 version\"|g" .bintray-${output_type}.json
    sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray-${output_type}.json
 
    # Testing repo

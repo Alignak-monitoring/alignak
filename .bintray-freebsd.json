@@ -17,7 +17,7 @@
   },
   "files": [
     {
-      "includePattern": "./bin/(.*\\.rpm)",
+      "includePattern": "./bin/(.*\\.txz)",
       "uploadPattern": "$1"
     }
   ],
