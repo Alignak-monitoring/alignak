@@ -3,7 +3,7 @@
 *Alignak project - modern Nagios compatible monitoring framework*
 
 
-[![Master branch build status](https://img.shields.io/travis/Alignak-monitoring/alignak/master.svg?label=master)](https://github.com/Alignak-monitoring/alignak)
+[![Master branch build status](https://img.shields.io/travis/Alignak-monitoring/alignak/master.svg?label=master)](https://travis-ci.org/Alignak-monitoring/alignak/branches)
 [![Develop branch build status](https://img.shields.io/travis/Alignak-monitoring/alignak/develop.svg?label=develop)](https://github.com/Alignak-monitoring/alignak)
 [![Develop branch code quality](https://landscape.io/github/Alignak-monitoring/alignak/develop/landscape.svg?style=flat)](https://landscape.io/github/Alignak-monitoring/alignak/develop)
 [![Develop branch code coverage](https://img.shields.io/codecov/c/github/codecov/example-python/master.svg)](https://codecov.io/gh/Alignak-monitoring/alignak/branch/develop)

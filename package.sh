@@ -56,6 +56,11 @@ echo "Building ${output_type} package for branch ${git_branch}, python version $
 python_prefix="python3"
 if [ "${python_version}" = "2.7" ]; then
    python_prefix="python"
+else
+   if [ "${output_type}" = "deb" ]; then
+      # Package a 'python3-' prefixed version of CherryPy
+      fpm -s python -t deb --package "./bin" --python-package-name-prefix "${python_prefix}" cherrypy
+   fi
 fi
 
 # Package information
@@ -63,32 +68,34 @@ version=`python -c "from alignak import __version__;print(__version__)"`
 version_date=`date "+%Y-%m-%d%"`
 
 if [ "${git_branch}" = "master" ]; then
+
+if [ "${git_branch}" = "master" ]; then
    # Updating deploy script for Alignak stable version
-   sed -i -e "s|\"sed_version_name\"|\"${version}\"|g" .bintray.json
-   sed -i -e "s|\"sed_version_name\"|\"Stable version\"|g" .bintray.json
-   sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray.json
+   sed -i -e "s|\"sed_version_name\"|\"${version}\"|g" .bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_name\"|\"Stable version\"|g" .bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray-${output_type}.json
 
    # Stable repo
-   sed -i -e "s/sed_version_repo/alignak-deb-stable/g" .bintray.json
+   sed -i -e "s/sed_version_repo/alignak-deb-stable/g" .bintray-${output_type}.json
 elif [ "${git_branch}" = "develop" ]; then
    # Updating deploy script for Alignak develop version
-   sed -i -e "s|\"sed_version_name\"|\"${version_date}\"|g" .bintray.json
-   sed -i -e "s|\"sed_version_name\"|\"Development version\"|g" .bintray.json
-   sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray.json
+   sed -i -e "s|\"sed_version_name\"|\"${version_date}\"|g" .bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_name\"|\"Development version\"|g" .bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray-${output_type}.json
 
    # Testing repo
-   sed -i -e "s/sed_version_repo/alignak-deb-testing/g" .bintray.json
+   sed -i -e "s/sed_version_repo/alignak-deb-testing/g" .bintray-${output_type}.json
 
    # Version
    version="${version}-dev"
 else
    # Updating deploy script for any other branch / tag
-   sed -i -e "s|\"sed_version_name\"|\"$1\"|g" .bintray.json
-   sed -i -e "s|\"sed_version_name\"|\"Branch $1 version\"|g" .bintray.json
-   sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray.json
+   sed -i -e "s|\"sed_version_name\"|\"$1\"|g" .bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_name\"|\"Branch $1 version\"|g" .bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray-${output_type}.json
 
    # Testing repo
-   sed -i -e "s/sed_version_repo/alignak-deb-testing/g" .bintray.json
+   sed -i -e "s/sed_version_repo/alignak-deb-testing/g" .bintray-${output_type}.json
 
    # Version
    version="${version}-dev_${git_branch}"
@@ -101,28 +108,76 @@ fi
 # are packaged in the main distros so it will use the
 # distro packages rather than the python one
 # Use the python version as a prefix for the package name
-fpm \
-   --force \
-   --input-type python \
-   --output-type ${output_type} \
-   --package "./bin" \
-   --architecture all \
-   --license AGPL \
-   --version ${version} \
-   --vendor "Alignak Team (contact@alignak.net)" \
-   --maintainer "Alignak Team (contact@alignak.net)" \
-   --python-package-name-prefix "${python_prefix}" \
-   --python-scripts-executable "/usr/bin/python" \
-   --python-install-lib "/usr/lib/python${python_version}/dist-packages" \
-   --python-install-data '/usr/local' \
-   --python-install-bin '/usr/local/bin' \
-   --python-dependencies \
-   --deb-systemd ./bin/systemd/alignak-arbiter@.service \
-   --deb-systemd ./bin/systemd/alignak-broker@.service \
-   --deb-systemd ./bin/systemd/alignak-poller@.service \
-   --deb-systemd ./bin/systemd/alignak-reactionner@.service \
-   --deb-systemd ./bin/systemd/alignak-receiver@.service \
-   --deb-systemd ./bin/systemd/alignak-scheduler@.service \
-   --deb-systemd ./bin/systemd/alignak.service \
-   --deb-no-default-config-files \
-   ./setup.py
+if [ "${output_type}" = "deb" ]; then
+   fpm \
+      --force \
+      --input-type python \
+      --output-type ${output_type} \
+      --package "./bin" \
+      --architecture all \
+      --license AGPL \
+      --version ${version} \
+      --vendor "Alignak Team (contact@alignak.net)" \
+      --maintainer "Alignak Team (contact@alignak.net)" \
+      --python-package-name-prefix "${python_prefix}" \
+      --python-scripts-executable "/usr/bin/python" \
+      --python-install-lib "/usr/lib/python${python_version}/dist-packages" \
+      --python-install-data '/usr/local' \
+      --python-install-bin '/usr/local/bin' \
+      --python-dependencies \
+      --python-disable-dependency cherrypy \
+      --depends python-cherrypy \
+      --deb-systemd ./bin/systemd/alignak-arbiter@.service \
+      --deb-systemd ./bin/systemd/alignak-broker@.service \
+      --deb-systemd ./bin/systemd/alignak-poller@.service \
+      --deb-systemd ./bin/systemd/alignak-reactionner@.service \
+      --deb-systemd ./bin/systemd/alignak-receiver@.service \
+      --deb-systemd ./bin/systemd/alignak-scheduler@.service \
+      --deb-systemd ./bin/systemd/alignak.service \
+      --deb-no-default-config-files \
+      ./setup.py
+elif [ "${output_type}" = "rpm" ]; then
+   fpm \
+      --force \
+      --input-type python \
+      --output-type ${output_type} \
+      --package "./bin" \
+      --architecture all \
+      --license AGPL \
+      --version ${version} \
+      --vendor "Alignak Team (contact@alignak.net)" \
+      --maintainer "Alignak Team (contact@alignak.net)" \
+      --python-package-name-prefix "${python_prefix}" \
+      --python-scripts-executable "/usr/bin/python" \
+      --python-install-lib "/usr/lib/python${python_version}/dist-packages" \
+      --python-install-data '/usr/local' \
+      --python-install-bin '/usr/local/bin' \
+      --python-dependencies \
+      --deb-systemd ./bin/systemd/alignak-arbiter@.service \
+      --deb-systemd ./bin/systemd/alignak-broker@.service \
+      --deb-systemd ./bin/systemd/alignak-poller@.service \
+      --deb-systemd ./bin/systemd/alignak-reactionner@.service \
+      --deb-systemd ./bin/systemd/alignak-receiver@.service \
+      --deb-systemd ./bin/systemd/alignak-scheduler@.service \
+      --deb-systemd ./bin/systemd/alignak.service \
+      --deb-no-default-config-files \
+      ./setup.py
+else
+   fpm \
+      --force \
+      --input-type python \
+      --output-type ${output_type} \
+      --package "./bin" \
+      --architecture all \
+      --license AGPL \
+      --version ${version} \
+      --vendor "Alignak Team (contact@alignak.net)" \
+      --maintainer "Alignak Team (contact@alignak.net)" \
+      --python-package-name-prefix "${python_prefix}" \
+      --python-scripts-executable "/usr/bin/python" \
+      --python-install-lib "/usr/lib/python${python_version}/dist-packages" \
+      --python-install-data '/usr/local' \
+      --python-install-bin '/usr/local/bin' \
+      --python-dependencies \
+      ./setup.py
+fi
