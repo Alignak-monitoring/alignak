@@ -28,14 +28,17 @@ with open(os.path.join('alignak', 'version.py')) as fh:
     VERSION = ns['VERSION']
 
 # Get default configuration files recursively
-data_files = []
-for subdir, dirs, files in os.walk('./etc'):
-    # Configuration directory
-    target = os.path.join('etc/alignak', re.sub(r"^(%s\/|%s$)" % ('./etc', './etc'), "", subdir))
-
-    package_files = [os.path.join(subdir, file) for file in files]
-    if package_files:
-        data_files.append((target, package_files))
+data_files = [
+    ('share/alignak', ['requirements.txt']),
+    ('share/alignak', ['bin/post-install.sh'])
+]
+for dir in ['./etc', './bin/manpages/manpages', './bin/rc.d', './bin/systemd']:
+    for subdir, dirs, files in os.walk(dir):
+        # Configuration directory
+        target = os.path.join('share/alignak', subdir)
+        package_files = [os.path.join(subdir, file) for file in files]
+        if package_files:
+            data_files.append((target, package_files))
 
 setup(
     name='alignak',

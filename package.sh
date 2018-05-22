@@ -139,6 +139,7 @@ if [ "${output_type}" = "deb" ]; then
       --python-install-data '/usr/local' \
       --python-install-bin '/usr/local/bin' \
       --no-python-dependencies \
+      --after-install '/usr/local/share/alignak/post-install.sh' \
       --deb-no-default-config-files \
       --deb-systemd ./bin/systemd/alignak-arbiter@.service \
       --deb-systemd ./bin/systemd/alignak-broker@.service \
