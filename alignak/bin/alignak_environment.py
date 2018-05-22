@@ -137,7 +137,7 @@ class AlignakConfigParser(object):
             try:
                 args = docopt(__doc__)
             except DocoptExit as exp:
-                print(("Command line parsing error:\n%s." % (exp)))
+                print("Command line parsing error:\n%s." % (exp))
                 exit(64)
 
             # Used as an independent script
@@ -155,7 +155,7 @@ class AlignakConfigParser(object):
         # Get the targeted item
         self.configuration_file = args['<cfg_file>']
         if self.verbose:
-            print(("- configuration file name: %s" % self.configuration_file))
+            print("- configuration file name: %s" % self.configuration_file)
         if self.configuration_file is None:
             print("* missing configuration file name. Please provide a configuration "
                   "file name in the command line parameters")
@@ -164,7 +164,7 @@ class AlignakConfigParser(object):
             exit(64)
         self.configuration_file = os.path.abspath(self.configuration_file)
         if not os.path.exists(self.configuration_file):
-            print(("* required configuration file does not exist: %s" % self.configuration_file))
+            print("* required configuration file does not exist: %s" % self.configuration_file)
             if self.embedded:
                 raise ValueError
             exit(1)
@@ -193,21 +193,21 @@ class AlignakConfigParser(object):
                     if not re.search(r"\.ini$", found_file):
                         continue
                     self.cfg_files.append(os.path.join(root, found_file))
-        print(("Loading configuration files: %s " % self.cfg_files))
+        print("Loading configuration files: %s " % self.cfg_files)
 
         # Read and parse the found configuration files
         self.config = configparser.ConfigParser()
         try:
             self.config.read(self.cfg_files)
             if self.config._sections == {}:
-                print(("* bad formatted configuration file: %s " % self.configuration_file))
+                print("* bad formatted configuration file: %s " % self.configuration_file)
                 if self.embedded:
                     raise ValueError
                 sys.exit(2)
 
             for section in self.config.sections():
                 if self.verbose:
-                    print(("- section: %s" % section))
+                    print("- section: %s" % section)
                 for (key, value) in self.config.items(section):
                     inner_property = "%s.%s" % (section, key)
 
@@ -218,13 +218,13 @@ class AlignakConfigParser(object):
                     os.environ[inner_property] = value
 
                     if self.verbose:
-                        print(("  %s = %s" % (inner_property, value)))
+                        print("  %s = %s" % (inner_property, value))
 
                     if self.export:
                         # Allowed shell variables may only contain: [a-zA-z0-9_]
                         inner_property = re.sub('[^0-9a-zA-Z]+', '_', inner_property)
                         inner_property = inner_property.upper()
-                        print(("export %s=%s" % (inner_property, cmd_quote(value))))
+                        print("export %s=%s" % (inner_property, cmd_quote(value)))
         except configparser.ParsingError as exp:
             print("* parsing error in config file : %s\n%s"
                   % (self.configuration_file, exp.message))
@@ -365,11 +365,11 @@ def main():
     try:
         parsed_configuration.parse()
     except configparser.ParsingError as exp:
-        print(("Environment file parsing error: %s", exp))
+        print("Environment file parsing error: %s", exp)
 
     if parsed_configuration.export:
         # Export Alignak version
-        print(("export ALIGNAK_VERSION=%s" % (parsed_configuration.alignak_version)))
+        print("export ALIGNAK_VERSION=%s" % (parsed_configuration.alignak_version))
 
 
 if __name__ == '__main__':

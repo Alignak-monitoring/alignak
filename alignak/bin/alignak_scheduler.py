@@ -84,7 +84,8 @@
  and a new one is created.
 """
 
-from __future__ import print_function
+import sys
+import traceback
 
 from alignak.daemons.schedulerdaemon import Alignak
 from alignak.util import parse_daemon_args
@@ -100,7 +101,8 @@ def main():
         daemon = Alignak(debug=args.debug_file is not None, **args.__dict__)
         daemon.main()
     except Exception as exp:  # pylint: disable=broad-except
-        print(("*** Daemon exited because: %s" % str(exp)))
+        sys.stderr.write("*** Daemon exited because: %s" % str(exp))
+        traceback.print_exc()
         exit(1)
 
 

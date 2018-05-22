@@ -54,7 +54,8 @@
  In case the arbiter has a new conf to send, the broker forget its old
  schedulers (and their associated broks) and take the new ones instead.
 """
-from __future__ import print_function
+import sys
+import traceback
 
 from alignak.daemons.brokerdaemon import Broker
 from alignak.util import parse_daemon_args
@@ -70,7 +71,8 @@ def main():
         daemon = Broker(debug=args.debug_file is not None, **args.__dict__)
         daemon.main()
     except Exception as exp:  # pylint: disable=broad-except
-        print(("*** Daemon exited because: %s" % str(exp)))
+        sys.stderr.write("*** Daemon exited because: %s" % str(exp))
+        traceback.print_exc()
         exit(1)
 
 

@@ -38,6 +38,8 @@ numpy==1.14.3
 # Uncomment or `pip install pyopenssl` if SSL must be used between the Alignak daemons
 # pyopenssl
 
+# configparser is used to parse command line of the daemons
+configparser; python_version == '2.7'
 # docopt is used by the alignak_environment script
 docopt==0.6.2
 
