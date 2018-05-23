@@ -1359,7 +1359,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             return
 
         # If we do not force and we are in downtime, bailout
-        # if the no_event_handlers_during_downtimes is 1 in conf
+        # if the no_event_handlers_during_downtimes is set in the configuration
         if not ext_cmd and self.in_scheduled_downtime and cls.no_event_handlers_during_downtimes:
             logger.debug("Event handler will not be launched. "
                          "The item %s is in a scheduled downtime", self.get_full_name())
@@ -2416,7 +2416,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 env = macroresolver.get_env_macros(macrodata)
 
             # By default we take the global timeout, but we use the command one if it
-            # define it (by default it's -1)
+            # is defined (default is -1 for no timeout)
             timeout = cls.check_timeout
             if check_command.timeout != -1:
                 timeout = check_command.timeout
@@ -3009,7 +3009,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.state_id_before_impact = self.state_id
             # This flag will know if we override the impact state
             self.state_changed_since_impact = False
-            self.state = 'UNREACHABLE'  # exit code UNDETERMINED
+            self.state = u'UNREACHABLE'
             self.state_id = 4
 
     def unset_impact_state(self):

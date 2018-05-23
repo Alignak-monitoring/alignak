@@ -39,7 +39,7 @@ script:
     # Do not print log synthesis on test end
     # Get coverage on tests run
     echo "Starting tests..."
-    pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_actions.py || travis_terminate 1;
+    pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
     cd ..
     cp test/.coverage .
     # codecov

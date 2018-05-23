@@ -49,7 +49,7 @@
  The configuration sent by the arbiter specifies from which schedulers the
  poller will take its checks.
  When the poller is already launched and has its own conf, it keeps on
- listening the arbiter (one a timeout)
+ listening the arbiter
  In case the arbiter has a new conf to send, the poller forget its old
  schedulers (and the associated checks) and take the new ones instead.
 """

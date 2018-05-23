@@ -109,9 +109,9 @@ class EventHandler(Action):
         """Setter of output attribute
 
         :param out: new output
-        :type out:
-        :param max_plugins_output_length: not use
-        :type max_plugins_output_length:
+        :type out: str
+        :param max_plugins_output_length: not used
+        :type max_plugins_output_length: int
         :return: None
         """
         self.output = out

@@ -130,7 +130,7 @@ class TestEnvironment(AlignakTest):
         ])
         assert self.alignak_env.get_defaults() == default_section
 
-        assert self.alignak_env.get_monitored_configuration() == {}
+        assert self.alignak_env.get_legacy_cfg_files() == {}
 
         arbiter_master = {
             '_dist': '/tmp',

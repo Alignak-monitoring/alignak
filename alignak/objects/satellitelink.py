@@ -126,9 +126,9 @@ class SatelliteLink(Item):
             StringProp(default=u'127.0.0.1', fill_brok=['full_status'], to_send=True),
         'active':
             BoolProp(default=True, fill_brok=['full_status'], to_send=True),
-        'timeout':
+        'short_timeout':
             IntegerProp(default=3, fill_brok=['full_status'], to_send=True),
-        'data_timeout':
+        'long_timeout':
             IntegerProp(default=120, fill_brok=['full_status'], to_send=True),
 
         # the delay (seconds) between two ping retries
@@ -154,7 +154,7 @@ class SatelliteLink(Item):
         'modules':
             ListProp(default=[''], split_on_comma=True),
         'polling_interval':
-            IntegerProp(default=1, fill_brok=['full_status'], to_send=True),
+            IntegerProp(default=5, fill_brok=['full_status'], to_send=True),
         'use_timezone':
             StringProp(default=u'NOTSET', to_send=True),
         'realm':
@@ -486,8 +486,8 @@ class SatelliteLink(Item):
         # Create the HTTP client for the connection
         try:
             self.con = HTTPClient(address=self.satellite_map['address'],
-                                  port=self.satellite_map['port'], timeout=self.timeout,
-                                  data_timeout=self.data_timeout,
+                                  port=self.satellite_map['port'],
+                                  short_timeout=self.short_timeout, long_timeout=self.long_timeout,
                                   use_ssl=self.satellite_map['use_ssl'],
                                   strong_ssl=self.satellite_map['hard_ssl_name_check'])
             self.uri = self.con.uri
@@ -772,8 +772,6 @@ class SatelliteLink(Item):
 
         Used to build the initial broks for a broker connecting to a scheduler
 
-        The first ping ensure the satellite is there to avoid a big timeout
-
         :param broker_name: the concerned broker name
         :type broker_name: str
         :return: Boolean indicating if the running id changed
@@ -878,8 +876,6 @@ class SatelliteLink(Item):
         and THEN Send a HTTP request to the satellite (POST /push_broks)
         Send broks to the satellite
 
-        The first ping ensure the satellite is there to avoid a big timeout
-
         :param broks: Brok list to send
         :type broks: list
         :return: True on success, False on failure
@@ -893,9 +889,7 @@ class SatelliteLink(Item):
     def push_actions(self, actions, scheduler_id):
         """Send a HTTP request to the satellite (GET /ping)
         and THEN Send a HTTP request to the satellite (POST /push_broks)
-        Send broks to the satellite
-
-        The first ping ensure the satellite is there to avoid a big timeout
+        Send actions to the satellite
 
         :param actions: Action list to send
         :type actions: list
@@ -950,7 +944,7 @@ class SatelliteLink(Item):
         :return: External Command list on success, [] on failure
         :rtype: list
         """
-        res = self.con.get('get_external_commands', wait='long')
+        res = self.con.get('get_external_commands', wait=True)
         logger.debug("Got %d external commands from %s: %s", len(res), self.name, res)
         return unserialize(res, True)
 
@@ -967,7 +961,7 @@ class SatelliteLink(Item):
         :return: Broks list on success, [] on failure
         :rtype: list
         """
-        res = self.con.get('get_broks', {'broker_name': broker_name}, wait='long')
+        res = self.con.get('get_broks', {'broker_name': broker_name}, wait=True)
         logger.debug("Got broks from %s: %s", self.name, res)
         return unserialize(res, True)
 
@@ -997,7 +991,7 @@ class SatelliteLink(Item):
         :return: Actions list on success, [] on failure
         :rtype: list
         """
-        res = self.con.get('get_checks', params, wait='long')
+        res = self.con.get('get_checks', params, wait=True)
         logger.debug("Got actions from %s: %s", self.name, res)
         return unserialize(res, True)
 
@@ -1012,7 +1006,7 @@ class SatelliteLink(Item):
         :return: Actions list on success, [] on failure
         :rtype: list
         """
-        res = self.con.get('get_host', host_name, wait='long')
+        res = self.con.get('get_host', host_name, wait=True)
         logger.debug("Got an host from %s: %s", self.name, res)
         return unserialize(res, True)
 

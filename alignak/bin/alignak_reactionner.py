@@ -50,7 +50,7 @@
  The configuration sent by the arbiter specifies from which schedulers the
  will take actions.
  When the reactionner is already launched and has its own conf, it keeps
- on listening the arbiter (one a timeout)
+ on listening the arbiter
  In case the arbiter has a new conf to send, the reactionner forget its old
  schedulers (and the associated actions) and take the new ones instead.
 """

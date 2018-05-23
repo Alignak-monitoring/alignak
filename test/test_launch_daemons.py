@@ -153,6 +153,49 @@ class TestLaunchDaemons(AlignakTest):
         # This to check that the configuration is correct!
         self.arbiter.load_monitoring_config_file()
 
+    def test_arbiter_class_env_default(self):
+        """ Instantiate the Alignak Arbiter class without environment file
+
+        :return:
+        """
+        from alignak.daemons.arbiterdaemon import Arbiter
+        print("Instantiate arbiter with default environment file...")
+        # Using values that are usually provided by the command line parameters
+        args = {
+            'env_file': "/tmp/etc/alignak/alignak.ini",
+            'daemon_name': 'arbiter-master'
+        }
+        self.arbiter = Arbiter(**args)
+
+        print("Arbiter: %s" % (self.arbiter))
+        assert self.arbiter.env_filename == '/tmp/etc/alignak/alignak.ini'
+        assert self.arbiter.monitoring_config_files == []
+        assert len(self.arbiter.monitoring_config_files) == 0
+
+        # Configure the logger
+        self.arbiter.log_level = 'INFO'
+        self.arbiter.setup_alignak_logger()
+
+        # Setup our modules manager
+        self.arbiter.load_modules_manager()
+
+        # Load and initialize the arbiter configuration
+        # This to check that the configuration is correct!
+        self.arbiter.load_monitoring_config_file()
+        # One file created to contain the Alignak macros
+        # File name is a temporary prefixed file ...
+        assert len(self.arbiter.monitoring_config_files) == 1
+        assert self.arbiter.monitoring_config_files[0].startswith(('/tmp/Alignak'))
+        # properties = self.__class__.properties
+        # for prop in properties:
+        #     print("Prop: %s" % prop)
+        # macros = self.__class__.macros
+        # for macro_name in self.resource_macros_names:
+        #     print("Macro: %s" % macro_name)
+        #     properties['$' + macro_name + '$'] = StringProp(default='')
+        #     macros[macro_name] = '$' + macro_name + '$'
+
+
     def test_arbiter_unexisting_environment(self):
         """ Running the Alignak Arbiter with a not existing environment file
 
@@ -204,11 +247,7 @@ class TestLaunchDaemons(AlignakTest):
         print("Stdout: %s" % stdout)
         assert b"Sorry, I bail out, exit code: 4" in stdout
         stderr = arbiter.stderr.read()
-        print(stderr)
-        # assert "The Alignak environment file is not existing or do not " \
-        #        "define any monitoring configuration files. " \
-        #        "The arbiter can not start correctly." in stderr
-        # Arbiter process must exit with a return code == 4
+        print("Stderr: %s" % stderr)
         assert ret == 4
 
     def test_arbiter_unexisting_monitoring_configuration(self):

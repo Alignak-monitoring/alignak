@@ -633,7 +633,7 @@ else:  # pragma: no cover, not currently tested with Windows...
                     env=self.local_env, shell=True)
             except WindowsError as exp:  # pylint: disable=E0602
                 logger.info("We kill the process: %s %s", exp, self.command)
-                self.status = 'timeout'
+                self.status = u'timeout'
                 self.execution_time = time.time() - self.check_time
 
         def _kill(self):

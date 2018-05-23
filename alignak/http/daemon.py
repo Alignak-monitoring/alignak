@@ -73,7 +73,11 @@ class HTTPDaemon(object):
         :param thread_pool_size:
         """
         self.port = port
-        self.host = host
+        try:
+            self.host = host.encode('utf-8')
+        except Exception as exp:
+            self.host = host
+        logger.warning("self.host: %s (%s)", self.host, type(self.host))
         self.use_ssl = use_ssl
 
         self.uri = '%s://%s:%s' % ('https' if self.use_ssl else 'http', self.host, self.port)
@@ -101,7 +105,6 @@ class HTTPDaemon(object):
         # - socket_queue_size
         cherrypy.config.update({'engine.autoreload.on': False,
                                 'server.thread_pool': thread_pool_size,
-                                # 'server.socket_host': self.host.encode('utf-8'),
                                 'server.socket_host': self.host,
                                 'server.socket_port': self.port})
 

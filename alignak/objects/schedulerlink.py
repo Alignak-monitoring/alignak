@@ -92,8 +92,8 @@ class SchedulerLink(SatelliteLink):
         It always manage arbiters
         """
         super(SchedulerLink, self).__init__(params, parsing)
-
-        self.manage_arbiters = True
+        #
+        # self.manage_arbiters = True
 
     def get_override_configuration(self):
         """

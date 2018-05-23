@@ -414,7 +414,7 @@ class Scheduler(object):  # pylint: disable=R0902
             # Update the default scheduler tick for this function
             try:
                 new_tick = int(new_tick)
-                logger.info("Changing the default tick to %d for the action %s", new_tick, name)
+                logger.warning("Changing the default tick to %d for the action %s", new_tick, name)
                 self.recurrent_works[key] = (name, fun, new_tick)
             except ValueError:
                 logger.warning("Changing the default tick for '%s' to '%s' failed!", new_tick, name)
@@ -1727,46 +1727,6 @@ class Scheduler(object):  # pylint: disable=R0902
                 elif entry.has_default:
                     data[prop] = entry.default
 
-        # todo: some information in this brok are unuseful: last_log_rotation, command_file
-        # Some others are unaccurate: last_command_check, modified_host_attributes,
-        # modified_service_attributes
-        # I do not remove yet because some modules may use them?
-        # data = {
-        #     # "is_running": 1,
-        #     # "instance_id": self.instance_id,
-        #     # "alignak_name": self.alignak_name,
-        #     # "instance_name": self.name,
-        #     # "last_alive": now,
-        #     "interval_length": self.pushed_conf.interval_length,
-        #     # "program_start": self.program_start,
-        #     # "pid": os.getpid(),
-        #     # "daemon_mode": 1,
-        #     # "last_command_check": now,
-        #     # "last_log_rotation": now,
-        #     # "notifications_enabled": self.pushed_conf.enable_notifications,
-        #     # "active_service_checks_enabled": self.pushed_conf.execute_service_checks,
-        #     # "passive_service_checks_enabled": self.pushed_conf.accept_passive_service_checks,
-        #     # "active_host_checks_enabled": self.pushed_conf.execute_host_checks,
-        #     # "passive_host_checks_enabled": self.pushed_conf.accept_passive_host_checks,
-        #     # "event_handlers_enabled": self.pushed_conf.enable_event_handlers,
-        #     # "flap_detection_enabled": self.pushed_conf.enable_flap_detection,
-        #     "process_performance_data": self.pushed_conf.process_performance_data,
-        #     # "modified_host_attributes": 0,
-        #     # "modified_service_attributes": 0,
-        #     "global_host_event_handler": self.pushed_conf.global_host_event_handler.get_name()
-        #     if self.pushed_conf.global_host_event_handler else '',
-        #     'global_service_event_handler':
-        # self.pushed_conf.global_service_event_handler.get_name()
-        #     if self.pushed_conf.global_service_event_handler else '',
-        #
-        #     # Flapping - duplicated!
-        #     # # # "enable_flap_detection": self.pushed_conf.enable_flap_detection,
-        #     "flap_history": self.pushed_conf.flap_history,
-        #     "low_host_flap_threshold": self.pushed_conf.low_host_flap_threshold,
-        #     "low_service_flap_threshold": self.pushed_conf.low_service_flap_threshold,
-        #     "high_host_flap_threshold": self.pushed_conf.high_host_flap_threshold,
-        #     "high_service_flap_threshold": self.pushed_conf.high_service_flap_threshold,
-        # }
         logger.debug("Program status brok %s data: %s", brok_type, data)
         brok = Brok({'type': brok_type, 'data': data})
         return brok

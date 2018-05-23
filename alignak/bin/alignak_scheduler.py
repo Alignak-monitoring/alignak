@@ -79,7 +79,7 @@
  the scheduler must schedule, and a list of reactionners and pollers
  to execute them
  When the scheduler is already launched and has its own conf, it keeps on
- listening the arbiter (one a timeout)
+ listening the arbiter
  In case the arbiter has a new conf to send, the scheduler is stopped
  and a new one is created.
 """

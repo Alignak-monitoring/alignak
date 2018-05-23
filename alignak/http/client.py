@@ -104,11 +104,11 @@ class HTTPClientTimeoutException(Exception):  # pragma: no cover, not with unit 
 
 class HTTPClientConnectionException(Exception):
     """HTTP Connection Exception - raised when connection fails with the server.
-    This specific exception is raised when a requests Timeout exception is catched.
+    This specific exception is raised when a connection exception is catched.
 
     Its attribute are:
     - uri: the requested URI,
-    - timeout: the duration of the timeout.
+    - msg: the exception message
     """
     def __init__(self, uri, msg):
         # Call the base class constructor with the parameters it needs
@@ -127,13 +127,13 @@ class HTTPClient(object):
     Basically used to get / post to other daemons
 
     """
-    def __init__(self, address='', port=0, use_ssl=False, timeout=3,
-                 data_timeout=120, uri='', strong_ssl=False, proxy=''):
+    def __init__(self, address='', port=0, use_ssl=False, short_timeout=3,
+                 long_timeout=120, uri='', strong_ssl=False, proxy=''):
         # pylint: disable=too-many-arguments
         self.address = address
         self.port = port
-        self.timeout = timeout
-        self.data_timeout = data_timeout
+        self.short_timeout = short_timeout
+        self.long_timeout = long_timeout
         self.use_ssl = use_ssl
         self.strong_ssl = strong_ssl
         if not uri:
@@ -164,14 +164,14 @@ class HTTPClient(object):
         return '%s%s' % (self.uri, path)
 
     def make_timeout(self, wait):
-        """Get timeout depending on wait time
+        """Get short_timeout depending on wait time
 
-        :param wait: wait is short or long (else)
-        :type wait: int
-        :return: self.timeout if wait is short, self.data_timeout otherwise
+        :param wait: wait for a long timeout
+        :type wait: bool
+        :return: self.short_timeout if wait is short, self.long_timeout otherwise
         :rtype: int
         """
-        return self.timeout if wait == 'short' else self.data_timeout
+        return self.short_timeout if not wait else self.long_timeout
 
     def set_proxy(self, proxy):  # pragma: no cover, not with unit tests
         """Set HTTP proxy
@@ -187,15 +187,15 @@ class HTTPClient(object):
                 'https': proxy,
             }
 
-    def get(self, path, args=None, wait='short'):
-        """Do a GET HTTP request
+    def get(self, path, args=None, wait=False):
+        """GET an HTTP request to a daemon
 
         :param path: path to do the request
         :type path: str
         :param args: args to add in the request
         :type args: dict
-        :param wait: timeout policy (short / long)
-        :type wait: int
+        :param wait: True for a long timeout
+        :type wait: bool
         :return: None
         """
         if args is None:
@@ -216,15 +216,15 @@ class HTTPClient(object):
         except Exception as exp:
             raise HTTPClientException('Request error to %s: %s' % (uri, exp))
 
-    def post(self, path, args, wait='short'):
-        """Do a POST HTTP request
+    def post(self, path, args, wait=False):
+        """POST an HTTP request to a daemon
 
         :param path: path to do the request
         :type path: str
         :param args: args to add in the request
         :type args: dict
-        :param wait: timeout policy (short / long)
-        :type wait: int
+        :param wait: True for a long timeout
+        :type wait: bool
         :return: Content of the HTTP response if server returned 200
         :rtype: str
         """
@@ -246,16 +246,14 @@ class HTTPClient(object):
         except Exception as exp:
             raise HTTPClientException('Request error to %s: %s' % (uri, exp))
 
-    def put(self, path, args, wait='short'):  # pragma: no cover, looks never used!
+    def put(self, path, args, wait=False):  # pragma: no cover, looks never used!
         # todo: remove this because it looks never used anywhere...
-        """Do a PUT HTTP request
+        """PUT and HTTP request to a daemon
 
         :param path: path to do the request
         :type path: str
         :param args: data to send in the request
         :type args:
-        :param wait: timeout policy (short / long)
-        :type wait: int
         :return: Content of the HTTP response if server returned 200
         :rtype: str
         """

@@ -90,9 +90,12 @@ class Worker(object):
         :param module_name:
         :param actions_queue:
         :param returns_queue:
-        :param processes_by_worker:
+        :param processes_by_worker: number of processes by worker
+        :type processes_by_worker: int
         :param timeout:
-        :param max_plugins_output_length:
+        :type timeout: int
+        :param max_plugins_output_length: max output lenght
+        :type max_plugins_output_length: int
         :param target:
         :param loaded_into:
         """

@@ -301,11 +301,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'check_external_commands':
             BoolProp(default=True),
         'command_check_interval':
-            UnusedProp(text=u'another value than look always the file is useless, so we fix it.'),
+            UnusedProp(text=u'Alignak will always check for external commands. This configuration value is useless.'),
         'command_file':
             StringProp(default=u''),
         'external_command_buffer_slots':
-            UnusedProp(text=u'We do not limit the external command slot.'),
+            UnusedProp(text=u'Alignak do not limit the external commands slot.'),
 
         # Application updates checks
         'check_for_updates':
@@ -414,7 +414,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                             'The only way is the smart way.'),
 
         'max_service_check_spread':
-            IntegerProp(default=30, class_inherit=[(Service, 'max_check_spread')]),
+            IntegerProp(default=5, class_inherit=[(Service, 'max_check_spread')]),
 
         'service_interleave_factor':
             UnusedProp(text=u'This option is useless in the Alignak scheduling '
@@ -441,7 +441,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                             'of the initial check is a random one.'),
 
         'max_host_check_spread':
-            IntegerProp(default=30, class_inherit=[(Host, 'max_check_spread')]),
+            IntegerProp(default=5, class_inherit=[(Host, 'max_check_spread')]),
 
         'interval_length':
             IntegerProp(default=60, fill_brok=['full_status'],
@@ -491,7 +491,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             UnusedProp(text=u'fork twice is not used.'),
 
         'enable_environment_macros':
-            BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
+            BoolProp(default=False, class_inherit=[(Host, None), (Service, None)]),
 
         # Flapping management
         'enable_flap_detection':
@@ -651,19 +651,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'broker_module':
             StringProp(default=''),
 
-        # Debug
-        'debug_file':
-            UnusedProp(text=None),
-
-        'debug_level':
-            UnusedProp(text=None),
-
-        'debug_verbosity':
-            UnusedProp(text=None),
-
-        'max_debug_file_size':
-            UnusedProp(text=None),
-
         'modified_attributes':
             IntegerProp(default=0),
 
@@ -674,7 +661,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             IntegerProp(default=8192, class_inherit=[(Host, None), (Service, None)]),
 
         'no_event_handlers_during_downtimes':
-            BoolProp(default=False, class_inherit=[(Host, None), (Service, None)]),
+            BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
 
         # Interval between cleaning queues pass
         'cleaning_queues_interval':
@@ -682,7 +669,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Now for problem/impact states changes
         'enable_problem_impacts_states_change':
-            BoolProp(default=False, class_inherit=[(Host, None), (Service, None)]),
+            BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
 
         # More a running value in fact
         'resource_macros_names':
@@ -699,7 +686,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             StringProp(default='/usr/local/var/log/alignak'),
 
         'daemons_initial_port':
-            IntegerProp(default=7800),
+            IntegerProp(default=10000),
 
         # Kill launched daemons on communication failure
         'daemons_failure_kill':
@@ -725,6 +712,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'PREFIX': '',
         'ALIGNAK': 'alignak_name',
         'MAINCONFIGFILE': 'main_config_file',
+        'MAINCONFIGDIR': 'config_base_dir',
+        # The following one are deprecated...
         'STATUSDATAFILE': '',
         'COMMENTDATAFILE': '',
         'DOWNTIMEDATAFILE': '',
@@ -941,28 +930,26 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :type params:
         :return: None
         """
-        clean_params = self.clean_params(params)
-
-        logger.info("Alignak parameters:")
-        for key, value in sorted(clean_params.items()):
+        logger.debug("Alignak parameters:")
+        for key, value in sorted(self.clean_params(params).items()):
             if key in self.properties:
-                val = self.properties[key].pythonize(clean_params[key])
+                val = self.properties[key].pythonize(value)
             elif key in self.running_properties:
                 logger.warning("using a the running property %s in a config file", key)
-                val = self.running_properties[key].pythonize(clean_params[key])
+                val = self.running_properties[key].pythonize(value)
             elif key.startswith('$') or key in ['cfg_file', 'cfg_dir']:
                 # it's a macro or a useless now param, we don't touch this
                 val = value
             else:
                 logger.debug("Guessing the property '%s' type because it "
                              "is not in %s object properties", key, self.__class__.__name__)
-                val = ToGuessProp.pythonize(clean_params[key])
+                val = ToGuessProp.pythonize(value)
 
             setattr(self, key, val)
-            logger.info("- %s = %s", key, val)
+            logger.debug("- %s = %s", key, val)
             # Maybe it's a variable as $USER$ or $ANOTHERVATRIABLE$
-            # so look at the first character. If it's a $, it's a variable
-            # and if it's end like it too
+            # so look at the first character. If it's a $, it is a macro variable
+            # if it ends with $ too
             if key[0] == '$' and key[-1] == '$':
                 macro_name = key[1:-1]
                 self.resource_macros_names.append(macro_name)
@@ -1248,8 +1235,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Check and load the parameters
         self.load_params(params)
-        # And then update our MACRO dict
-        self.fill_resource_macros_names_macros()
 
         for o_type in objectscfg:
             objects[o_type] = []
@@ -1265,6 +1250,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     value = ' '.join(elts[1:])
                     tmp_obj[prop].append(value)
                 if tmp_obj != {}:
+                    # Create a new object
                     objects[o_type].append(tmp_obj)
 
         return objects
@@ -2077,19 +2063,19 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 self.add_warning(msg)
 
         # Now the command_file
-        if hasattr(self, 'command_file') and self.command_file != '':
+        if hasattr(self, 'command_file') and getattr(self, 'command_file'):
             # Ok, the user wants external commands file, search for such a module
             if not self.got_arbiter_module_type_defined('external_commands'):
                 msg = "Your configuration parameter '%s = %s' needs to use an external module " \
-                      "such as 'external_commands' but I did not found one!" % \
-                      ('command_file', self.command_file)
+                      "such as 'external_commands' but I did not found one!" \
+                      % ('command_file', self.command_file)
                 logger.error(msg)
                 self.add_error(msg)
             else:
-                msg = "Your configuration parameters '%s = %s' are deprecated " \
-                      "and will be ignored. Please configure the 'external_commands' module " \
-                      "as expected." % \
-                      ('command_file', self.command_file)
+                msg = "Your configuration parameter '%s = %s' is deprecated " \
+                      "and will be ignored. Please configure an external commands capable " \
+                      "module as expected (eg external-commands, NSCA, or WS module may suit." \
+                      % ('command_file', self.command_file)
                 logger.warning(msg)
                 self.add_warning(msg)
 

@@ -333,8 +333,6 @@ class Daemon(object):
             IntegerProp(default=32),
         'debug':
             BoolProp(default=False),
-        'debug_file':
-            StringProp(default=u''),
         'monitoring_config_files':
             ListProp(default=[]),
 
@@ -431,7 +429,7 @@ class Daemon(object):
 
         # Configuration file name in environment
         if os.environ.get('ALIGNAK_CONFIGURATION_FILE'):
-            kwargs['env_file'] = [os.path.abspath(os.environ.get('ALIGNAK_CONFIGURATION_FILE'))]
+            kwargs['env_file'] = os.path.abspath(os.environ.get('ALIGNAK_CONFIGURATION_FILE'))
 
         # I must have an Alignak environment file
         if 'env_file' not in kwargs:
@@ -454,7 +452,7 @@ class Daemon(object):
                 self.alignak_env = AlignakConfigParser(args)
                 self.alignak_env.parse()
 
-                for prop, value in list(self.alignak_env.get_monitored_configuration().items()):
+                for prop, value in list(self.alignak_env.get_legacy_cfg_files().items()):
                     self.pre_log.append(("DEBUG",
                                          "Found Alignak monitoring "
                                          "configuration parameter, %s = %s" % (prop, value)))
@@ -547,8 +545,6 @@ class Daemon(object):
             self.do_replace = BoolProp().pythonize(kwargs['do_replace'])
         if 'debug' in kwargs:
             self.debug = BoolProp().pythonize(kwargs['debug'])
-        # if 'debug_file' in kwargs and kwargs['debug_file']:
-        #     self.debug_file = PathProp().pythonize(kwargs['debug_file'])
 
         if 'host' in kwargs and kwargs['host']:
             self.host = StringProp().pythonize(kwargs['host'])
@@ -850,7 +846,7 @@ class Daemon(object):
                 logger.error(message)
                 sys.stderr.write(message)
             logger.error("Sorry, I bail out, exit code: %d", exit_code)
-            sys.stderr.write("Sorry, I bail out, exit code: %d", exit_code)
+            sys.stderr.write("Sorry, I bail out, exit code: %d" % exit_code)
         else:
             if message:
                 logger.info(message)

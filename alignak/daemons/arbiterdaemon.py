@@ -391,20 +391,41 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         #     self.exit_on_error("*** No Alignak environment file. Exiting...", exit_code=2)
         # else:
         #     logger.info("Environment file: %s", self.env_filename)
-
         if self.monitoring_config_files:
             logger.info("Loading monitored system configuration from %s",
                         self.monitoring_config_files)
         else:
-            logger.info("No file configured for monitored system configuration")
-        # REF: doc/alignak-conf-dispatching.png (1)
-        raw_objects = self.conf.read_config_buf(
-            self.conf.read_config(self.monitoring_config_files)
-        )
+            logger.info("No file(s) configured for monitored system configuration")
+
+        # Manage Alignak macros; this before loading the legacy configuration files
+        # with their own potential macros
+        # ---------------------
+        macros = []
+        # Get the macros declared in the Alignak environment (alignak.ini) file!
+        if self.alignak_env:
+            # The properties defined in the alignak.cfg file are not yet set! So we set the one
+            # got from the environment
+            logger.info("Getting Alignak macros...")
+
+            alignak_macros = self.alignak_env.get_alignak_macros()
+            if alignak_macros:
+                for key in sorted(alignak_macros.keys()):
+                    # Create and old legacy macro format
+                    macros.append('$%s$=%s' % (key.upper(), alignak_macros[key]))
+                    logger.debug("- Alignak macro '%s' = %s", key, alignak_macros[key])
+
+        # Read and parse the legacy configuration files
+        raw_objects = self.conf.read_config_buf(self.conf.read_config(self.monitoring_config_files))
+        if macros:
+            self.conf.load_params(macros)
+
+        # Update our macro dictionary
+        self.conf.fill_resource_macros_names_macros()
 
         # Update configuration with the environment file path
-        self.conf.config_base_dir = os.path.dirname(self.env_filename)
         self.conf.main_config_file = os.path.abspath(self.env_filename)
+        self.conf.config_base_dir = os.path.dirname(self.conf.main_config_file)
+        print("%s / %s" % (self.conf.config_base_dir, self.conf.main_config_file))
 
         # Maybe conf is already invalid
         if not self.conf.conf_is_correct:
@@ -417,11 +438,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Alignak global environment file
         # -------------------------------
-        # Here we got the monitoring configuration from the Cfg configuration files
+        # Here we got the monitored system configuration from the legacy configuration files
         # We must overload this configuration for the daemons and modules with the configuration
         # declared in the Alignak environment (alignak.ini) file!
-        # We can overload the Alignak global configuration (alignak.cfg) with the global
-        # configuration defined in the Alignak environment file
         if self.alignak_env:
             # Get all the Alignak daemons from the configuration
             logger.info("Getting daemons configuration...")
@@ -812,7 +831,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 cfg = instance.get_alignak_configuration()
                 alignak_cfg.update(cfg)
             except Exception as exp:  # pylint: disable=broad-except
-                logger.error("Module get_alignak_configuration %s raised an exception %s. "
+                logger.error("Module %s get_alignak_configuration raised an exception %s. "
                              "Log and continue to run", instance.name, str(exp))
                 output = io.StringIO()
                 traceback.print_exc(file=output)
@@ -1241,7 +1260,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         timeout = 1.0
         self.last_master_ping = time.time()
 
-        # Look for the master timeout
         master_timeout = 300
         for arbiter_link in self.conf.arbiters:
             if not arbiter_link.spare:

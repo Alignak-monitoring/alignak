@@ -268,32 +268,58 @@ class AlignakConfigParser(object):
         """
         return self.config.defaults()
 
-    def get_monitored_configuration(self):
+    def get_legacy_cfg_files(self):
         """
-        Get the Alignak monitored configuration parameters
+        Get the Alignak monitored configuration files.
 
-        :return: a dict containing the Alignak configuration files
+        :return: a dict containing the Alignak legacy configuration files
+        """
+        return self.get_alignak_configuration(legacy_cfg=True)
+
+    def get_alignak_macros(self):
+        """
+        Get the Alignak macros.
+
+        :return: a dict containing the Alignak macros
+        """
+        return self.get_alignak_configuration(macros=True)
+
+    def get_alignak_configuration(self, legacy_cfg=False, macros=False):
+        """
+        Get the Alignak configuration parameters. All the variables included in
+        the SECTION_CONFIGURATION section except the variables starting with 'cfg'
+        and the macros.
+
+        If `lecagy_cfg` is True, this function only returns the variables included in
+        the SECTION_CONFIGURATION section except the variables starting with 'cfg'
+
+        If `macros` is True, this function only returns the variables included in
+        the SECTION_CONFIGURATION section that are considered as macros
+
+        :param legacy_cfg: only get the legacy cfg declarations
+        :type legacy_cfg: bool
+        :param macros: only get the macros declarations
+        :type macros: bool
+        :return: a dict containing the Alignak configuration parameters
         """
         configuration = self._search_sections(SECTION_CONFIGURATION)
         if SECTION_CONFIGURATION not in configuration:
             return []
         for prop, _ in list(configuration[SECTION_CONFIGURATION].items()):
-            if not prop.startswith('cfg'):
+            # Only legacy configuration items
+            if legacy_cfg:
+                if not prop.startswith('cfg'):
+                    configuration[SECTION_CONFIGURATION].pop(prop)
+                continue
+            # Only macro definitions
+            if macros:
+                if not prop.startswith('_'):
+                    configuration[SECTION_CONFIGURATION].pop(prop)
+                continue
+            # All values except legacy configuration and macros
+            if prop.startswith('cfg') or prop.startswith('_'):
                 configuration[SECTION_CONFIGURATION].pop(prop)
-        return configuration[SECTION_CONFIGURATION]
 
-    def get_alignak_configuration(self):
-        """
-        Get the Alignak configuration parameters, except the variables starting with 'cfg'
-
-        :return: a dict containing the Alignak configuration files
-        """
-        configuration = self._search_sections(SECTION_CONFIGURATION)
-        if SECTION_CONFIGURATION not in configuration:
-            return []
-        for prop, _ in list(configuration[SECTION_CONFIGURATION].items()):
-            if prop.startswith('cfg'):
-                configuration[SECTION_CONFIGURATION].pop(prop)
         return configuration[SECTION_CONFIGURATION]
 
     def get_daemons(self, daemon_name=None, daemon_type=None):

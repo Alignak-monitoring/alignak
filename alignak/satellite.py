@@ -382,7 +382,6 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
     })
 
     def __init__(self, name, **kwargs):
-
         super(Satellite, self).__init__(name, **kwargs)
 
         # Keep broks so they can be eaten by a broker
@@ -390,8 +389,8 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         self.broks_lock = threading.RLock()
 
         self.workers = {}   # dict of active workers
-        self.min_workers = 1
-        self.max_workers = 30
+        self.min_workers = 0
+        self.max_workers = 0
         self.worker_polling_interval = 1
         self.processes_by_worker = 256
 
@@ -986,6 +985,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # ------------------
             # For the worker daemons...
             # ------------------
+            # todo: check if moveable to the class __init__
             # Now the limit part, 0 means the number of cpu of this machine :)
             if self.max_workers == 0:
                 try:
@@ -1039,9 +1039,6 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 logger.info("- : %s/%s", satellite.type, satellite.name)
                 if not self.daemon_connection_init(satellite):
                     logger.error("Satellite connection failed: %s", satellite)
-
-            # Now I have a configuration!
-            self.have_conf = False
 
         # Now I have a configuration!
         self.have_conf = True

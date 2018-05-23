@@ -74,10 +74,32 @@ class MacroResolverTester(object):
         :return:
         """
         mr = self.get_mr()
-        (svc, hst) = self.get_hst_svc()
-        data = [hst, svc]
+
+        # This is a macro built from a variable
         result = mr.resolve_simple_macros_in_string("$ALIGNAK$", [], None, None, None)
         assert result == "My Alignak"
+
+        # This is a macro built from a dynamic variable
+        result = mr.resolve_simple_macros_in_string("$MAINCONFIGFILE$", [], None, None, None)
+        assert result == "/home/alignak/alignak/test/cfg/alignak.ini"
+        result = mr.resolve_simple_macros_in_string("$MAINCONFIGDIR$", [], None, None, None)
+        assert result == "/home/alignak/alignak/test/cfg"
+
+        # This is a deprecated macro -> n/a
+        result = mr.resolve_simple_macros_in_string("$COMMENTDATAFILE$", [], None, None, None)
+        assert result == "n/a"
+
+        # This is a macro built from an Alignak variable - because the variable is prefixed with _
+        result = mr.resolve_simple_macros_in_string("$_DIST$", [], None, None, None)
+        assert result == "/tmp"
+        # Alignak variable interpolated from %(var) is available as a macro
+        result = mr.resolve_simple_macros_in_string("$_DIST_ETC$", [], None, None, None)
+        assert result == "/tmp/etc/alignak"
+
+        # Alignak "standard" variable is not available as a macro
+        # Empty value ! todo: Perharps should be changed ?
+        result = mr.resolve_simple_macros_in_string("$USER$", [], None, None, None)
+        assert result == ""
 
     def test_resolv_simple_command(self):
         """Test a simple command resolution
