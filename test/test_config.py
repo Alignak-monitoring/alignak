@@ -20,12 +20,15 @@
 #
 #
 """
-This file contains the test for the Alignak configuration checks
+This file contains the test for the Alignak configuration checks. Indeed, it checks the
+correctness of the monitored system configuration contained in the Nagios flat-files...
+not the Alignak overall configuration defined in the alignak.ini!
 
-Almost all of these tests are using the self.setup_with_file function that is declare in
-the AlignakTest class. This function will get the *cfg/alignak.ini* configuration file. This
-is because all the tests were written before the configuration refactoring and it makes it
-easier to use always the same alignak.ini file whereas only the objects configuration is
+ Almost all of these tests are using the self.setup_with_file function that is declared in
+the AlignakTest class. This function will get the *cfg/alignak.ini* configuration file.
+
+ This is because all the tests were written before the configuration refactoring and it makes
+ it easier to use always the same alignak.ini file whereas only the objects configuration is
 changing:)
 
 """
@@ -178,7 +181,7 @@ class TestConfig(AlignakTest):
         assert self._arbiter.conf.conf_is_correct
 
         # Configuration inner properties are valued
-        assert self._arbiter.conf.main_config_file == os.path.abspath('cfg/alignak.ini')
+        assert self._arbiter.conf.main_config_file == os.path.abspath('cfg/cfg_default.cfg')
 
         # Default Alignak name is the arbiter name
         assert self._arbiter.conf.alignak_name == 'My Alignak'
@@ -570,8 +573,12 @@ class TestConfig(AlignakTest):
         assert not self.conf_is_correct
         self.show_logs()
 
-        # Error messages
-        assert len(self.configuration_errors) == 2
+        # Warning / error messages
+        assert len(self.configuration_warnings) == 1
+        assert len(self.configuration_errors) == 1
+        self.assert_any_cfg_log_match(re.escape(
+            "the parameter parameter is ambiguous! No value after =, assuming an empty string"
+        ))
         self.assert_any_cfg_log_match(re.escape(
             "the parameter parameter2 is malformed! (no = sign)"
         ))

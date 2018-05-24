@@ -75,15 +75,20 @@ class MacroResolverTester(object):
         """
         mr = self.get_mr()
 
-        # This is a macro built from a variable
+        # This is a macro built from a variable that is a string
         result = mr.resolve_simple_macros_in_string("$ALIGNAK$", [], None, None, None)
         assert result == "My Alignak"
+        # This is a macro built from a variable that is a list of strings
+        result = mr.resolve_simple_macros_in_string("$ALIGNAK_CONFIG$", [], None, None, None)
+        assert isinstance(result, string_types)
+        expected = "[%s]" % ','.join(self.alignak_env.cfg_files)
+        assert result == expected
 
         # This is a macro built from a dynamic variable
         result = mr.resolve_simple_macros_in_string("$MAINCONFIGFILE$", [], None, None, None)
-        assert result == "/home/alignak/alignak/test/cfg/alignak.ini"
+        assert result == os.path.abspath(self.setup_file)
         result = mr.resolve_simple_macros_in_string("$MAINCONFIGDIR$", [], None, None, None)
-        assert result == "/home/alignak/alignak/test/cfg"
+        assert result == os.path.abspath('./cfg')
 
         # This is a deprecated macro -> n/a
         result = mr.resolve_simple_macros_in_string("$COMMENTDATAFILE$", [], None, None, None)
@@ -912,7 +917,9 @@ class TestMacroResolverWithEnv(MacroResolverTester, AlignakTest):
     def setUp(self):
         super(TestMacroResolverWithEnv, self).setUp()
 
-        self.setup_with_file('cfg/cfg_macroresolver.cfg')
+        # Do not provide environment file to use the default one
+        self.setup_file = 'cfg/cfg_macroresolver.cfg'
+        self.setup_with_file(self.setup_file)
         assert self.conf_is_correct
 
 
@@ -922,5 +929,7 @@ class TestMacroResolverWithoutEnv(MacroResolverTester, AlignakTest):
     def setUp(self):
         super(TestMacroResolverWithoutEnv, self).setUp()
 
-        self.setup_with_file('cfg/cfg_macroresolver_environment.cfg')
+        # Do not provide environment file to use the default one
+        self.setup_file = 'cfg/cfg_macroresolver_environment.cfg'
+        self.setup_with_file(self.setup_file)
         assert self.conf_is_correct

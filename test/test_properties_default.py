@@ -130,8 +130,7 @@ class TestConfig(PropertiesTester, AlignakTest):
         'max_check_result_file_age', 'host_inter_check_delay_method',
         'free_child_process_memory', 'child_processes_fork_twice',
         'admin_email', 'admin_pager', 'event_broker_options',
-        'debug_file', 'debug_level', 'debug_verbosity',
-        'max_debug_file_size', 'translate_passive_host_checks', 'passive_host_checks_are_soft'
+        'translate_passive_host_checks', 'passive_host_checks_are_soft'
     ]
 
     without_default = []
@@ -156,7 +155,6 @@ class TestConfig(PropertiesTester, AlignakTest):
         # ('instance_name', ''),
         ('instance_id', ''),
         ('config_name', 'Main configuration'),
-        ('prefix', ''),
         ('alignak_name', ''),
         ('config_base_dir', ''),
         # ('triggers_dir', ''),
@@ -171,7 +169,8 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('log_rotation_method', 'd'),
         ('log_archive_path', '/usr/local/alignak/var/log/archives'),
         ('check_external_commands', True),
-        ('main_config_file', '/usr/local/etc/alignak/alignak.ini'),
+        ('main_config_file', ''),
+        ('config_files', []),
         ('command_file', ''),
         ('state_retention_file', ''),
         ('retention_update_interval', 60),
@@ -189,8 +188,8 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('log_passive_checks', False),
         ('global_host_event_handler', ''),
         ('global_service_event_handler', ''),
-        ('max_service_check_spread', 30),
-        ('max_host_check_spread', 30),
+        ('max_service_check_spread', 5),
+        ('max_host_check_spread', 5),
         ('interval_length', 60),
         ('auto_reschedule_checks', True),
         ('auto_rescheduling_interval', 1),
@@ -200,7 +199,7 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('cached_host_check_horizon', 0),
         ('cached_service_check_horizon', 0),
         ('use_large_installation_tweaks', '0'),
-        ('enable_environment_macros', True),
+        ('enable_environment_macros', False),
         ('enable_flap_detection', True),
         ('low_service_flap_threshold', 20),
         ('high_service_flap_threshold', 30),
@@ -246,9 +245,9 @@ class TestConfig(PropertiesTester, AlignakTest):
         # Alignak specific
         ('flap_history', 20),
         ('max_plugins_output_length', 8192),
-        ('no_event_handlers_during_downtimes', False),
+        ('no_event_handlers_during_downtimes', True),
         ('cleaning_queues_interval', 900),
-        ('enable_problem_impacts_states_change', False),
+        ('enable_problem_impacts_states_change', True),
         ('resource_macros_names', []),
 
         ('accept_passive_unknown_check_results', True),
@@ -261,15 +260,18 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('timeout_exit_status', 2),
 
         # daemons part
+        ('launch_missing_daemons', False),
         ('daemons_arguments', ''),
-        ('daemons_initial_port', 7800),
+        ('daemons_initial_port', 10000),
         ('daemons_log_folder', '/usr/local/var/log/alignak'),
         ('daemons_check_period', 5),
         ('daemons_start_timeout', 1),
         ('daemons_dispatch_timeout', 5),
         ('daemons_new_conf_timeout', 1),
         ('daemons_stop_timeout', 15),
-        ('daemons_failure_kill', True)
+        ('daemons_failure_kill', True),
+
+        ('alignak_env', []),
         ])
 
     def setUp(self):
@@ -623,8 +625,6 @@ class TestModule(PropertiesTester, AlignakTest):
         ('type', 'unset'),
         ('daemon', 'unset'),
         ('module_types', ['']),
-        # ('enable_problem_impacts_states_change', False),
-        # ('log_notifications', False),
         ('log_level', 'INFO'),
         ('statsd_host', 'localhost'),
         ('statsd_port', 8125),

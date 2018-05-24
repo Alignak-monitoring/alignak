@@ -107,8 +107,9 @@ class GenericInterface(object):
         return "pong"
 
     @cherrypy.expose
+    @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
-    def stop_request(self, stop_now):
+    def stop_request(self, stop_now='0'):
         """Request the daemon to stop
 
         If `stop_now` is set to '1' the daemon will stop now. Else, the daemon
@@ -119,8 +120,6 @@ class GenericInterface(object):
         :type stop_now: bool
         :return: None
         """
-        logger.info("Stop now: %s", stop_now)
-
         self.app.interrupted = (stop_now == '1')
         self.app.will_stop = True
 

@@ -133,6 +133,7 @@ import signal
 from copy import copy
 import threading
 import logging
+import tempfile
 import warnings
 import traceback
 from queue import Empty, Full
@@ -196,7 +197,7 @@ except ImportError as exp:  # pragma: no cover, not for unit tests...
         """
         return []
 
-from alignak.log import setup_logger
+from alignak.log import setup_logger, set_log_level
 from alignak.http.daemon import HTTPDaemon, PortNotFree
 from alignak.load import Load
 from alignak.stats import statsmgr
@@ -235,9 +236,9 @@ class EnvironmentFile(Exception):
 # pylint: disable=R0902
 class Daemon(object):
     """Class providing daemon level call for Alignak
-        TODO: Consider clean this code and use standard libs
     """
 
+    # todo: why using this dict here, because the Daemon is not inheriting from an Item
     properties = {
         'type':
             StringProp(default=u'unknown'),
@@ -310,8 +311,11 @@ class Daemon(object):
         #     IntegerProp(default=7),
         'logger_configuration':
             StringProp(default=u'./alignak-logger.json'),
-        # Override log file name
+        # Override log file name - default is to not override
         'log_filename':
+            StringProp(default=u''),
+        # Override log level - default is to not change anything
+        'log_level':
             StringProp(default=u''),
         # Set True to include cherrypy logs in the daemon log file
         'log_cherrypy':
@@ -333,8 +337,8 @@ class Daemon(object):
             IntegerProp(default=32),
         'debug':
             BoolProp(default=False),
-        'monitoring_config_files':
-            ListProp(default=[]),
+        'verbose':
+            BoolProp(default=False),
 
         # Daemon start time
         'start_time':
@@ -385,13 +389,26 @@ class Daemon(object):
         :param kwargs: list of key/value pairs from the daemon command line and configuration
         """
         self.alignak_env = None
-        self.monitoring_config_files = None
+        self.legacy_cfg_files = []
         self.modules_manager = None
+
+        import logging
+
+        logging.basicConfig(filename='/tmp/test_log.log',level=logging.DEBUG, \
+                            format='%(asctime)s -- %(name)s -- %(levelname)s -- %(message)s')
+        logging.info('INFO ERROR')
+        logging.warning('Warning Error %s: %s', '01234', 'Erreur Oracle')
+        logging.error('error message')
+        logging.critical('critical error')
 
         # First, do we debug?
         self.debug = False
         if 'debug' in kwargs and kwargs['debug']:
             self.debug = kwargs['debug']
+        # First, do we verbose?
+        self.verbose = False
+        if 'verbose' in kwargs and kwargs['verbose']:
+            self.verbose = kwargs['verbose']
         # Used to track debug, info warnings that will be logged once the logger is effective
         self.pre_log = []
 
@@ -463,17 +480,13 @@ class Daemon(object):
                     # Make the path absolute
                     if not os.path.isabs(value):
                         value = os.path.abspath(os.path.join(configuration_dir, value))
-                    self.monitoring_config_files.append(value)
-                if self.type == 'arbiter' and not self.monitoring_config_files:
+                    self.legacy_cfg_files.append(value)
+                if self.type == 'arbiter' and not self.legacy_cfg_files:
                     self.pre_log.append(("WARNING",
-                                         "No Alignak monitoring configuration files. "))
+                                         "No Nagios-like legacy configuration files configured."))
                     self.pre_log.append(("WARNING",
-                                         "An arbiter daemon may need to use this file "
-                                         "to get configured correctly "
-                                         "(macros, extra variables,...)."))
-                    self.pre_log.append(("WARNING",
-                                         "If needed, edit the 'alignak.ini' configuration file "
-                                         "to declare a CFG= defining an 'alignak.cfg file."))
+                                         "If you need some, edit the 'alignak.ini' configuration "
+                                         "file to declare one or more 'cfg=' variables."))
 
                 my_configuration = list(self.alignak_env.get_daemons(daemon_name=self.name).items())
                 for prop, value in my_configuration:
@@ -544,7 +557,9 @@ class Daemon(object):
         if 'do_replace' in kwargs and kwargs['do_replace']:
             self.do_replace = BoolProp().pythonize(kwargs['do_replace'])
         if 'debug' in kwargs:
-            self.debug = BoolProp().pythonize(kwargs['debug'])
+            self.debug = BoolProp().pythonize('1')
+        if 'verbose' in kwargs:
+            self.verbose = BoolProp().pythonize('1')
 
         if 'host' in kwargs and kwargs['host']:
             self.host = StringProp().pythonize(kwargs['host'])
@@ -690,7 +705,7 @@ class Daemon(object):
         self.conf_lock = threading.RLock()
 
         # Flag to know if we need to dump memory or not
-        self.need_dump_memory = False
+        self.need_dump_environment = False
 
         # Flag to dump objects or not
         self.need_objects_dump = False
@@ -705,12 +720,12 @@ class Daemon(object):
         self.start_time = None
 
         # Log loop turns if environment variable is set
-        if 'ALIGNAK_LOGLOOP' in os.environ:
-            self.log_loop = 'ALIGNAK_LOGLOOP' in os.environ
+        if 'ALIGNAK_LOG_LOOP' in os.environ:
+            self.log_loop = 'ALIGNAK_LOG_LOOP' in os.environ
 
         # Activity information log period (every activity_log_period loop, raise a log)
         try:
-            self.activity_log_period = int(os.getenv('ALIGNAK_ACTIVITY_LOG', '600'))
+            self.activity_log_period = int(os.getenv('ALIGNAK_LOG_ACTIVITY', '600'))
         except ValueError:  # pragma: no cover, simple protection
             self.activity_log_period = 0
 
@@ -844,9 +859,15 @@ class Daemon(object):
         if exit_code:
             if message:
                 logger.error(message)
-                sys.stderr.write(message)
+                try:
+                    sys.stderr.write(message)
+                except:
+                    pass
             logger.error("Sorry, I bail out, exit code: %d", exit_code)
-            sys.stderr.write("Sorry, I bail out, exit code: %d" % exit_code)
+            try:
+                sys.stderr.write("Sorry, I bail out, exit code: %d" % exit_code)
+            except:
+                pass
         else:
             if message:
                 logger.info(message)
@@ -1133,10 +1154,10 @@ class Daemon(object):
                 return
 
             # If someone asked us to dump memory, do it
-            if self.need_dump_memory:
+            if self.need_dump_environment:
                 logger.debug('Dumping memory')
-                self.dump_memory()
-                self.need_dump_memory = False
+                self.dump_environment()
+                self.need_dump_environment = False
 
     def do_load_modules(self, modules):
         """Wrapper for calling load_and_init method of modules_manager attribute
@@ -1174,17 +1195,22 @@ class Daemon(object):
         """
         pass
 
-    @staticmethod
-    def dump_memory():
+    def dump_environment(self):
         """ Try to dump memory
 
         Not currently implemented feature
 
         :return: None
         """
-        logger.warning("Dumping daemon memory is not implemented. "
-                       "If you really need this feature, please log "
-                       "an issue in the project repository;)")
+        # Dump the Alignak configuration to a temporary ini file
+        path = os.path.join(tempfile.gettempdir(),
+                            'dump-env-%s-%s-%d.ini' % (self.type, self.name, int(time.time())))
+
+        try:
+            with open(path, "w") as out_file:
+                self.alignak_env.write(out_file)
+        except Exception as exp:
+            logger.error("Dumping daemon environment raised an error: %s. ", exp)
 
     def load_modules_manager(self):
         """Instantiate the daemon ModulesManager and load the SyncManager (multiprocessing)
@@ -1637,7 +1663,7 @@ class Daemon(object):
 
     def manage_signal(self, sig, frame):  # pylint: disable=unused-argument
         """Manage signals caught by the daemon
-        signal.SIGUSR1 : dump_memory
+        signal.SIGUSR1 : dump_environment
         signal.SIGUSR2 : dump_object (nothing)
         signal.SIGTERM, signal.SIGINT : terminate process
 
@@ -1649,7 +1675,7 @@ class Daemon(object):
         """
         logger.info("received a signal: %s", SIGNALS_TO_NAMES_DICT[sig])
         if sig == signal.SIGUSR1:  # if USR1, ask a memory dump
-            self.need_dump_memory = True
+            self.need_dump_environment = True
         elif sig == signal.SIGUSR2:  # if USR2, ask objects dump
             self.need_objects_dump = True
         elif sig == signal.SIGHUP:  # if HUP, reload the monitoring configuration
@@ -2044,7 +2070,7 @@ class Daemon(object):
         if exit_code is not None:
             exit(exit_code)
 
-    def exit_on_exception(self, raised_exception, message='', exit_code=1):
+    def exit_on_exception(self, raised_exception, message='', exit_code=99):
         """Log generic message when getting an unrecoverable error
 
         :param raised_exception: raised Exception
@@ -2117,6 +2143,18 @@ class Daemon(object):
             setup_logger(logger_configuration_file=self.logger_configuration,
                          log_dir=self.logdir, process_name=self.name,
                          log_file=self.log_filename)
+            # print("Here!")
+            # if self.debug:
+            #     # Force the global logger at DEBUG level
+            #     set_log_level('DEBUG')
+            # elif self.verbose:
+            #     # Force the global logger at INFO level
+            #     set_log_level('INFO')
+            #
+            # if self.log_level:
+            #     # Force the global logger at INFO level
+            #     set_log_level(self.log_level)
+            # print("There!")
         except Exception as exp:  # pylint: disable=broad-except
             print("***** %s - exception when setting-up the logger: %s" % (self.name, exp))
             self.exit_on_exception(exp, message="Logger configuration error!")

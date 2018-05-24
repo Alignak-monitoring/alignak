@@ -104,6 +104,7 @@ class BaseSatellite(Daemon):
     Sub-classed by Alignak (scheduler), Broker and Satellite
 
     """
+    properties = Daemon.properties.copy()
 
     def __init__(self, name, **kwargs):
         super(BaseSatellite, self).__init__(name, **kwargs)
@@ -368,9 +369,9 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
     properties = BaseSatellite.properties.copy()
     properties.update({
         'min_workers':
-            IntegerProp(default=1, fill_brok=['full_status'], to_send=True),
+            IntegerProp(default=0, fill_brok=['full_status'], to_send=True),
         'max_workers':
-            IntegerProp(default=30, fill_brok=['full_status'], to_send=True),
+            IntegerProp(default=0, fill_brok=['full_status'], to_send=True),
         'processes_by_worker':
             IntegerProp(default=256, fill_brok=['full_status'], to_send=True),
         'worker_polling_interval':
@@ -389,10 +390,12 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         self.broks_lock = threading.RLock()
 
         self.workers = {}   # dict of active workers
-        self.min_workers = 0
-        self.max_workers = 0
-        self.worker_polling_interval = 1
-        self.processes_by_worker = 256
+        # self.min_workers = 0
+        # self.max_workers = 0
+        # self.worker_polling_interval = 1
+        # self.processes_by_worker = 256
+        logger.info("Configured minimum %d workers, maximum %d workers",
+                    self.min_workers, self.max_workers)
 
         # Init stats like Load for workers
         self.wait_ratio = Load(initial_value=1)
@@ -987,6 +990,8 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # ------------------
             # todo: check if moveable to the class __init__
             # Now the limit part, 0 means the number of cpu of this machine :)
+            logger.info("Configured minimum %d workers, maximum %d workers",
+                        self.min_workers, self.max_workers)
             if self.max_workers == 0:
                 try:
                     self.max_workers = cpu_count()

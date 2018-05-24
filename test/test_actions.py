@@ -234,11 +234,11 @@ class TestAction(AlignakTest):
 
         # Wait action execution end
         self.wait_finished(a)
-        assert 0 == a.exit_status
+        assert 3 == a.exit_status
         assert 'done' == a.status
         assert "Hi, I'm for testing only. Please do not use me directly, really" == a.output
         assert "" == a.long_output
-        assert "Hip=99% Bob=34mm" == a.perf_data
+        assert "Hip=99% Hop=34mm" == a.perf_data
 
     def test_action_timeout(self):
         """ Test simple action execution - fail on timeout

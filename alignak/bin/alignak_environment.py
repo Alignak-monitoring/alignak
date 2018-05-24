@@ -242,6 +242,20 @@ class AlignakConfigParser(object):
 
         return True
 
+    def write(self, env_file):
+        """
+        Write the Alignak configuration to a file
+
+        :param env_file: file name to dump the configuration
+        :type env_file: str
+        :return: True/False
+        """
+        try:
+            with open(env_file, "w") as out_file:
+                self.config.write(out_file)
+        except Exception as exp:
+            logger.error("Dumping environment file raised an error: %s. ", exp)
+
     def _search_sections(self, searched_sections=''):
         """
         Search sections in the configuration which name starts with the provided search criteria

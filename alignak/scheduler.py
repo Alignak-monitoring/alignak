@@ -298,7 +298,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # This scheduler has raised the initial broks
         self.raised_initial_broks = False
 
-        self.need_dump_memory = False
+        self.need_dump_environment = False
         self.need_objects_dump = False
 
     @property
@@ -441,22 +441,22 @@ class Scheduler(object):  # pylint: disable=R0902
         :return: None
         """
         path = os.path.join(tempfile.gettempdir(),
-                            'scheduler-%s-obj-dump-%d' % (self.name, time.time()))
+                            'dump-obj-scheduler-%s-%d.json' % (self.name, int(time.time())))
 
-        logger.info('Opened the objects dump file: %s', path)
+        logger.info('Dumping schduler objects to: %s', path)
         try:
             file_h = open(path, 'w')
-            output = 'Scheduler objects dump at %d\n' % time.time()
+            output = 'type:uuid:status:t_to_go:poller_tag:worker:command\n'
             file_h.write(output.encode('utf-8'))
             for check in list(self.checks.values()):
-                output = 'CHECK: %s:%s:%s:%s:%s:%s\n' \
+                output = 'check:%s:%s:%s:%s:%s:%s\n' \
                          % (check.uuid, check.status, check.t_to_go, check.poller_tag,
                             check.command, check.my_worker)
                 file_h.write(output.encode('utf-8'))
             logger.info('- dumped checks')
             for action in list(self.actions.values()):
                 output = '%s: %s:%s:%s:%s:%s:%s\n'\
-                         % (action.__class__.my_type.upper(), action.uuid, action.status,
+                         % (action.__class__.my_type, action.uuid, action.status,
                             action.t_to_go, action.reactionner_tag, action.command,
                             action.my_worker)
                 file_h.write(output.encode('utf-8'))
@@ -470,28 +470,25 @@ class Scheduler(object):  # pylint: disable=R0902
                 file_h.write(output.encode('utf-8'))
             logger.info('- dumped broks')
             file_h.close()
-            logger.info('Closed the dump file: %s', path)
+            logger.info('Dumped')
         except OSError as exp:  # pragma: no cover, should never happen...
             logger.critical("Error when writing the objects dump file %s : %s", path, str(exp))
 
     def dump_config(self):
-        """Dump scheduler configuration into a dump (temp) file
+        """Dump scheduler configuration into a temporary file
+
+        The dumped content is JSON formatted
 
         :return: None
         """
         path = os.path.join(tempfile.gettempdir(),
-                            'scheduler-%s-cfg-dump-%d' % (self.name, time.time()))
+                            'dump-cfg-scheduler-%s-%d.json' % (self.name, int(time.time())))
 
-        logger.info('Opened the configuration dump file: %s', path)
         try:
-            file_h = open(path, 'w')
-            output = 'Scheduler configuration dump at %d\n' % time.time()
-            file_h.write(output.encode('utf-8'))
-            self.pushed_conf.dump(file_h)
-            file_h.close()
-            logger.info('Closed the dump file: %s', path)
+            self.pushed_conf.dump(path)
         except (OSError, IndexError) as exp:  # pragma: no cover, should never happen...
-            logger.critical("Error when writing the config dump file %s : %s", path, str(exp))
+            logger.critical("Error when writing the configuration dump file %s: %s",
+                            path, str(exp))
 
     def run_external_commands(self, cmds):
         """Run external commands Arbiter/Receiver sent
@@ -2491,11 +2488,11 @@ class Scheduler(object):  # pylint: disable=R0902
         # if self.log_loop:
         #     logger.debug(dump_result)
 
-        if self.my_daemon.need_dump_memory:
+        if self.my_daemon.need_dump_environment:
             _ts = time.time()
             logger.debug('I must dump my memory...')
-            self.my_daemon.dump_memory()
-            self.my_daemon.need_dump_memory = False
+            self.my_daemon.dump_environment()
+            self.my_daemon.need_dump_environment = False
             statsmgr.timer('loop.memory_dump', time.time() - _ts)
 
         if self.my_daemon.need_objects_dump:

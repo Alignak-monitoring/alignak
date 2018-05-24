@@ -67,7 +67,7 @@ def main():
 
         # Protect for windows multiprocessing that will RELAUNCH all
         while True:
-            daemon = Arbiter(debug=args.debug_file is not None, **args.__dict__)
+            daemon = Arbiter(**args.__dict__)
             daemon.main()
             if not daemon.need_config_reload:
                 break

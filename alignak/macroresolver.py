@@ -220,6 +220,11 @@ class MacroResolver(Borg):
             return 'n/a'
 
         try:
+            # If the macro is set to a list property
+            if isinstance(value, list):
+                # Return the list items, comma separated and bracketed
+                return "[%s]" % ','.join(value)
+
             # If the macro is not set as a function to call
             if not isinstance(value, collections.Callable):
                 return value

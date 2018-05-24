@@ -26,6 +26,8 @@ import signal
 
 import psutil
 
+import configparser
+
 import subprocess
 from time import sleep
 import shutil
@@ -78,23 +80,73 @@ class TestLaunchDaemonsModules(AlignakTest):
         daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
                         'receiver-master', 'scheduler-master']
 
-        self._run_alignak_daemons(cfg_folder='cfg/run_daemons_1', daemons_list=daemons_list,
-                                  run_folder='/tmp', runtime=10)
+        # Copy and update the default configuration
+        cfg_folder = '/tmp/alignak'
+        self._prepare_configuration(copy=True, cfg_folder=cfg_folder)
 
-        self._stop_alignak_daemons()
+        files = ['%s/etc/alignak.ini' % cfg_folder,
+                 '%s/etc/alignak.d/daemons.ini' % cfg_folder,
+                 '%s/etc/alignak.d/modules.ini' % cfg_folder]
+        try:
+            cfg = configparser.ConfigParser()
+            cfg.read(files)
+
+            # Arbiter launches the other daemons
+            cfg.set('daemon.arbiter-master', 'alignak_launched', '1')
+            cfg.set('daemon.scheduler-master', 'alignak_launched', '1')
+            cfg.set('daemon.poller-master', 'alignak_launched', '1')
+            cfg.set('daemon.reactionner-master', 'alignak_launched', '1')
+            cfg.set('daemon.receiver-master', 'alignak_launched', '1')
+            cfg.set('daemon.broker-master', 'alignak_launched', '1')
+
+            # Modules configuration
+            cfg.set('daemon.arbiter-master', 'modules', 'Example')
+            cfg.set('daemon.scheduler-master', 'modules', 'Example')
+            cfg.set('daemon.poller-master', 'modules', 'Example')
+            cfg.set('daemon.reactionner-master', 'modules', 'Example')
+            cfg.set('daemon.receiver-master', 'modules', 'Example')
+            cfg.set('daemon.broker-master', 'modules', 'Example')
+
+            cfg.add_section('module.example')
+            cfg.set('module.example', 'name', 'Example')
+            cfg.set('module.example', 'type', 'test,test-module')
+            cfg.set('module.example', 'python_name', 'alignak_module_example')
+            cfg.set('module.example', 'option_1', 'foo')
+            cfg.set('module.example', 'option_2', 'bar')
+            cfg.set('module.example', 'option_3', 'foobar')
+            with open('%s/etc/alignak.ini' % cfg_folder, "w") as modified:
+                cfg.write(modified)
+        except Exception as exp:
+            print("* parsing error in config file: %s" % exp)
+            assert False
+
+        self._run_alignak_daemons(cfg_folder=cfg_folder, arbiter_only=True, runtime=30)
+
+        self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7770')
 
         # Check daemons log files
         ignored_warnings = [
-            'No realms defined,',
-            'Did not get any',
-            'notifications are enabled but no contacts',
-            'hosts configuration warnings',
-            'The module Example is not a worker one',
-            'Add failed attempt for ',
-            'is still living after a normal kill',
-            # Sometimes not killed during the test because of SIGTERM
-            'did not stopped, trying to kill',
-            'My Arbiter wants me to wait for a new configuration'
+            # 'No realms defined,',
+            # 'Did not get any',
+            # 'notifications are enabled but no contacts',
+            # 'hosts configuration warnings',
+            # 'The module Example is not a worker one',
+            # 'Add failed attempt for ',
+            # 'is still living after a normal kill',
+            # # Sometimes not killed during the test because of SIGTERM
+            # 'did not stopped, trying to kill',
+            # Not modules related warnings
+            "hosts configuration warnings:",
+            "Configuration warnings:",
+            "the parameter $_DIST_BIN$ is ambiguous! No value after =, assuming an empty string",
+            "[host::module_host_1] notifications are enabled but no contacts nor contact_groups property is defined for this host",
+            "Did not get any ",
+            "My Arbiter wants me to wait for a new configuration.",
+
+            # Modules related warnings
+            "The module Example is not a worker one, I remove it from the worker list.",
+            # todo: this log does not look appropriate... investigate more on this!
+            "is still living after a normal kill, I help it to die"
         ]
         (errors_raised, warnings_raised) = \
             self._check_daemons_log_for_errors(daemons_list, ignored_warnings=ignored_warnings)

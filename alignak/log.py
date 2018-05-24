@@ -148,7 +148,7 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
                 if getattr(hdlr, 'filename', None) and 'alignak_tests' in hdlr.filename:
                     hdlr.filename = hdlr.filename._fmt.replace("alignak_tests", process_name)
                 #     print("- handler : %s (%s) -> %s" % (hdlr, hdlr.formatter._fmt,
-                # hdlr.filename))
+                #                                          hdlr.filename))
                 # else:
                 #     print("- handler : %s (%s)" % (hdlr, hdlr.formatter._fmt))
             break

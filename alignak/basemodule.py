@@ -257,9 +257,8 @@ class BaseModule(object):
         logger.info("Starting external process for module %s...", self.name)
         proc = Process(target=self.start_module, args=(), group=None)
 
-        # Under windows we should not call start() on an object that got
-        # its process as object, so we remove it and we set it in a earlier
-        # start
+        # Under windows we should not call start() on an object that got its process
+        # as an object, so we remove it and we set it in a earlier start
         try:
             del self.properties['process']
         except KeyError:
@@ -283,12 +282,17 @@ class BaseModule(object):
         if os.name == 'nt':
             self.process.terminate()
         else:
-            # Ok, let him 1 second before really KILL IT
-            os.kill(self.process.pid, signal.SIGTERM)
-            time.sleep(1)
+            self.process.terminate()
+            # Wait for 10 seconds before killing the process abruptly
+            self.process.join(timeout=10)
             # You do not let me another choice guy...
             if self.process.is_alive():
+                logger.warning("%s is still living after a normal kill, I help it to die",
+                               self.name)
                 os.kill(self.process.pid, signal.SIGKILL)
+                self.process.join(1)
+                if self.process.is_alive():
+                    logger.error("%s still living after brutal kill, I leave it.", self.name)
             logger.info("External module killed")
 
     def stop_process(self):
@@ -300,16 +304,7 @@ class BaseModule(object):
             return
 
         logger.info("I'm stopping module %r (pid=%d)", self.name, self.process.pid)
-        self.process.terminate()
-        # Wait for 10 seconds before killing the process abruptly
-        self.process.join(timeout=10)
-        if self.process.is_alive():
-            logger.warning("%r is still living after a normal kill, I help it to die", self.name)
-            self.kill()
-            self.process.join(1)
-            if self.process.is_alive():
-                logger.error("%r still living after brutal kill, I leave it.", self.name)
-
+        self.kill()
         self.process = None
 
     def want_brok(self, b):  # pylint: disable=unused-argument,no-self-use
@@ -428,7 +423,7 @@ class BaseModule(object):
         self.set_proctitle(self.name)
         self.set_signal_handler()
 
-        logger.info("Process for module %s is now running (pid=%d)", self.name, os.getpid())
+        logger.info("process for module %s is now running (pid=%d)", self.name, os.getpid())
 
         # Will block here!
         try:
@@ -441,7 +436,8 @@ class BaseModule(object):
 
         self.do_stop()
 
-        logger.info("Process for module %s is now exiting (pid=%d)", self.name, os.getpid())
+        logger.info("process for module %s is now exiting (pid=%d)", self.name, os.getpid())
+        exit()
 
     # TODO: apparently some modules would uses "work" as the main method??
     work = _main

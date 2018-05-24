@@ -1214,13 +1214,12 @@ def parse_daemon_args(arbiter=False):
                                      epilog="And that's it!")
     if arbiter:
         parser.add_argument('-a', '--arbiter', action='append',
-                            dest='monitoring_files',
-                            help='Monitored configuration file(s). '
+                            dest='legacy_cfg_files',
+                            help='Legacy configuration file(s). '
                                  'This option is still available but is is preferable to declare '
-                                 'the monitored objects files in the alignak-configuration section '
-                                 'of the environment file specified with the -e option.'
-                                 'Multiple -a can be used, and they will be concatenated '
-                                 'to make a global configuration file.')
+                                 'the Nagios-like objects files in the alignak-configuration '
+                                 'section of the environment file specified with the -e option.'
+                                 'Multiple -a can be used to include several configuration files.')
 
         parser.add_argument('-V', '--verify-config', dest='verify_only', action='store_true',
                             help='Verify the configuration file(s) and exit')
@@ -1249,8 +1248,11 @@ def parse_daemon_args(arbiter=False):
     parser.add_argument('-r', '--replace', dest='do_replace', default=False, action='store_true',
                         help='Replace previous running daemon if any pid file is found.')
 
-    parser.add_argument('-f', '--debugfile', dest='debug_file',
-                        help='File to dump debug logs. Not of any interest, will be deprecated!')
+    parser.add_argument('-vv', '--debug', dest='debug', default=False, action='store_true',
+                        help='Set log level to debug mode (DEBUG)')
+
+    parser.add_argument('-v', '--verbose', dest='verbose', default=False, action='store_true',
+                        help='Set log level to verbose mode (INFO)')
 
     parser.add_argument('-o', '--host', dest='host',
                         help='Host interface used by the daemon. '

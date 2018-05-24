@@ -2713,7 +2713,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
             except Exception as exp:  # pylint: disable=broad-except
                 # Notifies the error, and return an UNKNOWN state.
-                check.output = "Error while re-evaluating business rule: %s" % exp
+                check.output = u"Error while re-evaluating business rule: %s" % exp
                 logger.debug("[%s] Error while re-evaluating business rule:\n%s",
                              self.get_name(), traceback.format_exc())
                 state = 3
@@ -2721,7 +2721,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         elif check.command == '_internal_host_up':
             state = 0
             check.execution_time = 0
-            check.output = 'Host assumed to be UP'
+            check.output = u'Host assumed to be UP'
             if 'ALIGNAK_LOG_ACTIONS' in os.environ:
                 if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                     logger.warning("Set host %s as UP (internal check)", self.get_full_name())
@@ -2740,6 +2740,52 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 else:
                     logger.info("Echo the current state (%s - %d) for %s ",
                                 self.state, self.state_id, self.get_full_name())
+
+        # _internal_host_check is for having an host check result
+        # without running a check plugin
+        elif check.command == '_internal_host_check':
+            # Command line contains: state_id;output
+            check_result = check.command_line.split(';')
+            if not check_result:
+                state = 3
+                check.output = u'Malformed host internal check'
+            else:
+                state = check_result[0]
+                check.output = u'Host internal check result: %d' % state
+                if len(check_result) > 1:
+                    check.output = check_result[1]
+
+            check.execution_time = 0
+            if 'ALIGNAK_LOG_ACTIONS' in os.environ:
+                if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
+                    logger.warning("Host %s internal check: %d - %s",
+                                   self.get_full_name(), state, check.output)
+                else:
+                    logger.info("Host %s internal check: %d - %s",
+                                self.get_full_name(), state, check.output)
+
+        # _internal_service_check is for having a service check result
+        # without running a check plugin
+        elif check.command == '_internal_service_check':
+            # Command line contains: state_id;output
+            check_result = check.command_line.split(';')
+            if not check_result:
+                state = 3
+                check.output = u'Malformed service internal check'
+            else:
+                state = check_result[0]
+                check.output = u'Service internal check result: %d' % state
+                if len(check_result) > 1:
+                    check.output = check_result[1]
+
+            check.execution_time = 0
+            if 'ALIGNAK_LOG_ACTIONS' in os.environ:
+                if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
+                    logger.warning("Service %s internal check: %d - %s",
+                                   self.get_full_name(), state, check.output)
+                else:
+                    logger.info("Service %s internal check: %d - %s",
+                                self.get_full_name(), state, check.output)
 
         check.long_output = check.output
         check.check_time = time.time()

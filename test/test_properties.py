@@ -56,7 +56,6 @@ from .alignak_test import AlignakTest
 import pytest
 
 
-
 class PropertyTests:
     """Common tests for all property classes"""
 
@@ -84,8 +83,6 @@ class PropertyTests:
         assert not p.unused
 
 
-#AlignakTest
-
 class TestBoolProp(PropertyTests, AlignakTest):
     """Test the BoolProp class"""
 
@@ -105,7 +102,6 @@ class TestBoolProp(PropertyTests, AlignakTest):
         assert p.pythonize("false") == False
         assert p.pythonize("off") == False
         assert p.pythonize(["on", "off"]) == False
-
 
 
 class TestIntegerProp(PropertyTests, AlignakTest):
@@ -200,7 +196,6 @@ class TestListProp(PropertyTests, AlignakTest):
         assert p.pythonize(["1,2,3", "4,5,6"]) == ["1,2,3", "4,5,6"]
 
 
-
 class TestLogLevelProp(PropertyTests, AlignakTest):
     """Test the LogLevelProp class"""
 
@@ -218,17 +213,6 @@ class TestLogLevelProp(PropertyTests, AlignakTest):
         #self.assertEqual(p.pythonize("FATAL"), 50)
         assert p.pythonize("CRITICAL") == 50
         assert p.pythonize(["NOTSET", "CRITICAL"]) == 50
-
-
-## :todo: fix DictProp error if no `elts_prop` are passed
-## class TestDictProp(PropertyTests, AlignakTest):
-##     """Test the DictProp class"""
-##
-##     prop_class = alignak.property.DictProp
-##
-##     def test_pythonize(self):
-##         p = self.prop_class()
-##         self.assertEqual(p.pythonize(""), "")
 
 
 class TestAddrProp(PropertyTests, AlignakTest):
@@ -279,7 +263,3 @@ class TestAddrProp(PropertyTests, AlignakTest):
 
     # :fixme: IPv6 addresses are no tested since they are not parsed
     # correcly
-
-
-if __name__ == '__main__':
-    AlignakTest.main()

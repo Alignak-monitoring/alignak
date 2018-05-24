@@ -30,6 +30,7 @@ from time import sleep
 import requests
 import shutil
 import psutil
+import configparser
 
 import pytest
 from .alignak_test import AlignakTest
@@ -47,45 +48,35 @@ class TestDaemonsApi(AlignakTest):
     """Test the daemons HTTP API"""
     def setUp(self):
         # Set an environment variable to change the default period of activity log (every 60 loops)
-        os.environ['ALIGNAK_ACTIVITY_LOG'] = '60'
+        os.environ['ALIGNAK_LOG_ACTIVITY'] = '1'
 
         # Set an environment variable to activate the logging of system cpu, memory and disk
         os.environ['ALIGNAK_DAEMON_MONITORING'] = '2'
 
-        # This function will stop all the running daemons (if any ...)
-        self._stop_alignak_daemons(arbiter_only=False)
-
         super(TestDaemonsApi, self).setUp()
 
-        # copy the default shipped configuration files in /tmp/etc and change the root folder
-        # used by the daemons for pid and log files in the alignak.ini file
-        if os.path.exists('/tmp/etc/alignak'):
-            shutil.rmtree('/tmp/etc/alignak')
+        self.cfg_folder = '/tmp/alignak'
+        # Copy the default Alignak shipped configuration to the run directory
+        print("Copy default configuration (../etc) to %s..." % self.cfg_folder)
+        if os.path.exists('%s/etc' % self.cfg_folder):
+            shutil.rmtree('%s/etc' % self.cfg_folder)
+        shutil.copytree('../etc', '%s/etc' % self.cfg_folder)
 
-        if os.path.exists('/tmp/alignak.log'):
-            os.remove('/tmp/alignak.log')
-
-        if os.path.exists('/tmp/monitoring-logs.log'):
-            os.remove('/tmp/monitoring-logs.log')
-
-        print("Preparing configuration...")
-        shutil.copytree('../etc', '/tmp/etc/alignak')
-        files = ['/tmp/etc/alignak/alignak.ini',
-                 '/tmp/etc/alignak/alignak-logger.json']
-        replacements = {
-            '_dist=/usr/local/': '_dist=/tmp',
-            '"level": "INFO"': '"level": "WARNING"'
-        }
-        self._files_update(files, replacements)
-
-        # Clean the former existing pid and log files
-        print("Cleaning pid and log files...")
-        for daemon in ['arbiter-master', 'scheduler-master', 'broker-master',
-                       'poller-master', 'reactionner-master', 'receiver-master']:
-            if os.path.exists('/tmp/var/run/%s.pid' % daemon):
-                os.remove('/tmp/var/run/%s.pid' % daemon)
-            if os.path.exists('/tmp/var/log/%s.log' % daemon):
-                os.remove('/tmp/var/log/%s.log' % daemon)
+        try:
+            cfg = configparser.ConfigParser()
+            cfg.read(['%s/etc/alignak.ini' % self.cfg_folder,
+                      '%s/etc/alignak.d/daemons.ini' % self.cfg_folder])
+            cfg.set('daemon.arbiter-master', 'alignak_launched', '1')
+            cfg.set('daemon.scheduler-master', 'alignak_launched', '1')
+            cfg.set('daemon.poller-master', 'alignak_launched', '1')
+            cfg.set('daemon.reactionner-master', 'alignak_launched', '1')
+            cfg.set('daemon.receiver-master', 'alignak_launched', '1')
+            cfg.set('daemon.broker-master', 'alignak_launched', '1')
+            with open('%s/etc/alignak.ini' % self.cfg_folder, "w") as modified:
+                cfg.write(modified)
+        except Exception as exp:
+            print("* parsing error in config file: %s" % exp)
+            assert False
 
     def tearDown(self):
         # Set an environment variable to change the default period of activity log (every 60 loops)
@@ -120,46 +111,6 @@ class TestDaemonsApi(AlignakTest):
 
         :return:
         """
-        print("Clean former run...")
-        cfg_folder = os.path.abspath('./run/test_launch_daemons')
-        if os.path.exists(cfg_folder):
-            shutil.rmtree(cfg_folder)
-
-        print("Copy run configuration (../etc) to %s..." % cfg_folder)
-        # Copy the default Alignak shipped configuration to the run directory
-        shutil.copytree('../etc', cfg_folder)
-
-        # Update monitoring configuration parameters
-        files = ['%s/alignak.ini' % cfg_folder,
-                 '%s/alignak-logger.json' % cfg_folder]
-        replacements = {
-            '_dist=/usr/local/': '_dist=%s' % cfg_folder,
-            '%(_dist)s/bin': '',
-            '%(_dist)s/etc/alignak': cfg_folder,
-            '%(_dist)s/var/lib/alignak': cfg_folder,
-            '%(_dist)s/var/run/alignak': cfg_folder,
-            '%(_dist)s/var/log/alignak': cfg_folder,
-
-            ';CFG=%(etcdir)s/alignak.cfg': 'CFG=%s/alignak.cfg' % cfg_folder,
-            # ';log_cherrypy=1': 'log_cherrypy=1',
-
-            'polling_interval=5': '',
-            'daemons_check_period=5': '',
-            'daemons_stop_timeout=10': 'daemons_stop_timeout=5',
-            ';daemons_start_timeout=0': 'daemons_start_timeout=5',
-            ';daemons_dispatch_timeout=0': 'daemons_dispatch_timeout=0',
-
-            'user=alignak': ';user=alignak',
-            'group=alignak': ';group=alignak',
-
-            ';alignak_launched=1': 'alignak_launched=1',
-            ';is_daemon=0': 'is_daemon=0',
-            ';do_replace=0': 'do_replace=1',
-
-            # '"level": "INFO"': '"level": "WARNING"'
-        }
-        self._files_update(files, replacements)
-
         satellite_map = {
             'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
             'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
@@ -168,7 +119,7 @@ class TestDaemonsApi(AlignakTest):
         daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
                         'receiver-master', 'scheduler-master']
 
-        self._run_alignak_daemons(cfg_folder=cfg_folder,
+        self._run_alignak_daemons(cfg_folder=self.cfg_folder,
                                   daemons_list=daemons_list, runtime=5)
 
         scheme = 'http'
@@ -243,7 +194,8 @@ class TestDaemonsApi(AlignakTest):
         if os.path.exists("../../alignak-doc/source/07_alignak_features/api"):
             rst_write = "../../alignak-doc/source/07_alignak_features/api/%s" % rst_file
         if rst_write:
-            with open(rst_write, mode='wt', encoding='utf-8') as out:
+            # with open(rst_write, mode='wt', encoding='utf-8') as out:
+            with open(rst_write, mode='wt') as out:
                 out.write('\n'.join(doc))
         # -----
 
@@ -358,7 +310,8 @@ class TestDaemonsApi(AlignakTest):
         if os.path.exists("../../alignak-doc/source/07_alignak_features/api"):
             rst_write = "../../alignak-doc/source/07_alignak_features/api/%s" % rst_file
         if rst_write:
-            with open(rst_write, mode='wt', encoding='utf-8') as out:
+            with open(rst_write, mode='wt') as out:
+            # with open(rst_write, mode='wt', encoding='utf-8') as out:
                 out.write('\n'.join(doc))
         # -----
 
@@ -439,7 +392,8 @@ class TestDaemonsApi(AlignakTest):
         if os.path.exists("../../alignak-doc/source/07_alignak_features/api"):
             rst_write = "../../alignak-doc/source/07_alignak_features/api/%s" % rst_file
         if rst_write:
-            with open(rst_write, mode='wt', encoding='utf-8') as out:
+            # with open(rst_write, mode='wt', encoding='utf-8') as out:
+            with open(rst_write, mode='wt') as out:
                 out.write('\n'.join(doc))
 
         print("Testing get_stats (detailed)")
@@ -580,11 +534,10 @@ class TestDaemonsApi(AlignakTest):
             print("%s, raw: %s" % (name, raw_data.content))
             data = raw_data.json()
             print("%s, log level: %s" % (name, data))
-            # Initially forced the WARNING log level
-            assert data['log_level'] == 30
-            assert data['log_level_name'] == 'WARNING'
+            # Initially forced the INFO log level
+            assert data['log_level'] == 20
+            assert data['log_level_name'] == 'INFO'
 
-        # todo: currently not fully functional ! Looks like it breaks the arbiter damon !
         print("Testing set_log_level")
         for name, port in list(satellite_map.items()):
             raw_data = req.post("%s://localhost:%s/set_log_level" % (scheme, port),
@@ -606,15 +559,24 @@ class TestDaemonsApi(AlignakTest):
 
         print("Testing get_log_level")
         for name, port in list(satellite_map.items()):
-            if name in ['arbiter']:
-                continue
+            # if name in ['arbiter']:
+            #     continue
             raw_data = req.get("%s://localhost:%s/get_log_level" % (scheme, port), verify=False)
             data = raw_data.json()
             print("%s, log level: %s" % (name, data))
-            if name in ['arbiter']:
-                assert data['log_level'] == 20
-            else:
-                assert data['log_level'] == 10
+            assert data['log_level'] == 10
+
+        print("Resetting log level")
+        for name, port in list(satellite_map.items()):
+            raw_data = req.post("%s://localhost:%s/set_log_level" % (scheme, port),
+                                data=json.dumps({'log_level': 'INFO'}),
+                                headers={'Content-Type': 'application/json'},
+                                verify=False)
+            print("%s, raw_data: %s" % (name, raw_data.text))
+            data = raw_data.json()
+            print("%s, log level set as : %s" % (name, data))
+            assert data['log_level'] == 20
+            assert data['log_level_name'] == 'INFO'
         # -----
 
         # -----
@@ -711,44 +673,51 @@ class TestDaemonsApi(AlignakTest):
 
         # -----
         print("Testing signals")
-        for name, proc in list(self.procs.items()):
-            # SIGUSR1: memory dump
-            print("%s, send signal SIGUSR1" % (name))
-            self.procs[name].send_signal(signal.SIGUSR1)
-            time.sleep(1.0)
-            # SIGUSR2: objects dump
-            print("%s, send signal SIGUSR2" % (name))
-            self.procs[name].send_signal(signal.SIGUSR2)
-            time.sleep(1.0)
-            # SIGHUP: reload configuration
-            # self.procs[name].send_signal(signal.SIGHUP)
-            # time.sleep(1.0)
-            # Other signals is considered as a request to stop...
+        daemon_count = 0
+        for daemon in ['broker', 'poller', 'reactionner', 'receiver', 'scheduler', 'arbiter']:
+            for proc in psutil.process_iter():
+                if 'alignak' in proc.name() and daemon in proc.name():
+                    # SIGUSR1: memory dump
+                    print("%s, send signal SIGUSR1" % (name))
+                    proc.send_signal(signal.SIGUSR1)
+                    time.sleep(1.0)
+                    # SIGUSR2: objects dump
+                    print("%s, send signal SIGUSR2" % (name))
+                    proc.send_signal(signal.SIGUSR2)
+                    time.sleep(1.0)
+                    # SIGHUP: reload configuration
+                    # proc.send_signal(signal.SIGHUP)
+                    # time.sleep(1.0)
+                    # Other signals is considered as a request to stop...
+                    daemon_count += 1
+        # 14 because all the daemons are forked at least once ;)
+        # todo: The test strategy should be updated to send signals only to the concerned daemons!
+        # assert daemon_count == 14
         # -----
 
-        # This function will only send a SIGTERM to the arbiter daemon
-        self._stop_alignak_daemons(arbiter_only=True)
-
+        # # This function will only send a SIGTERM to the arbiter daemon
+        # self._stop_alignak_daemons(arbiter_only=True)
+        #
         # The arbiter daemon will then request its satellites to stop...
         # this is the same as the following code:
-        # print("Testing stop_request - tell the daemons we will stop soon...")
-        # for name, port in satellite_map.items():
-        #     if name in ['arbiter']:
-        #         continue
-        #     raw_data = req.get("%s://localhost:%s/stop_request?stop_now=" % (scheme, port),
-        #                        params={'stop_now': False}, verify=False)
-        #     data = raw_data.json()
-        #     assert data is True
-        #
-        # time.sleep(2)
-        # print("Testing stop_request - tell the daemons they must stop now!")
-        # for name, port in satellite_map.items():
-        #     if name in ['arbiter']:
-        #         continue
-        #     raw_data = req.get("%s://localhost:%s/stop_request?stop_now=" % (scheme, port),
-        #                        params={'stop_now': True}, verify=False)
-        #     data = raw_data.json()
-        #     assert data is True
+        print("Testing stop_request - tell the daemons we will stop soon...")
+        for name, port in satellite_map.items():
+            if name in ['arbiter']:
+                continue
+            raw_data = req.get("%s://localhost:%s/stop_request?stop_now=0" % (scheme, port),
+                               params={'stop_now': False}, verify=False)
+            data = raw_data.json()
+            assert data is True
+
+        time.sleep(2)
+        print("Testing stop_request - tell the daemons they must stop now!")
+        for name, port in satellite_map.items():
+            if name in ['arbiter']:
+                continue
+            raw_data = req.get("%s://localhost:%s/stop_request?stop_now=1" % (scheme, port),
+                               params={'stop_now': True}, verify=False)
+            data = raw_data.json()
+            assert data is True
 
     def test_daemons_configuration(self):
         """ Running all the Alignak daemons to check their correct configuration
@@ -766,42 +735,6 @@ class TestDaemonsApi(AlignakTest):
 
         :return:
         """
-        print("Clean former run...")
-        cfg_folder = os.path.abspath('./run/test_launch_daemons')
-        if os.path.exists(cfg_folder):
-            shutil.rmtree(cfg_folder)
-
-        print("Copy run configuration (../etc) to %s..." % cfg_folder)
-        # Copy the default Alignak shipped configuration to the run directory
-        shutil.copytree('../etc', cfg_folder)
-
-        # Update monitoring configuration parameters
-        files = ['%s/alignak.ini' % cfg_folder]
-        replacements = {
-            '_dist=/usr/local/': '_dist=%s' % cfg_folder,
-            '%(_dist)s/bin': cfg_folder,
-            '%(_dist)s/etc/alignak': cfg_folder,
-            '%(_dist)s/var/lib/alignak': cfg_folder,
-            '%(_dist)s/var/run/alignak': cfg_folder,
-            '%(_dist)s/var/log/alignak': cfg_folder,
-
-            ';CFG=%(etcdir)s/alignak.cfg': 'CFG=%s/alignak.cfg' % cfg_folder,
-            # ';log_cherrypy=1': 'log_cherrypy=1',
-
-            'polling_interval=5': '',
-            'daemons_check_period=5': '',
-            'daemons_stop_timeout=10': 'daemons_stop_timeout=5',
-            ';daemons_start_timeout=0': 'daemons_start_timeout=5',
-            ';daemons_dispatch_timeout=0': 'daemons_dispatch_timeout=0',
-
-            'user=alignak': ';user=alignak',
-            'group=alignak': ';group=alignak',
-
-            ';alignak_launched=1': 'alignak_launched=1',
-            ';is_daemon=1': 'is_daemon=0'
-        }
-        self._files_update(files, replacements)
-
         satellite_map = {
             'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
             'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
@@ -810,7 +743,7 @@ class TestDaemonsApi(AlignakTest):
         daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
                         'receiver-master', 'scheduler-master']
 
-        self._run_alignak_daemons(cfg_folder=cfg_folder,
+        self._run_alignak_daemons(cfg_folder=self.cfg_folder,
                                   daemons_list=daemons_list, runtime=5)
 
         scheme = 'http'
@@ -901,42 +834,6 @@ class TestDaemonsApi(AlignakTest):
 
         :return:
         """
-        print("Clean former run...")
-        cfg_folder = os.path.abspath('./run/test_launch_daemons')
-        if os.path.exists(cfg_folder):
-            shutil.rmtree(cfg_folder)
-
-        print("Copy run configuration (../etc) to %s..." % cfg_folder)
-        # Copy the default Alignak shipped configuration to the run directory
-        shutil.copytree('../etc', cfg_folder)
-
-        # Update monitoring configuration parameters
-        files = ['%s/alignak.ini' % cfg_folder]
-        replacements = {
-            '_dist=/usr/local/': '_dist=%s' % cfg_folder,
-            '%(_dist)s/bin': cfg_folder,
-            '%(_dist)s/etc/alignak': cfg_folder,
-            '%(_dist)s/var/lib/alignak': cfg_folder,
-            '%(_dist)s/var/run/alignak': cfg_folder,
-            '%(_dist)s/var/log/alignak': cfg_folder,
-
-            ';CFG=%(etcdir)s/alignak.cfg': 'CFG=%s/alignak.cfg' % cfg_folder,
-            # ';log_cherrypy=1': 'log_cherrypy=1',
-
-            'polling_interval=5': '',
-            'daemons_check_period=5': '',
-            'daemons_stop_timeout=10': 'daemons_stop_timeout=5',
-            ';daemons_start_timeout=0': 'daemons_start_timeout=5',
-            ';daemons_dispatch_timeout=0': 'daemons_dispatch_timeout=0',
-
-            'user=alignak': ';user=alignak',
-            'group=alignak': ';group=alignak',
-
-            ';alignak_launched=1': 'alignak_launched=1',
-            ';is_daemon=1': 'is_daemon=0'
-        }
-        self._files_update(files, replacements)
-
         satellite_map = {
             'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
             'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
@@ -945,7 +842,7 @@ class TestDaemonsApi(AlignakTest):
         daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
                         'receiver-master', 'scheduler-master']
 
-        self._run_alignak_daemons(cfg_folder=cfg_folder,
+        self._run_alignak_daemons(cfg_folder=self.cfg_folder,
                                   daemons_list=daemons_list, runtime=5)
 
         req = requests.Session()
@@ -987,49 +884,13 @@ class TestDaemonsApi(AlignakTest):
         assert host is None
 
         # This function will only send a SIGTERM to the arbiter daemon
-        self._stop_alignak_daemons(arbiter_only=True)
+        self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7770')
 
     def test_get_external_commands(self):
         """ Running all the Alignak daemons - get external commands
 
         :return:
         """
-        print("Clean former run...")
-        cfg_folder = os.path.abspath('./run/test_launch_daemons')
-        if os.path.exists(cfg_folder):
-            shutil.rmtree(cfg_folder)
-
-        print("Copy run configuration (../etc) to %s..." % cfg_folder)
-        # Copy the default Alignak shipped configuration to the run directory
-        shutil.copytree('../etc', cfg_folder)
-
-        # Update monitoring configuration parameters
-        files = ['%s/alignak.ini' % cfg_folder]
-        replacements = {
-            '_dist=/usr/local/': '_dist=%s' % cfg_folder,
-            '%(_dist)s/bin': cfg_folder,
-            '%(_dist)s/etc/alignak': cfg_folder,
-            '%(_dist)s/var/lib/alignak': cfg_folder,
-            '%(_dist)s/var/run/alignak': cfg_folder,
-            '%(_dist)s/var/log/alignak': cfg_folder,
-
-            ';CFG=%(etcdir)s/alignak.cfg': 'CFG=%s/alignak.cfg' % cfg_folder,
-            # ';log_cherrypy=1': 'log_cherrypy=1',
-
-            'polling_interval=5': '',
-            'daemons_check_period=5': '',
-            'daemons_stop_timeout=10': 'daemons_stop_timeout=5',
-            ';daemons_start_timeout=0': 'daemons_start_timeout=5',
-            ';daemons_dispatch_timeout=0': 'daemons_dispatch_timeout=0',
-
-            'user=alignak': ';user=alignak',
-            'group=alignak': ';group=alignak',
-
-            ';alignak_launched=1': 'alignak_launched=1',
-            ';is_daemon=1': 'is_daemon=0'
-        }
-        self._files_update(files, replacements)
-
         satellite_map = {
             'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
             'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
@@ -1038,7 +899,7 @@ class TestDaemonsApi(AlignakTest):
         daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
                         'receiver-master', 'scheduler-master']
 
-        self._run_alignak_daemons(cfg_folder=cfg_folder,
+        self._run_alignak_daemons(cfg_folder=self.cfg_folder,
                                   daemons_list=daemons_list, runtime=5)
 
         req = requests.Session()
@@ -1195,81 +1056,17 @@ class TestDaemonsApi(AlignakTest):
             data = raw_data.json()
             print("Got: %s" % data)
             # External commands got consumed by the daemons - not always all !
-            # May be 0 but it seems that 5 are remaining
-            assert len(data) == 5
-            # if name in 'arbiter':
-            #     #         e = [
-            #     #             {'my_type': 'externalcommand', 'cmd_line': 'TEST;host_name;service;p1;p2;p3', 'creation_timestamp': 1526479441.683431},
-            #     #             {'my_type': 'externalcommand', 'cmd_line': 'TEST;user_name;p1;p2;p3', 'creation_timestamp': 1526479441.689507},
-            #     #             {'my_type': 'externalcommand', 'cmd_line': 'TEST;user_name;p1;p2;p3', 'creation_timestamp': 1526479441.695691}
-            #     #         ]
-            #
-            #     assert 'creation_timestamp' in data[0]
-            #     assert data[0]['cmd_line'] == 'TEST;host_name;p1;p2;p3'
-            #     assert data[0]['my_type'] == 'externalcommand'
-            #     assert 'creation_timestamp' in data[1]
-            #     assert data[1]['cmd_line'] == 'TEST;host_name;p1;p2;p3'
-            #     assert data[1]['my_type'] == 'externalcommand'
-            #     assert 'creation_timestamp' in data[2]
-            #     assert data[2]['cmd_line'] == 'TEST;host_name;p1;p2;p3'
-            #     assert data[2]['my_type'] == 'externalcommand'
-            #     assert 'creation_timestamp' in data[3]
-            #     assert data[3]['cmd_line'] == 'TEST;host_name;service;p1;p2;p3'
-            #     assert data[3]['my_type'] == 'externalcommand'
-            #     assert 'creation_timestamp' in data[4]
-            #     assert data[4]['cmd_line'] == 'TEST;host_name;service;p1;p2;p3'
-            #     assert data[4]['my_type'] == 'externalcommand'
-            #     assert 'creation_timestamp' in data[5]
-            #     assert data[5]['cmd_line'] == 'TEST;user_name;p1;p2;p3'
-            #     assert data[5]['my_type'] == 'externalcommand'
-            #     assert 'creation_timestamp' in data[6]
-            #     assert data[6]['cmd_line'] == 'TEST;user_name;p1;p2;p3'
-            #     assert data[6]['my_type'] == 'externalcommand'
+            # May be 0 but it seems that sometimes 5 are remaining
+            assert len(data) in [0, 5]
 
         # This function will only send a SIGTERM to the arbiter daemon
-        self._stop_alignak_daemons(arbiter_only=True)
+        self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7770')
 
     def test_get_stats(self):
         """ Running all the Alignak daemons - get daemons statistics
 
         :return:
         """
-        print("Clean former run...")
-        cfg_folder = os.path.abspath('./run/test_launch_daemons')
-        if os.path.exists(cfg_folder):
-            shutil.rmtree(cfg_folder)
-
-        print("Copy run configuration (../etc) to %s..." % cfg_folder)
-        # Copy the default Alignak shipped configuration to the run directory
-        shutil.copytree('../etc', cfg_folder)
-
-        # Update monitoring configuration parameters
-        files = ['%s/alignak.ini' % cfg_folder]
-        replacements = {
-            '_dist=/usr/local/': '_dist=%s' % cfg_folder,
-            '%(_dist)s/bin': cfg_folder,
-            '%(_dist)s/etc/alignak': cfg_folder,
-            '%(_dist)s/var/lib/alignak': cfg_folder,
-            '%(_dist)s/var/run/alignak': cfg_folder,
-            '%(_dist)s/var/log/alignak': cfg_folder,
-
-            ';CFG=%(etcdir)s/alignak.cfg': 'CFG=%s/alignak.cfg' % cfg_folder,
-            # ';log_cherrypy=1': 'log_cherrypy=1',
-
-            'polling_interval=5': '',
-            'daemons_check_period=5': '',
-            'daemons_stop_timeout=10': 'daemons_stop_timeout=5',
-            ';daemons_start_timeout=0': 'daemons_start_timeout=5',
-            ';daemons_dispatch_timeout=0': 'daemons_dispatch_timeout=0',
-
-            'user=alignak': ';user=alignak',
-            'group=alignak': ';group=alignak',
-
-            ';alignak_launched=1': 'alignak_launched=1',
-            ';is_daemon=1': 'is_daemon=0'
-        }
-        self._files_update(files, replacements)
-
         satellite_map = {
             'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
             'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
@@ -1278,7 +1075,7 @@ class TestDaemonsApi(AlignakTest):
         daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
                         'receiver-master', 'scheduler-master']
 
-        self._run_alignak_daemons(cfg_folder=cfg_folder,
+        self._run_alignak_daemons(cfg_folder=self.cfg_folder, arbiter_only=True,
                                   daemons_list=daemons_list, runtime=5)
 
         req = requests.Session()
@@ -1409,5 +1206,5 @@ class TestDaemonsApi(AlignakTest):
                     assert "livestate" in daemon_state
                     assert "livestate_output" in daemon_state
 
-        # This function will only send a SIGTERM to the arbiter daemon
-        self._stop_alignak_daemons(arbiter_only=True)
+        # This function will request the arbiter daemon to stop
+        self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7770')

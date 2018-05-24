@@ -41,7 +41,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         os.environ['ALIGNAK_LOG_ACTIONS'] = 'WARNING'
 
         # Set an environment variable to change the default period of activity log (every 60 loops)
-        os.environ['ALIGNAK_ACTIVITY_LOG'] = '60'
+        os.environ['ALIGNAK_LOG_ACTIVITY'] = '60'
 
         # Alignak daemons monitoring everay 3 seconds
         os.environ['ALIGNAK_DAEMON_MONITORING'] = '3'
@@ -116,7 +116,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         self._run_alignak_daemons(cfg_folder='cfg/run_realms_manage_sub_realms',
                                   daemons_list=daemons_list,
-                                  run_folder='/tmp', runtime=30)
+                                  run_folder='/tmp/alignak', runtime=30)
 
         self._stop_alignak_daemons()
 
@@ -166,7 +166,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         # Run daemons for 4 minutes
         self._run_alignak_daemons(cfg_folder='cfg/run_realms',
                                   daemons_list=daemons_list,
-                                  run_folder='/tmp', runtime=240)
+                                  run_folder='/tmp/alignak', runtime=240)
 
         self._stop_alignak_daemons()
 
@@ -348,7 +348,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         # Run daemons for 4 minutes
         self._run_alignak_daemons(cfg_folder='cfg/run_passive',
                                   daemons_list=daemons_list,
-                                  run_folder='/tmp', runtime=240)
+                                  run_folder='/tmp/alignak', runtime=240)
 
         self._stop_alignak_daemons()
 

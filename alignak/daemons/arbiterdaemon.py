@@ -83,7 +83,7 @@ from alignak.daemon import Daemon
 from alignak.stats import statsmgr
 from alignak.brok import Brok
 from alignak.external_command import ExternalCommand
-from alignak.property import IntegerProp, StringProp
+from alignak.property import IntegerProp, StringProp, ListProp
 from alignak.http.arbiter_interface import ArbiterInterface
 from alignak.objects.satellitelink import SatelliteLink
 from alignak.monitor import MonitorConnection
@@ -104,7 +104,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         'type':
             StringProp(default='arbiter'),
         'port':
-            IntegerProp(default=7770)
+            IntegerProp(default=7770),
+        'legacy_cfg_files':
+            ListProp(default=[])
     })
 
     def __init__(self, **kwargs):
@@ -113,7 +115,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         :param kwargs: command line arguments
         """
         # The monitored objects configuration files
-        self.monitoring_config_files = []
+        self.legacy_cfg_files = []
         # My daemons...
         self.daemons_last_check = 0
         self.daemons_last_reachable_check = 0
@@ -127,7 +129,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Our schedulers and arbiters are initialized in the base class
 
         # Specific arbiter command line parameters
-        if 'monitoring_files' in kwargs and kwargs['monitoring_files']:
+        if 'legacy_cfg_files' in kwargs and kwargs['legacy_cfg_files']:
             logger.warning(
                 "Using daemon configuration file is now deprecated. The arbiter daemon -a "
                 "parameter should not be used anymore. Use the -e environment file "
@@ -138,20 +140,20 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 "declared in the environment configuration file.")
             # Monitoring files in the arguments extend the ones defined
             # in the environment configuration file
-            self.monitoring_config_files.extend(kwargs['monitoring_files'])
-            logger.warning("Got some configuration files: %s", self.monitoring_config_files)
-        # if not self.monitoring_config_files:
+            self.legacy_cfg_files.extend(kwargs['legacy_cfg_files'])
+            logger.warning("Got some configuration files: %s", self.legacy_cfg_files)
+        # if not self.legacy_cfg_files:
         #     sys.exit("The Alignak environment file is not existing "
         #              "or do not define any monitoring configuration files. "
         #              "The arbiter can not start correctly.")
 
         # Make sure the configuration files are not repeated...
         my_cfg_files = []
-        for cfg_file in self.monitoring_config_files:
+        for cfg_file in self.legacy_cfg_files:
             logger.debug("- configuration file: %s / %s", cfg_file, os.path.abspath(cfg_file))
             if os.path.abspath(cfg_file) not in my_cfg_files:
                 my_cfg_files.append(os.path.abspath(cfg_file))
-        self.monitoring_config_files = my_cfg_files
+        self.legacy_cfg_files = my_cfg_files
 
         self.verify_only = False
         if 'verify_only' in kwargs and kwargs['verify_only']:
@@ -391,11 +393,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         #     self.exit_on_error("*** No Alignak environment file. Exiting...", exit_code=2)
         # else:
         #     logger.info("Environment file: %s", self.env_filename)
-        if self.monitoring_config_files:
-            logger.info("Loading monitored system configuration from %s",
-                        self.monitoring_config_files)
+        if self.legacy_cfg_files:
+            logger.info("Loading monitored system configuration from legacy files: %s",
+                        self.legacy_cfg_files)
         else:
-            logger.info("No file(s) configured for monitored system configuration")
+            logger.info("No legacy file(s) configured for monitored system configuration")
 
         # Manage Alignak macros; this before loading the legacy configuration files
         # with their own potential macros
@@ -415,17 +417,12 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     logger.debug("- Alignak macro '%s' = %s", key, alignak_macros[key])
 
         # Read and parse the legacy configuration files
-        raw_objects = self.conf.read_config_buf(self.conf.read_config(self.monitoring_config_files))
+        raw_objects = self.conf.read_config_buf(
+            self.conf.read_legacy_cfg_files(self.legacy_cfg_files, self.alignak_env.cfg_files if
+            self.alignak_env else  None)
+        )
         if macros:
             self.conf.load_params(macros)
-
-        # Update our macro dictionary
-        self.conf.fill_resource_macros_names_macros()
-
-        # Update configuration with the environment file path
-        self.conf.main_config_file = os.path.abspath(self.env_filename)
-        self.conf.config_base_dir = os.path.dirname(self.conf.main_config_file)
-        print("%s / %s" % (self.conf.config_base_dir, self.conf.main_config_file))
 
         # Maybe conf is already invalid
         if not self.conf.conf_is_correct:
@@ -433,8 +430,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             self.request_stop("*** One or more problems were encountered while "
                               "processing the configuration (first check)...", exit_code=1)
 
-        if self.monitoring_config_files:
-            logger.info("I correctly loaded the configuration files")
+        if self.legacy_cfg_files:
+            logger.info("I correctly loaded the legacy configuration files")
 
         # Alignak global environment file
         # -------------------------------
@@ -442,6 +439,12 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # We must overload this configuration for the daemons and modules with the configuration
         # declared in the Alignak environment (alignak.ini) file!
         if self.alignak_env:
+            # Update the daemons legacy configuration if not complete
+            for daemon_type in ['arbiter', 'scheduler', 'broker',
+                                'poller', 'reactionner', 'receiver']:
+                if daemon_type not in raw_objects:
+                    raw_objects[daemon_type] = []
+
             # Get all the Alignak daemons from the configuration
             logger.info("Getting daemons configuration...")
             for daemon_name, daemon_cfg in list(self.alignak_env.get_daemons().items()):
@@ -449,27 +452,29 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 if 'type' not in daemon_cfg:
                     self.conf.add_error("Ignoring daemon with an unknown type: %s" % daemon_name)
                     continue
+                daemon_type = daemon_cfg['type']
+                daemon_name = daemon_cfg['name']
                 logger.info("- got a %s named %s, spare: %s",
-                            daemon_cfg['type'], daemon_cfg['name'], daemon_cfg.get('spare', False))
+                            daemon_type, daemon_name, daemon_cfg.get('spare', False))
 
-                # If this daemon is found in the former Cfg files, replace the former configuration
+                # If this daemon is found in the legacy configuration, replace this
                 new_cfg_daemons = []
-                for cfg_daemon in raw_objects[daemon_cfg['type']]:
-                    if cfg_daemon.get('name', 'unset') == daemon_cfg['name'] \
-                            or cfg_daemon.get("%s_name" % daemon_cfg['type'],
-                                              'unset') == [daemon_cfg['name']]:
+                for cfg_daemon in raw_objects[daemon_type]:
+                    if cfg_daemon.get('name', 'unset') == daemon_name \
+                            or cfg_daemon.get("%s_name" % daemon_type,
+                                              'unset') == [daemon_name]:
                         logger.info("  updating daemon Cfg file configuration")
                     else:
                         new_cfg_daemons.append(cfg_daemon)
                 new_cfg_daemons.append(daemon_cfg)
-                raw_objects[daemon_cfg['type']] = new_cfg_daemons
+                raw_objects[daemon_type] = new_cfg_daemons
 
             logger.debug("Checking daemons configuration:")
-            some_daemons = False
+            some_legacy_daemons = False
             for daemon_type in ['arbiter', 'scheduler', 'broker',
                                 'poller', 'reactionner', 'receiver']:
                 for cfg_daemon in raw_objects[daemon_type]:
-                    some_daemons = True
+                    some_legacy_daemons = True
                     if 'name' not in cfg_daemon:
                         cfg_daemon['name'] = cfg_daemon['%s_name' % daemon_type]
 
@@ -477,12 +482,12 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                         self.alignak_env.get_modules(daemon_name=cfg_daemon['name'])
                     logger.debug("- %s / %s: ", daemon_type, cfg_daemon['name'])
                     logger.debug("  %s", cfg_daemon)
-            if not some_daemons:
-                logger.warning("- No configured daemons.")
+            if not some_legacy_daemons:
+                logger.info("- No legacy configured daemons.")
 
             # and then get all modules from the configuration
             logger.info("Getting modules configuration...")
-            if raw_objects['module']:
+            if 'module' in raw_objects and raw_objects['module']:
                 # Manage the former parameters module_alias and module_types
                 # - replace with name and type
                 for module_cfg in raw_objects['module']:
@@ -513,7 +518,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 else:
                     raw_objects['module'].append(module_cfg)
                     logger.debug("Module env %s params: %s", module_cfg['name'], module_cfg)
-            if not raw_objects['module']:
+            if 'module' in raw_objects and not raw_objects['module']:
                 logger.info("- No configured modules.")
 
             # and then the global configuration.
@@ -621,10 +626,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.load_modules_configuration_objects(raw_objects)
         statsmgr.timer('configuration.get_objects', time.time() - _ts)
 
-        logger.info("Creating objects...")
         # Create objects for all the configuration
-        # for daemon_type in ['scheduler', 'broker', 'poller', 'reactionner', 'receiver']:
-        #     self.conf.create_objects_for_type(raw_objects, daemon_type)
         _ts = time.time()
         self.conf.create_objects(raw_objects)
         statsmgr.timer('configuration.create_objects', time.time() - _ts)
@@ -701,13 +703,13 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         statsmgr.timer('configuration.check', time.time() - _ts)
 
         # Dump Alignak macros
-        logger.info("Alignak global macros:")
+        logger.debug("Alignak global macros:")
         macro_resolver = MacroResolver()
         macro_resolver.init(self.conf)
         for macro_name in sorted(self.conf.macros):
             macro_value = macro_resolver.resolve_simple_macros_in_string("$%s$" % macro_name, [],
                                                                          None, None)
-            logger.info("- $%s$ = %s", macro_name, macro_value)
+            logger.debug("- $%s$ = %s", macro_name, macro_value)
 
         # REF: doc/alignak-conf-dispatching.png (2)
         _ts = time.time()
@@ -847,7 +849,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 logger.info("- %s = %s", key, value)
                 # properties starting with an _ character are "transformed" to macro variables
                 if key.startswith('_'):
-                    key = '$' + key[1:].upper()
+                    key = '$' + key[1:].upper() + '$'
                 # properties valued as None are filtered
                 if value is None:
                     continue
@@ -929,9 +931,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
     def daemons_start(self, run_daemons=True):
         """Manage the list of the daemons in the configuration
 
-        Check if the daemon needs to be started and it ist can be started by the Arbiter.
+        Check if the daemon needs to be started by the Arbiter.
 
-        If so, starts the daemon
+        If so, starts the daemon if `run_daemons` is True
 
         :param run_daemons: run the daemons or make a simple check
         :type run_daemons: bool
@@ -940,15 +942,17 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """
         result = True
 
-        logger.info("Alignak configuration daemons start:")
+        if run_daemons:
+            logger.info("Alignak configured daemons start:")
+        else:
+            logger.info("Alignak configured daemons check:")
 
         # Parse the list of the missing daemons and try to run the corresponding processes
         for satellites_list in [self.conf.arbiters, self.conf.receivers, self.conf.reactionners,
                                 self.conf.pollers, self.conf.brokers, self.conf.schedulers]:
             for satellite in satellites_list:
-                logger.info("- found %s, detected as missing: %s, to be launched: %s, address: %s",
-                            satellite.name, satellite.missing_daemon,
-                            satellite.alignak_launched, satellite.uri)
+                logger.info("- found %s, to be launched: %s, address: %s",
+                            satellite.name, satellite.alignak_launched, satellite.uri)
 
                 if satellite == self.link_to_myself:
                     # Ignore myself ;)
@@ -956,8 +960,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
                 if satellite.address not in ['127.0.0.1', 'localhost']:
                     logger.error("Alignak is required to launch a daemon for %s %s "
-                                 "but the satelitte is defined on %s", satellite.type,
-                                 satellite.name, satellite.address)
+                                 "but the satelitte is defined on an external address: %s",
+                                 satellite.type, satellite.name, satellite.address)
                     result = False
                     continue
 
@@ -1007,12 +1011,13 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             procs.append(daemon['process'])
             for proc in procs:
                 try:
-                    logger.debug("Process %s is %s, listening:", proc.name(), proc.status())
-                    for connection in proc.connections():
-                        l_addr, l_port = connection.laddr if connection.laddr else ('', 0)
-                        r_addr, r_port = connection.raddr if connection.raddr else ('', 0)
-                        logger.debug("- %s:%s <-> %s:%s, %s", l_addr, l_port, r_addr, r_port,
-                                     connection.status)
+                    logger.debug("Process %s is %s", proc.name(), proc.status())
+                    # logger.debug("Process listening:", proc.name(), proc.status())
+                    # for connection in proc.connections():
+                    #     l_addr, l_port = connection.laddr if connection.laddr else ('', 0)
+                    #     r_addr, r_port = connection.raddr if connection.raddr else ('', 0)
+                    #     logger.debug("- %s:%s <-> %s:%s, %s", l_addr, l_port, r_addr, r_port,
+                    #                  connection.status)
                     # Reset the daemon connection if it got broked...
                     if not daemon['satellite'].con:
                         if self.daemon_connection_init(daemon['satellite']):
@@ -1045,14 +1050,20 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         return result
 
-    def daemons_stop(self, timeout=30):
+    def daemons_stop(self, timeout=30, kill_children=False):
         """Stop the Alignak daemons
 
-         Iterate over the daemons and their children list to send a TERM
+         Iterate over the self-launched daemons and their children list to send a TERM
          Wait for daemons to terminate and then send a KILL for those that are not yet stopped
+
+         As a default behavior, only the launched daemons are killed, not their children.
+         Each daemon will manage its children killing
 
         :param timeout: delay to wait before killing a daemon
         :type timeout: int
+
+        :param kill_children: also kill the children (defaults to False)
+        :type kill_children: bool
 
         :return: True if all daemons stopped
         """
@@ -1063,36 +1074,41 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         result = True
 
         if self.my_daemons:
-            logger.info("Alignak configuration daemons stop:")
+            logger.info("Alignak self-launched daemons stop:")
 
             start = time.time()
+            children = True
             for daemon in list(self.my_daemons.values()):
                 # Terminate the daemon and its children process
-                procs = daemon['process'].children()
+                procs = []
+                if kill_children:
+                    procs = daemon['process'].children()
                 procs.append(daemon['process'])
                 for process in procs:
                     try:
-                        logger.info("Terminating process %s", process.name())
+                        logger.info("- terminating process %s", process.name())
                         process.terminate()
                     except psutil.AccessDenied:
                         logger.warning("Process %s is %s", process.name(), process.status())
 
+            procs = []
             for daemon in list(self.my_daemons.values()):
                 # Stop the daemon and its children process
-                procs = daemon['process'].children()
+                if kill_children:
+                    procs = daemon['process'].children()
                 procs.append(daemon['process'])
-                _, alive = psutil.wait_procs(procs, timeout=timeout, callback=on_terminate)
+            _, alive = psutil.wait_procs(procs, timeout=timeout, callback=on_terminate)
+            if alive:
+                # Kill processes
+                for process in alive:
+                    logger.warning("Process %s did not stopped, trying to kill", process.name())
+                    process.kill()
+                _, alive = psutil.wait_procs(alive, timeout=timeout, callback=on_terminate)
                 if alive:
-                    # Kill processes
+                    # give up
                     for process in alive:
-                        logger.warning("Process %s did not stopped, trying to kill", process.name())
-                        process.kill()
-                    _, alive = psutil.wait_procs(alive, timeout=timeout, callback=on_terminate)
-                    if alive:
-                        # give up
-                        for process in alive:
-                            logger.warning("process %s survived SIGKILL; giving up", process.name())
-                            result = False
+                        logger.warning("process %s survived SIGKILL; giving up", process.name())
+                        result = False
 
             logger.debug("Stopping daemons duration: %.2f seconds", time.time() - start)
 
@@ -1357,12 +1373,12 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                                    "let's give another chance after %d seconds...",
                                    first_connection_try_count,
                                    self.link_to_myself.polling_interval)
-                    time.sleep(self.link_to_myself.polling_interval)
                     if first_connection_try_count >= 3:
                         self.request_stop("All the daemons connections could not be established "
                                           "despite %d tries! "
                                           "Sorry, I bail out!" % first_connection_try_count,
                                           exit_code=4)
+                    time.sleep(self.link_to_myself.polling_interval)
 
             # Now I have a connection with all the daemons I need to contact them,
             # check they are alive and ready to run
@@ -1426,7 +1442,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             return
 
         # Arbiter check if some daemons need to be started
-        logger.info("Start the configuration daemons...")
         if not self.daemons_start(run_daemons=True):
             self.request_stop(message="Some Alignak daemons did not started correctly.",
                               exit_code=4)

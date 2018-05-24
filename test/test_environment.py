@@ -130,6 +130,13 @@ class TestEnvironment(AlignakTest):
         ])
         assert self.alignak_env.get_defaults() == default_section
 
+        # Variables prefixed with an _ will be considered as Alignak macros
+        macros = OrderedDict([
+            ('_dist', '/tmp'),
+            ('_dist_etc', '/tmp/etc/alignak')
+        ])
+        assert self.alignak_env.get_alignak_macros() == macros
+
         assert self.alignak_env.get_legacy_cfg_files() == {}
 
         arbiter_master = {

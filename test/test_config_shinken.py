@@ -98,7 +98,7 @@ class TestConfigShinken(AlignakTest):
 
         for item in self._arbiter.conf.commands:
             print(("Command: %s" % item))
-        assert len(self._arbiter.conf.commands) == 106
+        assert len(self._arbiter.conf.commands) == 108
 
         for item in self._arbiter.conf.timeperiods:
             print(("Timeperiod: %s" % item))

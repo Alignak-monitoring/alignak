@@ -31,6 +31,9 @@ import re
 import locale
 import traceback
 
+import requests
+import configparser
+
 from six import string_types
 
 import shutil
@@ -108,7 +111,6 @@ class AlignakTest(unittest2.TestCase):
         self.former_log_level = None
         setup_logger(logger_configuration_file, log_dir=None, process_name='', log_file='')
         self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
-        # self.set_unit_tests_logger_level(logging.WARNING)
         self.logger_.warning("Test: %s", self.id())
 
         # To make sure that no running daemon exist
@@ -182,6 +184,72 @@ class AlignakTest(unittest2.TestCase):
                 print("Unit tests handler is set at debug!")
                 # break
 
+    def _prepare_configuration(self, copy=True, cfg_folder='/tmp/alignak'):
+        cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), cfg_folder)
+
+        # Copy the default Alignak shipped configuration to the run directory
+        if copy:
+            print("Copy default configuration (../etc) to %s..." % cfg_folder)
+            if os.path.exists('%s/etc' % cfg_folder):
+                shutil.rmtree('%s/etc' % cfg_folder)
+            shutil.copytree('../etc', '%s/etc' % cfg_folder)
+
+        # Load and update the configuration
+        for f in ['alignak.log', 'monitoring-logs.log', 'monitoring-log/monitoring-logs.log']:
+            if os.path.exists('%s/log/%s' % (cfg_folder, f)):
+                os.remove('%s/log/%s' % (cfg_folder, f))
+
+        # Clean the former existing pid and log files
+        print("Cleaning pid and log files...")
+        for daemon in ['arbiter-master', 'scheduler-master', 'broker-master',
+                       'poller-master', 'reactionner-master', 'receiver-master']:
+            if os.path.exists('%s/run/%s.pid' % (cfg_folder, daemon)):
+                print("- removing pid %s/run/%s.pid" % (cfg_folder, daemon))
+                os.remove('%s/run/%s.pid' % (cfg_folder, daemon))
+            if os.path.exists('%s/log/%s.log' % (cfg_folder, daemon)):
+                print("- removing log %s/run/%s.log" % (cfg_folder, daemon))
+                os.remove('%s/log/%s.log' % (cfg_folder, daemon))
+
+        # Update monitoring configuration parameters
+        files = ['%s/etc/alignak.ini' % cfg_folder,
+                 '%s/etc/alignak.d/daemons.ini' % cfg_folder,
+                 '%s/etc/alignak.d/modules.ini' % cfg_folder]
+        print("Configuration files: %s" % files)
+        # Update monitoring configuration file variables
+        try:
+            cfg = configparser.ConfigParser()
+            cfg.read(files)
+
+            # Configuration directories
+            cfg.set('DEFAULT', '_dist', cfg_folder)
+            # Do not set a specific bin directory to use the default Alignak one
+            cfg.set('DEFAULT', '_dist_BIN', '')
+            cfg.set('DEFAULT', '_dist_ETC', '%s/etc' % cfg_folder)
+            cfg.set('DEFAULT', '_dist_VAR', '%s/var' % cfg_folder)
+            cfg.set('DEFAULT', '_dist_RUN', '%s/run' % cfg_folder)
+            cfg.set('DEFAULT', '_dist_LOG', '%s/log' % cfg_folder)
+
+            # Nagios legacy files
+            cfg.set('alignak-configuration', 'cfg', '%s/etc/alignak.cfg' % cfg_folder)
+
+            # Daemons launching and check
+            cfg.set('alignak-configuration', 'polling_interval', '1')
+            cfg.set('alignak-configuration', 'daemons_check_period', '1')
+            cfg.set('alignak-configuration', 'daemons_stop_timeout', '10')
+            cfg.set('alignak-configuration', 'daemons_start_timeout', '1')
+            cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '1')
+            cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '1')
+
+            # Poller/reactionner workers count limited to 1
+            cfg.set('alignak-configuration', 'min_workers', '1')
+            cfg.set('alignak-configuration', 'max_workers', '1')
+
+            with open('%s/etc/alignak.ini' % cfg_folder, "w") as modified:
+                cfg.write(modified)
+        except Exception as exp:
+            print("* parsing error in config file: %s" % exp)
+            assert False
+
     def _files_update(self, files, replacements):
         """Update files content with the defined replacements
 
@@ -200,8 +268,11 @@ class AlignakTest(unittest2.TestCase):
                 for line in lines:
                     outfile.write(line)
 
-    def _stop_alignak_daemons(self, arbiter_only=True):
+    def _stop_alignak_daemons(self, arbiter_only=True, request_stop_uri=''):
         """ Stop the Alignak daemons started formerly
+
+        If request_stop is not set, the this function will try so stop the daemons with the
+        /stop_request API, else it will directly send a kill signal.
 
         If some alignak- daemons are still running after the kill, force kill them.
 
@@ -210,6 +281,36 @@ class AlignakTest(unittest2.TestCase):
 
         print("Stopping the daemons...")
         start = time.time()
+        if request_stop_uri:
+            req = requests.Session()
+            raw_data = req.get("%s/stop_request" % request_stop_uri, params={'stop_now': '1'})
+            data = raw_data.json()
+
+            # Let the process 20 seconds to exit
+            time.sleep(20)
+
+            no_daemons = True
+            for daemon in ['broker', 'poller', 'reactionner', 'receiver', 'scheduler', 'arbiter']:
+                for proc in psutil.process_iter():
+                    try:
+                        if daemon not in proc.name():
+                            continue
+                        if getattr(self, 'my_pid', None) and proc.pid == self.my_pid:
+                            continue
+
+                        print("- ***** remaining %s / %s" % (proc.name(), proc.status()))
+                        if proc.status() == 'running':
+                            no_daemons = False
+                    except psutil.NoSuchProcess:
+                        print("not existing!")
+                        continue
+                    except psutil.TimeoutExpired:
+                        print("***** timeout 10 seconds, force-killing the daemon...")
+            # Do not assert because some processes are sometimes zombies that are
+            # removed by the Python GC
+            # assert no_daemons
+            return
+
         if getattr(self, 'procs', None):
             for name, proc in list(self.procs.items()):
                 if arbiter_only and name not in ['arbiter-master']:
@@ -261,9 +362,9 @@ class AlignakTest(unittest2.TestCase):
                     print("***** timeout 10 seconds, force-killing the daemon...")
                     daemon_process.kill()
 
-    def _run_alignak_daemons(self, cfg_folder='/tmp', runtime=30,
+    def _run_alignak_daemons(self, cfg_folder='/tmp/alignak', runtime=30,
                              daemons_list=[], spare_daemons=[], piped=False, run_folder='',
-                             arbiter_only=True):
+                             arbiter_only=True, parameters=[]):
         """ Run the Alignak daemons for a passive configuration
 
         Let the daemons run for the number of seconds defined in the runtime parameter and
@@ -279,27 +380,62 @@ class AlignakTest(unittest2.TestCase):
             run_folder = cfg_folder
         print("Running Alignak daemons, cfg_folder: %s, run_folder: %s" % (cfg_folder, run_folder))
 
-        # Update alignak.ini file to avoid using the alignak:alignak user account
-        files = ['%s/alignak.ini' % cfg_folder]
-        replacements = {
-            'user=alignak': ';user=alignak',
-            'group=alignak': ';group=alignak',
-            'bindir=%(_dist_BIN)s': 'bindir='
-        }
-        print("Commenting user/group in alignak.ini...")
-        self._files_update(files, replacements)
+        for f in ['alignak.log', 'monitoring-logs.log', 'monitoring-log/monitoring-logs.log']:
+            if os.path.exists('%s/log/%s' % (cfg_folder, f)):
+                os.remove('%s/log/%s' % (cfg_folder, f))
 
+        # Clean the former existing pid and log files
         print("Cleaning pid and log files...")
-        for name in daemons_list + ['arbiter-master']:
-            # if arbiter_only and name not in ['arbiter-master']:
-            #     continue
-            if os.path.exists('%s/%s.pid' % (run_folder, name)):
-                os.remove('%s/%s.pid' % (run_folder, name))
-                print("- removed %s/%s.pid" % (run_folder, name))
-            if os.path.exists('%s/%s.log' % (run_folder, name)):
-                os.remove('%s/%s.log' % (run_folder, name))
-                print("- removed %s/%s.log" % (run_folder, name))
+        for daemon in ['arbiter-master', 'scheduler-master', 'broker-master',
+                       'poller-master', 'reactionner-master', 'receiver-master']:
+            if os.path.exists('%s/run/%s.pid' % (run_folder, daemon)):
+                print("- removing pid %s/run/%s.pid" % (run_folder, daemon))
+                os.remove('%s/run/%s.pid' % (run_folder, daemon))
+            if os.path.exists('%s/log/%s.log' % (run_folder, daemon)):
+                print("- removing log %s/run/%s.log" % (run_folder, daemon))
+                os.remove('%s/log/%s.log' % (run_folder, daemon))
 
+        # Update monitoring configuration parameters
+        files = ['%s/etc/alignak.ini' % cfg_folder,
+                 '%s/etc/alignak.d/daemons.ini' % cfg_folder,
+                 '%s/etc/alignak.d/modules.ini' % cfg_folder]
+        print("Configuration files: %s" % files)
+        # Update monitoring configuration file variables
+        try:
+            cfg = configparser.ConfigParser()
+            cfg.read(files)
+
+            # Configuration directories
+            cfg.set('DEFAULT', '_dist', cfg_folder)
+            # Do not set a specific bin directory to use the default Alignak one
+            cfg.set('DEFAULT', '_dist_BIN', '')
+            cfg.set('DEFAULT', '_dist_ETC', '%s/etc' % cfg_folder)
+            cfg.set('DEFAULT', '_dist_VAR', '%s/var' % run_folder)
+            cfg.set('DEFAULT', '_dist_RUN', '%s/run' % run_folder)
+            cfg.set('DEFAULT', '_dist_LOG', '%s/log' % run_folder)
+
+            # Nagios legacy files
+            cfg.set('alignak-configuration', 'cfg', '%s/etc/alignak.cfg' % cfg_folder)
+
+            # Daemons launching and check
+            cfg.set('alignak-configuration', 'polling_interval', '1')
+            cfg.set('alignak-configuration', 'daemons_check_period', '1')
+            cfg.set('alignak-configuration', 'daemons_stop_timeout', '20')
+            cfg.set('alignak-configuration', 'daemons_start_timeout', '5')
+            cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '1')
+            cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '1')
+
+            # Poller/reactionner workers count limited to 1
+            cfg.set('alignak-configuration', 'min_workers', '1')
+            cfg.set('alignak-configuration', 'max_workers', '1')
+
+            with open('%s/etc/alignak.ini' % cfg_folder, "w") as modified:
+                cfg.write(modified)
+        except Exception as exp:
+            print("* parsing error in config file: %s" % exp)
+            assert False
+
+        # If some Alignak daemons are still running...
         self._stop_alignak_daemons()
 
         # Some script commands may exist in the test folder ...
@@ -314,9 +450,10 @@ class AlignakTest(unittest2.TestCase):
             if arbiter_only and name not in ['arbiter-master']:
                 continue
             args = ["../alignak/bin/alignak_%s.py" % name.split('-')[0], "-n", name,
-                    "-e", "%s/alignak.ini" % cfg_folder]
+                    "-e", "%s/etc/alignak.ini" % cfg_folder]
             print("- %s arguments: %s" % (name, args))
             if piped:
+                print("- capturing stdout/stderr" % name)
                 self.procs[name] = \
                     subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
             else:
@@ -337,8 +474,8 @@ class AlignakTest(unittest2.TestCase):
                         for line in f:
                             print("xxx %s" % line)
 
-                if os.path.exists("%s/arbiter-master.log" % cfg_folder):
-                    with open("%s/arbiter-master.log" % cfg_folder) as f:
+                if os.path.exists("%s/log/arbiter-master.log" % cfg_folder):
+                    with open("%s/log/arbiter-master.log" % cfg_folder) as f:
                         for line in f:
                             print("... %s" % line)
 
@@ -362,13 +499,13 @@ class AlignakTest(unittest2.TestCase):
         for name in daemons_list + ['arbiter-master']:
             if arbiter_only and name not in ['arbiter-master']:
                 continue
-            print("- %s for %s" % ('%s/%s.pid' % (run_folder, name), name))
+            print("- %s for %s" % ('%s/run/%s.pid' % (run_folder, name), name))
             # Some times pid and log files may not exist ...
-            if not os.path.exists('%s/%s.pid' % (run_folder, name)):
-                print('%s/%s.pid does not exist!' % (run_folder, name))
-            print("- %s for %s" % ('%s/%s.log' % (run_folder, name), name))
-            if not os.path.exists('%s/%s.log' % (run_folder, name)):
-                print('%s/%s.log does not exist!' % (run_folder, name))
+            if not os.path.exists('%s/run/%s.pid' % (run_folder, name)):
+                print('%s/run/%s.pid does not exist!' % (run_folder, name))
+            print("- %s for %s" % ('%s/log/%s.log' % (run_folder, name), name))
+            if not os.path.exists('%s/log/%s.log' % (run_folder, name)):
+                print('%s/log/%s.log does not exist!' % (run_folder, name))
 
         time.sleep(1)
 
@@ -376,7 +513,8 @@ class AlignakTest(unittest2.TestCase):
         # Let the schedulers get their configuration and run the first checks
         time.sleep(runtime)
 
-    def _check_daemons_log_for_errors(self, daemons_list, ignored_warnings=[], ignored_errors=[]):
+    def _check_daemons_log_for_errors(self, daemons_list, run_folder='/tmp/alignak',
+                                      ignored_warnings=None, ignored_errors=None):
         """
         Check that the daemons all started correctly and that they got their configuration
         ignored_warnings and ignored_errors are lists of strings that make a WARNING or ERROR log
@@ -389,11 +527,11 @@ class AlignakTest(unittest2.TestCase):
         nb_errors = 0
         nb_warnings = 0
         for daemon in ['arbiter-master'] + daemons_list:
-            print("- log /tmp/%s.log" % daemon)
-            assert os.path.exists("/tmp/%s.log" % daemon), '/tmp/%s.log does not exist!' % daemon
+            print("- log /%s/log/%s.log" % (run_folder, daemon))
+            assert os.path.exists("/%s/log/%s.log" % (run_folder, daemon)), '/%s/log/%s.log does not exist!' % (run_folder, daemon)
             daemon_errors = False
             print("-----\n%s log file\n-----\n" % daemon)
-            with open('/tmp/%s.log' % daemon) as f:
+            with open('/%s/log/%s.log' % (run_folder, daemon)) as f:
                 for line in f:
                     if 'WARNING: ' in line or daemon_errors:
                         if not travis_run:
@@ -476,7 +614,11 @@ class AlignakTest(unittest2.TestCase):
 
         if os.path.exists('../etc'):
             shutil.copytree('../etc', '/tmp/etc/alignak')
-            files = ['/tmp/etc/alignak/alignak.ini']
+            cfg_folder = '/tmp/etc/alignak'
+            files = ['%s/alignak.ini' % cfg_folder,
+                     '%s/alignak.d/daemons.ini' % cfg_folder,
+                     '%s/alignak.d/modules.ini' % cfg_folder,
+                     '%s/alignak-logger.json' % cfg_folder]
             replacements = {
                 '_dist=/usr/local/': '_dist=/tmp',
                 'user=alignak': ';user=alignak',
@@ -524,7 +666,7 @@ class AlignakTest(unittest2.TestCase):
         args = {
             'env_file': self.env_filename,
             'alignak_name': 'alignak-test', 'daemon_name': arbiter_name,
-            'monitoring_files': [configuration_file],
+            'legacy_cfg_files': [configuration_file],
         }
         self._arbiter = Arbiter(**args)
 

@@ -73,13 +73,16 @@ class HTTPDaemon(object):
         :param thread_pool_size:
         """
         self.port = port
-        try:
-            self.host = host.encode('utf-8')
-        except Exception as exp:
-            self.host = host
-        logger.warning("self.host: %s (%s)", self.host, type(self.host))
+        self.host = host
         self.use_ssl = use_ssl
 
+        # # Make sure that the host ip/name is propely encoded for CherryPy
+        # try:
+        #     self.host = self.host.encode('utf-8')
+        # except Exception as exp:
+        #     pass
+        # logger.warning("self.host: %s (%s)", self.host, type(self.host))
+        #
         self.uri = '%s://%s:%s' % ('https' if self.use_ssl else 'http', self.host, self.port)
         logger.info("Configured HTTP server on %s, %d threads", self.uri, thread_pool_size)
 
@@ -105,7 +108,7 @@ class HTTPDaemon(object):
         # - socket_queue_size
         cherrypy.config.update({'engine.autoreload.on': False,
                                 'server.thread_pool': thread_pool_size,
-                                'server.socket_host': self.host,
+                                'server.socket_host': str(self.host),
                                 'server.socket_port': self.port})
 
         # Default is to disable CherryPy logging
@@ -115,8 +118,8 @@ class HTTPDaemon(object):
         if log_file:
             # Log into the provided log file
             cherrypy.config.update({'log.screen': True,
-                                    'log.access_file': log_file,
-                                    'log.error_file': log_file})
+                                    'log.access_file': str(log_file),
+                                    'log.error_file': str(log_file)})
             cherrypy.log.access_log.setLevel(logging.DEBUG)
             cherrypy.log.error_log.setLevel(logging.DEBUG)
             cherrypy.log("CherryPy logging: %s" % (log_file))

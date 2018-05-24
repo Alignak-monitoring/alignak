@@ -153,6 +153,10 @@ class Property(object):
         self.keep_empty = keep_empty
         self.special = special
 
+    def __repr__(self):  # pragma: no cover
+        return '<Property %r, default: %r />' % (self.__class__, self.default)
+    __str__ = __repr__
+
     def pythonize(self, val):  # pylint: disable=no-self-use
         """Generic pythonize method
 
@@ -202,12 +206,11 @@ class BoolProp(Property):
     Boolean values are currently case insensitively defined as 0,
     false, no, off for False, and 1, true, yes, on for True).
     """
-    @staticmethod
-    def pythonize(val):
+    def pythonize(self, val):
         """Convert value into a boolean
 
         :param val: value to convert
-        :type val:
+        :type val: bool, int, str
         :return: boolean corresponding to value ::
 
         {'1': True, 'yes': True, 'true': True, 'on': True,
@@ -241,8 +244,7 @@ class IntegerProp(Property):
         :return: integer corresponding to value
         :rtype: int
         """
-        val = unique_value(val)
-        return to_int(val)
+        return to_int(unique_value(val))
 
 
 class FloatProp(Property):
@@ -259,8 +261,7 @@ class FloatProp(Property):
         :return: float corresponding to value
         :rtype: float
         """
-        val = unique_value(val)
-        return to_float(val)
+        return to_float(unique_value(val))
 
 
 class CharProp(Property):
@@ -277,8 +278,7 @@ class CharProp(Property):
         :return: char corresponding to value
         :rtype: str
         """
-        val = unique_value(val)
-        return to_char(val)
+        return to_char(unique_value(val))
 
 
 class StringProp(Property):
@@ -359,8 +359,7 @@ class LogLevelProp(StringProp):
         :return: log level corresponding to value
         :rtype: str
         """
-        val = unique_value(val)
-        return logging.getLevelName(val)
+        return logging.getLevelName(unique_value(val))
 
 
 class DictProp(Property):
@@ -456,8 +455,7 @@ class AddrProp(Property):
 class ToGuessProp(Property):
     """Unknown property encountered while parsing"""
 
-    @staticmethod
-    def pythonize(val):
+    def pythonize(self, val):
         """If value is a single list element just return the element
         does nothing otherwise
 

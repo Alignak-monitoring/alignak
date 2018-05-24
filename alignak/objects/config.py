@@ -168,6 +168,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # if it is not defined in the configuration file
         'alignak_name':
             StringProp(default=u''),
+        'alignak_env':
+            ListProp(default=[]),
 
         # Configuration identification - instance id and name
         'instance_id':
@@ -212,18 +214,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # 'notifications_enabled':
         #     BoolProp(default=True, fill_brok=['full_status']),
 
-        # Used for the PREFIX macro
-        # Alignak prefix does not exist as for Nagios meaning.
-        # It is better to set this value as an empty string rather than a meaningless information!
-        'prefix':
-            UnusedProp(text=NOT_MANAGED),
-
-        # Used for the MAINCONFIGFILE macro
+        # Used for the MAINCONFIGFILE, CONFIGFILES and CONFIGBASEDIR macros
+        # will be set when we will load a file
+        'config_files':
+            ListProp(default=[]),
         'main_config_file':
-            StringProp(default=u'/usr/local/etc/alignak/alignak.ini'),
-
+            StringProp(default=u''),
         'config_base_dir':
-            StringProp(default=u''),  # will be set when we will load a file
+            StringProp(default=u''),
 
         # # Triggers directory
         # 'triggers_dir':
@@ -671,7 +669,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'enable_problem_impacts_states_change':
             BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
 
-        # More a running value in fact
+        # More a running value indeed - the macros catched in the parsed configuration
         'resource_macros_names':
             ListProp(default=[]),
 
@@ -679,6 +677,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
             IntegerProp(default=3600),
 
         # Self created daemons configuration
+        'launch_missing_daemons':
+            BoolProp(default=False),
+
         'daemons_arguments':
             StringProp(default=''),
 
@@ -709,11 +710,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
     }
 
     macros = {
-        'PREFIX': '',
         'ALIGNAK': 'alignak_name',
+        'ALIGNAK_CONFIG': 'alignak_env',
+        'CONFIGFILES': 'config_files',
         'MAINCONFIGFILE': 'main_config_file',
         'MAINCONFIGDIR': 'config_base_dir',
-        # The following one are deprecated...
+        # The following one are Nagios specific features...
         'STATUSDATAFILE': '',
         'COMMENTDATAFILE': '',
         'DOWNTIMEDATAFILE': '',
@@ -723,7 +725,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'TEMPPATH': '',
         'LOGFILE': '',
         'RESOURCEFILE': '',
-        'COMMANDFILE': 'command_file',
+        'COMMANDFILE': '',
         'HOSTPERFDATAFILE': '',
         'SERVICEPERFDATAFILE': '',
         'ADMINEMAIL': '',
@@ -891,17 +893,17 @@ class Config(Item):  # pylint: disable=R0904,R0902
         res['macros'] = self.macros
         return res
 
-    def fill_resource_macros_names_macros(self):
-        """ fill the macro dict will all value
-        from self.resource_macros_names
-
-        :return: None
-        """
-        properties = self.__class__.properties
-        macros = self.__class__.macros
-        for macro_name in self.resource_macros_names:
-            properties['$' + macro_name + '$'] = StringProp(default='')
-            macros[macro_name] = '$' + macro_name + '$'
+    # def fill_resource_macros_names_macros(self):
+    #     """ Fill the macro dict will all values stored in
+    #     self.resource_macros_names. This list was prepared during the configuration parsing
+    #
+    #     :return: None
+    #     """
+    #     for macro_name in self.resource_macros_names:
+    #         # Increase the macros list
+    #         self.__class__.macros[macro_name] = '$%s$' % macro_name
+    #         # Create a new property to store the macro value
+    #         self.__class__.properties['$%s$' % macro_name] = StringProp(default='')
 
     def clean_params(self, params):
         """Convert a list of parameters (key=value) into a dict
@@ -916,9 +918,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
             elts = elt.split('=', 1)
             if len(elts) == 1:  # error, there is no = !
                 self.add_error("the parameter %s is malformed! (no = sign)" % elts[0])
-            elif elts[1] == '':
-                self.add_error("the parameter %s is malformed! (no value after =)" % elts[0])
             else:
+                if elts[1] == '':
+                    self.add_warning("the parameter %s is ambiguous! "
+                                     "No value after =, assuming an empty string" % elts[0])
                 clean_p[elts[0]] = elts[1]
 
         return clean_p
@@ -932,27 +935,38 @@ class Config(Item):  # pylint: disable=R0904,R0902
         """
         logger.debug("Alignak parameters:")
         for key, value in sorted(self.clean_params(params).items()):
-            if key in self.properties:
-                val = self.properties[key].pythonize(value)
-            elif key in self.running_properties:
-                logger.warning("using a the running property %s in a config file", key)
-                val = self.running_properties[key].pythonize(value)
-            elif key.startswith('$') or key in ['cfg_file', 'cfg_dir']:
-                # it's a macro or a useless now param, we don't touch this
-                val = value
-            else:
-                logger.debug("Guessing the property '%s' type because it "
-                             "is not in %s object properties", key, self.__class__.__name__)
-                val = ToGuessProp.pythonize(value)
+            update_attribute = None
 
-            setattr(self, key, val)
-            logger.debug("- %s = %s", key, val)
-            # Maybe it's a variable as $USER$ or $ANOTHERVATRIABLE$
+            # Maybe it's a variable as $USER$ or $ANOTHERVARIABLE$
             # so look at the first character. If it's a $, it is a macro variable
             # if it ends with $ too
             if key[0] == '$' and key[-1] == '$':
-                macro_name = key[1:-1]
-                self.resource_macros_names.append(macro_name)
+                key = key[1:-1]
+                # Update the macros list
+                self.__class__.macros[key] = '$%s$' % key
+
+                logger.debug("- macro %s = %s", key, update_attribute)
+                # Create a new property to store the macro value
+                if isinstance(value, list):
+                    self.__class__.properties['$%s$' % key] = ListProp(default=value)
+                else:
+                    self.__class__.properties['$%s$' % key] = StringProp(default=value)
+            elif key in self.properties:
+                update_attribute = self.properties[key].pythonize(value)
+            elif key in self.running_properties:
+                logger.warning("using a the running property %s in a config file", key)
+                update_attribute = self.running_properties[key].pythonize(value)
+            elif key.startswith('$') or key in ['cfg_file', 'cfg_dir']:
+                # it's a macro or a useless now param, we don't touch this
+                update_attribute = value
+            else:
+                logger.debug("Guessing the property '%s' type because it "
+                             "is not in %s object properties", key, self.__class__.__name__)
+                update_attribute = ToGuessProp().pythonize(value)
+
+            if update_attribute:
+                setattr(self, key, update_attribute)
+                logger.debug("- %s = %s", key, update_attribute)
 
         # Change Nagios2 names to Nagios3 ones (before using them)
         self.old_properties_names_to_new()
@@ -974,50 +988,64 @@ class Config(Item):  # pylint: disable=R0904,R0902
         res = [elt.strip() for elt in tmp if elt.strip() != '']
         return res
 
-    def read_config(self, files):
+    def read_legacy_cfg_files(self, cfg_files, alignak_env_files=None):
         # pylint: disable=too-many-nested-blocks,too-many-statements
         # pylint: disable=too-many-branches, too-many-locals
-        """Read and parse main configuration files
-        (specified with -c option to the Arbiter)
-        and put them into a StringIO object
+        """Read and parse the Nagios legacy configuration files
+        and store their content into a StringIO object which content
+        will be returned as the function result
 
-        :param files: list of file to read
-        :type files: list
+        :param cfg_files: list of file to read
+        :type cfg_files: list
+        :param alignak_env_files: name of the alignak environment file
+        :type alignak_env_files: list
         :return: a buffer containing all files
         :rtype: str
         """
+        cfg_buffer = ''
+        if not cfg_files:
+            return cfg_buffer
+
+        # Update configuration with the first legacy configuration file name and path
+        # This will update macro properties
+        self.alignak_env = 'n/a'
+        if alignak_env_files is not None:
+            self.alignak_env = alignak_env_files
+            if not isinstance(alignak_env_files, list):
+                self.alignak_env = [os.path.abspath(alignak_env_files)]
+            else:
+                self.alignak_env = [os.path.abspath(f) for f in alignak_env_files]
+        self.main_config_file = os.path.abspath(cfg_files[0])
+        self.config_base_dir = os.path.dirname(self.main_config_file)
+
         # Universal newline mode (all new lines are managed internally)
-        res = StringIO(u"# Configuration files buffer", newline=None)
+        res = StringIO(u"# Configuration cfg_files buffer", newline=None)
 
-        if not self.read_config_silent and files:
-            logger.info("Reading the configuration files...")
+        if not self.read_config_silent and cfg_files:
+            logger.info("Reading the configuration cfg_files...")
 
-        # A first pass to get all the configuration files in a buffer
-        for c_file in files:
-            # Make sure the configuration files are not repeated...
-            if os.path.abspath(c_file) in self.my_cfg_files:
-                logger.warning("- ignoring repeated file: %s", os.path.abspath(c_file))
+        # A first pass to get all the configuration cfg_files in a buffer
+        for cfg_file in cfg_files:
+            # Make sure the configuration cfg_files are not repeated...
+            if os.path.abspath(cfg_file) in self.my_cfg_files:
+                logger.warning("- ignoring repeated file: %s", os.path.abspath(cfg_file))
                 continue
-            self.my_cfg_files.append(os.path.abspath(c_file))
+            self.my_cfg_files.append(os.path.abspath(cfg_file))
 
             # File header
             res.write(u"\n")
-            res.write(u"# imported_from=%s" % c_file)
+            res.write(u"# imported_from=%s" % cfg_file)
             res.write(u"\n")
 
             if not self.read_config_silent:
-                logger.info("- opening '%s' configuration file", c_file)
+                logger.info("- opening '%s' configuration file", cfg_file)
             try:
                 # Open in Universal way for Windows, Mac, Linux-based systems
-                file_d = open(c_file, 'rU')
+                file_d = open(cfg_file, 'rU')
                 buf = file_d.readlines()
                 file_d.close()
-
-                # Update macro used properties
-                self.config_base_dir = os.path.dirname(c_file)
-                self.main_config_file = os.path.abspath(c_file)
             except IOError as exp:
-                self.add_error("cannot open main file '%s' for reading: %s" % (c_file, exp))
+                self.add_error("cannot open main file '%s' for reading: %s" % (cfg_file, exp))
                 continue
 
             for line in buf:
@@ -1041,7 +1069,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     cfg_file_name = cfg_file_name.strip()
                     cfg_file_name = os.path.abspath(cfg_file_name)
 
-                    # Make sure the configuration files are not repeated...
+                    # Make sure the configuration cfg_files are not repeated...
                     if cfg_file_name in self.my_cfg_files:
                         logger.warning("- ignoring repeated file: %s", cfg_file_name)
                     else:
@@ -1089,7 +1117,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                                 continue
 
                             cfg_file_name = os.path.join(root, found_file)
-                            # Make sure the configuration files are not repeated...
+                            # Make sure the configuration cfg_files are not repeated...
                             if os.path.abspath(cfg_file_name) in self.my_cfg_files:
                                 logger.warning("- ignoring repeated file: %s", cfg_file_name)
                             else:
@@ -1120,16 +1148,21 @@ class Config(Item):  # pylint: disable=R0904,R0902
                                     self.add_error(u"cannot open file '%s' for reading: %s"
                                                    % (cfg_file_name, exp))
 
-        config = res.getvalue()
+        cfg_buffer = res.getvalue()
         res.close()
-        return config
 
-    def read_config_buf(self, buf):
+        return cfg_buffer
+
+    def read_config_buf(self, cfg_buffer):
         # pylint: disable=too-many-locals, too-many-branches
-        """The config buffer (previously returned by Config.read_config())
+        """The legacy configuration buffer (previously returned by Config.read_config())
 
-        :param buf: buffer containing all data from config files
-        :type buf: str
+        If the buffer is empty, it will return an empty dictionary else it will return a
+        dictionary containing dictionary items tha tmay be used to create Alignak
+        objects
+
+        :param cfg_buffer: buffer containing all data from config files
+        :type cfg_buffer: str
         :return: dict of alignak objects with the following structure ::
         { type1 : [{key: value, ..}, {..}],
           type2 : [ ... ]
@@ -1145,8 +1178,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :rtype: dict
         """
-        if not self.read_config_silent and buf:
-            logger.info("Parsing the configuration files...")
+        objects = {}
+        if not self.read_config_silent:
+            if cfg_buffer:
+                logger.info("Parsing the legacy configuration files...")
+            else:
+                logger.info("No legacy configuration files.")
+                return objects
 
         params = []
         objectscfg = {}
@@ -1159,7 +1197,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         almost_in_define = False
         continuation_line = False
         tmp_line = ''
-        lines = buf.split('\n')
+        lines = cfg_buffer.split('\n')
         line_nb = 0  # Keep the line number for the file path
         filefrom = ''
         for line in lines:
@@ -1231,7 +1269,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         if tmp_type not in objectscfg:
             objectscfg[tmp_type] = []
         objectscfg[tmp_type].append(tmp)
-        objects = {}
 
         # Check and load the parameters
         self.load_params(params)
@@ -1256,32 +1293,48 @@ class Config(Item):  # pylint: disable=R0904,R0902
         return objects
 
     @staticmethod
-    def add_ghost_objects(raw_objects):
-        """Add fake command objects for internal processing ; bp_rule, _internal_host_up, _echo
+    def add_self_defined_objects(raw_objects):
+        """Add self defined command objects for internal processing ;
+        bp_rule, _internal_host_up, _echo, _internal_host_check, _interna_service_check
 
         :param raw_objects: Raw config objects dict
         :type raw_objects: dict
-        :return: raw_objects with 3 extras commands
+        :return: raw_objects with some more commands
         :rtype: dict
         """
-        bp_rule = {
+        logger.info("- creating internally defined commands...")
+        if 'command' not in raw_objects:
+            raw_objects['command'] = []
+        # Business rule
+        raw_objects['command'].append({
             'command_name': 'bp_rule',
             'command_line': 'bp_rule',
             'imported_from': 'alignak-self'
-        }
-        raw_objects['command'].append(bp_rule)
-        host_up = {
+        })
+        # Internal host checks
+        raw_objects['command'].append({
             'command_name': '_internal_host_up',
             'command_line': '_internal_host_up',
             'imported_from': 'alignak-self'
-        }
-        raw_objects['command'].append(host_up)
-        echo_obj = {
+        })
+        raw_objects['command'].append({
+            'command_name': '_internal_host_check',
+            # Command line must contain: state_id;output
+            'command_line': '',
+            'imported_from': 'alignak-self'
+        })
+        # Internal service check
+        raw_objects['command'].append({
             'command_name': '_echo',
             'command_line': '_echo',
             'imported_from': 'alignak-self'
-        }
-        raw_objects['command'].append(echo_obj)
+        })
+        raw_objects['command'].append({
+            'command_name': '_internal_service_check',
+            # Command line must contain: state_id;output
+            'command_line': '',
+            'imported_from': 'alignak-self'
+        })
 
     def early_create_objects(self, raw_objects):
         """Create the objects needed for the post configuration file initialization
@@ -1293,9 +1346,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
         types_creations = self.__class__.types_creations
         early_created_types = self.__class__.early_created_types
 
+        logger.info("Creating objects...")
         for o_type in types_creations:
             if o_type in early_created_types:
                 self.create_objects_for_type(raw_objects, o_type)
+        logger.info("Done")
 
     def create_objects(self, raw_objects):
         """Create all the objects got after the post configuration file initialization
@@ -1307,13 +1362,16 @@ class Config(Item):  # pylint: disable=R0904,R0902
         types_creations = self.__class__.types_creations
         early_created_types = self.__class__.early_created_types
 
+        logger.info("Creating objects...")
+
         # Before really creating the objects, we add some ghost
         # ones like the bp_rule for correlation
-        self.add_ghost_objects(raw_objects)
+        self.add_self_defined_objects(raw_objects)
 
         for o_type in types_creations:
             if o_type not in early_created_types:
                 self.create_objects_for_type(raw_objects, o_type)
+        logger.info("Done")
 
     def create_objects_for_type(self, raw_objects, o_type):
         """Generic function to create objects regarding the o_type
@@ -1340,12 +1398,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # List to store the created objects
         lst = []
         try:
+            logger.info("- creating '%s' objects", o_type)
             for obj_cfg in raw_objects[o_type]:
                 my_object = cls(obj_cfg)
                 # We create the object
                 lst.append(my_object)
+            logger.info("  created %d.", len(lst))
         except KeyError:
-            logger.debug("No %s objects in the raw configuration objects", o_type)
+            logger.info("  no %s objects in the configuration", o_type)
 
         # Create the objects list and set it in our properties
         setattr(self, prop, clss(lst, initial_index))
@@ -1648,7 +1708,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             self.realms.fill_default()
 
             # Then we create missing satellites, so no other satellites will be created after
-            self.fill_default_satellites()
+            self.fill_default_satellites(self.launch_missing_daemons)
 
         types_creations = self.__class__.types_creations
         for o_type in types_creations:
@@ -1708,10 +1768,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 logger.debug("- %ss: %s", daemons_list.inner_class.my_type,
                              ','.join([daemon.get_name() for daemon in daemons_list]))
 
-    def fill_default_satellites(self):  # pylint: disable=too-many-branches
+    def fill_default_satellites(self, alignak_launched=False):  # pylint: disable=too-many-branches
         """If a required satellite is missing in the configuration, we create a new satellite
         on localhost with some default values
 
+        :param alignak_launched: created daemons are to be launched or not
+        :type alignak_launched: bool
         :return: None
         """
 
@@ -1731,7 +1793,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             logger.warning("No scheduler defined, I am adding one on 127.0.0.1:%d",
                            self.daemons_initial_port)
             satellite = SchedulerLink({'type': 'scheduler', 'name': 'Default-Scheduler',
-                                       'alignak_launched': True, 'missing_daemon': True,
+                                       'alignak_launched': alignak_launched,
+                                       'missing_daemon': True,
                                        'spare': '0', 'manage_sub_realms': '0',
                                        'address': '127.0.0.1', 'port': self.daemons_initial_port})
             self.daemons_initial_port = self.daemons_initial_port + 1
@@ -1741,7 +1804,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             logger.warning("No reactionner defined, I am adding one on 127.0.0.1:%d",
                            self.daemons_initial_port)
             satellite = ReactionnerLink({'type': 'reactionner', 'name': 'Default-Reactionner',
-                                         'alignak_launched': True, 'missing_daemon': True,
+                                         'alignak_launched': alignak_launched,
+                                         'missing_daemon': True,
                                          'spare': '0', 'manage_sub_realms': '0',
                                          'address': '127.0.0.1', 'port': self.daemons_initial_port})
             self.daemons_initial_port = self.daemons_initial_port + 1
@@ -1751,7 +1815,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             logger.warning("No poller defined, I am adding one on 127.0.0.1:%d",
                            self.daemons_initial_port)
             satellite = PollerLink({'type': 'poller', 'name': 'Default-Poller',
-                                    'alignak_launched': True, 'missing_daemon': True,
+                                    'alignak_launched': alignak_launched,
+                                    'missing_daemon': True,
                                     'spare': '0', 'manage_sub_realms': '0',
                                     'address': '127.0.0.1', 'port': self.daemons_initial_port})
             self.daemons_initial_port = self.daemons_initial_port + 1
@@ -1761,7 +1826,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             logger.warning("No broker defined, I am adding one on 127.0.0.1:%d",
                            self.daemons_initial_port)
             satellite = BrokerLink({'type': 'broker', 'name': 'Default-Broker',
-                                    'alignak_launched': True, 'missing_daemon': True,
+                                    'alignak_launched': alignak_launched,
+                                    'missing_daemon': True,
                                     'spare': '0', 'manage_sub_realms': '0',
                                     'address': '127.0.0.1', 'port': self.daemons_initial_port})
             self.daemons_initial_port = self.daemons_initial_port + 1
@@ -1771,7 +1837,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             logger.warning("No receiver defined, I am adding one on 127.0.0.1:%d",
                            self.daemons_initial_port)
             satellite = ReceiverLink({'type': 'receiver', 'name': 'Default-Receiver',
-                                      'alignak_launched': True, 'missing_daemon': True,
+                                      'alignak_launched': alignak_launched,
+                                      'missing_daemon': True,
                                       'spare': '0', 'manage_sub_realms': '0',
                                       'address': '127.0.0.1', 'port': self.daemons_initial_port})
             self.daemons_initial_port = self.daemons_initial_port + 1
@@ -2252,10 +2319,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 # really necessary to have information about each object ;
                 for cur_obj in dump_list:
                     if strclss == 'services':
-                        logger.debug('\t%s', cur_obj.get_full_name())
+                        logger.debug('    %s', cur_obj.get_full_name())
                     else:
-                        logger.debug('\t%s', cur_obj.get_name())
-                logger.info('\tChecked %d %s', len(checked_list), strclss)
+                        logger.debug('    %s', cur_obj.get_name())
+                if checked_list:
+                    logger.info('    Checked %d %s', len(checked_list), strclss)
+                else:
+                    logger.info('    None')
 
         # Parse hosts and services for tags and realms
         hosts_tag = set()
@@ -2310,7 +2380,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         if self.configuration_errors:
             valid = False
-            logger.error("********** Configuration errors:")
+            logger.error("Configuration errors:")
             for msg in self.configuration_errors:
                 logger.error(msg)
 
@@ -2351,13 +2421,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
         :return:  None
         """
         if self.configuration_warnings:
-            logger.info("Configuration warnings:")
+            logger.warning("Configuration warnings:")
             for msg in self.configuration_warnings:
-                logger.info(msg)
+                logger.warning(msg)
         if self.configuration_errors:
-            logger.info("Configuration errors:")
+            logger.warning("Configuration errors:")
             for msg in self.configuration_errors:
-                logger.info(msg)
+                logger.warning(msg)
 
     def create_packs(self):  # pylint: disable=R0915,R0914,R0912,W0613
         """Create packs of hosts and services (all dependencies are resolved)
@@ -2794,11 +2864,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # Now serialize the whole configuration, for sending to spare arbiters
             self.spare_arbiter_conf = serialize(self)
 
-    def dump(self, dump_file=None):  # pragma: no cover, not for unit tests...
+    def dump(self, dump_file_name=None):
         """Dump configuration to a file in a JSON format
 
-        :param dump_file: the file to dump
-        :type dump_file: file
+        :param dump_file_name: the file to dump configuration to
+        :type dump_file_name: str
         :return: None
         """
         config_dump = {}
@@ -2806,11 +2876,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         for _, _, category, _, _ in list(self.types_creations.values()):
             try:
                 objs = [jsonify_r(i) for i in getattr(self, category)]
-            except TypeError:  # pragma: no cover, simple protection
-                logger.warning("Dumping configuration, '%s' not present in the configuration",
-                               category)
-                continue
-            except AttributeError:  # pragma: no cover, simple protection
+            except (TypeError, AttributeError):  # pragma: no cover, simple protection
                 logger.warning("Dumping configuration, '%s' not present in the configuration",
                                category)
                 continue
@@ -2824,30 +2890,29 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 objs = sorted(objs, key=lambda o, prop=name_prop: getattr(o, prop, ''))
             config_dump[category] = objs
 
-        if dump_file is None:
-            temp_d = tempfile.gettempdir()
-            path = os.path.join(temp_d, 'alignak-config-dump-%d' % time.time())
-            dump_file = open(path, "wb")
-            close = True
-        else:
-            close = False
-
-        dump_file.write(json.dumps(config_dump, indent=4, separators=(',', ': '), sort_keys=True))
-        if close:
-            dump_file.close()
+        if not dump_file_name:
+            dump_file_name = os.path.join(tempfile.gettempdir(),
+                                          'alignak-%s-cfg-dump-%d.json'
+                                          % (self.name, int(time.time())))
+        try:
+            logger.info('Dumping configuration to: %s', dump_file_name)
+            fd = open(dump_file_name, "wb")
+            fd.write(json.dumps(config_dump, indent=4, separators=(',', ': '), sort_keys=True))
+            fd.close()
+            logger.info('Dumped')
+        except (OSError, IndexError) as exp:  # pragma: no cover, should never happen...
+            logger.critical("Error when dumping configuration to %s: %s", path, str(exp))
 
 
 def lazy():
-    """Generate 256 User macros
+    """Generate 256 User macros: $USERn
 
     :return: None
-    TODO: Should be removed
     """
     # let's compute the "USER" properties and macros..
-    for i in range(1, 15):
-        i = str(i)
-        Config.properties['$USER' + str(i) + '$'] = StringProp(default='')
-        Config.macros['USER' + str(i)] = '$USER' + i + '$'
+    for i in range(1, 255):
+        Config.properties['$USER%d$' % i] = StringProp(default='')
+        Config.macros['USER%d' % i] = '$USER%s$' % i
 
 
 lazy()
