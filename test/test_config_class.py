@@ -25,13 +25,15 @@ This file contains the test for the Alignak Config class
 """
 import os
 import re
+import sys
 import time
 import unittest2
 import pytest
+import importlib
+
 from .alignak_test import AlignakTest
 
 from alignak.objects.config import Config
-
 
 class TestConfigClassBase(AlignakTest):
     """
@@ -43,6 +45,13 @@ class TestConfigClassBase(AlignakTest):
     def test_config_ok(self):
         """Test the object initialization and base features"""
         # ---
+        # print("Reference to Config: %s" % sys.getrefcount(Config))
+        # mod = importlib.import_module("alignak.objects.config")
+        # importlib.reload(mod)
+        # #
+        # # importlib.reload('alignak.objects.config')
+        # print("Reference to Config: %s" % sys.getrefcount(Config))
+
         # Fresh initialized configuration
         alignak_cfg = Config()
         assert alignak_cfg.magic_hash
@@ -80,6 +89,14 @@ class TestConfigClassBase(AlignakTest):
         # The 255 "USER" macros.
         for i in range(1, 255):
             expected_macros['USER%d' % i] = '$USER%d$' % i
+
+        # After several tests execution the Config object got imported several times and
+        # has several python references. The properties object containing the macros is a
+        # class object and has thus been updated because some configurations got loaded.
+        # Because of this, a pure assertion is only valid when the test is the first one executed!
+        for macro in list(alignak_cfg.macros.items()):
+            if macro in ['_DIST', '_DIST_BIN', '_DIST_ETC', '_DIST_LOG', '_DIST_RUN', '_DIST_VAR']:
+                del alignak_cfg.macros[macro]
         assert alignak_cfg.macros == expected_macros
 
         # Macro properties are not yet existing!

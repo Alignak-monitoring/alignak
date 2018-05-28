@@ -52,7 +52,7 @@ class TestConfig(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('../etc/alignak.cfg', './cfg/alignak.ini')
+        self.setup_with_file('../etc/alignak.cfg', './etc/alignak.ini')
         assert self.conf_is_correct
 
         # No error messages
@@ -189,8 +189,8 @@ class TestConfig(AlignakTest):
         # Default Alignak daemons start/stop configuration
         # assert self._arbiter.conf.daemons_start_timeout == 1
         # Changed to 5 seconds for tests purpose
-        assert self._arbiter.conf.daemons_start_timeout == 5
-        assert self._arbiter.conf.daemons_stop_timeout == 30
+        assert self._arbiter.conf.daemons_start_timeout == 1
+        assert self._arbiter.conf.daemons_stop_timeout == 15
 
     def test_config_conf_inner_properties_named_alignak(self):
         """ Default configuration with an alignak_name property

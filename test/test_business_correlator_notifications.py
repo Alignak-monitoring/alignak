@@ -55,8 +55,7 @@ class TestBusinesscorrelNotifications(AlignakTest):
 
     def setUp(self):
         super(TestBusinesscorrelNotifications, self).setUp()
-        self.setup_with_file('cfg/cfg_business_correlator_notifications.cfg',
-                             'cfg/alignak.ini')
+        self.setup_with_file('cfg/cfg_business_correlator_notifications.cfg')
 
     def test_bprule_standard_notifications(self):
         """Standard notifications for BP rules"""

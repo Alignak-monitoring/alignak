@@ -592,7 +592,7 @@ class TestLaunchDaemons(AlignakTest):
         time.sleep(5)
 
         # This function will request the arbiter daemon to stop
-        self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7772')
+        self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7771')
 
         errors = 0
         with open('/tmp/alignak/log/poller-master.log') as f:
@@ -617,7 +617,7 @@ class TestLaunchDaemons(AlignakTest):
         time.sleep(5)
 
         # This function will request the arbiter daemon to stop
-        self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7772')
+        self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7769')
 
         errors = 0
         with open('/tmp/alignak/log/reactionner-master.log') as f:
@@ -642,7 +642,7 @@ class TestLaunchDaemons(AlignakTest):
         time.sleep(5)
 
         # This function will request the arbiter daemon to stop
-        self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7772')
+        self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7773')
 
         errors = 0
         with open('/tmp/alignak/log/receiver-master.log') as f:
@@ -667,7 +667,7 @@ class TestLaunchDaemons(AlignakTest):
         time.sleep(5)
 
         # This function will request the arbiter daemon to stop
-        self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7772')
+        self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7768')
 
         errors = 0
         with open('/tmp/alignak/log/scheduler-master.log') as f:

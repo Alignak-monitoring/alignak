@@ -102,7 +102,7 @@ class AlignakTest(unittest2.TestCase):
         print("Test current working directory: %s" % (os.getcwd()))
 
         # Configure Alignak logger with test configuration
-        logger_configuration_file = os.path.join(os.getcwd(), './cfg/alignak-logger.json')
+        logger_configuration_file = os.path.join(os.getcwd(), './etc/alignak-logger.json')
         print("Logger configuration: %s" % logger_configuration_file)
         try:
             os.makedirs('/tmp/monitoring-log')
@@ -606,29 +606,31 @@ class AlignakTest(unittest2.TestCase):
         self.configuration_warnings = []
         self.configuration_errors = []
 
-        # This to allow using a reference configuration if needed,
-        # and to make some tests easier to set-up
-        print("Preparing default configuration...")
-        if os.path.exists('/tmp/etc/alignak'):
-            shutil.rmtree('/tmp/etc/alignak')
-
-        if os.path.exists('../etc'):
-            shutil.copytree('../etc', '/tmp/etc/alignak')
-            cfg_folder = '/tmp/etc/alignak'
-            files = ['%s/alignak.ini' % cfg_folder,
-                     '%s/alignak.d/daemons.ini' % cfg_folder,
-                     '%s/alignak.d/modules.ini' % cfg_folder,
-                     '%s/alignak-logger.json' % cfg_folder]
-            replacements = {
-                '_dist=/usr/local/': '_dist=/tmp',
-                'user=alignak': ';user=alignak',
-                'group=alignak': ';group=alignak'
-
-            }
-            self._files_update(files, replacements)
-        print("Prepared")
+        # # This to allow using a reference configuration if needed,
+        # # and to make some tests easier to set-up
+        # print("Preparing default configuration...")
+        # if os.path.exists('/tmp/etc/alignak'):
+        #     shutil.rmtree('/tmp/etc/alignak')
+        #
+        # if os.path.exists('../etc'):
+        #     shutil.copytree('../etc', '/tmp/etc/alignak')
+        #     cfg_folder = '/tmp/etc/alignak'
+        #     files = ['%s/alignak.ini' % cfg_folder,
+        #              '%s/alignak.d/daemons.ini' % cfg_folder,
+        #              '%s/alignak.d/modules.ini' % cfg_folder,
+        #              '%s/alignak-logger.json' % cfg_folder]
+        #     replacements = {
+        #         '_dist=/usr/local/': '_dist=/tmp',
+        #         'user=alignak': ';user=alignak',
+        #         'group=alignak': ';group=alignak'
+        #
+        #     }
+        #     self._files_update(files, replacements)
+        # print("Prepared")
 
         # Initialize the Arbiter with no daemon configuration file
+        current_dir = os.getcwd()
+        print("Current directory: %s" % current_dir)
         configuration_dir = os.path.dirname(configuration_file)
         print("Test configuration directory: %s, file: %s"
               % (os.path.abspath(configuration_dir), configuration_file))
@@ -637,10 +639,14 @@ class AlignakTest(unittest2.TestCase):
             self.env_filename = env_file
         else:
             self.env_filename = os.path.join(configuration_dir, 'alignak.ini')
+            print("env filename: %s" % os.path.join(configuration_dir, 'alignak.ini'))
+            print("env filename: %s" % os.path.join(current_dir, './etc/alignak.ini'))
             if os.path.exists(os.path.join(configuration_dir, 'alignak.ini')):
+                # alignak.ini in the same directory as the legacy configuration file
                 self.env_filename = os.path.join(configuration_dir, 'alignak.ini')
-            elif os.path.exists(os.path.join(os.path.join(configuration_dir, '..'), 'alignak.ini')):
-                    self.env_filename = os.path.join(os.path.join(configuration_dir, '..'), 'alignak.ini')
+            elif os.path.exists(os.path.join(current_dir, './etc/alignak.ini')):
+                # alignak.ini in the test/etc directory
+                self.env_filename = os.path.join(current_dir, './etc/alignak.ini')
             else:
                 print("No Alignak configuration file found for the test: %s!" % self.env_filename)
                 raise SystemExit("No Alignak configuration file found for the test!")

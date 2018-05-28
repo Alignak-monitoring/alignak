@@ -91,7 +91,6 @@ class TestContactDowntime(AlignakTest):
         host = self._sched.hosts.find_by_name("test_host_0")
         host.act_depend_of = []  # ignore the router
 
-        #time.sleep(20)
         # We loop, the downtime will be checked and activated
         self.scheduler_loop(1, [[svc, 0, 'OK'], [host, 0, 'UP']])
 
