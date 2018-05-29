@@ -2896,7 +2896,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                                           % (self.name, int(time.time())))
         try:
             logger.info('Dumping configuration to: %s', dump_file_name)
-            fd = open(dump_file_name, "wb")
+            fd = open(dump_file_name, "w")
             fd.write(json.dumps(config_dump, indent=4, separators=(',', ': '), sort_keys=True))
             fd.close()
             logger.info('Dumped')
@@ -2910,7 +2910,7 @@ def lazy():
     :return: None
     """
     # let's compute the "USER" properties and macros..
-    for i in range(1, 255):
+    for i in range(1, 63):
         Config.properties['$USER%d$' % i] = StringProp(default='')
         Config.macros['USER%d' % i] = '$USER%s$' % i
 

@@ -74,7 +74,7 @@ setup(
     # Entry points (if some) ...
     entry_points={
         "console_scripts": [
-            "alignak-environment = alignak.bin.alignak_environment:main",
+            "alignak = alignak.bin.alignak_environment:main",
             "alignak-arbiter = alignak.bin.alignak_arbiter:main",
             "alignak-broker = alignak.bin.alignak_broker:main",
             "alignak-receiver = alignak.bin.alignak_receiver:main",

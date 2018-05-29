@@ -75,22 +75,32 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         # Check daemons log files
         ignored_warnings = [
-            'Timeout raised for ',
-            'spent too much time:',
-            # todo: Temporary: because of unordered daemon stop !
-            'that we must be related with cannot be connected',
-            'Exception: Server not available',
-            'Setting the satellite ',
-            'Add failed attempt',
-            'Launch command',
-            'Check result',
-            'Performance data',
-            'Action',
-            'Got check result',
-            'Echo the current state',
-            'Set host',
-            'did not stopped, trying to kill',
-            'My Arbiter wants me to wait for a new configuration'
+            # # todo: Temporary: because of unordered daemon stop !
+            # 'that we must be related with cannot be connected',
+            # 'Exception: Server not available',
+            # 'Setting the satellite ',
+            # 'Add failed attempt',
+
+            # Sometimes not killed during the test because of SIGTERM
+            # u'did not stopped, trying to kill'
+
+            # Configuration check
+            u"Configuration warnings",
+            u"the parameter $_DIST_BIN$ is ambiguous! No value after =, assuming an empty string",
+
+            # Configuration dispatching
+            u"My Arbiter wants me to wait for a new configuration",
+            u"The arbiter pushed a new configuration...",
+
+            u'Timeout raised for ',
+            u'spent too much time:',
+            u'Launch command',
+            u'Check result',
+            u'Performance data',
+            u'Action',
+            u'Got check result',
+            u'Echo the current state',
+            u'Set host',
         ]
         ignored_errors = [
         ]
@@ -122,22 +132,32 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         # Check daemons log files
         ignored_warnings = [
-            'Timeout raised for ',
-            'spent too much time:',
-            # todo: Temporary: because of unordered daemon stop !
-            'that we must be related with cannot be connected',
-            'Exception: Server not available',
-            'Setting the satellite ',
-            'Add failed attempt',
-            'Launch command',
-            'Check result',
-            'Performance data',
-            'Action',
-            'Got check result',
-            'Echo the current state',
-            'Set host',
-            'did not stopped, trying to kill',
-            'My Arbiter wants me to wait for a new configuration'
+            # # todo: Temporary: because of unordered daemon stop !
+            # 'that we must be related with cannot be connected',
+            # 'Exception: Server not available',
+            # 'Setting the satellite ',
+            # 'Add failed attempt',
+
+            # Sometimes not killed during the test because of SIGTERM
+            # u'did not stopped, trying to kill'
+
+            # Configuration check
+            u"Configuration warnings",
+            u"the parameter $_DIST_BIN$ is ambiguous! No value after =, assuming an empty string",
+
+            # Configuration dispatching
+            u"My Arbiter wants me to wait for a new configuration",
+            u"The arbiter pushed a new configuration...",
+
+            u'Timeout raised for ',
+            u'spent too much time:',
+            u'Launch command',
+            u'Check result',
+            u'Performance data',
+            u'Action',
+            u'Got check result',
+            u'Echo the current state',
+            u'Set host',
         ]
         ignored_errors = [
         ]
@@ -172,24 +192,34 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         # Check daemons log files
         ignored_warnings = [
-            # todo: Temporary: because of unordered daemon stop !
-            'that we must be related with cannot be connected',
-            'Exception: Server not available',
-            'Setting the satellite ',
-            'Add failed attempt',
-            # Action execution log
-            'Timeout raised for ',
-            'spent too much time:',
-            'Launch command',
-            'Check result',
-            'Performance data',
-            'Action',
-            'Got check result',
-            'Echo the current state',
-            'Set host',
+            # # todo: Temporary: because of unordered daemon stop !
+            # 'that we must be related with cannot be connected',
+            # 'Exception: Server not available',
+            # 'Setting the satellite ',
+            # 'Add failed attempt',
+
             # Sometimes not killed during the test because of SIGTERM
-            'did not stopped, trying to kill',
-            'My Arbiter wants me to wait for a new configuration'
+            # u'did not stopped, trying to kill'
+
+            # Configuration check
+            u"Configuration warnings",
+            u"the parameter $_DIST_BIN$ is ambiguous! No value after =, assuming an empty string",
+            u"No realms defined, I am adding one as All",
+
+            # Configuration dispatching
+            u"My Arbiter wants me to wait for a new configuration",
+            u"The arbiter pushed a new configuration...",
+
+            # Action execution log
+            u'Timeout raised for ',
+            u'spent too much time:',
+            u'Launch command',
+            u'Check result',
+            u'Performance data',
+            u'Action',
+            u'Got check result',
+            u'Echo the current state',
+            u'Set host',
         ]
         ignored_errors = [
         ]
@@ -198,11 +228,8 @@ class TestLaunchDaemonsRealms(AlignakTest):
                                                ignored_warnings=ignored_warnings,
                                                ignored_errors=ignored_errors)
 
-        assert errors_raised == 0, "Error logs raised!"
-        print("No unexpected error logs raised by the daemons")
-
-        assert warnings_raised == 0, "Warning logs raised!"
-        print("No unexpected warning logs raised by the daemons")
+        assert 0 == errors_raised, "Error logs raised!"
+        assert 0 == warnings_raised, "Warning logs raised!"
 
         # Expected logs from the daemons
         expected_logs = {
@@ -301,9 +328,9 @@ class TestLaunchDaemonsRealms(AlignakTest):
         travis_run = 'TRAVIS' in os.environ
         for name in ['poller-master', 'poller-north', 'poller-south',
                      'scheduler-master', 'scheduler-north', 'scheduler-south']:
-            assert os.path.exists('/tmp/%s.log' % name), '/tmp/%s.log does not exist!' % name
+            assert os.path.exists('/tmp/alignak/log/%s.log' % name), '/tmpalignak/log/%s.log does not exist!' % name
             print(("-----\n%s log file\n" % name))
-            with open('/tmp/%s.log' % name) as f:
+            with open('/tmp/alignak/log/%s.log' % name) as f:
                 lines = f.readlines()
                 logs = []
                 for line in lines:
@@ -332,10 +359,9 @@ class TestLaunchDaemonsRealms(AlignakTest):
                     #         print("line: %s" % line)
 
             for log in expected_logs[name]:
-                print("Last checked log %s: (%s) %s" % (name, type(log), log))
+                print("Last checked log %s: %s" % (name, log))
                 assert log in logs
 
-    @pytest.mark.skip("To be re-checked ...")
     def test_correct_checks_launch_and_result_passive(self):
         """ Run the Alignak daemons and check the correct checks result
         with some daemons in passive mode
@@ -354,25 +380,34 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         # Check daemons log files
         ignored_warnings = [
-            'No realms defined, I am adding one as All',
-            # todo: Temporary: because of unordered daemon stop !
-            'that we must be related with cannot be connected',
-            'Exception: Server not available',
-            'Setting the satellite ',
-            'Add failed attempt',
-            # Action execution log
-            'Timeout raised for ',
-            'spent too much time:',
-            'Launch command',
-            'Check result',
-            'Performance data',
-            'Action',
-            'Got check result',
-            'Echo the current state',
-            'Set host',
+            # # todo: Temporary: because of unordered daemon stop !
+            # 'that we must be related with cannot be connected',
+            # 'Exception: Server not available',
+            # 'Setting the satellite ',
+            # 'Add failed attempt',
+
             # Sometimes not killed during the test because of SIGTERM
-            'did not stopped, trying to kill',
-            'My Arbiter wants me to wait for a new configuration'
+            # u'did not stopped, trying to kill'
+
+            # Configuration check
+            u"Configuration warnings",
+            u"the parameter $_DIST_BIN$ is ambiguous! No value after =, assuming an empty string",
+            u"No realms defined, I am adding one as All",
+
+            # Configuration dispatching
+            u"My Arbiter wants me to wait for a new configuration",
+            u"The arbiter pushed a new configuration...",
+
+            # Action execution log
+            u'Timeout raised for ',
+            u'spent too much time:',
+            u'Launch command',
+            u'Check result',
+            u'Performance data',
+            u'Action',
+            u'Got check result',
+            u'Echo the current state',
+            u'Set host',
         ]
         ignored_errors = [
             # 'Error on backend login: ',
@@ -439,9 +474,9 @@ class TestLaunchDaemonsRealms(AlignakTest):
         errors_raised = 0
         travis_run = 'TRAVIS' in os.environ
         for name in ['poller-master', 'scheduler-master']:
-            assert os.path.exists('/tmp/%s.log' % name), '/tmp/%s.log does not exist!' % name
+            assert os.path.exists('/tmp/alignak/log/%s.log' % name), '/tmp/alignak/log/%s.log does not exist!' % name
             print(("-----\n%s log file\n" % name))
-            with open('/tmp/%s.log' % name) as f:
+            with open('/tmp/alignak/log/%s.log' % name) as f:
                 lines = f.readlines()
                 logs = []
                 for line in lines:

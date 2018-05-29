@@ -22,8 +22,8 @@
 alignak-environment command line interface::
 
     Usage:
-        alignak-environment [-h|--help]
-        alignak-environment [-v|--verbose] <cfg_file>
+        alignak [-h|--help]
+        alignak [-v|--verbose] <cfg_file>
 
     Options:
         -h, --help          Show this usage screen.

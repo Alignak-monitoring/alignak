@@ -175,10 +175,11 @@ class BaseSatellite(Daemon):
         :return: Action list
         :rtype: list
         """
-        # I do not know this scheduler?
-        logger.info("My schedulers: %s %s", self.schedulers, type(self.schedulers))
+        # Do I know this scheduler?
+        # logger.info("My schedulers: %s %s", self.schedulers, type(self.schedulers))
         if not self.schedulers:
-            logger.error("I do not have any scheduler: %s", self.schedulers)
+            # Probably not yet configured ...
+            logger.debug("I do not have any scheduler: %s", self.schedulers)
             return []
 
         scheduler_link = None

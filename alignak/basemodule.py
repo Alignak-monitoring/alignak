@@ -120,7 +120,9 @@ class BaseModule(object):
         self.from_q = None
         self.process = None
         self.illegal_char = re.compile(r'[^\w-]')
+        # Initialization try count and time
         self.init_try = 0
+        self.last_init_try = 0
         # We want to know where we are load from? (broker, scheduler, etc)
         self.loaded_into = 'unknown'
 
@@ -305,6 +307,7 @@ class BaseModule(object):
 
         logger.info("I'm stopping module %r (pid=%d)", self.name, self.process.pid)
         self.kill()
+        # Clean inner process reference
         self.process = None
 
     def want_brok(self, b):  # pylint: disable=unused-argument,no-self-use

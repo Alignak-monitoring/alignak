@@ -27,6 +27,7 @@ import json
 import configparser
 
 import subprocess
+import threading
 from time import sleep
 import requests
 import shutil
@@ -222,18 +223,8 @@ class TestLaunchDaemons(AlignakTest):
             assert False
 
         args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder]
-        arbiter = subprocess.Popen(args)
-        print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
-
-        # Wait for the arbiter to exit - more than 20s raises an exception and breaks the test
-        ret = None
-        try:
-            # Waitng for 30 seconds is enough to detect missing daemons and stop the arbiter!
-            ret = arbiter.wait(timeout=30)
-        except subprocess.TimeoutExpired:
-            # It should not raise a timeout!
-            assert False
-        print("*** Arbiter exited with code: %s" % ret)
+        ret = self._run_command_with_timeout(args, 30)
+        assert ret is not None
 
         errors = 0
         ok = False
@@ -276,12 +267,7 @@ class TestLaunchDaemons(AlignakTest):
             assert False
 
         args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder]
-        arbiter = subprocess.Popen(args)
-        print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
-
-        # Wait for the arbiter to exit - more than 20s raises an exception and breaks the test
-        ret = arbiter.wait(timeout=20)
-        print("*** Arbiter exited with code: %s" % ret)
+        ret = self._run_command_with_timeout(args, 20)
 
         errors = 0
         ok = False
@@ -327,12 +313,7 @@ class TestLaunchDaemons(AlignakTest):
         self._files_update(files, replacements)
 
         args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder]
-        arbiter = subprocess.Popen(args)
-        print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
-
-        # Wait for the arbiter to exit - more than 20s raises an exception and breaks the test
-        ret = arbiter.wait(timeout=20)
-        print("*** Arbiter exited with code: %s" % ret)
+        ret = self._run_command_with_timeout(args, 20)
 
         errors = 0
         ok = False
@@ -356,17 +337,11 @@ class TestLaunchDaemons(AlignakTest):
         """
         print("Launching arbiter with a missing arbiter configuration...")
 
-        args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder, "-n", "my-arbiter-name"]
-
         if os.path.exists('/tmp/alignak/log/my-arbiter-name.log'):
             os.remove('/tmp/alignak/log/my-arbiter-name.log')
 
-        arbiter = subprocess.Popen(args)
-        print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
-
-        # Wait for the arbiter to exit - more than 20s raises an exception and breaks the test
-        ret = arbiter.wait(timeout=20)
-        print("*** Arbiter exited with code: %s" % ret)
+        args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder, "-n", "my-arbiter-name"]
+        ret = self._run_command_with_timeout(args, 20)
 
         errors = 0
         ok = False
@@ -391,12 +366,8 @@ class TestLaunchDaemons(AlignakTest):
         """
         print("Launching arbiter in verification mode...")
         args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder, "-V"]
-        arbiter = subprocess.Popen(args)
-        print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
+        ret = self._run_command_with_timeout(args, 20)
 
-        # Wait for the arbiter to exit - more than 20s raises an exception and breaks the test
-        ret = arbiter.wait(timeout=20)
-        print("*** Arbiter exited with code: %s" % ret)
         errors = 0
         with open('/tmp/alignak/log/arbiter-master.log') as f:
             for line in f:
@@ -415,18 +386,12 @@ class TestLaunchDaemons(AlignakTest):
         # All the default configuration files are in /tmp/etc
 
         print("Launching arbiter with forced PID file...")
-        args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder, "-V",
-                "--pid_file", "/tmp/arbiter.pid"]
-
         if os.path.exists('/tmp/arbiter.pid'):
             os.remove('/tmp/arbiter.pid')
 
-        arbiter = subprocess.Popen(args)
-        print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
-
-        # Wait for the arbiter to exit - more than 20s raises an exception and breaks the test
-        ret = arbiter.wait(timeout=20)
-        print("*** Arbiter exited with code: %s" % ret)
+        args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder, "-V",
+                "--pid_file", "/tmp/arbiter.pid"]
+        ret = self._run_command_with_timeout(args, 20)
 
         # The arbiter unlinks the pid file - I cannot assert it exists!
         # assert os.path.exists('/tmp/arbiter.pid')
@@ -453,19 +418,12 @@ class TestLaunchDaemons(AlignakTest):
         # All the default configuration files are in /tmp/etc
 
         print("Launching arbiter with forced log file...")
-        args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder, "-V",
-                "--log_file", "/tmp/arbiter.log",
-                ]
-
         if os.path.exists('/tmp/arbiter.log'):
             os.remove('/tmp/arbiter.log')
 
-        arbiter = subprocess.Popen(args)
-        print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
-
-        # Wait for the arbiter to exit - more than 20s raises an exception and breaks the test
-        ret = arbiter.wait(timeout=20)
-        print("*** Arbiter exited with code: %s" % ret)
+        args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder,
+                "-V", "--log_file", "/tmp/arbiter.log"]
+        ret = self._run_command_with_timeout(args, 20)
 
         assert os.path.exists("/tmp/arbiter.log")
 
@@ -659,7 +617,9 @@ class TestLaunchDaemons(AlignakTest):
         :return:
         """
         print("Launching scheduler in verification mode...")
-        args = ["../alignak/bin/alignak_scheduler.py", "-n", "scheduler-master", "-e", '%s/etc/alignak.ini' % self.cfg_folder]
+
+        args = ["../alignak/bin/alignak_scheduler.py", "-n", "scheduler-master",
+                "-e", '%s/etc/alignak.ini' % self.cfg_folder]
         scheduler = subprocess.Popen(args)
         print("%s launched (pid=%d)" % ('scheduler', scheduler.pid))
 

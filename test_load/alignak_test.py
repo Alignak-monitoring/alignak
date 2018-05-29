@@ -396,8 +396,8 @@ class AlignakTest(unittest2.TestCase):
             with open('/tmp/%s.log' % daemon) as f:
                 for line in f:
                     if 'WARNING: ' in line or daemon_errors:
-                        if not travis_run:
-                            print(line[:-1])
+                        # if not travis_run:
+                        #     print(line[:-1])
                         if 'Cannot call the additional groups setting ' not in line \
                                 and 'loop exceeded the maximum expected' not in line \
                                 and 'ignoring repeated file' not in line:
@@ -416,6 +416,7 @@ class AlignakTest(unittest2.TestCase):
                                 break
                         else:
                             nb_errors += 1
+                            print("***" + line[:-1])
                         if nb_errors > 0:
                             daemon_errors = True
 

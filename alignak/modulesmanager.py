@@ -58,7 +58,7 @@ import collections
 
 from alignak.basemodule import BaseModule
 
-# Initialization test period
+# Initialization test period (5 seconds)
 MODULE_INIT_PERIOD = 5
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -165,36 +165,37 @@ class ModulesManager(object):
         """
         result = False
         try:
-            logger.info("Trying to initialize module: %s", instance.name)
             instance.init_try += 1
             # Maybe it's a retry
             if not late_start and instance.init_try > 1:
                 # Do not try until too frequently, or it's too loopy
                 if instance.last_init_try > time.time() - MODULE_INIT_PERIOD:
+                    logger.info("Too early to retry initialization, retry period is %d seconds",
+                                MODULE_INIT_PERIOD)
+                    logger.info("%s / %s", instance.last_init_try, time.time())
                     return False
             instance.last_init_try = time.time()
+
+            logger.info("Trying to initialize module: %s", instance.name)
 
             # If it's an external module, create/update Queues()
             if instance.is_external:
                 instance.create_queues(self.daemon.sync_manager)
 
             # The module instance init function says if initialization is ok
-            result = instance.init()
+            if not instance.init():
+                logger.warning("Module %s initialisation failed.", instance.name)
+                return False
         except Exception as exp:  # pylint: disable=broad-except
             # pragma: no cover, simple protection
-            self.configuration_errors.append(
-                "The module instance %s raised an exception on initialization: %s, I remove it!" %
-                (instance.name, str(exp))
-            )
-            logger.error("The instance %s raised an exception on initialization: %s, I remove it!",
-                         instance.name, str(exp))
-            output = io.StringIO()
-            traceback.print_exc(file=output)
-            logger.error("Traceback of the exception: %s", output.getvalue())
-            output.close()
+            msg = "The module instance %s raised an exception " \
+                  "on initialization: %s, I remove it!" % (instance.name, str(exp))
+            self.configuration_errors.append(msg)
+            logger.error(msg)
+            logger.exception(exp)
             return False
 
-        return result
+        return True
 
     def clear_instances(self, instances=None):
         """Request to "remove" the given instances list or all if not provided
@@ -216,6 +217,8 @@ class ModulesManager(object):
         :return: None
         """
         self.to_restart.append(instance)
+        if instance.is_external:
+            instance.proc = None
 
     def get_instances(self):
         """Create, init and then returns the list of module instances that the caller needs.
@@ -262,7 +265,7 @@ class ModulesManager(object):
                 # If the init failed, we put in in the restart queue
                 logger.warning("The module '%s' failed to initialize, "
                                "I will try to restart it later", instance.name)
-                self.to_restart.append(instance)
+                self.set_to_restart(instance)
 
         return self.instances
 
@@ -278,7 +281,7 @@ class ModulesManager(object):
             if not self.try_instance_init(instance, late_start=late_start):
                 logger.warning("The module '%s' failed to init, I will try to restart it later",
                                instance.name)
-                self.to_restart.append(instance)
+                self.set_to_restart(instance)
                 continue
 
             # ok, init succeed
@@ -320,7 +323,7 @@ class ModulesManager(object):
                 logger.info("Setting the module %s to restart", instance.name)
                 # We clean its queues, they are no more useful
                 instance.clear_queues(self.daemon.sync_manager)
-                self.to_restart.append(instance)
+                self.set_to_restart(instance)
                 # Ok, no need to look at queue size now
                 continue
 
@@ -329,19 +332,20 @@ class ModulesManager(object):
             # If max_queue_size is 0, don't check this
             if self.daemon.max_queue_size == 0:
                 continue
-            # Ok, go launch the dog!
+
+            # Check for module queue size
             queue_size = 0
             try:
                 queue_size = instance.to_q.qsize()
             except Exception:  # pylint: disable=broad-except
                 pass
             if queue_size > self.daemon.max_queue_size:
-                logger.error("The external module %s got a too high brok queue size (%s > %s)!",
+                logger.error("The module %s has a too important queue size (%s > %s max)!",
                              instance.name, queue_size, self.daemon.max_queue_size)
                 logger.info("Setting the module %s to restart", instance.name)
                 # We clean its queues, they are no more useful
                 instance.clear_queues(self.daemon.sync_manager)
-                self.to_restart.append(instance)
+                self.set_to_restart(instance)
 
     def try_to_restart_deads(self):
         """Try to reinit and restart dead instances
@@ -350,15 +354,19 @@ class ModulesManager(object):
         """
         to_restart = self.to_restart[:]
         del self.to_restart[:]
+
         for instance in to_restart:
-            logger.debug("I should try to reinit %s", instance.name)
+            logger.warning("Trying to restart module: %s", instance.name)
 
             if self.try_instance_init(instance):
-                logger.debug("Trying to restart module: %s", instance.name)
-                # If it's an external, it will start it
+                logger.warning("Restarting %s...", instance.name)
+                # Because it is a restart, clean the module inner process reference
+                instance.process = None
+                # If it's an external module, it will start the process
                 instance.start()
                 # Ok it's good now :)
             else:
+                # Will retry later...
                 self.to_restart.append(instance)
 
     def get_internal_instances(self, phase=None):

@@ -86,18 +86,24 @@ class TestConfigClassBase(AlignakTest):
             'HOSTPERFDATAFILE': '', 'LOGFILE': '', 'TEMPFILE': '', 'RETENTIONDATAFILE': '',
             'STATUSDATAFILE': ''
         }
-        # The 255 "USER" macros.
-        for i in range(1, 255):
+        # The 64 "USER" macros.
+        for i in range(1, 63):
             expected_macros['USER%d' % i] = '$USER%d$' % i
 
         # After several tests execution the Config object got imported several times and
         # has several python references. The properties object containing the macros is a
         # class object and has thus been updated because some configurations got loaded.
         # Because of this, a pure assertion is only valid when the test is the first one executed!
+        compare_macros = {}
         for macro in list(alignak_cfg.macros.items()):
-            if macro in ['_DIST', '_DIST_BIN', '_DIST_ETC', '_DIST_LOG', '_DIST_RUN', '_DIST_VAR']:
-                del alignak_cfg.macros[macro]
-        assert alignak_cfg.macros == expected_macros
+            # print(macro)
+            if macro[0] not in [
+                '_DIST', '_DIST_BIN', '_DIST_ETC', '_DIST_LOG', '_DIST_RUN', '_DIST_VAR',
+                'VAR', 'RUN', 'ETC', 'BIN', 'USER', 'GROUP', 'LIBEXEC', 'LOG',
+                'NAGIOSPLUGINSDIR', 'PLUGINSDIR', ''
+            ]:
+                compare_macros[macro[0]] = macro[1]
+        assert compare_macros == expected_macros
 
         # Macro properties are not yet existing!
         for macro in alignak_cfg.macros:
@@ -153,6 +159,12 @@ class TestConfigClassBase(AlignakTest):
         # ---
         # The macros defined in the default loaded configuration
         expected_macros.update({
+            '_DIST': '$_DIST$',
+            '_DIST_BIN': '$_DIST_BIN$',
+            '_DIST_ETC': '$_DIST_ETC$',
+            '_DIST_LOG': '$_DIST_LOG$',
+            '_DIST_RUN': '$_DIST_RUN$',
+            '_DIST_VAR': '$_DIST_VAR$',
             'BIN': '$BIN$',
             'ETC': '$ETC$',
             'GROUP': '$GROUP$',

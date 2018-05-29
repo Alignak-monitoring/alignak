@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Copyright (C) 2015-2017: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -18,6 +18,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 #
+
+# -----------------------------------------------------------------------------
+#  This script checks if an alignak user account/group exist in the system. If
+# it does not, it will create the appropriate user/group.
+#  You can start this script with a command line parameter to specify another directory
+# than the default one
+# -----------------------------------------------------------------------------
 
 # Default is alignak account
 ACCOUNT=$1

@@ -39,6 +39,7 @@ from six import string_types
 import shutil
 import psutil
 import subprocess
+import threading
 
 from copy import deepcopy
 
@@ -362,8 +363,28 @@ class AlignakTest(unittest2.TestCase):
                     print("***** timeout 10 seconds, force-killing the daemon...")
                     daemon_process.kill()
 
+    def _run_command_with_timeout(self, cmd, timeout_sec):
+        """Execute `cmd` in a subprocess and enforce timeout `timeout_sec` seconds.
+
+        Return subprocess exit code on natural completion of the subprocess.
+        Returns None if timeout expires before subprocess completes."""
+        start = time.time()
+        proc = subprocess.Popen(cmd)
+        print("%s launched (pid=%d)" % (cmd, proc.pid))
+        timer = threading.Timer(timeout_sec, proc.kill)
+        timer.start()
+        proc.communicate()
+        if timer.is_alive():
+            # Process completed naturally - cancel timer and return exit code
+            timer.cancel()
+            print("-> exited with %s after %.2d seconds" % (proc.returncode, time.time() - start))
+            return proc.returncode
+        # Process killed by timer - raise exception
+        print('Process #%d killed after %f seconds' % (proc.pid, timeout_sec))
+        return None
+
     def _run_alignak_daemons(self, cfg_folder='/tmp/alignak', runtime=30,
-                             daemons_list=[], spare_daemons=[], piped=False, run_folder='',
+                             daemons_list=None, spare_daemons=[], piped=False, run_folder='',
                              arbiter_only=True, parameters=[]):
         """ Run the Alignak daemons for a passive configuration
 
@@ -374,6 +395,11 @@ class AlignakTest(unittest2.TestCase):
 
         :return: None
         """
+        if daemons_list is None:
+            daemons_list = [
+                'scheduler-master', 'broker-master',
+                'poller-master', 'reactionner-master', 'receiver-master'
+            ]
         # Load and test the configuration
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), cfg_folder)
         if not run_folder:
@@ -386,8 +412,7 @@ class AlignakTest(unittest2.TestCase):
 
         # Clean the former existing pid and log files
         print("Cleaning pid and log files...")
-        for daemon in ['arbiter-master', 'scheduler-master', 'broker-master',
-                       'poller-master', 'reactionner-master', 'receiver-master']:
+        for daemon in daemons_list + ['arbiter-master']:
             if os.path.exists('%s/run/%s.pid' % (run_folder, daemon)):
                 print("- removing pid %s/run/%s.pid" % (run_folder, daemon))
                 os.remove('%s/run/%s.pid' % (run_folder, daemon))
@@ -524,28 +549,32 @@ class AlignakTest(unittest2.TestCase):
         """
         print("Get information from log files...")
         travis_run = 'TRAVIS' in os.environ
+
+        if ignored_warnings is None:
+            ignored_warnings = []
+        ignored_warnings.extend([
+            u'Cannot call the additional groups setting ',
+            u'loop exceeded the maximum expected',
+            u'ignoring repeated file'
+        ])
         nb_errors = 0
         nb_warnings = 0
         for daemon in ['arbiter-master'] + daemons_list:
-            print("- log /%s/log/%s.log" % (run_folder, daemon))
             assert os.path.exists("/%s/log/%s.log" % (run_folder, daemon)), '/%s/log/%s.log does not exist!' % (run_folder, daemon)
             daemon_errors = False
-            print("-----\n%s log file\n-----\n" % daemon)
+            print("-----\n%s log file: %s\n-----\n" % (daemon,
+                                                       '/%s/log/%s.log' % (run_folder, daemon)))
             with open('/%s/log/%s.log' % (run_folder, daemon)) as f:
                 for line in f:
                     if 'WARNING: ' in line or daemon_errors:
                         if not travis_run:
                             print(line[:-1])
-                        if 'Cannot call the additional groups setting ' not in line \
-                                and 'loop exceeded the maximum expected' not in line \
-                                and 'ignoring repeated file' not in line:
-                            for ignore_line in ignored_warnings:
-                                if ignore_line in line:
-                                    break
-                            else:
-                                nb_warnings += 1
-                                print("---" + line[:-1])
-                            # nb_warnings += 1
+                        for ignore_line in ignored_warnings:
+                            if ignore_line in line:
+                                break
+                        else:
+                            nb_warnings += 1
+                            print("---" + line[:-1])
                     if 'ERROR: ' in line or 'CRITICAL: ' in line:
                         if not daemon_errors:
                             print(line[:-1])
@@ -554,6 +583,7 @@ class AlignakTest(unittest2.TestCase):
                                 break
                         else:
                             nb_errors += 1
+                            print("***" + line[:-1])
                         if nb_errors > 0:
                             daemon_errors = True
 
@@ -1202,8 +1232,6 @@ class AlignakTest(unittest2.TestCase):
         """
         Check the number of actions
 
-        @verified
-
         :param number: number of actions we must have
         :type number: int
         :return: None
@@ -1257,6 +1285,24 @@ class AlignakTest(unittest2.TestCase):
         self.assertTrue(False,
                         "Not found a matching pattern in actions:\nfield=%s pattern=%r\n" %
                         (field, pattern))
+
+    def assert_log_count(self, number):
+        """
+        Check the number of log
+
+        :param number: number of logs we must have
+        :type number: int
+        :return: None
+        """
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for handler in logger_.handlers:
+            if isinstance(handler, CollectorHandler):
+                self.assertEqual(number, len(handler.collector),
+                                 "Not found expected number of logs: %s vs %s"
+                                 % (number, len(handler.collector)))
+                break
+        else:
+            assert False, "Alignak test Logger is not initialized correctly!"
 
     def assert_log_match(self, pattern, index=None):
         """

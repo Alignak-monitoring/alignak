@@ -445,21 +445,21 @@ class Scheduler(object):  # pylint: disable=R0902
 
         logger.info('Dumping schduler objects to: %s', path)
         try:
-            file_h = open(path, 'w')
+            fd = open(path, 'wb')
             output = 'type:uuid:status:t_to_go:poller_tag:worker:command\n'
-            file_h.write(output.encode('utf-8'))
+            fd.write(output.encode('utf-8'))
             for check in list(self.checks.values()):
                 output = 'check:%s:%s:%s:%s:%s:%s\n' \
                          % (check.uuid, check.status, check.t_to_go, check.poller_tag,
                             check.command, check.my_worker)
-                file_h.write(output.encode('utf-8'))
+                fd.write(output.encode('utf-8'))
             logger.info('- dumped checks')
             for action in list(self.actions.values()):
                 output = '%s: %s:%s:%s:%s:%s:%s\n'\
                          % (action.__class__.my_type, action.uuid, action.status,
                             action.t_to_go, action.reactionner_tag, action.command,
                             action.my_worker)
-                file_h.write(output.encode('utf-8'))
+                fd.write(output.encode('utf-8'))
             logger.info('- dumped actions')
             broks = []
             for broker in list(self.my_daemon.brokers.values()):
@@ -467,9 +467,9 @@ class Scheduler(object):  # pylint: disable=R0902
                     broks.append(brok)
             for brok in broks:
                 output = 'BROK: %s:%s\n' % (brok.uuid, brok.type)
-                file_h.write(output.encode('utf-8'))
+                fd.write(output.encode('utf-8'))
             logger.info('- dumped broks')
-            file_h.close()
+            fd.close()
             logger.info('Dumped')
         except OSError as exp:  # pragma: no cover, should never happen...
             logger.critical("Error when writing the objects dump file %s : %s", path, str(exp))

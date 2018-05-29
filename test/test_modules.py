@@ -54,7 +54,7 @@ Test Alignak modules manager
 import re
 import time
 from .alignak_test import AlignakTest
-from alignak.modulesmanager import ModulesManager
+from alignak.modulesmanager import ModulesManager, MODULE_INIT_PERIOD
 from alignak.objects.module import Module
 import pytest
 
@@ -292,6 +292,8 @@ class TestModules(AlignakTest):
             "Give an instance of alignak_module_example for alias: mod-example"
         ))
 
+        self.clear_logs()
+
         my_module = self.modules_manager.instances[0]
         assert my_module.is_external
 
@@ -308,83 +310,180 @@ class TestModules(AlignakTest):
         # Start external modules
         self.modules_manager.start_external_instances()
 
+        self.show_logs()
+
         # Starting external module logs
-        self.assert_any_log_match(re.escape(
+        idx = 0
+        self.assert_log_match(re.escape(
+            "Trying to initialize module: mod-example"
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
+            "Test - Example in init"
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
+            "Initialization of the example module"
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
             "Starting external module mod-example"
-        ))
-        self.assert_any_log_match(re.escape(
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
             "Starting external process for module mod-example"
-        ))
-        self.assert_any_log_match(re.escape(
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
             "mod-example is now started (pid="
-        ))
+        ), idx)
+        idx += 1
+        self.assert_log_count(6)
 
         # Check alive
         assert my_module.process is not None
         assert my_module.process.is_alive()
 
+        self.clear_logs()
+        # Check the alive module instances...
+        self.modules_manager.check_alive_instances()
+        # Try to restart the dead modules, if any
+        self.modules_manager.try_to_restart_deads()
+        self.show_logs()
+        self.assert_log_count(0)
+
         # Kill the external module (normal stop is .stop_process)
+        self.clear_logs()
         my_module.kill()
-        time.sleep(0.1)
-        # Should be dead (not normally stopped...) but we still know a process for this module!
+        idx = 0
+        self.assert_log_match(re.escape(
+            "Killing external module "
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
+            "External module killed"
+        ), idx)
+        idx += 1
+        self.assert_log_count(2)
+
+        # The module is dead (not normally stopped...) so this module inner
+        # process reference is not None!
         assert my_module.process is not None
 
-        # Stopping module logs
-        self.assert_any_log_match(re.escape(
-            "Killing external module "
-        ))
-        self.assert_any_log_match(re.escape(
-            "External module killed"
-        ))
-
-        # Nothing special ...
+        # Check the alive module instances...
+        self.clear_logs()
+        idx = 0
         self.modules_manager.check_alive_instances()
+        self.show_logs()
+        self.assert_log_match(re.escape(
+            "The external module mod-example died unexpectedly!"
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
+            "Setting the module mod-example to restart"
+        ), idx)
+        self.assert_log_count(2)
+        idx += 1
 
-        # Try to restart the dead modules
+        # Try to restart the dead modules, if any
+        # Indeed, it's too early, so it won't do it
+        self.clear_logs()
+        idx = 0
         self.modules_manager.try_to_restart_deads()
 
-        # In fact it's too early, so it won't do it
+        self.assert_log_match(re.escape(
+            "Trying to restart module: mod-example"
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
+            "Too early to retry initialization, retry period is %d seconds" % MODULE_INIT_PERIOD
+        ), idx)
+        idx += 1
+        # self.assert_log_count(2)
 
-        # Here the inst should still be dead
+        # Here the module instance is still dead
         assert not my_module.process.is_alive()
 
-        # So we lie
-        my_module.last_init_try = -5
+        # Wait for aminimum delay
+        time.sleep(MODULE_INIT_PERIOD + 1)
+
+        # my_module.last_init_try = -5
+        self.clear_logs()
         self.modules_manager.check_alive_instances()
+        self.assert_log_count(0)
+
+        # Try to restart the dead modules, if any
+        # Now it is time...
+        self.clear_logs()
+        idx = 0
         self.modules_manager.try_to_restart_deads()
+        self.show_logs()
+        self.assert_log_match(re.escape(
+            "Trying to restart module: mod-example"
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
+            "Trying to initialize module: mod-example"
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
+            "Test - Example in init"
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
+            "Initialization of the example module"
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
+            "Restarting mod-example..."
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
+            "Starting external process for module mod-example"
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
+            "mod-example is now started (pid="
+        ), idx)
+        idx += 1
+        self.assert_log_count(7)
 
-        # In fact it's too early, so it won't do it
-
-        # Here the inst should be alive again
+        # Here the module instance should be alive again
         assert my_module.process.is_alive()
 
-        # should be nothing more in to_restart of
-        # the module manager
+        # No more module to restart...
         assert [] == self.modules_manager.to_restart
 
-        # Now we look for time restart so we kill it again
-        my_module.kill()
-        time.sleep(0.2)
-        assert not my_module.process.is_alive()
-
-        # Should be too early
-        self.modules_manager.check_alive_instances()
-        self.modules_manager.try_to_restart_deads()
-        assert not my_module.process.is_alive()
-        # We lie for the test again
-        my_module.last_init_try = -5
-        self.modules_manager.check_alive_instances()
-        self.modules_manager.try_to_restart_deads()
-
-        # Here the inst should be alive again
-        assert my_module.process.is_alive()
-
         # And we clear all now
+        self.clear_logs()
+        idx = 0
         self.modules_manager.stop_all()
-        # Stopping module logs
-        self.assert_any_log_match(re.escape(
-            "I'm stopping module "
-        ))
+        self.show_logs()
+        self.assert_log_match(re.escape(
+            "Shutting down modules..."
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
+            "Request external process to stop for mod-example"
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
+            "I'm stopping module 'mod-example'"
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
+            "Killing external module "
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
+            "External module killed"
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
+            "External process stopped."
+        ), idx)
+        idx += 1
+        self.assert_log_count(6)
 
     def test_modulemanager_several_modules(self):
         """ Module manager manages its modules
@@ -423,14 +522,14 @@ class TestModules(AlignakTest):
         self._broker_daemon.sync_manager = None
         # Create the modules manager for a daemon type
         self.modules_manager = ModulesManager(self._broker_daemon)
-        print(("Modules: %s" % self._broker_daemon.modules))
+        print("Modules: %s" % self._broker_daemon.modules)
 
         # Load an initialize the modules:
         #  - load python module
         #  - get module properties and instances
         assert self.modules_manager.load_and_init([mod, mod2])
-        print(("I correctly loaded my modules: [%s]" % ','.join([inst.name for inst in
-                                                                self.modules_manager.instances])))
+        print("I correctly loaded my modules: [%s]" % ','.join([inst.name for inst in
+                                                                self.modules_manager.instances]))
         self.show_logs()
 
         self.assert_any_log_match(re.escape(
