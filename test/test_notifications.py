@@ -332,22 +332,26 @@ class TestNotifications(AlignakTest):
         # notification_interval is in minute, configure to have one per minute
         svc.notification_interval = 1
 
-        self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(1)
-        assert svc.current_notification_number == 0, 'All OK no notifications'
-        self.assert_actions_count(0)
-
-        self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(1)
-        assert "SOFT" == svc.state_type
-        assert svc.current_notification_number == 0, 'Critical SOFT, no notifications'
-        self.assert_actions_count(0)
-
         # Freeze the time !
         initial_datetime = datetime.datetime(year=2018, month=6, day=1,
                                              hour=18, minute=30, second=0)
         with freeze_time(initial_datetime) as frozen_datetime:
             assert frozen_datetime() == initial_datetime
+
+            self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert svc.current_notification_number == 0, 'All OK no notifications'
+            self.assert_actions_count(0)
+
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
+            assert "SOFT" == svc.state_type
+            assert svc.current_notification_number == 0, 'Critical SOFT, no notifications'
+            self.assert_actions_count(0)
 
             # create master notification + create first notification
             self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
@@ -355,8 +359,8 @@ class TestNotifications(AlignakTest):
             # The notifications are created to be launched in the next second when they happen !
             # Time warp 1 second
             frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
 
-            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
             assert "HARD" == svc.state_type
             # 2 actions
             # * 1 - VOID = notification master
@@ -367,6 +371,9 @@ class TestNotifications(AlignakTest):
 
             # no changes, because we do not need yet to create a second notification
             self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
             assert "HARD" == svc.state_type
             self.assert_actions_count(2)
 
@@ -374,7 +381,10 @@ class TestNotifications(AlignakTest):
             frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
 
             # notification #2
-            self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
             self.assert_actions_count(3)
             assert svc.current_notification_number == 2
 
@@ -382,12 +392,21 @@ class TestNotifications(AlignakTest):
             frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
 
             # notification #3
-            self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
             self.assert_actions_count(4)
             assert svc.current_notification_number == 3
 
+            # Time warp 10 seconds
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=10))
+
             # Too soon for a new one
-            self.scheduler_loop(2, [[svc, 2, 'CRITICAL']])
+            self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
             self.assert_actions_count(4)
             assert svc.current_notification_number == 3
 
@@ -415,6 +434,9 @@ class TestNotifications(AlignakTest):
             frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
 
             self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
             # Not one more notification ...
             self.assert_actions_count(3)
             assert svc.current_notification_number == 3
@@ -423,6 +445,9 @@ class TestNotifications(AlignakTest):
             frozen_datetime.tick(delta=datetime.timedelta(minutes=1, seconds=1))
 
             self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
             # Not one more notification ...
             self.assert_actions_count(3)
             assert svc.current_notification_number == 3
@@ -437,6 +462,9 @@ class TestNotifications(AlignakTest):
 
             # 2 loop turns this time ...
             self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+            # Time warp 1 second
+            frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
+            self.scheduler_loop(1)
 
             self.assert_actions_count(4)
             assert svc.current_notification_number == 4

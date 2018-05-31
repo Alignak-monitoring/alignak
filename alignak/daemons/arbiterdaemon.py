@@ -412,9 +412,14 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             alignak_macros = self.alignak_env.get_alignak_macros()
             if alignak_macros:
                 for key in sorted(alignak_macros.keys()):
+                    value = alignak_macros[key]
+                    if key[0] == '_':
+                        key = key[1:]
+                    if key[-1] == '_':
+                        key = key[:-1]
                     # Create and old legacy macro format
-                    macros.append('$%s$=%s' % (key.upper(), alignak_macros[key]))
-                    logger.debug("- Alignak macro '%s' = %s", key, alignak_macros[key])
+                    macros.append('$%s$=%s' % (key.upper(), value))
+                    logger.debug("- Alignak macro '$%s$' = %s", key.upper(), value)
 
         # Read and parse the legacy configuration files
         raw_objects = self.conf.read_config_buf(

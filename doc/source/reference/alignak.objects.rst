@@ -172,14 +172,6 @@ alignak.objects.notificationway module
     :undoc-members:
     :show-inheritance:
 
-alignak.objects.pack module
----------------------------
-
-.. automodule:: alignak.objects.pack
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 alignak.objects.pollerlink module
 ---------------------------------
 
@@ -291,15 +283,6 @@ alignak.objects.timeperiod module
     :members:
     :undoc-members:
     :show-inheritance:
-
-alignak.objects.trigger module
-------------------------------
-
-.. automodule:: alignak.objects.trigger
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 Module contents
 ---------------

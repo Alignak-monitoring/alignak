@@ -192,7 +192,7 @@ class TestCommand(AlignakTest):
         assert c.reactionner_tag == 'None'
         assert c.timeout == -1
         # Module type is the command name without the '_' prefix
-        assert c.module_type == 'internal_host_up'
+        assert c.module_type == 'internal'
         assert c.enable_environment_macros == False
 
         b = c.get_initial_status_brok()
@@ -219,7 +219,7 @@ class TestCommand(AlignakTest):
         assert c.reactionner_tag == 'None'
         assert c.timeout == -1
         # Module type is the command name without the '_' prefix
-        assert c.module_type == 'echo'
+        assert c.module_type == 'internal'
         assert c.enable_environment_macros == False
 
         b = c.get_initial_status_brok()

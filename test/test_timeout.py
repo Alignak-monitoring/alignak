@@ -47,13 +47,13 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 #
-# This file is used to test reading and processing of config files
+# This file is used to test the poller/reactionner workers that goes to timeout
 #
 import time
 
 from .alignak_test import AlignakTest
 
-from alignak.action import Action
+from alignak.action import Action, ACT_STATUS_TIMEOUT, ACT_STATUS_QUEUED
 from alignak.notification import Notification
 from alignak.message import Message
 from alignak.worker import Worker
@@ -69,16 +69,14 @@ class TestWorkerTimeout(AlignakTest):
         self.setup_with_file('cfg/cfg_check_worker_timeout.cfg')
         assert self.conf_is_correct
 
-        # Our scheduler
-        self._sched = self._scheduler
-
     def test_notification_timeout(self):
         """ Test timeout for notification sending
         
         :return: 
         """
         # Get a test service
-        svc = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0_timeout")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
+                                                                     "test_ok_0_timeout")
 
         # These queues connect a poller/reactionner with a worker
         to_queue = Queue()
@@ -107,7 +105,7 @@ class TestWorkerTimeout(AlignakTest):
         }
         n = Notification(data)
 
-        n.status = "queue"
+        n.status = ACT_STATUS_QUEUED
         n.t_to_go = time.time()
         n.contact = contact
         n.timeout = 2
@@ -136,7 +134,7 @@ class TestWorkerTimeout(AlignakTest):
         msg = from_queue.get()
 
         o = msg.get_data()
-        self.assertEqual('timeout', o.status)
+        self.assertEqual(ACT_STATUS_TIMEOUT, o.status)
         self.assertEqual(3, o.exit_status)
         self.assertLess(o.execution_time, n.timeout+1)
 
@@ -145,8 +143,8 @@ class TestWorkerTimeout(AlignakTest):
         control_queue.close()
 
         # Now look what the scheduler says about this
-        self._sched.actions[n.uuid] = n
-        self._sched.put_results(o)
+        self._scheduler.actions[n.uuid] = n
+        self._scheduler.put_results(o)
         self.show_logs()
         self.assert_any_log_match("Contact alignak service notification command "
                                   "'libexec/sleep_command.sh 7 ' timed out after")

@@ -292,7 +292,7 @@ class AlignakConfigParser(object):
 
     def get_alignak_macros(self):
         """
-        Get the Alignak macros.
+        Get the Alignak macros. Remove the leading and trailing underscores
 
         :return: a dict containing the Alignak macros
         """

@@ -81,6 +81,21 @@ __all__ = ('Action', )
 
 VALID_EXIT_STATUS = (0, 1, 2, 3)
 
+ACT_STATUS_SCHEDULED = u'scheduled'
+ACT_STATUS_LAUNCHED = u'launched'
+ACT_STATUS_POLLED = u'in_poller'
+ACT_STATUS_QUEUED = u'queued'
+ACT_STATUS_WAIT_DEPEND = u'wait_dependent'
+ACT_STATUS_WAITING_ME = u'wait_me'
+ACT_STATUS_TIMEOUT = u'timeout'
+ACT_STATUS_DONE = u'done'
+ACT_STATUS_ZOMBIE = u'zombie'
+ACT_STATUS_WAIT_CONSUME = u'wait_consume'
+ACTION_VALID_STATUS = [ACT_STATUS_SCHEDULED, ACT_STATUS_LAUNCHED,
+                       ACT_STATUS_POLLED, ACT_STATUS_QUEUED, ACT_STATUS_WAIT_DEPEND,
+                       ACT_STATUS_DONE, ACT_STATUS_TIMEOUT,
+                       ACT_STATUS_WAIT_CONSUME, ACT_STATUS_ZOMBIE]
+
 ONLY_COPY_PROP = ('uuid', 'status', 'command', 't_to_go', 'timeout', 'env',
                   'module_type', 'execution_time', 'u_time', 's_time')
 
@@ -134,7 +149,11 @@ class ActionError(Exception):
 class ActionBase(AlignakObject):
     # pylint: disable=too-many-instance-attributes
     """
-    This abstract class is used to have a common base for both actions (notifications) and checks.
+    This abstract class is used to have a common base for both actions (event handlers and
+    notifications) and checks.
+
+    The Action may be on internal one if it does require to use a Worker process to run the
+    action because the Scheduler is able to resolve the action by itseld.
 
     This class is specialized according to the running OS. Currently, only Linux/Unix like OSes
     are tested
@@ -146,12 +165,14 @@ class ActionBase(AlignakObject):
             StringProp(default=u''),
         'type':
             StringProp(default=u''),
+        'internal':
+            BoolProp(default=False),
         'creation_time':
             FloatProp(default=0.0),
         '_in_timeout':
             BoolProp(default=False),
         'status':
-            StringProp(default=u'scheduled'),
+            StringProp(default=ACT_STATUS_SCHEDULED),
         'exit_status':
             IntegerProp(default=3),
         'output':
@@ -164,8 +185,12 @@ class ActionBase(AlignakObject):
             FloatProp(default=0.0),
         'check_time':
             IntegerProp(default=0),
+        'last_poll':
+            IntegerProp(default=0),
         'execution_time':
             FloatProp(default=0.0),
+        'wait_time':
+            FloatProp(default=0.001),
         'u_time':
             FloatProp(default=0.0),
         's_time':
@@ -233,7 +258,7 @@ class ActionBase(AlignakObject):
         :return: reference to the started process
         :rtype: psutil.Process
         """
-        self.status = u'launched'
+        self.status = ACT_STATUS_LAUNCHED
         self.check_time = time.time()
         self.wait_time = 0.0001
         self.last_poll = self.check_time
@@ -362,7 +387,7 @@ class ActionBase(AlignakObject):
                                self.process.pid, now - self.check_time)
                 self._in_timeout = True
                 self._kill()
-                self.status = u'timeout'
+                self.status = ACT_STATUS_TIMEOUT
                 self.execution_time = now - self.check_time
                 self.exit_status = 3
 
@@ -453,7 +478,7 @@ class ActionBase(AlignakObject):
         del self.stdoutdata
         del self.stderrdata
 
-        self.status = u'done'
+        self.status = ACT_STATUS_DONE
         self.execution_time = time.time() - self.check_time
 
         # Also get the system and user times
@@ -538,7 +563,7 @@ if os.name != 'nt':
                 except Exception as exp:  # pylint: disable=broad-except
                     self.output = 'Not a valid shell command: ' + str(exp)
                     self.exit_status = 3
-                    self.status = u'done'
+                    self.status = ACT_STATUS_DONE
                     self.execution_time = time.time() - self.check_time
                     raise ActionError('no_process_launched')
             logger.debug("Action execute, cmd: %s", cmd)
@@ -563,7 +588,7 @@ if os.name != 'nt':
 
                 self.output = str(exp)
                 self.exit_status = 2
-                self.status = u'done'
+                self.status = ACT_STATUS_DONE
                 self.execution_time = time.time() - self.check_time
 
                 # Maybe we run out of file descriptor. It's not good at all!
@@ -623,7 +648,7 @@ else:  # pragma: no cover, not currently tested with Windows...
             except Exception as exp:  # pylint: disable=W0703
                 self.output = 'Not a valid shell command: ' + exp.__str__()
                 self.exit_status = 3
-                self.status = 'done'
+                self.status = ACT_STATUS_DONE
                 self.execution_time = time.time() - self.check_time
                 return
 
@@ -633,7 +658,7 @@ else:  # pragma: no cover, not currently tested with Windows...
                     env=self.local_env, shell=True)
             except WindowsError as exp:  # pylint: disable=E0602
                 logger.info("We kill the process: %s %s", exp, self.command)
-                self.status = u'timeout'
+                self.status = ACT_STATUS_TIMEOUT
                 self.execution_time = time.time() - self.check_time
 
         def _kill(self):

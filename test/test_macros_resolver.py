@@ -95,10 +95,12 @@ class MacroResolverTester(object):
         assert result == "n/a"
 
         # This is a macro built from an Alignak variable - because the variable is prefixed with _
-        result = mr.resolve_simple_macros_in_string("$_DIST$", [], None, None, None)
+        # The macro name is built from the uppercased variable name without the leading
+        # and trailing underscores: _dist -> $DIST$
+        result = mr.resolve_simple_macros_in_string("$DIST$", [], None, None, None)
         assert result == "/tmp"
         # Alignak variable interpolated from %(var) is available as a macro
-        result = mr.resolve_simple_macros_in_string("$_DIST_ETC$", [], None, None, None)
+        result = mr.resolve_simple_macros_in_string("$DIST_ETC$", [], None, None, None)
         assert result == "/tmp/etc/alignak"
 
         # # Alignak "standard" variable is not available as a macro

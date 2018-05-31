@@ -163,7 +163,6 @@ class ModulesManager(object):
         :return: True on successful init. False if instance init method raised any Exception.
         :rtype: bool
         """
-        result = False
         try:
             instance.init_try += 1
             # Maybe it's a retry
@@ -172,7 +171,7 @@ class ModulesManager(object):
                 if instance.last_init_try > time.time() - MODULE_INIT_PERIOD:
                     logger.info("Too early to retry initialization, retry period is %d seconds",
                                 MODULE_INIT_PERIOD)
-                    logger.info("%s / %s", instance.last_init_try, time.time())
+                    # logger.info("%s / %s", instance.last_init_try, time.time())
                     return False
             instance.last_init_try = time.time()
 

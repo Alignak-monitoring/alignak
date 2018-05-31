@@ -420,7 +420,7 @@ class Broker(BaseSatellite):
                         return
                     else:
                         self.got_initial_broks = True
-                        logger.info("Got %d initial broks from '%s'",
+                        logger.debug("Got %d initial broks from '%s'",
                                     my_initial_broks, satellite.name)
                         statsmgr.gauge('broks.initial.%s.count' % satellite.name, my_initial_broks)
                 except LinkError as exp:

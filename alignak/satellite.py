@@ -70,15 +70,17 @@ import traceback
 import threading
 
 from queue import Empty, Full
-from multiprocessing import Queue, active_children, cpu_count
+import psutil
+from multiprocessing import Queue, active_children
 
 from alignak.http.generic_interface import GenericInterface
 
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
-from alignak.property import IntegerProp, ListProp
+from alignak.property import BoolProp, IntegerProp, ListProp
 from alignak.brok import Brok
 from alignak.external_command import ExternalCommand
 
+from alignak.action import ACT_STATUS_QUEUED
 from alignak.message import Message
 from alignak.worker import Worker
 from alignak.load import Load
@@ -167,12 +169,12 @@ class BaseSatellite(Daemon):
         self.external_commands = []
         return res
 
-    def get_return_for_passive(self, scheduler_instance_id):
-        """Get returns of passive actions for a specific scheduler
+    def get_results_from_passive(self, scheduler_instance_id):
+        """Get executed actions results from a passive satellite for a specific scheduler
 
         :param scheduler_instance_id: scheduler id
         :type scheduler_instance_id: int
-        :return: Action list
+        :return: Results list
         :rtype: list
         """
         # Do I know this scheduler?
@@ -191,6 +193,7 @@ class BaseSatellite(Daemon):
             logger.warning("I do not know this scheduler: %s", scheduler_instance_id)
             return []
 
+        logger.debug("Get results for the scheduler: %s" % scheduler_instance_id)
         ret, scheduler_link.wait_homerun = scheduler_link.wait_homerun, {}
         logger.debug("Results: %s" % (list(ret.values())) if ret else "No results available")
 
@@ -336,6 +339,8 @@ class BaseSatellite(Daemon):
 
             # For each scheduler, we received its managed hosts list
             self.hosts_schedulers = {}
+            logger.debug("My arbiters: %s", self.arbiters)
+            logger.debug("My schedulers: %s", self.schedulers)
             for link_uuid in self.schedulers:
                 # We received the hosts names for each scheduler
                 for host_name in self.schedulers[link_uuid].managed_hosts_names:
@@ -369,6 +374,10 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
     properties = BaseSatellite.properties.copy()
     properties.update({
+        'passive':
+            BoolProp(default=False),
+        'max_plugins_output_length':
+            IntegerProp(default=8192),
         'min_workers':
             IntegerProp(default=0, fill_brok=['full_status'], to_send=True),
         'max_workers':
@@ -390,13 +399,39 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         self.broks = []
         self.broks_lock = threading.RLock()
 
-        self.workers = {}   # dict of active workers
-        # self.min_workers = 0
-        # self.max_workers = 0
-        # self.worker_polling_interval = 1
-        # self.processes_by_worker = 256
-        logger.info("Configured minimum %d workers, maximum %d workers",
-                    self.min_workers, self.max_workers)
+        # My active workers
+        self.workers = {}
+
+        # May be we are a passive daemon
+        if self.passive:
+            self.pre_log.append(("INFO", "Passive mode enabled."))
+
+        # Our tags
+        # ['None'] is the default tags
+        if self.type in ['poller'] and self.poller_tags:
+            self.pre_log.append(("INFO", "Poller tags: %s" % self.poller_tags))
+        if self.type in ['reactionner'] and self.reactionner_tags:
+            self.pre_log.append(("INFO", "Reactionner tags: %s" % self.reactionner_tags))
+
+        # Now the limit part, 0 means the number of cpu of this machine :)
+        cpu_count = psutil.cpu_count()
+        # Do not use the logger in this function because it is not yet initialized...
+        self.pre_log.append(("INFO",
+                             "Detected %d CPUs" % cpu_count))
+        if self.max_workers == 0:
+            try:
+                # Preserve one CPU if more than one detected
+                self.max_workers = max(cpu_count - 1, 1)
+            except NotImplementedError:  # pragma: no cover, simple protection
+                self.max_workers = 1
+        if self.min_workers == 0:
+            try:
+                self.min_workers = max(cpu_count - 1, 1)
+            except NotImplementedError:  # pragma: no cover, simple protection
+                self.min_workers = 1
+        self.pre_log.append(("INFO",
+                             "Using minimum %d workers, maximum %d workers, %d processes/worker"
+                             % (self.min_workers, self.max_workers, self.processes_by_worker)))
 
         # Init stats like Load for workers
         self.wait_ratio = Load(initial_value=1)
@@ -423,14 +458,14 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         """
         # Maybe our workers send us something else than an action
         # if so, just add this in other queues and return
-        cls_type = action.__class__.my_type
-        if cls_type not in ['check', 'notification', 'eventhandler']:
+        # todo: test a class instance
+        if action.__class__.my_type not in ['check', 'notification', 'eventhandler']:
             self.add(action)
             return
 
-        # Ok, it's a result. We get it, and fill verifs of the good my_scheduler
-        my_scheduler = action.my_scheduler
-        logger.debug("Got action return: %s / %s", my_scheduler, action.uuid)
+        # Ok, it's a result. Get the concerned scheduler uuid
+        scheduler_uuid = action.my_scheduler
+        logger.debug("Got action return: %s / %s", scheduler_uuid, action.uuid)
 
         try:
             # Now that we know where to put the action result, we do not need any reference to
@@ -438,26 +473,24 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             del action.my_scheduler
             del action.my_worker
         except AttributeError:  # pragma: no cover, simple protection
-            logger.error("AttributeError Got action return: %s / %s", my_scheduler, action)
+            logger.error("AttributeError Got action return: %s / %s", scheduler_uuid, action)
 
         # And we remove it from the actions queue of the scheduler too
         try:
-            del self.schedulers[my_scheduler].actions[action.uuid]
+            del self.schedulers[scheduler_uuid].actions[action.uuid]
         except KeyError as exp:
             logger.error("KeyError del scheduler action: %s / %s - %s",
                          my_scheduler, action.uuid, str(exp))
 
         # We tag it as "return wanted", and move it in the wait return queue
         try:
-            self.schedulers[my_scheduler].wait_homerun[action.uuid] = action
+            self.schedulers[scheduler_uuid].wait_homerun[action.uuid] = action
         except KeyError:  # pragma: no cover, simple protection
             logger.error("KeyError Add home run action: %s / %s - %s",
-                         my_scheduler, action.uuid, str(exp))
+                         scheduler_uuid, action.uuid, str(exp))
 
-    def manage_returns(self):
-        """Manage the checks and then
-        send a HTTP request to schedulers (POST /put_results)
-        REF: doc/alignak-action-queues.png (6)
+    def push_results(self):
+        """Push the checks/actions results to our schedulers
 
         :return: None
         """
@@ -468,6 +501,11 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             if not scheduler_link.active:
                 logger.warning("My scheduler '%s' is not active currently", scheduler_link.name)
                 continue
+
+            if not scheduler_link.wait_homerun:
+                # Nothing to push back...
+                continue
+
             # NB: it's **mostly** safe for us to not use some lock around
             # this 'results' / sched['wait_homerun'].
             # Because it can only be modified (for adding new values) by the
@@ -478,8 +516,8 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # ISchedulers.get_results() -> Satelitte.get_return_for_passive()
             # This can so happen in an (http) client thread.
             results = scheduler_link.wait_homerun
-            if not results:
-                continue
+            logger.debug("Pushing %d results to '%s'", len(results), scheduler_link.name)
+
             # So, at worst, some results would be received twice on the
             # scheduler level, which shouldn't be a problem given they are
             # indexed by their "action_id".
@@ -632,10 +670,10 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             # Del the queue of the module queue
             del self.q_by_mod[worker.module_name][worker.get_id()]
 
-            for my_scheduler in self.schedulers:
-                sched = self.schedulers[my_scheduler]
+            for scheduler_uuid in self.schedulers:
+                sched = self.schedulers[scheduler_uuid]
                 for act in list(sched.actions.values()):
-                    if act.status == u'queue' and act.my_worker == worker_id:
+                    if act.status == ACT_STATUS_QUEUED and act.my_worker == worker_id:
                         # Got a check that will NEVER return if we do not restart it
                         self.assign_to_a_queue(act)
 
@@ -700,21 +738,26 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         # return the id of the worker (i), and its queue
         return (worker_id, queue)
 
-    def add_actions(self, actions_list, scheduler_id):
+    def add_actions(self, actions_list, scheduler_instance_id):
         """Add a list of actions to the satellite queues
 
         :param actions_list: Actions list to add
         :type actions_list: list
-        :param scheduler_id: sheduler link to assign the actions to
-        :type scheduler_id: SchedulerLink
+        :param scheduler_instance_id: sheduler link to assign the actions to
+        :type scheduler_instance_id: SchedulerLink
         :return: None
         """
         # We check for new check in each schedulers and put the result in new_checks
-        if scheduler_id in self.schedulers:
-            scheduler_link = self.schedulers[scheduler_id]
-        else:
-            logger.error("Trying to add actions from an unknwown scheduler: %s", scheduler_id)
-            return
+        scheduler_link = None
+        for scheduler_id in self.schedulers:
+            if scheduler_instance_id == self.schedulers[scheduler_id].instance_id:
+                scheduler_link = self.schedulers[scheduler_id]
+                break
+            else:
+                logger.error("Trying to add actions from an unknwown scheduler: %s",
+                             scheduler_instance_id)
+                return
+        logger.debug("Found scheduler link: %s", scheduler_link)
 
         for action in actions_list:
             # First we look if the action is identified
@@ -731,7 +774,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             if uuid in scheduler_link.actions:
                 continue
             # Action is attached to a scheduler
-            action.my_scheduler = scheduler_id
+            action.my_scheduler = scheduler_link.uuid
             scheduler_link.actions[action.uuid] = action
             self.assign_to_a_queue(action)
 
@@ -748,7 +791,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         # Tag the action as "in the worker i"
         action.my_worker = worker_id
-        action.status = u'queue'
+        action.status = ACT_STATUS_QUEUED
 
         msg = Message(_type='Do', data=action, source=self.name)
         logger.debug("Queuing message: %s", msg)
@@ -760,7 +803,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         For stats purpose
 
         :return: None
-        TODO: Use a decorator
+        TODO: Use a decorator for timing this function
         """
         try:
             _t0 = time.time()
@@ -776,14 +819,13 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         :return: None
         """
-        # Here are the differences between a
-        # poller and a reactionner:
+        # Here are the differences between a poller and a reactionner:
         # Poller will only do checks,
-        # reactionner do actions (notif + event handlers)
+        # Reactionner will do actions (notifications and event handlers)
         do_checks = self.__class__.do_checks
         do_actions = self.__class__.do_actions
 
-        # We check for new check in each schedulers and put the result in new_checks
+        # We check and get the new actions to execute in each of our schedulers
         for scheduler_link_uuid in self.schedulers:
             scheduler_link = self.schedulers[scheduler_link_uuid]
 
@@ -803,7 +845,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             if actions:
                 logger.debug("Got %d actions from %s", len(actions), scheduler_link.name)
                 # We 'tag' them with my_scheduler and put into queue for workers
-                self.add_actions(actions, scheduler_link.uuid)
+                self.add_actions(actions, scheduler_link.instance_id)
                 logger.debug("Got %d actions from %s in %s",
                              len(actions), scheduler_link.name, time.time() - _t0)
             statsmgr.gauge('actions.added.count.%s' % (scheduler_link.name), len(actions))
@@ -830,8 +872,6 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         :return: None
         """
-        logger.debug("loop pause: %s", self.timeout)
-
         # Try to see if one of my module is dead, and restart previously dead modules
         self.check_and_del_zombie_modules()
 
@@ -860,9 +900,9 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                         pass
 
         # todo temporaray deactivate all this stuff!
-        # # Before return or get new actions, see how we managed
-        # # the former ones: are they still in queue(s)? If so, we
-        # # must wait more or at least have more workers
+        # Before return or get new actions, see how we managed
+        # the former ones: are they still in queue(s)? If so, we
+        # must wait more or at least have more workers
         wait_ratio = self.wait_ratio.get_load()
         total_q = 0
         try:
@@ -884,12 +924,6 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         # statsmgr.timer('core.wait-ratio', wait_ratio)
         # if self.log_loop:
         #     logger.debug("[%s] wait ratio: %f", self.name, wait_ratio)
-
-        # # We can wait more than 1s if needed, no more than 5s, but no less than 1s
-        # timeout = self.timeout * wait_ratio
-        # timeout = max(self.worker_polling_interval, timeout)
-        # self.timeout = min(5 * self.worker_polling_interval, timeout)
-        # statsmgr.timer('core.pause-loop', self.timeout)
 
         # Maybe we do not have enough workers, we check for it
         # and launch the new ones if needed
@@ -922,20 +956,22 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             logger.error(traceback.format_exc())
 
         for _, sched in self.schedulers.items():
-            logger.debug("[%s] scheduler home run: %d results",
-                         self.name, len(sched.wait_homerun))
+            if sched.wait_homerun:
+                logger.debug("scheduler home run: %d results", len(sched.wait_homerun))
 
-        # If we are passive, we do not initiate the check getting
-        # and return
         if not self.passive:
+            # If we are an active satellite, we do not initiate the check getting
+            # and return
             try:
                 # We send to our schedulers the results of all finished checks
-                self.manage_returns()
+                logger.debug("pushing results...")
+                self.push_results()
             except LinkError as exp:
                 logger.warning("Scheduler connection failed, I could not send my results!")
 
             try:
                 # And we get the new actions from our schedulers
+                logger.debug("getting new actions...")
                 self.get_new_actions()
             except LinkError as exp:
                 logger.warning("Scheduler connection failed, I could not get new actions!")
@@ -980,42 +1016,6 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
             # self_conf is our own configuration from the alignak environment
             self_conf = self.cur_conf['self_conf']
-
-            # May be we are a passive daemon
-            self.passive = self_conf.get('passive', False)
-            if self.passive:
-                logger.info("Passive mode enabled.")
-
-            # ------------------
-            # For the worker daemons...
-            # ------------------
-            # todo: check if moveable to the class __init__
-            # Now the limit part, 0 means the number of cpu of this machine :)
-            logger.info("Configured minimum %d workers, maximum %d workers",
-                        self.min_workers, self.max_workers)
-            if self.max_workers == 0:
-                try:
-                    self.max_workers = cpu_count()
-                except NotImplementedError:  # pragma: no cover, simple protection
-                    self.max_workers = 1
-            if self.min_workers == 0:
-                try:
-                    self.min_workers = cpu_count()
-                except NotImplementedError:  # pragma: no cover, simple protection
-                    self.min_workers = 1
-            logger.info("Using minimum %d workers, maximum %d workers",
-                        self.min_workers, self.max_workers)
-
-            # self.processes_by_worker = self_conf.get('processes_by_worker', 1)
-            # self.worker_polling_interval = self_conf.get('worker_polling_interval', 1)
-            self.timeout = self.worker_polling_interval
-
-            # Now set tags
-            # ['None'] is the default tags
-            self.poller_tags = self_conf.get('poller_tags', ['None'])
-            self.reactionner_tags = self_conf.get('reactionner_tags', ['None'])
-            self.max_plugins_output_length = self_conf.get('max_plugins_output_length', 8192)
-            # ------------------
 
             # Now manage modules
             if not self.have_modules:

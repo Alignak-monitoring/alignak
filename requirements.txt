@@ -1,6 +1,11 @@
 # Application deployment requirements
 # Including dependencies version which Alignak was tested with
 # ----------
+# It is important to set a version for the Python packages; this will make sure on a
+# production server that the expected versions are those installed
+# ----------
+# More about this: https://packaging.python.org/discussions/install-requires-vs-requirements/#install-requires-vs-requirements-files
+# ----------
 
 # This is an implicit value, here for clarity
 --index-url https://pypi.python.org/simple/

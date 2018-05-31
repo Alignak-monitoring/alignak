@@ -74,6 +74,8 @@ from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
 from alignak.dependencynode import DependencyNode
 
+from alignak.action import ACT_STATUS_WAIT_CONSUME, ACT_STATUS_ZOMBIE, \
+    ACT_STATUS_WAIT_DEPEND, ACT_STATUS_WAITING_ME, ACT_STATUS_POLLED
 from alignak.check import Check
 from alignak.property import (BoolProp, IntegerProp, FloatProp, SetProp,
                               CharProp, StringProp, ListProp, DictProp)
@@ -1274,7 +1276,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.active_checks_enabled = False
         for chk_id in self.checks_in_progress:
             chk = checks[chk_id]
-            chk.status = u'waitconsume'
+            chk.status = ACT_STATUS_WAIT_CONSUME
             chk.exit_status = self.state_id
             chk.output = self.output
             chk.check_time = time.time()
@@ -1310,7 +1312,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return: None
         """
         if notification.uuid in self.notifications_in_progress:
-            notification.status = u'zombie'
+            notification.status = ACT_STATUS_ZOMBIE
             del self.notifications_in_progress[notification.uuid]
 
     def remove_in_progress_notifications(self, master=True, force=False):
@@ -1569,10 +1571,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         if 'ALIGNAK_LOG_ACTIONS' in os.environ:
             if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
-                logger.warning("Got check result: %d for '%s'",
+                logger.warning("Got check result: %d for %s",
                                chk.exit_status, self.get_full_name())
             else:
-                logger.info("Got check result: %d for '%s'",
+                logger.info("Got check result: %d for %s",
                             chk.exit_status, self.get_full_name())
 
         # # Protect against bad type output
@@ -1601,8 +1603,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # ============ MANAGE THE CHECK ============ #
         # Not OK, waitconsume and have dependencies, put this check in waitdep, create if
         # necessary the check of dependent items and nothing else ;)
-        if chk.exit_status != 0 and chk.status == u'waitconsume' and self.act_depend_of:
-            chk.status = u'waitdep'
+        if chk.exit_status != 0 and chk.status == ACT_STATUS_WAIT_CONSUME and self.act_depend_of:
+            chk.status = ACT_STATUS_WAIT_DEPEND
             # Make sure the check know about his dep
             # C is my check, and he wants dependencies
             deps_checks = self.raise_dependencies_check(chk, hosts, services, timeperiods,
@@ -1674,20 +1676,20 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Used to know if a notification is raised or not
         enable_action = True
 
-        if chk.status == u'waitdep':
+        if chk.status == ACT_STATUS_WAIT_DEPEND:
             # Check dependencies
             enable_action = self.is_enable_action_dependent(hosts, services)
             # If all dependencies not ok, define item as UNREACHABLE
             self.check_and_set_unreachability(hosts, services)
 
-        if chk.status in [u'waitconsume', u'waitdep']:
+        if chk.status in [ACT_STATUS_WAIT_CONSUME, ACT_STATUS_WAIT_DEPEND]:
             # check waiting consume or waiting result of dependencies
             if chk.depend_on_me != []:
-                # one or more checks wait this check  (dependency)
-                chk.status = u'havetoresolvedep'
+                # one or more checks wait this check (dependency)
+                chk.status = ACT_STATUS_WAITING_ME
             else:
                 # the check go in zombie state to be removed later
-                chk.status = u'zombie'
+                chk.status = ACT_STATUS_ZOMBIE
 
         # from UP/OK/PENDING
         # to UP/OK
@@ -1949,7 +1951,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type host_ref: alignak.object.host.Host
         :return: None
         """
-        if notif.status == u'in_poller':
+        if notif.status == ACT_STATUS_POLLED:
             self.update_notification_command(notif, contact, macromodulations, timeperiods,
                                              host_ref)
             self.notified_contacts.add(contact.uuid)
@@ -2691,6 +2693,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type check: alignak.objects.check.Check
         :return: None
         """
+        logger.debug("Internal check: %s - %s", self.get_full_name(), check.command)
         if check.command.startswith('bp_'):
             try:
                 # Re evaluate the business rule to take into account macro

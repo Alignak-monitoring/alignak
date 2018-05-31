@@ -64,6 +64,8 @@ from alignak.misc.common import setproctitle, SIGNALS_TO_NAMES_DICT
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
+KILL_TIME = 10
+
 # The `properties` dict defines what the module can do and
 # if it's an external module or not.
 # pylint: disable=invalid-name
@@ -286,11 +288,11 @@ class BaseModule(object):
         else:
             self.process.terminate()
             # Wait for 10 seconds before killing the process abruptly
-            self.process.join(timeout=10)
+            self.process.join(timeout=KILL_TIME)
             # You do not let me another choice guy...
             if self.process.is_alive():
-                logger.warning("%s is still living after a normal kill, I help it to die",
-                               self.name)
+                logger.warning("%s is still living %d seconds after a normal kill, "
+                               "I help it to die", self.name, KILL_TIME)
                 os.kill(self.process.pid, signal.SIGKILL)
                 self.process.join(1)
                 if self.process.is_alive():

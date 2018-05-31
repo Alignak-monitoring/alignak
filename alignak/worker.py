@@ -59,8 +59,11 @@ from queue import Empty, Full
 from multiprocessing import Process
 from six import string_types
 
+from alignak.action import ACT_STATUS_QUEUED, ACT_STATUS_LAUNCHED, \
+    ACT_STATUS_DONE, ACT_STATUS_TIMEOUT
 from alignak.message import Message
 from alignak.misc.common import setproctitle, SIGNALS_TO_NAMES_DICT
+
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -278,7 +281,7 @@ class Worker(object):
         """
         # queue
         for chk in self.checks:
-            if chk.status not in [u'queue']:
+            if chk.status not in [ACT_STATUS_QUEUED]:
                 continue
             logger.debug("Launch check: %s", chk.uuid)
             self._idletime = 0
@@ -307,11 +310,11 @@ class Worker(object):
         for action in self.checks:
             logger.debug("--- checking: last poll: %s, now: %s, wait_time: %s, action: %s",
                          action.last_poll, now, action.wait_time, action)
-            if action.status == u'launched' and action.last_poll < now - action.wait_time:
+            if action.status == ACT_STATUS_LAUNCHED and action.last_poll < now - action.wait_time:
                 action.check_finished(self.max_plugins_output_length)
                 wait_time = min(wait_time, action.wait_time)
             # If action done, we can launch a new one
-            if action.status in [u'done', u'timeout']:
+            if action.status in [ACT_STATUS_DONE, ACT_STATUS_TIMEOUT]:
                 logger.debug("--- check done/timeout: %s", action.uuid)
                 self.actions_finished += 1
                 to_del.append(action)
@@ -370,14 +373,10 @@ class Worker(object):
             logger.info("[%s] (pid=%d) starting my job...", self.get_id(), os.getpid())
             self.do_work(actions_queue, returns_queue)
             logger.info("[%s] (pid=%d) stopped", self.get_id(), os.getpid())
-        # Catch any exception, try to print it and exit anyway
-        except Exception:  # pragma: no cover, this should never happen indeed ;)
-            output = io.StringIO()
-            traceback.print_exc(file=output)
-            logger.error("[%s] exit with an unmanaged exception : %s",
-                         self._id, output.getvalue())
-            output.close()
-            # Ok I die now
+        # Catch any exception, log the exception and exit anyway
+        except Exception as exp:  # pragma: no cover, this should never happen indeed ;)
+            logger.error("[%s] exited with an unmanaged exception : %s", self._id, str(exp))
+            logger.exception(exp)
             raise
 
     def do_work(self, actions_queue, returns_queue):  # pragma: no cover, unit tests

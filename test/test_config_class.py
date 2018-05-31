@@ -96,9 +96,9 @@ class TestConfigClassBase(AlignakTest):
         # Because of this, a pure assertion is only valid when the test is the first one executed!
         compare_macros = {}
         for macro in list(alignak_cfg.macros.items()):
-            # print(macro)
+            print(macro)
             if macro[0] not in [
-                '_DIST', '_DIST_BIN', '_DIST_ETC', '_DIST_LOG', '_DIST_RUN', '_DIST_VAR',
+                'DIST', 'DIST_BIN', 'DIST_ETC', 'DIST_LOG', 'DIST_RUN', 'DIST_VAR',
                 'VAR', 'RUN', 'ETC', 'BIN', 'USER', 'GROUP', 'LIBEXEC', 'LOG',
                 'NAGIOSPLUGINSDIR', 'PLUGINSDIR', ''
             ]:
@@ -159,12 +159,12 @@ class TestConfigClassBase(AlignakTest):
         # ---
         # The macros defined in the default loaded configuration
         expected_macros.update({
-            '_DIST': '$_DIST$',
-            '_DIST_BIN': '$_DIST_BIN$',
-            '_DIST_ETC': '$_DIST_ETC$',
-            '_DIST_LOG': '$_DIST_LOG$',
-            '_DIST_RUN': '$_DIST_RUN$',
-            '_DIST_VAR': '$_DIST_VAR$',
+            'DIST': '$DIST$',
+            'DIST_BIN': '$DIST_BIN$',
+            'DIST_ETC': '$DIST_ETC$',
+            'DIST_LOG': '$DIST_LOG$',
+            'DIST_RUN': '$DIST_RUN$',
+            'DIST_VAR': '$DIST_VAR$',
             'BIN': '$BIN$',
             'ETC': '$ETC$',
             'GROUP': '$GROUP$',

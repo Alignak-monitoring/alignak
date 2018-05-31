@@ -33,9 +33,6 @@ Thumbs.db
 \#*#
 
 *.debug
-*pack_distribution.dat
-test/tmp/*dat
-env/
 
 # Documentation #
 #################
@@ -45,12 +42,8 @@ docs/tools/pages/
 
 
 # test and coverage
-test/.coverage
-test/.coverage.*
+tests/.coverage
+tests/.coverage.*
 
-test/run/
-test_run/run/
-
-# Pbr
-pbr-*.egg/
-
+tests_integ/.coverage
+tests_integ/.coverage.*

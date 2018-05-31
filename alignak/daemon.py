@@ -213,9 +213,6 @@ from alignak.bin.alignak_environment import AlignakConfigParser
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 # #########################   DAEMON PART    ###############################
-# The standard I/O file descriptors are redirected to /dev/null by default.
-REDIRECT_TO = getattr(os, "devnull", "/dev/null")
-
 # Recommended (default) umask for a daemonized process is 0. Former Alignak one was 027...
 # UMASK = 027
 UMASK = 0
@@ -238,7 +235,6 @@ class Daemon(object):
     """Class providing daemon level call for Alignak
     """
 
-    # todo: why using this dict here, because the Daemon is not inheriting from an Item
     properties = {
         'type':
             StringProp(default=u'unknown'),
@@ -391,15 +387,6 @@ class Daemon(object):
         self.alignak_env = None
         self.legacy_cfg_files = []
         self.modules_manager = None
-
-        import logging
-
-        logging.basicConfig(filename='/tmp/test_log.log',level=logging.DEBUG, \
-                            format='%(asctime)s -- %(name)s -- %(levelname)s -- %(message)s')
-        logging.info('INFO ERROR')
-        logging.warning('Warning Error %s: %s', '01234', 'Erreur Oracle')
-        logging.error('error message')
-        logging.critical('critical error')
 
         # First, do we debug?
         self.debug = False
@@ -2173,9 +2160,9 @@ class Daemon(object):
             logger.debug("--- Start - Log prior to our configuration:")
             for level, message in self.pre_log:
                 if level.lower() == "debug":
-                    logger.debug("--- %s", message)
+                    logger.debug(message)
                 elif level.lower() == "info":
-                    logger.info("--- %s", message)
+                    logger.info(message)
                 elif level.lower() == "warning":
-                    logger.warning("--- %s", message)
+                    logger.warning(message)
             logger.debug("--- Stop - Log prior to our configuration")

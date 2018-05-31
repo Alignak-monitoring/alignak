@@ -72,6 +72,7 @@ import collections
 
 # This import, despite not used, is necessary to include all Alignak objects modules
 # pylint: disable=wildcard-import,unused-wildcard-import
+from alignak.action import ACT_STATUS_DONE, ACT_STATUS_TIMEOUT, ACT_STATUS_WAIT_CONSUME
 from alignak.objects import *
 from alignak.util import to_int, to_bool, split_semicolon
 from alignak.downtime import Downtime
@@ -3097,7 +3098,7 @@ class ExternalCommandManager(object):
         # So exit_status, output and status is eaten by the host
         chk.exit_status = status_code
         chk.get_outputs(plugin_output, host.max_plugins_output_length)
-        chk.status = u'waitconsume'
+        chk.status = ACT_STATUS_WAIT_CONSUME
         chk.check_time = self.current_timestamp  # we are using the external command timestamps
         # Set the corresponding host's check type to passive
         chk.set_type_passive()
@@ -3192,7 +3193,7 @@ class ExternalCommandManager(object):
         logger.debug('%s > Passive service check output: %s',
                      service.get_full_name(), chk.output)
 
-        chk.status = u'waitconsume'
+        chk.status = ACT_STATUS_WAIT_CONSUME
         chk.check_time = self.current_timestamp  # we are using the external command timestamps
         # Set the corresponding service's check type to passive
         chk.set_type_passive()
@@ -3296,11 +3297,11 @@ class ExternalCommandManager(object):
         # Ok now run it
         e_handler.execute()
         # And wait for the command to finish
-        while e_handler.status not in [u'done', u'timeout']:
+        while e_handler.status not in [ACT_STATUS_DONE, ACT_STATUS_TIMEOUT]:
             e_handler.check_finished(64000)
 
         log_level = 'info'
-        if e_handler.status == u'timeout' or e_handler.exit_status != 0:
+        if e_handler.status == ACT_STATUS_TIMEOUT or e_handler.exit_status != 0:
             logger.error("Cannot restart Alignak : the 'restart-alignak' command failed with"
                          " the error code '%d' and the text '%s'.",
                          e_handler.exit_status, e_handler.output)
@@ -3332,11 +3333,11 @@ class ExternalCommandManager(object):
         # Ok now run it
         e_handler.execute()
         # And wait for the command to finish
-        while e_handler.status not in [u'done', u'timeout']:
+        while e_handler.status not in [ACT_STATUS_DONE, ACT_STATUS_TIMEOUT]:
             e_handler.check_finished(64000)
 
         log_level = 'info'
-        if e_handler.status == u'timeout' or e_handler.exit_status != 0:
+        if e_handler.status == ACT_STATUS_TIMEOUT or e_handler.exit_status != 0:
             logger.error("Cannot reload Alignak configuration: the 'reload-alignak' command failed"
                          " with the error code '%d' and the text '%s'.",
                          e_handler.exit_status, e_handler.output)

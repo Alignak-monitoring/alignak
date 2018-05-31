@@ -85,14 +85,15 @@ class Check(Action):  # pylint: disable=R0902
             BoolProp(default=False),
         'poller_tag':
             StringProp(default=u'None'),
-        'internal':
-            BoolProp(default=False),
         'dependency_check':
             BoolProp(default=False),
     })
 
     def __init__(self, params=None, parsing=False):
         super(Check, self).__init__(params, parsing=parsing)
+
+        if self.command.startswith('_'):
+            self.internal = True
 
     def __str__(self):  # pragma: no cover
         return "Check %s %s, item: %s, status: %s, command:'%s'" % \

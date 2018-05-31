@@ -303,7 +303,7 @@ class GenericInterface(object):
         :return: None
         """
         with self.app.conf_lock:
-            logger.warning("My Arbiter wants me to wait for a new configuration.")
+            logger.info("My Arbiter wants me to wait for a new configuration.")
             # Clear can occur while setting up a new conf and lead to error.
             self.app.schedulers.clear()
             self.app.cur_conf = {}
@@ -333,13 +333,13 @@ class GenericInterface(object):
         This function is used by the scheduler to send the actions to get executed to
         the poller/reactionner
 
-        {'actions': actions, 'scheduler_id': scheduler_id}
+        {'actions': actions, 'instance_id': scheduler_instance_id}
 
         :return:None
         """
         data = cherrypy.request.json
         with self.app.lock:
-            self.app.add_actions(data['actions'], data['scheduler_id'])
+            self.app.add_actions(data['actions'], data['scheduler_instance_id'])
     push_actions.method = 'post'
 
     @cherrypy.expose
@@ -347,13 +347,16 @@ class GenericInterface(object):
     def get_results(self, scheduler_instance_id):
         """Get the results of the executed actions for the scheduler which instance id is provided
 
+        Calling this method for daemons that are not configured as passive do not make sense.
+        Indeed, this service should only be exposed on poller and reactionner daemons.
+
         :param scheduler_instance_id: instance id of the scheduler
         :type scheduler_instance_id: string
         :return: serialized list
         :rtype: str
         """
         with self.app.lock:
-            res = self.app.get_return_for_passive(scheduler_instance_id)
+            res = self.app.get_results_from_passive(scheduler_instance_id)
         return serialize(res, True)
 
     @cherrypy.expose

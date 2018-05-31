@@ -139,8 +139,10 @@ class TestAction(AlignakTest):
             'ref_type': 'host',
             'command': 'my_command.sh',
             'check_time': 0,
+            'last_poll': 0,
             'exit_status': 0,
             'execution_time': 0.0,
+            'wait_time': 0.001,
             'creation_time': time.time(),
             'my_worker': 'test_worker',
             'my_scheduler': 'test_scheduler',
@@ -165,7 +167,8 @@ class TestAction(AlignakTest):
             'type': '',
             'output': '',
             'long_output': '',
-            'perf_data': ''
+            'perf_data': '',
+            'internal': False
         })
         # creation_time and log_actions will not be modified! They are set
         # only if they do not yet exist
@@ -215,6 +218,8 @@ class TestAction(AlignakTest):
             'reactionner_tag': 'None',
             'state': 0,
             'status': 'scheduled',
+            'last_poll': 0,
+            'wait_time': 0.001
         })
         assert check.__dict__ == parameters
 

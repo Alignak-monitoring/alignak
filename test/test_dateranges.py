@@ -274,7 +274,7 @@ class TestDateRanges(AlignakTest):
             with freeze_time(date_now, tz_offset=0):
                 print("Date: %s: %s" % (date_now, data[date_now]))
                 start, end = caldate.get_start_and_end_time()
-                print("-> res: %s (%s) - %s (%s)" % (start, type(start), end, type(end)))
+                print("-> start: %s, end: %s" % (start, end))
                 assert data[date_now]['start'] == start
                 assert data[date_now]['end'] == end
 

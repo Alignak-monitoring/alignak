@@ -611,7 +611,7 @@ class TestDependencies(AlignakTest):
             # self.assert_checks_match(10, 'scheduled', 'status')
             # self.assert_checks_match(11, 'waitdep', 'status')
             self.assert_any_check_match('scheduled', 'status')
-            self.assert_any_check_match('waitdep', 'status')
+            self.assert_any_check_match('wait_dependent', 'status')
 
             self.scheduler_loop(1, [[host, 0, 'UP']])
             # The notifications are created to be launched in the next second when they happen !
@@ -708,7 +708,7 @@ class TestDependencies(AlignakTest):
             # self.assert_checks_match(11, 'scheduled', 'status')
             # self.assert_checks_match(10, 'waitdep', 'status')
             self.assert_any_check_match('scheduled', 'status')
-            self.assert_any_check_match('waitdep', 'status')
+            self.assert_any_check_match('wait_dependent', 'status')
 
             self.scheduler_loop(1, [[host, 2, 'DOWN']])
             # The notifications are created to be launched in the next second when they happen !
@@ -784,7 +784,7 @@ class TestDependencies(AlignakTest):
             self.assert_checks_count(12)
             # self.assert_checks_match(10, 'test_hostcheck.pl', 'command')
             # self.assert_checks_match(10, 'hostname test_host_00', 'command')
-            # self.assert_checks_match(10, 'waitdep', 'status')
+            # self.assert_checks_match(10, 'wait_dependent', 'status')
             # self.assert_checks_match(11, 'scheduled', 'status')
 
             self.scheduler_loop(1, [[router_00, 0, 'UP']])
@@ -1309,9 +1309,9 @@ class TestDependencies(AlignakTest):
             # 	7 = creation: 1477557942.21, is_a: check, type: , status: scheduled, planned: 1477557946, command: /tmp/dependencies/plugins/test_servicecheck.pl --type=ok --failchance=5% --previous-state=OK --state-duration=0 --total-critical-on-host=0 --total-warning-on-host=0 --hostname host_P --servicedesc service_A
             # 	8 = creation: 1477557942.21, is_a: check, type: , status: scheduled, planned: 1477557980, command: /tmp/dependencies/plugins/test_servicecheck.pl --type=ok --failchance=5% --previous-state=OK --state-duration=0 --total-critical-on-host=0 --total-warning-on-host=0 --hostname host_A --servicedesc service_A
             # 	9 = creation: 1477557942.24, is_a: check, type: , status: scheduled, planned: 1477557995, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=down --failchance=2% --previous-state=UP --state-duration=1477557942 --hostname host_A
-            # 	10 = creation: 1477557942.37, is_a: check, type: , status: waitdep, planned: 1477557942.36, command: /tmp/dependencies/plugins/test_servicecheck.pl --type=ok --failchance=5% --previous-state=OK --state-duration=1477557942 --total-critical-on-host=0 --total-warning-on-host=0 --hostname host_A --servicedesc service_P
+            # 	10 = creation: 1477557942.37, is_a: check, type: , status: wait_dependent, planned: 1477557942.36, command: /tmp/dependencies/plugins/test_servicecheck.pl --type=ok --failchance=5% --previous-state=OK --state-duration=1477557942 --total-critical-on-host=0 --total-warning-on-host=0 --hostname host_A --servicedesc service_P
             # ]]]
-            self.assert_checks_match(10, 'waitdep', 'status')
+            self.assert_checks_match(10, 'wait_dependent', 'status')
 
             self.scheduler_loop(1, [[host, 2, 'DOWN']])
             # The notifications are created to be launched in the next second when they happen !

@@ -893,18 +893,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         res['macros'] = self.macros
         return res
 
-    # def fill_resource_macros_names_macros(self):
-    #     """ Fill the macro dict will all values stored in
-    #     self.resource_macros_names. This list was prepared during the configuration parsing
-    #
-    #     :return: None
-    #     """
-    #     for macro_name in self.resource_macros_names:
-    #         # Increase the macros list
-    #         self.__class__.macros[macro_name] = '$%s$' % macro_name
-    #         # Create a new property to store the macro value
-    #         self.__class__.properties['$%s$' % macro_name] = StringProp(default='')
-
     def clean_params(self, params):
         """Convert a list of parameters (key=value) into a dict
 
@@ -2576,7 +2564,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                                    if self.schedulers[s_id].active and
                                    not self.schedulers[s_id].spare]
             nb_schedulers = len(no_spare_schedulers)
-            logger.info("  %d schedulers in the realm %s", nb_schedulers, realm.get_name())
+            logger.info("  %d scheduler(s) in the realm %s", nb_schedulers, realm.get_name())
 
             # Maybe there is no scheduler in the realm, it can be a
             # big problem if there are elements in packs
@@ -2687,7 +2675,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                                    not self.schedulers[s_id].spare]
             nb_schedulers = len(no_spare_schedulers)
             nb_parts += nb_schedulers
-            logger.info(" - %d schedulers in the realm %s", nb_schedulers, realm.get_name())
+            logger.info(" - %d scheduler(s) in the realm %s", nb_schedulers, realm.get_name())
 
         if nb_parts == 0:
             logger.warning("Splitting the configuration into parts but I found no scheduler. "

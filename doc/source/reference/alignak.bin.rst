@@ -4,6 +4,14 @@ alignak.bin package
 Submodules
 ----------
 
+alignak.bin.alignak_environment module
+--------------------------------------
+
+.. automodule:: alignak.bin.alignak_environment
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 alignak.bin.alignak_arbiter module
 ----------------------------------
 

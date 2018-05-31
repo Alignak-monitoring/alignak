@@ -79,6 +79,9 @@ from six import string_types
 from alignak.objects.item import Item
 from alignak.macroresolver import MacroResolver
 
+from alignak.action import ACT_STATUS_SCHEDULED, ACT_STATUS_POLLED, \
+    ACT_STATUS_TIMEOUT, ACT_STATUS_ZOMBIE, ACT_STATUS_WAIT_CONSUME, \
+    ACT_STATUS_WAIT_DEPEND, ACT_STATUS_WAITING_ME
 from alignak.external_command import ExternalCommand
 from alignak.check import Check
 from alignak.notification import Notification
@@ -584,8 +587,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # but only for items that are actively checked
         item = self.find_item_by_id(check.ref)
         if item.active_checks_enabled:
-            brok = item.get_next_schedule_brok()
-            self.add(brok)
+            self.add(item.get_next_schedule_brok())
 
     def add_event_handler(self, action):
         """Add a event handler into actions list
@@ -755,8 +757,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type item: alignak.objects.item.Item
         :return: None
         """
-        brok = item.get_update_status_brok()
-        self.add(brok)
+        self.add(item.get_update_status_brok())
 
     def get_and_register_check_result_brok(self, item):
         """Get a check result brok for item and add it
@@ -765,8 +766,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :type item: alignak.objects.schedulingitem.SchedulingItem
         :return: None
         """
-        brok = item.get_check_result_brok()
-        self.add(brok)
+        self.add(item.get_check_result_brok())
 
     def check_for_expire_acknowledge(self):
         """Iter over host and service and check if any acknowledgement has expired
@@ -822,7 +822,7 @@ class Scheduler(object):  # pylint: disable=R0902
         now = time.time()
         # We only want the master scheduled notifications that are immediately launchable
         notifications = [a for a in self.actions.values()
-                         if a.is_a == u'notification' and a.status == u'scheduled'
+                         if a.is_a == u'notification' and a.status == ACT_STATUS_SCHEDULED
                          and not a.contact and a.is_launchable(now)]
         if notifications:
             logger.debug("Scatter master notification: %d notifications",
@@ -849,7 +849,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 )
                 for notif in children:
                     logger.debug(" - child notification: %s", notif)
-                    notif.status = u'scheduled'
+                    notif.status = ACT_STATUS_SCHEDULED
                     # Add the notification to the scheduler objects
                     self.add(notif)
 
@@ -921,38 +921,52 @@ class Scheduler(object):  # pylint: disable=R0902
             reactionner_tags = ['None']
         if module_types is None:
             module_types = ['fork']
+        if not isinstance(module_types, list):
+            module_types = [module_types]
 
         # If a poller wants its checks
         if do_checks:
-            logger.debug("%d checks for poller tags: %s and module types: %s",
-                         len(self.checks), poller_tags, module_types)
-            for chk in list(self.checks.values()):
-                logger.debug("Check: %s (%s / %s)", chk.uuid, chk.poller_tag, chk.module_type)
+            if self.checks:
+                logger.debug("I have %d prepared checks", len(self.checks))
+
+            for check in list(self.checks.values()):
+                logger.debug("Check: %s (%s / %s)", check.uuid, check.poller_tag, check.module_type)
+
+                if check.internal:
+                    # Do not care about Alignak internally executed checks
+                    continue
+
                 #  If the command is untagged, and the poller too, or if both are tagged
                 #  with same name, go for it
                 # if do_check, call for poller, and so poller_tags by default is ['None']
                 # by default poller_tag is 'None' and poller_tags is ['None']
                 # and same for module_type, the default is the 'fork' type
-                if chk.poller_tag not in poller_tags:
+                if check.poller_tag not in poller_tags:
                     logger.debug(" -> poller tag do not match")
                     continue
-                if chk.module_type not in module_types:
+                if check.module_type not in module_types:
                     logger.debug(" -> module type do not match")
                     continue
 
                 logger.debug(" -> : %s %s (%s)",
-                             'worker' if not chk.internal else 'internal',
-                             chk.status,
-                             'now' if chk.is_launchable(now) else 'not yet')
+                             'worker' if not check.internal else 'internal',
+                             check.status,
+                             'now' if check.is_launchable(now) else 'not yet')
                 # must be ok to launch, and not an internal one (business rules based)
-                if chk.status == u'scheduled' and chk.is_launchable(now) and not chk.internal:
-                    logger.debug("Check to run: %s", chk)
-                    chk.status = u'in_poller'
-                    chk.my_worker = worker_name
-                    res.append(chk)
+                if check.status == ACT_STATUS_SCHEDULED and check.is_launchable(now):
+                    logger.debug("Check to run: %s", check)
+                    check.status = ACT_STATUS_POLLED
+                    check.my_worker = worker_name
+                    res.append(check)
 
+                    if 'ALIGNAK_LOG_ACTIONS' in os.environ:
+                        if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
+                            logger.warning("Check to run: %s", check)
+                        else:
+                            logger.info("Check to run: %s", check)
+
+                    # Stats
                     self.nb_checks_launched += 1
-
                     self.counters["check"]["total"]["launched"] += 1
                     self.counters["check"]["loop"]["launched"] += 1
                     self.counters["check"]["active"]["launched"] += 1
@@ -964,40 +978,54 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # If a reactionner wants its actions
         if do_actions:
-            logger.debug("%d actions for reactionner tags: %s", len(self.actions), reactionner_tags)
-            for act in list(self.actions.values()):
-                is_master = (act.is_a == 'notification' and not act.contact)
-                logger.debug("Action: %s (%s / %s)", act.uuid, act.reactionner_tag, act.module_type)
+            if self.actions:
+                logger.debug("I have %d prepared actions", len(self.actions))
 
-                if not is_master:
-                    # if do_action, call the reactionner,
-                    # and so reactionner_tags by default is ['None']
-                    # by default reactionner_tag is 'None' and reactionner_tags is ['None'] too
-                    # So if not the good one, loop for next :)
-                    if act.reactionner_tag not in reactionner_tags:
-                        logger.error(" -> reactionner tag do not match")
-                        continue
+            for action in list(self.actions.values()):
+                logger.debug("Action: %s (%s / %s)",
+                             action.uuid, action.reactionner_tag, action.module_type)
 
-                    # same for module_type
-                    if act.module_type not in module_types:
-                        logger.error(" -> module type do not match")
-                        continue
+                if action.internal:
+                    # Do not care about Alignak internally executed checks
+                    continue
+
+                is_master = (action.is_a == 'notification' and not action.contact)
+                if is_master:
+                    continue
+
+                # if do_action, call the reactionner,
+                # and so reactionner_tags by default is ['None']
+                # by default reactionner_tag is 'None' and reactionner_tags is ['None'] too
+                # So if not the good one, loop for next :)
+                if action.reactionner_tag not in reactionner_tags:
+                    logger.debug(" -> reactionner tag do not match")
+                    continue
+
+                # same for module_type
+                if action.module_type not in module_types:
+                    logger.debug(" -> module type do not match")
+                    continue
 
                 # And now look if we can launch or not :)
                 logger.debug(" -> : worker %s (%s)",
-                             act.status, 'now' if act.is_launchable(now) else 'not yet')
-                if act.status == u'scheduled' and act.is_launchable(now):
-                    if not is_master:
-                        # This is for child notifications and eventhandlers
-                        act.status = u'in_poller'
-                        act.my_worker = worker_name
-                        res.append(act)
+                             action.status, 'now' if action.is_launchable(now) else 'not yet')
+                if action.status == ACT_STATUS_SCHEDULED and action.is_launchable(now):
+                    # This is for child notifications and eventhandlers
+                    action.status = ACT_STATUS_POLLED
+                    action.my_worker = worker_name
+                    res.append(action)
 
-                        self.nb_actions_launched += 1
+                    if 'ALIGNAK_LOG_ACTIONS' in os.environ:
+                        if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
+                            logger.warning("Action to run: %s", action)
+                        else:
+                            logger.info("Action to run: %s", action)
 
-                        self.counters[act.is_a]["total"]["launched"] += 1
-                        self.counters[act.is_a]["loop"]["launched"] += 1
-                        self.counters[act.is_a]["active"]["launched"] += 1
+                    # Stats
+                    self.nb_actions_launched += 1
+                    self.counters[action.is_a]["total"]["launched"] += 1
+                    self.counters[action.is_a]["loop"]["launched"] += 1
+                    self.counters[action.is_a]["active"]["launched"] += 1
 
             if res:
                 logger.info("-> %d actions to start now", len(res))
@@ -1027,7 +1055,8 @@ class Scheduler(object):  # pylint: disable=R0902
             # We will only see child notifications here
             try:
                 timeout = False
-                if action.status == u'timeout':
+                execution_time = 0
+                if action.status == ACT_STATUS_TIMEOUT:
                     # Unfortunately the remove_in_progress_notification
                     # sets the status to zombie, so we need to save it here.
                     timeout = True
@@ -1045,7 +1074,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 self.actions[action.uuid].get_return_from(action)
                 item = self.find_item_by_id(self.actions[action.uuid].ref)
                 item.remove_in_progress_notification(action)
-                self.actions[action.uuid].status = u'zombie'
+                self.actions[action.uuid].status = ACT_STATUS_ZOMBIE
                 item.last_notification = action.check_time
 
                 # And we ask the item to update its state
@@ -1115,7 +1144,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     self.counters[action.is_a]["loop"]["results"][action.status] = 0
                 self.counters[action.is_a]["loop"]["results"][action.status] += 1
 
-                if action.status == u'timeout':
+                if action.status == ACT_STATUS_TIMEOUT:
                     ref = self.find_item_by_id(self.checks[action.uuid].ref)
                     action.long_output = action.output
                     action.output = "(%s %s check timed out)" % (ref.my_type, ref.get_full_name())
@@ -1135,7 +1164,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     self.counters[action.is_a]["loop"]["executed"] += 1
 
                 self.checks[action.uuid].get_return_from(action)
-                self.checks[action.uuid].status = u'waitconsume'
+                self.checks[action.uuid].status = ACT_STATUS_WAIT_CONSUME
             except (ValueError, AttributeError) as exp:  # pragma: no cover, simple protection
                 # bad object, drop it
                 logger.warning('put_results:: got bad check: %s ', str(exp))
@@ -1143,7 +1172,7 @@ class Scheduler(object):  # pylint: disable=R0902
         elif action.is_a == 'eventhandler':
             try:
                 old_action = self.actions[action.uuid]
-                old_action.status = u'zombie'
+                old_action.status = ACT_STATUS_ZOMBIE
             except KeyError as exp:  # pragma: no cover, simple protection
                 # cannot find old action
                 # bad object, drop it
@@ -1163,7 +1192,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     self.counters[action.is_a]["loop"]["results"][action.status] = 0
                 self.counters[action.is_a]["loop"]["results"][action.status] += 1
 
-                if action.status == u'timeout':
+                if action.status == ACT_STATUS_TIMEOUT:
                     _type = 'event handler'
                     if action.is_snapshot:
                         _type = 'snapshot'
@@ -1185,8 +1214,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 if action.is_snapshot:
                     old_action.get_return_from(action)
                     s_item = self.find_item_by_id(old_action.ref)
-                    brok = s_item.get_snapshot_brok(old_action.output, old_action.exit_status)
-                    self.add(brok)
+                    self.add(s_item.get_snapshot_brok(old_action.output, old_action.exit_status))
             except (ValueError, AttributeError) as exp:  # pragma: no cover, simple protection
                 # bad object, drop it
                 logger.warning('put_results:: got bad event handler: %s ', str(exp))
@@ -1194,7 +1222,7 @@ class Scheduler(object):  # pylint: disable=R0902
         else:  # pragma: no cover, simple protection, should not happen!
             logger.error("The received result type in unknown! %s", str(action.is_a))
 
-    def push_actions_to_passives_satellites(self):
+    def push_actions_to_passive_satellites(self):
         """Send actions/checks to passive poller/reactionners
 
         :return: None
@@ -1222,7 +1250,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     logger.debug("Nothing to do...")
                     continue
 
-                logger.info("Sending %d actions to the %s '%s'", len(lst), s_type, link.name)
+                logger.debug("Sending %d actions to the %s '%s'", len(lst), s_type, link.name)
                 link.push_actions(lst, self.instance_id)
                 if s_type == 'poller':
                     self.nb_checks_launched += len(lst)
@@ -1231,7 +1259,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     self.nb_actions_launched += len(lst)
                     self.nb_actions_launched_passive += len(lst)
 
-    def get_actions_from_passives_satellites(self):
+    def get_results_from_passive_satellites(self):
         #  pylint: disable=broad-except
         """Get actions/checks results from passive poller/reactionners
 
@@ -1256,7 +1284,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 results = unserialize(results, no_load=True)
                 if results:
                     logger.info("Received %d passive results from %s",
-                                len(results), link['name'])
+                                len(results), link.name)
                 self.nb_checks_results += len(results)
 
                 for result in results:
@@ -1284,33 +1312,39 @@ class Scheduler(object):  # pylint: disable=R0902
             return
         now = time.time()
         for chk in list(self.checks.values()):
-            # must be ok to launch, and not an internal one (business rules based)
-            if chk.internal and chk.status == u'scheduled' and chk.is_launchable(now):
-                item = self.find_item_by_id(chk.ref)
-                # Only if active checks are enabled
-                if not item.active_checks_enabled:
-                    # Ask to remove the check
-                    chk.status = u'zombie'
-                    continue
-                logger.debug("Run internal check for %s", item)
+            if not chk.internal:
+                # Exclude checks that are not internal ones
+                continue
 
-                item.manage_internal_check(self.hosts, self.services, chk, self.hostgroups,
-                                           self.servicegroups, self.macromodulations,
-                                           self.timeperiods)
-                # Ask to consume the check result
-                chk.status = u'waitconsume'
+            # Exclude checks that are not yet ready to launch
+            if not chk.is_launchable(now) or chk.status not in [ACT_STATUS_SCHEDULED]:
+                continue
 
-                # Count and execute only if active checks is enabled
-                self.nb_internal_checks += 1
-                self.counters["check"]["total"]["results"]["total"] += 1
-                if "internal" not in self.counters["check"]["total"]["results"]:
-                    self.counters["check"]["total"]["results"]["internal"] = 0
-                self.counters["check"]["total"]["results"]["internal"] += 1
+            item = self.find_item_by_id(chk.ref)
+            # Only if active checks are enabled
+            if not item or not item.active_checks_enabled:
+                # Ask to remove the check
+                chk.status = ACT_STATUS_ZOMBIE
+                continue
+            logger.debug("Run internal check for %s", item)
 
-                self.counters["check"]["loop"]["results"]["total"] += 1
-                if "internal" not in self.counters["check"]["loop"]["results"]:
-                    self.counters["check"]["loop"]["results"]["internal"] = 0
-                self.counters["check"]["loop"]["results"]["internal"] += 1
+            item.manage_internal_check(self.hosts, self.services, chk, self.hostgroups,
+                                       self.servicegroups, self.macromodulations,
+                                       self.timeperiods)
+            # Ask to consume the check result
+            chk.status = ACT_STATUS_WAIT_CONSUME
+
+            # Count and execute only if active checks is enabled
+            self.nb_internal_checks += 1
+            self.counters["check"]["total"]["results"]["total"] += 1
+            if "internal" not in self.counters["check"]["total"]["results"]:
+                self.counters["check"]["total"]["results"]["internal"] = 0
+            self.counters["check"]["total"]["results"]["internal"] += 1
+
+            self.counters["check"]["loop"]["results"]["total"] += 1
+            if "internal" not in self.counters["check"]["loop"]["results"]:
+                self.counters["check"]["loop"]["results"]["internal"] = 0
+            self.counters["check"]["loop"]["results"]["internal"] += 1
 
     def reset_topology_change_flag(self):
         """Set topology_change attribute to False in all hosts and services
@@ -1742,7 +1776,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # Then we consume them
         for chk in list(self.checks.values()):
-            if chk.status == 'waitconsume':
+            if chk.status == ACT_STATUS_WAIT_CONSUME:
                 logger.debug("Consuming: %s", chk)
                 item = self.find_item_by_id(chk.ref)
                 notification_period = self.timeperiods[item.notification_period]
@@ -1770,17 +1804,17 @@ class Scheduler(object):  # pylint: disable=R0902
             have_resolved_checks = False
             # All 'finished' checks (no more dep) raise checks they depend on
             for chk in list(self.checks.values()):
-                if chk.status == u'havetoresolvedep':
+                if chk.status == ACT_STATUS_WAITING_ME:
                     for dependent_checks in chk.depend_on_me:
                         # Ok, now dependent will no more wait
                         dependent_checks.depend_on.remove(chk.uuid)
                         have_resolved_checks = True
                     # REMOVE OLD DEP CHECK -> zombie
-                    chk.status = u'zombie'
+                    chk.status = ACT_STATUS_ZOMBIE
 
             # Now, reinteger dep checks
             for chk in list(self.checks.values()):
-                if chk.status == u'waitdep' and not chk.depend_on:
+                if chk.status == ACT_STATUS_WAIT_DEPEND and not chk.depend_on:
                     item = self.find_item_by_id(chk.ref)
                     notification_period = self.timeperiods[item.notification_period]
                     dep_checks = item.consume_result(chk, notification_period, self.hosts,
@@ -1800,7 +1834,7 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         id_to_del = []
         for chk in list(self.checks.values()):
-            if chk.status == u'zombie':
+            if chk.status == ACT_STATUS_ZOMBIE:
                 id_to_del.append(chk.uuid)
         # une petite tape dans le dos et tu t'en vas, merci...
         # *pat pat* GFTO, thks :)
@@ -1814,7 +1848,7 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         id_to_del = []
         for act in list(self.actions.values()):
-            if act.status == u'zombie':
+            if act.status == ACT_STATUS_ZOMBIE:
                 id_to_del.append(act.uuid)
         # une petite tape dans le dos et tu t'en vas, merci...
         # *pat pat* GFTO, thks :)
@@ -2031,26 +2065,26 @@ class Scheduler(object):  # pylint: disable=R0902
         orphans_count = {}
         now = int(time.time())
         for chk in list(self.checks.values()):
-            if chk.status == u'in_poller':
+            if chk.status == ACT_STATUS_POLLED:
                 time_to_orphanage = self.find_item_by_id(chk.ref).get_time_to_orphanage()
                 if time_to_orphanage:
                     if chk.t_to_go < now - time_to_orphanage:
                         logger.info("Orphaned check (%d s / %s / %s) check for: %s (%s)",
                                     time_to_orphanage, chk.t_to_go, now,
                                     self.find_item_by_id(chk.ref).get_full_name(), chk)
-                        chk.status = u'scheduled'
+                        chk.status = ACT_STATUS_SCHEDULED
                         if chk.my_worker not in orphans_count:
                             orphans_count[chk.my_worker] = 0
                         orphans_count[chk.my_worker] += 1
         for act in list(self.actions.values()):
-            if act.status == u'in_poller':
+            if act.status == ACT_STATUS_POLLED:
                 time_to_orphanage = self.find_item_by_id(act.ref).get_time_to_orphanage()
                 if time_to_orphanage:
                     if act.t_to_go < now - time_to_orphanage:
                         logger.info("Orphaned action (%d s / %s / %s) action for: %s (%s)",
                                     time_to_orphanage, act.t_to_go, now,
                                     self.find_item_by_id(act.ref).get_full_name(), act)
-                        act.status = u'scheduled'
+                        act.status = ACT_STATUS_SCHEDULED
                         if act.my_worker not in orphans_count:
                             orphans_count[act.my_worker] = 0
                         orphans_count[act.my_worker] += 1
@@ -2250,7 +2284,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # Item id should be a uuid string
         if not isinstance(object_id, string_types):
-            logger.warning("Find an item by id, object_id is not int nor string: %s", object_id)
+            logger.debug("Find an item by id, object_id is not int nor string: %s", object_id)
             return object_id
 
         for items in [self.hosts, self.services, self.actions, self.checks, self.hostgroups,
@@ -2387,11 +2421,11 @@ class Scheduler(object):  # pylint: disable=R0902
         statsmgr.timer('loop.recurrent', time.time() - loop_start_ts)
 
         _ts = time.time()
-        self.push_actions_to_passives_satellites()
-        statsmgr.timer('loop.push_actions_to_passives_satellites', time.time() - _ts)
+        self.push_actions_to_passive_satellites()
+        statsmgr.timer('loop.push_actions_to_passive_satellites', time.time() - _ts)
         _ts = time.time()
-        self.get_actions_from_passives_satellites()
-        statsmgr.timer('loop.get_actions_from_passives_satellites', time.time() - _ts)
+        self.get_results_from_passive_satellites()
+        statsmgr.timer('loop.get_results_from_passive_satellites', time.time() - _ts)
 
         # Scheduler statistics
         # - broks / notifications counters

@@ -886,21 +886,21 @@ class SatelliteLink(Item):
 
     @valid_connection()
     @communicate()
-    def push_actions(self, actions, scheduler_id):
-        """Send a HTTP request to the satellite (GET /ping)
-        and THEN Send a HTTP request to the satellite (POST /push_broks)
-        Send actions to the satellite
+    def push_actions(self, actions, scheduler_instance_id):
+        """Post the actions to execute to the satellite.
+        Indeed, a scheduler post its checks to a poller and its actions to a reactionner.
 
         :param actions: Action list to send
         :type actions: list
-        :param scheduler_id: Scheduler identifier
-        :type scheduler_id: uuid
+        :param scheduler_instance_id: Scheduler instance identifier
+        :type scheduler_instance_id: uuid
         :return: True on success, False on failure
         :rtype: bool
         """
-        logger.debug("[%s] Pushing %d actions", self.name, len(actions))
+        logger.debug("Pushing %d actions from %s", len(actions), scheduler_instance_id)
         return self.con.post('push_actions', {'actions': actions,
-                                              'scheduler_id': scheduler_id}, wait='long')
+                                              'scheduler_instance_id': scheduler_instance_id},
+                             wait='long')
 
     @valid_connection()
     @communicate()
@@ -916,7 +916,7 @@ class SatelliteLink(Item):
         :return: True on success, False on failure
         :rtype: bool
         """
-        logger.debug("Pushing %d results", len(results))
+        logger.info("Pushing %d results", len(results))
         result = self.con.post('put_results', {'results': results, 'from': scheduler_name},
                                wait='long')
         return result
@@ -968,7 +968,7 @@ class SatelliteLink(Item):
     @valid_connection()
     def get_results(self, scheduler_instance_id):
         """Send a HTTP request to the satellite (GET /get_results)
-        Get actions results from satellite.
+        Get actions results from satellite (only passive satellites expose this method.
 
         :param scheduler_instance_id: scheduler instance identifier
         :type scheduler_instance_id: str
@@ -977,7 +977,7 @@ class SatelliteLink(Item):
         """
         res = self.con.get('get_results', {'scheduler_instance_id': scheduler_instance_id},
                            wait='long')
-        logger.debug("Got %d returns from %s: %s", len(res), self.name, res)
+        logger.debug("Got %d results from %s: %s", len(res), self.name, res)
         return res
 
     @valid_connection()

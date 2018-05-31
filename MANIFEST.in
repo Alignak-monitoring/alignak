@@ -6,7 +6,6 @@ include requirements.txt
 recursive-include etc *.*
 recursive-include bin *.*
 recursive-include contrib *.*
-recursive-include dev *.*
 recursive-include alignak *.*
 global-exclude *.pyc
 global-exclude *.log

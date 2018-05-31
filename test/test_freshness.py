@@ -157,13 +157,6 @@ class TestPassiveChecks(AlignakTest):
         assert "x" == host_d.freshness_state
         assert "x" == host_e.freshness_state
 
-        # Set last state update in the past...
-        host_a.last_state_update = int(time.time()) - 10000
-        host_b.last_state_update = int(time.time()) - 10000
-        host_c.last_state_update = int(time.time()) - 10000
-        host_d.last_state_update = int(time.time()) - 10000
-        host_e.last_state_update = int(time.time()) - 10000
-
         svc0 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_0")
         svc1 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_1")
         svc2 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_A", "test_svc_2")
@@ -178,14 +171,6 @@ class TestPassiveChecks(AlignakTest):
         assert "x" == svc4.freshness_state
         assert "x" == svc5.freshness_state
 
-        # Set last state update in the past...
-        svc0.last_state_update = int(time.time()) - 10000
-        svc1.last_state_update = int(time.time()) - 10000
-        svc2.last_state_update = int(time.time()) - 10000
-        svc3.last_state_update = int(time.time()) - 10000
-        svc4.last_state_update = int(time.time()) - 10000
-        svc5.last_state_update = int(time.time()) - 10000
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.event_handler_enabled = False
@@ -195,6 +180,21 @@ class TestPassiveChecks(AlignakTest):
                                              hour=18, minute=30, second=0)
         with freeze_time(initial_datetime) as frozen_datetime:
             assert frozen_datetime() == initial_datetime
+
+            # Set last state update in the past...
+            host_a.last_state_update = int(time.time()) - 10000
+            host_b.last_state_update = int(time.time()) - 10000
+            host_c.last_state_update = int(time.time()) - 10000
+            host_d.last_state_update = int(time.time()) - 10000
+            host_e.last_state_update = int(time.time()) - 10000
+
+            # Set last state update in the past...
+            svc0.last_state_update = int(time.time()) - 10000
+            svc1.last_state_update = int(time.time()) - 10000
+            svc2.last_state_update = int(time.time()) - 10000
+            svc3.last_state_update = int(time.time()) - 10000
+            svc4.last_state_update = int(time.time()) - 10000
+            svc5.last_state_update = int(time.time()) - 10000
 
             expiry_date = time.strftime("%Y-%m-%d %H:%M:%S %Z")
             self.scheduler_loop(1, [[host, 0, 'UP']])

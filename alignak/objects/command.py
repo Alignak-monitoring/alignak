@@ -95,19 +95,21 @@ class Command(Item):
         if not hasattr(self, 'timeout'):
             self.timeout = -1
 
-        if not hasattr(self, 'poller_tag'):
-            self.poller_tag = u'None'
         if not hasattr(self, 'enable_environment_macros'):
             self.enable_environment_macros = False
+        if not hasattr(self, 'poller_tag'):
+            self.poller_tag = u'None'
         if not hasattr(self, 'reactionner_tag'):
             self.reactionner_tag = u'None'
         if not hasattr(self, 'module_type'):
             # If the command start with a _, set the module_type
             # as the name of the command, without the _
             if getattr(self, 'command_line', '').startswith('_'):
-                module_type = getattr(self, 'command_line', '').split(' ')[0]
-                # and we remove the first _
-                self.module_type = module_type[1:]
+                # For an internal command...
+                self.module_type = u'internal'
+                # module_type = getattr(self, 'command_line', '').split(' ')[0]
+                # # and we remove the first _
+                # self.module_type = module_type[1:]
             # If no command starting with _, be fork :)
             else:
                 self.module_type = u'fork'
