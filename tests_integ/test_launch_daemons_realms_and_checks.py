@@ -267,6 +267,10 @@ class TestLaunchDaemonsRealms(AlignakTest):
             cfg.read(files)
 
             cfg.set('alignak-configuration', 'launch_missing_daemons', '1')
+
+            cfg.set('alignak-configuration', 'daemons_start_timeout', '15')
+            cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '15')
+
             # A macro for the check script directory
             cfg.set('alignak-configuration', '_EXEC_DIR', self.cfg_folder)
             for daemon in daemons_list:
