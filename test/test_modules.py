@@ -648,12 +648,15 @@ class TestModules(AlignakTest):
         assert my_module.process is not None
         assert my_module.process.is_alive()
 
+        assert my_module2.process is not None
+        assert my_module2.process.is_alive()
+
         # Kill the external module (normal stop is .stop_process)
+        self.clear_logs()
+        print("Killing a module")
         my_module.kill()
         time.sleep(0.1)
-        # Should be dead (not normally stopped...) but we still know a process for this module!
-        assert my_module.process is not None
-
+        self.show_logs()
         # Stopping module logs
         self.assert_any_log_match(re.escape(
             "Killing external module "
@@ -661,27 +664,52 @@ class TestModules(AlignakTest):
         self.assert_any_log_match(re.escape(
             "External module killed"
         ))
+        # Should be dead (not normally stopped...) but we still know a process for this module!
+        assert my_module.process is not None
+
+        self.clear_logs()
+        print("Killing another module")
+        my_module2.kill()
+        time.sleep(0.1)
+        self.show_logs()
+        # Stopping module logs
+        self.assert_any_log_match(re.escape(
+            "Killing external module "
+        ))
+        self.assert_any_log_match(re.escape(
+            "External module killed"
+        ))
+        # Should be dead (not normally stopped...) but we still know a process for this module!
+        assert my_module.process is not None
 
         # Nothing special ...
+        self.clear_logs()
         self.modules_manager.check_alive_instances()
 
         # Try to restart the dead modules
+        print("Trying to restart dead modules")
+        # We lie on the last restart try time
+        my_module.last_init_try = time.time()
+        my_module2.last_init_try = time.time()
         self.modules_manager.try_to_restart_deads()
-
+        self.show_logs()
         # In fact it's too early, so it won't do it
 
-        # Here the inst should still be dead
+        # Here the module instances should still be dead
         assert not my_module.process.is_alive()
+        assert not my_module2.process.is_alive()
 
-        # So we lie
-        my_module.last_init_try = -5
+        # We lie on the last restart try time
+        my_module.last_init_try = 0
+        my_module2.last_init_try = 0
         self.modules_manager.check_alive_instances()
         self.modules_manager.try_to_restart_deads()
 
-        # Here the instance should be alive again
+        # Here the module instances should be alive again
         assert my_module.process.is_alive()
+        assert my_module2.process.is_alive()
 
-        # Now we look for time restart so we kill it again
+        # Kill the module again
         self.clear_logs()
         my_module.kill()
         self.show_logs()
