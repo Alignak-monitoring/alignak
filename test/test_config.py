@@ -209,20 +209,23 @@ class TestConfig(AlignakTest):
         assert self._arbiter.conf.conf_is_correct
 
         # Alignak name is defined in the arbiter
-        assert self._arbiter.conf.alignak_name == 'My Alignak'
-        assert self._arbiter.alignak_name == 'My Alignak'
+        # assert self._arbiter.conf.alignak_name == 'My Alignak'
+        # assert self._arbiter.alignak_name == 'My Alignak'
+        # The value defined in the Cfg files takes precedence over the one in alignak.ini!
+        assert self._arbiter.conf.alignak_name == 'my_alignak'
+        assert self._arbiter.alignak_name == 'my_alignak'
 
         # Alignak name is defined in the configuration dispatched to the schedulers
         assert len(self._arbiter.dispatcher.schedulers) == 1
         for scheduler in self._arbiter.dispatcher.schedulers:
             assert 'alignak_name' in scheduler.cfg
-            assert scheduler.cfg.get('alignak_name') == 'My Alignak'
+            assert scheduler.cfg.get('alignak_name') == 'my_alignak'
 
         # Alignak name is defined in the configuration dispatched to the satellites
         assert len(self._arbiter.dispatcher.satellites) == 4
         for satellite in self._arbiter.dispatcher.satellites:
             assert 'alignak_name' in satellite.cfg
-            assert satellite.cfg.get('alignak_name') == 'My Alignak'
+            assert satellite.cfg.get('alignak_name') == 'my_alignak'
 
     def test_config_ok_no_declared_daemons(self):
         """ Default configuration has no loading problems ... but no daemons are defined
@@ -588,43 +591,45 @@ class TestConfig(AlignakTest):
 
         :return: None
         """
-        with pytest.raises(SystemExit):
-            self.setup_with_file('cfg/config/deprecated_configuration.cfg')
-        assert not self.conf_is_correct
+        # with pytest.raises(SystemExit):
+        self.setup_with_file('cfg/config/deprecated_configuration.cfg')
+        # assert not self.conf_is_correct
         self.show_logs()
 
-        # Error messages
-        assert len(self.configuration_errors) == 6
+        # Error messages - none because some deprecation warnings are better!
+        assert len(self.configuration_errors) == 0
+        assert len(self.configuration_warnings) == 11
         self.assert_any_cfg_log_match(re.escape(
-            "Your configuration parameters 'status_file = /tmp/status' and "
-            "'object_cache_file = /tmp/cache' need to use an external module such "
-            "as 'retention' but I did not found one!"
+            "The configuration parameters 'status_file = /tmp/status' and "
+            "'object_cache_file = /tmp/cache' are deprecated and will be ignored. "
+            "Please configure your external 'retention' module as expected."
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "Your configuration parameter 'log_file = /tmp/log' needs to use an "
-            "external module such as 'logs' but I did not found one!"
+            "The configuration parameter 'log_file = /tmp/log' is deprecated and will be ignored. "
+            "Please configure your external 'logs' module as expected."
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "Your configuration parameter 'use_syslog = True' needs to use an "
-            "external module such as 'logs' but I did not found one!"
+            "The configuration parameter 'use_syslog = True' is deprecated and will be ignored. "
+            "Please configure your external 'logs' module as expected."
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "Your configuration parameters 'host_perfdata_file = /tmp/host_perf' "
-            "and 'service_perfdata_file = /tmp/srv_perf' need to use an "
-            "external module such as 'retention' but I did not found one!"
+            "The configuration parameters 'host_perfdata_file = /tmp/host_perf' "
+            "and 'service_perfdata_file = /tmp/srv_perf' are deprecated and will be ignored. "
+            "Please configure your external 'retention' module as expected."
         ))
+        # Alignak inner module for retention is now implemented!
+        # self.assert_any_cfg_log_match(re.escape(
+        #     "Your configuration parameters 'state_retention_file = /tmp/retention' "
+        #     "and 'retention_update_interval = 10' need to use an "
+        #     "external module such as 'retention' but I did not found one!"
+        # ))
         self.assert_any_cfg_log_match(re.escape(
-            "Your configuration parameters 'state_retention_file = /tmp/retention' "
-            "and 'retention_update_interval = 10' need to use an "
-            "external module such as 'retention' but I did not found one!"
-        ))
-        self.assert_any_cfg_log_match(re.escape(
-            "Your configuration parameter 'command_file = /tmp/command' needs to use an "
-            "external module such as 'external_commands' but I did not found one!"
+            "The configuration parameter 'command_file = /tmp/command' is deprecated and will "
+            "be ignored. "
+            "Please configure an external commands capable module as expected "
+            "(eg external-commands, NSCA, or WS module may suit."
         ))
 
-        # Warning messages
-        assert len(self.configuration_warnings) == 6
         self.assert_any_cfg_log_match(re.escape(
             "use_regexp_matching parameter is not managed."
         ))

@@ -848,12 +848,12 @@ class Daemon(object):
                 logger.error(message)
                 try:
                     sys.stderr.write(message)
-                except:
+                except Exception:
                     pass
             logger.error("Sorry, I bail out, exit code: %d", exit_code)
             try:
                 sys.stderr.write("Sorry, I bail out, exit code: %d" % exit_code)
-            except:
+            except Exception:
                 pass
         else:
             if message:

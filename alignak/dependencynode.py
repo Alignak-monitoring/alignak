@@ -152,20 +152,23 @@ class DependencyNode(object):
             return self.get_host_node_state(host.last_hard_state_id,
                                             host.problem_has_been_acknowledged,
                                             host.in_scheduled_downtime)
-        elif self.operand == 'service':
+        if self.operand == 'service':
             service = services[self.sons[0]]
             return self.get_service_node_state(service.last_hard_state_id,
                                                service.problem_has_been_acknowledged,
                                                service.in_scheduled_downtime)
-        elif self.operand == '|':
+        if self.operand == '|':
             return self.get_complex_or_node_state(hosts, services)
-        elif self.operand == '&':
+
+        if self.operand == '&':
             return self.get_complex_and_node_state(hosts, services)
+
         #  It's an Xof rule
-        elif self.operand == 'of:':
+        if self.operand == 'of:':
             return self.get_complex_xof_node_state(hosts, services)
 
-        return 4  # We have an unknown node. Code is not reachable because we validate operands
+        # We have an unknown node. Code is not reachable because we validate operands
+        return 4
 
     def get_host_node_state(self, state, problem_has_been_acknowledged, in_scheduled_downtime):
         """Get host node state, simplest case ::
@@ -341,14 +344,14 @@ class DependencyNode(object):
             if self.not_value:
                 return self.get_reverse_state(0)
             return 0
+
+        if 2 in states:
+            worst_state = 2
         else:
-            if 2 in states:
-                worst_state = 2
-            else:
-                worst_state = max(states)
-            if self.not_value:
-                return self.get_reverse_state(worst_state)
-            return worst_state
+            worst_state = max(states)
+        if self.not_value:
+            return self.get_reverse_state(worst_state)
+        return worst_state
 
     def list_all_elements(self):
         """Get all host/service uuid in our node and below
@@ -555,7 +558,7 @@ class DependencyNodeFactory(object):
                 son_is_not = True
                 # DO NOT keep the c in tmp, we consumed it
 
-            elif char == '&' or char == '|':
+            elif char in ['&', '|']:
                 # Oh we got a real cut in an expression, if so, cut it
                 tmp = tmp.strip()
                 # Look at the rule viability
@@ -780,18 +783,19 @@ class DependencyNodeFactory(object):
         """
         if expr == "*":
             return [filter_any]
-        match = re.search(r"^([%s]+):(.*)" % self.host_flags, expr)
 
+        match = re.search(r"^([%s]+):(.*)" % self.host_flags, expr)
         if match is None:
             return [filter_host_by_name(expr)]
+
         flags, expr = match.groups()
         if "g" in flags:
             return [filter_host_by_group(expr)]
-        elif "r" in flags:
+        if "r" in flags:
             return [filter_host_by_regex(expr)]
-        elif "l" in flags:
+        if "l" in flags:
             return [filter_host_by_bp_rule_label(expr)]
-        elif "t" in flags:
+        if "t" in flags:
             return [filter_host_by_tag(expr)]
 
         return [filter_none]
@@ -815,18 +819,19 @@ class DependencyNodeFactory(object):
         """
         if expr == "*":
             return [filter_any]
+
         match = re.search(r"^([%s]+):(.*)" % self.host_flags, expr)
         if match is None:
             return [filter_service_by_host_name(expr)]
-        flags, expr = match.groups()
 
+        flags, expr = match.groups()
         if "g" in flags:
             return [filter_service_by_hostgroup_name(expr)]
-        elif "r" in flags:
+        if "r" in flags:
             return [filter_service_by_regex_host_name(expr)]
-        elif "l" in flags:
+        if "l" in flags:
             return [filter_service_by_host_bp_rule_label(expr)]
-        elif "t" in flags:
+        if "t" in flags:
             return [filter_service_by_host_tag_name(expr)]
 
         return [filter_none]
@@ -849,16 +854,17 @@ class DependencyNodeFactory(object):
         """
         if expr == "*":
             return [filter_any]
+
         match = re.search(r"^([%s]+):(.*)" % self.service_flags, expr)
         if match is None:
             return [filter_service_by_name(expr)]
-        flags, expr = match.groups()
 
+        flags, expr = match.groups()
         if "g" in flags:
             return [filter_service_by_servicegroup_name(expr)]
-        elif "r" in flags:
+        if "r" in flags:
             return [filter_service_by_regex_name(expr)]
-        elif "l" in flags:
+        if "l" in flags:
             return [filter_service_by_bp_rule_label(expr)]
 
         return [filter_none]

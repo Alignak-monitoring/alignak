@@ -21,13 +21,13 @@ script:
   if [[ $TEST_SUITE == 'codingstandard' ]]; then
     # Static code analysis
     # -- pycodestyle (former pep8)
-    pycodestyle --max-line-length=100 --exclude='*.pyc' alignak/*
+    pycodestyle --max-line-length=100 --exclude='*.pyc,carboniface.py' alignak/* || travis_terminate 1;
     # -- pylint
     unset PYTHONWARNINGS
-    pylint --rcfile=.pylintrc -r no alignak
+    pylint --rcfile=.pylintrc -r no alignak || travis_terminate 1;
     export PYTHONWARNINGS=all
     # -- pep257
-    pep257 --select=D300 alignak
+    pep257 --select=D300 alignak || travis_terminate 1;
   fi
 - |
   if [[ $TEST_SUITE == 'unit_tests' ]]; then

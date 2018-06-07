@@ -286,7 +286,7 @@ class Dispatcher(object):
 
         return all_ok
 
-    def check_status(self, forced=False, test=False):
+    def check_status(self):
         # pylint: disable=too-many-branches
         """Check all daemons state (reachable or not)
 
@@ -299,7 +299,6 @@ class Dispatcher(object):
 
         :return: True if all daemons are reachable
         """
-        all_ok = True
         statistics = {}
         for daemon_link in self.all_daemons_links:
             if daemon_link == self.arbiter_link:
@@ -315,7 +314,6 @@ class Dispatcher(object):
                 result = daemon_link.get_daemon_stats()
                 statistics[daemon_link.name] = result
             except LinkError:
-                all_ok = False
                 logger.warning("Daemon connection failed, I could not get statistics.")
 
         return statistics

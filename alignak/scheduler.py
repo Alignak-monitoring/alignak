@@ -1467,7 +1467,7 @@ class Scheduler(object):  # pylint: disable=R0902
         logger.info('%d services restored from retention', len(data['services']))
 
     def restore_retention_data_item(self, data, item):
-        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-branches, too-many-locals
         """
         Restore data in item
 
@@ -1512,12 +1512,10 @@ class Scheduler(object):  # pylint: disable=R0902
         # Downtimes are in a list..
         for downtime_uuid in data['downtimes']:
             downtime = data['downtimes'][downtime_uuid]
-            print("Downtime: %s" % downtime)
 
             # Update the downtime referenced object
             downtime['ref'] = item.uuid
             my_downtime = Downtime(params=downtime)
-            print("Downtime: %s" % my_downtime)
             if downtime['comment_id']:
                 if downtime['comment_id'] not in data['comments']:
                     downtime['comment_id'] = ''
@@ -1532,7 +1530,6 @@ class Scheduler(object):  # pylint: disable=R0902
         # Comments are in a list..
         for comment_uuid in data['comments']:
             comment = data['comments'][comment_uuid]
-            print("Comment: %s" % comment)
             # Update the comment referenced object
             comment['ref'] = item.uuid
             item.add_comment(Comment(comment))
@@ -2106,7 +2103,6 @@ class Scheduler(object):  # pylint: disable=R0902
         }
 
         checks_status_counts = self.get_checks_status_counts()
-        print("Checks: %s" % checks_status_counts)
 
         # Checks / actions counters
         for what in (u'actions', u'checks'):

@@ -63,6 +63,7 @@ DOWNTIME_FLEXIBLE_MESSAGE = u"This %s has been scheduled for flexible downtime s
                             u"%s and %s and lasting for a period of %d hours and %d minutes. " \
                             u"Notifications for the %s will not be sent out for this time period."
 
+
 class Downtime(AlignakObject):
     """ Schedules downtime for a specified service. If the "fixed" argument is set
     to one (1), downtime will start and end at the times specified by the

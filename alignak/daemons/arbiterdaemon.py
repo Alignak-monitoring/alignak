@@ -378,6 +378,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         :return: None
         """
         self.loading_configuration = True
+        _t_configuration = time.time()
 
         if self.verify_only:
             # Force the global logger at INFO level
@@ -414,7 +415,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                         key = key[1:]
                     if key[-1] == '_':
                         key = key[:-1]
-                    # Create and old legacy macro format
+                    # Create an old legacy macro format
                     macros.append('$%s$=%s' % (key.upper(), value))
                     logger.debug("- Alignak macro '$%s$' = %s", key.upper(), value)
 
@@ -437,8 +438,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Read and parse the legacy configuration files
         raw_objects = self.conf.read_config_buf(
-            self.conf.read_legacy_cfg_files(self.legacy_cfg_files, self.alignak_env.cfg_files if
-            self.alignak_env else  None)
+            self.conf.read_legacy_cfg_files(self.legacy_cfg_files,
+                                            self.alignak_env.cfg_files if self.alignak_env
+                                            else None)
         )
         if macros:
             self.conf.load_params(macros)
@@ -462,7 +464,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 raw_objects['module'] = []
             for _, module in extra_modules:
                 raw_objects['module'].append(module)
-        logger.warning("Extra: %s", extra_modules)
+        logger.debug("Extra modules: %s", extra_modules)
 
         # Alignak global environment file
         # -------------------------------
@@ -637,6 +639,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Call modules that manage this read configuration pass
         _ts = time.time()
         self.hook_point('read_configuration')
+        statsmgr.timer('hook.read_configuration', time.time() - _ts)
 
         # Call modules get_alignak_configuration() to load Alignak configuration parameters
         # (example modules: alignak_backend)
@@ -646,6 +649,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Call modules get_objects() to load new objects from arbiter modules
         # (example modules: alignak_backend)
+        _ts = time.time()
         self.load_modules_configuration_objects(raw_objects)
         statsmgr.timer('configuration.get_objects', time.time() - _ts)
 
@@ -664,6 +668,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         _ts = time.time()
         logger.info("Preparing configuration...")
         self.hook_point('early_configuration')
+        statsmgr.timer('hook.early_configuration', time.time() - _ts)
 
         # Create Template links
         self.conf.linkify_templates()
@@ -708,8 +713,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.conf.create_business_rules_dependencies()
 
         # Manage all post-conf modules
+        _ts = time.time()
         self.hook_point('late_configuration')
-        statsmgr.timer('configuration.prepare', time.time() - _ts)
+        statsmgr.timer('hook.late_configuration', time.time() - _ts)
 
         # Configuration is correct?
         _ts = time.time()
@@ -728,6 +734,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             macro_value = macro_resolver.resolve_simple_macros_in_string("$%s$" % macro_name, [],
                                                                          None, None)
             logger.debug("- $%s$ = %s", macro_name, macro_value)
+        statsmgr.timer('configuration.loading', time.time() - _t_configuration)
 
         # REF: doc/alignak-conf-dispatching.png (2)
         _ts = time.time()
@@ -746,6 +753,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # This to prepare the configuration that will be sent to our spare arbiter (if any)
         self.conf.prepare_for_sending()
         statsmgr.timer('configuration.split', time.time() - _ts)
+        statsmgr.timer('configuration.spliting', time.time() - _t_configuration)
         # Here, the self.conf.spare_arbiter_conf exist
 
         # Still a last configuration check because some things may have changed when
@@ -778,6 +786,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Now I have a configuration!
         self.have_conf = True
         self.loading_configuration = False
+        statsmgr.timer('configuration.available', time.time() - _t_configuration)
 
     def load_modules_configuration_objects(self, raw_objects):  # pragma: no cover,
         # not yet with unit tests.

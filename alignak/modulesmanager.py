@@ -50,8 +50,6 @@
 """
 import logging
 import time
-import traceback
-import io
 
 import importlib
 import collections

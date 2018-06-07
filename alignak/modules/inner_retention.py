@@ -120,8 +120,8 @@ class InnerRetention(BaseModule):
         all_data = {'hosts': {}, 'services': {}}
 
         if not os.path.isfile(self.retention_file):
-            logger.info("The configured state retention file does not exist."
-                           "Loading objects state is not available.")
+            logger.info("The configured state retention file does not exist. "
+                        "Loading objects state is not available.")
             return None
 
         # Get data from the retention file
@@ -147,10 +147,6 @@ class InnerRetention(BaseModule):
                             all_data[service_key][(host['host'], service)] = \
                                 host[service_key][service]
                     all_data['hosts'][hostname] = host
-
-                from pprint import pprint
-                pprint(all_data)
-
 
                 logger.info('%d hosts loaded from retention', len(all_data['hosts']))
                 self.statsmgr.counter('retention-load.hosts', len(all_data['hosts']))
@@ -183,14 +179,11 @@ class InnerRetention(BaseModule):
         try:
             start_time = time.time()
 
-            # Get retention data from the scheduler
+            # Get retention data from the scheduler
             data_to_save = scheduler.get_retention_data()
             if not data_to_save:
                 logger.warning("Alignak retention data to save are not containing any information.")
                 return None
-
-            from pprint import pprint
-            pprint(data_to_save)
 
             # Move services data to their respective hosts dictionary
             # Alignak scheduler do not merge the services into the host dictionary!

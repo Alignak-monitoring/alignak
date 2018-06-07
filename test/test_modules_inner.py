@@ -26,6 +26,7 @@ import re
 import os
 import shutil
 import time
+import json
 import logging
 import configparser
 from alignak.log import ALIGNAK_LOGGER_NAME

@@ -828,8 +828,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         if params is None:
             params = {}
 
-        print("Config: %s" % params)
-
         if parsing:
             # Create a new configuration identifier
             self.instance_id = u'%s_%d' % (self.__class__.__name__, self.__class__._next_id)
@@ -2035,7 +2033,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # For status_dat
         if hasattr(self, 'status_file') and self.status_file != '' and \
                 hasattr(self, 'object_cache_file') and self.object_cache_file != '':
-            msg = "Your configuration parameters '%s = %s' and '%s = %s' are deprecated " \
+            msg = "The configuration parameters '%s = %s' and '%s = %s' are deprecated " \
                   "and will be ignored. Please configure your external 'retention' module " \
                   "as expected." % \
                   ('status_file', self.status_file,
@@ -2045,7 +2043,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Now the log_file
         if hasattr(self, 'log_file') and self.log_file:
-            msg = "Your configuration parameters '%s = %s' are deprecated " \
+            msg = "The configuration parameter '%s = %s' is deprecated " \
                   "and will be ignored. Please configure your external 'logs' module " \
                   "as expected." % \
                   ('log_file', self.log_file)
@@ -2054,7 +2052,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Now the syslog facility
         if hasattr(self, 'use_syslog') and self.use_syslog:
-            msg = "Your configuration parameters '%s = %s' are deprecated " \
+            msg = "The configuration parameter '%s = %s' is deprecated " \
                   "and will be ignored. Please configure your external 'logs' module " \
                   "as expected." % \
                   ('use_syslog', self.use_syslog)
@@ -2064,7 +2062,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # Now the host_perfdata or service_perfdata module
         if hasattr(self, 'service_perfdata_file') and self.service_perfdata_file or \
                 hasattr(self, 'host_perfdata_file') and self.host_perfdata_file:
-            msg = "Your configuration parameters '%s = %s' and '%s = %s' are deprecated " \
+            msg = "The configuration parameters '%s = %s' and '%s = %s' are deprecated " \
                   "and will be ignored. Please configure your external 'retention' module " \
                   "as expected." % \
                   ('host_perfdata_file', self.host_perfdata_file,
@@ -2094,7 +2092,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Now the command_file
         if hasattr(self, 'command_file') and getattr(self, 'command_file'):
-            msg = "Your configuration parameter '%s = %s' is deprecated " \
+            msg = "The configuration parameter '%s = %s' is deprecated " \
                   "and will be ignored. Please configure an external commands capable " \
                   "module as expected (eg external-commands, NSCA, or WS module may suit." \
                   % ('command_file', self.command_file)

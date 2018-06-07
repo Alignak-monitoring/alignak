@@ -51,8 +51,6 @@ This module provide Worker class. It is used to spawn new processes in Poller an
 import os
 import time
 import signal
-import traceback
-import io
 import logging
 
 from queue import Empty, Full
