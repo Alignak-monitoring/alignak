@@ -312,8 +312,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         :return: None
         """
-        # for satellites in [self.conf.brokers, self.conf.receivers,
-        #                    self.conf.pollers, self.conf.reactionners, self.conf.receivers]:
         for satellite in self.conf.receivers:
             # Get only if reachable...
             if not satellite.reachable:
@@ -403,12 +401,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # with their own potential macros
         # ---------------------
         macros = []
-        # Get the macros declared in the Alignak environment (alignak.ini) file!
+        # Get the macros / variables declared in the Alignak environment (alignak.ini) file!
         if self.alignak_env:
             # The properties defined in the alignak.cfg file are not yet set! So we set the one
             # got from the environment
             logger.info("Getting Alignak macros...")
-
             alignak_macros = self.alignak_env.get_alignak_macros()
             if alignak_macros:
                 for key in sorted(alignak_macros.keys()):
@@ -420,6 +417,23 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     # Create and old legacy macro format
                     macros.append('$%s$=%s' % (key.upper(), value))
                     logger.debug("- Alignak macro '$%s$' = %s", key.upper(), value)
+
+            # and then the global configuration.
+            # The properties defined in the alignak.cfg file are not yet set! So we set the one
+            # got from the environment
+            logger.info("Getting Alignak configuration...")
+            alignak_configuration = self.alignak_env.get_alignak_configuration()
+            for key in sorted(alignak_configuration.keys()):
+                value = alignak_configuration[key]
+                if key.startswith('_'):
+                    # Ignore configuration variables prefixed with _
+                    continue
+                if key in self.conf.properties:
+                    entry = self.conf.properties[key]
+                    setattr(self.conf, key, entry.pythonize(value))
+                else:
+                    setattr(self.conf, key, value)
+                logger.debug("- setting '%s' as %s", key, getattr(self.conf, key))
 
         # Read and parse the legacy configuration files
         raw_objects = self.conf.read_config_buf(
@@ -437,6 +451,18 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         if self.legacy_cfg_files:
             logger.info("I correctly loaded the legacy configuration files")
+
+        # Hacking some global parameters inherited from Nagios to create
+        # on the fly some Broker modules like for status.dat parameters
+        # or nagios.log one if there are none already available
+        extra_modules = self.conf.hack_old_nagios_parameters()
+        if extra_modules:
+            logger.info("Some inner modules were configured for Nagios legacy parameters")
+            if 'module' not in raw_objects:
+                raw_objects['module'] = []
+            for _, module in extra_modules:
+                raw_objects['module'].append(module)
+        logger.warning("Extra: %s", extra_modules)
 
         # Alignak global environment file
         # -------------------------------
@@ -485,10 +511,19 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
                     cfg_daemon['modules'] = \
                         self.alignak_env.get_modules(daemon_name=cfg_daemon['name'])
+                    for module_daemon_type, module in extra_modules:
+                        if module_daemon_type == daemon_type:
+                            cfg_daemon['modules'].append(module['name'])
+                            logger.info("- added an Alignak inner module '%s' to the %s: %s",
+                                        module['name'], cfg_daemon['type'], cfg_daemon['name'])
                     logger.debug("- %s / %s: ", daemon_type, cfg_daemon['name'])
                     logger.debug("  %s", cfg_daemon)
             if not some_legacy_daemons:
-                logger.info("- No legacy configured daemons.")
+                logger.debug("- No legacy configured daemons.")
+            else:
+                logger.info("- some dameons are configured in legacy Cfg files. "
+                            "You should update the configuration with the new Alignak "
+                            "configuration file.")
 
             # and then get all modules from the configuration
             logger.info("Getting modules configuration...")
@@ -525,23 +560,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     logger.debug("Module env %s params: %s", module_cfg['name'], module_cfg)
             if 'module' in raw_objects and not raw_objects['module']:
                 logger.info("- No configured modules.")
-
-            # and then the global configuration.
-            # The properties defined in the alignak.cfg file are not yet set! So we set the one
-            # got from the environment
-            logger.info("Getting Alignak configuration...")
-            alignak_configuration = self.alignak_env.get_alignak_configuration()
-            for key in sorted(alignak_configuration.keys()):
-                value = alignak_configuration[key]
-                if key.startswith('_'):
-                    # Ignore configuration variables prefixed with _
-                    continue
-                if key in self.conf.properties:
-                    entry = self.conf.properties[key]
-                    setattr(self.conf, key, entry.pythonize(value))
-                else:
-                    setattr(self.conf, key, value)
-                logger.debug("- setting '%s' as %s", key, getattr(self.conf, key))
 
         self.alignak_name = getattr(self.conf, "alignak_name", self.name)
         logger.info("Configuration for Alignak: %s", self.alignak_name)
@@ -673,11 +691,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # applying dependencies
         self.conf.apply_dependencies()
-
-        # Hacking some global parameters inherited from Nagios to create
-        # on the fly some Broker modules like for status.dat parameters
-        # or nagios.log one if there are none already available
-        self.conf.hack_old_nagios_parameters()
 
         # Raise warning about currently unmanaged parameters
         if self.verify_only:
@@ -1516,7 +1529,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             self.check_and_del_zombie_modules()
 
             # Call modules that manage a starting tick pass
+            _t0 = time.time()
             self.hook_point('tick')
+            statsmgr.timer('hook.tick', time.time() - _t0)
 
             # Look for logging timeperiods activation change (active/inactive)
             self.check_and_log_tp_activation_change()

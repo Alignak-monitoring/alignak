@@ -434,7 +434,9 @@ class Broker(BaseSatellite):
         self.check_and_del_zombie_modules()
 
         # Call modules that manage a starting tick pass
+        _t0 = time.time()
         self.hook_point('tick')
+        statsmgr.timer('hook.tick', time.time() - _t0)
 
         # Maybe the last loop we did raised some broks internally
         self.get_internal_broks()

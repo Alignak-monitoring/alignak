@@ -197,6 +197,8 @@ class Module(Item):
         :type: str
         :return: True / False
         """
+        if hasattr(self, 'type'):
+            return module_type in self.type
         return module_type in self.module_types
 
     def serialize(self):

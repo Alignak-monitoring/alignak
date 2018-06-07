@@ -82,6 +82,7 @@ from alignak.macroresolver import MacroResolver
 from alignak.action import ACT_STATUS_SCHEDULED, ACT_STATUS_POLLED, \
     ACT_STATUS_TIMEOUT, ACT_STATUS_ZOMBIE, ACT_STATUS_WAIT_CONSUME, \
     ACT_STATUS_WAIT_DEPEND, ACT_STATUS_WAITING_ME
+from alignak.property import DictProp, ListProp
 from alignak.external_command import ExternalCommand
 from alignak.check import Check
 from alignak.notification import Notification
@@ -93,7 +94,7 @@ from alignak.util import average_percentile
 from alignak.load import Load
 from alignak.stats import statsmgr
 from alignak.misc.common import DICT_MODATTR
-from alignak.misc.serialization import unserialize
+from alignak.misc.serialization import serialize, unserialize
 from alignak.acknowledge import Acknowledge
 from alignak.log import make_monitoring_log
 
@@ -651,23 +652,7 @@ class Scheduler(object):  # pylint: disable=R0902
         :return:None
         TODO: find a way to merge this and the version in daemon.py
         """
-        for module in self.my_daemon.modules_manager.instances:
-            _ts = time.time()
-            full_hook_name = 'hook_' + hook_name
-            if not hasattr(module, full_hook_name):
-                continue
-
-            fun = getattr(module, full_hook_name)
-            try:
-                fun(self)
-            # pylint: disable=broad-except
-            except Exception as exp:  # pragma: no cover, never happen during unit tests...
-                logger.error("The instance %s raised an exception %s. I disabled it,"
-                             " and set it to restart later", module.name, str(exp))
-                logger.exception('Exception %s', exp)
-                self.my_daemon.modules_manager.set_to_restart(module)
-            else:
-                statsmgr.timer('hook.%s.%s' % (module.name, hook_name), time.time() - _ts)
+        self.my_daemon.hook_point(hook_name=hook_name, handle=self)
 
     def clean_queues(self):
         # pylint: disable=too-many-locals
@@ -1371,6 +1356,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         _t0 = time.time()
         self.hook_point('save_retention')
+        statsmgr.timer('hook.retention-save', time.time() - _t0)
 
         brok = make_monitoring_log('INFO', 'RETENTION SAVE: %s' % self.name)
         if self.pushed_conf.monitoring_log_broks:
@@ -1385,141 +1371,71 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         _t0 = time.time()
         self.hook_point('load_retention')
+        statsmgr.timer('hook.retention-load', time.time() - _t0)
 
         brok = make_monitoring_log('INFO', 'RETENTION LOAD: %s' % self.name)
         if self.pushed_conf.monitoring_log_broks:
             self.add(brok)
         logger.info('Retention data loaded: %.2f seconds', time.time() - _t0)
 
-    def get_retention_data(self):  # pylint: disable=R0912,too-many-statements
+    def get_retention_data(self):  # pylint: disable=too-many-branches,too-many-statements
         # pylint: disable=too-many-locals
-        """Get all host and service data in order to store it after
-        The module is in charge of that
+        """Get all hosts and services data to be sent to the retention storage.
+
+        This function only prepares the data because a module is in charge of making
+        the data survive to the scheduler restart.
+
+        todo: Alignak scheduler creates two separate dictionaries: hosts and services
+        It would be better to merge the services into the host dictionary!
 
         :return: dict containing host and service data
         :rtype: dict
         """
-        # We create an all_data dict with list of useful retention data dicts
-        # of our hosts and services
-        all_data = {'hosts': {}, 'services': {}}
+        retention_data = {
+            'hosts': {}, 'services': {}
+        }
         for host in self.hosts:
             h_dict = {}
-            running_properties = host.__class__.running_properties
-            for prop, entry in list(running_properties.items()):
-                if entry.retention:
-                    val = getattr(host, prop)
-                    # Maybe we should "prepare" the data before saving it
-                    # like get only names instead of the whole objects
-                    fun = entry.retention_preparation
-                    if fun:
-                        val = fun(host, val)
-                    h_dict[prop] = val
-            # and some properties are also like this, like
-            # active checks enabled or not
+
+            # Get the hosts properties and running properties
             properties = host.__class__.properties
+            properties.update(host.__class__.running_properties)
             for prop, entry in list(properties.items()):
-                if entry.retention:
-                    val = getattr(host, prop)
-                    # Maybe we should "prepare" the data before saving it
-                    # like get only names instead of the whole objects
-                    fun = entry.retention_preparation
-                    if fun:
-                        val = fun(host, val)
-                    h_dict[prop] = val
-            # manage special properties: the Notifications
-            if 'notifications_in_progress' in h_dict and h_dict['notifications_in_progress'] != {}:
-                notifs = {}
-                for notif_uuid, notification in h_dict['notifications_in_progress'].items():
-                    notifs[notif_uuid] = notification.serialize()
-                h_dict['notifications_in_progress'] = notifs
-            # manage special properties: the downtimes
-            downtimes = []
-            if 'downtimes' in h_dict and h_dict['downtimes'] != {}:
-                for downtime in list(h_dict['downtimes'].values()):
-                    downtimes.append(downtime.serialize())
-            h_dict['downtimes'] = downtimes
-            # manage special properties: the acknowledges
-            if 'acknowledgement' in h_dict and h_dict['acknowledgement'] is not None:
-                h_dict['acknowledgement'] = h_dict['acknowledgement'].serialize()
-            # manage special properties: the comments
-            comments = []
-            if 'comments' in h_dict and h_dict['comments'] != {}:
-                for comment in list(h_dict['comments'].values()):
-                    comments.append(comment.serialize())
-            h_dict['comments'] = comments
-            # manage special properties: the notified_contacts
-            if 'notified_contacts' in h_dict and h_dict['notified_contacts'] != []:
-                ncontacts = []
-                for contact_uuid in h_dict['notified_contacts']:
-                    ncontacts.append(self.contacts[contact_uuid].get_name())
-                h_dict['notified_contacts'] = ncontacts
-            all_data['hosts'][host.host_name] = h_dict
-        logger.info('%d hosts sent to retention', len(all_data['hosts']))
+                if not entry.retention:
+                    continue
+
+                val = getattr(host, prop)
+                # If a preparation function exists...
+                prepare_retention = entry.retention_preparation
+                if prepare_retention:
+                    val = prepare_retention(host, val)
+                h_dict[prop] = val
+
+            retention_data['hosts'][host.host_name] = h_dict
+        logger.info('%d hosts sent to retention', len(retention_data['hosts']))
 
         # Same for services
-        for serv in self.services:
+        for service in self.services:
             s_dict = {}
-            running_properties = serv.__class__.running_properties
-            for prop, entry in list(running_properties.items()):
-                if entry.retention:
-                    val = getattr(serv, prop)
-                    # Maybe we should "prepare" the data before saving it
-                    # like get only names instead of the whole objects
-                    fun = entry.retention_preparation
-                    if fun:
-                        val = fun(serv, val)
-                    s_dict[prop] = val
 
-            # We consider the service ONLY if it has modified attributes.
-            # If not, then no non-running attributes will be saved for this service.
-            if serv.modified_attributes > 0:
-                # Same for properties, like active checks enabled or not
-                properties = serv.__class__.properties
+            # Get the services properties and running properties
+            properties = service.__class__.properties
+            properties.update(service.__class__.running_properties)
+            for prop, entry in list(properties.items()):
+                if not entry.retention:
+                    continue
 
-                for prop, entry in list(properties.items()):
-                    # We save the value only if the attribute
-                    # is selected for retention AND has been modified.
-                    if entry.retention and \
-                            not (prop in DICT_MODATTR and
-                                 not DICT_MODATTR[prop].value & serv.modified_attributes):
-                        val = getattr(serv, prop)
-                        # Maybe we should "prepare" the data before saving it
-                        # like get only names instead of the whole objects
-                        fun = entry.retention_preparation
-                        if fun:
-                            val = fun(serv, val)
-                        s_dict[prop] = val
-            # manage special properties: the notifications
-            if 'notifications_in_progress' in s_dict and s_dict['notifications_in_progress']:
-                notifs = {}
-                for notif_uuid, notification in s_dict['notifications_in_progress'].items():
-                    notifs[notif_uuid] = notification.serialize()
-                s_dict['notifications_in_progress'] = notifs
-            # manage special properties: the downtimes
-            downtimes = []
-            if 'downtimes' in s_dict and s_dict['downtimes'] != {}:
-                for downtime in list(s_dict['downtimes'].values()):
-                    downtimes.append(downtime.serialize())
-            s_dict['downtimes'] = downtimes
-            # manage special properties: the acknowledges
-            if 'acknowledgement' in s_dict and s_dict['acknowledgement'] is not None:
-                s_dict['acknowledgement'] = s_dict['acknowledgement'].serialize()
-            # manage special properties: the comments
-            comments = []
-            if 'comments' in s_dict and s_dict['comments'] != {}:
-                for comment in list(s_dict['comments'].values()):
-                    comments.append(comment.serialize())
-            s_dict['comments'] = comments
-            # manage special properties: the notified_contacts
-            if 'notified_contacts' in s_dict and s_dict['notified_contacts'] != []:
-                ncontacts = []
-                for contact_uuid in s_dict['notified_contacts']:
-                    ncontacts.append(self.contacts[contact_uuid].get_name())
-                s_dict['notified_contacts'] = ncontacts
-            all_data['services'][(serv.host_name, serv.service_description)] = s_dict
-        logger.info('%d services sent to retention', len(all_data['services']))
+                val = getattr(service, prop)
+                # If a preparation function exists...
+                prepare_retention = entry.retention_preparation
+                if prepare_retention:
+                    val = prepare_retention(service, val)
+                s_dict[prop] = val
 
-        return all_data
+            retention_data['services'][(service.host_name, service.service_description)] = s_dict
+        logger.info('%d services sent to retention', len(retention_data['services']))
+
+        return retention_data
 
     def restore_retention_data(self, data):
         """Restore retention data
@@ -1532,31 +1448,28 @@ class Scheduler(object):  # pylint: disable=R0902
         :type data: dict
         :return: None
         """
-        ret_hosts = data['hosts']
-        for ret_h_name in ret_hosts:
+        for host_name in data['hosts']:
             # We take the dict of our value to load
-            host = self.hosts.find_by_name(ret_h_name)
+            host = self.hosts.find_by_name(host_name)
             if host is not None:
-                self.restore_retention_data_item(data['hosts'][ret_h_name], host)
-        statsmgr.gauge('retention.hosts', len(ret_hosts))
-        logger.info('%d hosts restored from retention', len(ret_hosts))
+                self.restore_retention_data_item(data['hosts'][host_name], host)
+        statsmgr.gauge('retention.hosts', len(data['hosts']))
+        logger.info('%d hosts restored from retention', len(data['hosts']))
 
         # Same for services
-        ret_services = data['services']
-        for (ret_s_h_name, ret_s_desc) in ret_services:
+        for (host_name, service_description) in data['services']:
             # We take our dict to load
-            s_dict = data['services'][(ret_s_h_name, ret_s_desc)]
-            serv = self.services.find_srv_by_name_and_hostname(ret_s_h_name, ret_s_desc)
-
-            if serv is not None:
-                self.restore_retention_data_item(s_dict, serv)
-        statsmgr.gauge('retention.services', len(ret_services))
-        logger.info('%d services restored from retention', len(ret_services))
+            service = self.services.find_srv_by_name_and_hostname(host_name, service_description)
+            if service is not None:
+                self.restore_retention_data_item(data['services'][(host_name, service_description)],
+                                                 service)
+        statsmgr.gauge('retention.services', len(data['services']))
+        logger.info('%d services restored from retention', len(data['services']))
 
     def restore_retention_data_item(self, data, item):
         # pylint: disable=too-many-branches
         """
-        restore data in item
+        Restore data in item
 
         :param data: retention data of the item
         :type data: dict
@@ -1564,55 +1477,83 @@ class Scheduler(object):  # pylint: disable=R0902
         :type item: alignak.objects.host.Host | alignak.objects.service.Service
         :return: None
         """
-        # First manage all running properties
-        running_properties = item.__class__.running_properties
-        for prop, entry in list(running_properties.items()):
-            if entry.retention:
-                # Maybe the saved one was not with this value, so
-                # we just bypass this
-                if prop in data and prop not in ['downtimes', 'comments']:
-                    setattr(item, prop, data[prop])
-        # Ok, some are in properties too (like active check enabled
-        # or not. Will OVERRIDE THE CONFIGURATION VALUE!
+        # Manage the properties and running properties
         properties = item.__class__.properties
+        properties.update(item.__class__.running_properties)
         for prop, entry in list(properties.items()):
-            if entry.retention:
-                # Maybe the saved one was not with this value, so
-                # we just bypass this
-                if prop in data:
-                    setattr(item, prop, data[prop])
+            if not entry.retention:
+                continue
+
+            if prop not in data:
+                continue
+
+            # If a restoration function exists...
+            restore_retention = entry.retention_restoration
+            if restore_retention:
+                setattr(item, prop, restore_retention(item, data[prop]))
+            else:
+                setattr(item, prop, data[prop])
+
         # Now manage all linked objects load from/ previous run
-        for notif_uuid, notif in item.notifications_in_progress.items():
-            notif['ref'] = item.uuid
-            mynotif = Notification(params=notif)
-            self.add(mynotif)
-            item.notifications_in_progress[notif_uuid] = mynotif
+        for notification_uuid in item.notifications_in_progress:
+            notification = item.notifications_in_progress[notification_uuid]
+            # Update the notification referenced object
+            notification['ref'] = item.uuid
+            my_notification = Notification(params=notification)
+            item.notifications_in_progress[notification_uuid] = my_notification
+
+            # Add a notification in the scheduler actions
+            self.add(my_notification)
+
+        # todo: is it useful? We do not save/restore checks in the retention data...
         item.update_in_checking()
+
         # And also add downtimes and comments
-        for down in data['downtimes']:
-            if down['uuid'] not in item.downtimes:
-                down['ref'] = item.uuid
-                # case comment_id has comment dict instead uuid
-                if 'uuid' in down['comment_id']:
-                    data['comments'].append(down['comment_id'])
-                    down['comment_id'] = down['comment_id']['uuid']
-                item.add_downtime(Downtime(down))
+        # Downtimes are in a list..
+        for downtime_uuid in data['downtimes']:
+            downtime = data['downtimes'][downtime_uuid]
+            print("Downtime: %s" % downtime)
+
+            # Update the downtime referenced object
+            downtime['ref'] = item.uuid
+            my_downtime = Downtime(params=downtime)
+            print("Downtime: %s" % my_downtime)
+            if downtime['comment_id']:
+                if downtime['comment_id'] not in data['comments']:
+                    downtime['comment_id'] = ''
+
+            # case comment_id has comment dict instead uuid
+            # todo: This should never happen! Why this code ?
+            if 'uuid' in downtime['comment_id']:
+                data['comments'].append(downtime['comment_id'])
+                downtime['comment_id'] = downtime['comment_id']['uuid']
+            item.add_downtime(my_downtime)
+
+        # Comments are in a list..
+        for comment_uuid in data['comments']:
+            comment = data['comments'][comment_uuid]
+            print("Comment: %s" % comment)
+            # Update the comment referenced object
+            comment['ref'] = item.uuid
+            item.add_comment(Comment(comment))
+
         if item.acknowledgement is not None:
+            # Update the comment referenced object
+            item.acknowledgement['ref'] = item.uuid
             item.acknowledgement = Acknowledge(item.acknowledgement)
-            item.acknowledgement.ref = item.uuid
+
         # Relink the notified_contacts as a set() of true contacts objects
         # if it was loaded from the retention, it's now a list of contacts
         # names
-        for comm in data['comments']:
-            comm['ref'] = item.uuid
-            item.add_comment(Comment(comm))
         new_notified_contacts = set()
-        for cname in item.notified_contacts:
-            comm = self.contacts.find_by_name(cname)
-            # Maybe the contact is gone. Skip it
-            if comm is not None:
-                new_notified_contacts.add(comm.uuid)
+        new_notified_contacts_ids = set()
+        for contact_name in item.notified_contacts:
+            contact = self.contacts.find_by_name(contact_name)
+            if contact is not None:
+                new_notified_contacts.add(contact_name)
+                new_notified_contacts_ids.add(contact.uuid)
         item.notified_contacts = new_notified_contacts
+        item.notified_contacts_ids = new_notified_contacts_ids
 
     def fill_initial_broks(self, broker_name, with_logs=False):
         # pylint: disable=too-many-branches
@@ -1706,16 +1647,14 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
-        brok = self.get_program_status_brok(brok_type='program_status')
-        self.add(brok)
+        self.add(self.get_program_status_brok(brok_type='program_status'))
 
     def update_program_status(self):
         """Create and add a update_program_status brok
 
         :return: None
         """
-        brok = self.get_program_status_brok(brok_type='update_program_status')
-        self.add(brok)
+        self.add(self.get_program_status_brok(brok_type='update_program_status'))
 
     def get_program_status_brok(self, brok_type='program_status'):
         """Create a program status brok
@@ -1759,8 +1698,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     data[prop] = entry.default
 
         logger.debug("Program status brok %s data: %s", brok_type, data)
-        brok = Brok({'type': brok_type, 'data': data})
-        return brok
+        return Brok({'type': brok_type, 'data': data})
 
     def consume_results(self):
         """Handle results waiting in waiting_results list.
@@ -1961,7 +1899,9 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
+        _t0 = time.time()
         self.hook_point('get_new_actions')
+        statsmgr.timer('hook.get-new-actions', time.time() - _t0)
         # ask for service and hosts their next check
         for elt in self.all_my_hosts_and_services():
             for action in elt.actions:

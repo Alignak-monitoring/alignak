@@ -72,7 +72,7 @@ from alignak.property import (StringProp, ListProp, BoolProp, SetProp, DictProp,
 
 from alignak.alignakobject import AlignakObject
 from alignak.brok import Brok
-from alignak.util import strip_and_uniq, is_complex_expr
+from alignak.util import strip_and_uniq, is_complex_expr, dict_to_serialized_dict
 from alignak.complexexpression import ComplexExpressionFactory
 from alignak.graph import Graph
 
@@ -130,7 +130,8 @@ class Item(AlignakObject):
         # used by host, service and contact
         # todo: conceptually this should be moved to the SchedulingItem and Contact objects...
         'downtimes':
-            DictProp(default={}, fill_brok=['full_status'], retention=True),
+            DictProp(default={}, fill_brok=['full_status'],
+                     retention=True, retention_preparation=dict_to_serialized_dict),
     }
 
     macros = {
@@ -612,7 +613,7 @@ class Item(AlignakObject):
         Create an initial status brok
 
         :return: Brok object
-        :rtype: object
+        :rtype: alignak.Brok
         """
         data = {'uuid': self.uuid}
         self.fill_data_brok_from(data, 'full_status')
@@ -625,7 +626,7 @@ class Item(AlignakObject):
         :param name: name of the new object
         :type name: str
         :return: Brok object
-        :rtype: object
+        :rtype: alignak.Brok
         """
         return Brok({'type': 'new_' + self.my_type, 'data': {'uuid': self.uuid, 'name': name}})
 
@@ -634,7 +635,7 @@ class Item(AlignakObject):
         Create an update item brok
 
         :return: Brok object
-        :rtype: object
+        :rtype: alignak.Brok
         """
         data = {'uuid': self.uuid}
         self.fill_data_brok_from(data, 'full_status')
@@ -645,7 +646,7 @@ class Item(AlignakObject):
         Create check_result brok
 
         :return: Brok object
-        :rtype: object
+        :rtype: alignak.Brok
         """
         data = {'uuid': self.uuid}
         self.fill_data_brok_from(data, 'check_result')
@@ -656,7 +657,7 @@ class Item(AlignakObject):
         Create next_schedule (next check) brok
 
         :return: Brok object
-        :rtype: object
+        :rtype: alignak.Brok
         """
         data = {'uuid': self.uuid}
         self.fill_data_brok_from(data, 'next_schedule')
@@ -671,7 +672,7 @@ class Item(AlignakObject):
         :param exit_status: status of exit
         :type exit_status: integer
         :return: Brok object
-        :rtype: object
+        :rtype: alignak.Brok
         """
         data = {
             'uuid': self.uuid,

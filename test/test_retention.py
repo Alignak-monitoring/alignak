@@ -24,6 +24,7 @@ This file test retention
 
 import time
 import json
+import pprint
 from .alignak_test import AlignakTest
 
 from alignak.misc.serialization import unserialize
@@ -44,6 +45,10 @@ class TestRetention(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_default.cfg')
 
+        router = self._scheduler.hosts.find_by_name("test_router_0")
+        router.checks_in_progress = []
+        router.event_handler_enabled = False
+
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
@@ -56,11 +61,13 @@ class TestRetention(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
-        self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
+        self.scheduler_loop(1, [[router, 0, 'UP and OK']])
         time.sleep(0.1)
-        self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
+        self.scheduler_loop(1, [[host, 2, 'DOWN!'], [svc, 2, 'CRITICAL']])
         time.sleep(0.1)
-        self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
+        self.scheduler_loop(1, [[host, 2, 'DOWN!'], [svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
+        self.scheduler_loop(1, [[host, 2, 'DOWN!'], [svc, 2, 'CRITICAL']])
         time.sleep(1.0)
         self.scheduler_loop(1)
 
@@ -73,73 +80,104 @@ class TestRetention(AlignakTest):
         time.sleep(1.0)
         expected_logs = [
             ("info", "RETENTION LOAD: scheduler-master scheduler"),
+            ("info", "ACTIVE HOST CHECK: test_router_0;UP;0;UP and OK"),
             ("error", "ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;0;CRITICAL"),
             ("error", "SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;CRITICAL"),
             ("error", "SERVICE EVENT HANDLER: test_host_0;test_ok_0;CRITICAL;SOFT;1;eventhandler"),
-            ("error", "ACTIVE HOST CHECK: test_host_0;DOWN;0;DOWN"),
-            ("error", "HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN"),
-            ("error", "ACTIVE HOST CHECK: test_host_0;DOWN;1;DOWN"),
-            ("error", "HOST ALERT: test_host_0;DOWN;SOFT;2;DOWN"),
+            ("error", "ACTIVE HOST CHECK: test_host_0;DOWN;0;DOWN!"),
+            ("error", "HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN!"),
+            ("error", "ACTIVE HOST CHECK: test_host_0;DOWN;1;DOWN!"),
+            ("error", "HOST ALERT: test_host_0;DOWN;SOFT;2;DOWN!"),
             ("error", "ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;CRITICAL"),
             ("error", "SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;CRITICAL"),
             ("error", "SERVICE EVENT HANDLER: test_host_0;test_ok_0;CRITICAL;HARD;2;eventhandler"),
-            ("error", "ACTIVE HOST CHECK: test_host_0;DOWN;2;DOWN"),
-            ("error", "HOST ALERT: test_host_0;DOWN;HARD;3;DOWN"),
+            ("error", "ACTIVE HOST CHECK: test_host_0;DOWN;2;DOWN!"),
+            ("error", "HOST ALERT: test_host_0;DOWN;HARD;3;DOWN!"),
             ("error", "ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;2;CRITICAL"),
-            ("error", "HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;DOWN"),
+            ("error", "HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;DOWN!"),
             ("info", "EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;test_contact;My downtime" % (now, now, now + 1200)),
             ("info", "HOST DOWNTIME ALERT: test_host_0;STARTED; Host has entered a period of scheduled downtime"),
             ("info", "HOST ACKNOWLEDGE ALERT: test_host_0;STARTED; Host problem has been acknowledged"),
             ("info", "SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;STARTED; Service problem has been acknowledged"),
-            ("info", "HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (DOWN);notify-host;DOWN")
+            ("info", "HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (DOWN);notify-host;DOWN!")
         ]
         self.check_monitoring_logs(expected_logs)
+
         assert 2 == len(host.comments)
         assert 3 == len(host.notifications_in_progress)
 
-        # # Acknowledge service
-        # No more necessary because scheduling a downtime for an host acknowledges its services
-        # excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;' \
-        #         'Acknowledge service' % time.time()
-        # self.schedulers['scheduler-master'].sched.run_external_command(excmd)
-        # self.external_command_loop()
-
         host_comments = []
-        ack_comment_uuid = ''
+        host_comment_id = None
         for comm_uuid, comment in host.comments.items():
             host_comments.append(comment.comment)
+            if comment.entry_type == 4:
+                host_comment_id = comment.uuid
         print("Comments: %s" % host_comments)
+        # ['Acknowledged because of an host downtime',
+        # 'This host has been scheduled for fixed downtime from
+        # 2018-06-05 07:22:15 to 2018-06-05 07:42:15.
+        # Notifications for the host will not be sent out during that time period.']
 
         service_comments = []
+        service_comment_id = None
         for comm_uuid, comment in svc.comments.items():
             service_comments.append(comment.comment)
             if comment.entry_type == 4:
-                ack_comment_uuid = comment.uuid
+                service_comment_id = comment.uuid
         print("Comments (service): %s" % service_comments)
+        # ['Acknowledged because of an host downtime']
+
+        assert True == host.problem_has_been_acknowledged
+        assert host.acknowledgement.__dict__ == {
+            'uuid': host.acknowledgement.uuid,
+            'author': 'Alignak',
+            'comment': 'Acknowledged because of an host downtime',
+            'ref': host.uuid,
+            'sticky': True,
+            'end_time': 0,
+            'notify': 1,
+            "comment_id": host_comment_id
+        }
 
         assert True == svc.problem_has_been_acknowledged
         assert svc.acknowledgement.__dict__ == {
-            "comment": "Acknowledged because of an host downtime",
             "uuid": svc.acknowledgement.uuid,
-            "ref": svc.uuid,
             "author": "Alignak",
+            "comment": "Acknowledged because of an host downtime",
+            "ref": svc.uuid,
             "sticky": False,
             "end_time": 0,
             "notify": True,
-            "comment_id": ack_comment_uuid
+            "comment_id": service_comment_id
         }
 
+        # Prepare retention data to be stored
         retention = self._scheduler.get_retention_data()
 
         assert 'hosts' in retention
         assert 'services' in retention
+        print('Hosts retention:')
+        for host_name in retention['hosts']:
+            print('- %s' % host_name)
         assert len(retention['hosts']) == 2
+
+        print('Services retention:')
+        for host_name, service_description in retention['services']:
+            print('- %s - %s' % (host_name, service_description))
         assert len(retention['services']) == 1
 
-        # Test if can json.dumps (serialize)
-        for hst in retention['hosts']:
+        print('Services retention:')
+        for service in retention['services']:
+            print('- %s / %s' % (service[0], service[1]))
+        assert len(retention['services']) == 1
+
+        # Test if it can be JSON dumped (serialization...)
+        print('Hosts retention:')
+        for host_name in retention['hosts']:
             try:
-                t = json.dumps(retention['hosts'][hst])
+                print('- %s:' % host_name)
+                pprint.pprint(retention['hosts'][host_name], indent=3)
+                t = json.dumps(retention['hosts'][host_name])
             except Exception as err:
                 assert False, 'Json dumps impossible: %s' % str(err)
             assert "notifications_in_progress" in t
@@ -237,19 +275,4 @@ class TestRetention(AlignakTest):
         assert isinstance(hostn.notified_contacts, set)
         assert isinstance(svcn.notified_contacts, set)
         assert set([self._scheduler.contacts.find_by_name("test_contact").uuid]) == \
-                         hostn.notified_contacts
-
-        # No brok for monitoring logs...
-        # # Retention load monitoring log
-        # # We got 'monitoring_log' broks for logging to the monitoring logs...
-        # monitoring_logs = []
-        # for brok in self._main_broker.broks.values():
-        #     if brok.type == 'monitoring_log':
-        #         data = unserialize(brok.data)
-        #         monitoring_logs.append((data['level'], data['message']))
-        #
-        # expected_logs = [
-        #     (u'info', u'RETENTION LOAD: scheduler-master scheduler')
-        # ]
-        # for log_level, log_message in expected_logs:
-        #     assert (log_level, log_message) in monitoring_logs
+               hostn.notified_contacts_ids

@@ -1899,24 +1899,42 @@ class Daemon(object):
         self.make_a_pause(timeout=timeout, check_time_change=False)
         return any(self.new_conf)
 
-    def hook_point(self, hook_name):
+    def hook_point(self, hook_name, handle=None):
         """Used to call module function that may define a hook function
         for hook_name
 
+        Available hook points:
+        - `tick`, called on each daemon loop turn
+        - `save_retention`; called by the scheduler when live state
+            saving is to be done
+        - `load_retention`; called by the scheduler when live state
+            restoring is necessary (on restart)
+        - `get_new_actions`; called by the scheduler before adding the actions to be executed
+        - `early_configuration`; called by the arbiter when it begins parsing the configuration
+        - `read_configuration`; called by the arbiter when it read the configuration
+        - `late_configuration`; called by the arbiter when it finishes parsing the configuration
+
+        As a default, the `handle` parameter provided to the hooked function is the
+        caller Daemon object. The scheduler will provide its own instance when it call this
+        function.
+
         :param hook_name: function name we may hook in module
         :type hook_name: str
+        :param handle: parameter to provide to the hook function
+        :type: handle: alignak.Satellite
         :return: None
         """
+        full_hook_name = 'hook_' + hook_name
         for module in self.modules_manager.instances:
             _ts = time.time()
-            full_hook_name = 'hook_' + hook_name
             if not hasattr(module, full_hook_name):
                 continue
 
             fun = getattr(module, full_hook_name)
             try:
-                fun(self)
-            except Exception as exp:  # pylint: disable=broad-except
+                fun(handle if handle is not None else self)
+            # pylint: disable=broad-except
+            except Exception as exp:  # pragma: no cover, never happen during unit tests...
                 logger.warning('The instance %s raised an exception %s. I disabled it,'
                                ' and set it to restart later', module.name, str(exp))
                 logger.exception('Exception %s', exp)

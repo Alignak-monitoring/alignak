@@ -311,7 +311,9 @@ class Receiver(Satellite):
         statsmgr.timer('external-commands.pushed.time', time.time() - _t0)
 
         # Say to modules it's a new tick :)
+        _t0 = time.time()
         self.hook_point('tick')
+        statsmgr.timer('hook.tick', time.time() - _t0)
 
     def get_daemon_stats(self, details=False):
         """Increase the stats provided by the Daemon base class

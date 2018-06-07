@@ -124,8 +124,8 @@ from alignak.util import jsonify_r
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 NO_LONGER_USED = (u'This parameter is not longer take from the main file, but must be defined '
-                  'in the status_dat broker module instead. But Alignak will create you one '
-                  'if there are no present and use this parameter in it, so no worry.')
+                  u'in the status_dat broker module instead. But Alignak will create you one '
+                  u'if there are no present and use this parameter in it, so no worry.')
 NOT_INTERESTING = u'We do not think such an option is interesting to manage.'
 NOT_MANAGED = (u'This Nagios legacy parameter is not managed by Alignak. Ignoring...')
 
@@ -299,7 +299,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'check_external_commands':
             BoolProp(default=True),
         'command_check_interval':
-            UnusedProp(text=u'Alignak will always check for external commands. This configuration value is useless.'),
+            UnusedProp(text=u'Alignak will always check for external commands. '
+                            u'This configuration value is useless.'),
         'command_file':
             StringProp(default=u''),
         'external_command_buffer_slots':
@@ -308,17 +309,17 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # Application updates checks
         'check_for_updates':
             UnusedProp(text=u'network administrators will never allow such communication between '
-                            'server and the external world. Use your distribution packet manager '
-                            'to know if updates are available or go to the '
-                            'http://www.github.com/Alignak-monitoring/alignak website instead.'),
+                            u'server and the external world. Use your distribution packet manager '
+                            u'to know if updates are available or go to the '
+                            u'http://www.github.com/Alignak-monitoring/alignak website instead.'),
 
         'bare_update_checks':
             UnusedProp(text=None),
 
-        # Inner status.dat self created module parameters
+        # -----
+        # Inner state retention module parameters
         'retain_state_information':
-            UnusedProp(text=u'sorry, retain state information will not be implemented '
-                            'because it is useless.'),
+            BoolProp(default=False),
 
         'state_retention_file':
             StringProp(default=u''),
@@ -349,6 +350,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         'retained_contact_service_attribute_mask':
             UnusedProp(text=NOT_INTERESTING),
+        # -----
 
         # Inner syslog self created module parameters
         'use_syslog':
@@ -825,6 +827,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
     def __init__(self, params=None, parsing=True):
         if params is None:
             params = {}
+
+        print("Config: %s" % params)
 
         if parsing:
             # Create a new configuration identifier
@@ -1356,7 +1360,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # ones like the bp_rule for correlation
         self.add_self_defined_objects(raw_objects)
 
-        for o_type in types_creations:
+        for o_type in sorted(types_creations):
             if o_type not in early_created_types:
                 self.create_objects_for_type(raw_objects, o_type)
         logger.info("Done")
@@ -2013,126 +2017,91 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
     def hack_old_nagios_parameters(self):
         # pylint: disable=too-many-branches
-        """ Check if modules exist for some of the old Nagios parameters.
+        """ Check if modules exist for some of the Nagios legacy parameters.
 
         If no module of the required type is present, it alerts the user that the parameters will
         be ignored and the functions will be disabled, else it encourages the user to set the
         correct parameters in the installed modules.
 
-        TODO :clean and deprecate this part of the configuration checking!
+        Note that some errors are raised if some parameters are used and no module is found
+        to manage the corresponding feature.
 
-        :return: None
+        TODO: clean this part of the configuration checking! Nagios ascending compatibility!
+
+        :return: modules list
+        :rtype: list
         """
+        modules = []
         # For status_dat
         if hasattr(self, 'status_file') and self.status_file != '' and \
                 hasattr(self, 'object_cache_file') and self.object_cache_file != '':
-            # Ok, the user wants retention, search for such a module
-            if not self.got_broker_module_type_defined('retention'):
-                msg = "Your configuration parameters '%s = %s' and '%s = %s' need to use an " \
-                      "external module such as 'retention' but I did not found one!" % \
-                      ('status_file', self.status_file,
-                       'object_cache_file', self.object_cache_file)
-                logger.error(msg)
-                self.add_error(msg)
-            else:
-                msg = "Your configuration parameters '%s = %s' and '%s = %s' are deprecated " \
-                      "and will be ignored. Please configure your external 'retention' module " \
-                      "as expected." % \
-                      ('status_file', self.status_file,
-                       'object_cache_file', self.object_cache_file)
-                logger.warning(msg)
-                self.add_warning(msg)
+            msg = "Your configuration parameters '%s = %s' and '%s = %s' are deprecated " \
+                  "and will be ignored. Please configure your external 'retention' module " \
+                  "as expected." % \
+                  ('status_file', self.status_file,
+                   'object_cache_file', self.object_cache_file)
+            logger.warning(msg)
+            self.add_warning(msg)
 
         # Now the log_file
-        if hasattr(self, 'log_file') and self.log_file != '':
-            # Ok, the user wants some monitoring logs
-            if not self.got_broker_module_type_defined('logs'):
-                msg = "Your configuration parameter '%s = %s' needs to use an external module " \
-                      "such as 'logs' but I did not found one!" % \
-                      ('log_file', self.log_file)
-                logger.error(msg)
-                self.add_error(msg)
-            else:
-                msg = "Your configuration parameters '%s = %s' are deprecated " \
-                      "and will be ignored. Please configure your external 'logs' module " \
-                      "as expected." % \
-                      ('log_file', self.log_file)
-                logger.warning(msg)
-                self.add_warning(msg)
+        if hasattr(self, 'log_file') and self.log_file:
+            msg = "Your configuration parameters '%s = %s' are deprecated " \
+                  "and will be ignored. Please configure your external 'logs' module " \
+                  "as expected." % \
+                  ('log_file', self.log_file)
+            logger.warning(msg)
+            self.add_warning(msg)
 
         # Now the syslog facility
         if hasattr(self, 'use_syslog') and self.use_syslog:
-            # Ok, the user want a syslog logging, why not after all
-            if not self.got_broker_module_type_defined('logs'):
-                msg = "Your configuration parameter '%s = %s' needs to use an external module " \
-                      "such as 'logs' but I did not found one!" % \
-                      ('use_syslog', self.use_syslog)
-                logger.error(msg)
-                self.add_error(msg)
-            else:
-                msg = "Your configuration parameters '%s = %s' are deprecated " \
-                      "and will be ignored. Please configure your external 'logs' module " \
-                      "as expected." % \
-                      ('use_syslog', self.use_syslog)
-                logger.warning(msg)
-                self.add_warning(msg)
+            msg = "Your configuration parameters '%s = %s' are deprecated " \
+                  "and will be ignored. Please configure your external 'logs' module " \
+                  "as expected." % \
+                  ('use_syslog', self.use_syslog)
+            logger.warning(msg)
+            self.add_warning(msg)
 
         # Now the host_perfdata or service_perfdata module
-        if hasattr(self, 'service_perfdata_file') and self.service_perfdata_file != '' or \
-                hasattr(self, 'host_perfdata_file') and self.host_perfdata_file != '':
-            # Ok, the user wants performance data, search for such a module
-            if not self.got_broker_module_type_defined('perfdata'):
-                msg = "Your configuration parameters '%s = %s' and '%s = %s' need to use an " \
-                      "external module such as 'retention' but I did not found one!" % \
-                      ('host_perfdata_file', self.host_perfdata_file,
-                       'service_perfdata_file', self.service_perfdata_file)
-                logger.error(msg)
-                self.add_error(msg)
-            else:
-                msg = "Your configuration parameters '%s = %s' and '%s = %s' are deprecated " \
-                      "and will be ignored. Please configure your external 'retention' module " \
-                      "as expected." % \
-                      ('host_perfdata_file', self.host_perfdata_file,
-                       'service_perfdata_file', self.service_perfdata_file)
-                logger.warning(msg)
-                self.add_warning(msg)
+        if hasattr(self, 'service_perfdata_file') and self.service_perfdata_file or \
+                hasattr(self, 'host_perfdata_file') and self.host_perfdata_file:
+            msg = "Your configuration parameters '%s = %s' and '%s = %s' are deprecated " \
+                  "and will be ignored. Please configure your external 'retention' module " \
+                  "as expected." % \
+                  ('host_perfdata_file', self.host_perfdata_file,
+                   'service_perfdata_file', self.service_perfdata_file)
+            logger.warning(msg)
+            self.add_warning(msg)
 
-        # Now the old retention file module
-        if hasattr(self, 'state_retention_file') and self.state_retention_file != '' and \
-                hasattr(self, 'retention_update_interval') and self.retention_update_interval != 0:
-            # Ok, the user wants livestate data retention, search for such a module
-            if not self.got_scheduler_module_type_defined('retention'):
-                msg = "Your configuration parameters '%s = %s' and '%s = %s' need to use an " \
-                      "external module such as 'retention' but I did not found one!" % \
-                      ('state_retention_file', self.state_retention_file,
-                       'retention_update_interval', self.retention_update_interval)
-                logger.error(msg)
-                self.add_error(msg)
-            else:
-                msg = "Your configuration parameters '%s = %s' and '%s = %s' are deprecated " \
-                      "and will be ignored. Please configure your external 'retention' module " \
-                      "as expected." % \
-                      ('state_retention_file', self.state_retention_file,
-                       'retention_update_interval', self.retention_update_interval)
-                logger.warning(msg)
-                self.add_warning(msg)
+        # Now the Nagios legacy retention file module
+        if hasattr(self, 'retain_state_information') and self.retain_state_information:
+            msg = "The configuration parameter '%s = %s' is a Nagios legacy " \
+                  "parameter. Alignak will use its inner 'retention' module " \
+                  "to match the expected behavior." % \
+                  ('retain_state_information', self.retain_state_information)
+            logger.warning(msg)
+            self.add_warning(msg)
+            mod_configuration = {
+                'name': 'inner-retention',
+                'type': 'retention',
+                'python_name': 'alignak.modules.inner_retention',
+                'enabled': True
+            }
+            if getattr(self, 'state_retention_file', None):
+                mod_configuration['retention_file'] = getattr(self, 'state_retention_file')
+            modules.append((
+                'scheduler', mod_configuration
+            ))
 
         # Now the command_file
         if hasattr(self, 'command_file') and getattr(self, 'command_file'):
-            # Ok, the user wants external commands file, search for such a module
-            if not self.got_arbiter_module_type_defined('external_commands'):
-                msg = "Your configuration parameter '%s = %s' needs to use an external module " \
-                      "such as 'external_commands' but I did not found one!" \
-                      % ('command_file', self.command_file)
-                logger.error(msg)
-                self.add_error(msg)
-            else:
-                msg = "Your configuration parameter '%s = %s' is deprecated " \
-                      "and will be ignored. Please configure an external commands capable " \
-                      "module as expected (eg external-commands, NSCA, or WS module may suit." \
-                      % ('command_file', self.command_file)
-                logger.warning(msg)
-                self.add_warning(msg)
+            msg = "Your configuration parameter '%s = %s' is deprecated " \
+                  "and will be ignored. Please configure an external commands capable " \
+                  "module as expected (eg external-commands, NSCA, or WS module may suit." \
+                  % ('command_file', self.command_file)
+            logger.warning(msg)
+            self.add_warning(msg)
+
+        return modules
 
     def propagate_timezone_option(self):
         """Set our timezone value and give it too to unset satellites
@@ -2269,7 +2238,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             self.add_error(msg)
             valid = False
 
-        for _, _, strclss, _, _ in list(self.types_creations.values()):
+        classes = [strclss for _, _, strclss, _, _ in list(self.types_creations.values())]
+        for strclss in sorted(classes):
             if strclss in ['hostescalations', 'serviceescalations']:
                 logger.debug("Ignoring correctness check for '%s'...", strclss)
                 continue

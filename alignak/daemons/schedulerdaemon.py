@@ -411,6 +411,7 @@ class Alignak(BaseSatellite):
             # Scheduler modules
             if not self.have_modules:
                 try:
+                    logger.info("Modules configuration: %s", self.cur_conf['modules'])
                     self.modules = unserialize(self.cur_conf['modules'], no_load=True)
                 except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
                     logger.error('Cannot un-serialize modules configuration '
