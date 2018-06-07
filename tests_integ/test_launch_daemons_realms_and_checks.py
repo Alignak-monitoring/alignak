@@ -185,7 +185,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         ignored_warnings = [
             # Sometimes, daemons comunication problem happen :(
             u"Server not available:",
-            u"Setting the satellite poller-South as dead :(",
+            u"Setting the satellite ",
             u"is not alive for",
             u"let's give another chance after 5 seconds...",
 
