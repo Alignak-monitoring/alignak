@@ -39,7 +39,7 @@ script:
     # Get coverage on tests run
     echo "Starting tests..."
     pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
-    # codecov
+    # Upload coverage results to codecov
     bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
     cd ..
   fi
@@ -51,13 +51,14 @@ script:
     # Run test suite with py.test running its coverage plugin
     # Dump the 10 slowest tests - do not capture to have some activity in Travis
     pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
-    # codecov
+    # Upload coverage results to codecov
     bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
     cd ..
   fi
 after_success:
 - |
   if [[ $TEST_SUITE == 'unit_tests' ]]; then
+    # Package Alignak for deb/rpm
     ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION deb;
     ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION rpm;
     # Not yet available
