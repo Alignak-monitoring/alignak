@@ -79,7 +79,8 @@ from alignak.action import ACT_STATUS_WAIT_CONSUME, ACT_STATUS_ZOMBIE, \
 from alignak.check import Check
 from alignak.property import (BoolProp, IntegerProp, FloatProp, SetProp,
                               CharProp, StringProp, ListProp, DictProp)
-from alignak.util import from_set_to_list, format_t_into_dhms_format
+from alignak.util import format_t_into_dhms_format, to_serialized, from_serialized, \
+    dict_to_serialized_dict, from_set_to_list, from_list_to_set
 from alignak.notification import Notification
 from alignak.macroresolver import MacroResolver
 from alignak.eventhandler import EventHandler
@@ -307,11 +308,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             FloatProp(default=0.0, fill_brok=['full_status'], retention=True),
         'checks_in_progress':
             ListProp(default=[]),
-        # no broks because notifications are too linked
         'notifications_in_progress':
-            DictProp(default={}, retention=True),
+            DictProp(default={},
+                     retention=True, retention_preparation=dict_to_serialized_dict),
         'comments':
-            DictProp(default={}, fill_brok=['full_status'], retention=True),
+            DictProp(default={}, fill_brok=['full_status'],
+                     retention=True, retention_preparation=dict_to_serialized_dict),
         'flapping_changes':
             ListProp(default=[], fill_brok=['full_status'], retention=True),
         'flapping_comment_id':
@@ -321,7 +323,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'problem_has_been_acknowledged':
             BoolProp(default=False, fill_brok=['full_status', 'check_result'], retention=True),
         'acknowledgement':
-            StringProp(default=None, retention=True),
+            StringProp(default=None,
+                       retention=True,
+                       retention_preparation=to_serialized, retention_restoration=from_serialized),
         'acknowledgement_type':
             IntegerProp(default=1, fill_brok=['full_status', 'check_result'], retention=True),
         'has_been_checked':
@@ -371,7 +375,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # them when we load it.
         # use for having all contacts we have notified
         'notified_contacts':
-            SetProp(default=set(), retention=True, retention_preparation=from_set_to_list),
+            SetProp(default=set(), retention=True,
+                    retention_preparation=from_set_to_list, retention_restoration=from_list_to_set),
+        'notified_contacts_ids':
+            SetProp(default=set()),
         'in_scheduled_downtime':
             BoolProp(default=False, fill_brok=['full_status', 'check_result'], retention=True),
         'in_scheduled_downtime_during_last_check':
@@ -1315,7 +1322,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             notification.status = ACT_STATUS_ZOMBIE
             del self.notifications_in_progress[notification.uuid]
 
-    def remove_in_progress_notifications(self, master=True, force=False):
+    def remove_in_progress_notifications(self, master=True):
         """Remove all notifications from notifications_in_progress
 
         Preserves some specific notifications (downtime, ...)
@@ -1954,7 +1961,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if notif.status == ACT_STATUS_POLLED:
             self.update_notification_command(notif, contact, macromodulations, timeperiods,
                                              host_ref)
-            self.notified_contacts.add(contact.uuid)
+            self.notified_contacts.add(contact.get_name())
+            self.notified_contacts_ids.add(contact.uuid)
             self.raise_notification_log_entry(notif, contact, host_ref)
 
     def update_notification_command(self, notif, contact, macromodulations, timeperiods,
@@ -2231,15 +2239,16 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         escalated = False
         notification_contacts = []
         if notif.type == u'RECOVERY':
-            if self.first_notification_delay != 0 and not self.notified_contacts:
+            if self.first_notification_delay != 0 and not self.notified_contacts_ids:
                 # Recovered during first_notification_delay. No notifications
                 # have been sent yet, so we keep quiet
                 notification_contacts = []
             else:
                 # The old way. Only send recover notifications to those contacts
                 # who also got problem notifications
-                notification_contacts = [c_id for c_id in self.notified_contacts]
+                notification_contacts = [c_id for c_id in self.notified_contacts_ids]
             self.notified_contacts.clear()
+            self.notified_contacts_ids.clear()
         else:
             # Check is an escalation match. If yes, get all contacts from escalations
             if self.is_escalable(notif, escalations, timeperiods):
@@ -2260,7 +2269,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if notif.type == u'PROBLEM' and self.notification_interval == 0 \
                     and self.state_type == 'HARD' and self.last_state_type == self.state_type \
                     and self.state == self.last_state \
-                    and contact_uuid in self.notified_contacts:
+                    and contact_uuid in self.notified_contacts_ids:
                 # Do not send notification
                 continue
             recipients.append(contact_uuid)
@@ -2310,7 +2319,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     if notif.type == u'PROBLEM':
                         # Remember the contacts. We might need them later in the
                         # recovery code some lines above
-                        self.notified_contacts.add(contact.uuid)
+                        self.notified_contacts_ids.add(contact.uuid)
+                        self.notified_contacts.add(contact.get_name())
 
         return childnotifications
 

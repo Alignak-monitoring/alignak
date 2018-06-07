@@ -421,7 +421,7 @@ class Broker(BaseSatellite):
                     else:
                         self.got_initial_broks = True
                         logger.debug("Got %d initial broks from '%s'",
-                                    my_initial_broks, satellite.name)
+                                     my_initial_broks, satellite.name)
                         statsmgr.gauge('broks.initial.%s.count' % satellite.name, my_initial_broks)
                 except LinkError as exp:
                     logger.warning("Scheduler connection failed, I could not get initial broks!")
@@ -434,7 +434,9 @@ class Broker(BaseSatellite):
         self.check_and_del_zombie_modules()
 
         # Call modules that manage a starting tick pass
+        _t0 = time.time()
         self.hook_point('tick')
+        statsmgr.timer('hook.tick', time.time() - _t0)
 
         # Maybe the last loop we did raised some broks internally
         self.get_internal_broks()

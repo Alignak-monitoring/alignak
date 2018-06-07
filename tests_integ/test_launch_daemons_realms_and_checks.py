@@ -125,10 +125,10 @@ class TestLaunchDaemonsRealms(AlignakTest):
             daemons_list += more_daemons
         print("Daemons: %s" % daemons_list)
 
-        # Default shipped configuration preparation
+        # Default shipped configuration preparation
         self._prepare_configuration(copy=True, cfg_folder=self.cfg_folder)
 
-        # Specific daemon load configuration preparation
+        # Specific daemon load configuration preparation
         if os.path.exists('./cfg/%s/alignak.cfg' % cfg_dir):
             shutil.copy('./cfg/%s/alignak.cfg' % cfg_dir, '%s/etc' % self.cfg_folder)
         if os.path.exists('%s/etc/arbiter' % self.cfg_folder):

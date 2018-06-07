@@ -87,31 +87,43 @@ class Property(object):
     def __init__(self, default=NONE_OBJECT, class_inherit=None,  # pylint: disable=R0913
                  unmanaged=False, _help='', no_slots=False,
                  fill_brok=None, brok_transformation=None, retention=False,
-                 retention_preparation=None, to_send=False,
+                 retention_preparation=None, retention_restoration=None, to_send=False,
                  override=False, managed=True, split_on_comma=True,
                  keep_empty=False, merging='uniq', special=False):
         # pylint: disable=too-many-locals
         """
-        `default`: default value to be used if this property is not set.
-                   If default is None, this property is required.
+        `default`:
+            the default value to be used if this property is not set.
+            If default is None, this property is required.
 
-        `class_inherit`: List of 2-tuples, (Service, 'blabla'): must
-                   set this property to the Service class with name
-                   blabla. if (Service, None): must set this property
-                   to the Service class with same name
+        `class_inherit`:
+            List of 2-tuples, (Service, 'blabla'): must set this property to the
+            Service class with name blabla. if (Service, None): must set this property
+            to the Service class with same name
+
         `unmanaged`: ....
-        `help`: usage text
-        `no_slots`: do not take this property for __slots__
 
-        `fill_brok`: if set, send to broker. There are two categories:
-                     FULL_STATUS for initial and update status,
-                     CHECK_RESULT for check results
-        `retention`: if set, we will save this property in the retention files
-        `retention_preparation`: function, if set, will go this function before
-                     being save to the retention data
-        `split_on_comma`: indicates that list property value should not be
-                     split on coma delimiter (values conain comas that
-                     we want to keep).
+        `help`: usage text
+
+        `no_slots`:
+            do not take this property for __slots__
+
+        `fill_brok`:
+            if set, send to broker. There are two categories:
+                FULL_STATUS for initial and update status,
+                CHECK_RESULT for check results
+
+        `retention`:
+            if set, the property will be saved in the retention files
+        `retention_preparation`:
+            function name, if set, this function will be called with the property before
+            saving the date to the retention
+        `retention_restoration`:
+            function name, if set, this function will be called with the restored retention data
+
+        `split_on_comma`:
+            indicates that list property value should not be split on comma delimiter
+            (values may contain commas that we want to keep).
 
         Only for the initial call:
 
@@ -144,6 +156,7 @@ class Property(object):
         self.brok_transformation = brok_transformation
         self.retention = retention
         self.retention_preparation = retention_preparation
+        self.retention_restoration = retention_restoration
         self.to_send = to_send
         self.override = override
         self.managed = managed

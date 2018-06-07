@@ -69,7 +69,7 @@ def main():
     """
     try:
         args = parse_daemon_args()
-        daemon = Reactionner( **args.__dict__)
+        daemon = Reactionner(**args.__dict__)
         daemon.main()
     except Exception as exp:  # pylint: disable=broad-except
         sys.stderr.write("*** Daemon exited because: %s" % str(exp))

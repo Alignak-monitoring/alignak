@@ -57,6 +57,13 @@ from alignak.brok import Brok
 from alignak.alignakobject import AlignakObject
 
 
+DOWNTIME_FIXED_MESSAGE = u"This %s has been scheduled for fixed downtime from %s to %s. " \
+                         u"Notifications for the %s will not be sent out for this time period."
+DOWNTIME_FLEXIBLE_MESSAGE = u"This %s has been scheduled for flexible downtime starting between " \
+                            u"%s and %s and lasting for a period of %d hours and %d minutes. " \
+                            u"Notifications for the %s will not be sent out for this time period."
+
+
 class Downtime(AlignakObject):
     """ Schedules downtime for a specified service. If the "fixed" argument is set
     to one (1), downtime will start and end at the times specified by the
@@ -310,38 +317,34 @@ class Downtime(AlignakObject):
         :return: None
         """
         if self.fixed is True:
-            text = (
-                "This %s has been scheduled for fixed downtime from %s to %s. "
-                "Notifications for the %s will not be sent out during that time period." % (
-                    ref.my_type,
-                    time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.start_time)),
-                    time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.end_time)),
-                    ref.my_type)
-            )
+            text = (DOWNTIME_FIXED_MESSAGE % (ref.my_type,
+                                              time.strftime("%Y-%m-%d %H:%M:%S",
+                                                            time.localtime(self.start_time)),
+                                              time.strftime("%Y-%m-%d %H:%M:%S",
+                                                            time.localtime(self.end_time)),
+                                              ref.my_type))
         else:
             hours, remainder = divmod(self.duration, 3600)
             minutes, _ = divmod(remainder, 60)
-            text = (
-                "This %s has been scheduled for flexible downtime starting between %s and %s "
-                "and lasting for a period of %d hours and %d minutes. "
-                "Notifications for the %s will not be sent out during that time period."
-                % (ref.my_type,
-                   time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.start_time)),
-                   time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(self.end_time)),
-                   hours, minutes, ref.my_type)
-            )
-        if ref.my_type == 'host':
-            comment_type = 1
-        else:
-            comment_type = 2
+            text = (DOWNTIME_FLEXIBLE_MESSAGE % (ref.my_type,
+                                                 time.strftime("%Y-%m-%d %H:%M:%S",
+                                                               time.localtime(self.start_time)),
+                                                 time.strftime("%Y-%m-%d %H:%M:%S",
+                                                               time.localtime(self.end_time)),
+                                                 hours, minutes, ref.my_type))
+
         data = {
-            'comment': text, 'comment_type': comment_type, 'entry_type': 2, 'source': 0,
-            'expires': False, 'ref': ref.uuid
+            'comment': text,
+            'comment_type': 1 if ref.my_type == 'host' else 2,
+            'entry_type': 2,
+            'source': 0,
+            'expires': False,
+            'ref': ref.uuid
         }
-        comm = Comment(data)
-        self.comment_id = comm.uuid
-        ref.comments[comm.uuid] = comm
-        return comm
+        comment = Comment(data)
+        self.comment_id = comment.uuid
+        ref.comments[comment.uuid] = comment
+        return comment
 
     def del_automatic_comment(self, item):
         """Remove automatic comment on ref previously created
@@ -351,6 +354,7 @@ class Downtime(AlignakObject):
         :return: None
         """
         item.del_comment(self.comment_id)
+        self.comment_id = ''
 
     def fill_data_brok_from(self, data, brok_type):
         """Fill data with info of item by looking at brok_type
@@ -373,9 +377,10 @@ class Downtime(AlignakObject):
     def get_raise_brok(self, host_name, service_name=''):
         """Get a start downtime brok
 
-        :param comment_type: 1 = host, 2 = service
-        :param host_name:
-        :param service_name:
+        :param host_name: host concerned by the downtime
+        :type host_name
+        :param service_name: service concerned by the downtime
+        :type service_name
         :return: brok with wanted data
         :rtype: alignak.brok.Brok
         """
@@ -384,13 +389,15 @@ class Downtime(AlignakObject):
         if service_name != '':
             data['service'] = service_name
 
-        brok = Brok({'type': 'downtime_raise', 'data': data})
-        return brok
+        return Brok({'type': 'downtime_raise', 'data': data})
 
     def get_expire_brok(self, host_name, service_name=''):
         """Get an expire downtime brok
 
-        :type item: item
+        :param host_name: host concerned by the downtime
+        :type host_name
+        :param service_name: service concerned by the downtime
+        :type service_name
         :return: brok with wanted data
         :rtype: alignak.brok.Brok
         """
@@ -399,5 +406,4 @@ class Downtime(AlignakObject):
         if service_name != '':
             data['service'] = service_name
 
-        brok = Brok({'type': 'downtime_expire', 'data': data})
-        return brok
+        return Brok({'type': 'downtime_expire', 'data': data})

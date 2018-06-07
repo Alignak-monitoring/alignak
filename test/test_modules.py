@@ -140,61 +140,6 @@ class TestModules(AlignakTest):
         modules = [m.module_alias for m in self._arbiter.link_to_myself.modules]
         assert modules == ['Example']
 
-    def test_missing_module_detection(self):
-        """ Detect missing module configuration
-
-        Alignak configuration parser detects that some modules are required because some
-        specific parameters are included in the configuration files. If the modules are not
-        present in the configuration, it logs warning message to alert the user about this!
-
-        :return:
-        """
-        with pytest.raises(SystemExit):
-            self.setup_with_file('cfg/modules/alignak_modules_nagios_parameters.cfg')
-        assert not self.conf_is_correct
-        self.show_configuration_logs()
-
-        # Log missing module
-        self.assert_any_log_match(
-            re.escape(
-                "Your configuration parameters 'status_file = /var/status.dat' and "
-                "'object_cache_file = /var/status.dat' need to use an external module such "
-                "as 'retention' but I did not found one!"
-            )
-        )
-        self.assert_any_log_match(
-            re.escape(
-                "Your configuration parameter 'log_file = /test/file' needs to use an external "
-                "module such as 'logs' but I did not found one!"
-            )
-        )
-        self.assert_any_log_match(
-            re.escape(
-                "Your configuration parameter 'use_syslog = True' needs to use an external "
-                "module such as 'logs' but I did not found one!"
-            )
-        )
-        self.assert_any_log_match(
-            re.escape(
-                "Your configuration parameters 'host_perfdata_file = /test/file' and "
-                "'service_perfdata_file = /test/file' need to use an external module such as "
-                "'retention' but I did not found one!"
-            )
-        )
-        self.assert_any_log_match(
-            re.escape(
-                "Your configuration parameters 'state_retention_file = /test/file' and "
-                "'retention_update_interval = 100' need to use an external module such as "
-                "'retention' but I did not found one!"
-            )
-        )
-        self.assert_any_log_match(
-            re.escape(
-                "Your configuration parameter 'command_file = /var/alignak.cmd' needs to use "
-                "an external module such as 'external_commands' but I did not found one!"
-            )
-        )
-
     def test_module_on_module(self):
         """ No module configuration for modules
 

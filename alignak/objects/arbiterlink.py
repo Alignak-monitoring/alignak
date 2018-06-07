@@ -76,15 +76,6 @@ class ArbiterLink(SatelliteLink):
             FloatProp(default=0.0)
     })
 
-    def __init__(self, params=None, parsing=True):
-        """Initialize an ArbiterLink
-
-        It always manage other arbiters!
-        """
-        super(ArbiterLink, self).__init__(params, parsing)
-        #
-        # self.manage_arbiters = True
-
     def is_me(self):  # pragma: no cover, seems not to be used anywhere
         """Check if parameter name if same than name of this object
 

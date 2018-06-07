@@ -13,6 +13,11 @@
     },
 
     "handlers": {
+        "unit_tests": {
+            "class": "alignak.log.CollectorHandler",
+            "level": "DEBUG",
+            "formatter": "alignak"
+        },
         "console": {
             "class": "logging.StreamHandler",
             "level": "DEBUG",
@@ -38,7 +43,7 @@
             "class": "logging.handlers.TimedRotatingFileHandler",
             "level": "INFO",
             "formatter": "monitoring-log",
-            "filename": "%(logdir)s/monitoring-logs.log",
+            "filename": "%(logdir)s/monitoring-log/monitoring-logs.log",
             "when": "midnight",
             "interval": 1,
             "backupCount": 365

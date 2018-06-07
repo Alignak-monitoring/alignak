@@ -707,6 +707,9 @@ class Daterange(AbstractDaterange):
             for timeinterval in params['other'].split(','):
                 self.timeranges.append(Timerange(timeinterval.strip()))
 
+    def get_start_and_end_time(self, ref=None):
+        raise NotImplementedError
+
     def serialize(self):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)

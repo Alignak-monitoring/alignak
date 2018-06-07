@@ -60,7 +60,6 @@ You can find functions for time management, type management (pythonization),
 macros solving, sorting, parsing, file handling, filters.
 
 """
-import time
 import re
 import json
 import argparse
@@ -515,8 +514,11 @@ def to_list_string_of_names(ref, tab):  # pragma: no cover, to be deprecated?
     return ",".join([e.get_name() for e in tab])
 
 
-def from_set_to_list(ref, tab):  # pragma: no cover, to be deprecated?
-    """Convert set into a list of element name
+# Functions for retention storage / restoration
+def from_set_to_list(ref, tab):
+    """Convert set into a list
+
+    Used for the retention store
 
     :param ref: Not used
     :type ref:
@@ -526,6 +528,99 @@ def from_set_to_list(ref, tab):  # pragma: no cover, to be deprecated?
     :rtype: list
     """
     return list(tab)
+
+
+def from_list_to_set(ref, tab):
+    """Convert list to a set
+
+    Used for the retention restore
+
+    :param ref: Not used
+    :type ref:
+    :param tab: list to parse
+    :type tab: list
+    :return: list of names
+    :rtype: list
+    """
+    return set(tab)
+
+
+def to_serialized(ref, the_data):
+    """Serialize the property
+
+    Used for the retention store
+
+    :param ref: Not used
+    :type ref:
+    :param the_data: dictionary to convert
+    :type the_data: dict
+    :return: serialized data
+    :rtype: dict
+    """
+    if not the_data:
+        return {}
+    if not getattr(the_data, 'serialize', None):
+        return the_data
+    return the_data.serialize()
+
+
+def from_serialized(ref, the_data):
+    """Unserialize the element
+
+    Used for the retention store
+
+    :param ref: Not used
+    :type ref:
+    :param the_data: dictionary to convert
+    :type the_data: dict
+    :return: serialized data
+    :rtype: dict
+    """
+    if not the_data:
+        return {}
+    if not getattr(the_data, 'unserialize', None):
+        return the_data
+    return the_data.unserialize()
+
+
+def dict_to_serialized_dict(ref, the_dict):
+    """Serialize the list of elements to a dictionary
+
+    Used for the retention store
+
+    :param ref: Not used
+    :type ref:
+    :param the_dict: dictionary to convert
+    :type the_dict: dict
+    :return: dict of serialized
+    :rtype: dict
+    """
+    result = {}
+    for elt in list(the_dict.values()):
+        if not getattr(elt, 'serialize', None):
+            continue
+        result[elt.uuid] = elt.serialize()
+    return result
+
+
+def list_to_serialized(ref, the_list):
+    """Serialize the list of elements
+
+    Used for the retention store
+
+    :param ref: Not used
+    :type ref:
+    :param the_list: dictionary to convert
+    :type the_list: dict
+    :return: dict of serialized
+    :rtype: dict
+    """
+    result = []
+    for elt in the_list:
+        if not getattr(elt, 'serialize', None):
+            continue
+        result.append(elt.serialize())
+    return result
 
 
 def to_name_if_possible(ref, value):  # pragma: no cover, to be deprecated?

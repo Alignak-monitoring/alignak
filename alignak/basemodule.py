@@ -54,7 +54,6 @@ that alignak modules will subclass
 
 import os
 import signal
-import time
 import traceback
 import re
 from multiprocessing import Queue, Process
