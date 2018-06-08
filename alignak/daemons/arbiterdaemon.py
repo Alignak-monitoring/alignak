@@ -409,6 +409,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             logger.info("Getting Alignak macros...")
             alignak_macros = self.alignak_env.get_alignak_macros()
             if alignak_macros:
+                # Remove the leading and trailing underscores
                 for key in sorted(alignak_macros.keys()):
                     value = alignak_macros[key]
                     if key[0] == '_':
