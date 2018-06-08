@@ -52,14 +52,6 @@ alignak.http.generic_interface module
     :undoc-members:
     :show-inheritance:
 
-alignak.http.receiver_interface module
---------------------------------------
-
-.. automodule:: alignak.http.receiver_interface
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 alignak.http.scheduler_interface module
 ---------------------------------------
 

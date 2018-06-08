@@ -278,6 +278,3 @@ class TestCommand(AlignakTest):
         assert c == cc.command
         assert 'DMZ' == cc.poller_tag
         assert 'REAC' == cc.reactionner_tag
-
-if __name__ == '__main__':
-    AlignakTest.main()

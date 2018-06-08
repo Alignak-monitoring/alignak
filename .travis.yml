@@ -5,10 +5,9 @@ python:
 - '3.5'
 - '3.6'
 env:
-  matrix:
-  - TEST_SUITE=unit_tests
-  - TEST_SUITE=integration
-  - TEST_SUITE=codingstandard
+- TEST_SUITE=unit_tests
+- TEST_SUITE=integration
+- TEST_SUITE=codingstandard
 install:
 - unset PYTHONWARNINGS
 - sudo apt-get install rpm
@@ -38,7 +37,8 @@ script:
     # Do not print log synthesis on test end
     # Get coverage on tests run
     echo "Starting tests..."
-    pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
+    # pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
+    pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_actions.py || travis_terminate 1;
     # Upload coverage results to codecov
     bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
     cd ..
@@ -50,7 +50,8 @@ script:
     cd tests_integ
     # Run test suite with py.test running its coverage plugin
     # Dump the 10 slowest tests - do not capture to have some activity in Travis
-    pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
+    # pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
+    pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_launch_arbiter.py || travis_terminate 1;
     # Upload coverage results to codecov
     bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
     cd ..

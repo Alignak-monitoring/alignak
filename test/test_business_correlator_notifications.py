@@ -256,6 +256,3 @@ class TestBusinesscorrelNotifications(AlignakTest):
 
         assert ['w', 'u', 'c', 'r', 's', 'x'] == svc1.notification_options
         assert ['d', 'x', 'r', 's'] == hst2.notification_options
-
-if __name__ == '__main__':
-    AlignakTest.main()

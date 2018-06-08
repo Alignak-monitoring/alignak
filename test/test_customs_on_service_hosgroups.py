@@ -88,7 +88,3 @@ class TestCustomsonservicehosgroups(AlignakTest):
         assert 'custvalue' == svc_two_hosts_1.customs['_CUSTNAME']
         assert 'custvalue' == svc_two_hosts_2.customs['_CUSTNAME']
         assert 'custvalue' == svc_on_group.customs['_CUSTNAME']
-
-
-if __name__ == '__main__':
-    unittest2.main()

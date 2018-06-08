@@ -483,7 +483,3 @@ class TestBusinessCorrelatorExpand(AlignakTest):
                 ])
 
         profile.runctx('profile_bp_rule_macro_modulated()', globals(), locals())
-
-
-if __name__ == '__main__':
-    AlignakTest.main()

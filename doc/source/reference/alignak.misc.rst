@@ -44,6 +44,7 @@ alignak.misc.serialization module
     :undoc-members:
     :show-inheritance:
 
+
 Module contents
 ---------------
 
