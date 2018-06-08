@@ -96,10 +96,6 @@ class PropertiesTester(object):
         prop_names = set(list(self.properties.keys()) + self.unused_props + self.without_default)
 
         print("Testing all properties are tested:")
-        for name in item.properties:
-            print(("- %s" % name))
-
-        print("Testing all properties are tested:")
         print(("- list: %s" % prop_names))
         for name in item.properties:
             if name.startswith('$') and name.endswith('$'):
@@ -524,7 +520,8 @@ class TestHost(PropertiesTester, AlignakTest):
         'alias',
         'address',
         'check_period',
-        'notification_period'
+        'notification_period',
+        'state_id_before_impact'
     ]
 
     properties = dict([
@@ -600,6 +597,7 @@ class TestHost(PropertiesTester, AlignakTest):
         ('snapshot_criteria', ['d','x']),
         ('business_rule_host_notification_options', []),
         ('business_rule_service_notification_options', []),
+        # ('state_id_before_impact', 0)
         ])
 
     def setUp(self):
@@ -608,8 +606,6 @@ class TestHost(PropertiesTester, AlignakTest):
         self.item = Host(parsing=True)
 
 
-# @pytest.mark.skip("Not easily testable because it sometimes "
-#                   "include the Daemon properties - see # 955 :/")
 class TestModule(PropertiesTester, AlignakTest):
 
     unused_props = []
@@ -837,7 +833,8 @@ class TestService(PropertiesTester, AlignakTest):
         'service_description',
         'check_command',
         'check_period',
-        'notification_period'
+        'notification_period',
+        'state_id_before_impact'
     ]
 
     properties = dict([
@@ -912,6 +909,7 @@ class TestService(PropertiesTester, AlignakTest):
         ('business_rule_service_notification_options', []),
         ('host_dependency_enabled', True),
         ('realm', ''),
+        # ('state_id_before_impact', 0)
         ])
 
     def setUp(self):
