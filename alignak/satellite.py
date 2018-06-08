@@ -70,8 +70,8 @@ import traceback
 import threading
 
 from queue import Empty, Full
-import psutil
 from multiprocessing import Queue, active_children
+import psutil
 
 from alignak.http.generic_interface import GenericInterface
 
@@ -193,7 +193,7 @@ class BaseSatellite(Daemon):
             logger.warning("I do not know this scheduler: %s", scheduler_instance_id)
             return []
 
-        logger.debug("Get results for the scheduler: %s" % scheduler_instance_id)
+        logger.debug("Get results for the scheduler: %s", scheduler_instance_id)
         ret, scheduler_link.wait_homerun = scheduler_link.wait_homerun, {}
         logger.debug("Results: %s" % (list(ret.values())) if ret else "No results available")
 
@@ -480,7 +480,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             del self.schedulers[scheduler_uuid].actions[action.uuid]
         except KeyError as exp:
             logger.error("KeyError del scheduler action: %s / %s - %s",
-                         my_scheduler, action.uuid, str(exp))
+                         scheduler_uuid, action.uuid, str(exp))
 
         # We tag it as "return wanted", and move it in the wait return queue
         try:
@@ -1018,7 +1018,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             logger.info("Received a new configuration")
 
             # self_conf is our own configuration from the alignak environment
-            self_conf = self.cur_conf['self_conf']
+            # self_conf = self.cur_conf['self_conf']
 
             # Now manage modules
             if not self.have_modules:

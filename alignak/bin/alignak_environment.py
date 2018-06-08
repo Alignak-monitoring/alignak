@@ -253,8 +253,8 @@ class AlignakConfigParser(object):
         try:
             with open(env_file, "w") as out_file:
                 self.config.write(out_file)
-        except Exception as exp:
-            logger.error("Dumping environment file raised an error: %s. ", exp)
+        except Exception as exp:  # pylint: disable=broad-except
+            print("Dumping environment file raised an error: %s. " % exp)
 
     def _search_sections(self, searched_sections=''):
         """

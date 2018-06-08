@@ -126,7 +126,7 @@ class InnerRetention(BaseModule):
 
         # Get data from the retention file
         try:
-            start = time.time()
+            start_time = time.time()
 
             try:
                 logger.info('Loading retention data from: %s', self.retention_file)
@@ -134,8 +134,8 @@ class InnerRetention(BaseModule):
                     response = json.load(fd)
                 logger.info('Loaded')
             except json.JSONDecodeError as exp:  # pragma: no cover, should never happen...
-                logger.warning("Error when loading retention data from: %s", self.retention_file)
-                # logger.exception(exp)
+                logger.warning("Error when loading retention data from %s", self.retention_file)
+                logger.exception(exp)
             else:
                 for host in response:
                     hostname = host['host']
@@ -152,12 +152,12 @@ class InnerRetention(BaseModule):
                 self.statsmgr.counter('retention-load.hosts', len(all_data['hosts']))
                 logger.info('%d services loaded from retention', len(all_data['services']))
                 self.statsmgr.counter('retention-load.services', len(all_data['services']))
-                self.statsmgr.timer('retention-load.time', time.time() - start)
+                self.statsmgr.timer('retention-load.time', time.time() - start_time)
 
                 # Restore the scheduler objects
                 scheduler.restore_retention_data(all_data)
                 logger.info("Retention data loaded in %s seconds", (time.time() - start_time))
-        except Exception as exp:
+        except Exception as exp:  # pylint: disable=broad-except
             logger.warning("Retention load failed: %s", exp)
             logger.exception(exp)
             return False
@@ -197,11 +197,13 @@ class InnerRetention(BaseModule):
             try:
                 logger.info('Saving retention data to: %s', self.retention_file)
                 with open(self.retention_file, "w") as fd:
-                    json.dump(fd, data_to_save['hosts'],
-                              indent=4, separators=(',', ': '), sort_keys=True)
+                    fd.write(json.dumps(data_to_save['hosts'],
+                                        indent=2, separators=(',', ': '), sort_keys=True))
+
                 logger.info('Saved')
-            except Exception as exp:  # pragma: no cover, should never happen...
-                logger.warning("Error when saving retenion data to: %s", self.retention_file)
+            except Exception as exp:  # pylint: disable=broad-except
+                # pragma: no cover, should never happen...
+                logger.warning("Error when saving retention data to %s", self.retention_file)
                 logger.exception(exp)
 
             logger.info('%d hosts saved in retention', len(data_to_save['hosts']))
@@ -211,7 +213,7 @@ class InnerRetention(BaseModule):
             self.statsmgr.timer('retention-save.time', time.time() - start_time)
 
             logger.info("Retention data saved in %s seconds", (time.time() - start_time))
-        except Exception as exp:
+        except Exception as exp:  # pylint: disable=broad-except
             self.enabled = False
             logger.warning("Retention save failed: %s", exp)
             logger.exception(exp)

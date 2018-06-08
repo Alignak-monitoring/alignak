@@ -60,7 +60,6 @@ You can find functions for time management, type management (pythonization),
 macros solving, sorting, parsing, file handling, filters.
 
 """
-import time
 import re
 import json
 import argparse

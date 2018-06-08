@@ -70,7 +70,7 @@ class TestInnerModules(AlignakTest):
         """
         self.cfg_folder = '/tmp/alignak'
         cfg_dir = 'default_many_hosts'
-        hosts_count = 10
+        hosts_count = 2
         realms = ['All']
 
         #  Default shipped configuration preparation

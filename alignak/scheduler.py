@@ -82,7 +82,6 @@ from alignak.macroresolver import MacroResolver
 from alignak.action import ACT_STATUS_SCHEDULED, ACT_STATUS_POLLED, \
     ACT_STATUS_TIMEOUT, ACT_STATUS_ZOMBIE, ACT_STATUS_WAIT_CONSUME, \
     ACT_STATUS_WAIT_DEPEND, ACT_STATUS_WAITING_ME
-from alignak.property import DictProp, ListProp
 from alignak.external_command import ExternalCommand
 from alignak.check import Check
 from alignak.notification import Notification
@@ -93,8 +92,7 @@ from alignak.comment import Comment
 from alignak.util import average_percentile
 from alignak.load import Load
 from alignak.stats import statsmgr
-from alignak.misc.common import DICT_MODATTR
-from alignak.misc.serialization import serialize, unserialize
+from alignak.misc.serialization import unserialize
 from alignak.acknowledge import Acknowledge
 from alignak.log import make_monitoring_log
 

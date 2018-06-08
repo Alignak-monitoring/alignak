@@ -683,28 +683,26 @@ class Item(AlignakObject):
         self.fill_data_brok_from(data, 'check_result')
         return Brok({'type': self.my_type + '_snapshot', 'data': data})
 
-    def dump(self, dump_file=None):  # pragma: no cover, never called
+    def dump(self, dump_file_name=None):  # pragma: no cover, never called
         # pylint: disable=unused-argument
         """
-        Dump properties
-
-        TODO: still useful?
+        Dump Item object properties
 
         :return: dictionary with properties
         :rtype: dict
         """
-        dmp = {}
+        dump = {}
         for prop in self.properties:
             if not hasattr(self, prop):
                 continue
             attr = getattr(self, prop)
             if isinstance(attr, list) and attr and isinstance(attr[0], Item):
-                dmp[prop] = [i.dump() for i in attr]
+                dump[prop] = [i.dump() for i in attr]
             elif isinstance(attr, Item):
-                dmp[prop] = attr.dump()
+                dump[prop] = attr.dump()
             elif attr:
-                dmp[prop] = getattr(self, prop)
-        return dmp
+                dump[prop] = getattr(self, prop)
+        return dump
 
     def _get_name(self):
         """Get the name of the object

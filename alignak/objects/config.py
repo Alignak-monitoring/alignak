@@ -1758,7 +1758,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 logger.debug("- %ss: %s", daemons_list.inner_class.my_type,
                              ','.join([daemon.get_name() for daemon in daemons_list]))
 
-    def fill_default_satellites(self, alignak_launched=False):  # pylint: disable=too-many-branches
+    def fill_default_satellites(self, alignak_launched=False):
+        # pylint: disable=too-many-branches, too-many-locals
         """If a required satellite is missing in the configuration, we create a new satellite
         on localhost with some default values
 
@@ -2857,7 +2858,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             fd.close()
             logger.info('Dumped')
         except (OSError, IndexError) as exp:  # pragma: no cover, should never happen...
-            logger.critical("Error when dumping configuration to %s: %s", path, str(exp))
+            logger.critical("Error when dumping configuration to %s: %s", dump_file_name, str(exp))
 
 
 def lazy():

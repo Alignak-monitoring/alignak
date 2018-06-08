@@ -1104,7 +1104,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             logger.info("Alignak self-launched daemons stop:")
 
             start = time.time()
-            children = True
             for daemon in list(self.my_daemons.values()):
                 # Terminate the daemon and its children process
                 procs = []

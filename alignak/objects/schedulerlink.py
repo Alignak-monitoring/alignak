@@ -86,15 +86,6 @@ class SchedulerLink(SatelliteLink):
             StringProp(default=[]),
     })
 
-    def __init__(self, params=None, parsing=True):
-        """Initialize a SchedulerLink
-
-        It always manage arbiters
-        """
-        super(SchedulerLink, self).__init__(params, parsing)
-        #
-        # self.manage_arbiters = True
-
     def get_override_configuration(self):
         """
         Some parameters can give as 'overridden parameters' like use_timezone

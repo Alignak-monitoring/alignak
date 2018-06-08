@@ -79,9 +79,8 @@ from alignak.action import ACT_STATUS_WAIT_CONSUME, ACT_STATUS_ZOMBIE, \
 from alignak.check import Check
 from alignak.property import (BoolProp, IntegerProp, FloatProp, SetProp,
                               CharProp, StringProp, ListProp, DictProp)
-from alignak.util import to_list_string_of_names, format_t_into_dhms_format, \
-    to_serialized, from_serialized, dict_to_serialized_dict, \
-    from_set_to_list, from_list_to_set
+from alignak.util import format_t_into_dhms_format, to_serialized, from_serialized, \
+    dict_to_serialized_dict, from_set_to_list, from_list_to_set
 from alignak.notification import Notification
 from alignak.macroresolver import MacroResolver
 from alignak.eventhandler import EventHandler
@@ -1323,7 +1322,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             notification.status = ACT_STATUS_ZOMBIE
             del self.notifications_in_progress[notification.uuid]
 
-    def remove_in_progress_notifications(self, master=True, force=False):
+    def remove_in_progress_notifications(self, master=True):
         """Remove all notifications from notifications_in_progress
 
         Preserves some specific notifications (downtime, ...)

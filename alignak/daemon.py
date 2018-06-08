@@ -848,12 +848,12 @@ class Daemon(object):
                 logger.error(message)
                 try:
                     sys.stderr.write(message)
-                except Exception:
+                except Exception:  # pylint: disable=broad-except
                     pass
             logger.error("Sorry, I bail out, exit code: %d", exit_code)
             try:
                 sys.stderr.write("Sorry, I bail out, exit code: %d" % exit_code)
-            except Exception:
+            except Exception:  # pylint: disable=broad-except
                 pass
         else:
             if message:
@@ -1196,7 +1196,7 @@ class Daemon(object):
         try:
             with open(path, "w") as out_file:
                 self.alignak_env.write(out_file)
-        except Exception as exp:
+        except Exception as exp:  # pylint: disable=broad-except
             logger.error("Dumping daemon environment raised an error: %s. ", exp)
 
     def load_modules_manager(self):
