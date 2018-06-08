@@ -7,7 +7,6 @@ python:
 env:
 - TEST_SUITE=unit_tests
 - TEST_SUITE=integration
-- TEST_SUITE=codingstandard
 install:
 - unset PYTHONWARNINGS
 - sudo apt-get install rpm
@@ -16,18 +15,6 @@ install:
 - "./test/setup_test.sh"
 script:
 - pip freeze
-- |
-  if [[ $TEST_SUITE == 'codingstandard' ]]; then
-    # Static code analysis
-    # -- pycodestyle (former pep8)
-    pycodestyle --max-line-length=100 --exclude='*.pyc,carboniface.py' alignak/* || travis_terminate 1;
-    # -- pylint
-    unset PYTHONWARNINGS
-    pylint --rcfile=.pylintrc -r no alignak || travis_terminate 1;
-    export PYTHONWARNINGS=all
-    # -- pep257
-    pep257 --select=D300 alignak || travis_terminate 1;
-  fi
 - |
   if [[ $TEST_SUITE == 'unit_tests' ]]; then
     # Run unit tests and code coverage analysis
@@ -51,19 +38,10 @@ script:
     # Run test suite with py.test running its coverage plugin
     # Dump the 10 slowest tests - do not capture to have some activity in Travis
     # pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
-    pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_launch_arbiter.py || travis_terminate 1;
+    pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_daemons_api.py || travis_terminate 1;
     # Upload coverage results to codecov
     bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
     cd ..
-  fi
-after_success:
-- |
-  if [[ $TEST_SUITE == 'unit_tests' ]]; then
-    # Package Alignak for deb/rpm
-    ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION deb;
-    ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION rpm;
-    # Not yet available
-    # ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION freebsd;
   fi
 notifications:
   webhooks:
@@ -74,19 +52,41 @@ notifications:
     on_start: never
 jobs:
   include:
-    - stage: CS
-      python: 2.7
-    - stage: deploy
-      python: 3.5
-      script: skip
+    - stage: Coding standard
+      script: |
+                # Static code analysis
+                # -- pycodestyle (former pep8)
+                pycodestyle --max-line-length=100 --exclude='*.pyc,carboniface.py' alignak/* || travis_terminate 1;
+                # -- pylint
+                unset PYTHONWARNINGS
+                pylint --rcfile=.pylintrc -r no alignak || travis_terminate 1;
+                export PYTHONWARNINGS=all
+                # -- pep257
+                pep257 --select=D300 alignak || travis_terminate 1;
+    - stage: Pypi
+      python: 3.6
+      script: echo "Deploying to PyPi..."
       deploy:
       - provider: pypi
+        distributions: "sdist bdist_wheel"
         user: alignak
         password:
-          secure: "ka6dbwrBa6d+p/POLiROKraAYT+M2c6CiGB+/b6zL8nCcge1VMsYKtmUrZwXvHzOcYPWiFmI6r5r9TPXBb4vHTIIpIvJ1Ic/MBZi3iQ+0pB+r7Vfzityz68xNPxYNCBts5iBeJ1KTCWtp6PQudKpQlxaZNI9H0PzwybqV7KWut5mkzHoIz+Sc0TvgwTPbI0w3dTvHca8jkwugYce3/oFcBf7QDFjxjsfOmouFOaM5enhgBc0vZ1fnvj2j1VPG64tpbQs5QK7Bb1ZCpsemhRNt08ZRVHd5FK2Gce1ZhKIle+CytPJpg5na9n81ku4s1V7wdSSNDLStdQycL25XI7d669P8JsrVyyi7lwtldafC3/lg49ldoOaovyfR5mBi11E0NO7pRrupTKD/z3qVSMP8+1gkJYFTDx9cBb/wdaqIHQ4yuOcru3PYNb0hlywrqKlzKR65NJj89oBuwu71ux1jkP6Sol4FqRn94jl9GRwX61HyILq3EC95EdtwTm9S9QCUO7wYYHU3TvJ+zLQ2EuPJGXUO78PykBsxreKABV3PTo1wFU+w47UpEZlPetPBusiZDgQcSmmthw8kcb7RntSkWQXZo9XrLmESLkgxekb4RC+LgxyhezwULKjR7F61D423NiruGCHwlim5Mdms+O1lMspbZ2B1f1N1pxvF3y+cB4="
+          secure: "eoCeoyPlvmE1lHVA+1mi7vDXvabAttW2PE1gyEHBt4KxoiV8rutM+Ka2H6OFjJNNwk2c0XDwdpNXuM94rl8Cg2gsF7SVOcuuaJRzm2f0QIKMld0qXz5h/9H4hiCYYY4A7kmalO0/h63Dha84c7AA/gxdphPg/egMfgU/KnwpSf7Nwhbeiy+Ss2Afs5rOfC1x4A2HScKMe/MpSSnizZC/0WpRI8llZBupwb1sGVD9yclz6rzxs5it6ePgBYYpLxgV0HUPUc9efa3fNVrPme3lrXJqG9xAP152Zoh95jOaLKn6BBwf63CHt2NloKfeqs313T4Z8E7AKMcA2+GUlFlK8mD6vVl4NcVqpCb8noyDUiWb3mH4XGYkvWlWkKhSsqqGR/HkO2YjrRI+4EWt+nUVEva2ydPpKblv0ycg7su06X3nN35+OjacbHyNIBKKC/HAYMJjC/7/maCKgGRHJxoJdCsC43hdhZjjDIlpstndo6NgE9Nl4HJ+rB2sqHJXOUFwMMEvVpcGPPfj8YBVZMR9OG9EJVUsijKpq+/8KIxsyOfXXbmIEEMn7Ct9pSa4oSeo4N6VzPWggpZN9q08uolSBETCUo2mHpyVt2d0RjhcEE9kVDo6Liiv9H0EWnGJg9N2IXBQV3794Ngh1HnJNihcBSqIRC020yQkp1yDZsof34I="
         on:
           branch: develop
           tags: true
+    - stage: Bintray
+      python: 2.7
+      python: 3.6
+      script: |
+                echo "Deploying to BinTray packages...";
+                echo "Branch: $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION";
+                # Package Alignak for deb/rpm
+                ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION deb;
+                ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION rpm;
+                # Not yet available
+                # ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION freebsd;
+      deploy:
       - provider: bintray
         skip_cleanup: true
         file: .bintray-deb.json

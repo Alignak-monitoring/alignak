@@ -871,6 +871,9 @@ class TestDaemonsApi(AlignakTest):
         raw_data = req.get("http://localhost:7768/get_host?host_name=localhost", verify=False)
         assert raw_data.status_code == 200
         print("get_host, got (raw): %s" % raw_data)
+        print("get_host, got (json): %s" % raw_data.json())
+        from pprint import pprint
+        pprint(raw_data.json())
         host = unserialize(raw_data.json(), True)
         print("Got: %s" % host)
         assert host.__class__ == Host
