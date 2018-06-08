@@ -74,7 +74,7 @@ notifications:
 deploy:
   - provider: pypi
     user: alignak
-    key:
+    password:
       secure: "JF2Ebj/jY9GZVUc20RooSSsarV0nVEkZYrZ6IYGTtLs0QzxmB43FhNHxMF0SoZYqcSkDzThv6D2g6CLC1XN0W//W/82fRzmVfpecoQA4qJnAvYkuNqA15BM/GoRCkYFDWLIIIBxgemFqA19ZFWNA1d4M10NAGmqfnIkEJEHbtXb9xgFieWzkT+T5gjpfx6Sodlz5oKsgKaYe7w6e8UBJmv7pTlgMm3dZfmzqUHX9UP7pIqmegqlRkBFEzaHxqRTcf2SH6womxkoVJT5SSkFBaz/o6clgWZkLQ8NnQmBNUxqt59Jmkm2qs9xPMDewdc63PIzT9UBiQJosjM7s8fEjbNFNOOVDIkHf0BDq5lpA/bkun7xxvtpA9syltJG/D1MSgcegM+6Ej3clKCg6souCeLidqJ1zXRztVHlpC9zJC07AQGXR9i+XOnrfLUHZEcqcvdNrJ0Ys7VLrekulm5DGzd3Ax2xb0U0yttvos5/zD3kURzk8KxLKZWqsUEOXZ93oVOXlFNtFJ5/oQf61vN9D94H8JOMsOsbaHP/MkPkK7wU6SM3aHiXZntlhSR5pQHg5txPK/NuZRq6IWyp0skrQ8WcAIUkPzTliDjceo0rqLr69FTt//tU+PtXArHNAUgPVS1by+WJiLXf6ly3GvDLvaelpl8ZQNXY/HMqpgVN2FYw="
     on:
       branch: develop
