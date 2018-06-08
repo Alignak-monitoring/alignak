@@ -532,8 +532,7 @@ class Timeperiod(Item):
         return original_t
 
     def is_correct(self):
-        """
-        Check if this object configuration is correct ::
+        """Check if this object configuration is correct ::
 
         * Check if dateranges of timeperiod are valid
         * Call our parent class is_correct checker
@@ -546,14 +545,13 @@ class Timeperiod(Item):
         for daterange in self.dateranges:
             good = daterange.is_correct()
             if not good:
-                msg = "[timeperiod::%s] invalid daterange '%s'" % (self.get_name(), daterange)
-                self.add_error(msg)
+                self.add_error("[timeperiod::%s] invalid daterange '%s'"
+                               % (self.get_name(), daterange))
             state &= good
 
         # Warn about non correct entries
         for entry in self.invalid_entries:
-            msg = "[timeperiod::%s] invalid entry '%s'" % (self.get_name(), entry)
-            self.add_error(msg)
+            self.add_error("[timeperiod::%s] invalid entry '%s'" % (self.get_name(), entry))
 
         return super(Timeperiod, self).is_correct() and state
 

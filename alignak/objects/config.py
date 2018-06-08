@@ -60,11 +60,16 @@
 #  You should have received a copy of the GNU Affero General Public License
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
-""" Config is the class to read, load and manipulate the user
- configuration. It read a main cfg (alignak.cfg) and get all informations
- from it. It create objects, make link between them, clean them, and cut
- them into independent parts. The main user of this is Arbiter, but schedulers
- use it too (but far less)"""
+""" Config is the class that reads, loads and manipulates the main Alignak monitored objects
+ configuration. It reads the Nagios legacy configuration files (cfg files ) and gets all
+ informations from these files.
+
+ It creates the monitored objects (eg. hosts, contacts, ...), creates links between them,
+ check them, clean them, and cut them into independent parts.
+
+ The main user of this Config class is the Arbiter daemon when it loads the configuration and
+ dispatches to the other daemons.
+"""
 # pylint: disable=C0302
 import re
 import string
@@ -131,13 +136,15 @@ NOT_MANAGED = (u'This Nagios legacy parameter is not managed by Alignak. Ignorin
 
 
 class Config(Item):  # pylint: disable=R0904,R0902
-    """Config is the class to read, load and manipulate the user
- configuration. It read a main cfg (alignak.cfg) and get all information
- from it. It create objects, make link between them, clean them, and cut
- them into independent parts. The main user of this is Arbiter, but schedulers
- use it too (but far less)
+    """Config is the class that reads, loads and manipulates the main Alignak monitored objects
+ configuration. It reads the Nagios legacy configuration files (cfg files ) and gets all
+ informations from these files.
 
-    """
+ It creates the monitored objects (eg. hosts, contacts, ...), creates links between them,
+ check them, clean them, and cut them into independent parts.
+
+ The main user of this Config class is the Arbiter daemon when it loads the configuration and
+ dispatches to the other daemons."""
     # Next value used for auto generated instance_id
     _next_id = 1
 
@@ -159,6 +166,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
     # All the properties with 'full_status' in the fill_brok will be include in the
     # 'program_status' and 'update_program_status' broks.
     # ---
+    """Configuration properties:
+    """
     properties = {
         # -----
         # Included in the program status brok raised for the scheduler live state
@@ -1031,7 +1040,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 logger.info("- opening '%s' configuration file", cfg_file)
             try:
                 # Open in Universal way for Windows, Mac, Linux-based systems
-                file_d = open(cfg_file, 'rU')
+                file_d = open(cfg_file, 'r')
                 buf = file_d.readlines()
                 file_d.close()
             except IOError as exp:
@@ -1070,7 +1079,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
                         try:
                             # Read the file content to the buffer
-                            file_d = open(cfg_file_name, 'rU')
+                            file_d = open(cfg_file_name, 'r')
 
                             # File header
                             res.write(u"\n")
@@ -1118,7 +1127,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
                                 try:
                                     # Read the file content to the buffer
-                                    file_d = open(cfg_file_name, 'rU')
+                                    file_d = open(cfg_file_name, 'r')
 
                                     # File header
                                     res.write(u"\n")

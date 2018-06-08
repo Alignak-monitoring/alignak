@@ -72,38 +72,45 @@ notifications:
     on_success: change
     on_failure: always
     on_start: never
-deploy:
-  - provider: pypi
-    user: alignak
-    password:
-      secure: "JF2Ebj/jY9GZVUc20RooSSsarV0nVEkZYrZ6IYGTtLs0QzxmB43FhNHxMF0SoZYqcSkDzThv6D2g6CLC1XN0W//W/82fRzmVfpecoQA4qJnAvYkuNqA15BM/GoRCkYFDWLIIIBxgemFqA19ZFWNA1d4M10NAGmqfnIkEJEHbtXb9xgFieWzkT+T5gjpfx6Sodlz5oKsgKaYe7w6e8UBJmv7pTlgMm3dZfmzqUHX9UP7pIqmegqlRkBFEzaHxqRTcf2SH6womxkoVJT5SSkFBaz/o6clgWZkLQ8NnQmBNUxqt59Jmkm2qs9xPMDewdc63PIzT9UBiQJosjM7s8fEjbNFNOOVDIkHf0BDq5lpA/bkun7xxvtpA9syltJG/D1MSgcegM+6Ej3clKCg6souCeLidqJ1zXRztVHlpC9zJC07AQGXR9i+XOnrfLUHZEcqcvdNrJ0Ys7VLrekulm5DGzd3Ax2xb0U0yttvos5/zD3kURzk8KxLKZWqsUEOXZ93oVOXlFNtFJ5/oQf61vN9D94H8JOMsOsbaHP/MkPkK7wU6SM3aHiXZntlhSR5pQHg5txPK/NuZRq6IWyp0skrQ8WcAIUkPzTliDjceo0rqLr69FTt//tU+PtXArHNAUgPVS1by+WJiLXf6ly3GvDLvaelpl8ZQNXY/HMqpgVN2FYw="
-    on:
-      branch: develop
-      tags: true
-  - provider: bintray
-    skip_cleanup: true
-    file: .bintray-deb.json
-    user: mohierf
-    key:
-      secure: "xcvRMpwT+Gk0F+EpelwxSxixkrgb+XLS2310zj3j7+eQ2ahPD20yKX7sZsvIJs3DQjUtJwTemvgW6Yi7TFFJyYK9UA3csPbSojTonXUULjxLP8J3tmaioC2l0L3g+rzeVRbGdsBg5MBMgiz1xdheA3dlaoadL7UXIKx+ZiIjSIkcQJNZWUAPtgsnHGpNx94YGDv4zKp9sBm1Y34QPY8sRXRdlYfmBtp1k1wXVqiVk0K81c6PYoL7bGg9tywfZCGAlhzW0F4Dq9GsB+J1aKgT/QnNVS3HKID8W3wXmlIqGfiidECKjRgZuKcC7ayinuGTOhlitPRtlsAs55Suq7EbAUu4SF8QKV8q5wjtdVxln3zxLrJTAAG2rHQYI4JICjUtPocajZd5661IdHu/UnhqKKWcORK00zwTiQqly9Px/FN0C1qCmnz+1nZOECAQpUxUUXISgKQhYHFKCQK3V4DMryPzPsDuvq4aAIrjjzedca1QwC8FvQgRE13TyLm9wtgsCCZ2TM5moigY37Ea1Gw0leDnAnx6sN5ZERLRE59VxWjhO5O617+kuvxlOcAwkiRYtUPuCVlv00TySqKxtjlY9Rkpc1YLqiLiYJQYCm7ubcFMje9Cy6c8xzS0kTO7HBdPbfJ9ODEKHpOZLYD39iOUk/T60IWMIvsM1RhLTVr7z5Y="
-    on:
-      branch: develop
-  - provider: bintray
-    skip_cleanup: true
-    file: .bintray-deb.json
-    user: mohierf
-    key:
-      secure: "xcvRMpwT+Gk0F+EpelwxSxixkrgb+XLS2310zj3j7+eQ2ahPD20yKX7sZsvIJs3DQjUtJwTemvgW6Yi7TFFJyYK9UA3csPbSojTonXUULjxLP8J3tmaioC2l0L3g+rzeVRbGdsBg5MBMgiz1xdheA3dlaoadL7UXIKx+ZiIjSIkcQJNZWUAPtgsnHGpNx94YGDv4zKp9sBm1Y34QPY8sRXRdlYfmBtp1k1wXVqiVk0K81c6PYoL7bGg9tywfZCGAlhzW0F4Dq9GsB+J1aKgT/QnNVS3HKID8W3wXmlIqGfiidECKjRgZuKcC7ayinuGTOhlitPRtlsAs55Suq7EbAUu4SF8QKV8q5wjtdVxln3zxLrJTAAG2rHQYI4JICjUtPocajZd5661IdHu/UnhqKKWcORK00zwTiQqly9Px/FN0C1qCmnz+1nZOECAQpUxUUXISgKQhYHFKCQK3V4DMryPzPsDuvq4aAIrjjzedca1QwC8FvQgRE13TyLm9wtgsCCZ2TM5moigY37Ea1Gw0leDnAnx6sN5ZERLRE59VxWjhO5O617+kuvxlOcAwkiRYtUPuCVlv00TySqKxtjlY9Rkpc1YLqiLiYJQYCm7ubcFMje9Cy6c8xzS0kTO7HBdPbfJ9ODEKHpOZLYD39iOUk/T60IWMIvsM1RhLTVr7z5Y="
-    on:
-      tags: true
-  - provider: bintray
-    skip_cleanup: true
-    file: .bintray-rpm.json
-    user: mohierf
-    key:
-      secure: "xcvRMpwT+Gk0F+EpelwxSxixkrgb+XLS2310zj3j7+eQ2ahPD20yKX7sZsvIJs3DQjUtJwTemvgW6Yi7TFFJyYK9UA3csPbSojTonXUULjxLP8J3tmaioC2l0L3g+rzeVRbGdsBg5MBMgiz1xdheA3dlaoadL7UXIKx+ZiIjSIkcQJNZWUAPtgsnHGpNx94YGDv4zKp9sBm1Y34QPY8sRXRdlYfmBtp1k1wXVqiVk0K81c6PYoL7bGg9tywfZCGAlhzW0F4Dq9GsB+J1aKgT/QnNVS3HKID8W3wXmlIqGfiidECKjRgZuKcC7ayinuGTOhlitPRtlsAs55Suq7EbAUu4SF8QKV8q5wjtdVxln3zxLrJTAAG2rHQYI4JICjUtPocajZd5661IdHu/UnhqKKWcORK00zwTiQqly9Px/FN0C1qCmnz+1nZOECAQpUxUUXISgKQhYHFKCQK3V4DMryPzPsDuvq4aAIrjjzedca1QwC8FvQgRE13TyLm9wtgsCCZ2TM5moigY37Ea1Gw0leDnAnx6sN5ZERLRE59VxWjhO5O617+kuvxlOcAwkiRYtUPuCVlv00TySqKxtjlY9Rkpc1YLqiLiYJQYCm7ubcFMje9Cy6c8xzS0kTO7HBdPbfJ9ODEKHpOZLYD39iOUk/T60IWMIvsM1RhLTVr7z5Y="
-    on:
-      tags: true
+jobs:
+  include:
+    - stage: CS
+      python: 2.7
+    - stage: deploy
+      python: 3.5
+      script: skip
+      deploy:
+      - provider: pypi
+        user: alignak
+        password:
+          secure: "ka6dbwrBa6d+p/POLiROKraAYT+M2c6CiGB+/b6zL8nCcge1VMsYKtmUrZwXvHzOcYPWiFmI6r5r9TPXBb4vHTIIpIvJ1Ic/MBZi3iQ+0pB+r7Vfzityz68xNPxYNCBts5iBeJ1KTCWtp6PQudKpQlxaZNI9H0PzwybqV7KWut5mkzHoIz+Sc0TvgwTPbI0w3dTvHca8jkwugYce3/oFcBf7QDFjxjsfOmouFOaM5enhgBc0vZ1fnvj2j1VPG64tpbQs5QK7Bb1ZCpsemhRNt08ZRVHd5FK2Gce1ZhKIle+CytPJpg5na9n81ku4s1V7wdSSNDLStdQycL25XI7d669P8JsrVyyi7lwtldafC3/lg49ldoOaovyfR5mBi11E0NO7pRrupTKD/z3qVSMP8+1gkJYFTDx9cBb/wdaqIHQ4yuOcru3PYNb0hlywrqKlzKR65NJj89oBuwu71ux1jkP6Sol4FqRn94jl9GRwX61HyILq3EC95EdtwTm9S9QCUO7wYYHU3TvJ+zLQ2EuPJGXUO78PykBsxreKABV3PTo1wFU+w47UpEZlPetPBusiZDgQcSmmthw8kcb7RntSkWQXZo9XrLmESLkgxekb4RC+LgxyhezwULKjR7F61D423NiruGCHwlim5Mdms+O1lMspbZ2B1f1N1pxvF3y+cB4="
+        on:
+          branch: develop
+          tags: true
+      - provider: bintray
+        skip_cleanup: true
+        file: .bintray-deb.json
+        user: mohierf
+        key:
+          secure: "xcvRMpwT+Gk0F+EpelwxSxixkrgb+XLS2310zj3j7+eQ2ahPD20yKX7sZsvIJs3DQjUtJwTemvgW6Yi7TFFJyYK9UA3csPbSojTonXUULjxLP8J3tmaioC2l0L3g+rzeVRbGdsBg5MBMgiz1xdheA3dlaoadL7UXIKx+ZiIjSIkcQJNZWUAPtgsnHGpNx94YGDv4zKp9sBm1Y34QPY8sRXRdlYfmBtp1k1wXVqiVk0K81c6PYoL7bGg9tywfZCGAlhzW0F4Dq9GsB+J1aKgT/QnNVS3HKID8W3wXmlIqGfiidECKjRgZuKcC7ayinuGTOhlitPRtlsAs55Suq7EbAUu4SF8QKV8q5wjtdVxln3zxLrJTAAG2rHQYI4JICjUtPocajZd5661IdHu/UnhqKKWcORK00zwTiQqly9Px/FN0C1qCmnz+1nZOECAQpUxUUXISgKQhYHFKCQK3V4DMryPzPsDuvq4aAIrjjzedca1QwC8FvQgRE13TyLm9wtgsCCZ2TM5moigY37Ea1Gw0leDnAnx6sN5ZERLRE59VxWjhO5O617+kuvxlOcAwkiRYtUPuCVlv00TySqKxtjlY9Rkpc1YLqiLiYJQYCm7ubcFMje9Cy6c8xzS0kTO7HBdPbfJ9ODEKHpOZLYD39iOUk/T60IWMIvsM1RhLTVr7z5Y="
+        on:
+          branch: develop
+      - provider: bintray
+        skip_cleanup: true
+        file: .bintray-deb.json
+        user: mohierf
+        key:
+          secure: "xcvRMpwT+Gk0F+EpelwxSxixkrgb+XLS2310zj3j7+eQ2ahPD20yKX7sZsvIJs3DQjUtJwTemvgW6Yi7TFFJyYK9UA3csPbSojTonXUULjxLP8J3tmaioC2l0L3g+rzeVRbGdsBg5MBMgiz1xdheA3dlaoadL7UXIKx+ZiIjSIkcQJNZWUAPtgsnHGpNx94YGDv4zKp9sBm1Y34QPY8sRXRdlYfmBtp1k1wXVqiVk0K81c6PYoL7bGg9tywfZCGAlhzW0F4Dq9GsB+J1aKgT/QnNVS3HKID8W3wXmlIqGfiidECKjRgZuKcC7ayinuGTOhlitPRtlsAs55Suq7EbAUu4SF8QKV8q5wjtdVxln3zxLrJTAAG2rHQYI4JICjUtPocajZd5661IdHu/UnhqKKWcORK00zwTiQqly9Px/FN0C1qCmnz+1nZOECAQpUxUUXISgKQhYHFKCQK3V4DMryPzPsDuvq4aAIrjjzedca1QwC8FvQgRE13TyLm9wtgsCCZ2TM5moigY37Ea1Gw0leDnAnx6sN5ZERLRE59VxWjhO5O617+kuvxlOcAwkiRYtUPuCVlv00TySqKxtjlY9Rkpc1YLqiLiYJQYCm7ubcFMje9Cy6c8xzS0kTO7HBdPbfJ9ODEKHpOZLYD39iOUk/T60IWMIvsM1RhLTVr7z5Y="
+        on:
+          tags: true
+      - provider: bintray
+        skip_cleanup: true
+        file: .bintray-rpm.json
+        user: mohierf
+        key:
+          secure: "xcvRMpwT+Gk0F+EpelwxSxixkrgb+XLS2310zj3j7+eQ2ahPD20yKX7sZsvIJs3DQjUtJwTemvgW6Yi7TFFJyYK9UA3csPbSojTonXUULjxLP8J3tmaioC2l0L3g+rzeVRbGdsBg5MBMgiz1xdheA3dlaoadL7UXIKx+ZiIjSIkcQJNZWUAPtgsnHGpNx94YGDv4zKp9sBm1Y34QPY8sRXRdlYfmBtp1k1wXVqiVk0K81c6PYoL7bGg9tywfZCGAlhzW0F4Dq9GsB+J1aKgT/QnNVS3HKID8W3wXmlIqGfiidECKjRgZuKcC7ayinuGTOhlitPRtlsAs55Suq7EbAUu4SF8QKV8q5wjtdVxln3zxLrJTAAG2rHQYI4JICjUtPocajZd5661IdHu/UnhqKKWcORK00zwTiQqly9Px/FN0C1qCmnz+1nZOECAQpUxUUXISgKQhYHFKCQK3V4DMryPzPsDuvq4aAIrjjzedca1QwC8FvQgRE13TyLm9wtgsCCZ2TM5moigY37Ea1Gw0leDnAnx6sN5ZERLRE59VxWjhO5O617+kuvxlOcAwkiRYtUPuCVlv00TySqKxtjlY9Rkpc1YLqiLiYJQYCm7ubcFMje9Cy6c8xzS0kTO7HBdPbfJ9ODEKHpOZLYD39iOUk/T60IWMIvsM1RhLTVr7z5Y="
+        on:
+          tags: true
 # Not yet available
 #  - provider: bintray
 #    skip_cleanup: true
