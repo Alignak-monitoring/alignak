@@ -50,19 +50,10 @@ script:
     # Run test suite with py.test running its coverage plugin
     # Dump the 10 slowest tests - do not capture to have some activity in Travis
     # pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
-    pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_launch_arbiter.py || travis_terminate 1;
+    pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_daemons_api.py || travis_terminate 1;
     # Upload coverage results to codecov
     bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
     cd ..
-  fi
-after_success:
-- |
-  if [[ $TEST_SUITE == 'unit_tests' ]]; then
-    # Package Alignak for deb/rpm
-    ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION deb;
-    ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION rpm;
-    # Not yet available
-    # ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION freebsd;
   fi
 notifications:
   webhooks:
@@ -74,8 +65,6 @@ notifications:
 jobs:
   include:
     - stage: Coding standard
-      python: 2.7
-      python: 3.6
       script: |
                 # Static code analysis
                 # -- pycodestyle (former pep8)
@@ -86,14 +75,20 @@ jobs:
                 export PYTHONWARNINGS=all
                 # -- pep257
                 pep257 --select=D300 alignak || travis_terminate 1;
-    - stage: deploy
-      python: 3.5
-      script: skip
+    - stage: pypi
+      python: 3.6
+      script: |
+                # Package Alignak for deb/rpm
+                ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION deb;
+                ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION rpm;
+                # Not yet available
+                # ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION freebsd;
       deploy:
       - provider: pypi
+        distributions: "sdist bdist_wheel"
         user: alignak
         password:
-          secure: "ka6dbwrBa6d+p/POLiROKraAYT+M2c6CiGB+/b6zL8nCcge1VMsYKtmUrZwXvHzOcYPWiFmI6r5r9TPXBb4vHTIIpIvJ1Ic/MBZi3iQ+0pB+r7Vfzityz68xNPxYNCBts5iBeJ1KTCWtp6PQudKpQlxaZNI9H0PzwybqV7KWut5mkzHoIz+Sc0TvgwTPbI0w3dTvHca8jkwugYce3/oFcBf7QDFjxjsfOmouFOaM5enhgBc0vZ1fnvj2j1VPG64tpbQs5QK7Bb1ZCpsemhRNt08ZRVHd5FK2Gce1ZhKIle+CytPJpg5na9n81ku4s1V7wdSSNDLStdQycL25XI7d669P8JsrVyyi7lwtldafC3/lg49ldoOaovyfR5mBi11E0NO7pRrupTKD/z3qVSMP8+1gkJYFTDx9cBb/wdaqIHQ4yuOcru3PYNb0hlywrqKlzKR65NJj89oBuwu71ux1jkP6Sol4FqRn94jl9GRwX61HyILq3EC95EdtwTm9S9QCUO7wYYHU3TvJ+zLQ2EuPJGXUO78PykBsxreKABV3PTo1wFU+w47UpEZlPetPBusiZDgQcSmmthw8kcb7RntSkWQXZo9XrLmESLkgxekb4RC+LgxyhezwULKjR7F61D423NiruGCHwlim5Mdms+O1lMspbZ2B1f1N1pxvF3y+cB4="
+          secure: "loo2jU6+V9QOG81ARMtgSpgwGROqWwhpQMbYr/BitddaSbyLftUK1Wmpuzu1nN69/T4MMVqTNU74gYihy+iqVDeD1Mvd4kHWfsApG8OBOTWcymIEusLvLpCD3yhE7uAeJ1AwwsqnIOGt9XzuU8Ty1CqHgtjrZp9uWvhIoC7QfTS+Tzbk3tnmiprFU2+TZ+AdVx1BHrHudAsgqK28sXpFTLtCf/2NTf4SIhzjQqZ+8jSeRL9gEq+l7nOlt4EEn4IFvRiUSS00/Eh46EAurRxmWuiRYx6ssHptgla2QATm75Elcr4r5wN6MKigiRpklrvGd1NHe4ISIaI3Y1ZilPjDuvmkWnu6+rvoH1NDZaAk0g8hKlfDHVAgH+1Xyax68fg8Q5HSyn9ReHsn5zhdDRsJ3icWuyhPpYAQ/DtU81PfNLuIPnRNOZryZTAWuJS0YQp2BzXRW+8j3Hc5n7BsNqDKZNtU7/YjayDciQylzip3JZY/EZwNjYSLWSsUDxezR871mlyP5QrU8gN1PKYt6S5YivPNPeGQFYFoS+MTKGl/cxhvbY398ZV7pNDi/D2G/SYdyyc6KDjltvmjxfWfe8OL81k7kD5QtcQ/223UDW34SAmrUUeyquNK9TX4KlPLLXFFZFDO6iygF+qto3U6Zd8raD9T/5LEQwdeaIszCgGQOsE="
         on:
           branch: develop
           tags: true
