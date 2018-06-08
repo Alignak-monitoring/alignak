@@ -521,7 +521,7 @@ class TestHost(PropertiesTester, AlignakTest):
         'address',
         'check_period',
         'notification_period',
-        'state_id_before_impact'
+        # 'state_id_before_impact'
     ]
 
     properties = dict([
@@ -834,7 +834,7 @@ class TestService(PropertiesTester, AlignakTest):
         'check_command',
         'check_period',
         'notification_period',
-        'state_id_before_impact'
+        # 'state_id_before_impact'
     ]
 
     properties = dict([

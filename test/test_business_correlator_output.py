@@ -297,7 +297,3 @@ class TestBusinesscorrelOutput(AlignakTest):
         assert 0 == svc_cor.business_rule.get_state(self._sched.hosts,
                                                             self._sched.services)
         assert "OK all checks were successful." == svc_cor.output
-
-
-if __name__ == '__main__':
-    AlignakTest.main()

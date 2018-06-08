@@ -139,7 +139,3 @@ class TestPropertyOverrideConfigBroken(AlignakTest):
             "Error: trying to override 'host_name', a forbidden property for service 'proc proc2'")
         self.assert_any_cfg_log_match(
             "hosts configuration is incorrect!")
-
-
-if __name__ == '__main__':
-    AlignakTest.main()

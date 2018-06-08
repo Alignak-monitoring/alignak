@@ -193,7 +193,3 @@ class TestComplexHostgroups(AlignakTest):
         assert self.service_defined_only_on(
             'WINDOWS_AND_linux_OR_web_PAR_AND_prod0_AND_NOT_test_linux_file_prod_0', [
                 test_win_web_prod_0])
-
-
-if __name__ == '__main__':
-    AlignakTest.main()

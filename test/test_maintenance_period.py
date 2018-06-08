@@ -113,6 +113,3 @@ class TestMaintenancePeriod(AlignakTest):
         assert downtime.end_time == timestamp_end
         assert downtime.comment == 'This downtime was automatically scheduled by Alignak because ' \
                                    'of a maintenance period.'
-
-if __name__ == '__main__':
-    AlignakTest.main()

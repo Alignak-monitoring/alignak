@@ -193,6 +193,3 @@ class TestInheritanceAndPlus(AlignakTest):
         # variables are always stored in upper case
         assert '_CUSTOM_123' in service.customs
 
-
-if __name__ == '__main__':
-    AlignakTest.main()
