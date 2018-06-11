@@ -63,23 +63,38 @@ jobs:
                 export PYTHONWARNINGS=all
                 # -- pep257
                 pep257 --select=D300 alignak || travis_terminate 1;
-    - stage: pypi
+    - stage: GitHub Release
+      script: echo "Deploying to GitHub releases ..."
+      deploy:
+        provider: releases
+        api_key: $GITHUB_OAUTH_TOKEN
+        skip_cleanup: true
+        on:
+          tags: true
+    - stage: Pypi
+      python: 3.6
+      script: echo "Deploying to PyPi..."
+      deploy:
+      - provider: pypi
+        distributions: "sdist bdist_wheel"
+        user: alignak
+        password:
+          secure: "eoCeoyPlvmE1lHVA+1mi7vDXvabAttW2PE1gyEHBt4KxoiV8rutM+Ka2H6OFjJNNwk2c0XDwdpNXuM94rl8Cg2gsF7SVOcuuaJRzm2f0QIKMld0qXz5h/9H4hiCYYY4A7kmalO0/h63Dha84c7AA/gxdphPg/egMfgU/KnwpSf7Nwhbeiy+Ss2Afs5rOfC1x4A2HScKMe/MpSSnizZC/0WpRI8llZBupwb1sGVD9yclz6rzxs5it6ePgBYYpLxgV0HUPUc9efa3fNVrPme3lrXJqG9xAP152Zoh95jOaLKn6BBwf63CHt2NloKfeqs313T4Z8E7AKMcA2+GUlFlK8mD6vVl4NcVqpCb8noyDUiWb3mH4XGYkvWlWkKhSsqqGR/HkO2YjrRI+4EWt+nUVEva2ydPpKblv0ycg7su06X3nN35+OjacbHyNIBKKC/HAYMJjC/7/maCKgGRHJxoJdCsC43hdhZjjDIlpstndo6NgE9Nl4HJ+rB2sqHJXOUFwMMEvVpcGPPfj8YBVZMR9OG9EJVUsijKpq+/8KIxsyOfXXbmIEEMn7Ct9pSa4oSeo4N6VzPWggpZN9q08uolSBETCUo2mHpyVt2d0RjhcEE9kVDo6Liiv9H0EWnGJg9N2IXBQV3794Ngh1HnJNihcBSqIRC020yQkp1yDZsof34I="
+        on:
+          branch: develop
+          tags: true
+    - stage: Bintray
+      python: 2.7
       python: 3.6
       script: |
+                echo "Deploying to BinTray packages...";
+                echo "Branch: $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION";
                 # Package Alignak for deb/rpm
                 ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION deb;
                 ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION rpm;
                 # Not yet available
                 # ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION freebsd;
       deploy:
-      - provider: pypi
-        distributions: "sdist bdist_wheel"
-        user: alignak
-        password:
-          secure: "ts7AMZZZMUWlnG9nRGKUcJYLG98QpnXoYw5LXYG1TrNBx7LeWJwwNM6of59t48TbAyLAkWfuOOcyqQjjBwzLObo6kh1WVrrOhDtjpnEqrcWIqlHEKlPqwuEJpk6qlxzsSDCIeRPAfvicyK5kyHDQ7Jm66PDfufU97yRCvchxKc1fPk8amzdJ1FoNbzipyrxaSWvh4nI51gnmnsIgqbRL+z7l+HD5uKELS+MD7x4qr6N9rFBfSiHU7VJPp178s8qXGS31/0yNUVblEnhDTw0p5D871S1VDHcOmcJcqJ01hIsW99G58ddS8pfj63O9i7vxF+9Jp7phneNZwBIwGtorEvILH4plYwpG3YNOtoIPYH62Mzo3x8TrxbnlxmSqfvS1123jxTwFHh3cfab1kmMX6wEJmfhWO/brz1G5icXaVdKIcKE76LTKdct8CBqus0ED9/eTal9lmTeibb3iCLF5widCcuxjF0lFOxF7/KH07Y+d5FCBIFvic2usHFLojrcc2eSrwbqwxpt26A9IpyWu/E8iiGQGeKUmSmc9v36QvimuwN/EN0VyeG3dho/TAWfW/BLU4dlaHmOuJByiFSsA/ZiCpgkblwf1rkeB8/l6iIVD/j/G+7qU8FsMPggmvgD77grIE4LLQYRJu/jtAPzmhWODiZ+uWqkJncNbFHXjPS0="
-        on:
-          branch: develop
-          tags: true
       - provider: bintray
         skip_cleanup: true
         file: .bintray-deb.json
