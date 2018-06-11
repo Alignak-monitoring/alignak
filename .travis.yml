@@ -63,14 +63,6 @@ jobs:
                 export PYTHONWARNINGS=all
                 # -- pep257
                 pep257 --select=D300 alignak || travis_terminate 1;
-    - stage: GitHub Release
-      script: echo "Deploying to GitHub releases ..."
-      deploy:
-        provider: releases
-        api_key: $GITHUB_OAUTH_TOKEN
-        skip_cleanup: true
-        on:
-          tags: true
     - stage: Pypi
       python: 3.6
       script: echo "Deploying to PyPi..."
