@@ -76,7 +76,7 @@ pkg_url="http://alignak.net"
 pkg_team="Alignak Team (contact@alignak.net)"
 
 version=`python -c "from alignak import __version__;print(__version__)"`
-version_date=`date "+%Y-%m-%d%"`
+version_date=`date "+%Y-%m-%d"`
 
 if [ "${git_branch}" = "master" ]; then
    # Updating deploy script for Alignak stable version
