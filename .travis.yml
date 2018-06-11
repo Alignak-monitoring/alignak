@@ -77,8 +77,9 @@ jobs:
           branch: develop
           tags: true
     - stage: Bintray
-      python: 2.7
-      python: 3.6
+      python:
+      - '2.7'
+      - '3.6'
       script: |
                 echo "Deploying to BinTray packages...";
                 echo "Branch: $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION";
