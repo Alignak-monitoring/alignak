@@ -76,7 +76,7 @@ pkg_url="http://alignak.net"
 pkg_team="Alignak Team (contact@alignak.net)"
 
 version=`python -c "from alignak import __version__;print(__version__)"`
-version_date=`date "+%Y-%m-%d%"`
+version_date=`date "+%Y-%m-%d"`
 
 if [ "${git_branch}" = "master" ]; then
    # Updating deploy script for Alignak stable version
@@ -85,7 +85,11 @@ if [ "${git_branch}" = "master" ]; then
    sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray-${output_type}.json
 
    # Stable repo
-   sed -i -e "s/sed_version_repo/alignak-deb-stable/g" .bintray-${output_type}.json
+   if [ "${output_type}" = "deb" ]; then
+      sed -i -e "s/sed_version_repo/alignak-deb-stable/g" .bintray-${output_type}.json
+   else
+      sed -i -e "s/sed_version_repo/alignak-rpm-stable/g" .bintray-${output_type}.json
+   fi
 elif [ "${git_branch}" = "develop" ]; then
    # Updating deploy script for Alignak develop version
    sed -i -e "s|\"sed_version_name\"|\"${version_date}\"|g" .bintray-${output_type}.json
@@ -93,7 +97,11 @@ elif [ "${git_branch}" = "develop" ]; then
    sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray-${output_type}.json
 
    # Testing repo
-   sed -i -e "s/sed_version_repo/alignak-deb-testing/g" .bintray-${output_type}.json
+   if [ "${output_type}" = "deb" ]; then
+      sed -i -e "s/sed_version_repo/alignak-deb-testing/g" .bintray-${output_type}.json
+   else
+      sed -i -e "s/sed_version_repo/alignak-rpm-testing/g" .bintray-${output_type}.json
+   fi
 
    # Version
    version="${version}-dev"
@@ -104,7 +112,11 @@ else
    sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray-${output_type}.json
 
    # Testing repo
-   sed -i -e "s/sed_version_repo/alignak-deb-testing/g" .bintray-${output_type}.json
+   if [ "${output_type}" = "deb" ]; then
+      sed -i -e "s/sed_version_repo/alignak-deb-testing/g" .bintray-${output_type}.json
+   else
+      sed -i -e "s/sed_version_repo/alignak-rpm-testing/g" .bintray-${output_type}.json
+   fi
 
    # Version
    version="${version}-${git_branch}"

@@ -385,6 +385,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             set_log_level(logging.INFO if not self.debug else logging.DEBUG)
             logger.info("-----")
             logger.info("Arbiter is in configuration check mode")
+            logger.info("Arbiter log level got increased to a minimum of INFO")
             logger.info("-----")
 
         # Maybe we do not have environment file

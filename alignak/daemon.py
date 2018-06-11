@@ -543,9 +543,9 @@ class Daemon(object):
             self.is_daemon = BoolProp().pythonize(kwargs['is_daemon'])
         if 'do_replace' in kwargs and kwargs['do_replace']:
             self.do_replace = BoolProp().pythonize(kwargs['do_replace'])
-        if 'debug' in kwargs:
+        if 'debug' in kwargs and kwargs['debug']:
             self.debug = BoolProp().pythonize('1')
-        if 'verbose' in kwargs:
+        if 'verbose' in kwargs and kwargs['verbose']:
             self.verbose = BoolProp().pythonize('1')
 
         if 'host' in kwargs and kwargs['host']:
@@ -589,8 +589,7 @@ class Daemon(object):
                                                          self.logger_configuration)
             else:
                 self.logger_configuration = os.path.abspath(self.logger_configuration)
-        # print("Daemon '%s' logger configuration file: %s"
-        #       % (self.name, self.logger_configuration))
+        print("Daemon '%s' logger configuration file: %s" % (self.name, self.logger_configuration))
 
         # # Make my paths properties be absolute paths
         # for prop, entry in list(my_properties.items()):
@@ -2148,18 +2147,18 @@ class Daemon(object):
             setup_logger(logger_configuration_file=self.logger_configuration,
                          log_dir=self.logdir, process_name=self.name,
                          log_file=self.log_filename)
-            # print("Here!")
-            # if self.debug:
-            #     # Force the global logger at DEBUG level
-            #     set_log_level('DEBUG')
-            # elif self.verbose:
-            #     # Force the global logger at INFO level
-            #     set_log_level('INFO')
-            #
-            # if self.log_level:
-            #     # Force the global logger at INFO level
-            #     set_log_level(self.log_level)
-            # print("There!")
+            if self.debug:
+                # Force the global logger at DEBUG level
+                set_log_level('DEBUG')
+                logger.info("-----")
+                logger.info("Arbiter log level set to a minimum of DEBUG")
+                logger.info("-----")
+            elif self.verbose:
+                # Force the global logger at INFO level
+                set_log_level('INFO')
+                logger.info("-----")
+                logger.info("Arbiter log level set to a minimum of INFO")
+                logger.info("-----")
         except Exception as exp:  # pylint: disable=broad-except
             print("***** %s - exception when setting-up the logger: %s" % (self.name, exp))
             self.exit_on_exception(exp, message="Logger configuration error!")

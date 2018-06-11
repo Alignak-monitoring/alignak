@@ -141,7 +141,7 @@ class Hostgroup(Itemgroup):
         """
         # First we tag the hg so it will not be explode
         # if a son of it already call it
-        self.already_explode = True
+        self.already_exploded = True
 
         # Now the recursive part
         # rec_tag is set to False every HG we explode
@@ -311,10 +311,9 @@ class Hostgroups(Itemgroups):
         # We do not want a same hostgroup to be exploded again and again
         # so we tag it
         for tmp_hg in list(self.items.values()):
-            tmp_hg.already_explode = False
+            tmp_hg.already_exploded = False
         for hostgroup in list(self.items.values()):
-            if hasattr(hostgroup, 'hostgroup_members') and not \
-                    hostgroup.already_explode:
+            if hasattr(hostgroup, 'hostgroup_members') and not hostgroup.already_exploded:
                 # get_hosts_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
                 for tmp_hg in list(self.items.values()):
@@ -323,6 +322,7 @@ class Hostgroups(Itemgroups):
 
         # We clean the tags
         for tmp_hg in list(self.items.values()):
+            print("HG exploded: %s" % tmp_hg)
             if hasattr(tmp_hg, 'rec_tag'):
                 del tmp_hg.rec_tag
-            del tmp_hg.already_explode
+            del tmp_hg.already_exploded

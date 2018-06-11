@@ -5,8 +5,8 @@ python:
 - '3.5'
 - '3.6'
 env:
-- TEST_SUITE=unit_tests
-- TEST_SUITE=integration
+- TEST_SUITE=test
+- TEST_SUITE=tests_integ
 install:
 - unset PYTHONWARNINGS
 - sudo apt-get install rpm
@@ -16,33 +16,14 @@ install:
 script:
 - pip freeze
 - |
-  if [[ $TEST_SUITE == 'unit_tests' ]]; then
-    # Run unit tests and code coverage analysis
-    cd test
-    # Run test suite with py.test running its coverage plugin
-    # Dump the 10 slowest tests
-    # Do not print log synthesis on test end
-    # Get coverage on tests run
-    echo "Starting tests..."
-    # pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
-    pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_actions.py || travis_terminate 1;
-    # Upload coverage results to codecov
-    bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
-    cd ..
-  fi
-- ''
-- |
-  if [[ $TEST_SUITE == 'integration' ]]; then
-    # Run load tests and code dynamic analysis
-    cd tests_integ
-    # Run test suite with py.test running its coverage plugin
-    # Dump the 10 slowest tests - do not capture to have some activity in Travis
-    # pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
-    pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_daemons_api.py || travis_terminate 1;
-    # Upload coverage results to codecov
-    bash <(curl -s https://codecov.io/bash) -e TEST_SUITE
-    cd ..
-  fi
+  # Run tests suite with code coverage analysis
+  cd $TEST_SUITE
+  echo "Starting tests '$TEST_SUITE' ..."
+  pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
+  # Upload coverage results to codecov
+  bash <(curl -s https://codecov.io/bash) -e $TEST_SUITE
+  cd ..
+after_success:
 notifications:
   webhooks:
     urls:
@@ -63,21 +44,20 @@ jobs:
                 export PYTHONWARNINGS=all
                 # -- pep257
                 pep257 --select=D300 alignak || travis_terminate 1;
-    - stage: Pypi
+    - stage: Pypi deployment
       python: 3.6
       script: echo "Deploying to PyPi..."
       deploy:
       - provider: pypi
         distributions: "sdist bdist_wheel"
+        skip_existing: true
         user: alignak
         password:
           secure: "eoCeoyPlvmE1lHVA+1mi7vDXvabAttW2PE1gyEHBt4KxoiV8rutM+Ka2H6OFjJNNwk2c0XDwdpNXuM94rl8Cg2gsF7SVOcuuaJRzm2f0QIKMld0qXz5h/9H4hiCYYY4A7kmalO0/h63Dha84c7AA/gxdphPg/egMfgU/KnwpSf7Nwhbeiy+Ss2Afs5rOfC1x4A2HScKMe/MpSSnizZC/0WpRI8llZBupwb1sGVD9yclz6rzxs5it6ePgBYYpLxgV0HUPUc9efa3fNVrPme3lrXJqG9xAP152Zoh95jOaLKn6BBwf63CHt2NloKfeqs313T4Z8E7AKMcA2+GUlFlK8mD6vVl4NcVqpCb8noyDUiWb3mH4XGYkvWlWkKhSsqqGR/HkO2YjrRI+4EWt+nUVEva2ydPpKblv0ycg7su06X3nN35+OjacbHyNIBKKC/HAYMJjC/7/maCKgGRHJxoJdCsC43hdhZjjDIlpstndo6NgE9Nl4HJ+rB2sqHJXOUFwMMEvVpcGPPfj8YBVZMR9OG9EJVUsijKpq+/8KIxsyOfXXbmIEEMn7Ct9pSa4oSeo4N6VzPWggpZN9q08uolSBETCUo2mHpyVt2d0RjhcEE9kVDo6Liiv9H0EWnGJg9N2IXBQV3794Ngh1HnJNihcBSqIRC020yQkp1yDZsof34I="
         on:
           branch: develop
           tags: true
-    - stage: Bintray
-      python: 2.7
-      python: 3.6
+    - stage: Bintray deployment
       script: |
                 echo "Deploying to BinTray packages...";
                 echo "Branch: $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION";

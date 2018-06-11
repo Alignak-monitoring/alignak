@@ -182,8 +182,8 @@ class AlignakTest(unittest2.TestCase):
             if getattr(handler, '_name', None) == 'unit_tests':
                 self.former_log_level = handler.level
                 handler.setLevel(log_level)
-                print("Unit tests handler is set at debug!")
-                # break
+                print("Unit tests handler is set at %s" % log_level)
+                break
 
     def _prepare_hosts_configuration(self, cfg_folder, hosts_count=10,
                                      target_file_name=None, realms=None):
@@ -203,6 +203,7 @@ class AlignakTest(unittest2.TestCase):
 define host {
     use                     test-host
     contact_groups          admins
+    hostgroups              allhosts
     host_name               host-%s-%s
     address                 127.0.0.1
     realm                   %s
@@ -430,7 +431,7 @@ define host {
 
     def _run_alignak_daemons(self, cfg_folder='/tmp/alignak', runtime=30,
                              daemons_list=None, spare_daemons=[], piped=False, run_folder='',
-                             arbiter_only=True, update_configuration=True):
+                             arbiter_only=True, update_configuration=True, verbose=False):
         """ Run the Alignak daemons for a passive configuration
 
         Let the daemons run for the number of seconds defined in the runtime parameter and
@@ -520,6 +521,8 @@ define host {
                 continue
             args = ["../alignak/bin/alignak_%s.py" % name.split('-')[0], "-n", name,
                     "-e", "%s/etc/alignak.ini" % cfg_folder]
+            if verbose:
+                args.append("--debug")
             print("- %s arguments: %s" % (name, args))
             if piped:
                 print("- capturing stdout/stderr" % name)
@@ -633,7 +636,8 @@ define host {
 
         return (nb_errors, nb_warnings)
 
-    def setup_with_file(self, configuration_file, env_file=None, verbose=False, unit_test=True):
+    def setup_with_file(self, configuration_file=None, env_file=None,
+                        verbose=False, unit_test=True):
         """
         Load alignak with the provided configuration and environment files
 
@@ -703,11 +707,20 @@ define host {
         # print("Prepared")
 
         # Initialize the Arbiter with no daemon configuration file
+        assert configuration_file or env_file
+
         current_dir = os.getcwd()
+        configuration_dir = current_dir
         print("Current directory: %s" % current_dir)
-        configuration_dir = os.path.dirname(configuration_file)
-        print("Test configuration directory: %s, file: %s"
-              % (os.path.abspath(configuration_dir), configuration_file))
+        if configuration_file:
+            configuration_dir = os.path.dirname(configuration_file)
+            print("Test configuration directory: %s, file: %s"
+                  % (os.path.abspath(configuration_dir), configuration_file))
+        else:
+            configuration_dir = os.path.dirname(env_file)
+            print("Test configuration directory: %s, file: %s"
+                  % (os.path.abspath(configuration_dir), env_file))
+
         self.env_filename = None
         if env_file is not None:
             self.env_filename = env_file
@@ -744,10 +757,13 @@ define host {
 
         # Using default values that are usually provided by the command line parameters
         args = {
-            'env_file': self.env_filename,
             'alignak_name': 'alignak-test', 'daemon_name': arbiter_name,
-            'legacy_cfg_files': [configuration_file],
+            'env_file': self.env_filename
         }
+        if configuration_file:
+            args.update({
+                'legacy_cfg_files': [configuration_file]
+            })
         self._arbiter = Arbiter(**args)
 
         try:

@@ -359,14 +359,18 @@ class Scheduler(object):  # pylint: disable=R0902
         logger.debug("Macros:")
         for key in sorted(self.pushed_conf.macros):
             logger.debug("- %s: %s", key, getattr(self.pushed_conf.macros, key, []))
-        logger.debug("Objects types:")
+        logger.info("Objects types:")
         for _, _, strclss, _, _ in list(self.pushed_conf.types_creations.values()):
             if strclss in ['arbiters', 'schedulers', 'brokers',
                            'pollers', 'reactionners', 'receivers']:
                 continue
             setattr(self, strclss, getattr(self.pushed_conf, strclss, []))
             # Internal statistics
-            logger.debug("- %d %s", len(getattr(self, strclss)), strclss)
+            logger.info("- %d %s", len(getattr(self, strclss)), strclss)
+            if strclss == 'hostgroups':
+                logger.info("- %s", getattr(self, strclss))
+                for hg in getattr(self, strclss):
+                    logger.info("- %s", hg)
             statsmgr.gauge('configuration.%s' % strclss, len(getattr(self, strclss)))
 
         # We need reversed list for searching in the retention file read

@@ -136,7 +136,7 @@ class Servicegroup(Itemgroup):
         """
         # First we tag the hg so it will not be explode
         # if a son of it already call it
-        self.already_explode = True
+        self.already_exploded = True
 
         # Now the recursive part
         # rec_tag is set to False every HG we explode
@@ -264,11 +264,11 @@ class Servicegroups(Itemgroups):
         # We do not want a same service group to be exploded again and again
         # so we tag it
         for servicegroup in list(self.items.values()):
-            servicegroup.already_explode = False
+            servicegroup.already_exploded = False
 
         for servicegroup in list(self.items.values()):
             if hasattr(servicegroup, 'servicegroup_members') and not \
-                    servicegroup.already_explode:
+                    servicegroup.already_exploded:
                 # get_services_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
                 for sg2 in list(self.items.values()):
@@ -281,4 +281,4 @@ class Servicegroups(Itemgroups):
                 del servicegroup.rec_tag
             except AttributeError:
                 pass
-            del servicegroup.already_explode
+            del servicegroup.already_exploded

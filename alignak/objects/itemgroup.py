@@ -72,6 +72,7 @@ class Itemgroup(Item):
         'members':
             ListProp(fill_brok=['full_status'], default=None, split_on_comma=True),
         # Alignak specific
+        # todo: should be a running property...
         'unknown_members':
             ListProp(default=[]),
     })
@@ -79,12 +80,21 @@ class Itemgroup(Item):
     def __repr__(self):  # pragma: no cover
         if getattr(self, 'members', None) is None or not getattr(self, 'members'):
             return '<%r %r, no members/>' % (self.__class__.__name__, self.get_name())
-        # Build a sorted list of unicode elements name or uuid, this to make it easier to compare ;)
+        # Build a sorted list of elements name or uuid, this to make it easier to compare ;)
         dump_list = sorted([str(item.get_name()
                                 if isinstance(item, Item) else item) for item in self])
         return '<%r %r, %d members: %r/>' \
                % (self.__class__.__name__, self.get_name(), len(self.members), dump_list)
     __str__ = __repr__
+
+    def __iter__(self):
+        return self.members.__iter__()
+
+    def __delitem__(self, i):
+        try:
+            self.members.remove(i)
+        except ValueError:
+            pass
 
     def copy_shell(self):
         """
@@ -148,15 +158,6 @@ class Itemgroup(Item):
             self.unknown_members = []
         add_fun(self.unknown_members, member)
 
-    def __iter__(self):
-        return self.members.__iter__()
-
-    def __delitem__(self, i):
-        try:
-            self.members.remove(i)
-        except ValueError:
-            pass
-
     def is_correct(self):
         """
         Check if a group is valid.
@@ -181,22 +182,6 @@ class Itemgroup(Item):
 
         return super(Itemgroup, self).is_correct() and state
 
-    def has(self, prop):
-        """
-        Check if self have a property
-
-        :param prop: property name
-        :type prop: string
-        :return: True if self has this attribute, otherwise False
-        :rtype: bool
-        """
-        warnings.warn(
-            "{s.__class__.__name__} is deprecated, please use "
-            "`hasattr(your_object, attr)` instead. This has() method will "
-            "be removed in a later version.".format(s=self),
-            DeprecationWarning, stacklevel=2)
-        return hasattr(self, prop)
-
     def get_initial_status_brok(self, items=None):  # pylint:disable=W0221
         """
         Get a brok with hostgroup info (like id, name)
@@ -214,14 +199,14 @@ class Itemgroup(Item):
             if entry.fill_brok != []:
                 if hasattr(self, prop):
                     data[prop] = getattr(self, prop)
+
         # Here members is just a bunch of host, I need name in place
         data['members'] = []
         for m_id in self.members:
             member = items[m_id]
-            # it look like lisp! ((( ..))), sorry....
             data['members'].append((member.uuid, member.get_name()))
-        brok = Brok({'type': 'initial_' + cls.my_type + '_status', 'data': data})
-        return brok
+
+        return Brok({'type': 'initial_' + cls.my_type + '_status', 'data': data})
 
 
 class Itemgroups(Items):

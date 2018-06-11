@@ -322,6 +322,7 @@ class Alignak(BaseSatellite):
 
             # Get the monitored objects configuration
             t00 = time.time()
+            received_conf_part = None
             try:
                 received_conf_part = unserialize(conf_part)
                 assert received_conf_part is not None
@@ -342,7 +343,7 @@ class Alignak(BaseSatellite):
                     "_status": "Cannot un-serialize configuration received from arbiter"
                 }
                 logger.error(self.new_conf['_status'])
-                self.exit_on_exception(exp, self.new_conf)
+                self.exit_on_exception(exp, str(self.new_conf))
 
             # if not received_conf_part:
             #     return

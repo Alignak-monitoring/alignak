@@ -182,8 +182,8 @@ class AlignakTest(unittest2.TestCase):
             if getattr(handler, '_name', None) == 'unit_tests':
                 self.former_log_level = handler.level
                 handler.setLevel(log_level)
-                print("Unit tests handler is set at debug!")
-                # break
+                print("Unit tests handler is set at %s" % log_level)
+                break
 
     def _prepare_hosts_configuration(self, cfg_folder, hosts_count=10,
                                      target_file_name=None, realms=None):
@@ -203,6 +203,7 @@ class AlignakTest(unittest2.TestCase):
 define host {
     use                     test-host
     contact_groups          admins
+    hostgroups              allhosts
     host_name               host-%s-%s
     address                 127.0.0.1
     realm                   %s
@@ -430,7 +431,7 @@ define host {
 
     def _run_alignak_daemons(self, cfg_folder='/tmp/alignak', runtime=30,
                              daemons_list=None, spare_daemons=[], piped=False, run_folder='',
-                             arbiter_only=True, update_configuration=True):
+                             arbiter_only=True, update_configuration=True, verbose=False):
         """ Run the Alignak daemons for a passive configuration
 
         Let the daemons run for the number of seconds defined in the runtime parameter and
@@ -520,6 +521,8 @@ define host {
                 continue
             args = ["../alignak/bin/alignak_%s.py" % name.split('-')[0], "-n", name,
                     "-e", "%s/etc/alignak.ini" % cfg_folder]
+            if verbose:
+                args.append("--debug")
             print("- %s arguments: %s" % (name, args))
             if piped:
                 print("- capturing stdout/stderr" % name)

@@ -74,22 +74,6 @@ class SchedulerInterface(GenericInterface):
         return serialize(res, True)
 
     @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def get_host(self, host_name='None'):
-        """Get host configuration from the scheduler, used mainly by the receiver
-
-        :param host_name: searched host name
-        :type host_name: str
-        :return: serialized host information
-        :rtype: str
-        """
-        try:
-            host = self.app.sched.hosts.find_by_name(host_name)
-        except Exception:  # pylint: disable=broad-except
-            return None
-        return serialize(host, True) if host else None
-
-    @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
     def put_results(self):
@@ -204,3 +188,86 @@ class SchedulerInterface(GenericInterface):
         # Stop the scheduling loop
         self.app.sched.stop_scheduling()
         super(SchedulerInterface, self).wait_new_conf()
+
+    def _get_objects(self, o_type):
+        """Get an object list from the scheduler
+
+        Returns None if the required object type (`o_type`) is not known or an exception is raised.
+        Else returns the objects list
+
+        :param o_type: searched object type
+        :type o_type: str
+        :return: objects list
+        :rtype: alignak.objects.item.Items
+        """
+        if o_type not in [t for t in self.app.sched.pushed_conf.types_creations]:
+            return None
+
+        try:
+            _, _, strclss, _, _ = self.app.sched.pushed_conf.types_creations[o_type]
+            o_list = getattr(self.app.sched, strclss)
+        except Exception:  # pylint: disable=broad-except
+            return None
+
+        return o_list
+
+    def _get_object(self, o_type, name='None'):
+        """Get an object from the scheduler
+
+        Returns None if the required object type (`o_type`) is not known.
+        Else returns the serialized object if found
+
+        :param o_type: searched object type
+        :type o_type: str
+        :param name: searched object name
+        :type name: str
+        :return: serialized object
+        :rtype: str
+        """
+        try:
+            o_found = None
+            o_list = self._get_objects(o_type)
+            if o_list:
+                o_found = o_list.find_by_name(name)
+                if not o_found:
+                    o_found = o_list[name]
+        except Exception:  # pylint: disable=broad-except
+            return None
+        return serialize(o_found, True) if o_found else None
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def get_host(self, host_name='None'):
+        """Get host configuration from the scheduler, used mainly by the receiver
+
+        :param host_name: searched host name
+        :type host_name: str
+        :return: serialized host information
+        :rtype: str
+        """
+        return self._get_object('host', name=host_name)
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def get_hostgroup(self, hostgroup_name='None'):
+        """Get hostgroup configuration from the scheduler, used mainly by the receiver
+
+        :param hostgroup_name: searched host name
+        :type hostgroup_name: str
+        :return: serialized hostgroup information
+        :rtype: str
+        """
+        return self._get_object('hostgroup', name=hostgroup_name)
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def get_realm(self, realm_name='None'):
+        """Get realm configuration from the scheduler, used mainly by the receiver
+
+        :param realm_name: searched host name
+        :type realm_name: str
+        :return: serialized host information
+        :rtype: str
+        """
+        return self._get_object('realm', name=realm_name)
+

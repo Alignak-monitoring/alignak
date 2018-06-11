@@ -130,7 +130,7 @@ class Contactgroup(Itemgroup):
         """
         # First we tag the hg so it will not be explode
         # if a son of it already call it
-        self.already_explode = True
+        self.already_exploded = True
 
         # Now the recursive part
         # rec_tag is set to False every CG we explode
@@ -258,11 +258,11 @@ class Contactgroups(Itemgroups):
         # We do not want a same hg to be explode again and again
         # so we tag it
         for tmp_cg in list(self.items.values()):
-            tmp_cg.already_explode = False
+            tmp_cg.already_exploded = False
 
         for contactgroup in list(self.items.values()):
             if hasattr(contactgroup, 'contactgroup_members') and not \
-                    contactgroup.already_explode:
+                    contactgroup.already_exploded:
                 # get_contacts_by_explosion is a recursive
                 # function, so we must tag hg so we do not loop
                 for tmp_cg in list(self.items.values()):
@@ -273,4 +273,4 @@ class Contactgroups(Itemgroups):
         for tmp_cg in list(self.items.values()):
             if hasattr(tmp_cg, 'rec_tag'):
                 del tmp_cg.rec_tag
-            del tmp_cg.already_explode
+            del tmp_cg.already_exploded

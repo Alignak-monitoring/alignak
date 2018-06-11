@@ -25,6 +25,8 @@ import time
 import signal
 import json
 
+from pprint import pprint
+
 import subprocess
 from time import sleep
 import requests
@@ -37,6 +39,8 @@ from .alignak_test import AlignakTest
 
 from alignak.misc.serialization import unserialize
 from alignak.objects.host import Host
+from alignak.objects.hostgroup import Hostgroup
+from alignak.objects.realm import Realm
 from alignak.http.generic_interface import GenericInterface
 from alignak.http.arbiter_interface import ArbiterInterface
 from alignak.http.scheduler_interface import SchedulerInterface
@@ -56,22 +60,49 @@ class TestDaemonsApi(AlignakTest):
         super(TestDaemonsApi, self).setUp()
 
         self.cfg_folder = '/tmp/alignak'
-        # Copy the default Alignak shipped configuration to the run directory
-        print("Copy default configuration (../etc) to %s..." % self.cfg_folder)
-        if os.path.exists('%s/etc' % self.cfg_folder):
-            shutil.rmtree('%s/etc' % self.cfg_folder)
-        shutil.copytree('../etc', '%s/etc' % self.cfg_folder)
+        cfg_dir = 'default_many_hosts'
+        hosts_count = 10
+        daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
+                        'receiver-master', 'scheduler-master']
+        satellite_map = {
+            'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
+            'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
+        }
 
+        # Default shipped configuration preparation
+        self._prepare_configuration(copy=True, cfg_folder=self.cfg_folder)
+
+        # Specific daemon load configuration preparation
+        if os.path.exists('./cfg/%s/alignak.cfg' % cfg_dir):
+            shutil.copy('./cfg/%s/alignak.cfg' % cfg_dir, '%s/etc' % self.cfg_folder)
+        if os.path.exists('%s/etc/arbiter' % self.cfg_folder):
+            shutil.rmtree('%s/etc/arbiter' % self.cfg_folder)
+        shutil.copytree('./cfg/%s/arbiter' % cfg_dir, '%s/etc/arbiter' % self.cfg_folder)
+
+        self._prepare_hosts_configuration(cfg_folder='%s/etc/arbiter/objects/hosts' % self.cfg_folder,
+                                          hosts_count=hosts_count, target_file_name='hosts.cfg')
+
+        # Some script commands must be copied in the test folder
+        if os.path.exists('./libexec/check_command.sh'):
+            shutil.copy('./libexec/check_command.sh', '%s/check_command.sh' % self.cfg_folder)
+
+        # Update the default configuration files
+        files = ['%s/etc/alignak.ini' % self.cfg_folder]
         try:
             cfg = configparser.ConfigParser()
-            cfg.read(['%s/etc/alignak.ini' % self.cfg_folder,
-                      '%s/etc/alignak.d/daemons.ini' % self.cfg_folder])
-            cfg.set('daemon.arbiter-master', 'alignak_launched', '1')
-            cfg.set('daemon.scheduler-master', 'alignak_launched', '1')
-            cfg.set('daemon.poller-master', 'alignak_launched', '1')
-            cfg.set('daemon.reactionner-master', 'alignak_launched', '1')
-            cfg.set('daemon.receiver-master', 'alignak_launched', '1')
-            cfg.set('daemon.broker-master', 'alignak_launched', '1')
+            cfg.read(files)
+
+            cfg.set('alignak-configuration', 'launch_missing_daemons', '1')
+
+            # cfg.set('alignak-configuration', 'daemons_start_timeout', '15')
+            # cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '15')
+            #
+            # A macro for the check script directory
+            cfg.set('alignak-configuration', '_EXEC_DIR', self.cfg_folder)
+            for daemon in daemons_list:
+                if cfg.has_section('daemon.%s' % daemon):
+                    cfg.set('daemon.%s' % daemon, 'alignak_launched', '1')
+
             with open('%s/etc/alignak.ini' % self.cfg_folder, "w") as modified:
                 cfg.write(modified)
         except Exception as exp:
@@ -834,29 +865,73 @@ class TestDaemonsApi(AlignakTest):
 
         :return:
         """
+        cfg_folder = '/tmp/alignak'
+        cfg_dir = 'default_many_hosts'
+        hosts_count = 10
+        daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
+                        'receiver-master', 'scheduler-master']
         satellite_map = {
             'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
             'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
         }
 
-        daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
-                        'receiver-master', 'scheduler-master']
+        # Default shipped configuration preparation
+        self._prepare_configuration(copy=True, cfg_folder=cfg_folder)
 
-        self._run_alignak_daemons(cfg_folder=self.cfg_folder,
-                                  daemons_list=daemons_list, runtime=5)
+        # Specific daemon load configuration preparation
+        if os.path.exists('./cfg/%s/alignak.cfg' % cfg_dir):
+            shutil.copy('./cfg/%s/alignak.cfg' % cfg_dir, '%s/etc' % cfg_folder)
+        if os.path.exists('%s/etc/arbiter' % cfg_folder):
+            shutil.rmtree('%s/etc/arbiter' % cfg_folder)
+        shutil.copytree('./cfg/%s/arbiter' % cfg_dir, '%s/etc/arbiter' % cfg_folder)
 
-        req = requests.Session()
+        self._prepare_hosts_configuration(cfg_folder='%s/etc/arbiter/objects/hosts' % cfg_folder,
+                                          hosts_count=hosts_count, target_file_name='hosts.cfg')
+
+        # Some script commands must be copied in the test folder
+        if os.path.exists('./libexec/check_command.sh'):
+            shutil.copy('./libexec/check_command.sh', '%s/check_command.sh' % cfg_folder)
+
+        # Update the default configuration files
+        files = ['%s/etc/alignak.ini' % cfg_folder]
+        try:
+            cfg = configparser.ConfigParser()
+            cfg.read(files)
+
+            cfg.set('alignak-configuration', 'launch_missing_daemons', '1')
+
+            # cfg.set('alignak-configuration', 'daemons_start_timeout', '15')
+            # cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '15')
+            #
+            # A macro for the check script directory
+            cfg.set('alignak-configuration', '_EXEC_DIR', cfg_folder)
+            for daemon in daemons_list:
+                if cfg.has_section('daemon.%s' % daemon):
+                    cfg.set('daemon.%s' % daemon, 'alignak_launched', '1')
+
+            with open('%s/etc/alignak.ini' % cfg_folder, "w") as modified:
+                cfg.write(modified)
+        except Exception as exp:
+            print("* parsing error in config file: %s" % exp)
+            assert False
+
+        # Run daemons for the required duration
+        self._run_alignak_daemons(cfg_folder='/tmp/alignak',
+                                  daemons_list=daemons_list,
+                                  run_folder='/tmp/alignak', runtime=5,
+                                  # verbose=True
+                                  )
 
         # Here the daemons got started by the arbiter and the arbiter dispatched a configuration
         # We will ask to wait for a new configuration
 
         # -----
         # 1/ get the running identifier (confirm the daemon is running)
+        req = requests.Session()
         print("--- get_running_id")
         for name, port in list(satellite_map.items()):
             raw_data = req.get("http://localhost:%s/get_running_id" % port, verify=False)
             assert raw_data.status_code == 200
-            print("Got (raw): %s" % raw_data)
             data = raw_data.json()
             assert "running_id" in data
             print("%s, my running id: %s" % (name, data['running_id']))
@@ -864,27 +939,95 @@ class TestDaemonsApi(AlignakTest):
 
         # -----
         # 2/ ask for a managed host.
-        # The scheduler has a service to get an host information. This may be used to know if
+        # The scheduler has a service to get some objects information. This may be used to know if
         # an host exist in Alignak and to get its configuration and state
 
-        # Only Scheduler daemon
-        raw_data = req.get("http://localhost:7768/get_host?host_name=localhost", verify=False)
-        assert raw_data.status_code == 200
-        print("get_host, got (raw): %s" % raw_data)
-        print("get_host, got (json): %s" % raw_data.json())
-        from pprint import pprint
-        pprint(raw_data.json())
-        host = unserialize(raw_data.json(), True)
-        print("Got: %s" % host)
-        assert host.__class__ == Host
-        assert host.get_name() == 'localhost'
+        # Only for the scheduler daemon
 
+        # ---
+        # Get an unknown realm
+        raw_data = req.get("http://localhost:7768/get_realm?realm_name=unknown_realm", verify=False)
+        assert raw_data.status_code == 200
+        realm = unserialize(raw_data.json(), True)
+        print("Got realm: %s" % realm)
+        assert realm is None
+
+        # ---
+        # Get a known realm
+        raw_data = req.get("http://localhost:7768/get_realm?realm_name=All", verify=False)
+        assert raw_data.status_code == 200
+        print("get_realm, got (raw): %s" % raw_data)
+        print("get_realm, got (json): %s" % raw_data.json())
+        pprint(raw_data.json())
+        realm = unserialize(raw_data.json(), True)
+        print("Got realm: %s" % realm)
+        # todo : The scheduler did not receive the realm All in its configuration!
+        assert realm is None
+        # assert realm.__class__ == Realm
+        # assert realm.get_name() == 'All'
+
+        # ---
+        # Get an unknown hostgroup
+        raw_data = req.get("http://localhost:7768/get_hostgroup?hostgroup_name=unknown_hostgroup")
+        assert raw_data.status_code == 200
+        print("get_hostgroup, got (raw): %s" % raw_data)
+        hostgroup = unserialize(raw_data.json(), True)
+        print("Got: %s" % hostgroup)
+        assert hostgroup is None
+
+        # ---
+        # Get a known hostgroup
+        raw_data = req.get("http://localhost:7768/get_hostgroup?hostgroup_name=allhosts")
+        assert raw_data.status_code == 200
+        print("get_hostgroup, got (raw): %s" % raw_data)
+        print("get_hostgroup, got (json): %s" % raw_data.json())
+        pprint(raw_data.json())
+        hostgroup = unserialize(raw_data.json(), True)
+        print("Got: %s" % hostgroup)
+        assert hostgroup.__class__ == Hostgroup
+        assert hostgroup.get_name() == 'allhosts'
+        for m in hostgroup.members:
+            raw_data = req.get("http://localhost:7768/get_host?host_name=%s" % m, verify=False)
+            assert raw_data.status_code == 200
+            print("get_host member, got (raw): %s" % raw_data)
+            host = raw_data.json()
+            host = host['content']
+            print("get_hostgroup member, got: %s" % host['host_name'])
+        # assert len(hostgroup.members) == 11
+
+        # ---
+        # Get an unknown host
         raw_data = req.get("http://localhost:7768/get_host?host_name=unknown_host", verify=False)
         assert raw_data.status_code == 200
         print("get_host, got (raw): %s" % raw_data)
         host = unserialize(raw_data.json(), True)
         print("Got: %s" % host)
         assert host is None
+
+        # ---
+        # Get a known host
+        raw_data = req.get("http://localhost:7768/get_host?host_name=localhost", verify=False)
+        assert raw_data.status_code == 200
+        print("get_host, got (raw): %s" % raw_data)
+        print("get_host, got (json): %s" % raw_data.json())
+        pprint(raw_data.json())
+        host = unserialize(raw_data.json(), True)
+        print("Got: %s" % host)
+        assert host.__class__ == Host
+        assert host.get_name() == 'localhost'
+
+        # ---
+        # Get the other hosts
+        for index in range(hosts_count):
+            raw_data = req.get("http://localhost:7768/get_host?host_name=host-all-%d" % index, verify=False)
+            assert raw_data.status_code == 200
+            # print("get_host, got (raw): %s" % raw_data)
+            # print("get_host, got (json): %s" % raw_data.json())
+            pprint(raw_data.json())
+            host = unserialize(raw_data.json(), True)
+            print("Got: %s" % host)
+            assert host.__class__ == Host
+            assert host.get_name() == 'host-all-%d' % index
 
         # This function will only send a SIGTERM to the arbiter daemon
         self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7770')

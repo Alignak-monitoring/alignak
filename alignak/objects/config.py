@@ -1346,7 +1346,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         early_created_types = self.__class__.early_created_types
 
         logger.info("Creating objects...")
-        for o_type in types_creations:
+        for o_type in sorted(types_creations):
             if o_type in early_created_types:
                 self.create_objects_for_type(raw_objects, o_type)
         logger.info("Done")
@@ -2287,7 +2287,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     if strclss == 'services':
                         logger.debug('    %s', cur_obj.get_full_name())
                     else:
-                        logger.debug('    %s', cur_obj.get_name())
+                        logger.info('    %s', cur_obj.get_name())
                 if checked_list:
                     logger.info('    Checked %d %s', len(checked_list), strclss)
                 else:
