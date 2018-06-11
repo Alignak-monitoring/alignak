@@ -75,7 +75,8 @@ jobs:
       - provider: pypi
         distributions: "sdist bdist_wheel"
         user: alignak
-        password: Alignak2016pip
+        password:
+          secure: "ts7AMZZZMUWlnG9nRGKUcJYLG98QpnXoYw5LXYG1TrNBx7LeWJwwNM6of59t48TbAyLAkWfuOOcyqQjjBwzLObo6kh1WVrrOhDtjpnEqrcWIqlHEKlPqwuEJpk6qlxzsSDCIeRPAfvicyK5kyHDQ7Jm66PDfufU97yRCvchxKc1fPk8amzdJ1FoNbzipyrxaSWvh4nI51gnmnsIgqbRL+z7l+HD5uKELS+MD7x4qr6N9rFBfSiHU7VJPp178s8qXGS31/0yNUVblEnhDTw0p5D871S1VDHcOmcJcqJ01hIsW99G58ddS8pfj63O9i7vxF+9Jp7phneNZwBIwGtorEvILH4plYwpG3YNOtoIPYH62Mzo3x8TrxbnlxmSqfvS1123jxTwFHh3cfab1kmMX6wEJmfhWO/brz1G5icXaVdKIcKE76LTKdct8CBqus0ED9/eTal9lmTeibb3iCLF5widCcuxjF0lFOxF7/KH07Y+d5FCBIFvic2usHFLojrcc2eSrwbqwxpt26A9IpyWu/E8iiGQGeKUmSmc9v36QvimuwN/EN0VyeG3dho/TAWfW/BLU4dlaHmOuJByiFSsA/ZiCpgkblwf1rkeB8/l6iIVD/j/G+7qU8FsMPggmvgD77grIE4LLQYRJu/jtAPzmhWODiZ+uWqkJncNbFHXjPS0="
         on:
           branch: develop
           tags: true
