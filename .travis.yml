@@ -88,7 +88,7 @@ jobs:
         distributions: "sdist bdist_wheel"
         user: alignak
         password:
-          secure: "loo2jU6+V9QOG81ARMtgSpgwGROqWwhpQMbYr/BitddaSbyLftUK1Wmpuzu1nN69/T4MMVqTNU74gYihy+iqVDeD1Mvd4kHWfsApG8OBOTWcymIEusLvLpCD3yhE7uAeJ1AwwsqnIOGt9XzuU8Ty1CqHgtjrZp9uWvhIoC7QfTS+Tzbk3tnmiprFU2+TZ+AdVx1BHrHudAsgqK28sXpFTLtCf/2NTf4SIhzjQqZ+8jSeRL9gEq+l7nOlt4EEn4IFvRiUSS00/Eh46EAurRxmWuiRYx6ssHptgla2QATm75Elcr4r5wN6MKigiRpklrvGd1NHe4ISIaI3Y1ZilPjDuvmkWnu6+rvoH1NDZaAk0g8hKlfDHVAgH+1Xyax68fg8Q5HSyn9ReHsn5zhdDRsJ3icWuyhPpYAQ/DtU81PfNLuIPnRNOZryZTAWuJS0YQp2BzXRW+8j3Hc5n7BsNqDKZNtU7/YjayDciQylzip3JZY/EZwNjYSLWSsUDxezR871mlyP5QrU8gN1PKYt6S5YivPNPeGQFYFoS+MTKGl/cxhvbY398ZV7pNDi/D2G/SYdyyc6KDjltvmjxfWfe8OL81k7kD5QtcQ/223UDW34SAmrUUeyquNK9TX4KlPLLXFFZFDO6iygF+qto3U6Zd8raD9T/5LEQwdeaIszCgGQOsE="
+          secure: "YS3mMSFps4ehq3vTTiS74E+rf66bbV+rrujtkDOwaPqaTQU27xL4Ho7XPUjKzaXV7JnoN3NBwP3JnWQJthnVoK7QMxtCRPzZcoK/B2TlZ5e8P4gVc4TObom7RpxF9kT7SRbe6bSBx4xgwes82TqOytx7i+LZBukgv+H04gXHwICQcvpdfm84PpK1fzax4AiWd+mHwIh5am6nRvdOoHbssa9Kwyyd+Z8GpnNWZTaWNCv6z1lil6rj1QwCDmihm4JO5I7n6d6pZr7MU5Faz+t9bApGZLxqSiUKSdTzotQTUD7er3f7MaXJaacSyKEwdiO4lsew6mydlGrECAyXdtDf9GFco6EXzPI3yzdzAGRWn08rUsKGWbRPYCCWv9zbcrJaVU4a9x7UUY9lmhOaO5M99my0tPZyd1P9eGWq6GQ0dgHQJcL/iDvT6s/8jZwGosqWqK7lk+GCw0DlKJeVZGhnz67WKuG7VIYVXlm5zIAPcnCUCge5iZsIOx+WQyB7SfdzSAnO22211x4Oxtai0DwY6NuD+ZzqoGu1SAYIZJAUgfCOcDJCD21w6y6gKPUmA65xuQL3+sO+jux11RnRAxMF8OSjpQyDGyxc24aQXAsoOG1KNJzyqUTepKwKMoZzN6bvgdge6BRajtcAy3M0oBUxZNG7act+dNBd8e5NYThjt5E="
         on:
           branch: develop
           tags: true
