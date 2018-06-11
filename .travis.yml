@@ -16,18 +16,6 @@ install:
 script:
 - pip freeze
 - |
-  if [[ $TEST_SUITE == 'codingstandard' ]]; then
-    # Static code analysis
-    # -- pycodestyle (former pep8)
-    pycodestyle --max-line-length=100 --exclude='*.pyc,carboniface.py' alignak/* || travis_terminate 1;
-    # -- pylint
-    unset PYTHONWARNINGS
-    pylint --rcfile=.pylintrc -r no alignak || travis_terminate 1;
-    export PYTHONWARNINGS=all
-    # -- pep257
-    pep257 --select=D300 alignak || travis_terminate 1;
-  fi
-- |
   if [[ $TEST_SUITE == 'unit_tests' ]]; then
     # Run unit tests and code coverage analysis
     cd test
@@ -87,8 +75,7 @@ jobs:
       - provider: pypi
         distributions: "sdist bdist_wheel"
         user: alignak
-        password:
-          secure: "YS3mMSFps4ehq3vTTiS74E+rf66bbV+rrujtkDOwaPqaTQU27xL4Ho7XPUjKzaXV7JnoN3NBwP3JnWQJthnVoK7QMxtCRPzZcoK/B2TlZ5e8P4gVc4TObom7RpxF9kT7SRbe6bSBx4xgwes82TqOytx7i+LZBukgv+H04gXHwICQcvpdfm84PpK1fzax4AiWd+mHwIh5am6nRvdOoHbssa9Kwyyd+Z8GpnNWZTaWNCv6z1lil6rj1QwCDmihm4JO5I7n6d6pZr7MU5Faz+t9bApGZLxqSiUKSdTzotQTUD7er3f7MaXJaacSyKEwdiO4lsew6mydlGrECAyXdtDf9GFco6EXzPI3yzdzAGRWn08rUsKGWbRPYCCWv9zbcrJaVU4a9x7UUY9lmhOaO5M99my0tPZyd1P9eGWq6GQ0dgHQJcL/iDvT6s/8jZwGosqWqK7lk+GCw0DlKJeVZGhnz67WKuG7VIYVXlm5zIAPcnCUCge5iZsIOx+WQyB7SfdzSAnO22211x4Oxtai0DwY6NuD+ZzqoGu1SAYIZJAUgfCOcDJCD21w6y6gKPUmA65xuQL3+sO+jux11RnRAxMF8OSjpQyDGyxc24aQXAsoOG1KNJzyqUTepKwKMoZzN6bvgdge6BRajtcAy3M0oBUxZNG7act+dNBd8e5NYThjt5E="
+        password: Alignak2016pip
         on:
           branch: develop
           tags: true
