@@ -204,7 +204,7 @@ class Dispatcher(object):
 
         If test parameter is True, do not really send but simulate only for testing purpose...
 
-        TODO: The update_infos function returns None when no ping has been executed
+        The update_infos function returns None when no ping has been executed
         (too early...), or True / False according to the real ping and get managed
         configuration result. So, if the result is None, consider as not valid,
         else compute the global result...
@@ -246,7 +246,7 @@ class Dispatcher(object):
 
                 if result:
                     # Got a managed configuration
-                    logger.debug("The %s %s manages %s",
+                    logger.debug("The %s '%s' manages %s",
                                  daemon_link.type, daemon_link.name, daemon_link.cfg_managed)
                     if not self.first_dispatch_done:
                         # I just (re)started the arbiter
@@ -259,8 +259,6 @@ class Dispatcher(object):
                                 daemon_link.type, daemon_link.name)
                     # the daemon is not yet configured
                     self.not_configured.append(daemon_link)
-                    # # Ask to wait for a new configuration
-                    # daemon_link.wait_new_conf()
                     daemon_link.configuration_sent = False
             else:
                 # Got a timeout !
@@ -288,16 +286,11 @@ class Dispatcher(object):
 
     def check_status(self):
         # pylint: disable=too-many-branches
-        """Check all daemons state (reachable or not)
+        """Get all the daemons status
 
-        If test parameter is True, do not really send but simulate only for testing purpose...
 
-        TODO: The update_infos function returns None when no ping has been executed
-        (too early...), or True / False according to the real ping and get managed
-        configuration result. So, if the result is None, consider as not valid,
-        else compute the global result...
-
-        :return: True if all daemons are reachable
+        :return: Fictionary with all the daemons returned information
+        :rtype: dict
         """
         statistics = {}
         for daemon_link in self.all_daemons_links:
@@ -309,10 +302,12 @@ class Dispatcher(object):
                 # I exclude the daemons that are not active
                 continue
 
-            result = None
             try:
-                result = daemon_link.get_daemon_stats()
-                statistics[daemon_link.name] = result
+                daemon_link.statistics = daemon_link.get_daemon_stats(details=True)
+                daemon_link.statistics['_freshness'] = int(time.time())
+                statistics[daemon_link.name] = daemon_link.statistics
+                logger.debug("Daemon %s statistics: %s" % (daemon_link.name,
+                                                           daemon_link.statistics))
             except LinkError:
                 logger.warning("Daemon connection failed, I could not get statistics.")
 

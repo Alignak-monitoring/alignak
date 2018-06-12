@@ -1151,17 +1151,22 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """
         # First look if it's not too early to ping
         start = time.time()
-        if self.daemons_last_reachable_check \
-                and self.daemons_last_reachable_check + self.conf.daemons_check_period > start:
+        if self.daemons_last_reachable_check and \
+                self.daemons_last_reachable_check + self.conf.daemons_check_period > start:
             logger.debug("Too early to check daemons reachability, check period is %.2f seconds",
                          self.conf.daemons_check_period)
             return True
 
+        _t0 = time.time()
         logger.debug("Alignak daemons reachability check")
+        self.dispatcher.check_reachable()
+        statsmgr.timer('dispatcher.check-alive', time.time() - _t0)
 
         _t0 = time.time()
-        result = self.dispatcher.check_reachable()
-        statsmgr.timer('dispatcher.check-alive', time.time() - _t0)
+        logger.debug("Alignak daemons status get")
+        result = self.dispatcher.check_status()
+        statsmgr.timer('dispatcher.check-status', time.time() - _t0)
+        logger.debug("Getting daemons status duration: %.2f seconds", time.time() - _t0)
 
         # Set the last check as now
         self.daemons_last_reachable_check = start
@@ -1718,7 +1723,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         if getattr(self, 'dispatcher', None):
             # Daemon properties that we are interested in
             res['daemons_states'] = {}
-            state = 0
             for satellite in self.dispatcher.all_daemons_links:
                 if satellite == self.link_to_myself:
                     continue
@@ -1755,6 +1759,99 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 # "long_output": "Long output...",
                 # "perf_data": "'counter'=1"
             })
+
+        return res
+
+    def get_monitoring_problems(self):
+        """Get the schedulers satellites problems list
+
+        :return: problems dictionary
+        :rtype: dict
+        """
+        res = self.get_id()
+        res['problems'] = {}
+
+        # Report our schedulers information, but only if a dispatcher exists
+        if getattr(self, 'dispatcher', None) is None:
+            return res
+
+        for satellite in self.dispatcher.all_daemons_links:
+            if satellite.type not in ['scheduler']:
+                continue
+            if not satellite.active:
+                continue
+
+            if 'problems' in satellite.statistics:
+                res['problems'][satellite.name] = {
+                    '_freshness': satellite.statistics['_freshness'],
+                    'problems': satellite.statistics['problems']
+                }
+
+        return res
+
+    def get_livesynthesis(self):
+        """Get the schedulers satellites live synthesis
+
+        :return: compiled livesynthesis dictionary
+        :rtype: dict
+        """
+        res = self.get_id()
+        res['livesynthesis'] = {
+            '_overall': {
+                '_freshness': int(time.time()),
+                'livesynthesis': {
+                    'hosts_total': 0,
+                    'hosts_not_monitored': 0,
+                    'hosts_up_hard': 0,
+                    'hosts_up_soft': 0,
+                    'hosts_down_hard': 0,
+                    'hosts_down_soft': 0,
+                    'hosts_unreachable_hard': 0,
+                    'hosts_unreachable_soft': 0,
+                    'hosts_acknowledged': 0,
+                    'hosts_in_downtime': 0,
+                    'hosts_flapping': 0,
+    
+                    'services_total': 0,
+                    'services_not_monitored': 0,
+                    'services_ok_hard': 0,
+                    'services_ok_soft': 0,
+                    'services_warning_hard': 0,
+                    'services_warning_soft': 0,
+                    'services_critical_hard': 0,
+                    'services_critical_soft': 0,
+                    'services_unknown_hard': 0,
+                    'services_unknown_soft': 0,
+                    'services_unreachable_hard': 0,
+                    'services_unreachable_soft': 0,
+                    'services_acknowledged': 0,
+                    'services_in_downtime': 0,
+                    'services_flapping': 0,
+                }
+            }
+        }
+
+        # Report our schedulers information, but only if a dispatcher exists
+        if getattr(self, 'dispatcher', None) is None:
+            return res
+
+        for satellite in self.dispatcher.all_daemons_links:
+            if satellite.type not in ['scheduler']:
+                continue
+            if not satellite.active:
+                continue
+
+            if 'livesynthesis' in satellite.statistics:
+                # Scheduler detailed live synthesis
+                res['livesynthesis'][satellite.name] = {
+                    '_freshness': satellite.statistics['_freshness'],
+                    'livesynthesis': satellite.statistics['livesynthesis']
+                }
+                # Cumulated live synthesis
+                for prop in res['livesynthesis']['_overall']:
+                    if prop in satellite.statistics['livesynthesis']:
+                        res['livesynthesis']['_overall']['livesynthesis'][prop] += \
+                            satellite.statistics['livesynthesis'][prop]
 
         return res
 

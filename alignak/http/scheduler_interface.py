@@ -271,3 +271,22 @@ class SchedulerInterface(GenericInterface):
         """
         return self._get_object('realm', name=realm_name)
 
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def get_monitoring_problems(self):
+        """Get Alignak scheduler monitoring status
+
+        Returns an object with the scheduler livesynthesis
+        and the known problems
+
+        :return: scheduler live synthesis
+        :rtype: dict
+        """
+        if self.app.type != 'scheduler':
+            return {'_status': u'ERR',
+                    '_message': u"This service is only available for a scheduler daemon"}
+
+        res = self.get_id()
+        res.update(self.get_start_time())
+        res.update(self.app.get_monitoring_problems())
+        return res

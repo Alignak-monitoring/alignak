@@ -163,7 +163,7 @@ class Escalation(Item):
                 return False
 
             # self.last_notification = 0 mean no end
-            if self.last_notification != 0 and notif_number > self.last_notification:
+            if self.last_notification and notif_number > self.last_notification:
                 return False
         # Else we are time based, we must check for the good value
         else:
@@ -171,8 +171,7 @@ class Escalation(Item):
             if in_notif_time < self.first_notification_time * interval:
                 return False
 
-            # self.last_notification = 0 mean no end
-            if self.last_notification_time != 0 and \
+            if self.last_notification_time and \
                     in_notif_time > self.last_notification_time * interval:
                 return False
 
@@ -247,28 +246,23 @@ class Escalation(Item):
 
         # Ok now we manage special cases...
         if not hasattr(self, 'contacts') and not hasattr(self, 'contact_groups'):
-            msg = '%s: I do not have contacts nor contact_groups' % (self.get_name())
-            self.add_error(msg)
+            self.add_error('%s: I do not have contacts nor contact_groups' % (self.get_name()))
             state = False
 
         # If time_based or not, we do not check all properties
         if self.time_based:
             if not hasattr(self, 'first_notification_time'):
-                msg = '%s: I do not have first_notification_time' % (self.get_name())
-                self.add_error(msg)
+                self.add_error('%s: I do not have first_notification_time' % (self.get_name()))
                 state = False
             if not hasattr(self, 'last_notification_time'):
-                msg = '%s: I do not have last_notification_time' % (self.get_name())
-                self.add_error(msg)
+                self.add_error('%s: I do not have last_notification_time' % (self.get_name()))
                 state = False
         else:  # we check classical properties
             if not hasattr(self, 'first_notification'):
-                msg = '%s: I do not have first_notification' % (self.get_name())
-                self.add_error(msg)
+                self.add_error('%s: I do not have first_notification' % (self.get_name()))
                 state = False
             if not hasattr(self, 'last_notification'):
-                msg = '%s: I do not have last_notification' % (self.get_name())
-                self.add_error(msg)
+                self.add_error('%s: I do not have last_notification' % (self.get_name()))
                 state = False
 
         # Change the special_properties definition according to time_based ...

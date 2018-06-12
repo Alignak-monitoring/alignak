@@ -265,8 +265,8 @@ class TestLaunchArbiter(AlignakTest):
             cfg.read(['/tmp/alignak/etc/alignak.ini', '/tmp/alignak/etc/alignak.d/daemons.ini'])
             cfg.set('alignak-configuration', 'launch_missing_daemons', '1')
             cfg.set('alignak-configuration', 'polling_interval', '1')
-            cfg.set('alignak-configuration', 'daemons_check_period', '1')
-            cfg.set('alignak-configuration', 'daemons_stop_timeout', '1')
+            cfg.set('alignak-configuration', 'daemons_check_period', '5')
+            cfg.set('alignak-configuration', 'daemons_stop_timeout', '3')
             cfg.set('alignak-configuration', 'daemons_start_timeout', '1')
             cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '1')
             cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '1')
@@ -300,7 +300,7 @@ class TestLaunchArbiter(AlignakTest):
         self._ping_daemons()
 
         # Sleep some few seconds to let the arbiter ping the daemons by itself
-        sleep(10)
+        sleep(60)
 
         self._ping_daemons()
 

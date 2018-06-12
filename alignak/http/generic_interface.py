@@ -65,7 +65,7 @@ class GenericInterface(object):
         :rtype: dict
         """
         functions = [x[0]for x in inspect.getmembers(self, predicate=inspect.ismethod)
-                     if not x[0].startswith('__')]
+                     if not x[0].startswith('_')]
 
         full_api = {
             'doc': u"When posting data you have to use the JSON format.",

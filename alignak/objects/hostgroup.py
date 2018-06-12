@@ -322,7 +322,6 @@ class Hostgroups(Itemgroups):
 
         # We clean the tags
         for tmp_hg in list(self.items.values()):
-            print("HG exploded: %s" % tmp_hg)
             if hasattr(tmp_hg, 'rec_tag'):
                 del tmp_hg.rec_tag
             del tmp_hg.already_exploded

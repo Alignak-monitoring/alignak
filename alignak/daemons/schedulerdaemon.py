@@ -534,6 +534,25 @@ class Alignak(BaseSatellite):
 
         return res
 
+    def get_monitoring_problems(self):
+        """Get the current scheduler livesynthesis
+
+        :return: live synthesis and problems dictionary
+        :rtype: dict
+        """
+        res = {}
+        if not self.sched:
+            return res
+
+        # Get statistics from the scheduler
+        scheduler_stats = self.sched.get_scheduler_stats(details=True)
+        if 'livesynthesis' in scheduler_stats:
+            res['livesynthesis'] = scheduler_stats['livesynthesis']
+        if 'livesynthesis' in scheduler_stats:
+            res['problems'] = scheduler_stats['problems']
+
+        return res
+
     def main(self):
         """Main function for Scheduler, launch after the init::
 

@@ -173,16 +173,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'last_time_unreachable':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        # 'last_time_up':
-        #     IntegerProp(default=0, fill_brok=['full_status', 'check_result'],
-        #                 brok_transformation=brok_last_time, retention=True),
-        # 'last_time_down':
-        #     IntegerProp(default=0, fill_brok=['full_status', 'check_result'],
-        #                 brok_transformation=brok_last_time, retention=True),
-        # 'last_time_unreachable':
-        #     IntegerProp(default=0, fill_brok=['full_status', 'check_result'],
-        #                 brok_transformation=brok_last_time, retention=True),
-        # no brok, too much links...
+
         'services':
             StringProp(default=[]),
         'realm_name':

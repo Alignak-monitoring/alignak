@@ -2287,7 +2287,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     if strclss == 'services':
                         logger.debug('    %s', cur_obj.get_full_name())
                     else:
-                        logger.info('    %s', cur_obj.get_name())
+                        logger.debug('    %s', cur_obj.get_name())
                 if checked_list:
                     logger.info('    Checked %d %s', len(checked_list), strclss)
                 else:

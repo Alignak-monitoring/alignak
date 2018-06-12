@@ -272,9 +272,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'last_state_id':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'last_state_change':
-            FloatProp(default=0.0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'last_hard_state_change':
-            FloatProp(default=0.0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'last_hard_state':
             StringProp(default='PENDING', fill_brok=['full_status'], retention=True),
         'last_hard_state_id':
@@ -305,7 +305,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'chk_depend_of_me':
             ListProp(default=[]),
         'last_state_update':
-            FloatProp(default=0.0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
         'checks_in_progress':
             ListProp(default=[]),
         'notifications_in_progress':
@@ -343,7 +343,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         's_time':
             FloatProp(default=0.0),
         'last_notification':
-            FloatProp(default=0.0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
         'current_notification_number':
             IntegerProp(default=0, fill_brok=['full_status'], retention=True),
         'current_notification_id':
@@ -674,7 +674,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             #              self.get_full_name(), self.last_state_update, now)
             # If we never checked this item, we begin the freshness period
             if not self.last_state_update:
-                self.last_state_update = now
+                self.last_state_update = int(now)
             if self.last_state_update < now - \
                     (self.freshness_threshold + cls.additional_freshness_latency):
                 timeperiod = timeperiods[self.check_period]
@@ -1660,7 +1660,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         if not chk.freshness_expiry_check:
             # Only update the last state date if not in freshness expiry
-            self.last_state_update = time.time()
+            self.last_state_update = int(time.time())
             if chk.exit_status == 1 and self.__class__.my_type == 'host':
                 chk.exit_status = 2
 

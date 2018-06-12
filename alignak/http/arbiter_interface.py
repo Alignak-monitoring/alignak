@@ -372,3 +372,153 @@ class ArbiterInterface(GenericInterface):
         :return: None
         """
         return self.command(command=command)
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def get_monitoring_problems(self):
+        """Get Alignak detailed monitoring status
+
+        This will return an object containing the properties of the `get_id`, plus a `problems`
+        object which contains 2 properties for each known scheduler:
+        - _freshness, which is the timestamp when the provided data were fetched
+        - problems, which is an object with the scheduler known problems:
+
+        {
+            ...
+
+            "problems": {
+                "scheduler-master": {
+                    "_freshness": 1528903945,
+                    "problems": {
+                        "fdfc986d-4ab4-4562-9d2f-4346832745e6": {
+                            "last_state": "CRITICAL",
+                            "service": "dummy_critical",
+                            "last_state_type": "SOFT",
+                            "last_state_update": 1528902442,
+                            "last_hard_state": "CRITICAL",
+                            "last_hard_state_change": 1528902442,
+                            "last_state_change": 1528902381,
+                            "state": "CRITICAL",
+                            "state_type": "HARD",
+                            "host": "host-all-8",
+                            "output": "Hi, checking host-all-8/dummy_critical -> exit=2"
+                        },
+                        "2445f2a3-2a3b-4b13-96ed-4cfb60790e7e": {
+                            "last_state": "WARNING",
+                            "service": "dummy_warning",
+                            "last_state_type": "SOFT",
+                            "last_state_update": 1528902463,
+                            "last_hard_state": "WARNING",
+                            "last_hard_state_change": 1528902463,
+                            "last_state_change": 1528902400,
+                            "state": "WARNING",
+                            "state_type": "HARD",
+                            "host": "host-all-6",
+                            "output": "Hi, checking host-all-6/dummy_warning -> exit=1"
+                        },
+                        ...
+                    }
+                }
+            }
+        }
+
+        :return: schedulers live synthesis list
+        :rtype: dict
+        """
+        res = self.get_id()
+        res.update(self.get_start_time())
+        res.update(self.app.get_monitoring_problems())
+        return res
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def get_livesynthesis(self):
+        """Get Alignak live synthesis
+
+        This will return an object containing the properties of the `get_id`, plus a `livesynthesis`
+        object which contains 2 properties for each known scheduler:
+        - _freshness, which is the timestamp when the provided data were fetched
+        - livesynthesis, which is an object with the scheduler live synthesis.
+
+        An `_overall` fake scheduler is also contained in the schedulers list to provide the
+        cumulated live synthesis. Before sending the results, the arbiter sums-up all its
+        schedulers live synthesis counters in the `_overall` live synthesis.
+
+        {
+            ...
+
+            "livesynthesis": {
+                "_overall": {
+                    "_freshness": 1528947526,
+                    "livesynthesis": {
+                        "hosts_total": 11,
+                        "hosts_not_monitored": 0,
+                        "hosts_up_hard": 11,
+                        "hosts_up_soft": 0,
+                        "hosts_down_hard": 0,
+                        "hosts_down_soft": 0,
+                        "hosts_unreachable_hard": 0,
+                        "hosts_unreachable_soft": 0,
+                        "hosts_flapping": 0,
+                        "hosts_acknowledged": 0,
+                        "hosts_in_downtime": 0,
+                        "services_total": 100,
+                        "services_not_monitored": 0,
+                        "services_ok_hard": 70,
+                        "services_ok_soft": 0,
+                        "services_warning_hard": 4,
+                        "services_warning_soft": 6,
+                        "services_critical_hard": 6,
+                        "services_critical_soft": 4,
+                        "services_unknown_hard": 3,
+                        "services_unknown_soft": 7,
+                        "services_unreachable_hard": 0,
+                        "services_unreachable_soft": 0,
+                        "services_flapping": 0,
+                        "services_acknowledged": 0,
+                        "services_in_downtime": 0
+                        }
+                    }
+                },
+                "scheduler-master": {
+                    "_freshness": 1528947522,
+                    "livesynthesis": {
+                        "hosts_total": 11,
+                        "hosts_not_monitored": 0,
+                        "hosts_up_hard": 11,
+                        "hosts_up_soft": 0,
+                        "hosts_down_hard": 0,
+                        "hosts_down_soft": 0,
+                        "hosts_unreachable_hard": 0,
+                        "hosts_unreachable_soft": 0,
+                        "hosts_flapping": 0,
+                        "hosts_acknowledged": 0,
+                        "hosts_in_downtime": 0,
+                        "services_total": 100,
+                        "services_not_monitored": 0,
+                        "services_ok_hard": 70,
+                        "services_ok_soft": 0,
+                        "services_warning_hard": 4,
+                        "services_warning_soft": 6,
+                        "services_critical_hard": 6,
+                        "services_critical_soft": 4,
+                        "services_unknown_hard": 3,
+                        "services_unknown_soft": 7,
+                        "services_unreachable_hard": 0,
+                        "services_unreachable_soft": 0,
+                        "services_flapping": 0,
+                        "services_acknowledged": 0,
+                        "services_in_downtime": 0
+                        }
+                    }
+                }
+            }
+        }
+
+        :return: scheduler live synthesis
+        :rtype: dict
+        """
+        res = self.get_id()
+        res.update(self.get_start_time())
+        res.update(self.app.get_livesynthesis())
+        return res

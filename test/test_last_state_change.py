@@ -51,23 +51,26 @@ class TestHostsvcLastStateChange(AlignakTest):
         assert host.last_state_change == 0
 
         before = time.time()
+        time.sleep(0.1)
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
+        time.sleep(0.1)
         after = time.time()
-        time.sleep(0.2)
+        # Integer values !
+        assert host.last_state_change == int(host.last_state_change)
         assert host.last_state_change != 0
-        assert host.last_state_change > before
-        assert host.last_state_change < after
-        reference_time = host.last_state_change
+        assert host.last_state_change >= int(before)
+        assert host.last_state_change <= int(after)
 
+        reference_time = host.last_state_change
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.2)
+        time.sleep(1.1)
         assert host.last_state_change == reference_time
 
-        before = time.time()
+        time.sleep(1.0)
+
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.2)
-        assert host.last_state_change != reference_time
-        assert host.last_state_change > before
+        assert host.last_state_change > reference_time
 
     def test_host_unreachable(self):
         """ Test last_state_change in unreachable mode (in host)
@@ -86,8 +89,7 @@ class TestHostsvcLastStateChange(AlignakTest):
         host_router.event_handler_enabled = False
         host_router.notifications_enabled = False
 
-        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
-                                                                              "test_ok_0")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
@@ -121,33 +123,34 @@ class TestHostsvcLastStateChange(AlignakTest):
         assert "HARD" == host.state_type
 
         before = time.time()
-        self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
+        time.sleep(0.1)
+        self.scheduler_loop(1, [[host, 2, 'DOWN'], [host_router, 2, 'DOWN']])
+        time.sleep(0.1)
         after = time.time()
-        time.sleep(0.2)
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
         # The host remains unreachable
         assert "UNREACHABLE" == host.state
         assert "SOFT" == host.state_type
 
+        # Integer values !
+        assert host.last_state_change == int(host.last_state_change)
         assert host.last_state_change != 0
-        assert host.last_state_change > before
-        assert host.last_state_change < after
-        reference_time = host.last_state_change
+        assert host.last_state_change >= int(before)
+        assert host.last_state_change <= int(after)
 
-        self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
-        time.sleep(0.2)
+        reference_time = host.last_state_change
+        time.sleep(1.1)
+        self.scheduler_loop(2, [[host, 2, 'DOWN'], [host_router, 2, 'DOWN']])
         assert "UNREACHABLE" == host.state
         assert "UNREACHABLE" == host.last_state
         assert host.last_state_change == reference_time
 
-        before = time.time()
+        time.sleep(1.0)
+
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.2)
-        assert host.last_state_change != reference_time
-        assert host.last_state_change > before
+        assert host.last_state_change > reference_time
 
     def test_service(self):
         """ Test the last_state_change of service
@@ -171,20 +174,24 @@ class TestHostsvcLastStateChange(AlignakTest):
         assert svc.last_state_change == 0
 
         before = time.time()
+        time.sleep(0.1)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
+        time.sleep(0.1)
         after = time.time()
-        time.sleep(0.2)
-        assert svc.last_state_change != 0
-        assert svc.last_state_change > before
-        assert svc.last_state_change < after
-        reference_time = svc.last_state_change
 
+        # Integer values !
+        assert svc.last_state_change == int(svc.last_state_change)
+        assert svc.last_state_change != 0
+        assert svc.last_state_change >= int(before)
+        assert svc.last_state_change <= int(after)
+
+        reference_time = svc.last_state_change
+        time.sleep(1.1)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.2)
         assert svc.last_state_change == reference_time
 
-        before = time.time()
-        self.scheduler_loop(1, [[svc, 0, 'UP']])
+        time.sleep(1.0)
+
+        self.scheduler_loop(1, [[svc, 0, 'OK']])
         time.sleep(0.2)
-        assert svc.last_state_change != reference_time
-        assert svc.last_state_change > before
+        assert svc.last_state_change > reference_time

@@ -215,6 +215,8 @@ class SatelliteLink(Item):
             DictProp(default={}),
         'configuration_sent':
             BoolProp(default=False),
+        'statistics':
+            DictProp(default={}),
     })
 
     def __init__(self, params=None, parsing=True):
@@ -756,14 +758,14 @@ class SatelliteLink(Item):
 
     @valid_connection()
     @communicate()
-    def get_daemon_stats(self):
+    def get_daemon_stats(self, details=False):
         """Send a HTTP request to the satellite (GET /get_daemon_stats)
 
         :return: Daemon statistics
         :rtype: dict
         """
         logger.debug("Get daemon statistics for %s, %s %s", self.name, self.alive, self.reachable)
-        return self.con.get('get_daemon_stats')
+        return self.con.get('get_stats%s' % ('?details=1' if details else ''))
 
     @valid_connection()
     @communicate()

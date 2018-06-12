@@ -172,27 +172,9 @@ class Service(SchedulingItem):
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'last_time_unreachable':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
-        # 'last_time_ok':
-        #     IntegerProp(default=0, fill_brok=['full_status', 'check_result'],
-        #                 brok_transformation=brok_last_time, retention=True),
-        # 'last_time_warning':
-        #     IntegerProp(default=0, fill_brok=['full_status', 'check_result'],
-        #                 brok_transformation=brok_last_time, retention=True),
-        # 'last_time_critical':
-        #     IntegerProp(default=0, fill_brok=['full_status', 'check_result'],
-        #                 brok_transformation=brok_last_time, retention=True),
-        # 'last_time_unknown':
-        #     IntegerProp(default=0, fill_brok=['full_status', 'check_result'],
-        #                 brok_transformation=brok_last_time, retention=True),
-        # 'last_time_unreachable':
-        #     IntegerProp(default=0, fill_brok=['full_status', 'check_result'],
-        #                 brok_transformation=brok_last_time, retention=True),
         'host':
             StringProp(default=None),
         'state_before_hard_unknown_reach_phase': StringProp(default=u'OK', retention=True),
-
-
-
     })
 
     special_properties = (

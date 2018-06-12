@@ -359,18 +359,14 @@ class Scheduler(object):  # pylint: disable=R0902
         logger.debug("Macros:")
         for key in sorted(self.pushed_conf.macros):
             logger.debug("- %s: %s", key, getattr(self.pushed_conf.macros, key, []))
-        logger.info("Objects types:")
+        logger.debug("Objects types:")
         for _, _, strclss, _, _ in list(self.pushed_conf.types_creations.values()):
             if strclss in ['arbiters', 'schedulers', 'brokers',
                            'pollers', 'reactionners', 'receivers']:
                 continue
             setattr(self, strclss, getattr(self.pushed_conf, strclss, []))
             # Internal statistics
-            logger.info("- %d %s", len(getattr(self, strclss)), strclss)
-            if strclss == 'hostgroups':
-                logger.info("- %s", getattr(self, strclss))
-                for hg in getattr(self, strclss):
-                    logger.info("- %s", hg)
+            logger.debug("- %d %s", len(getattr(self, strclss)), strclss)
             statsmgr.gauge('configuration.%s' % strclss, len(getattr(self, strclss)))
 
         # We need reversed list for searching in the retention file read
@@ -392,14 +388,12 @@ class Scheduler(object):  # pylint: disable=R0902
         self.instance_name = instance_name
 
         self.push_flavor = getattr(self.pushed_conf, 'push_flavor', 'None')
-        logger.info("Set my scheduler instance: %s (%s - %s - %s)",
-                    self.name, self.instance_id, self.instance_name, self.push_flavor)
+        logger.info("Set my scheduler instance: %s - %s - %s",
+                    self.instance_id, self.instance_name, self.push_flavor)
 
         # Tag our monitored hosts/services with our instance_id
-        for host in self.hosts:
-            host.instance_id = self.instance_id
-        for serv in self.services:
-            serv.instance_id = self.instance_id
+        for item in self.all_my_hosts_and_services():
+            item.instance_id = self.instance_id
 
     def update_recurrent_works_tick(self, conf):
         """Modify the tick value for the scheduler recurrent work
@@ -1015,7 +1009,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     self.counters[action.is_a]["active"]["launched"] += 1
 
             if res:
-                logger.info("-> %d actions to start now", len(res))
+                logger.debug("-> %d actions to start now", len(res))
             else:
                 logger.debug("-> no actions to start now")
 
@@ -1062,7 +1056,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 item = self.find_item_by_id(self.actions[action.uuid].ref)
                 item.remove_in_progress_notification(action)
                 self.actions[action.uuid].status = ACT_STATUS_ZOMBIE
-                item.last_notification = action.check_time
+                item.last_notification = int(action.check_time)
 
                 # And we ask the item to update its state
                 self.get_and_register_status_brok(item)
@@ -2117,7 +2111,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 # Internal statistics
                 res['monitored_objects'][strclss] = len(getattr(self, strclss, []))
 
-            # Hosts/services problems counters
+            # Scheduler live synthesis
             res['livesynthesis'] = {
                 'hosts_total': m_solver._get_total_hosts(),
                 'hosts_not_monitored': m_solver._get_total_hosts_not_monitored(),
@@ -2148,25 +2142,69 @@ class Scheduler(object):  # pylint: disable=R0902
                 'services_flapping': m_solver._get_total_services_flapping()
             }
 
-            all_commands = {}
-            # Some checks statistics: user/system time
-            for elt in self.all_my_hosts_and_services():
-                last_cmd = elt.last_check_command
-                if not last_cmd:
-                    continue
-                cmd = os.path.split(last_cmd.split(' ', 1)[0])[1]
-                u_time = elt.u_time
-                s_time = elt.s_time
-                old_u_time, old_s_time = all_commands.get(cmd, (0.0, 0.0))
-                interval = elt.check_interval
-                if not interval:
-                    interval = 1
-                old_u_time += u_time / interval
-                old_s_time += s_time / interval
-                all_commands[cmd] = (old_u_time, old_s_time)
+            if details:
+                # Hosts/services problems list
+                all_problems = {}
+                for item in self.hosts:
+                    if item.state_type not in [u'HARD'] or item.state not in ['DOWN']:
+                        continue
 
-            # Return all the commands
-            res['commands'] = all_commands
+                    if item.is_problem and not item.problem_has_been_acknowledged:
+                        all_problems[item.uuid] = {
+                            'host': item.get_name(),
+                            'service': None,
+                            'state': item.state,
+                            'state_type': item.state_type,
+                            'output': item.output,
+                            'last_state': item.last_state,
+                            'last_state_type': item.last_state_type,
+                            'last_state_update': item.last_state_update,
+                            'last_state_change': item.last_state_change,
+                            'last_hard_state_change': item.last_hard_state_change,
+                            'last_hard_state': item.last_hard_state,
+                        }
+
+                for item in self.services:
+                    if item.state_type not in [u'HARD'] or item.state not in ['WARNING',
+                                                                              'CRITICAL']:
+                        continue
+
+                    if item.is_problem and not item.problem_has_been_acknowledged:
+                        all_problems[item.uuid] = {
+                            'host': item.host_name,
+                            'service': item.get_name(),
+                            'output': item.output,
+                            'state': item.state,
+                            'state_type': item.state_type,
+                            'last_state': item.last_state,
+                            'last_state_type': item.last_state_type,
+                            'last_hard_state': item.last_hard_state,
+                            'last_state_update': item.last_state_update,
+                            'last_state_change': item.last_state_change,
+                            'last_hard_state_change': item.last_hard_state_change,
+                        }
+
+                res['problems'] = all_problems
+
+                all_commands = {}
+                # Some checks statistics: user/system time
+                for elt in self.all_my_hosts_and_services():
+                    last_cmd = elt.last_check_command
+                    if not last_cmd:
+                        continue
+                    cmd = os.path.split(last_cmd.split(' ', 1)[0])[1]
+                    u_time = elt.u_time
+                    s_time = elt.s_time
+                    old_u_time, old_s_time = all_commands.get(cmd, (0.0, 0.0))
+                    interval = elt.check_interval
+                    if not interval:
+                        interval = 1
+                    old_u_time += u_time / interval
+                    old_s_time += s_time / interval
+                    all_commands[cmd] = (old_u_time, old_s_time)
+
+                # Return all the commands
+                res['commands'] = all_commands
 
         return res
 

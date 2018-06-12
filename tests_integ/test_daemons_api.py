@@ -57,6 +57,10 @@ class TestDaemonsApi(AlignakTest):
         # Set an environment variable to activate the logging of system cpu, memory and disk
         os.environ['ALIGNAK_DAEMON_MONITORING'] = '2'
 
+        # Set an environment variable to activate the logging of checks execution
+        # With this the pollers/schedulers will raise INFO logs about the checks execution
+        os.environ['ALIGNAK_LOG_ACTIONS'] = 'WARNING'
+
         super(TestDaemonsApi, self).setUp()
 
         self.cfg_folder = '/tmp/alignak'
@@ -94,9 +98,14 @@ class TestDaemonsApi(AlignakTest):
 
             cfg.set('alignak-configuration', 'launch_missing_daemons', '1')
 
-            # cfg.set('alignak-configuration', 'daemons_start_timeout', '15')
-            # cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '15')
-            #
+            cfg.set('alignak-configuration', 'daemons_check_period', '5')
+            cfg.set('alignak-configuration', 'daemons_stop_timeout', '3')
+            cfg.set('alignak-configuration', 'daemons_start_timeout', '1')
+            cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '1')
+            cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '1')
+            cfg.set('alignak-configuration', 'min_workers', '1')
+            cfg.set('alignak-configuration', 'max_workers', '1')
+
             # A macro for the check script directory
             cfg.set('alignak-configuration', '_EXEC_DIR', self.cfg_folder)
             for daemon in daemons_list:
@@ -110,11 +119,9 @@ class TestDaemonsApi(AlignakTest):
             assert False
 
     def tearDown(self):
-        # Set an environment variable to change the default period of activity log (every 60 loops)
-        os.environ['ALIGNAK_ACTIVITY_LOG'] = ''
-
-        # Set an environment variable to activate the logging of system cpu, memory and disk
-        os.environ['ALIGNAK_DAEMON_MONITORING'] = ''
+        del os.environ['ALIGNAK_LOG_ACTIVITY']
+        del os.environ['ALIGNAK_DAEMON_MONITORING']
+        del os.environ['ALIGNAK_LOG_ACTIONS']
 
         print("Test terminated!")
 
@@ -193,7 +200,9 @@ class TestDaemonsApi(AlignakTest):
         doc.append("===================")
         doc.append("Alignak daemons API")
         doc.append("===================")
-        for name, port in list(satellite_map.items()):
+        doc.append("")
+        for name in sorted(satellite_map):
+            port = satellite_map[name]
             raw_data = req.get("%s://localhost:%s/api" % (scheme, port), verify=False)
             print("%s, api: %s" % (name, raw_data.text))
             assert raw_data.status_code == 200
@@ -1208,6 +1217,121 @@ class TestDaemonsApi(AlignakTest):
         # This function will only send a SIGTERM to the arbiter daemon
         self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7770')
 
+    def _get_stats(self, req, satellite_map, details, run=False):
+        """Get and check daemons statistics"""
+        problems = []
+
+        print("--- get_stats")
+        for name, port in list(satellite_map.items()):
+            print("- for %s" % (name))
+            raw_data = req.get("http://localhost:%s/get_stats%s" % (port, '?details=1' if details else ''), verify=False)
+            print("%s, my stats: %s" % (name, raw_data.text))
+            assert raw_data.status_code == 200
+            data = raw_data.json()
+            print("%s, my stats: %s" % (name, json.dumps(data)))
+
+            # Same as start_time
+            assert 'alignak' in data
+            assert 'type' in data
+            assert 'name' in data
+            assert 'version' in data
+            assert 'start_time' in data
+            # +
+            assert "program_start" in data
+            assert "load" in data
+            assert "metrics" in data    # To be deprecated...
+            assert "modules" in data
+            assert "counters" in data
+
+            # Scheduler specific information
+            if name in ['scheduler']:
+                assert "livesynthesis" in data
+                livesynthesis = data['livesynthesis']
+                print("%s, my livesythesis: %s" % (name, livesynthesis))
+                if not run:
+                    assert livesynthesis["hosts_total"] == 11
+                    assert livesynthesis["hosts_up_hard"] == 11
+                    assert livesynthesis["services_total"] == 100
+                    assert livesynthesis["services_ok_hard"] == 100
+
+                # Detailed information!
+                if details:
+                    assert "commands" in data
+                    commands = data['commands']
+                    print("%s, my commands: %s" % (name, commands))
+
+                    assert "problems" in data
+                    problems = data['problems']
+                    print("%s, my problems: %s" % (name, problems))
+                    if run:
+                        assert len(problems) > 0
+                        for problem in problems:
+                            problem = problems[problem]
+                            print("A problem: %s" % (problem))
+                            assert "host" in problem
+                            assert "service" in problem
+                            assert "output" in problem
+                            assert "state" in problem
+                            assert "state_type" in problem
+                            assert "last_state" in problem
+                            assert "last_state_type" in problem
+                            assert "last_hard_state" in problem
+                            assert "last_state_update" in problem
+                            assert "last_state_change" in problem
+                            assert "last_hard_state_change" in problem
+
+            # Arbiter specific information
+            if name in ['arbiter']:
+                assert "livestate" in data
+                livestate = data['livestate']
+                assert "timestamp" in livestate
+                assert "state" in livestate
+                assert "output" in livestate
+                assert "daemons" in livestate
+                for daemon_state in livestate['daemons']:
+                    assert livestate['daemons'][daemon_state] == 0
+                print("%s, my livestate: %s" % (name, livestate))
+
+                assert "daemons_states" in data
+                daemons_state = data['daemons_states']
+                for daemon_name in daemons_state:
+                    daemon_state = daemons_state[daemon_name]
+                    assert "type" in daemon_state
+                    assert "name" in daemon_state
+                    assert "realm_name" in daemon_state
+                    assert "manage_sub_realms" in daemon_state
+                    assert "uri" in daemon_state
+                    assert "alive" in daemon_state
+                    assert "passive" in daemon_state
+                    assert "reachable" in daemon_state
+                    assert "active" in daemon_state
+                    assert "spare" in daemon_state
+                    assert "polling_interval" in daemon_state
+                    assert "configuration_sent" in daemon_state
+                    assert "max_check_attempts" in daemon_state
+                    assert "last_check" in daemon_state
+                    assert "livestate" in daemon_state
+                    assert "livestate_output" in daemon_state
+                print("%s, my daemons state: %s" % (name, daemons_state))
+
+                # Detailed information!
+                if details:
+                    assert "monitoring_objects" in data
+                    monitoring_objects = data['monitoring_objects']
+                    assert "hosts" in monitoring_objects
+                    assert "items" in monitoring_objects["hosts"]
+                    assert "count" in monitoring_objects["hosts"]
+                    assert monitoring_objects["hosts"]["count"] == 11
+                    assert "services" in monitoring_objects
+                    assert "items" in monitoring_objects["services"]
+                    assert "count" in monitoring_objects["services"]
+                    assert monitoring_objects["services"]["count"] == 100
+                    for o_type in monitoring_objects:
+                        print("%s, my %s: %d items" % (name, o_type, monitoring_objects[o_type]["count"]))
+                        assert monitoring_objects[o_type]["count"] == len(monitoring_objects[o_type]["items"])
+
+        return problems
+
     def test_get_stats(self):
         """ Running all the Alignak daemons - get daemons statistics
 
@@ -1222,7 +1346,7 @@ class TestDaemonsApi(AlignakTest):
                         'receiver-master', 'scheduler-master']
 
         self._run_alignak_daemons(cfg_folder=self.cfg_folder, arbiter_only=True,
-                                  daemons_list=daemons_list, runtime=5)
+                                  daemons_list=daemons_list, runtime=5, update_configuration=False)
 
         req = requests.Session()
 
@@ -1241,116 +1365,90 @@ class TestDaemonsApi(AlignakTest):
         # -----
 
         # -----
-        # 2/ get the daemons statistics
-        print("--- get_stats")
-        for name, port in list(satellite_map.items()):
-            print("- for %s" % (name))
-            raw_data = req.get("http://localhost:%s/get_stats" % port, verify=False)
-            print("%s, my stats: %s" % (name, raw_data.text))
-            assert raw_data.status_code == 200
-            data = raw_data.json()
-            print("%s, my stats: %s" % (name, json.dumps(data)))
+        # 1/ get Alignak overall problems
+        print("--- get monitoring problems")
+        raw_data = req.get("http://localhost:7770/get_monitoring_problems")
+        print("Alignak problems: %s" % (raw_data.text))
+        assert raw_data.status_code == 200
+        data = raw_data.json()
+        assert 'alignak' in data
+        assert 'type' in data
+        assert 'name' in data
+        assert 'version' in data
+        assert 'start_time' in data
 
-            # Same as start_time
-            assert 'alignak' in data
-            assert 'type' in data
-            assert 'name' in data
-            assert 'version' in data
-            assert 'start_time' in data
-            # +
-            assert "program_start" in data
-            assert "load" in data
-            assert "metrics" in data    # To be deprecated...
-            assert "modules" in data
-            assert "counters" in data
+        # No problems exist for the scheduler master!
+        assert 'problems' in data
+        # assert 'scheduler-master' in data['problems']
+        # assert '_freshness' in data['problems']['scheduler-master']
+        # assert 'problems' in data['problems']['scheduler-master']
+        # assert data['problems']['scheduler-master']['problems'] == {}
 
-            if name in ['arbiter']:
-                assert "livestate" in data
-                livestate = data['livestate']
-                assert "timestamp" in livestate
-                assert "state" in livestate
-                assert "output" in livestate
-                assert "daemons" in livestate
-                for daemon_state in livestate['daemons']:
-                    assert livestate['daemons'][daemon_state] == 0
-
-                assert "daemons_states" in data
-                daemons_state = data['daemons_states']
-                for daemon_name in daemons_state:
-                    daemon_state = daemons_state[daemon_name]
-                    assert "type" in daemon_state
-                    assert "name" in daemon_state
-                    assert "realm_name" in daemon_state
-                    assert "manage_sub_realms" in daemon_state
-                    assert "uri" in daemon_state
-                    assert "alive" in daemon_state
-                    assert "passive" in daemon_state
-                    assert "reachable" in daemon_state
-                    assert "active" in daemon_state
-                    assert "spare" in daemon_state
-                    assert "polling_interval" in daemon_state
-                    assert "configuration_sent" in daemon_state
-                    assert "max_check_attempts" in daemon_state
-                    assert "last_check" in daemon_state
-                    assert "livestate" in daemon_state
-                    assert "livestate_output" in daemon_state
+        # -----
+        # 2/ get the daemons statistics - no details
+        self._get_stats(req, satellite_map, False)
 
         time.sleep(5)
 
         # -----
-        # 3/ once again, get the daemons statistics
-        print("--- get_stats")
-        for name, port in list(satellite_map.items()):
-            print("- for %s" % (name))
-            raw_data = req.get("http://localhost:%s/get_stats" % port, verify=False)
-            print("%s, my stats: %s" % (name, raw_data.text))
-            assert raw_data.status_code == 200
-            data = raw_data.json()
-            print("%s, my stats: %s" % (name, json.dumps(data)))
+        # 3/ once again, get the daemons statistics - with more details
+        self._get_stats(req, satellite_map, True)
 
-            # Same as start_time
-            assert 'alignak' in data
-            assert 'type' in data
-            assert 'name' in data
-            assert 'version' in data
-            assert 'start_time' in data
-            # +
-            assert "program_start" in data
-            assert "load" in data
-            assert "metrics" in data    # To be deprecated...
-            assert "modules" in data
-            assert "counters" in data
+        # Sleep some seconds for some checks to execute
+        time.sleep(120)
 
-            if name in ['arbiter']:
-                assert "livestate" in data
-                livestate = data['livestate']
-                assert "timestamp" in livestate
-                assert "state" in livestate
-                assert "output" in livestate
-                assert "daemons" in livestate
-                for daemon_state in livestate['daemons']:
-                    assert livestate['daemons'][daemon_state] == 0
+        # -----
+        # 4/ once again, get the daemons statistics - with more details
+        problems = self._get_stats(req, satellite_map, True, run=True)
+        print("Problems: %s" % problems)
 
-                assert "daemons_states" in data
-                daemons_state = data['daemons_states']
-                for daemon_name in daemons_state:
-                    daemon_state = daemons_state[daemon_name]
-                    assert "type" in daemon_state
-                    assert "name" in daemon_state
-                    assert "realm_name" in daemon_state
-                    assert "manage_sub_realms" in daemon_state
-                    assert "uri" in daemon_state
-                    assert "alive" in daemon_state
-                    assert "passive" in daemon_state
-                    assert "reachable" in daemon_state
-                    assert "active" in daemon_state
-                    assert "spare" in daemon_state
-                    assert "polling_interval" in daemon_state
-                    assert "configuration_sent" in daemon_state
-                    assert "max_check_attempts" in daemon_state
-                    assert "last_check" in daemon_state
-                    assert "livestate" in daemon_state
-                    assert "livestate_output" in daemon_state
+        time.sleep(1)
+
+        # -----
+        # 4/ get Alignak overall problems
+        print("--- get monitoring problems")
+        raw_data = req.get("http://localhost:7770/get_monitoring_problems")
+        print("Alignak problems: %s" % (raw_data.text))
+        assert raw_data.status_code == 200
+        data = raw_data.json()
+        assert 'alignak' in data
+        assert 'type' in data
+        assert 'name' in data
+        assert 'version' in data
+        assert 'start_time' in data
+
+        # Now, some problems exist for the scheduler master!
+        assert 'problems' in data
+        assert 'scheduler-master' in data['problems']
+        assert '_freshness' in data['problems']['scheduler-master']
+        assert 'problems' in data['problems']['scheduler-master']
+        # I have some problems
+        assert len(data['problems']['scheduler-master']) > 0
+        for problem in data['problems']['scheduler-master']['problems']:
+            problem = data['problems']['scheduler-master']['problems'][problem]
+            print("A problem: %s" % (problem))
+
+        # -----
+        # 5/ get Alignak overall live synthesis
+        print("--- get livesynthesis")
+        raw_data = req.get("http://localhost:7770/get_livesynthesis")
+        print("Alignak livesynthesis: %s" % (raw_data.text))
+        assert raw_data.status_code == 200
+        data = raw_data.json()
+        assert 'alignak' in data
+        assert 'type' in data
+        assert 'name' in data
+        assert 'version' in data
+        assert 'start_time' in data
+
+        # Now, some problems exist for the scheduler master!
+        assert 'livesynthesis' in data
+        assert '_overall' in data['livesynthesis']
+        assert 'scheduler-master' in data['livesynthesis']
+        assert '_freshness' in data['livesynthesis']['scheduler-master']
+        assert 'livesynthesis' in data['livesynthesis']['scheduler-master']
+        livesynthesis = data['livesynthesis']['scheduler-master']['livesynthesis']
+        print("LS: %s" % livesynthesis)
 
         # This function will request the arbiter daemon to stop
         self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7770')

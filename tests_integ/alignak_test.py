@@ -491,7 +491,7 @@ define host {
 
                 # Daemons launching and check
                 cfg.set('alignak-configuration', 'polling_interval', '1')
-                cfg.set('alignak-configuration', 'daemons_check_period', '1')
+                cfg.set('alignak-configuration', 'daemons_check_period', '5')
                 cfg.set('alignak-configuration', 'daemons_stop_timeout', '20')
                 cfg.set('alignak-configuration', 'daemons_start_timeout', '5')
                 cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '1')
