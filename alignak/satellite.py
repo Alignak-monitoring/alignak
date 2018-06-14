@@ -758,7 +758,8 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                              scheduler_instance_id)
                 return
         if not scheduler_link:
-            logger.error("scheduler link is None for: %s", scheduler_instance_id)
+            logger.error("Trying to add actions, but scheduler link is not found for: %s, "
+                         "actions: %s", scheduler_instance_id, actions_list)
             return
         logger.debug("Found scheduler link: %s", scheduler_link)
 
