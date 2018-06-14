@@ -2071,7 +2071,7 @@ class Scheduler(object):  # pylint: disable=R0902
         return self.my_daemon.get_objects_from_from_queues()
 
     def get_scheduler_stats(self, details=False):  # pylint: disable=unused-argument
-        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-locals, too-many-branches
         """Get the scheduler statistics
 
         :return: A dict with the following structure

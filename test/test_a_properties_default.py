@@ -233,6 +233,7 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('date_format', None),
         ('use_timezone', ''),
         ('illegal_object_name_chars', '`~!$%^&*"|\'<>?,()='),
+        ('env_variables_prefix', 'ALIGNAK_'),
         ('illegal_macro_output_chars', ''),
         ('use_regexp_matching', False),
         ('use_true_regexp_matching', None),

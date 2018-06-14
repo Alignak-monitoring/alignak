@@ -91,7 +91,7 @@ class TestLaunchArbiter(AlignakTest):
         for name, port in list(satellite_map.items()):
             if daemon_names and name not in daemon_names:
                 continue
-            print("- stopping %s: http://127.0.0.1:%s/stop_request" % (name, port))
+            print("- stopping (now) %s: http://127.0.0.1:%s/stop_request" % (name, port))
             raw_data = self.req.get("http://127.0.0.1:%s/stop_request?stop_now=1" % (port))
             data = raw_data.json()
             print("- response = %s" % data)
@@ -328,7 +328,7 @@ class TestLaunchArbiter(AlignakTest):
             cfg.read(['/tmp/alignak/etc/alignak.ini', '/tmp/alignak/etc/alignak.d/daemons.ini'])
             cfg.set('alignak-configuration', 'launch_missing_daemons', '1')
             cfg.set('alignak-configuration', 'polling_interval', '1')
-            cfg.set('alignak-configuration', 'daemons_check_period', '1')
+            cfg.set('alignak-configuration', 'daemons_check_period', '3')
             cfg.set('alignak-configuration', 'daemons_stop_timeout', '1')
             cfg.set('alignak-configuration', 'daemons_start_timeout', '1')
             cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '1')
@@ -361,9 +361,11 @@ class TestLaunchArbiter(AlignakTest):
         print("Started...")
 
         self._ping_daemons()
+        sleep(1)
 
         print("Killing one daemon process...")
         self._stop_daemons(['receiver'])
+        sleep(1)
         self._ping_daemons()
         sleep(2)
 

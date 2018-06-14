@@ -513,13 +513,17 @@ class MacroResolverTester(object):
         data = [hst, svc]
         data.append(self._arbiter.conf)
 
+        # Macros are existing in the environment with a prefix which defaults to ALIGNAK_
+        # but this prefix may be overriden in the configuration
+        # assert mr.env_prefix == 'ALIGNAK_'
+
         env = mr.get_env_macros(data)
         assert env != {}
-        assert 'test_host_0' == env['NAGIOS_HOSTNAME']
-        assert 0.0 == env['NAGIOS_SERVICEPERCENTCHANGE']
-        assert 'custvalue' == env['NAGIOS__SERVICECUSTNAME']
-        assert 'gnulinux' == env['NAGIOS__HOSTOSTYPE']
-        assert 'NAGIOS_USER1' not in env
+        assert 'test_host_0' == env['%sHOSTNAME' % mr.env_prefix]
+        assert 0.0 == env['%sSERVICEPERCENTCHANGE' % mr.env_prefix]
+        assert 'custvalue' == env['%s_SERVICECUSTNAME' % mr.env_prefix]
+        assert 'gnulinux' == env['%s_HOSTOSTYPE' % mr.env_prefix]
+        assert '%sUSER1'  % mr.env_prefix not in env
 
     def test_resource_file(self):
         """
@@ -925,6 +929,9 @@ class TestMacroResolverWithEnv(MacroResolverTester, AlignakTest):
         self.setup_with_file(self.setup_file)
         assert self.conf_is_correct
 
+        mr = self.get_mr()
+        assert mr.env_prefix == 'ALIGNAK_'
+
 
 class TestMacroResolverWithoutEnv(MacroResolverTester, AlignakTest):
     """Test without enabled environment macros"""
@@ -936,3 +943,6 @@ class TestMacroResolverWithoutEnv(MacroResolverTester, AlignakTest):
         self.setup_file = 'cfg/cfg_macroresolver_environment.cfg'
         self.setup_with_file(self.setup_file)
         assert self.conf_is_correct
+
+        mr = self.get_mr()
+        assert mr.env_prefix == 'NAGIOS_'

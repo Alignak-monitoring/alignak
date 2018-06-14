@@ -304,10 +304,10 @@ class Dispatcher(object):
 
             try:
                 daemon_link.statistics = daemon_link.get_daemon_stats(details=True)
-                daemon_link.statistics['_freshness'] = int(time.time())
-                statistics[daemon_link.name] = daemon_link.statistics
-                logger.debug("Daemon %s statistics: %s" % (daemon_link.name,
-                                                           daemon_link.statistics))
+                if daemon_link.statistics:
+                    daemon_link.statistics['_freshness'] = int(time.time())
+                    statistics[daemon_link.name] = daemon_link.statistics
+                    logger.debug("Daemon %s statistics: %s", daemon_link.name, daemon_link.statistics)
             except LinkError:
                 logger.warning("Daemon connection failed, I could not get statistics.")
 

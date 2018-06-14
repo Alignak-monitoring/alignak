@@ -18,50 +18,37 @@ except IOError:
     pass
 
 # Define the list of requirements with specified versions
-requirements = [
-    # Still needing future for the CarbonIFace lib and some other stuff (queues, ...)
-    # Needing six for python 2.7/3 compatibility
-    'future==0.16.0',
-    'six==1.11.0',
+def read_requirements(filename='requirements.txt'):
+    """Reads the list of requirements from given file.
 
-    # Alignak supports the most recent CherryPy
-    'CherryPy==15.0.0',
+    :param filename: Filename to read the requirements from.
+                     Uses ``'requirements.txt'`` by default.
 
-    # Requests to communicate between the daemons
-    'requests==2.18.4',
+    :return: Requirments as list of strings.
+    """
+    # allow for some leeway with the argument
+    if not filename.startswith('requirements'):
+        filename = 'requirements-' + filename
+    if not os.path.splitext(filename)[1]:
+        filename += '.txt'  # no extension, add default
 
-    # importlib is used to import modules used by the daemons
-    'importlib' if sys.version_info <= (2,7) else '',
+    def valid_line(line):
+        line = line.strip()
+        return line and not any(line.startswith(p) for p in ('#', '-'))
 
-    # Colored console log
-    'termcolor==1.1.0',
+    def extract_requirement(line):
+        egg_eq = '#egg='
+        if egg_eq in line:
+            _, requirement = line.split(egg_eq, 1)
+            return requirement
+        return line
 
-    # Set process titles
-    'setproctitle==1.1.10',
-
-    # ujson is used for the internal objects serialization
-    'ujson==1.35',
-
-    # numpy for date and percentile computation - needs a compiler on the installation target system!
-    # Comment to use an internal implementation of percentile function
-    'numpy==1.14.3',
-
-    # SSL between the daemons
-    # This requirement is only a requirement if you intend to use SLL for the inter-daemons
-    # communication. As such, to avoid installing this library per default, commenting this line!
-    # Uncomment or `pip install pyopenssl` if SSL must be used between the Alignak daemons
-    # pyopenssl
-
-    # configparser is used to parse command line of the daemons
-    'configparser' if sys.version_info <= (2,7) else '',
-    # docopt is used by the alignak_environment script
-    'docopt==0.6.2',
-
-    # Use psutil for daemons memory monitoring (env ALIGNAK_DAEMONS_MONITORING)
-    # Use psutil for scheduler ALIGNAK_LOG_MONITORING
-    # Use psutil for launching daemons from the Arbiter
-    'psutil==5.4.5'
-]
+    with open(filename) as f:
+        lines = f.readlines()
+        return list(map(extract_requirement, filter(valid_line, lines)))
+requirements = read_requirements()
+print(requirements)
+# exit()
 
 # Better to use exec to load the VERSION from alignak/version.py
 # so to not have to import the alignak package:
@@ -138,23 +125,8 @@ setup(
     zip_safe=False,
     platforms='any',
 
-    # Dependencies (if some) ...
-    install_requires=[
-        # Do not set specific versions - for development purposes, use the most recent versions
-        # More about this: https://packaging.python.org/discussions/
-        # install-requires-vs-requirements/#install-requires-vs-requirements-files
-        'future',
-        'six',
-        'importlib' if sys.version_info <= (2,7) else '',
-        'CherryPy',
-        'requests',
-        'termcolor',
-        'setproctitle',
-        'ujson',
-        'numpy',
-        'docopt',
-        'psutil'
-    ],
+    # Dependencies...
+    install_requires=requirements,
     dependency_links=[
         # Use the standard PyPi repository
         "https://pypi.python.org/simple/",

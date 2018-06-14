@@ -29,10 +29,9 @@ pip install --upgrade pip
 sudo addgroup --system alignak
 sudo adduser --system alignak --ingroup alignak
 
-# install prog AND tests requirements :
-pip install --upgrade -r requirements.txt
-pip install -e .
+# install application AND tests requirements :
 pip install --upgrade -r test/requirements.txt
+pip install -e .
 
 pyversion=$(python -c "import sys; print(''.join(map(str, sys.version_info[:2])))")
 if test -e "test/requirements.py${pyversion}.txt"

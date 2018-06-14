@@ -169,6 +169,7 @@ class MacroResolver(Borg):
         self.contactgroups = self.my_conf.contactgroups
         self.lists_on_demand.append(self.contactgroups)
         self.illegal_macro_output_chars = self.my_conf.illegal_macro_output_chars
+        self.env_prefix = self.my_conf.env_variables_prefix
 
     @staticmethod
     def _get_macros(chain):
@@ -298,11 +299,13 @@ class MacroResolver(Borg):
 
                 prop = macros[macro]
                 value = self._get_value_from_element(obj, prop)
-                env['NAGIOS_%s' % macro] = value
+                env['%s%s' % (self.env_prefix, macro)] = value
             if hasattr(obj, 'customs'):
                 # make NAGIOS__HOSTMACADDR from _MACADDR
                 for cmacro in obj.customs:
-                    new_env_name = 'NAGIOS__' + obj.__class__.__name__.upper() + cmacro[1:].upper()
+                    new_env_name = '%s_%s%s' % (self.env_prefix,
+                                                obj.__class__.__name__.upper(),
+                                                cmacro[1:].upper())
                     env[new_env_name] = obj.customs[cmacro]
 
         return env

@@ -639,6 +639,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'illegal_macro_output_chars':
             StringProp(default='',
                        class_inherit=[(Host, None), (Service, None), (Contact, None)]),
+        'env_variables_prefix':
+            StringProp(default='ALIGNAK_'),
 
         'use_regexp_matching':
             BoolProp(managed=False,

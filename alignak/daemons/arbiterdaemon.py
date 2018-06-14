@@ -1811,7 +1811,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     'hosts_acknowledged': 0,
                     'hosts_in_downtime': 0,
                     'hosts_flapping': 0,
-    
                     'services_total': 0,
                     'services_not_monitored': 0,
                     'services_ok_hard': 0,
