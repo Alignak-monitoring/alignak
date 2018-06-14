@@ -11,6 +11,8 @@
 [![Read the Docs (stable)](https://img.shields.io/readthedocs/pip/stable.svg?label=doc-stable)](http://docs.alignak.net/en/master/)
 [![Read the Docs (develop)](https://img.shields.io/readthedocs/pip/stable.svg?label=doc-develop)](http://docs.alignak.net/en/develop/)
 [![Join the chat #alignak on freenode.net](https://img.shields.io/badge/IRC-%23alignak-1e72ff.svg?style=flat)](http://webchat.freenode.net/?channels=%23alignak)
+[![Gitter](https://badges.gitter.im/Alignak-monitoring/alignak.svg)](https://gitter.im/Alignak-monitoring/alignak?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+
 [![License AGPL v3](https://img.shields.io/badge/License-AGPL%20v3-blue.svg)](http://www.gnu.org/licenses/agpl-3.0)
 
 

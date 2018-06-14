@@ -44,6 +44,8 @@ class TestHostsvcLastStateChange(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
         time.sleep(0.2)
+
+        # Not yet a state change
         assert host.last_state_change == 0
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
@@ -98,18 +100,43 @@ class TestHostsvcLastStateChange(AlignakTest):
         assert not host.problem_has_been_acknowledged
         self.assert_actions_count(0)
 
+        # Not yet a state change
+        assert host.last_state_change == 0
+
+        before = time.time()
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
         time.sleep(0.1)
+        time.sleep(0.1)
+        after = time.time()
         assert "DOWN" == host_router.state
         assert "SOFT" == host_router.state_type
+        assert "UP" == host_router.last_state
+        assert "HARD" == host_router.last_state_type
+        assert "UP" == host_router.last_hard_state
+
+        # Integer values !
+        assert host_router.last_state_change == int(host_router.last_state_change)
+        assert host_router.last_state_change != 0
+        assert host_router.last_state_change >= int(before)
+        assert host_router.last_state_change <= int(after)
+
         # The host is still considered as UP
         assert "UP" == host.state
         assert "HARD" == host.state_type
 
+        reference_time = host_router.last_state_change
+        time.sleep(1.1)
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
         time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "SOFT" == host_router.state_type
+        assert "DOWN" == host_router.last_state
+        assert "SOFT" == host_router.last_state_type
+        assert "UP" == host_router.last_hard_state
+
+        # last_state_change not updated !
+        assert host_router.last_state_change == reference_time
+
         # The host is still considered as UP
         assert "UP" == host.state
         assert "HARD" == host.state_type
@@ -118,39 +145,48 @@ class TestHostsvcLastStateChange(AlignakTest):
         time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
+        assert "DOWN" == host_router.last_state
+        assert "SOFT" == host_router.last_state_type
+        assert "DOWN" == host_router.last_hard_state
+
         # The host is now unreachable
+        print("Host: %s" % host)
         assert "UNREACHABLE" == host.state
         assert "HARD" == host.state_type
+        assert "UP" == host.last_state
+        assert "HARD" == host.last_state_type
+        assert "UP" == host.last_hard_state
 
-        before = time.time()
         time.sleep(0.1)
-        self.scheduler_loop(1, [[host, 2, 'DOWN'], [host_router, 2, 'DOWN']])
+        self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
+        # self.scheduler_loop(1, [[host, 2, 'DOWN'], [host_router, 2, 'DOWN']])
         time.sleep(0.1)
         after = time.time()
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
         # The host remains unreachable
+        print("Host: %s" % host)
         assert "UNREACHABLE" == host.state
-        assert "SOFT" == host.state_type
+        assert "HARD" == host.state_type
+        assert "UP" == host.last_state
+        assert "HARD" == host.last_state_type
+        assert "UP" == host.last_hard_state
 
-        # Integer values !
-        assert host.last_state_change == int(host.last_state_change)
-        assert host.last_state_change != 0
-        assert host.last_state_change >= int(before)
-        assert host.last_state_change <= int(after)
+        # last_state_change not updated for UNREACHABLE state !
+        assert host.last_state_change == 0
 
-        reference_time = host.last_state_change
-        time.sleep(1.1)
-        self.scheduler_loop(2, [[host, 2, 'DOWN'], [host_router, 2, 'DOWN']])
-        assert "UNREACHABLE" == host.state
-        assert "UNREACHABLE" == host.last_state
-        assert host.last_state_change == reference_time
+        self.scheduler_loop(1, [[host_router, 0, 'UP']])
+        assert "UP" == host_router.state
+        assert "HARD" == host_router.state_type
+        assert "DOWN" == host_router.last_state
+        assert "HARD" == host_router.last_state_type
+        assert "UP" == host_router.last_hard_state
 
-        time.sleep(1.0)
-
-        self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(0.2)
-        assert host.last_state_change > reference_time
+        assert "UP" == host.state
+        assert "HARD" == host.state_type
+        assert "UP" == host.last_state
+        assert "HARD" == host.last_state_type
+        assert "UP" == host.last_hard_state
 
     def test_service(self):
         """ Test the last_state_change of service
@@ -171,6 +207,8 @@ class TestHostsvcLastStateChange(AlignakTest):
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
         time.sleep(0.2)
+
+        # Not yet a state change
         assert svc.last_state_change == 0
 
         before = time.time()

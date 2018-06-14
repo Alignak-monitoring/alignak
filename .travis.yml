@@ -5,14 +5,14 @@ python:
 - '3.5'
 - '3.6'
 env:
-- TEST_SUITE=test
+- TEST_SUITE=tests
 - TEST_SUITE=tests_integ
 install:
 - unset PYTHONWARNINGS
 - sudo apt-get install rpm
 - sudo pip install virtualenv virtualenv-tools
 - sudo pip install --upgrade distribute
-- "./test/setup_test.sh"
+- ./tests/setup_test.sh
 script:
 - pip freeze
 - |

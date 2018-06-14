@@ -26,15 +26,10 @@ cd $BASE_PATH
 
 pip install --upgrade pip
 
+# Create alignak user/group for test purpose
 sudo addgroup --system alignak
 sudo adduser --system alignak --ingroup alignak
 
-# install application AND tests requirements :
-pip install --upgrade -r test/requirements.txt
+# Install application AND tests requirements :
+pip install --upgrade -r tests/requirements.txt
 pip install -e .
-
-pyversion=$(python -c "import sys; print(''.join(map(str, sys.version_info[:2])))")
-if test -e "test/requirements.py${pyversion}.txt"
-then
-    pip install -r "test/requirements.py${pyversion}.txt"
-fi

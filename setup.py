@@ -47,8 +47,6 @@ def read_requirements(filename='requirements.txt'):
         lines = f.readlines()
         return list(map(extract_requirement, filter(valid_line, lines)))
 requirements = read_requirements()
-print(requirements)
-# exit()
 
 # Better to use exec to load the VERSION from alignak/version.py
 # so to not have to import the alignak package:
@@ -70,6 +68,7 @@ for dir in ['./etc', './bin/manpages/manpages', './bin/rc.d', './bin/systemd']:
         if package_files:
             data_files.append((target, package_files))
 
+print(data_files)
 setup(
     name='alignak',
     version=VERSION,

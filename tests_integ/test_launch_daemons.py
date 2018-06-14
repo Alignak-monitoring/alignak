@@ -548,7 +548,8 @@ class TestLaunchDaemons(AlignakTest):
         :return:
         """
         self._arbiter(verbosity='--debug')
-        self._arbiter(verbosity='-vv')
+        # Execute only once, because it looks too verbose for Travis :/
+        # self._arbiter(verbosity='-vv')
 
     def _arbiter(self, verbosity=None):
         """ Running the Alignak Arbiter with a specific verbosity
