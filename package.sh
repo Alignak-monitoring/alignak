@@ -3,21 +3,19 @@
 # --------------------------------------------------------------------------------
 # This script is building packages for Alignak thanks to the fpm
 # application (https://github.com/jordansissel/fpm).
-# Installing fpm:
-#  sudo apt-get install ruby ruby-dev rubygems build-essential
+# -----
+# Using this script and fpm requires:
+# sudo apt-get install ruby ruby-dev rubygems build-essential
 #  sudo gem install --no-ri --no-rdoc fpm
 # -----
-# This script updates the .bintray.json file to update:
+# This script updates the .bintray-*.json file to update:
 # - the target repo, replacing sed_version_repo with the appropriate
 #  repository name: alignak-deb-testing or alignak-deb-stable
 # - the version name, description and release date, replacing
 #  sed_version_name, sed_version_desc and sed_version_released
 # -----
-# Using this script and fpm requires:
-# sudo apt-get install ruby ruby-dev rubygems build-essential
-# -----
 # Command line parameters:
-# git branch name:
+# - git branch name:
 # - master will build a stable version (alignak_deb-stable repository)
 #   -> python-alignak_x.x.x_all.deb
 # - develop will build a develop version (alignak_deb-testing repository)
@@ -28,10 +26,12 @@
 # Note that it is not recommended to use anything else than alphabetic characters in the
 # branch name according to the debian version name policy! Else, the package will not even
 # install on the system!
-# python version:
-# - 2.7, 3.5 (default)
-# package type:
-# - deb (default), rpm, freebsd, apk, pacman, ...
+#
+# - python version:
+#   2.7, 3.5 (default)
+#
+# - package type:
+#   deb (default), rpm, freebsd, apk, pacman, ...
 # Indeed all the package types supported by fpm
 # --------------------------------------------------------------------------------
 #set -ev

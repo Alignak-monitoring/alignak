@@ -9,7 +9,7 @@ env:
 - TEST_SUITE=tests_integ
 install:
 - unset PYTHONWARNINGS
-- sudo apt-get install rpm
+- sudo apt-get install -y rpm
 - sudo pip install virtualenv virtualenv-tools
 - sudo pip install --upgrade distribute
 - ./tests/setup_test.sh
