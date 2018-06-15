@@ -54,10 +54,7 @@
 """
 This module provide Itemgroup and Itemgroups class used to define group of items
 """
-import warnings
-
 from alignak.objects.item import Item, Items
-from alignak.brok import Brok
 from alignak.property import ListProp
 
 
@@ -182,31 +179,28 @@ class Itemgroup(Item):
 
         return super(Itemgroup, self).is_correct() and state
 
-    def get_initial_status_brok(self, items=None):  # pylint:disable=W0221
+    def get_initial_status_brok(self, extra=None):
         """
-        Get a brok with hostgroup info (like id, name)
-        Members contain list of (id, host_name)
+        Get a brok with the group properties
 
-        :param items: monitoring items, used to recover members
-        :type items: alignak.objects.item.Items
+        `members` contains a list of uuid which we must provide the names. Thus we will replace
+        the default provided uuid with the members short name. The `extra` parameter, if present,
+         is containing the Items to search for...
+
+        :param extra: monitoring items, used to recover members
+        :type extra: alignak.objects.item.Items
         :return:Brok object
         :rtype: object
         """
-        cls = self.__class__
-        data = {}
-        # Now config properties
-        for prop, entry in list(cls.properties.items()):
-            if entry.fill_brok != []:
-                if hasattr(self, prop):
-                    data[prop] = getattr(self, prop)
+        # Here members is a list of identifiers and we need their names
+        if extra and isinstance(extra, Items):
+            members = []
+            for member_id in self.members:
+                member = extra[member_id]
+                members.append((member.uuid, member.get_name()))
+            extra = {'members': members}
 
-        # Here members is just a bunch of host, I need name in place
-        data['members'] = []
-        for m_id in self.members:
-            member = items[m_id]
-            data['members'].append((member.uuid, member.get_name()))
-
-        return Brok({'type': 'initial_' + cls.my_type + '_status', 'data': data})
+        return super(Itemgroup, self).get_initial_status_brok(extra=extra)
 
 
 class Itemgroups(Items):

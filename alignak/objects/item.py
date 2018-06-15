@@ -594,13 +594,13 @@ class Item(AlignakObject):
         :return: None
         """
         cls = self.__class__
-        # Now config properties
+        # Configuration properties
         for prop, entry in list(cls.properties.items()):
             # Is this property intended for broking?
             if brok_type in entry.fill_brok:
                 data[prop] = self.get_property_value_for_brok(prop, cls.properties)
 
-        # Maybe the class do not have running_properties
+        # And the running properties
         if hasattr(cls, 'running_properties'):
             # We've got prop in running_properties too
             for prop, entry in list(cls.running_properties.items()):
@@ -608,15 +608,19 @@ class Item(AlignakObject):
                 if brok_type in entry.fill_brok:
                     data[prop] = self.get_property_value_for_brok(prop, cls.running_properties)
 
-    def get_initial_status_brok(self):
+    def get_initial_status_brok(self, extra=None):
         """
         Create an initial status brok
 
+        :param extra: some extra information to be added in the brok data
+        :type extra: dict
         :return: Brok object
         :rtype: alignak.Brok
         """
         data = {'uuid': self.uuid}
         self.fill_data_brok_from(data, 'full_status')
+        if extra:
+            data.update(extra)
         return Brok({'type': 'initial_' + self.my_type + '_status', 'data': data})
 
     def get_new_brok(self, name):

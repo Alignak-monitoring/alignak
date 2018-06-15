@@ -205,10 +205,8 @@ class Notification(Action):  # pylint: disable=R0902
         :rtype: alignak.brok.Brok
         """
         data = {'uuid': self.uuid}
-
         self.fill_data_brok_from(data, 'full_status')
-        brok = Brok({'type': 'notification_raise', 'data': data})
-        return brok
+        return Brok({'type': 'notification_raise', 'data': data})
 
     def serialize(self):
         """This function serialize into a simple dict object.

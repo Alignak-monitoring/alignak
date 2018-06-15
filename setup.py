@@ -60,7 +60,7 @@ data_files = [
     ('share/alignak', ['requirements.txt']),
     ('share/alignak', ['bin/post-install.sh'])
 ]
-for dir in ['./etc', './bin/manpages/manpages', './bin/rc.d', './bin/systemd']:
+for dir in ['etc', 'bin/manpages/manpages', 'bin/rc.d', 'bin/systemd']:
     for subdir, dirs, files in os.walk(dir):
         # Configuration directory
         target = os.path.join('share/alignak', subdir)
@@ -69,6 +69,7 @@ for dir in ['./etc', './bin/manpages/manpages', './bin/rc.d', './bin/systemd']:
             data_files.append((target, package_files))
 
 print(data_files)
+
 setup(
     name='alignak',
     version=VERSION,
@@ -114,7 +115,7 @@ setup(
     },
 
     # Package data
-    packages=find_packages(exclude=['contrib', 'dev', 'doc', 'test', 'test_load']),
+    packages=find_packages(exclude=['contrib', 'dev', 'doc', 'tests', 'tests_integ']),
     include_package_data=True,
 
     # Where to install distributed files

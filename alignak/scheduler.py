@@ -1603,11 +1603,10 @@ class Scheduler(object):  # pylint: disable=R0902
 
             for tab in initial_status_types:
                 for item in tab:
+                    member_items = None
                     if hasattr(item, 'members'):
                         member_items = getattr(self, item.my_type.replace("group", "s"))
-                        brok = item.get_initial_status_brok(member_items)
-                    else:
-                        brok = item.get_initial_status_brok()
+                    brok = item.get_initial_status_brok(member_items)
                     self.add_brok(brok, broker_uuid)
 
         # Only raises the all logs at the scheduler startup
