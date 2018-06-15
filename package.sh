@@ -123,7 +123,7 @@ else
 fi
 
 # Run fpm:
-# - verbose mode to have information
+# Add --verbose for a verbose (very...) mode to have more information
 # - from python to deb packages, for all architectures
 # Use python dependencies - all Alignak python packages
 # are packaged in the main distros so it will use the
@@ -133,7 +133,6 @@ echo "Running fpm..."
 if [ "${output_type}" = "deb" ]; then
    fpm \
       --force \
-      --verbose \
       --input-type ${input_type} \
       --output-type ${output_type} \
       --package "./bin" \
@@ -165,8 +164,6 @@ if [ "${output_type}" = "deb" ]; then
 elif [ "${output_type}" = "rpm" ]; then
    fpm \
       --force \
-      --verbose \
-      --input-type virtualenv \
       --input-type ${input_type} \
       --output-type ${output_type} \
       --package "./bin" \
@@ -188,8 +185,6 @@ elif [ "${output_type}" = "rpm" ]; then
 else
    fpm \
       --force \
-      --verbose \
-      --input-type virtualenv \
       --input-type ${input_type} \
       --output-type ${output_type} \
       --package "./bin" \

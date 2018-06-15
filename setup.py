@@ -68,8 +68,6 @@ for dir in ['etc', 'bin/manpages/manpages', 'bin/rc.d', 'bin/systemd']:
         if package_files:
             data_files.append((target, package_files))
 
-print(data_files)
-
 setup(
     name='alignak',
     version=VERSION,

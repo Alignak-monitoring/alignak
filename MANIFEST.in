@@ -9,7 +9,3 @@ recursive-include contrib *.*
 recursive-include alignak *.*
 global-exclude *.pyc
 global-exclude *.log
-prune dev
-prune doc
-prune tests
-prune tests_integ
