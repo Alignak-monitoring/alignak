@@ -60,16 +60,16 @@ gem install --no-ri --no-rdoc fpm
 
 echo "Building ${output_type} package for branch ${git_branch}, python version ${python_version}"
 
-# Python prefix
+# Python prefix - no more used but kept for compatibility
 python_prefix="python3"
 if [ "${python_version}" = "2.7" ]; then
    python_prefix="python"
 fi
 
-# Package information
-pkg_name="python3-alignak"
+# Package information - no more python-prefix but kept for compatibility
+pkg_name="alignak"
 if [ "${python_version}" = "2.7" ]; then
-   pkg_name="python-alignak"
+   pkg_name="alignak"
 fi
 pkg_description="Alignak, modern Nagios compatible monitoring framework"
 pkg_url="http://alignak.net"
@@ -80,6 +80,7 @@ version_date=`date "+%Y-%m-%d"`
 
 if [ "${git_branch}" = "master" ]; then
    # Updating deploy script for Alignak stable version
+   sed -i -e "s|\"sed_package_name\"|\"${pkg_name}\"|g" .bintray-${output_type}.json
    sed -i -e "s|\"sed_version_name\"|\"${version}\"|g" .bintray-${output_type}.json
    sed -i -e "s|\"sed_version_desc\"|\"Stable version\"|g" .bintray-${output_type}.json
    sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray-${output_type}.json
@@ -92,6 +93,7 @@ if [ "${git_branch}" = "master" ]; then
    fi
 elif [ "${git_branch}" = "develop" ]; then
    # Updating deploy script for Alignak develop version
+   sed -i -e "s|\"sed_package_name\"|\"${pkg_name}\"|g" .bintray-${output_type}.json
    sed -i -e "s|\"sed_version_name\"|\"${version_date}\"|g" .bintray-${output_type}.json
    sed -i -e "s|\"sed_version_desc\"|\"Development version\"|g" .bintray-${output_type}.json
    sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray-${output_type}.json
@@ -107,6 +109,7 @@ elif [ "${git_branch}" = "develop" ]; then
    version="${version}-dev"
 else
    # Updating deploy script for any other branch / tag
+   sed -i -e "s|\"sed_package_name\"|\"${pkg_name}\"|g" .bintray-${output_type}.json
    sed -i -e "s|\"sed_version_name\"|\"$1\"|g" .bintray-${output_type}.json
    sed -i -e "s|\"sed_version_desc\"|\"Branch $1 version\"|g" .bintray-${output_type}.json
    sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray-${output_type}.json
@@ -128,7 +131,7 @@ fi
 # Use python dependencies - all Alignak python packages
 # are packaged in the main distros so it will use the
 # distro packages rather than the python one
-# Use the python version as a prefix for the package name
+# Force python interpreter else Travis deployment will use its own venv interpreter!
 echo "Running fpm..."
 if [ "${output_type}" = "deb" ]; then
    fpm \
@@ -144,9 +147,7 @@ if [ "${output_type}" = "deb" ]; then
       --url "${pkg_url}" \
       --vendor "${pkg_team}" \
       --maintainer "${pkg_team}" \
-      --python-package-name-prefix "${python_prefix}" \
-      --python-scripts-executable "/usr/bin/python" \
-      --python-install-lib "/usr/lib/python${python_version}/dist-packages" \
+      --python-bin '/usr/bin/python' \
       --python-install-data '/usr/local' \
       --python-install-bin '/usr/local/bin' \
       --no-python-dependencies \
@@ -175,12 +176,11 @@ elif [ "${output_type}" = "rpm" ]; then
       --url "${pkg_url}" \
       --vendor "${pkg_team}" \
       --maintainer "${pkg_team}" \
-      --python-package-name-prefix "${python_prefix}" \
-      --python-scripts-executable "/usr/bin/python" \
-      --python-install-lib "/usr/lib/python${python_version}/dist-packages" \
+      --python-bin '/usr/bin/python' \
       --python-install-data '/usr/local' \
       --python-install-bin '/usr/local/bin' \
-      --python-dependencies \
+      --no-python-dependencies \
+      --after-install './bin/post-install.sh' \
       ./setup.py
 else
    fpm \
@@ -196,11 +196,9 @@ else
       --url "${pkg_url}" \
       --vendor "${pkg_team}" \
       --maintainer "${pkg_team}" \
-      --python-package-name-prefix "${python_prefix}" \
-      --python-scripts-executable "/usr/bin/python" \
-      --python-install-lib "/usr/lib/python${python_version}/dist-packages" \
+      --python-bin '/usr/bin/python' \
       --python-install-data '/usr/local' \
       --python-install-bin '/usr/local/bin' \
-      --python-dependencies \
+      --no-python-dependencies \
       ./setup.py
 fi

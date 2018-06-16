@@ -434,10 +434,11 @@ class Daemon(object):
         # Configuration file name in environment
         if os.environ.get('ALIGNAK_CONFIGURATION_FILE'):
             kwargs['env_file'] = os.path.abspath(os.environ.get('ALIGNAK_CONFIGURATION_FILE'))
+            print("Alignak environment file from system environment: %s" % kwargs['env_file'])
 
         # I must have an Alignak environment file
         if 'env_file' not in kwargs:
-            self.exit_on_error("Alignak environment file is missing or corrupted")
+            self.exit_on_error("Alignak environment file is missing or corrupted", exit_code=1)
 
         if kwargs['env_file']:
             self.env_filename = kwargs['env_file']
@@ -487,7 +488,7 @@ class Daemon(object):
                         # For a declared property, that match a self function name
                         self.exit_on_error("Variable %s cannot be defined as a property because "
                                            "it exists a callable function with the same name!"
-                                           % prop)
+                                           % prop, exit_code=1)
                     else:
                         # For a declared property, cast the read value
                         current_prop = getattr(self, prop)
@@ -501,7 +502,8 @@ class Daemon(object):
                                          "variables as parameters for the daemon:" % self.name))
                     # Set the global Alignak configuration parameters
                     # as the current daemon properties
-                    logger.info("Getting alignak configuration to configure the daemon...")
+                    self.pre_log.append(("INFO",
+                                         "Get alignak configuration to configure the daemon..."))
                     for prop, value in list(self.alignak_env.get_alignak_configuration().items()):
                         if prop in ['name'] or prop.startswith('_'):
                             self.pre_log.append(("DEBUG",
@@ -512,7 +514,6 @@ class Daemon(object):
                             setattr(self, prop, entry.pythonize(value))
                         else:
                             setattr(self, prop, value)
-                        logger.info("- setting '%s' as %s", prop, getattr(self, prop))
                         self.pre_log.append(("DEBUG",
                                              "- setting '%s' as %s" % (prop, getattr(self, prop))))
 
@@ -558,6 +559,14 @@ class Daemon(object):
             except ValueError:
                 pass
 
+        # Running user/group in environment
+        if os.environ.get('ALIGNAK_USER'):
+            self.user = os.environ.get('ALIGNAK_USER')
+            print("Alignak user from system environment: %s" % self.user)
+        if os.environ.get('ALIGNAK_GROUP'):
+            self.group = os.environ.get('ALIGNAK_GROUP')
+            print("Alignak group from system environment: %s" % self.group)
+
         if self.debug:
             print("Daemon '%s' is in debug mode" % self.name)
 
@@ -578,7 +587,7 @@ class Daemon(object):
 
         if self.uid is None or self.gid is None:
             self.exit_on_error("Configured user/group (%s/%s) are not valid."
-                               % (self.user, self.group), exit_code=1)
+                               % (self.user, self.group), exit_code=3)
 
         # Alignak logger configuration file
         if os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None):
@@ -789,7 +798,7 @@ class Daemon(object):
                                      % (dirname, exp)))
                 self.exit_on_error("Daemon directory '%s' did not exist, "
                                    "and I could not create.'. Exception: %s"
-                                   % (dirname, exp))
+                                   % (dirname, exp), exit_code=3)
 
     def do_stop(self):
         """Execute the stop of this daemon:
@@ -1221,7 +1230,8 @@ class Daemon(object):
             self.exit_on_error("Error changing to working directory: %s. Error: %s. "
                                "Check the existence of %s and the %s/%s account "
                                "permissions on this directory."
-                               % (self.workdir, str(exp), self.workdir, self.user, self.group), 1)
+                               % (self.workdir, str(exp), self.workdir, self.user, self.group),
+                               exit_code=3)
         self.pre_log.append(("INFO", "Using working directory: %s" % os.path.abspath(self.workdir)))
 
     def unlink(self):
@@ -1276,7 +1286,7 @@ class Daemon(object):
         except Exception as exp:  # pylint: disable=broad-except
             self.exit_on_error("Error opening pid file: %s. Error: %s. "
                                "Check the %s/%s account permissions to write this file."
-                               % (self.pid_filename, str(exp), self.user, self.group), 1)
+                               % (self.pid_filename, str(exp), self.user, self.group), exit_code=3)
 
     def check_parallel_run(self):  # pragma: no cover, not with unit tests...
         """Check (in pid file) if there isn't already a daemon running.
@@ -1323,7 +1333,7 @@ class Daemon(object):
 
         if not self.do_replace:
             self.exit_on_error("A valid pid file still exists (pid=%s) and "
-                               "I am not allowed to replace. Exiting!" % pid)
+                               "I am not allowed to replace. Exiting!" % pid, exit_code=3)
 
         self.pre_log.append(("DEBUG", "Replacing former instance: %d" % pid))
         try:
@@ -1396,9 +1406,9 @@ class Daemon(object):
 
         # Close all file descriptors except the one we need
         self.pre_log.append(("DEBUG", "Closing file descriptors..."))
-        preserved_fds = [self.fpid.fileno()]
-        if os.getenv('ALIGNAK_KEEP_STDOUT', None):
-            preserved_fds = [1, 2, self.fpid.fileno()]
+        preserved_fds = [1, 2, self.fpid.fileno()]
+        if os.getenv('ALIGNAK_DO_NOT_PRESERVE_STDOUT', None):
+            preserved_fds = [self.fpid.fileno()]
         if self.debug:
             # Do not close stdout nor stderr
             preserved_fds.extend([1, 2])
@@ -1603,7 +1613,8 @@ class Daemon(object):
                          "in the configuration file")
             self.exit_on_error("You want the application to run with the root account credentials? "
                                "It is not a safe configuration! If you really want it, "
-                               "set: 'idontcareaboutsecurity=1' in the configuration file.", 1)
+                               "set: 'idontcareaboutsecurity=1' in the configuration file.",
+                               exit_code=3)
 
         uid = None
         try:
@@ -1619,7 +1630,7 @@ class Daemon(object):
 
         if uid is None or gid is None:
             self.exit_on_error("Configured user/group (%s/%s) are not valid."
-                               % (self.user, self.group), 1)
+                               % (self.user, self.group), exit_code=1)
 
         # Maybe the os module got the initgroups function. If so, try to call it.
         # Do this when we are still root
@@ -1645,7 +1656,7 @@ class Daemon(object):
             os.setreuid(uid, uid)
         except OSError as err:  # pragma: no cover, not with unit tests...
             self.exit_on_error("Cannot change user/group to %s/%s (%s [%d]). Exiting..."
-                               % (self.user, self.group, err.strerror, err.errno), 2)
+                               % (self.user, self.group, err.strerror, err.errno), exit_code=3)
 
     def manage_signal(self, sig, frame):  # pylint: disable=unused-argument
         """Manage signals caught by the daemon
@@ -1857,7 +1868,7 @@ class Daemon(object):
             _, _ = self.make_a_pause(timeout, check_time_change=True)
 
         if not self.interrupted:
-            logger.info("Got initial configuration, waited for: %.2f", time.time() - _ts)
+            logger.info("Got initial configuration, waited for: %.2f seconds", time.time() - _ts)
             statsmgr.timer('configuration.initial', time.time() - _ts)
         else:
             logger.info("Interrupted before getting the initial configuration")
@@ -2053,7 +2064,7 @@ class Daemon(object):
         if exit_code is not None:
             exit(exit_code)
 
-    def exit_on_error(self, message, exit_code=None):
+    def exit_on_error(self, message, exit_code=1):
         # pylint: disable=no-self-use
         """Log generic message when getting an error and exit
 
@@ -2151,13 +2162,13 @@ class Daemon(object):
                 # Force the global logger at DEBUG level
                 set_log_level('DEBUG')
                 logger.info("-----")
-                logger.info("Arbiter log level set to a minimum of DEBUG")
+                logger.info("Daemon log level set to a minimum of DEBUG")
                 logger.info("-----")
             elif self.verbose:
                 # Force the global logger at INFO level
                 set_log_level('INFO')
                 logger.info("-----")
-                logger.info("Arbiter log level set to a minimum of INFO")
+                logger.info("Daemon log level set to a minimum of INFO")
                 logger.info("-----")
         except Exception as exp:  # pylint: disable=broad-except
             print("***** %s - exception when setting-up the logger: %s" % (self.name, exp))
@@ -2166,20 +2177,22 @@ class Daemon(object):
         logger.debug("Alignak daemon logger configured")
 
         for line in self.get_header():
-            logger.info(line)
+            logger.info("- %s", line)
 
         # Log daemon configuration
         for line in self.get_header(configuration=True):
-            logger.debug(line)
+            logger.debug("- %s", line)
 
         # We can now output some previously silenced debug output
         if self.pre_log:
             logger.debug("--- Start - Log prior to our configuration:")
             for level, message in self.pre_log:
-                if level.lower() == "debug":
-                    logger.debug(message)
-                elif level.lower() == "info":
-                    logger.info(message)
-                elif level.lower() == "warning":
-                    logger.warning(message)
+                fun_level = level.lower()
+                getattr(logger, fun_level)("- %s", message)
+                # if level.lower() == "debug":
+                #     logger.debug(message)
+                # elif level.lower() == "info":
+                #     logger.info(message)
+                # elif level.lower() == "warning":
+                #     logger.warning(message)
             logger.debug("--- Stop - Log prior to our configuration")

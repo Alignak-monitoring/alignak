@@ -3,16 +3,13 @@ Description=Alignak broker %I daemon instance
 PartOf=alignak.service
 
 [Service]
-# Environment variables
-Environment=ALIGNAK_CONFIGURATION_FILE=/usr/local/etc/alignak/alignak.ini
+# Environment variables - may be overriden in the /etc/default/alignak
+Environment=ALIGNAK_CONFIGURATION_FILE=/usr/local/share/alignak/etc/alignak.ini
+Environment=ALIGNAK_USER=alignak
+Environment=ALIGNAK_GROUP=alignak
+EnvironmentFile=-/etc/default/alignak
 
 Type=forking
-
-# Execution
-ExecStartPre=/bin/mkdir -p /usr/local/var/log/alignak
-ExecStartPre=/bin/chown alignak:alignak /usr/local/var/log/alignak
-ExecStartPre=/bin/mkdir -p /usr/local/var/run/alignak
-ExecStartPre=/bin/chown alignak:alignak /usr/local/var/run/alignak
 
 # PID file as declared in daemon configuration
 PIDFile=/usr/local/var/run/alignak/broker-%i.pid

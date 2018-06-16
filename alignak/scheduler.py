@@ -443,7 +443,7 @@ class Scheduler(object):  # pylint: disable=R0902
         path = os.path.join(tempfile.gettempdir(),
                             'dump-obj-scheduler-%s-%d.json' % (self.name, int(time.time())))
 
-        logger.info('Dumping schduler objects to: %s', path)
+        logger.info('Dumping scheduler objects to: %s', path)
         try:
             fd = open(path, 'wb')
             output = 'type:uuid:status:t_to_go:poller_tag:worker:command\n'

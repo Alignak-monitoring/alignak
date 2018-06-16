@@ -42,6 +42,10 @@ class TestLaunchDaemonsRealms(AlignakTest):
         # With this the pollers/schedulers will raise INFO logs about the checks execution
         os.environ['ALIGNAK_LOG_ACTIONS'] = 'WARNING'
 
+        # Change default daemonisation behavior: do not preserve file descriptors for stdin/stdout
+        # Tricky configuration !
+        # os.environ['ALIGNAK_DO_NOT_PRESERVE_STDOUT'] = '1'
+
         # Set an environment variable to change the default period of activity log (every 60 loops)
         os.environ['ALIGNAK_LOG_ACTIVITY'] = '60'
 
@@ -64,6 +68,17 @@ class TestLaunchDaemonsRealms(AlignakTest):
         :return: None
         """
         self._run_checks(passive=False, hosts_count=10, duration=60, cfg_dir='default_many_hosts')
+
+    def test_checks_active_satellites_daemons(self):
+        """ Run the Alignak daemons and check the correct checks result and notifications
+        with some pollers / reactionners in active mode
+
+        Satellites are started as daemons
+
+        :return: None
+        """
+        self._run_checks(passive=False, hosts_count=10, duration=60, cfg_dir='default_many_hosts',
+                         daemonize=True)
 
     def test_checks_active_satellites_multi_realms(self):
         """ Run the Alignak daemons and check the correct checks result and notifications
@@ -110,7 +125,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
                          realms = ['All', 'North', 'South'])
 
     def _run_checks(self, passive=True, duration=60, hosts_count=10, cfg_dir='default_many_hosts',
-                    more_daemons=None, realms=None):
+                    more_daemons=None, realms=None, daemonize=False):
         """ Run the Alignak daemons and check the correct checks result and notifications
         with some pollers / reactionners in active or passive mode
 
@@ -160,6 +175,8 @@ class TestLaunchDaemonsRealms(AlignakTest):
             for daemon in daemons_list:
                 if cfg.has_section('daemon.%s' % daemon):
                     cfg.set('daemon.%s' % daemon, 'alignak_launched', '1')
+                    if daemonize:
+                        cfg.set('daemon.%s' % daemon, 'is_daemon', '1')
 
             # Poller and reactionner daemons are in active mode - default mode!
             if passive:

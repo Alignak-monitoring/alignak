@@ -372,6 +372,8 @@ class template_Daemon_Start():
 
         :return:
         """
+        self.clear_logs()
+
         daemon = self.get_daemon()
         assert daemon.pid_filename == os.path.abspath('/tmp/var/run/alignak/%s.pid' % daemon.name)
         # assert daemon.log_filename == os.path.abspath('./cfg/daemons/log/%s.log' % daemon.name)
@@ -379,6 +381,9 @@ class template_Daemon_Start():
 
         # Do not reload the configuration file (avoid replacing modified properties for the test...)
         daemon.setup_alignak_logger()
+        daemon.debug = True
+
+        self.show_logs()
 
         # The daemon log file is set by the logger configuration ... if it did not exist
         # an exception should have been raised!
@@ -400,6 +405,19 @@ class template_Daemon_Start():
             "My pid: %s" % daemon.pid
         ]
         assert daemon.get_header()[:7] == expected_result
+
+    def test_daemon_environment(self):
+        """ Test daemon environment variables
+
+        :return:
+        """
+        os.environ['ALIGNAK_USER'] = 'alignak'
+        os.environ['ALIGNAK_GROUP'] = 'alignak'
+        daemon = self.get_daemon()
+        assert daemon.user == 'alignak'
+        assert daemon.group == 'alignak'
+        del os.environ['ALIGNAK_USER']
+        del os.environ['ALIGNAK_GROUP']
 
     @pytest.mark.skip("Not easily testable with CherryPy ... "
                       "by the way this will mainly test Cherrypy ;)")
