@@ -8,7 +8,7 @@
 # ----------
 
 # This is an implicit value, here for clarity
---index-url https://pypi.python.org/simple/
+# --index-url https://pypi.python.org/simple/
 
 # Still needing future for the CarbonIFace lib and some other stuff (queues, ...)
 # Needing six for python 2.7/3 compatibility

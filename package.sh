@@ -66,10 +66,10 @@ if [ "${python_version}" = "2.7" ]; then
    python_prefix="python"
 fi
 
-# Package information
-pkg_name="python3-alignak"
+# Package information - no more python-prefix but kept for compatibility
+pkg_name="alignak"
 if [ "${python_version}" = "2.7" ]; then
-   pkg_name="python-alignak"
+   pkg_name="alignak"
 fi
 pkg_description="Alignak, modern Nagios compatible monitoring framework"
 pkg_url="http://alignak.net"
