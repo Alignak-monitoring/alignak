@@ -60,7 +60,7 @@ gem install --no-ri --no-rdoc fpm
 
 echo "Building ${output_type} package for branch ${git_branch}, python version ${python_version}"
 
-# Python prefix
+# Python prefix - no more used but kept for compatibility
 python_prefix="python3"
 if [ "${python_version}" = "2.7" ]; then
    python_prefix="python"
@@ -128,7 +128,6 @@ fi
 # Use python dependencies - all Alignak python packages
 # are packaged in the main distros so it will use the
 # distro packages rather than the python one
-# Use the python version as a prefix for the package name
 echo "Running fpm..."
 if [ "${output_type}" = "deb" ]; then
    fpm \
@@ -144,7 +143,6 @@ if [ "${output_type}" = "deb" ]; then
       --url "${pkg_url}" \
       --vendor "${pkg_team}" \
       --maintainer "${pkg_team}" \
-      --python-package-name-prefix "${python_prefix}" \
       --python-scripts-executable "/usr/bin/python" \
       --python-install-lib "/usr/lib/python${python_version}/dist-packages" \
       --python-install-data '/usr/local' \
@@ -175,7 +173,6 @@ elif [ "${output_type}" = "rpm" ]; then
       --url "${pkg_url}" \
       --vendor "${pkg_team}" \
       --maintainer "${pkg_team}" \
-      --python-package-name-prefix "${python_prefix}" \
       --python-scripts-executable "/usr/bin/python" \
       --python-install-lib "/usr/lib/python${python_version}/dist-packages" \
       --python-install-data '/usr/local' \
@@ -197,7 +194,6 @@ else
       --url "${pkg_url}" \
       --vendor "${pkg_team}" \
       --maintainer "${pkg_team}" \
-      --python-package-name-prefix "${python_prefix}" \
       --python-scripts-executable "/usr/bin/python" \
       --python-install-lib "/usr/lib/python${python_version}/dist-packages" \
       --python-install-data '/usr/local' \
