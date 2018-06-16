@@ -27,6 +27,7 @@ dependening upon the timezone
 # pylint: disable=R0904
 
 import time
+import datetime
 import pytest
 from freezegun import freeze_time
 from .alignak_test import AlignakTest
@@ -139,13 +140,14 @@ class TestDateRanges(AlignakTest):
                 'end': 1471737599 + local_offset
             },
         }
-        params = {'syear': 2015, 'smon': 7, 'smday': 26, 'swday': 0,
-                  'swday_offset': 0, 'eyear': 2016, 'emon': 8, 'emday': 20,
-                  'ewday': 0, 'ewday_offset': 0, 'skip_interval': 3,
-                  'other': ''}
-        caldate = CalendarDaterange(params)
+
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
+                caldate = CalendarDaterange({
+                    'syear': 2015, 'smon': 7, 'smday': 26, 'swday': 0,
+                    'swday_offset': 0, 'eyear': 2016, 'emon': 8, 'emday': 20,
+                    'ewday': 0, 'ewday_offset': 0, 'skip_interval': 3,
+                    'other': ''})
                 ret = caldate.get_start_and_end_time()
                 print("* %s" % date_now)
                 assert data[date_now]['start'] == ret[0]
@@ -179,7 +181,7 @@ class TestDateRanges(AlignakTest):
                 'end': 1437177599 + local_offset
             }
 
-        # Time from next wednesday morning to next wednesday night
+        # Time from next friday morning to next friday night
         caldate = StandardDaterange({'day': 'friday', 'other': '00:00-24:00'})
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
@@ -249,29 +251,38 @@ class TestDateRanges(AlignakTest):
             local_hour_offset = "+%02d" % -local_hour_offset
 
         data = {
-            '2015-07-20 01:50:00 %s' % local_hour_offset: {
+            '2015-07-20 00:50:00 %s' % local_hour_offset: {
                 'start': 1437868800 + local_offset,
                 'end': 1440115199 + local_offset
             },
-            '2015-07-26 01:50:00 %s' % local_hour_offset: {
+            '2015-07-26 00:50:00 %s' % local_hour_offset: {
                 'start': 1437868800 + local_offset,
                 'end': 1440115199 + local_offset
             },
-            '2015-08-28 01:50:00 %s' % local_hour_offset: {
+            '2015-08-28 00:50:00 %s' % local_hour_offset: {
                 'start': 1469491200 + local_offset,
                 'end': 1471737599 + local_offset
             },
-            '2016-01-01 01:50:00 %s' % local_hour_offset: {
+            '2016-01-01 00:50:00 %s' % local_hour_offset: {
                 'start': 1469491200 + local_offset,
                 'end': 1471737599 + local_offset
             },
         }
-        params = {'syear': 0, 'smon': 7, 'smday': 26, 'swday': 0, 'swday_offset': 0,
-                  'eyear': 0, 'emon': 8, 'emday': 20, 'ewday': 0, 'ewday_offset': 0,
-                  'skip_interval': 0, 'other': ''}
-        caldate = MonthDateDaterange(params)
+
         for date_now in data:
             with freeze_time(date_now, tz_offset=0):
+                # Reset the initial parameters for every date else the test is broken (#1022!
+                caldate = MonthDateDaterange({
+                    'syear': 0, 'smon': 7, 'smday': 26, 'swday': 0, 'swday_offset': 0,
+                    'eyear': 0, 'emon': 8, 'emday': 20, 'ewday': 0, 'ewday_offset': 0,
+                    'skip_interval': 0, 'other': ''
+                })
+                print("-----\nToday is: %s, UTC: %s, expected: [%s, %s]" % (
+                    datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                    datetime.datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S"),
+                    data[date_now]['start'], data[date_now]['end']
+                ))
+                print("MonthDateDaterange: %s" % caldate.__dict__)
                 print("Date: %s: %s" % (date_now, data[date_now]))
                 start, end = caldate.get_start_and_end_time()
                 print("-> start: %s, end: %s" % (start, end))

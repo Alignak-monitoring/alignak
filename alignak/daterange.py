@@ -897,6 +897,7 @@ class MonthDateDaterange(Daterange):
         :rtype: tuple (int, int)
         """
         now = time.localtime(ref)
+        print("Now: %s" % str(now))
         if self.syear == 0:
             self.syear = now.tm_year
         day_start = find_day_by_offset(self.syear, self.smon, self.smday)
@@ -908,6 +909,7 @@ class MonthDateDaterange(Daterange):
         end_time = get_end_of_day(self.eyear, self.emon, day_end)
 
         now_epoch = time.mktime(now)
+        print("Now ts: %s" % now_epoch)
         if start_time > end_time:  # the period is between years
             if now_epoch > end_time:
                 # check for next year
