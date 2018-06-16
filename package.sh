@@ -181,6 +181,7 @@ elif [ "${output_type}" = "rpm" ]; then
       --python-install-data '/usr/local' \
       --python-install-bin '/usr/local/bin' \
       --python-dependencies \
+      --after-install './bin/post-install.sh' \
       ./setup.py
 else
    fpm \
