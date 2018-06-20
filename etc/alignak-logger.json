@@ -43,7 +43,7 @@
             "class": "logging.handlers.TimedRotatingFileHandler",
             "level": "INFO",
             "formatter": "monitoring-log",
-            "filename": "%(logdir)s/monitoring-log/monitoring-logs.log",
+            "filename": "%(logdir)s/monitoring-log/monitoring-logs-%(daemon)s.log",
             "when": "midnight",
             "interval": 1,
             "backupCount": 365

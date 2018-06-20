@@ -145,7 +145,7 @@ class CheckModulation(Item):
                 msg = "[checkmodulation::%s] a check_command is missing" % (self.get_name())
                 self.add_error(msg)
                 state = False
-            if not self.check_command.is_valid():
+            if self.check_command and not self.check_command.is_valid():
                 msg = "[checkmodulation::%s] a check_command is invalid" % (self.get_name())
                 self.add_error(msg)
                 state = False

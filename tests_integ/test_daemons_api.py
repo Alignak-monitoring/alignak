@@ -1002,7 +1002,7 @@ class TestDaemonsApi(AlignakTest):
             host = raw_data.json()
             host = host['content']
             print("get_hostgroup member, got: %s" % host['host_name'])
-        # assert len(hostgroup.members) == 11
+        # assert len(hostgroup.members) == 13
 
         # ---
         # Get an unknown host
@@ -1249,8 +1249,8 @@ class TestDaemonsApi(AlignakTest):
                 livesynthesis = data['livesynthesis']
                 print("%s, my livesythesis: %s" % (name, livesynthesis))
                 if not run:
-                    assert livesynthesis["hosts_total"] == 11
-                    assert livesynthesis["hosts_up_hard"] == 11
+                    assert livesynthesis["hosts_total"] == 13
+                    assert livesynthesis["hosts_up_hard"] == 13
                     assert livesynthesis["services_total"] == 100
                     assert livesynthesis["services_ok_hard"] == 100
 
@@ -1321,7 +1321,7 @@ class TestDaemonsApi(AlignakTest):
                     assert "hosts" in monitoring_objects
                     assert "items" in monitoring_objects["hosts"]
                     assert "count" in monitoring_objects["hosts"]
-                    assert monitoring_objects["hosts"]["count"] == 11
+                    assert monitoring_objects["hosts"]["count"] == 13
                     assert "services" in monitoring_objects
                     assert "items" in monitoring_objects["services"]
                     assert "count" in monitoring_objects["services"]

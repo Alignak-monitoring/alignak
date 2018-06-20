@@ -2352,9 +2352,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # the check is being forced, so we just replace next_chk time by now
         if force and self.in_checking:
             try:
-                now = time.time()
                 c_in_progress = checks[self.checks_in_progress[0]]
-                c_in_progress.t_to_go = now
+                c_in_progress.t_to_go = time.time()
                 return c_in_progress
             except KeyError:
                 pass
@@ -2390,47 +2389,58 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             return chk
 
         if force or (not self.is_no_check_dependent(hosts, services, timeperiods)):
+            if self.my_type == 'host' and not self.check_command:
+                logger.debug("Host check is for an host that has no check command (%s), "
+                             "do not launch the check !", self.host_name)
+                return None
+
             # Fred : passive only checked host dependency
             if dependent and self.my_type == 'host' and \
                     self.passive_checks_enabled and not self.active_checks_enabled:
-                logger.debug("Host check is for a host that is only passively "
+                logger.debug("Host check is for an host that is only passively "
                              "checked (%s), do not launch the check !", self.host_name)
                 return None
 
-            # By default we will use our default check_command
-            check_command = self.check_command
-            # But if a checkway is available, use this one instead.
-            # Take the first available
-            for chkmod_id in self.checkmodulations:
-                chkmod = checkmodulations[chkmod_id]
-                c_cw = chkmod.get_check_command(timeperiods, timestamp)
-                if c_cw:
-                    check_command = c_cw
-                    break
-
-            # Get the command to launch
-            macroresolver = MacroResolver()
-            if hasattr(self, 'host'):
-                macrodata = [hosts[self.host], self]
-            else:
-                macrodata = [self]
-            command_line = macroresolver.resolve_command(check_command, macrodata,
-                                                         macromodulations, timeperiods)
-
-            # remember it, for pure debugging purpose
-            self.last_check_command = command_line
-
             # By default env is void
             env = {}
+            poller_tag = u'None'
+            module_type = None
+
+            # By default we will use our default check_command
+            check_command = self.check_command
+            if check_command:
+                poller_tag = check_command.poller_tag
+                module_type = check_command.module_type
+
+                # But if a checkway is available, use this one instead.
+                # Take the first available
+                for chkmod_id in self.checkmodulations:
+                    chkmod = checkmodulations[chkmod_id]
+                    c_cw = chkmod.get_check_command(timeperiods, timestamp)
+                    if c_cw:
+                        check_command = c_cw
+                        break
+    
+                # Get the command to launch
+                macroresolver = MacroResolver()
+                if hasattr(self, 'host'):
+                    macrodata = [hosts[self.host], self]
+                else:
+                    macrodata = [self]
+                command_line = macroresolver.resolve_command(check_command, macrodata,
+                                                             macromodulations, timeperiods)
 
             # And get all environment variables only if needed
             if cls.enable_environment_macros or check_command.enable_environment_macros:
                 env = macroresolver.get_env_macros(macrodata)
 
+            # remember it, for pure debugging purpose
+            self.last_check_command = command_line
+
             # By default we take the global timeout, but we use the command one if it
             # is defined (default is -1 for no timeout)
             timeout = cls.check_timeout
-            if check_command.timeout != -1:
+            if check_command and check_command.timeout != -1:
                 timeout = check_command.timeout
 
             # Make the Check object and put the service in checking
@@ -2439,9 +2449,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             data = {
                 'command': command_line,
                 'timeout': timeout,
-                'poller_tag': check_command.poller_tag,
+                'poller_tag': poller_tag,
                 'env': env,
-                'module_type': check_command.module_type,
+                'module_type': module_type,
                 't_to_go': timestamp,
                 'depend_on_me': [ref_check] if ref_check else [],
                 'ref': self.uuid,
@@ -2756,17 +2766,21 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # _internal_host_check is for having an host check result
         # without running a check plugin
-        elif check.command == '_internal_host_check':
+        elif check.command.startswith('_internal_host_check'):
             # Command line contains: state_id;output
-            check_result = check.command_line.split(';')
-            if not check_result:
+            check_result = check.command.split(';')
+            if len(check_result) < 2:
                 state = 3
                 check.output = u'Malformed host internal check'
             else:
-                state = check_result[0]
+                state = 3
+                try:
+                    state = int(check_result[1])
+                except ValueError:
+                    pass
                 check.output = u'Host internal check result: %d' % state
-                if len(check_result) > 1:
-                    check.output = check_result[1]
+                if len(check_result) > 2:
+                    check.output = check_result[2]
 
             check.execution_time = 0
             if 'ALIGNAK_LOG_ACTIONS' in os.environ:
@@ -2779,9 +2793,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # _internal_service_check is for having a service check result
         # without running a check plugin
-        elif check.command == '_internal_service_check':
+        elif check.command.startswith('_internal_service_check'):
             # Command line contains: state_id;output
-            check_result = check.command_line.split(';')
+            check_result = check.command.split(';')
             if not check_result:
                 state = 3
                 check.output = u'Malformed service internal check'
@@ -2817,7 +2831,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # workaround/easy trick to have the command_name of this
         # SchedulingItem in its check_result brok
         if brok_type == 'check_result':
-            data['command_name'] = self.check_command.command.command_name
+            data['command_name'] = ''
+            if self.check_command:
+                data['command_name'] = self.check_command.command.command_name
+
 
     def acknowledge_problem(self, notification_period, hosts, services, sticky, notify, author,
                             comment, end_time=0):
@@ -3191,7 +3208,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             state = False
         # Ok got a command, but maybe it's invalid
         else:
-            if not self.check_command.is_valid():
+            if self.check_command and not self.check_command.is_valid():
                 self.add_error("[%s::%s] check_command '%s' invalid"
                                % (self.my_type, self.get_name(), self.check_command.command))
                 state = False

@@ -535,7 +535,7 @@ class TestHost(PropertiesTester, AlignakTest):
         ('address6', ''),
         ('parents', []),
         ('hostgroups', []),
-        ('check_command', '_internal_host_up'),
+        ('check_command', ''),
         ('initial_state', 'o'),
         ('freshness_state', 'x'),
         ('check_interval', 0),

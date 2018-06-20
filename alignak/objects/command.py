@@ -145,6 +145,54 @@ class Command(Item):
                 # elif 'default' in entry[prop]:
                 #    data[prop] = entry.default
 
+    def is_correct(self):
+        """Check if this object configuration is correct ::
+
+        * Check our own specific properties
+        * Call our parent class is_correct checker
+
+        :return: True if the configuration is correct, otherwise False
+        :rtype: bool
+        """
+        state = True
+
+        # _internal_host_check is for having an host check result
+        # without running a check plugin
+        if self.command_name.startswith('_internal_host_check'):
+            # Command line may contain: [state_id][;output]
+            parameters = self.command_line.split(';')
+            print("Command: %s / %s" % (self.command_name, parameters))
+            if len(parameters) < 2:
+                self.command_name = "_internal_host_check;0;Host assumed to be UP"
+                self.add_warning("[%s::%s] has no defined state nor output. Changed to %s"
+                                 % (self.my_type, self.command_name, self.command_name))
+            elif len(parameters) < 3:
+                state = 3
+                try:
+                    state = int(parameters[1])
+                except ValueError:
+                    self.add_warning("[%s::%s] required a non integer state: %s. Using 3."
+                                     % (self.my_type, self.command_name, parameters[1]))
+                    pass
+
+                if state > 4:
+                    self.add_warning("[%s::%s] required an impossible state: %d. Using 3."
+                                     % (self.my_type, self.command_name, state))
+
+                output = {0: "UP", 1: "DOWN", 2: "DOWN", 3: "UNKNOWN", 4: "UNREACHABLE", }[state]
+                self.command_name = "_internal_host_check;Host assumed to be %s" % output
+
+                self.add_warning("[%s::%s] has no defined output. Changed to %s"
+                                 % (self.my_type, self.command_name, self.command_name))
+            elif len(parameters) > 3:
+                self.command_name = "%s;%s;%s" % (parameters[0], parameters[1], parameters[2])
+
+                self.add_warning("[%s::%s] has too many parameters. Changed to %s"
+                                 % (self.my_type, self.command_name, self.command_name))
+
+        return super(Command, self).is_correct() and state
+
+
 
 class Commands(Items):
     """

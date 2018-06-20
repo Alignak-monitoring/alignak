@@ -165,6 +165,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
             cfg = configparser.ConfigParser()
             cfg.read(files)
 
+            cfg.set('alignak-configuration', 'tick_manage_internal_checks', '10')
             cfg.set('alignak-configuration', 'launch_missing_daemons', '1')
 
             cfg.set('alignak-configuration', 'daemons_start_timeout', '15')
@@ -175,6 +176,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
             for daemon in daemons_list:
                 if cfg.has_section('daemon.%s' % daemon):
                     cfg.set('daemon.%s' % daemon, 'alignak_launched', '1')
+                    # cfg.set('daemon.%s' % daemon, 'debug', '1')
                     if daemonize:
                         cfg.set('daemon.%s' % daemon, 'is_daemon', '1')
 
@@ -210,6 +212,9 @@ class TestLaunchDaemonsRealms(AlignakTest):
             u"Configuration warnings",
             u"the parameter $DIST_BIN$ is ambiguous! No value after =, assuming an empty string",
             u"No realms defined, I am adding one as All",
+            u"[host::localhost2] has no defined check command",
+            u"hosts configuration warnings: 1, total: 2",
+            u"[host::localhost2] has no defined check command",
 
             # Daemons not existing
             u"Some hosts exist in the realm ",
@@ -233,6 +238,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
             u'Got check result',
             u'Echo the current state',
             u'Set host',
+            u'Host localhost',
             u'Check to run:'
         ]
         ignored_errors = [

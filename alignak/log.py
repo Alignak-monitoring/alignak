@@ -84,6 +84,10 @@ class CollectorHandler(Handler):
         except TypeError:  # pragma: no cover, simple protection
             self.handleError(record)
 
+import sys
+def is_tty():
+    # Look if we are in a tty or not
+    return getattr(sys.stdout, 'isatty', False)
 
 class ColorStreamHandler(StreamHandler):
     """
@@ -94,7 +98,10 @@ class ColorStreamHandler(StreamHandler):
                   'WARNING': 'yellow', 'CRITICAL': 'magenta', 'ERROR': 'red'}
         msg = self.format(record)
         try:
-            cprint(msg, colors[record.levelname])
+            if is_tty():
+                cprint(msg, colors[record.levelname])
+            else:
+                print(msg)
         except UnicodeEncodeError:  # pragma: no cover, simple protection
             print(msg.encode('ascii', 'ignore'))
         except IOError:  # pragma: no cover, simple protection

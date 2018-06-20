@@ -726,8 +726,6 @@ define host {
             self.env_filename = env_file
         else:
             self.env_filename = os.path.join(configuration_dir, 'alignak.ini')
-            print("env filename: %s" % os.path.join(configuration_dir, 'alignak.ini'))
-            print("env filename: %s" % os.path.join(current_dir, './etc/alignak.ini'))
             if os.path.exists(os.path.join(configuration_dir, 'alignak.ini')):
                 # alignak.ini in the same directory as the legacy configuration file
                 self.env_filename = os.path.join(configuration_dir, 'alignak.ini')

@@ -3086,14 +3086,13 @@ class ExternalCommandManager(object):
                          plugin_output)
             return
 
-        chk = host.launch_check(now, self.hosts, self.services, self.timeperiods,
+        chk = host.launch_check(int(now), self.hosts, self.services, self.timeperiods,
                                 self.daemon.macromodulations, self.daemon.checkmodulations,
                                 self.daemon.checks, force=True)
-        # Should not be possible to not find the check, but if so, don't crash
+        # We will not have a check if an host/service is checked but it has no defined check_command
         if not chk:
-            logger.error('%s > Passive host check failed. None check launched !?',
-                         host.get_full_name())
             return
+
         # Now we 'transform the check into a result'
         # So exit_status, output and status is eaten by the host
         chk.exit_status = status_code

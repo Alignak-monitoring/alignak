@@ -117,7 +117,6 @@ class TestEscalations(AlignakTest):
 
         tolevel2 = self._scheduler.escalations.find_by_name('ToLevel2')
         assert tolevel2 is not None
-        print("Esc: %s / %s" % (type(tolevel2), tolevel2))
         self.assertIsInstance(tolevel2, Escalation)
         assert tolevel2.uuid in svc.escalations
 

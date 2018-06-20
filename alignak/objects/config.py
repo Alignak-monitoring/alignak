@@ -1321,7 +1321,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         raw_objects['command'].append({
             'command_name': '_internal_host_check',
             # Command line must contain: state_id;output
-            'command_line': '',
+            'command_line': '_internal_host_check;$ARG1$;$ARG2$',
             'imported_from': 'alignak-self'
         })
         # Internal service check
@@ -1333,7 +1333,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         raw_objects['command'].append({
             'command_name': '_internal_service_check',
             # Command line must contain: state_id;output
-            'command_line': '',
+            'command_line': '_internal_service_check;$ARG1$;$ARG2$',
             'imported_from': 'alignak-self'
         })
 

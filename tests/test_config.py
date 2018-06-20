@@ -1101,13 +1101,16 @@ class TestConfig(AlignakTest):
         host = self._scheduler.hosts.find_by_name(
             "test_host_2;with_semicolon")
         assert host is not None, "host 'test_host_2;with_semicolon' not found"
-        assert 'UP' == host.state
+        # This host has no defined check_command, thenit will always keep its initial state!
+        assert host.initial_state == 'd'
+        assert 'DOWN' == host.state
 
         # We can send a command by escaping the semicolon.
-        command = r'[%lu] PROCESS_HOST_CHECK_RESULT;test_host_2\;with_semicolon;2;down' % (
+        command = r'[%lu] PROCESS_HOST_CHECK_RESULT;test_host_2\;with_semicolon;0;I should be up' % (
             time.time())
         self._scheduler.run_external_commands([command])
         self.external_command_loop()
+        # This host has no defined check_command, thenit will always keep its initial state!
         assert 'DOWN' == host.state
 
     def test_config_hosts_default_check_command(self):
@@ -1130,7 +1133,7 @@ class TestConfig(AlignakTest):
         assert command
 
         host = self._arbiter.conf.hosts.find_by_name('test_host')
-        assert '_internal_host_up' == host.check_command.get_name()
+        assert host.check_command is None
 
     def test_config_services(self):
         """ Test services initial states
@@ -1246,7 +1249,7 @@ class TestConfig(AlignakTest):
             "Configuration in checkmodulation::MODULATION is incorrect; "
         )
         self.assert_any_cfg_log_match(re.escape(
-            "[checkmodulation::MODULATION] check_command property is missing"
+            "[checkmodulation::MODULATION] a check_command is missing"
         ))
 
         # MM without name

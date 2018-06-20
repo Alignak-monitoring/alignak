@@ -127,7 +127,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             ListProp(default=[],
                      fill_brok=['full_status'], merging='join', split_on_comma=True),
         'check_command':
-            StringProp(default='_internal_host_up', fill_brok=['full_status']),
+            StringProp(default='', fill_brok=['full_status']),
         'flap_detection_options':
             ListProp(default=['o', 'd', 'x'], fill_brok=['full_status'],
                      merging='join', split_on_comma=True),
@@ -334,17 +334,20 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         if hasattr(self, 'host_name'):
             for char in cls.illegal_object_name_chars:
                 if char in self.host_name:
-                    msg = "[%s::%s] host_name got an illegal character: %s" % (
-                        self.my_type, self.get_name(), char
-                    )
-                    self.add_error(msg)
+                    self.add_error("[%s::%s] host_name contains an illegal character: %s"
+                                   % (self.my_type, self.get_name(), char))
                     state = False
 
-        # Ok now we manage special cases...
+        # Fred: do not alert about missing check_command for an host... this because 1/ it is
+        # very verbose if hosts are not checked and 2/ because it is the Nagios default behavior
+        # if not self.check_command:
+        #     self.add_warning("[%s::%s] has no defined check command"
+        #                      % (self.my_type, self.get_name()))
+
         if self.notifications_enabled and not self.contacts:
-            msg = "[%s::%s] notifications are enabled but no contacts nor contact_groups " \
-                  "property is defined for this host" % (self.my_type, self.get_name())
-            self.add_warning(msg)
+            self.add_warning("[%s::%s] notifications are enabled but no contacts nor "
+                             "contact_groups property is defined for this host"
+                             % (self.my_type, self.get_name()))
 
         return super(Host, self).is_correct() and state
 
