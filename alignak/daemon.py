@@ -1850,7 +1850,7 @@ class Daemon(object):
         :return: None
         """
         logger.warning('A system time change of %s seconds has been detected. Compensating...',
-                       difference)
+                       int(difference))
 
     def wait_for_initial_conf(self, timeout=1.0):
         """Wait initial configuration from the arbiter.

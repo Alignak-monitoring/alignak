@@ -161,7 +161,6 @@ class Command(Item):
         if self.command_name.startswith('_internal_host_check'):
             # Command line may contain: [state_id][;output]
             parameters = self.command_line.split(';')
-            print("Command: %s / %s" % (self.command_name, parameters))
             if len(parameters) < 2:
                 self.command_name = "_internal_host_check;0;Host assumed to be UP"
                 self.add_warning("[%s::%s] has no defined state nor output. Changed to %s"
@@ -173,7 +172,6 @@ class Command(Item):
                 except ValueError:
                     self.add_warning("[%s::%s] required a non integer state: %s. Using 3."
                                      % (self.my_type, self.command_name, parameters[1]))
-                    pass
 
                 if state > 4:
                     self.add_warning("[%s::%s] required an impossible state: %d. Using 3."
@@ -191,7 +189,6 @@ class Command(Item):
                                  % (self.my_type, self.command_name, self.command_name))
 
         return super(Command, self).is_correct() and state
-
 
 
 class Commands(Items):

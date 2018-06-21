@@ -38,6 +38,7 @@ the Alignak broker.
 from __future__ import print_function
 
 import os
+import sys
 import json
 import time
 
@@ -84,10 +85,6 @@ class CollectorHandler(Handler):
         except TypeError:  # pragma: no cover, simple protection
             self.handleError(record)
 
-import sys
-def is_tty():
-    # Look if we are in a tty or not
-    return getattr(sys.stdout, 'isatty', False)
 
 class ColorStreamHandler(StreamHandler):
     """
@@ -98,7 +95,7 @@ class ColorStreamHandler(StreamHandler):
                   'WARNING': 'yellow', 'CRITICAL': 'magenta', 'ERROR': 'red'}
         msg = self.format(record)
         try:
-            if is_tty():
+            if getattr(sys.stdout, 'isatty', False):
                 cprint(msg, colors[record.levelname])
             else:
                 print(msg)

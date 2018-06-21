@@ -57,7 +57,7 @@ sudo pip install -r $PREFIX/share/alignak/requirements.txt
 echo "Installed."
 echo "Creating some necessary directories"
 mkdir -p $PREFIX/var/run/alignak
-chown -R $ACCOUNT:$ACCOUNT $PREFIX/var/log/alignak
-mkdir -p $PREFIX/var/log/alignak/monitoring-log
 chown -R $ACCOUNT:$ACCOUNT $PREFIX/var/run/alignak
+mkdir -p $PREFIX/var/log/alignak/monitoring-log
+chown -R $ACCOUNT:$ACCOUNT $PREFIX/var/log/alignak
 echo "Created."

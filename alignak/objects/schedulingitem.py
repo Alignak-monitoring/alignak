@@ -2327,7 +2327,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
     def launch_check(self, timestamp, hosts, services, timeperiods,
                      macromodulations, checkmodulations, checks, ref_check=None, force=False,
                      dependent=False):
-        # pylint: disable=too-many-locals, too-many-arguments
+        # pylint: disable=too-many-locals, too-many-arguments, too-many-branches
         """Launch a check (command)
 
         :param timestamp:
@@ -2420,7 +2420,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     if c_cw:
                         check_command = c_cw
                         break
-    
+
                 # Get the command to launch
                 macroresolver = MacroResolver()
                 if hasattr(self, 'host'):
@@ -2834,7 +2834,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             data['command_name'] = ''
             if self.check_command:
                 data['command_name'] = self.check_command.command.command_name
-
 
     def acknowledge_problem(self, notification_period, hosts, services, sticky, notify, author,
                             comment, end_time=0):

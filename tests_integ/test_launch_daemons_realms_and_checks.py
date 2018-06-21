@@ -67,7 +67,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         :return: None
         """
-        self._run_checks(passive=False, hosts_count=10, duration=60, cfg_dir='default_many_hosts')
+        self._run_checks(passive=False, hosts_count=10, duration=240, cfg_dir='default_many_hosts')
 
     def test_checks_active_satellites_daemons(self):
         """ Run the Alignak daemons and check the correct checks result and notifications
@@ -77,7 +77,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         :return: None
         """
-        self._run_checks(passive=False, hosts_count=10, duration=60, cfg_dir='default_many_hosts',
+        self._run_checks(passive=False, hosts_count=10, duration=240, cfg_dir='default_many_hosts',
                          daemonize=True)
 
     def test_checks_active_satellites_multi_realms(self):
@@ -88,7 +88,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         :return: None
         """
-        self._run_checks(passive=False, hosts_count=10, duration=60, cfg_dir='default_realms',
+        self._run_checks(passive=False, hosts_count=10, duration=120, cfg_dir='default_realms',
                          more_daemons = ['broker-North', 'broker-South',
                                          'poller-North', 'poller-South',
                                          # 'receiver-North',
@@ -104,7 +104,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
         :return: None
         """
-        self._run_checks(passive=True, hosts_count=10, duration=60, cfg_dir='default_many_hosts')
+        self._run_checks(passive=True, hosts_count=10, duration=120, cfg_dir='default_many_hosts')
 
     def test_checks_passive_satellites_multi_realms(self):
         """ Run the Alignak daemons and check the correct checks result and notifications
@@ -278,6 +278,12 @@ class TestLaunchDaemonsRealms(AlignakTest):
         service_checks = {}
         # Store services information for localhost
         service_checks["localhost"] = {
+            "host-check": {"launch": 0, "run": 0, "exit": 0, "result": 0}
+        }
+        service_checks["localhost2"] = {
+            "host-check": {"launch": 0, "run": 0, "exit": 0, "result": 0}
+        }
+        service_checks["localhost3"] = {
             "host-check": {"launch": 0, "run": 0, "exit": 0, "result": 0}
         }
         for realm in realms:

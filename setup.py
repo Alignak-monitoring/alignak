@@ -60,7 +60,7 @@ data_files = [
     ('share/alignak', ['requirements.txt']),
     ('share/alignak', ['bin/post-install.sh'])
 ]
-for dir in ['etc', 'bin/manpages/manpages', 'bin/rc.d', 'bin/systemd']:
+for dir in ['etc', 'bin/manpages/manpages', 'bin/rc.d', 'bin/systemd', 'bin/systemV']:
     for subdir, dirs, files in os.walk(dir):
         # Configuration directory
         target = os.path.join('share/alignak', subdir)
