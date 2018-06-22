@@ -34,7 +34,7 @@ elif [ "$unamestr" = 'FreeBSD' ]; then
    platform='freebsd'
 fi
 echo "-> found ${platform}"
-if [ $platform == 'linux' ]; then
+if [ "$platform" = 'linux' ]; then
    ## Create user and group
    echo "Checking / creating '$ACCOUNT' user and users group"
    id -u $ACCOUNT &>/dev/null || useradd $ACCOUNT --system --no-create-home --user-group -c "Alignak daemons user"
@@ -47,7 +47,7 @@ if [ $platform == 'linux' ]; then
 #   id -Gn $ACCOUNT |grep -E '(^|[:blank:])nagios($|[:blank:])' >/dev/null ||
 #      echo "Adding user '$ACCOUNT' to the nagios users group"
 #      usermod -a -G nagios $ACCOUNT
-elif [ $platform = 'freebsd' ]; then
+elif [ "$platform" = 'freebsd' ]; then
    ## Create user and group
    echo "Checking / creating '$ACCOUNT' user and users group"
    id -u $ACCOUNT &>/dev/null || pw adduser $ACCOUNT -d /nonexistent -s /usr/sbin/nologin -c "Alignak daemons user"
