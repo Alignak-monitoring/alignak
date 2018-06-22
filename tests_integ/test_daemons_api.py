@@ -64,6 +64,8 @@ class TestDaemonsApi(AlignakTest):
         super(TestDaemonsApi, self).setUp()
 
         self.cfg_folder = '/tmp/alignak'
+        if os.path.exists(self.cfg_folder):
+            shutil.rmtree(self.cfg_folder)
         cfg_dir = 'default_many_hosts'
         hosts_count = 10
         daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
@@ -1247,7 +1249,7 @@ class TestDaemonsApi(AlignakTest):
             if name in ['scheduler']:
                 assert "livesynthesis" in data
                 livesynthesis = data['livesynthesis']
-                print("%s, my livesythesis: %s" % (name, livesynthesis))
+                print("%s, my livesynthesis: %s" % (name, livesynthesis))
                 if not run:
                     assert livesynthesis["hosts_total"] == 13
                     assert livesynthesis["hosts_up_hard"] == 13
