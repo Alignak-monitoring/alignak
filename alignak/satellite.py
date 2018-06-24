@@ -118,6 +118,10 @@ class BaseSatellite(Daemon):
         # Hosts / schedulers mapping
         self.hosts_schedulers = {}
 
+        # Keep monitoring events so they can be eaten by the arbiter
+        self.events = []
+        self.events_lock = threading.RLock()
+
         # Now we create the interfaces
         self.http_interface = GenericInterface(self)
 
@@ -320,7 +324,7 @@ class BaseSatellite(Daemon):
                     new_link = SatelliteLink.get_a_satellite_link(link_type[:-1],
                                                                   rs_conf)
                     my_satellites[new_link.uuid] = new_link
-                    logger.info("I got a new %s satellite: %s", link_type, new_link)
+                    logger.info("I got a new %s satellite: %s", link_type[:-1], new_link)
 
                     new_link.running_id = running_id
                     new_link.external_commands = external_commands
@@ -345,6 +349,16 @@ class BaseSatellite(Daemon):
                 # We received the hosts names for each scheduler
                 for host_name in self.schedulers[link_uuid].managed_hosts_names:
                     self.hosts_schedulers[host_name] = link_uuid
+
+    def get_events(self):
+        """Get event list from satellite
+
+        :return: A copy of the events list
+        :rtype: list
+        """
+        res = copy.copy(self.events)
+        del self.events[:]
+        return res
 
     def get_daemon_stats(self, details=False):
         """Increase the stats provided by the Daemon base class
@@ -395,6 +409,8 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
     def __init__(self, name, **kwargs):
         super(Satellite, self).__init__(name, **kwargs)
 
+        # Move these properties to the base Daemon ?
+        # todo: change this?
         # Keep broks so they can be eaten by a broker
         self.broks = []
         self.broks_lock = threading.RLock()
@@ -612,10 +628,16 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         :return: None
         """
         if isinstance(elt, Brok):
-            # For brok, we TAG brok with our instance_id
+            # For brok, we tag the brok with our instance_id
             elt.instance_id = self.instance_id
-            with self.broks_lock:
-                self.broks.append(elt)
+            if elt.type == 'monitoring_log':
+                # The brok is a monitoring event
+                with self.events_lock:
+                    self.events.append(elt)
+                statsmgr.counter('events', 1)
+            else:
+                with self.broks_lock:
+                    self.broks.append(elt)
             statsmgr.counter('broks.added', 1)
         elif isinstance(elt, ExternalCommand):
             logger.debug("Queuing an external command '%s'", str(elt.__dict__))
@@ -626,7 +648,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
     def get_broks(self):
         """Get brok list from satellite
 
-        :return: A copy of the Brok list
+        :return: A copy of the broks list
         :rtype: list
         """
         res = copy.copy(self.broks)
@@ -865,6 +887,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         # Clean my lists
         del self.broks[:]
+        del self.events[:]
 
     def do_loop_turn(self):  # pylint: disable=too-many-branches
         """Satellite main loop::
@@ -986,6 +1009,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         self.get_objects_from_from_queues()
         statsmgr.gauge('external-commands.count', len(self.external_commands))
         statsmgr.gauge('broks.count', len(self.broks))
+        statsmgr.gauge('events.count', len(self.events))
 
     def do_post_daemon_init(self):
         """Do this satellite (poller or reactionner) post "daemonize" init
@@ -1064,6 +1088,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
         counters = res['counters']
         counters['broks'] = len(self.broks)
+        counters['events'] = len(self.events)
         counters['satellites.workers'] = len(self.workers)
 
         return res

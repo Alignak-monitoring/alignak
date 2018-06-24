@@ -48,8 +48,8 @@ class TestLaunchDaemonsModules(AlignakTest):
         if os.path.exists('/tmp/alignak.log'):
             os.remove('/tmp/alignak.log')
 
-        if os.path.exists('/tmp/monitoring-logs.log'):
-            os.remove('/tmp/monitoring-logs.log')
+        if os.path.exists('/tmp/alignak-events.log'):
+            os.remove('/tmp/alignak-events.log')
 
         print("Preparing configuration...")
         shutil.copytree('../etc', '/tmp/etc/alignak')
@@ -154,8 +154,8 @@ class TestLaunchDaemonsModules(AlignakTest):
 
         :return: None
         """
-        if os.path.exists('/tmp/monitoring-logs.log'):
-            os.remove('/tmp/monitoring-logs.log')
+        if os.path.exists('/tmp/alignak-events.log'):
+            os.remove('/tmp/alignak-events.log')
 
         daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
                         'receiver-master', 'scheduler-master']
@@ -190,10 +190,10 @@ class TestLaunchDaemonsModules(AlignakTest):
         assert warnings_raised == 0, "Warning logs raised!"
         print("No unexpected warning logs raised by the daemons")
 
-        assert os.path.exists('/tmp/monitoring-logs.log'), '/tmp/monitoring-logs.log does not exist!'
+        assert os.path.exists('/tmp/alignak-events.log'), '/tmp/alignak-events.log does not exist!'
         count = 0
         print("Monitoring logs:")
-        with open('/tmp/monitoring-logs.log') as f:
+        with open('/tmp/alignak-events.log') as f:
             for line in f:
                 print(("- : %s" % line))
                 count += 1
@@ -211,8 +211,8 @@ class TestLaunchDaemonsModules(AlignakTest):
 
         :return: None
         """
-        if os.path.exists('/tmp/monitoring-logs.log'):
-            os.remove('/tmp/monitoring-logs.log')
+        if os.path.exists('/tmp/alignak-events.log'):
+            os.remove('/tmp/alignak-events.log')
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   'cfg/run_daemons_logs')
@@ -228,10 +228,10 @@ class TestLaunchDaemonsModules(AlignakTest):
         assert nb_errors == 0, "Error logs raised!"
         print("No error logs raised when daemons started and loaded the modules")
 
-        assert os.path.exists('/tmp/monitoring-logs.log'), '/tmp/monitoring-logs.log does not exist!'
+        assert os.path.exists('/tmp/alignak-events.log'), '/tmp/alignak-events.log does not exist!'
         count = 0
         print("Monitoring logs:")
-        with open('/tmp/monitoring-logs.log') as f:
+        with open('/tmp/alignak-events.log') as f:
             for line in f:
                 print(("- : %s" % line))
                 count += 1
@@ -275,7 +275,7 @@ class TestLaunchDaemonsModules(AlignakTest):
                 "[alignak.modulesmanager] Loaded Python module 'alignak_module_logs' (logs)",
                 # "[alignak.module] Give an instance of alignak_module_logs for alias: logs",
                 "[alignak.module.logs] logger default configuration:",
-                "[alignak.module.logs]  - rotating logs in /tmp/monitoring-logs.log",
+                "[alignak.module.logs]  - rotating logs in /tmp/alignak-events.log",
                 "[alignak.module.logs]  - log level: 20",
                 "[alignak.module.logs]  - rotation every 1 midnight, keeping 365 files",
                 "[alignak.basemodule] Process for module logs received a signal: 15",
@@ -325,10 +325,10 @@ class TestLaunchDaemonsModules(AlignakTest):
                 assert log in logs, logs
 
         # Still only two logs
-        assert os.path.exists('/tmp/monitoring-logs.log'), '/tmp/monitoring-logs.log does not exist!'
+        assert os.path.exists('/tmp/alignak-events.log'), '/tmp/alignak-events.log does not exist!'
         count = 0
         print("Monitoring logs:")
-        with open('/tmp/monitoring-logs.log') as f:
+        with open('/tmp/alignak-events.log') as f:
             for line in f:
                 print(("- : %s" % line))
                 count += 1
@@ -439,8 +439,8 @@ class TestLaunchDaemonsModules(AlignakTest):
 
         :return: None
         """
-        if os.path.exists('/tmp/monitoring-logs.log'):
-            os.remove('/tmp/monitoring-logs.log')
+        if os.path.exists('/tmp/alignak-events.log'):
+            os.remove('/tmp/alignak-events.log')
 
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                   'cfg/run_daemons_ws_logs')
@@ -467,10 +467,10 @@ class TestLaunchDaemonsModules(AlignakTest):
                 modules_pids['logs'] = proc.pid
         assert len(modules_pids) == 2
 
-        assert os.path.exists('/tmp/monitoring-logs.log'), '/tmp/monitoring-logs.log does not exist!'
+        assert os.path.exists('/tmp/alignak-events.log'), '/tmp/alignak-events.log does not exist!'
         count = 0
         print("Monitoring logs:")
-        with open('/tmp/monitoring-logs.log') as f:
+        with open('/tmp/alignak-events.log') as f:
             for line in f:
                 print(("- : %s" % line))
                 count += 1
@@ -514,7 +514,7 @@ class TestLaunchDaemonsModules(AlignakTest):
                 "[alignak.modulesmanager] Loaded Python module 'alignak_module_logs' (logs)",
                 # "[alignak.module] Give an instance of alignak_module_logs for alias: logs",
                 "[alignak.module.logs] logger default configuration:",
-                "[alignak.module.logs]  - rotating logs in /tmp/monitoring-logs.log",
+                "[alignak.module.logs]  - rotating logs in /tmp/alignak-events.log",
                 "[alignak.module.logs]  - log level: 10",
                 "[alignak.module.logs]  - rotation every 1 midnight, keeping 365 files",
                 "[alignak.module.logs] Alignak Backend is not configured. Some module features will not be available.",

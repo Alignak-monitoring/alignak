@@ -265,14 +265,14 @@ class Dispatcher(object):
                 self.not_configured.append(daemon_link)
 
         if self.not_configured and self.new_to_dispatch and not self.first_dispatch_done:
-            logger.info("Dispatcher, those daemons are not configured: %s, "
+            logger.info("Dispatcher, these daemons are not configured: %s, "
                         "and a configuration is ready to dispatch, run the dispatching...",
                         ','.join(d.name for d in self.not_configured))
             self.dispatch_ok = False
             self.dispatch(test=test)
 
         elif self.not_configured and self.first_dispatch_done:
-            logger.info("Dispatcher, those daemons are not configured: %s, "
+            logger.info("Dispatcher, these daemons are not configured: %s, "
                         "and a configuration has yet been dispatched dispatch, "
                         "a new dispatch is required...",
                         ','.join(d.name for d in self.not_configured))
@@ -284,15 +284,16 @@ class Dispatcher(object):
 
         return all_ok
 
-    def check_status(self):
+    def check_status_and_get_events(self):
         # pylint: disable=too-many-branches
         """Get all the daemons status
 
 
-        :return: Fictionary with all the daemons returned information
+        :return: Dictionary with all the daemons returned information
         :rtype: dict
         """
         statistics = {}
+        events = []
         for daemon_link in self.all_daemons_links:
             if daemon_link == self.arbiter_link:
                 # I exclude myself from the polling, sure I am reachable ;)
@@ -312,7 +313,15 @@ class Dispatcher(object):
             except LinkError:
                 logger.warning("Daemon connection failed, I could not get statistics.")
 
-        return statistics
+            try:
+                got = daemon_link.get_events()
+                if got:
+                    events.extend(got)
+                    logger.debug("Daemon %s has %d events: %s", daemon_link.name, len(got), got)
+            except LinkError:
+                logger.warning("Daemon connection failed, I could not get events.")
+
+        return events
 
     def check_dispatch(self):
         """Check that all active satellites have a configuration dispatched

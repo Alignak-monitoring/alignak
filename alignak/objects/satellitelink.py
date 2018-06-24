@@ -953,9 +953,8 @@ class SatelliteLink(Item):
     @valid_connection()
     @communicate()
     def get_broks(self, broker_name):
-        """Send a HTTP request to the satellite (GET /ping)
-        and THEN send a HTTP request to the satellite (GET /get_broks)
-        Get broks from satellite.
+        """Send a HTTP request to the satellite (GET /get_broks)
+        Get broks from the satellite.
         Un-serialize data received.
 
         :param broker_name: the concerned broker link
@@ -965,6 +964,19 @@ class SatelliteLink(Item):
         """
         res = self.con.get('get_broks', {'broker_name': broker_name}, wait=True)
         logger.debug("Got broks from %s: %s", self.name, res)
+        return unserialize(res, True)
+
+    @valid_connection()
+    @communicate()
+    def get_events(self):
+        """Send a HTTP request to the satellite (GET /get_events)
+        Get monitoring events from the satellite.
+
+        :return: Broks list on success, [] on failure
+        :rtype: list
+        """
+        res = self.con.get('get_events', wait=True)
+        logger.debug("Got events from %s: %s", self.name, res)
         return unserialize(res, True)
 
     @valid_connection()

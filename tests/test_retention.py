@@ -38,12 +38,48 @@ class TestRetention(AlignakTest):
         super(TestRetention, self).setUp()
 
 
+    def test_default_is_disabled_retention(self):
+        """ Test that default configuration is retention disabled
+
+        :return: None
+        """
+        self.setup_with_file('cfg/cfg_default.cfg')
+        # Default configuration has no retention configured
+        assert self._scheduler.pushed_conf.retention_update_interval == 0
+
+        expected_logs = [
+        ]
+        self.check_monitoring_events_log(expected_logs)
+
+    def test_retention_enabled(self):
+        """ Test that when retention is enabled when have a log
+
+        :return: None
+        """
+        self.setup_with_file('cfg/cfg_default_retention.cfg')
+        # Default configuration has no retention configured
+        assert self._scheduler.pushed_conf.retention_update_interval == 5
+        # Force retention for the test
+        self._scheduler.pushed_conf.retention_update_interval = 5
+
+        # Check freshness on each scheduler tick
+        self._scheduler.update_recurrent_works_tick({'tick_check_freshness': 1})
+
+        self.scheduler_loop(10, [])
+
+        expected_logs = [
+            ('info', 'RETENTION LOAD: scheduler-master scheduler')
+        ]
+        self.check_monitoring_events_log(expected_logs)
+
     def test_scheduler_retention(self):
         """ Test restore retention data
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default_retention.cfg')
+        # Default configuration has no retention configured
+        assert self._scheduler.pushed_conf.retention_update_interval == 5
 
         router = self._scheduler.hosts.find_by_name("test_router_0")
         router.checks_in_progress = []
@@ -101,7 +137,7 @@ class TestRetention(AlignakTest):
             ("info", "SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;STARTED; Service problem has been acknowledged"),
             ("info", "HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (DOWN);notify-host;DOWN!")
         ]
-        self.check_monitoring_logs(expected_logs)
+        self.check_monitoring_events_log(expected_logs)
 
         assert 2 == len(host.comments)
         assert 3 == len(host.notifications_in_progress)

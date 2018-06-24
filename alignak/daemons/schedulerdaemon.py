@@ -113,6 +113,10 @@ class Alignak(BaseSatellite):
         self.reactionners = {}
         self.receivers = {}
 
+        # This because it is the Satellite that has thes properties and I am a Satellite
+        # todo: change this?
+        # Broks are stored in each broker link, not locally
+        # self.broks = []
         self.broks_lock = threading.RLock()
 
         # Modules are only loaded one time
@@ -287,14 +291,19 @@ class Alignak(BaseSatellite):
         hash, push_flavor and configuration identifier as values
         :rtype: dict
         """
+        # for scheduler_link in list(self.schedulers.values()):
+        #     res[scheduler_link.instance_id] = {
+        #         'hash': scheduler_link.hash,
+        #         'push_flavor': scheduler_link.push_flavor,
+        #         'managed_conf_id': scheduler_link.managed_conf_id
+        #     }
+
         res = {}
-        if self.sched.pushed_conf and self.cur_conf:
-            res = {
-                self.cur_conf['instance_id']: {
-                    'hash': self.cur_conf['hash'],
-                    'push_flavor': self.cur_conf['push_flavor'],
-                    'managed_conf_id': self.cur_conf['managed_conf_id']
-                }
+        if self.sched.pushed_conf and self.cur_conf and 'instance_id' in self.cur_conf:
+            res[self.cur_conf['instance_id']] = {
+                'hash': self.cur_conf['hash'],
+                'push_flavor': self.cur_conf['push_flavor'],
+                'managed_conf_id': self.cur_conf['managed_conf_id']
             }
         logger.debug("Get managed configuration: %s", res)
         return res
@@ -386,7 +395,7 @@ class Alignak(BaseSatellite):
                     new_link = SatelliteLink.get_a_satellite_link(link_type[:-1],
                                                                   rs_conf)
                     my_satellites[new_link.uuid] = new_link
-                    logger.info("I got a new %s satellite: %s", link_type, new_link)
+                    logger.info("I got a new %s satellite: %s", link_type[:-1], new_link)
                     # print("My new %s satellite: %s" % (link_type, new_link))
 
                     new_link.running_id = running_id

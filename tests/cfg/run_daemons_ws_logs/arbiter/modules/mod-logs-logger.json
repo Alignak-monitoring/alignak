@@ -33,23 +33,13 @@
             "interval": 1,
             "backupCount": 7,
             "encoding": "utf8"
-        },
-        "monitoring_logs": {
-            "class": "logging.handlers.TimedRotatingFileHandler",
-            "level": "INFO",
-            "formatter": "local",
-            "filename": "ALIGNAKLOG/monitoring-logs.log",
-            "when": "midnight",
-            "interval": 1,
-            "backupCount": 30,
-            "encoding": "utf8"
         }
     },
 
     "loggers": {
         "monitoring-logs": {
             "level": "INFO",
-            "handlers": ["monitoring_logs"],
+            "handlers": ["event_log"],
             "propagate": "no"
         }
     },

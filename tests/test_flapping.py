@@ -253,45 +253,62 @@ class TestFlapping(AlignakTest):
         # Should be in flapping state now
         assert svc.is_flapping
 
-        # We got 'monitoring_log' broks for logging to the monitoring logs...
-        monitoring_logs = []
-        for brok in sorted(self._main_broker.broks, key=lambda x: x.creation_time):
-            if brok.type == 'monitoring_log':
-                data = unserialize(brok.data)
-                monitoring_logs.append((data['level'], data['message']))
-
         expected_logs = [
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;0;OK'),
+            ('info', 'ACTIVE HOST CHECK: test_router_0;UP;0;UP | rtt=10'),
+            ('info', 'ACTIVE HOST CHECK: test_host_0;UP;0;UP | value1=1 value2=2'),
+            ('info', 'ACTIVE HOST CHECK: test_host_0;UP;1;UP | value1=1 value2=2'),
+            ('info', 'ACTIVE HOST CHECK: test_router_0;UP;1;UP | rtt=10'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;OK'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Crit'),
-            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;'
-                       'notify-service;Crit'),
+            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;notify-service;Crit'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;2;Crit'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;2;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Ok'),
-            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;'
-                      'notify-service;Ok'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;notify-service;Ok'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
             ('info', 'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STARTED; '
-                      'Service appears to have started flapping (83.8% change >= 50.0% threshold)'),
+                     'Service appears to have started flapping (83.8% change >= 50.0% threshold)'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      'FLAPPINGSTART (OK);notify-service;Ok'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;FLAPPINGSTART '
+                     '(OK);notify-service;Ok'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
         ]
-        for log_level, log_message in expected_logs:
-            assert (log_level, log_message) in monitoring_logs
+        self.check_monitoring_events_log(expected_logs, dump=True)
 
         # Now we put it as back :)
         # 10 is not enouth to get back as normal
@@ -306,48 +323,84 @@ class TestFlapping(AlignakTest):
 
 
         # We got 'monitoring_log' broks for logging to the monitoring logs...
-        monitoring_logs = []
-        for brok in sorted(self._main_broker.broks, key=lambda x: x.creation_time):
-            if brok.type == 'monitoring_log':
-                data = unserialize(brok.data)
-                monitoring_logs.append((data['level'], data['message']))
-
-        print(("Logs: %s" % monitoring_logs))
         expected_logs = [
+            ('info', 'ACTIVE HOST CHECK: test_host_0;UP;0;UP | value1=1 value2=2'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;0;OK'),
+            ('info', 'ACTIVE HOST CHECK: test_router_0;UP;0;UP | rtt=10'),
+            ('info', 'ACTIVE HOST CHECK: test_router_0;UP;1;UP | rtt=10'),
+            ('info', 'ACTIVE HOST CHECK: test_host_0;UP;1;UP | value1=1 value2=2'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;OK'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Crit'),
-            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;'
-                       'notify-service;Crit'),
+            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;notify-service;Crit'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;2;Crit'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;2;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Ok'),
-            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;'
-                      'notify-service;Ok'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;notify-service;Ok'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
             ('info', 'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STARTED; '
-                      'Service appears to have started flapping '
-                      '(83.8% change >= 50.0% threshold)'),
+                     'Service appears to have started flapping (83.8% change >= 50.0% threshold)'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
-            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      'FLAPPINGSTART (OK);notify-service;Ok'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;FLAPPINGSTART '
+                     '(OK);notify-service;Ok'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
+            ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE FLAPPING ALERT: test_host_0;test_ok_0;STOPPED; '
-                      'Service appears to have stopped flapping '
-                      '(21.5% change < 25.0% threshold)'),
-            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      'FLAPPINGSTOP (OK);notify-service;Ok')
+                     'Service appears to have stopped flapping (21.5% change < 25.0% threshold)'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;FLAPPINGSTOP '
+                     '(OK);notify-service;Ok'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
         ]
-        for log_level, log_message in expected_logs:
-            assert (log_level, log_message) in monitoring_logs
+        self.check_monitoring_events_log(expected_logs, dump=True)

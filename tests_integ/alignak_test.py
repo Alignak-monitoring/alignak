@@ -243,7 +243,7 @@ define host {
             shutil.copytree('../etc', '%s/etc' % cfg_folder)
 
         # Load and update the configuration
-        for f in ['alignak.log', 'monitoring-logs.log', 'monitoring-log/monitoring-logs.log']:
+        for f in ['alignak.log', 'alignak-events.log']:
             if os.path.exists('%s/log/%s' % (cfg_folder, f)):
                 os.remove('%s/log/%s' % (cfg_folder, f))
 
@@ -452,7 +452,7 @@ define host {
             run_folder = cfg_folder
         print("Running Alignak daemons, cfg_folder: %s, run_folder: %s" % (cfg_folder, run_folder))
 
-        for f in ['alignak.log', 'monitoring-logs.log', 'monitoring-log/monitoring-logs.log']:
+        for f in ['alignak.log', 'monitoring-logs.log', 'alignak-events.log']:
             if os.path.exists('%s/log/%s' % (cfg_folder, f)):
                 os.remove('%s/log/%s' % (cfg_folder, f))
 

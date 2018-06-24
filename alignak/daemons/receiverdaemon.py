@@ -121,10 +121,16 @@ class Receiver(Satellite):
             elt = ExternalCommand(elt['cmd_line'], elt['creation_timestamp'])
 
         if isinstance(elt, Brok):
-            # We tag the broks with our instance_id
+            # For brok, we tag the brok with our instance_id
             elt.instance_id = self.instance_id
-            with self.broks_lock:
-                self.broks.append(elt)
+            if elt.type == 'monitoring_log':
+                # The brok is a monitoring event
+                with self.events_lock:
+                    self.events.append(elt)
+                statsmgr.counter('events', 1)
+            else:
+                with self.broks_lock:
+                    self.broks.append(elt)
             statsmgr.counter('broks.added', 1)
         elif isinstance(elt, ExternalCommand):
             logger.debug("Queuing an external command: %s", str(ExternalCommand.__dict__))

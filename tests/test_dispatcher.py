@@ -177,7 +177,7 @@ class TestDispatcher(AlignakTest):
                             "Too early to ping %s" % (link.name)
                         ))
                 self.assert_no_log_match(re.escape(
-                    "Dispatcher, those daemons are not configured: "
+                    "Dispatcher, these daemons are not configured: "
                     "reactionner-master,poller-master,broker-master,receiver-master,"
                     "scheduler-master"
                     ", and a configuration is ready to dispatch, run the dispatching..."
@@ -233,7 +233,7 @@ class TestDispatcher(AlignakTest):
                         ))
 
                 self.assert_any_log_match(re.escape(
-                    "Dispatcher, those daemons are not configured:"))
+                    "Dispatcher, these daemons are not configured:"))
                 self.assert_any_log_match(re.escape(
                     ", and a configuration is ready to dispatch, run the dispatching..."))
 

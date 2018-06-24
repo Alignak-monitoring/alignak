@@ -136,10 +136,16 @@ class Broker(BaseSatellite):
         :return: None
         """
         if isinstance(elt, Brok):
-            # We tag the broks with our instance_id
+            # For brok, we tag the brok with our instance_id
             elt.instance_id = self.instance_id
-            with self.broks_lock:
-                self.internal_broks.append(elt)
+            if elt.type == 'monitoring_log':
+                # The brok is a monitoring event
+                with self.events_lock:
+                    self.events.append(elt)
+                statsmgr.counter('events', 1)
+            else:
+                with self.broks_lock:
+                    self.broks.append(elt)
             statsmgr.counter('broks.added', 1)
         elif isinstance(elt, ExternalCommand):
             logger.debug("Queuing an external command '%s'", str(elt.__dict__))
@@ -319,7 +325,7 @@ class Broker(BaseSatellite):
                     new_link = SatelliteLink.get_a_satellite_link(link_type[:-1],
                                                                   rs_conf)
                     my_satellites[new_link.uuid] = new_link
-                    logger.info("I got a new %s satellite: %s", link_type, new_link)
+                    logger.info("I got a new %s satellite: %s", link_type[:-1], new_link)
                     # print("My new %s satellite: %s" % (link_type, new_link))
 
                     new_link.running_id = running_id

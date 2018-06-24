@@ -7,7 +7,7 @@
             "datefmt": "%Y-%m-%d %H:%M:%S"
         },
         "monitoring-log": {
-            "format": "[%(asctime)s] %(levelname)s: %(message)s",
+            "format": "[%(my_date)s] %(levelname)s: %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S"
         },
         "unit_tests": {
@@ -43,11 +43,11 @@
             "interval": 1,
             "backupCount": 7
         },
-        "monitoring_logs": {
+        "event_log": {
             "class": "logging.handlers.TimedRotatingFileHandler",
             "level": "INFO",
             "formatter": "monitoring-log",
-            "filename": "%(logdir)s/monitoring-log/monitoring-logs.log",
+            "filename": "%(logdir)s/alignak-events.log",
             "when": "midnight",
             "interval": 1,
             "backupCount": 365
@@ -62,7 +62,7 @@
         },
         "monitoring-log": {
             "level": "DEBUG",
-            "handlers": ["console", "monitoring_logs"],
+            "handlers": ["console", "event_log"],
             "propagate": "no"
         }
     },
