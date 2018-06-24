@@ -521,11 +521,15 @@ class Scheduler(object):  # pylint: disable=R0902
         :type broker_uuid: str
         :return: None
         """
-        if brok.type == 'monitoring_log' and not self.pushed_conf.monitoring_log_broks:
-            return
-
         # We tag the brok with our instance_id
         brok.instance_id = self.instance_id
+        if brok.type == 'monitoring_log':
+            # The brok is a monitoring event
+            with self.my_daemon.events_lock:
+                self.my_daemon.events.append(brok)
+            statsmgr.counter('events', 1)
+            return
+
         if broker_uuid:
             if broker_uuid not in self.my_daemon.brokers:
                 logger.info("Unknown broker: %s / %s!", broker_uuid, self.my_daemon.brokers)
@@ -646,7 +650,6 @@ class Scheduler(object):  # pylint: disable=R0902
         :param hook_name: function name to call
         :type hook_name: str
         :return:None
-        TODO: find a way to merge this and the version in daemon.py
         """
         self.my_daemon.hook_point(hook_name=hook_name, handle=self)
 
@@ -1341,37 +1344,42 @@ class Scheduler(object):  # pylint: disable=R0902
         """Call hook point 'save_retention'.
         Retention modules will write back retention (to file, db etc)
 
-        :param forced: if update forced?
+        :param forced: is update forced?
         :type forced: bool
         :return: None
         """
-        # If we set the update to 0, we do not want of this
-        # if we are not forced (like at stopping)
+        # If we set the retention update to 0, we do not want to manage retention
+        # If we are not forced (like at stopping)
         if self.pushed_conf.retention_update_interval == 0 and not forced:
+            logger.debug("Sould have saved retention but it is not enabled")
             return
 
         _t0 = time.time()
         self.hook_point('save_retention')
         statsmgr.timer('hook.retention-save', time.time() - _t0)
 
-        brok = make_monitoring_log('INFO', 'RETENTION SAVE: %s' % self.name)
-        if self.pushed_conf.monitoring_log_broks:
-            self.add(brok)
+        self.add(make_monitoring_log('INFO', 'RETENTION SAVE: %s' % self.name))
         logger.info('Retention data saved: %.2f seconds', time.time() - _t0)
 
-    def retention_load(self):
+    def retention_load(self, forced=False):
         """Call hook point 'load_retention'.
         Retention modules will read retention (from file, db etc)
 
+        :param forced: is load forced?
+        :type forced: bool
         :return: None
         """
+        # If we set the retention update to 0, we do not want to manage retention
+        # If we are not forced (like at stopping)
+        if self.pushed_conf.retention_update_interval == 0 and not forced:
+            logger.debug("Sould have loaded retention but it is not enabled")
+            return
+
         _t0 = time.time()
         self.hook_point('load_retention')
         statsmgr.timer('hook.retention-load', time.time() - _t0)
 
-        brok = make_monitoring_log('INFO', 'RETENTION LOAD: %s' % self.name)
-        if self.pushed_conf.monitoring_log_broks:
-            self.add(brok)
+        self.add(make_monitoring_log('INFO', 'RETENTION LOAD: %s' % self.name))
         logger.info('Retention data loaded: %.2f seconds', time.time() - _t0)
 
     def get_retention_data(self):  # pylint: disable=too-many-branches,too-many-statements

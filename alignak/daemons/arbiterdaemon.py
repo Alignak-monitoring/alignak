@@ -173,8 +173,15 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             except ValueError:  # pragma: no cover, simple protection
                 pass
 
+        # This because it is the Satellite that has these properties and I am a Daemon
+        # todo: change this?
+        # My own broks
         self.broks = []
         self.broks_lock = threading.RLock()
+        # My own monitoring events
+        self.events = []
+        self.events_lock = threading.RLock()
+
         self.is_master = False
         self.link_to_myself = None
         self.instance_id = None
@@ -210,9 +217,16 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         :return: None
         """
         if isinstance(elt, Brok):
+            # For brok, we tag the brok with our instance_id
             elt.instance_id = self.instance_id
-            with self.broks_lock:
-                self.broks.append(elt)
+            if elt.type == 'monitoring_log':
+                # The brok is a monitoring event
+                with self.events_lock:
+                    self.events.append(elt)
+                statsmgr.counter('events', 1)
+            else:
+                with self.broks_lock:
+                    self.broks.append(elt)
             statsmgr.counter('broks.added', 1)
         elif isinstance(elt, ExternalCommand):
             logger.debug("Queuing an external command '%s'", str(elt.__dict__))
@@ -1159,14 +1173,21 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         _t0 = time.time()
         logger.debug("Alignak daemons reachability check")
-        self.dispatcher.check_reachable()
+        result = self.dispatcher.check_reachable()
         statsmgr.timer('dispatcher.check-alive', time.time() - _t0)
 
         _t0 = time.time()
         logger.debug("Alignak daemons status get")
-        result = self.dispatcher.check_status()
-        statsmgr.timer('dispatcher.check-status', time.time() - _t0)
-        logger.debug("Getting daemons status duration: %.2f seconds", time.time() - _t0)
+        events = self.dispatcher.check_status_and_get_events()
+        duration = time.time() - _t0
+        statsmgr.timer('dispatcher.check-status', duration)
+        logger.debug("Getting daemons status duration: %.2f seconds", duration)
+
+        # Send the collected events to the Alignak logger
+        for event in events:
+            event.prepare()
+            make_monitoring_log(event.data['level'], event.data['message'],
+                                timestamp=event.creation_time, to_logger=True)
 
         # Set the last check as now
         self.daemons_last_reachable_check = start
@@ -2060,11 +2081,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                         _ts = time.time()
                         logger.warning('--- Reloading configuration...')
                         self.load_monitoring_config_file()
-                        brok = make_monitoring_log('info', 'CONFIGURATION RELOAD')
-                        if self.conf.monitoring_log_broks:
-                            self.add(brok)
-                        logger.warning('--- Configuration reloaded, %.2f seconds',
-                                       time.time() - _ts)
+                        duration = int(time.time() - _ts)
+                        self.add(make_monitoring_log('info', 'CONFIGURATION RELOAD;%d' % duration))
+                        logger.warning('--- Configuration reloaded, %d seconds', duration)
 
                         # Make a pause to let our satellites get ready...
                         pause = max(1, self.conf.daemons_new_conf_timeout)

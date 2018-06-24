@@ -59,6 +59,9 @@ class Brok(object):
     """A Brok is a piece of information exported by Alignak to the Broker.
     Broker can do whatever he wants with it.
 
+    A specific type of Brok exists when the type is monitoring_log. This Brok contains
+    a monitoring event (alert, notification, ...) information
+
     Broks types:
     - log
     - monitoring_log
@@ -105,10 +108,23 @@ class Brok(object):
         else:
             self.data = serialize(params['data'])
 
-    def __repr__(self):  # pragma: no cover
+    def __repr__(self):
         ct = datetime.fromtimestamp(self.creation_time).strftime("%Y-%m-%d %H:%M:%S.%f")
         return "Brok %s (%s) '%s': %s" % (self.uuid, ct, self.type, self.data)
     __str__ = __repr__
+
+    def get_event(self):
+        """This function returns an Event from a Brok
+
+        If the type is monitoring_log then the Brok contains a monitoring event
+        (alert, notification, ...) information. This function will return a tuple
+        with the creation time, the level and message information
+
+        :return: tuple with date, level and message
+        :rtype: tuple
+        """
+        self.prepare()
+        return (self.creation_time, self.data['level'], self.data['message'])
 
     def serialize(self):
         """This function serialize into a simple dict object.
@@ -130,7 +146,7 @@ class Brok(object):
 
         :return: None
         """
-        # Maybe the brok is a old daemon one or was already prepared
+        # Maybe the Brok is a old daemon one or was already prepared
         # if so, the data is already ok
         if hasattr(self, 'prepared') and not self.prepared:
             try:

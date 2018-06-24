@@ -626,7 +626,7 @@ class Daemon(object):
         self.check_dir(os.path.dirname(self.log_filename))
 
         # Specific monitoring log directory
-        self.check_dir(os.path.join(os.path.dirname(self.log_filename), 'monitoring-log'))
+        # self.check_dir(os.path.join(os.path.dirname(self.log_filename), 'monitoring-log'))
 
         if 'log_filename' not in kwargs or not kwargs['log_filename']:
             # Log file name is not overridden, the logger will use the configured default one
@@ -1181,8 +1181,8 @@ class Daemon(object):
         statsmgr.timer('modules.load-time', time.time() - _ts)
 
     def add(self, elt):
-        """ Abstract method for adding brok
-         It is overridden in subclasses of Daemon
+        """ Abstract method for adding brok, external commands, messages, ...
+         It is overridden in subclasses (Satellite) of Daemon
 
         :param elt: element to add
         :type elt:
@@ -1485,21 +1485,21 @@ class Daemon(object):
             # Else, I set my own pid as the reference one
             self.write_pid(os.getpid())
 
-        # TODO: check if really necessary!
-        # -------
-        # Set ownership on some default log files. It may happen that these default
-        # files are owned by a privileged user account
-        try:
-            for log_file in ['alignak.log', 'monitoring-logs.log']:
-                if os.path.exists('/tmp/%s' % log_file):
-                    with open('/tmp/%s' % log_file, "w") as file_log_file:
-                        os.fchown(file_log_file.fileno(), self.uid, self.gid)
-                if os.path.exists('/tmp/monitoring-log/%s' % log_file):
-                    with open('/tmp/monitoring-log/%s' % log_file, "w") as file_log_file:
-                        os.fchown(file_log_file.fileno(), self.uid, self.gid)
-        except Exception as exp:  # pylint: disable=broad-except
-            #  pragma: no cover
-            print("Could not set default log files ownership, exception: %s" % str(exp))
+        # # TODO: check if really necessary!
+        # # -------
+        # # Set ownership on some default log files. It may happen that these default
+        # # files are owned by a privileged user account
+        # try:
+        #     for log_file in ['alignak.log', 'alignak-events.log']:
+        #         if os.path.exists('/tmp/%s' % log_file):
+        #             with open('/tmp/%s' % log_file, "w") as file_log_file:
+        #                 os.fchown(file_log_file.fileno(), self.uid, self.gid)
+        #         if os.path.exists('/tmp/monitoring-log/%s' % log_file):
+        #             with open('/tmp/monitoring-log/%s' % log_file, "w") as file_log_file:
+        #                 os.fchown(file_log_file.fileno(), self.uid, self.gid)
+        # except Exception as exp:  # pylint: disable=broad-except
+        #     #  pragma: no cover
+        #     print("Could not set default log files ownership, exception: %s" % str(exp))
 
         # Configure the daemon logger
         self.setup_alignak_logger()
@@ -1910,8 +1910,7 @@ class Daemon(object):
         return any(self.new_conf)
 
     def hook_point(self, hook_name, handle=None):
-        """Used to call module function that may define a hook function
-        for hook_name
+        """Used to call module function that may define a hook function for hook_name
 
         Available hook points:
         - `tick`, called on each daemon loop turn

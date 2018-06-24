@@ -43,6 +43,15 @@
             "interval": 1,
             "backupCount": 7
         },
+        "event_log": {
+            "class": "logging.handlers.TimedRotatingFileHandler",
+            "level": "INFO",
+            "formatter": "monitoring-log",
+            "filename": "%(logdir)s/alignak-events.log",
+            "when": "midnight",
+            "interval": 1,
+            "backupCount": 365
+        },
         "monitoring_logs": {
             "class": "logging.handlers.TimedRotatingFileHandler",
             "level": "INFO",
@@ -62,7 +71,7 @@
         },
         "monitoring-log": {
             "level": "DEBUG",
-            "handlers": ["console", "monitoring_logs"],
+            "handlers": ["console", "event_log"],
             "propagate": "no"
         }
     },

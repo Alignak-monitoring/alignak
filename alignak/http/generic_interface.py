@@ -374,6 +374,20 @@ class GenericInterface(object):
         return serialize(res, True)
 
     @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def get_events(self):
+        """Get the monitoring events from the daemon
+
+        This is used by the arbiter to get the monitoring events from all its satellites
+
+        :return: Events list serialized
+        :rtype: list
+        """
+        with self.app.events_lock:
+            res = self.app.get_events()
+        return serialize(res, True)
+
+    @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
     def get_stats(self, details=False):

@@ -31,7 +31,7 @@ sudo addgroup --system alignak
 sudo adduser --system alignak --ingroup alignak
 
 # Create alignak default directories
-sudo mkdir -p /usr/local/var/log/alignak/monitoring-log
+sudo mkdir -p /usr/local/var/log/alignak
 sudo mkdir -p /usr/local/var/run/alignak
 
 # Install application AND tests requirements :

@@ -94,7 +94,7 @@ class TestContactDowntime(AlignakTest):
         # We loop, the downtime will be checked and activated
         self.scheduler_loop(1, [[svc, 0, 'OK'], [host, 0, 'UP']])
 
-        self.assert_any_brok_match('CONTACT DOWNTIME ALERT.*;STARTED')
+        self.assert_any_event_match('CONTACT DOWNTIME ALERT.*;STARTED')
 
         print("downtime was scheduled. check its activity and the comment\n"*5)
         self.assertEqual(1, len(test_contact.downtimes))
@@ -106,9 +106,14 @@ class TestContactDowntime(AlignakTest):
         # Ok, we define the downtime like we should, now look at if it does the job: do not
         # raise notif during a downtime for this contact
         self.scheduler_loop(3, [[svc, 2, 'CRITICAL']])
+        time.sleep(1.0)
+        assert downtime.is_in_effect
+        assert not downtime.can_be_deleted
+        assert svc.state == 'CRITICAL'
+        assert svc.state_type == 'HARD'
 
         # We should NOT see any service notification
-        self.assert_no_brok_match('SERVICE NOTIFICATION.*;CRITICAL')
+        self.assert_no_event_match('SERVICE NOTIFICATION.*;CRITICAL')
 
         # Now we short the downtime a lot so it will be stop at now + 1 sec.
         downtime.end_time = time.time() + 1
@@ -119,7 +124,7 @@ class TestContactDowntime(AlignakTest):
         self.scheduler_loop(1, [])
 
         # So we should be out now, with a log
-        self.assert_any_brok_match('CONTACT DOWNTIME ALERT.*;STOPPED')
+        self.assert_any_event_match('CONTACT DOWNTIME ALERT.*;STOPPED')
 
         print("\n\nDowntime was ended. Check it is really stopped")
         self.assertEqual(0, len(test_contact.downtimes))
@@ -132,7 +137,7 @@ class TestContactDowntime(AlignakTest):
         # raise notif during a downtime for this contact
         time.sleep(1)
         self.scheduler_loop(3, [[svc, 2, 'CRITICAL']])
-        self.assert_any_brok_match('SERVICE NOTIFICATION.*;CRITICAL')
+        self.assert_any_event_match('SERVICE NOTIFICATION.*;CRITICAL')
 
         for n in list(svc.notifications_in_progress.values()):
             print("NOTIF", n, n.t_to_go, time.time(), time.time() - n.t_to_go)
@@ -175,7 +180,7 @@ class TestContactDowntime(AlignakTest):
             # We loop, the downtime wil be check and activate
             self.scheduler_loop(1, [[svc, 0, 'OK'], [host, 0, 'UP']])
 
-            self.assert_any_brok_match('CONTACT DOWNTIME ALERT.*;STARTED')
+            self.assert_any_event_match('CONTACT DOWNTIME ALERT.*;STARTED')
 
             print("downtime was scheduled. check its activity and the comment")
             assert len(test_contact.downtimes) == 1
@@ -216,7 +221,7 @@ class TestContactDowntime(AlignakTest):
             self.scheduler_loop(1, [])
 
             # So we should be out now, with a log
-            self.assert_any_brok_match('CONTACT DOWNTIME ALERT.*;CANCELLED')
+            self.assert_any_event_match('CONTACT DOWNTIME ALERT.*;CANCELLED')
 
             print("Downtime was cancelled")
             assert len(test_contact.downtimes) == 0
@@ -243,6 +248,6 @@ class TestContactDowntime(AlignakTest):
             self.scheduler_loop(1)
             assert 0 == svc.current_notification_number, 'Ok HARD, no notifications'
 
-            self.assert_any_brok_match('SERVICE NOTIFICATION.*;OK')
+            self.assert_any_event_match('SERVICE NOTIFICATION.*;OK')
 
-            self.assert_any_brok_match('SERVICE NOTIFICATION.*;CRITICAL')
+            self.assert_any_event_match('SERVICE NOTIFICATION.*;CRITICAL')

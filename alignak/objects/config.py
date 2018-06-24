@@ -334,7 +334,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             StringProp(default=u''),
 
         'retention_update_interval':
-            IntegerProp(default=60),
+            IntegerProp(default=0),
 
         'use_retained_program_state':
             UnusedProp(text=NOT_INTERESTING),
@@ -366,9 +366,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
             BoolProp(default=False),
 
         # Monitoring logs configuration
-        'monitoring_log_broks':
-            BoolProp(default=False, fill_brok=['full_status']),
-
         'log_notifications':
             BoolProp(default=True, fill_brok=['full_status'],
                      class_inherit=[(Host, None), (Service, None)]),

@@ -105,10 +105,10 @@ class AlignakTest(unittest2.TestCase):
         # Configure Alignak logger with test configuration
         logger_configuration_file = os.path.join(os.getcwd(), './etc/alignak-logger.json')
         print("Logger configuration: %s" % logger_configuration_file)
-        try:
-            os.makedirs('/tmp/monitoring-log')
-        except OSError as exp:
-            pass
+        # try:
+        #     os.makedirs('/tmp/monitoring-log')
+        # except OSError as exp:
+        #     pass
         self.former_log_level = None
         setup_logger(logger_configuration_file, log_dir=None, process_name='', log_file='')
         self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
@@ -243,7 +243,7 @@ define host {
             shutil.copytree('../etc', '%s/etc' % cfg_folder)
 
         # Load and update the configuration
-        for f in ['alignak.log', 'monitoring-logs.log', 'monitoring-log/monitoring-logs.log']:
+        for f in ['alignak.log', 'alignak-events.log']:
             if os.path.exists('%s/log/%s' % (cfg_folder, f)):
                 os.remove('%s/log/%s' % (cfg_folder, f))
 
@@ -452,7 +452,7 @@ define host {
             run_folder = cfg_folder
         print("Running Alignak daemons, cfg_folder: %s, run_folder: %s" % (cfg_folder, run_folder))
 
-        for f in ['alignak.log', 'monitoring-logs.log', 'monitoring-log/monitoring-logs.log']:
+        for f in ['alignak.log', 'alignak-events.log']:
             if os.path.exists('%s/log/%s' % (cfg_folder, f)):
                 os.remove('%s/log/%s' % (cfg_folder, f))
 
@@ -1254,37 +1254,16 @@ define host {
         """
         self._scheduler.checks = {}
 
-    def check_monitoring_logs(self, expected_logs, dump=True):
+    def clear_events(self, daemon=None):
         """
-        Get the monitoring_log broks and check that they match with the expected_logs provided
+        Clear the checks in the scheduler's checks.
 
-        :param expected_logs: expected monitoring logs
-        :param dump: True to print out the monitoring logs
         :return:
         """
-        # We got 'monitoring_log' broks for logging to the monitoring logs...
-        monitoring_logs = []
-        if dump:
-            print("Monitoring logs: ")
-        # Sort broks by ascending uuid
-        index = 0
-        for brok in sorted(self._main_broker.broks, key=lambda x: x.creation_time):
-            if brok.type not in ['monitoring_log']:
-                continue
+        if daemon is None:
+            daemon = self._scheduler_daemon
 
-            data = unserialize(brok.data)
-            monitoring_logs.append((data['level'], data['message']))
-            if dump:
-                print("- %s" % brok)
-                # print("- %d: %s - %s: %s" % (index, brok.creation_time,
-                #                              data['level'], data['message']))
-                index+=1
-
-        for log_level, log_message in expected_logs:
-            assert (log_level, log_message) in monitoring_logs, "Not found :%s" % log_message
-
-        assert len(expected_logs) == len(monitoring_logs), "Length do not match: %d" \
-                                                           % len(monitoring_logs)
+        daemon.events = []
 
     def assert_actions_count(self, number):
         """
@@ -1583,7 +1562,7 @@ define host {
                     return
 
         self.assertTrue(assert_not, "No matching brok found:\n"
-                                    "pattern = %r\n" "brok message = %r" % (pattern,
+                                    "pattern = %r\n" "monitring log = %r" % (pattern,
                                                                             monitoring_logs))
 
     def assert_any_brok_match(self, pattern, level=None):
@@ -1609,6 +1588,118 @@ define host {
         :return:
         """
         self._any_brok_match(pattern, level, assert_not=True)
+
+    def get_monitoring_events(self, daemon=None, no_date=False):
+        """ This function gets the monitoring events from the provided daemon
+
+        If no daemon is specified, it will get from the default Scheduler
+
+        the event Broks are sorted by ascending creation timestamp
+
+        If no_date is specified, then the events list will be filtered and the vents data will
+        not be returned. This makes it really easier for the unit tests that do not need to care
+        about the events timestamp to check if an event is raised or not!
+
+        :return:
+        """
+        if daemon is None:
+            daemon = self._scheduler_daemon
+
+        monitoring_logs = []
+        for brok in sorted(daemon.events, key=lambda x: x.creation_time):
+            ts, level, message = brok.get_event()
+            print("Event: %s / %s / %s" % (ts, level, message))
+            if no_date:
+                monitoring_logs.append((level, message))
+            else:
+                monitoring_logs.append((ts, level, message))
+
+        return monitoring_logs
+
+    def check_monitoring_events_log(self, expected_logs, dump=True):
+        """
+        Get the monitoring_log broks and check that they match with the expected_logs provided
+
+        :param expected_logs: expected monitoring logs
+        :param dump: True to print out the monitoring logs
+        :return:
+        """
+        # We got 'monitoring_log' broks for logging to the monitoring events..
+        # no_date to avoid comparing the events timestamp !
+        monitoring_events = self.get_monitoring_events(no_date=True)
+        if dump:
+            print("Monitoring events: ")
+            for level, message in monitoring_events:
+                print("- ('%s', '%s')" % (level, message))
+
+        for log_level, log_message in expected_logs:
+            try:
+                assert (log_level, log_message) in monitoring_events, "Not found :%s" % log_message
+            except UnicodeDecodeError:
+                assert (log_level.decode('utf8', 'ignore'), log_message.decode('utf8', 'ignore')) in monitoring_events, "Not found :%s" % log_message
+
+        assert len(expected_logs) == len(monitoring_events), "Length do not match: %d" \
+                                                             % len(monitoring_events)
+
+    def _any_event_match(self, pattern, level, assert_not):
+        """
+        Search if any event message in the Arbiter events matches the requested pattern and
+        requested level
+
+        @verified
+        :param pattern:
+        :param assert_not:
+        :return:
+        """
+        regex = re.compile(pattern)
+
+        my_broker = [b for b in list(self._scheduler.my_daemon.brokers.values())][0]
+
+        monitoring_logs = []
+        print("Broker broks: %s" % my_broker.broks)
+        for brok in my_broker.broks:
+            print("- %s" % brok)
+
+        monitoring_logs = []
+        print("Arbiter events: %s" % self._arbiter.events)
+        print("Scheduler events: %s" % self._scheduler_daemon.events)
+        print("Receiver events: %s" % self._receiver_daemon.events)
+        for event in self._scheduler_daemon.events:
+            data = unserialize(event.data)
+            monitoring_logs.append((data['level'], data['message']))
+            if re.search(regex, data['message']) and (level is None or data['level'] == level):
+                self.assertTrue(not assert_not,
+                                "Found matching event:\npattern = %r\nevent message = %r"
+                                % (pattern, data['message']))
+                return
+
+        self.assertTrue(assert_not,
+                        "No matching event found:\npattern = %r\n" "event message = %r"
+                        % (pattern, monitoring_logs))
+
+    def assert_any_event_match(self, pattern, level=None):
+        """
+        Search if any event message in the Scheduler events matches the requested pattern and
+        requested level
+
+        @verified
+        :param pattern:
+        :param scheduler:
+        :return:
+        """
+        self._any_event_match(pattern, level, assert_not=False)
+
+    def assert_no_event_match(self, pattern, level=None):
+        """
+        Search if no event message in the Scheduler events matches the requested pattern and
+        requested level
+
+        @verified
+        :param pattern:
+        :param scheduler:
+        :return:
+        """
+        self._any_event_match(pattern, level, assert_not=True)
 
     def get_log_match(self, pattern):
         """Get the collected logs matching the provided pattern"""

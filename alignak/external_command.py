@@ -581,10 +581,7 @@ class ExternalCommandManager(object):
 
             if make_a_log:
                 # I am a command dispatcher, notifies to my arbiter
-                brok = make_monitoring_log('info', 'EXTERNAL COMMAND: ' + command)
-                if self.my_conf.monitoring_log_broks:
-                    # Send a brok to our daemon
-                    self.send_an_element(brok)
+                self.send_an_element(make_monitoring_log('info', 'EXTERNAL COMMAND: ' + command))
 
         if not cmd['global']:
             # Execute the command
@@ -730,11 +727,8 @@ class ExternalCommandManager(object):
 
                 if self.my_conf and getattr(self.my_conf, 'log_external_commands', False):
                     # The command failed, make a monitoring log to inform
-                    brok = make_monitoring_log('error',
-                                               "Malformed command: '%s'" % command)
-                    if self.my_conf.monitoring_log_broks:
-                        # Send a brok to our arbiter else to our scheduler
-                        self.send_an_element(brok)
+                    self.send_an_element(make_monitoring_log(
+                        'error', "Malformed command: '%s'" % command))
                 return None
 
         c_name = c_name.lower()
@@ -755,11 +749,8 @@ class ExternalCommandManager(object):
 
             if self.my_conf and getattr(self.my_conf, 'log_external_commands', False):
                 # The command failed, make a monitoring log to inform
-                brok = make_monitoring_log('error',
-                                           "Malformed command: '%s'" % command)
-                if self.my_conf.monitoring_log_broks:
-                    # Send a brok to our arbiter else to our scheduler
-                    self.send_an_element(brok)
+                self.send_an_element(make_monitoring_log(
+                    'error', "Malformed command: '%s'" % command))
             return None
 
         if c_name not in ExternalCommandManager.commands:
@@ -767,11 +758,8 @@ class ExternalCommandManager(object):
 
             if self.my_conf and getattr(self.my_conf, 'log_external_commands', False):
                 # The command failed, make a monitoring log to inform
-                brok = make_monitoring_log('error',
-                                           "Command '%s' is not recognized, sorry" % command)
-                if self.my_conf.monitoring_log_broks:
-                    # Send a brok to our arbiter else to our scheduler
-                    self.send_an_element(brok)
+                self.send_an_element(make_monitoring_log(
+                    'error', "Command '%s' is not recognized, sorry" % command))
             return None
 
         # Split again based on the number of args we expect. We cannot split
@@ -922,12 +910,8 @@ class ExternalCommandManager(object):
 
             if self.my_conf and self.my_conf.log_external_commands:
                 # The command failed, make a monitoring log to inform
-                brok = make_monitoring_log('error',
-                                           "Arguments are not correct for the command: '%s'" %
-                                           command)
-                if self.my_conf.monitoring_log_broks:
-                    # Send a brok to our arbiter else to our scheduler
-                    self.send_an_element(brok)
+                self.send_an_element(make_monitoring_log(
+                    'error', "Arguments are not correct for the command: '%s'" % command))
         else:
             if len(args) == (len(entry['args']) - obsolete_arg):
                 return {'global': False, 'c_name': c_name, 'args': args}
@@ -937,12 +921,8 @@ class ExternalCommandManager(object):
 
             if self.my_conf and self.my_conf.log_external_commands:
                 # The command failed, make a monitoring log to inform
-                brok = make_monitoring_log('error',
-                                           "Arguments are not correct for the command: '%s'" %
-                                           command)
-                if self.my_conf.monitoring_log_broks:
-                    # Send a brok to our arbiter else to our scheduler
-                    self.send_an_element(brok)
+                self.send_an_element(make_monitoring_log(
+                    'error', "Arguments are not correct for the command: '%s'" % command))
         return None
 
     @staticmethod
@@ -1041,8 +1021,7 @@ class ExternalCommandManager(object):
                                        % (self.hosts[service.host].get_name(),
                                           service.get_name(), author, comment))
 
-        if self.my_conf.monitoring_log_broks:
-            self.send_an_element(brok)
+        self.send_an_element(brok)
 
     def add_host_comment(self, host, author, comment):
         """Add a host comment
@@ -1073,8 +1052,7 @@ class ExternalCommandManager(object):
             brok = make_monitoring_log('info', "HOST COMMENT: %s;%s;%s"
                                        % (host.get_name(), author, comment))
 
-        if self.my_conf.monitoring_log_broks:
-            self.send_an_element(brok)
+        self.send_an_element(brok)
 
     def acknowledge_svc_problem(self, service, sticky, notify, author, comment):
         """Acknowledge a service problem
@@ -1264,12 +1242,8 @@ class ExternalCommandManager(object):
                        "is not currently implemented in Alignak. If you really need it, "
                        "request for its implementation in the project repository: "
                        "https://github.com/Alignak-monitoring/alignak")
-        brok = make_monitoring_log('warning',
-                                   'CHANGE_GLOBAL_HOST_EVENT_HANDLER: '
-                                   'this command is not implemented!')
-        if self.my_conf.monitoring_log_broks:
-            self.send_an_element(brok)
-        # todo: #783 create a dedicated brok for global parameters
+        self.send_an_element(make_monitoring_log(
+            'warning', 'CHANGE_GLOBAL_HOST_EVENT_HANDLER: this command is not implemented!'))
 
     def change_global_svc_event_handler(self, event_handler_command):
         """DOES NOTHING (should change global service event handler)
@@ -1286,12 +1260,8 @@ class ExternalCommandManager(object):
                        "is not currently implemented in Alignak. If you really need it, "
                        "request for its implementation in the project repository: "
                        "https://github.com/Alignak-monitoring/alignak")
-        brok = make_monitoring_log('warning',
-                                   'CHANGE_GLOBAL_SVC_EVENT_HANDLER: '
-                                   'this command is not implemented!')
-        if self.my_conf.monitoring_log_broks:
-            self.send_an_element(brok)
-        # todo: #783 create a dedicated brok for global parameters
+        self.send_an_element(make_monitoring_log(
+            'warning', 'CHANGE_GLOBAL_SVC_EVENT_HANDLER: this command is not implemented!'))
 
     def change_host_check_command(self, host, check_command):
         """Modify host check command
@@ -1792,11 +1762,9 @@ class ExternalCommandManager(object):
                 item.downtimes[downtime_id].cancel(self.daemon.contacts)
                 break
         else:
-            brok = make_monitoring_log('warning',
-                                       'DEL_CONTACT_DOWNTIME: downtime_id id: %s does not exist '
-                                       'and cannot be deleted.' % downtime_id)
-            if self.my_conf.monitoring_log_broks:
-                self.send_an_element(brok)
+            self.send_an_element(make_monitoring_log(
+                'warning', 'DEL_CONTACT_DOWNTIME: downtime id: %s does not exist '
+                           'and cannot be deleted.' % downtime_id))
 
     def del_host_comment(self, comment_id):
         """Delete a host comment
@@ -1813,11 +1781,9 @@ class ExternalCommandManager(object):
                 item.del_comment(comment_id)
                 break
         else:
-            brok = make_monitoring_log('warning',
-                                       'DEL_HOST_COMMENT: comment id: %s does not exist '
-                                       'and cannot be deleted.' % comment_id)
-            if self.my_conf.monitoring_log_broks:
-                self.send_an_element(brok)
+            self.send_an_element(make_monitoring_log(
+                'warning', 'DEL_HOST_COMMENT: comment id: %s does not exist '
+                           'and cannot be deleted.' % comment_id))
 
     def del_host_downtime(self, downtime_id):
         """Delete a host downtime
@@ -1837,11 +1803,9 @@ class ExternalCommandManager(object):
                                                                 self.daemon.services))
                 break
         else:
-            brok = make_monitoring_log('warning',
-                                       'DEL_HOST_DOWNTIME: downtime_id id: %s does not exist '
-                                       'and cannot be deleted.' % downtime_id)
-            if self.my_conf.monitoring_log_broks:
-                broks.append(brok)
+            self.send_an_element(make_monitoring_log(
+                'warning', 'DEL_HOST_DOWNTIME: downtime id: %s does not exist '
+                           'and cannot be deleted.' % downtime_id))
         for brok in broks:
             self.send_an_element(brok)
 
@@ -1860,11 +1824,9 @@ class ExternalCommandManager(object):
                 svc.del_comment(comment_id)
                 break
         else:
-            brok = make_monitoring_log('warning',
-                                       'DEL_SVC_COMMENT: comment id: %s does not exist '
-                                       'and cannot be deleted.' % comment_id)
-            if self.my_conf.monitoring_log_broks:
-                self.send_an_element(brok)
+            self.send_an_element(make_monitoring_log(
+                'warning', 'DEL_SVC_COMMENT: comment id: %s does not exist '
+                           'and cannot be deleted.' % comment_id))
 
     def del_svc_downtime(self, downtime_id):
         """Delete a service downtime
@@ -1884,11 +1846,9 @@ class ExternalCommandManager(object):
                                                                self.daemon.services))
                 break
         else:
-            brok = make_monitoring_log('warning',
-                                       'DEL_SVC_DOWNTIME: downtime_id id: %s does not exist '
-                                       'and cannot be deleted.' % downtime_id)
-            if self.my_conf.monitoring_log_broks:
-                broks.append(brok)
+            self.send_an_element(make_monitoring_log(
+                'warning', 'DEL_SVC_DOWNTIME: downtime id: %s does not exist '
+                           'and cannot be deleted.' % downtime_id))
         for brok in broks:
             self.send_an_element(brok)
 
@@ -1907,11 +1867,8 @@ class ExternalCommandManager(object):
                        "is not currently implemented in Alignak. If you really need it, "
                        "request for its implementation in the project repository: "
                        "https://github.com/Alignak-monitoring/alignak")
-        brok = make_monitoring_log('warning',
-                                   'DISABLE_ALL_NOTIFICATIONS_BEYOND_HOST: '
-                                   'this command is not implemented!')
-        if self.my_conf.monitoring_log_broks:
-            self.send_an_element(brok)
+        self.send_an_element(make_monitoring_log(
+            'warning', 'DISABLE_ALL_NOTIFICATIONS_BEYOND_HOST: this command is not implemented!'))
 
     def disable_contactgroup_host_notifications(self, contactgroup):
         """Disable host notifications for a contactgroup
@@ -2114,11 +2071,8 @@ class ExternalCommandManager(object):
                        "is not currently implemented in Alignak. If you really need it, "
                        "request for its implementation in the project repository: "
                        "https://github.com/Alignak-monitoring/alignak")
-        brok = make_monitoring_log('warning',
-                                   'DISABLE_HOST_AND_CHILD_NOTIFICATIONS: '
-                                   'this command is not implemented!')
-        if self.my_conf.monitoring_log_broks:
-            self.send_an_element(brok)
+        self.send_an_element(make_monitoring_log(
+            'warning', 'DISABLE_HOST_AND_CHILD_NOTIFICATIONS: this command is not implemented!'))
 
     def disable_host_check(self, host):
         """Disable checks for a host
@@ -2483,11 +2437,8 @@ class ExternalCommandManager(object):
                        "is not currently implemented in Alignak. If you really need it, "
                        "request for its implementation in the project repository: "
                        "https://github.com/Alignak-monitoring/alignak")
-        brok = make_monitoring_log('warning',
-                                   'ENABLE_ALL_NOTIFICATIONS_BEYOND_HOST: '
-                                   'this command is not implemented!')
-        if self.my_conf.monitoring_log_broks:
-            self.send_an_element(brok)
+        self.send_an_element(make_monitoring_log(
+            'warning', 'ENABLE_ALL_NOTIFICATIONS_BEYOND_HOST: this command is not implemented!'))
 
     def enable_contactgroup_host_notifications(self, contactgroup):
         """Enable host notifications for a contactgroup
@@ -2683,11 +2634,8 @@ class ExternalCommandManager(object):
                        "is not currently implemented in Alignak. If you really need it, "
                        "request for its implementation in the project repository: "
                        "https://github.com/Alignak-monitoring/alignak")
-        brok = make_monitoring_log('warning',
-                                   'ENABLE_HOST_AND_CHILD_NOTIFICATIONS: '
-                                   'this command is not implemented!')
-        if self.my_conf.monitoring_log_broks:
-            self.send_an_element(brok)
+        self.send_an_element(make_monitoring_log(
+            'warning', 'ENABLE_HOST_AND_CHILD_NOTIFICATIONS: this command is not implemented!'))
 
     def enable_host_check(self, host):
         """Enable checks for a host
@@ -3040,11 +2988,8 @@ class ExternalCommandManager(object):
                        "is not currently implemented in Alignak. If you really need it, "
                        "request for its implementation in the project repository: "
                        "https://github.com/Alignak-monitoring/alignak")
-        brok = make_monitoring_log('warning',
-                                   'PROCESS_FILE: '
-                                   'this command is not implemented!')
-        if self.my_conf.monitoring_log_broks:
-            self.send_an_element(brok)
+        self.send_an_element(make_monitoring_log(
+            'warning', 'PROCESS_FILE: this command is not implemented!'))
 
     def process_host_check_result(self, host, status_code, plugin_output):
         """Process host check result
@@ -3112,14 +3057,9 @@ class ExternalCommandManager(object):
                 log_level = 'error'
             if status_code == 2:  # UNREACHABLE
                 log_level = 'warning'
-            brok = make_monitoring_log(
-                log_level,
-                'PASSIVE HOST CHECK: %s;%d;%s;%s;%s' % (
-                    host.get_name(), status_code, chk.output, chk.long_output, chk.perf_data)
-            )
-            if self.my_conf.monitoring_log_broks:
-                # Send a brok to our arbiter else to our scheduler
-                self.send_an_element(brok)
+            self.send_an_element(make_monitoring_log(
+                log_level, 'PASSIVE HOST CHECK: %s;%d;%s;%s;%s' % (
+                    host.get_name(), status_code, chk.output, chk.long_output, chk.perf_data)))
 
     def process_host_output(self, host, plugin_output):
         """Process host output
@@ -3207,15 +3147,10 @@ class ExternalCommandManager(object):
                 log_level = 'warning'
             if return_code == 2:  # CRITICAL
                 log_level = 'error'
-            brok = make_monitoring_log(
+            self.send_an_element(make_monitoring_log(
                 log_level, 'PASSIVE SERVICE CHECK: %s;%s;%d;%s;%s;%s' % (
                     self.hosts[service.host].get_name(), service.get_name(),
-                    return_code, chk.output, chk.long_output, chk.perf_data
-                )
-            )
-            if self.my_conf.monitoring_log_broks:
-                # Send the brok
-                self.send_an_element(brok)
+                    return_code, chk.output, chk.long_output, chk.perf_data)))
 
     def process_service_output(self, service, plugin_output):
         """Process service output
@@ -3243,11 +3178,8 @@ class ExternalCommandManager(object):
                        "is not currently implemented in Alignak. If you really need it, "
                        "request for its implementation in the project repository: "
                        "https://github.com/Alignak-monitoring/alignak")
-        brok = make_monitoring_log('warning',
-                                   'READ_STATE_INFORMATION: '
-                                   'this command is not implemented!')
-        if self.my_conf.monitoring_log_broks:
-            self.send_an_element(brok)
+        self.send_an_element(make_monitoring_log(
+            'warning', 'READ_STATE_INFORMATION: this command is not implemented!'))
 
     @staticmethod
     def remove_host_acknowledgement(host):
@@ -3306,10 +3238,7 @@ class ExternalCommandManager(object):
                          e_handler.exit_status, e_handler.output)
             log_level = 'error'
         # Ok here the command succeed, we can now wait our death
-        brok = make_monitoring_log(log_level, "%s" % (e_handler.output))
-        if self.my_conf.monitoring_log_broks:
-            # Send a brok to our arbiter else to our scheduler
-            self.send_an_element(brok)
+        self.send_an_element(make_monitoring_log(log_level, "RESTART: %s" % (e_handler.output)))
 
     def reload_config(self):
         """Reload Alignak configuration
@@ -3342,10 +3271,7 @@ class ExternalCommandManager(object):
                          e_handler.exit_status, e_handler.output)
             log_level = 'error'
         # Ok here the command succeed, we can now wait our death
-        brok = make_monitoring_log(log_level, "%s" % (e_handler.output))
-        if self.my_conf.monitoring_log_broks:
-            # Send a brok to our arbiter else to our scheduler
-            self.send_an_element(brok)
+        self.send_an_element(make_monitoring_log(log_level, "RELOAD: %s" % (e_handler.output)))
 
     def save_state_information(self):
         """DOES NOTHING (What it is supposed to do?)
@@ -3359,11 +3285,8 @@ class ExternalCommandManager(object):
                        "is not currently implemented in Alignak. If you really need it, "
                        "request for its implementation in the project repository: "
                        "https://github.com/Alignak-monitoring/alignak")
-        brok = make_monitoring_log('warning',
-                                   'SAVE_STATE_INFORMATION: '
-                                   'this command is not implemented!')
-        if self.my_conf.monitoring_log_broks:
-            self.send_an_element(brok)
+        self.send_an_element(make_monitoring_log(
+            'warning', 'SAVE_STATE_INFORMATION: this command is not implemented!'))
 
     def schedule_and_propagate_host_downtime(self, host, start_time, end_time,
                                              fixed, trigger_id, duration, author, comment):
@@ -3379,11 +3302,8 @@ class ExternalCommandManager(object):
                        "is not currently implemented in Alignak. If you really need it, "
                        "request for its implementation in the project repository: "
                        "https://github.com/Alignak-monitoring/alignak")
-        brok = make_monitoring_log('warning',
-                                   'SCHEDULE_AND_PROPAGATE_HOST_DOWNTIME: '
-                                   'this command is not implemented!')
-        if self.my_conf.monitoring_log_broks:
-            self.send_an_element(brok)
+        self.send_an_element(make_monitoring_log(
+            'warning', 'SCHEDULE_AND_PROPAGATE_HOST_DOWNTIME: this command is not implemented!'))
 
     def schedule_and_propagate_triggered_host_downtime(self, host, start_time, end_time, fixed,
                                                        trigger_id, duration, author, comment):
@@ -3399,11 +3319,9 @@ class ExternalCommandManager(object):
                        "is not currently implemented in Alignak. If you really need it, "
                        "request for its implementation in the project repository: "
                        "https://github.com/Alignak-monitoring/alignak")
-        brok = make_monitoring_log('warning',
-                                   'SCHEDULE_AND_PROPAGATE_TRIGGERED_HOST_DOWNTIME: '
-                                   'this command is not implemented!')
-        if self.my_conf.monitoring_log_broks:
-            self.send_an_element(brok)
+        self.send_an_element(make_monitoring_log(
+            'warning', 'SCHEDULE_AND_PROPAGATE_TRIGGERED_HOST_DOWNTIME: '
+                       'this command is not implemented!'))
 
     def schedule_contact_downtime(self, contact, start_time, end_time, author, comment):
         """Schedule contact downtime
@@ -3788,11 +3706,8 @@ class ExternalCommandManager(object):
                        "is not currently implemented in Alignak. If you really need it, "
                        "request for its implementation in the project repository: "
                        "https://github.com/Alignak-monitoring/alignak")
-        brok = make_monitoring_log('warning',
-                                   'SEND_CUSTOM_HOST_NOTIFICATION: '
-                                   'this command is not implemented!')
-        if self.my_conf.monitoring_log_broks:
-            self.send_an_element(brok)
+        self.send_an_element(make_monitoring_log(
+            'warning', 'SEND_CUSTOM_HOST_NOTIFICATION: this command is not implemented!'))
 
     def send_custom_svc_notification(self, service, options, author, comment):
         """DOES NOTHING (Should send a custom notification)
@@ -3814,11 +3729,8 @@ class ExternalCommandManager(object):
                        "is not currently implemented in Alignak. If you really need it, "
                        "request for its implementation in the project repository: "
                        "https://github.com/Alignak-monitoring/alignak")
-        brok = make_monitoring_log('warning',
-                                   'SEND_CUSTOM_SVC_NOTIFICATION: '
-                                   'this command is not implemented!')
-        if self.my_conf.monitoring_log_broks:
-            self.send_an_element(brok)
+        self.send_an_element(make_monitoring_log(
+            'warning', 'SEND_CUSTOM_SVC_NOTIFICATION: this command is not implemented!'))
 
     def set_host_notification_number(self, host, notification_number):
         """DOES NOTHING (Should set host notification number)
@@ -3836,11 +3748,8 @@ class ExternalCommandManager(object):
                        "is not currently implemented in Alignak. If you really need it, "
                        "request for its implementation in the project repository: "
                        "https://github.com/Alignak-monitoring/alignak")
-        brok = make_monitoring_log('warning',
-                                   'SET_HOST_NOTIFICATION_NUMBER: '
-                                   'this command is not implemented!')
-        if self.my_conf.monitoring_log_broks:
-            self.send_an_element(brok)
+        self.send_an_element(make_monitoring_log(
+            'warning', 'SET_HOST_NOTIFICATION_NUMBER: this command is not implemented!'))
 
     def set_svc_notification_number(self, service, notification_number):
         """DOES NOTHING (Should set host notification number)
@@ -3858,11 +3767,8 @@ class ExternalCommandManager(object):
                        "is not currently implemented in Alignak. If you really need it, "
                        "request for its implementation in the project repository: "
                        "https://github.com/Alignak-monitoring/alignak")
-        brok = make_monitoring_log('warning',
-                                   'SET_SVC_NOTIFICATION_NUMBER: '
-                                   'this command is not implemented!')
-        if self.my_conf.monitoring_log_broks:
-            self.send_an_element(brok)
+        self.send_an_element(make_monitoring_log(
+            'warning', 'SET_SVC_NOTIFICATION_NUMBER: this command is not implemented!'))
 
     def shutdown_program(self):
         """DOES NOTHING (Should shutdown Alignak)
@@ -3876,11 +3782,8 @@ class ExternalCommandManager(object):
                        "is not currently implemented in Alignak. If you really need it, "
                        "request for its implementation in the project repository: "
                        "https://github.com/Alignak-monitoring/alignak")
-        brok = make_monitoring_log('warning',
-                                   'SHUTDOWN_PROGRAM: '
-                                   'this command is not implemented!')
-        if self.my_conf.monitoring_log_broks:
-            self.send_an_element(brok)
+        self.send_an_element(make_monitoring_log(
+            'warning', 'SHUTDOWN_PROGRAM: this command is not implemented!'))
 
     def start_accepting_passive_host_checks(self):
         """Enable passive host check submission (globally)

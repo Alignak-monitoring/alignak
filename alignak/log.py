@@ -41,7 +41,7 @@ import os
 import sys
 import json
 import time
-
+import datetime
 import logging
 from logging import Handler, StreamHandler
 from logging.config import dictConfig as logger_dictConfig
@@ -232,38 +232,50 @@ def get_log_level():
     return logger_.log_level
 
 
-def make_monitoring_log(level, message):
+def make_monitoring_log(level, message, timestamp=None, to_logger=False):
     """
     Function used to build the monitoring log.
 
     Emit a log message with the provided level to the monitoring log logger.
     Build a Brok typed as monitoring_log with the provided message
 
+    When to_logger is True, the information is sent to the python logger, else a monitoring_log
+    Brok is returned. The Brok is managed by the daemons to build an Event that will br logged
+    by the Arbiter when it collects all the events.
+
     TODO: replace with dedicated brok for each event to log - really useful?
 
     :param level: log level as defined in logging
     :param message: message to send to the monitoring log logger
-    :return:
+    :param to_logger: when set, send to the logger, else raise a brok
+    :param timestamp: if set, force the log event timestamp
+    :return: a monitoring_log Brok
+    :rtype: alignak.brok.Brok
     """
-    logging.getLogger(ALIGNAK_LOGGER_NAME).debug("Monitoring log: %s / %s", level, message)
     level = level.lower()
     if level not in ['debug', 'info', 'warning', 'error', 'critical']:
         return False
 
-    # Emit to our monitoring log logger
-    message = message.replace('\r', '\\r')
-    message = message.replace('\n', '\\n')
-    logger_ = logging.getLogger(MONITORING_LOGGER_NAME)
-    logging_function = getattr(logger_, level)
-    try:
-        message = message.decode('utf8', 'ignore')
-    except UnicodeEncodeError:
-        pass
-    except AttributeError:
-        # Python 3 raises an exception!
-        pass
+    if to_logger:
+        logging.getLogger(ALIGNAK_LOGGER_NAME).debug("Monitoring log: %s / %s", level, message)
 
-    logging_function(message)
+        # Emit to our monitoring log logger
+        message = message.replace('\r', '\\r')
+        message = message.replace('\n', '\\n')
+        logger_ = logging.getLogger(MONITORING_LOGGER_NAME)
+        logging_function = getattr(logger_, level)
+        try:
+            message = message.decode('utf8', 'ignore')
+        except UnicodeEncodeError:
+            pass
+        except AttributeError:
+            # Python 3 raises an exception!
+            pass
+
+        if timestamp:
+            st = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
+            logging_function(message, extra={'my_date': st})
+        return True
 
     # ... and returns a brok
     return Brok({'type': 'monitoring_log', 'data': {'level': level, 'message': message}})

@@ -58,10 +58,9 @@ class TestEventhandler(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_global_event_handlers.cfg')
+        self.clear_events()
 
-        self._sched = self._scheduler
-
-        host = self._sched.hosts.find_by_name("test_host_1")
+        host = self._scheduler.hosts.find_by_name("test_host_1")
         print(host.event_handler_enabled)
         assert host.event_handler_enabled is True
         print("host: %s" % host.event_handler)
@@ -69,7 +68,7 @@ class TestEventhandler(AlignakTest):
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
-        svc = self._sched.services.find_srv_by_name_and_hostname(
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_1", "test_ok_0")
         assert svc.event_handler_enabled is True
         print("svc: %s" % svc.event_handler)
@@ -133,36 +132,29 @@ class TestEventhandler(AlignakTest):
         self.assert_actions_match(3, 'test_global_host_eventhandler.pl DOWN SOFT', 'command')
         self.assert_actions_match(4, 'test_global_host_eventhandler.pl UP SOFT', 'command')
 
-        # Get my first broker link
-        my_broker = [b for b in list(self._scheduler.my_daemon.brokers.values())][0]
-
-        # We got 'monitoring_log' broks for logging to the monitoring logs...
-        monitoring_logs = []
-        for brok in sorted(my_broker.broks, key=lambda x: x.creation_time):
-            if brok.type == 'monitoring_log':
-                data = unserialize(brok.data)
-                monitoring_logs.append((data['level'], data['message']))
-
-        print(monitoring_logs)
         expected_logs = [
-            ('info', 'SERVICE ALERT: test_host_1;test_ok_0;OK;HARD;2;OK'),
-            ('error', 'SERVICE ALERT: test_host_1;test_ok_0;CRITICAL;HARD;2;CRITICAL'),
-            ('error', 'SERVICE EVENT HANDLER: test_host_1;test_ok_0;CRITICAL;SOFT;'
-                       '1;global_service_eventhandler'),
-            ('info', 'SERVICE EVENT HANDLER: test_host_1;test_ok_0;OK;HARD;'
-                      '2;global_service_eventhandler'),
+            ('info', 'ACTIVE HOST CHECK: test_host_1;UP;0;UP'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_1;test_ok_0;OK;0;OK'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_1;test_ok_0;CRITICAL;1;CRITICAL'),
             ('error', 'SERVICE ALERT: test_host_1;test_ok_0;CRITICAL;SOFT;1;CRITICAL'),
-            ('error', 'SERVICE EVENT HANDLER: test_host_1;test_ok_0;CRITICAL;HARD;'
-                       '2;global_service_eventhandler'),
+            ('error', 'SERVICE EVENT HANDLER: test_host_1;test_ok_0;CRITICAL;SOFT;1;global_service_eventhandler'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_1;test_ok_0;CRITICAL;1;CRITICAL'),
+            ('error', 'SERVICE ALERT: test_host_1;test_ok_0;CRITICAL;HARD;2;CRITICAL'),
+            ('error', 'SERVICE EVENT HANDLER: test_host_1;test_ok_0;CRITICAL;HARD;2;global_service_eventhandler'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_1;test_ok_0;CRITICAL;2;CRITICAL'),
+            ('error', 'ACTIVE SERVICE CHECK: test_host_1;test_ok_0;CRITICAL;2;CRITICAL'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_1;test_ok_0;OK;2;OK'),
+            ('info', 'SERVICE ALERT: test_host_1;test_ok_0;OK;HARD;2;OK'),
+            ('info', 'SERVICE EVENT HANDLER: test_host_1;test_ok_0;OK;HARD;2;global_service_eventhandler'),
+            ('info', 'ACTIVE SERVICE CHECK: test_host_1;test_ok_0;OK;1;OK'),
+            ('error', 'ACTIVE HOST CHECK: test_host_1;DOWN;1;DOWN'),
             ('error', 'HOST ALERT: test_host_1;DOWN;SOFT;1;DOWN'),
             ('error', 'HOST EVENT HANDLER: test_host_1;DOWN;SOFT;1;global_host_eventhandler'),
+            ('info', 'ACTIVE HOST CHECK: test_host_1;UP;1;UP'),
             ('info', 'HOST ALERT: test_host_1;UP;SOFT;2;UP'),
-            ('info', 'HOST EVENT HANDLER: test_host_1;UP;SOFT;2;global_host_eventhandler')
+            ('info', 'HOST EVENT HANDLER: test_host_1;UP;SOFT;2;global_host_eventhandler'),
         ]
-
-        for log_level, log_message in expected_logs:
-            print(log_message)
-            assert (log_level, log_message) in monitoring_logs
+        self.check_monitoring_events_log(expected_logs, dump=True)
 
     def test_ok_critical_ok(self):
         """ Test event handler scenario 1:

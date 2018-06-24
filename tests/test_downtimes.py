@@ -343,21 +343,20 @@ class TestDowntime(AlignakTest):
             self.assert_actions_match(1, 'PROBLEM', 'type')
             self.assert_actions_match(1, 'scheduled', 'status')
 
-            # We got 'monitoring_log' broks for logging to the monitoring logs...
-            monitoring_logs = []
-            for brok in sorted(self._main_broker.broks, key=lambda x: x.creation_time):
-                if brok.type == 'monitoring_log':
-                    data = unserialize(brok.data)
-                    monitoring_logs.append((data['level'], data['message']))
+            # We got 'monitoring_log' broks for logging to the monitoring events..
+            # no_date to avoid comparing the events timestamp !
+            monitoring_events = self.get_monitoring_events(no_date=True)
+            print("monitoring events: %s" % monitoring_events)
 
-            print(("Monitoring logs: %s" % monitoring_logs))
             expected_logs = [
                 ('info',
                  u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;0;OK'),
                 ('info',
-                 u'EXTERNAL COMMAND: [1527877861] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;1527877861;1527878761;1;0;900;downtime author;downtime comment'),
+                 u'EXTERNAL COMMAND: [1527877861] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;'
+                 u'1527877861;1527878761;1;0;900;downtime author;downtime comment'),
                 ('info',
-                 u'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STARTED; Service has entered a period of scheduled downtime'),
+                 u'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STARTED; '
+                 u'Service has entered a period of scheduled downtime'),
                 ('info',
                  u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;DOWNTIMESTART (OK);notify-service;OK'),
                 ('info',
@@ -387,11 +386,9 @@ class TestDowntime(AlignakTest):
                 ('error',
                  u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;BAD'),
                 ('error',
-                 u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;notify-service;BAD')
+                 u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;notify-service;BAD'),
             ]
-            self.check_monitoring_logs(expected_logs)
-            # for log_level, log_message in expected_logs:
-            #     assert (log_level, log_message) in monitoring_logs
+            self.check_monitoring_events_log(expected_logs)
 
     def test_schedule_flexible_svc_downtime(self):
         """ Schedule a flexible downtime for a service """
@@ -562,14 +559,11 @@ class TestDowntime(AlignakTest):
         self.assert_actions_match(-1, 'PROBLEM', 'type')
         self.assert_actions_match(-1, 'scheduled', 'status')
 
-        # We got 'monitoring_log' broks for logging to the monitoring logs...
-        monitoring_logs = []
-        for brok in sorted(self._main_broker.broks, key=lambda x: x.creation_time):
-            if brok.type == 'monitoring_log':
-                data = unserialize(brok.data)
-                monitoring_logs.append((data['level'], data['message']))
+        # We got 'monitoring_log' broks for logging to the monitoring events..
+        # no_date to avoid comparing the events timestamp !
+        monitoring_events = self.get_monitoring_events(no_date=True)
+        print("monitoring events: %s" % monitoring_events)
 
-        print(("Monitoring logs: %s" % monitoring_logs))
         expected_logs = [
             ('info', 'EXTERNAL COMMAND: [%s] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;'
                       '%s;%s;0;0;%s;downtime author;downtime comment' % (
@@ -591,7 +585,7 @@ class TestDowntime(AlignakTest):
                        'CRITICAL;notify-service;BAD')
         ]
         for log_level, log_message in expected_logs:
-            assert (log_level, log_message) in monitoring_logs
+            assert (log_level, log_message) in monitoring_events
 
     def test_schedule_fixed_host_downtime(self):
         """ Schedule a fixed downtime for an host """
@@ -830,14 +824,11 @@ class TestDowntime(AlignakTest):
             self.assert_actions_match(1, 'PROBLEM', 'type')
             self.assert_actions_match(1, 'scheduled', 'status')
 
-            # We got 'monitoring_log' broks for logging to the monitoring logs...
-            monitoring_logs = []
-            for brok in sorted(self._main_broker.broks, key=lambda x: x.creation_time):
-                if brok.type == 'monitoring_log':
-                    data = unserialize(brok.data)
-                    monitoring_logs.append((data['level'], data['message']))
+            # We got 'monitoring_log' broks for logging to the monitoring events..
+            # no_date to avoid comparing the events timestamp !
+            monitoring_events = self.get_monitoring_events(no_date=True)
+            print("monitoring events: %s" % monitoring_events)
 
-            print("Monitoring logs: %s" % monitoring_logs)
             expected_logs = [
                 ('info', 'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;;%s;'
                           'downtime author;downtime comment' % (
@@ -862,7 +853,7 @@ class TestDowntime(AlignakTest):
                 ('error', 'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;DOWN')
             ]
             for log_level, log_message in expected_logs:
-                assert (log_level, log_message) in monitoring_logs, "Not found: %s" % log_message
+                assert (log_level, log_message) in monitoring_events, "Not found: %s" % log_message
 
     def test_schedule_fixed_host_downtime_with_service(self):
         """ Schedule a downtime for an host - services changes are not notified """
@@ -1049,14 +1040,11 @@ class TestDowntime(AlignakTest):
             self.assert_actions_match(2, 'DOWNTIMEEND', 'type')
             self.assert_actions_match(2, 'scheduled', 'status')
 
-            # We got 'monitoring_log' broks for logging to the monitoring logs...
-            monitoring_logs = []
-            for brok in sorted(self._main_broker.broks, key=lambda x: x.creation_time):
-                if brok.type == 'monitoring_log':
-                    data = unserialize(brok.data)
-                    monitoring_logs.append((data['level'], data['message']))
+            # We got 'monitoring_log' broks for logging to the monitoring events..
+            # no_date to avoid comparing the events timestamp !
+            monitoring_events = self.get_monitoring_events(no_date=True)
+            print("monitoring events: %s" % monitoring_events)
 
-            print("Monitoring logs: %s" % monitoring_logs)
             expected_logs = [
                 ('info', 'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;'
                           '%s;%s;1;;%s;downtime author;downtime comment' % (
@@ -1073,4 +1061,4 @@ class TestDowntime(AlignakTest):
                 ('info', 'HOST ALERT: test_host_0;UP;HARD;3;UP')
             ]
             for log_level, log_message in expected_logs:
-                assert (log_level, log_message) in monitoring_logs
+                assert (log_level, log_message) in monitoring_events
