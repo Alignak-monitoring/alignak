@@ -51,15 +51,6 @@
             "when": "midnight",
             "interval": 1,
             "backupCount": 365
-        },
-        "monitoring_logs": {
-            "class": "logging.handlers.TimedRotatingFileHandler",
-            "level": "INFO",
-            "formatter": "monitoring-log",
-            "filename": "%(logdir)s/monitoring-log/monitoring-logs.log",
-            "when": "midnight",
-            "interval": 1,
-            "backupCount": 365
         }
     },
 

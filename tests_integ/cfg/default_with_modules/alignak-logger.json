@@ -56,7 +56,7 @@
             "class": "logging.handlers.TimedRotatingFileHandler",
             "level": "INFO",
             "formatter": "monitoring-log",
-            "filename": "%(logdir)s/monitoring-logs.log",
+            "filename": "%(logdir)s/alignak-events.log",
             "when": "midnight",
             "interval": 1,
             "backupCount": 365
