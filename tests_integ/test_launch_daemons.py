@@ -312,7 +312,7 @@ class TestLaunchDaemons(AlignakTest):
         # Update configuration with a bad file name
         files = ['%s/etc/alignak.cfg' % self.cfg_folder]
         replacements = {
-            'cfg_dir=arbiter/objects/realms': 'cfg_dir=unexisting/objects/realms'
+            'cfg_dir=arbiter/templates': 'cfg_dir=unexisting/objects/realms'
         }
         self._files_update(files, replacements)
 

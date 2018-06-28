@@ -60,8 +60,11 @@ echo "Installed."
 echo "Creating some necessary directories"
 mkdir -p $PREFIX/var/run/alignak
 chown -R $ACCOUNT:$ACCOUNT $PREFIX/var/run/alignak
+echo "$ACCOUNT user and members of its group $ACCOUNT are granted 775 on $PREFIX/var/run/alignak"
 chmod -R 775 $PREFIX/var/run/alignak
 mkdir -p $PREFIX/var/log/alignak
 chown -R $ACCOUNT:$ACCOUNT $PREFIX/var/log/alignak
+echo "$ACCOUNT user and members of its group $ACCOUNT are granted 775 on $PREFIX/var/run/alignak"
 chmod -R 775 $PREFIX/var/run/alignak
+echo "Add your own user account as a member of $ACCOUNT group to run daemons from your shell!"
 echo "Created."

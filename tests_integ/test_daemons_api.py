@@ -1105,6 +1105,34 @@ class TestDaemonsApi(AlignakTest):
         # For an host
         raw_data = req.post("http://localhost:7770/command",
                             data=json.dumps({
+                                'command': 'process_host_check_result;Host_name;0;I am alive!'
+                            }),
+                            headers={'Content-Type': 'application/json'},
+                            verify=False)
+        print("command, got (raw): %s" % (raw_data.content))
+        assert raw_data.status_code == 200
+        data = raw_data.json()
+        print("Got: %s" % data)
+        assert data['_status'] == 'OK'
+        # Note the uppercase for the command, not for the parameters...
+        assert data['_message'] == 'Got command: PROCESS_HOST_CHECK_RESULT;Host_name;0;I am alive!'
+        assert data['command'] == 'PROCESS_HOST_CHECK_RESULT;Host_name;0;I am alive!'
+
+        raw_data = req.get("http://localhost:7770/get_external_commands")
+        assert raw_data.status_code == 200
+        print("%s get_external_commands, got (raw): %s" % (name, raw_data))
+        data = raw_data.json()
+        print("---Got: %s" % data)
+        assert len(data) == 1
+        assert 'creation_timestamp' in data[0]
+        assert data[0]['cmd_line'] == 'PROCESS_HOST_CHECK_RESULT;Host_name;0;I am alive!'
+        assert data[0]['my_type'] == 'externalcommand'
+
+        # -----
+        # 3/ notify an external command to the arbiter (WS interface).
+        # For an host
+        raw_data = req.post("http://localhost:7770/command",
+                            data=json.dumps({
                                 'command': 'disable_passive_host_checks',
                                 'element': 'host_name',
                                 'parameters': 'p1;p2;p3'

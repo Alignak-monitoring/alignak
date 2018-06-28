@@ -24,6 +24,7 @@ import json
 import cherrypy
 
 from alignak.http.generic_interface import GenericInterface
+from alignak.util import split_semicolon
 from alignak.external_command import ExternalCommand
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -161,7 +162,8 @@ class ArbiterInterface(GenericInterface):
         if not command:
             return {'_status': u'ERR', '_message': u'Missing command parameter'}
 
-        command_line = command.upper()
+        fields = split_semicolon(command)
+        command_line = command.replace(fields[0], fields[0].upper())
         if timestamp:
             try:
                 timestamp = int(timestamp)
