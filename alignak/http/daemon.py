@@ -24,7 +24,6 @@
 """This module provide the HTTP daemon for Alignak inter daemon communication.
 It is mostly based on Cherrypy
 """
-import os
 import socket
 import logging
 
