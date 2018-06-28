@@ -316,6 +316,8 @@ class Daemon(object):
         # Set True to include cherrypy logs in the daemon log file
         'log_cherrypy':
             BoolProp(default=False),
+        'favicon':
+            PathProp(default=''),
 
         'idontcareaboutsecurity':
             BoolProp(default=False),
@@ -1572,7 +1574,7 @@ class Daemon(object):
             self.http_daemon = HTTPDaemon(self.host, self.port, self.http_interface,
                                           self.use_ssl, ca_cert, ssl_key,
                                           ssl_cert, server_dh, self.thread_pool_size,
-                                          self.log_cherrypy)
+                                          self.log_cherrypy, self.favicon)
         except PortNotFree:
             logger.error('The HTTP daemon port (%s:%d) is not free...', self.host, self.port)
             return False

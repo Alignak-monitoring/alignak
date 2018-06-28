@@ -60,6 +60,8 @@ echo "Installed."
 echo "Creating some necessary directories"
 mkdir -p $PREFIX/var/run/alignak
 chown -R $ACCOUNT:$ACCOUNT $PREFIX/var/run/alignak
+chmod -R 775 $PREFIX/var/run/alignak
 mkdir -p $PREFIX/var/log/alignak
 chown -R $ACCOUNT:$ACCOUNT $PREFIX/var/log/alignak
+chmod -R 775 $PREFIX/var/run/alignak
 echo "Created."

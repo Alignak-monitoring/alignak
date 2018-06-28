@@ -24,7 +24,6 @@
 """This module provide the HTTP daemon for Alignak inter daemon communication.
 It is mostly based on Cherrypy
 """
-# import os
 import socket
 import logging
 
@@ -59,7 +58,7 @@ class HTTPDaemon(object):
     """
     # pylint: disable=too-many-arguments, unused-argument
     def __init__(self, host, port, http_interface, use_ssl, ca_cert,
-                 ssl_key, ssl_cert, server_dh, thread_pool_size, log_file=None):
+                 ssl_key, ssl_cert, server_dh, thread_pool_size, log_file=None, icon_file=None):
         """
         Initialize HTTP daemon
 
@@ -71,6 +70,8 @@ class HTTPDaemon(object):
         :param ssl_key:
         :param ssl_cert:
         :param thread_pool_size:
+        :param log_file: if set, the log file for Cherrypy log
+        :param icon_file: if set, the favicon file to use
         """
         self.port = port
         self.host = host
@@ -95,7 +96,9 @@ class HTTPDaemon(object):
                                             'multipart': process_multipart,
                                             'application/zlib': zlib_processor},
                 'tools.gzip.on': True,
-                'tools.gzip.mime_types': ['text/*', 'application/json']
+                'tools.gzip.mime_types': ['text/*', 'application/json'],
+                'tools.staticfile.on': True if icon_file else False,
+                'tools.staticfile.filename': icon_file
             }
         }
 
