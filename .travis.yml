@@ -1,10 +1,10 @@
 language: python
 sudo: required
 python:
-  - '2.7'
-  - '3.4'
-  - '3.5'
   - '3.6'
+  - '3.5'
+  - '3.4'
+  - '2.7'
 env:
   - TEST_SUITE=tests
   - TEST_SUITE=tests_integ
@@ -39,7 +39,6 @@ notifications:
 jobs:
   include:
     - stage: Coding standard
-      python: 3.6
       script: |
                 # Static code analysis
                 # -- pycodestyle (former pep8)
@@ -51,8 +50,13 @@ jobs:
                 # -- pep257
                 pep257 --select=D300 alignak || travis_terminate 1;
     - stage: Pypi deployment
-      python: 3.6
       script: echo "Deploying to PyPi..."
+      deploy:
+        provider: releases
+        api_key: $GITHUB_OAUTH_TOKEN
+        skip_cleanup: true
+        on:
+          tags: true
       deploy:
       - provider: pypi
         distributions: "sdist bdist_wheel"
@@ -64,7 +68,6 @@ jobs:
           branch: develop
           tags: true
     - stage: Bintray deployment
-      python: 3.6
       script: |
                 echo "Deploying to BinTray packages...";
                 echo "Branch: $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION";
