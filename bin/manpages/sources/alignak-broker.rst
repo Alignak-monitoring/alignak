@@ -7,7 +7,7 @@ Alignak broker daemon
 ---------------------
 
 :Author:            Alignak Team
-:Date:              2018-05-21
+:Date:              2018-06-27
 :Version:           1.1.0
 :Manual section:    8
 :Manual group:      Alignak commands

@@ -2,6 +2,7 @@
 
 # --------------------------------------------------------------------------------
 # This script is doing the post-install processing for Alignak application:
+# - checking and creating alignak:alignak user account
 # - installing the python dependencies for Alignak.
 # -----
 # Command line parameters may be used to change the default 'alignak'
