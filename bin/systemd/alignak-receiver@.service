@@ -17,7 +17,11 @@ PIDFile=/usr/local/var/run/alignak/receiver-%i.pid
 ExecStartPre=/bin/echo Alignak starting receiver %i - /usr/local/bin/alignak-receiver -d -n receiver-%i -e "${ALIGNAK_CONFIGURATION_FILE}"
 ExecStart=/usr/local/bin/alignak-receiver -d -n receiver-%i -e "${ALIGNAK_CONFIGURATION_FILE}"
 
-KillSignal=SIGINT
+# See man systemd.kill
+KillMode=control-group
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
 ExecReload=/bin/kill -HUP $MAINPID
 
 [Install]

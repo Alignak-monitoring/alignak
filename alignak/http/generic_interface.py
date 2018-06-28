@@ -54,7 +54,7 @@ class GenericInterface(object):
 
         :return: function list
         """
-        return self.api()
+        return self.get_id()
 
     @cherrypy.expose
     @cherrypy.tools.json_out()

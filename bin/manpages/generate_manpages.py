@@ -21,9 +21,8 @@ source_folder = os.path.join(os.path.abspath(os.path.dirname(__file__)), "source
 for current_folder, subfolders, files in os.walk(source_folder):
     for rst_file in files:
         if rst_file.endswith(".rst"):
+            print("Parsing file: %s" % rst_file)
             input_file = os.path.join(current_folder, rst_file)
             output_file = os.path.join(output_folder, os.path.splitext(rst_file)[0] + ".8")
-            publish_file(source_path=input_file,
-                         destination_path=output_file,
-                         writer=manpage.Writer()
-                         )
+            publish_file(source_path=input_file, destination_path=output_file,
+                         writer=manpage.Writer())
