@@ -161,7 +161,7 @@ class ArbiterInterface(GenericInterface):
         if not command:
             return {'_status': u'ERR', '_message': u'Missing command parameter'}
 
-        command_line = command.upper()
+        command_line = command
         if timestamp:
             try:
                 timestamp = int(timestamp)
