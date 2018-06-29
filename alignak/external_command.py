@@ -709,7 +709,8 @@ class ExternalCommandManager(object):
 
         :rtype: dict | None
         """
-        elts = split_semicolon(command)  # danger!!! passive checkresults with perfdata
+        # danger!!! passive check results with perfdata
+        elts = split_semicolon(command)
 
         try:
             timestamp, c_name = elts[0].split()

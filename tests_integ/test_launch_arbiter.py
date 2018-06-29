@@ -124,6 +124,7 @@ class TestLaunchArbiter(AlignakTest):
         if os.path.exists('%s/etc' % cfg_folder):
             shutil.rmtree('%s/etc' % cfg_folder)
         shutil.copytree('../etc', '%s/etc' % cfg_folder)
+        # Remove the daemons configuration part!
         shutil.rmtree('%s/etc/alignak.d' % cfg_folder)
 
         files = ['%s/etc/alignak.ini' % cfg_folder,
@@ -181,11 +182,11 @@ class TestLaunchArbiter(AlignakTest):
 
             u"There is no arbiter, I add myself (arbiter-master) reachable on 127.0.0.1:7770",
             u"No realms defined, I am adding one as All",
-            u"No scheduler defined, I am adding one on 127.0.0.1:7800",
-            u"No reactionner defined, I am adding one on 127.0.0.1:7801",
-            u"No poller defined, I am adding one on 127.0.0.1:7802",
-            u"No broker defined, I am adding one on 127.0.0.1:7803",
-            u"No receiver defined, I am adding one on 127.0.0.1:7804",
+            u"No scheduler defined, I am adding one on 127.0.0.1:10000",
+            u"No reactionner defined, I am adding one on 127.0.0.1:10001",
+            u"No poller defined, I am adding one on 127.0.0.1:10002",
+            u"No broker defined, I am adding one on 127.0.0.1:10003",
+            u"No receiver defined, I am adding one on 127.0.0.1:10004",
         ]
         if not alignak_launched:
             expected_warnings.extend([

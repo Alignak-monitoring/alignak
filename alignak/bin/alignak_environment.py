@@ -187,7 +187,6 @@ class AlignakConfigParser(object):
         dir_name = os.path.join(dir_name, sub_directory)
         self.cfg_files = [self.configuration_file]
         if os.path.exists(dir_name):
-            # Now walk for it.
             for root, _, walk_files in os.walk(dir_name, followlinks=True):
                 for found_file in walk_files:
                     if not re.search(r"\.ini$", found_file):
@@ -265,6 +264,7 @@ class AlignakConfigParser(object):
         found_sections = {}
         # Get the daemons related properties
         for section in self.config.sections():
+            print("Section: %s" % section)
             if not section.startswith(searched_sections):
                 continue
 

@@ -261,7 +261,6 @@ define host {
         files = ['%s/etc/alignak.ini' % cfg_folder,
                  '%s/etc/alignak.d/daemons.ini' % cfg_folder,
                  '%s/etc/alignak.d/modules.ini' % cfg_folder]
-        print("Configuration files: %s" % files)
         # Update monitoring configuration file variables
         try:
             cfg = configparser.ConfigParser()
@@ -471,7 +470,6 @@ define host {
             files = ['%s/etc/alignak.ini' % cfg_folder,
                      '%s/etc/alignak.d/daemons.ini' % cfg_folder,
                      '%s/etc/alignak.d/modules.ini' % cfg_folder]
-            print("Configuration files: %s" % files)
             # Update monitoring configuration file variables
             try:
                 cfg = configparser.ConfigParser()

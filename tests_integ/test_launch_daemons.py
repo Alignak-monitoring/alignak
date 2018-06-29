@@ -329,7 +329,7 @@ class TestLaunchDaemons(AlignakTest):
                     print("*** %s" % line.rstrip())
                     errors = errors + 1
         # Arbiter process must exit with a return code == 0 and no errors
-        assert errors == 2
+        assert errors == 0
         # Arbiter process must exit with a return code == 1
         assert ret == 1
         assert ok

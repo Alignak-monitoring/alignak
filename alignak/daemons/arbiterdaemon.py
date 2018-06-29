@@ -496,11 +496,13 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
             # Get all the Alignak daemons from the configuration
             logger.info("Getting daemons configuration...")
+            some_daemons = False
             for daemon_name, daemon_cfg in list(self.alignak_env.get_daemons().items()):
-                logger.debug("Got a daemon configuration for %s", daemon_name)
+                logger.info("Got a daemon configuration for %s", daemon_name)
                 if 'type' not in daemon_cfg:
                     self.conf.add_error("Ignoring daemon with an unknown type: %s" % daemon_name)
                     continue
+                some_daemons = True
                 daemon_type = daemon_cfg['type']
                 daemon_name = daemon_cfg['name']
                 logger.info("- got a %s named %s, spare: %s",
@@ -542,6 +544,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 logger.info("- some dameons are configured in legacy Cfg files. "
                             "You should update the configuration with the new Alignak "
                             "configuration file.")
+            if not some_daemons and not some_legacy_daemons:
+                logger.info("- No configured daemons.")
 
             # and then get all modules from the configuration
             logger.info("Getting modules configuration...")
