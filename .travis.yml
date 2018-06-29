@@ -5,20 +5,19 @@ python:
   - '3.5'
   - '3.4'
   - '2.7'
+
 env:
   - TEST_SUITE=tests
   - TEST_SUITE=tests_integ
+
 install:
   - unset PYTHONWARNINGS
-  # Install packaging requirements
-  - sudo apt-get install -y rpm
-  - sudo pip install virtualenv virtualenv-tools
-  - sudo pip install --upgrade distribute
+  # Install all Python requirements (application and tests)
   - ./tests/setup_test.sh
   # To help eventual debug: knowing which exact versions are in use can be rather useful.
   - pip freeze
+
 script:
-  - echo "I will test all this stuff ..."
   - echo "Starting tests '$TEST_SUITE' ..."
   - |
     # Run tests suite with code coverage analysis
@@ -62,6 +61,12 @@ jobs:
           branch: develop
           tags: true
     - stage: Bintray deployment
+      install:
+        # Install packaging requirements
+        - echo "Installing packaging requirements..."
+        - sudo apt-get install -y rpm
+        - sudo pip install virtualenv virtualenv-tools
+        - sudo pip install --upgrade distribute
       script: |
                 echo "Deploying to BinTray packages...";
                 echo "Branch: $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION";

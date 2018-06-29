@@ -149,7 +149,7 @@ class Timeperiod(Item):
         'timeperiod_name':
             StringProp(fill_brok=['full_status']),
         'alias':
-            StringProp(fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
         'use':
             ListProp(default=[]),
         'register':

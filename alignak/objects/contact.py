@@ -74,7 +74,7 @@ class Contact(Item):
         'contact_name':
             StringProp(fill_brok=['full_status']),
         'alias':
-            StringProp(fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
         'contactgroups':
             ListProp(default=[], fill_brok=['full_status']),
         'host_notifications_enabled':

@@ -115,7 +115,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'host_name':
             StringProp(fill_brok=['full_status', 'check_result', 'next_schedule']),
         'alias':
-            StringProp(fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
         'address':
             StringProp(fill_brok=['full_status']),
         'address6':

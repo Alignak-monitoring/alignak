@@ -125,6 +125,12 @@ else
    version="${version}-${git_branch}"
 fi
 
+echo "----------"
+echo "BinTray configuration file:"
+echo "----------"
+cat .bintray-${output_type}.json
+echo "----------"
+
 # Run fpm:
 # Add --verbose for a verbose (very...) mode to have more information
 # - from python to deb packages, for all architectures

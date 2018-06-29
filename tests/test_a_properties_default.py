@@ -308,9 +308,10 @@ class TestContactgroup(PropertiesTester, AlignakTest):
 
     unused_props = []
 
-    without_default = ['contactgroup_name', 'alias']
+    without_default = ['contactgroup_name']
 
     properties = dict([
+        ('alias', ''),
         ('members', None),
         ('imported_from', 'unknown'),
         ('use', []),
@@ -332,10 +333,11 @@ class TestContact(PropertiesTester, AlignakTest):
     unused_props = []
 
     without_default = [
-        'alias', 'contact_name'
+        'contact_name'
     ]
 
     properties = dict([
+        ('alias', ''),
         ('host_notification_commands', []),
         ('service_notification_commands', []),
         ('host_notification_period', ''),
@@ -488,9 +490,10 @@ class TestHostgroup(PropertiesTester, AlignakTest):
 
     unused_props = []
 
-    without_default = ['hostgroup_name', 'alias']
+    without_default = ['hostgroup_name']
 
     properties = dict([
+        ('alias', ''),
         ('members', None),
         ('imported_from', 'unknown'),
         ('use', []),
@@ -517,7 +520,6 @@ class TestHost(PropertiesTester, AlignakTest):
 
     without_default = [
         'host_name',
-        'alias',
         'address',
         'check_period',
         'notification_period',
@@ -525,6 +527,7 @@ class TestHost(PropertiesTester, AlignakTest):
     ]
 
     properties = dict([
+        ('alias', ''),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
@@ -671,9 +674,10 @@ class TestRealm(PropertiesTester, AlignakTest):
 
     unused_props = []
 
-    without_default = ['alias']
+    without_default = []
 
     properties = dict([
+        ('alias', ''),
         ('members', None),
         ('imported_from', 'unknown'),
         ('use', []),
@@ -801,9 +805,10 @@ class TestServicegroup(PropertiesTester, AlignakTest):
 
     unused_props = []
 
-    without_default = ['servicegroup_name', 'alias']
+    without_default = ['servicegroup_name']
 
     properties = dict([
+        ('alias', ''),
         ('members', None),
         ('imported_from', 'unknown'),
         ('use', []),
@@ -828,7 +833,6 @@ class TestService(PropertiesTester, AlignakTest):
     unused_props = []
 
     without_default = [
-        'alias',
         'host_name',
         'service_description',
         'check_command',
@@ -838,6 +842,7 @@ class TestService(PropertiesTester, AlignakTest):
     ]
 
     properties = dict([
+        ('alias', ''),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
@@ -922,9 +927,10 @@ class TestTimeperiod(PropertiesTester, AlignakTest):
 
     unused_props = []
 
-    without_default = ['alias', 'timeperiod_name']
+    without_default = ['timeperiod_name']
 
     properties = dict([
+        ('alias', ''),
         ('imported_from', 'unknown'),
         ('use', []),
         ('definition_order', 100),

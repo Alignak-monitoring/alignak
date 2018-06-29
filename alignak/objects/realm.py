@@ -80,7 +80,7 @@ class Realm(Itemgroup):
         'name':
             StringProp(default=u'', fill_brok=['full_status']),
         'alias':
-            StringProp(fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
         'realm_members':
             ListProp(default=[], split_on_comma=True),
         'higher_realms':

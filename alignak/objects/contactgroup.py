@@ -75,7 +75,7 @@ class Contactgroup(Itemgroup):
         'contactgroup_name':
             StringProp(fill_brok=['full_status']),
         'alias':
-            StringProp(fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
         'contactgroup_members':
             ListProp(default=[], fill_brok=['full_status'], merging='join', split_on_comma=True)
     })

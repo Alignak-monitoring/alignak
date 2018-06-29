@@ -35,23 +35,21 @@ elif [ "$unamestr" = 'FreeBSD' ]; then
    platform='freebsd'
 fi
 echo "-> found ${platform}"
-if [ "$platform" = 'linux' ]; then
-   ## Create user and group
-   echo "Checking / creating '$ACCOUNT' user and users group"
-   id -u $ACCOUNT &>/dev/null || useradd $ACCOUNT --system --no-create-home --user-group -c "Alignak daemons user"
 
-#   ## Create nagios group
-#   echo "Checking / creating 'nagios' users group"
-#   getent group nagios || groupadd nagios
-#
-#   ## Add user to nagios group
-#   id -Gn $ACCOUNT |grep -E '(^|[:blank:])nagios($|[:blank:])' >/dev/null ||
-#      echo "Adding user '$ACCOUNT' to the nagios users group"
-#      usermod -a -G nagios $ACCOUNT
-elif [ "$platform" = 'freebsd' ]; then
-   ## Create user and group
-   echo "Checking / creating '$ACCOUNT' user and users group"
-   id -u $ACCOUNT &>/dev/null || pw adduser $ACCOUNT -d /nonexistent -s /usr/sbin/nologin -c "Alignak daemons user"
+echo "Checking / creating '$ACCOUNT' user and users group"
+if id "$ACCOUNT" >/dev/null 2>&1; then
+   echo "User $ACCOUNT still exists"
+else
+   echo "User $ACCOUNT does not exist, trying to create..."
+   if [ "$platform" = 'linux' ]; then
+      ## Create user and group
+      echo "Creating '$ACCOUNT' user and users group"
+      useradd $ACCOUNT --system --no-create-home --user-group -c "Alignak daemons user"
+   elif [ "$platform" = 'freebsd' ]; then
+      ## Create user and group
+      echo "Creating '$ACCOUNT' user and users group"
+      pw adduser $ACCOUNT -d /nonexistent -s /usr/sbin/nologin -c "Alignak daemons user"
+   fi
 fi
 
 echo "Installing python packages dependencies from requirements.txt..."

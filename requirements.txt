@@ -12,10 +12,10 @@
 
 # Still needing future for the CarbonIFace lib and some other stuff (queues, ...)
 # Needing six for python 2.7/3 compatibility
-future==0.16.0
-six==1.11.0
+future
+six
 
-# Alignak supports the most recent CherryPy
+# Alignak supports a recent CherryPy
 CherryPy==15.0.0
 
 # Requests to communicate between the daemons
@@ -43,10 +43,10 @@ numpy==1.14.3
 # Uncomment or `pip install pyopenssl` if SSL must be used between the Alignak daemons
 # pyopenssl
 
-# configparser is used to parse command line of the daemons
+# configparser is used to parse the main configuration file
 configparser; python_version == '2.7'
 # docopt is used by the alignak_environment script
-docopt==0.6.2
+docopt
 
 # Use psutil for daemons memory monitoring (env ALIGNAK_DAEMONS_MONITORING)
 # Use psutil for scheduler ALIGNAK_LOG_MONITORING
