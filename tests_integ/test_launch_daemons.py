@@ -438,7 +438,7 @@ class TestLaunchDaemons(AlignakTest):
             os.remove('/tmp/arbiter.log')
 
         args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder,
-                "-V", "--log_file", "/tmp/arbiter.log"]
+                "-V", "-vv", "--log_file", "/tmp/arbiter.log"]
         ret = self._run_command_with_timeout(args, 20)
 
         assert os.path.exists("/tmp/arbiter.log")

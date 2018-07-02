@@ -12,7 +12,7 @@ EnvironmentFile=-/etc/default/alignak
 Type=forking
 
 # PID file as declared in daemon configuration
-PIDFile=/usr/local/var/run/alignak/reactionner-%i.pid
+PIDFile=/var/run/alignak/reactionner-%i.pid
 
 ExecStartPre=/bin/echo Alignak starting reactionner %i - /usr/local/bin/alignak-reactionner -d -n reactionner-%i -e "${ALIGNAK_CONFIGURATION_FILE}"
 ExecStart=/usr/local/bin/alignak-reactionner -d -n reactionner-%i -e "${ALIGNAK_CONFIGURATION_FILE}"

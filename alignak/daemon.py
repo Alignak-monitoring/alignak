@@ -621,6 +621,8 @@ class Daemon(object):
                 else:
                     self.use_log_file = False
                     print("Daemon '%s' will not log to a file: %s" % (self.name))
+            else:
+                self.logdir = os.path.dirname(self.log_filename)
             print("Daemon '%s' is started with an overridden log file: %s"
                   % (self.name, self.log_filename))
 

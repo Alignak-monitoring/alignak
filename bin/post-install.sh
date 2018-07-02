@@ -66,3 +66,7 @@ echo "$ACCOUNT user and members of its group $ACCOUNT are granted 775 on $PREFIX
 chmod -R 775 $PREFIX/var/run/alignak
 echo "Add your own user account as a member of $ACCOUNT group to run daemons from your shell!"
 echo "Created."
+
+echo "Installing log rotation script"
+cp $PREFIX/share/alignak/alignak-log-rotate /etc/logrotate.d/
+echo "Installed."

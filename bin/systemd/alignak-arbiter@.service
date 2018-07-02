@@ -12,10 +12,10 @@ EnvironmentFile=-/etc/default/alignak
 Type=forking
 
 # PID file as declared in daemon configuration
-PIDFile=/usr/local/var/run/alignak/arbiter-%i.pid
+PIDFile=/var/run/alignak/arbiter-%i.pid
 
 ExecStartPre=/bin/echo Alignak starting arbiter %i - /usr/local/bin/alignak-arbiter -d -n arbiter-%i -e "${ALIGNAK_CONFIGURATION_FILE}"
-ExecStart=/usr/local/bin/alignak-arbiter -d -n arbiter-%i -e "${ALIGNAK_CONFIGURATION_FILE}"
+ExecStart=/usr/local/bin/alignak-arbiter -d -n arbiter-%i -e "${ALIGNAK_CONFIGURATION_FILE}" --pid_file /var/run/alignak/arbiter-%i.pid
 
 # See man systemd.kill
 KillMode=control-group
