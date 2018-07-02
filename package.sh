@@ -28,7 +28,7 @@
 # install on the system!
 #
 # - python version:
-#   2.7, 3.5 (default)
+#   2.7, 3.5 (when called from the Travis build, it is the most recent python 3 version)
 #
 # - package type:
 #   deb (default), rpm, freebsd, apk, pacman, ...
@@ -78,47 +78,50 @@ pkg_team="Alignak Team (contact@alignak.net)"
 version=`python -c "from alignak import __version__;print(__version__)"`
 version_date=`date "+%Y-%m-%d"`
 
+mkdir -p dist
+cp .bintray-${output_type}.json dist/.bintray-${output_type}.json
+
 if [ "${git_branch}" = "master" ]; then
    # Updating deploy script for Alignak stable version
-   sed -i -e "s|\"sed_package_name\"|\"${pkg_name}\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_name\"|\"${version}\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_desc\"|\"Stable version\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray-${output_type}.json
+   sed -i -e "s|\"sed_package_name\"|\"${pkg_name}\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_name\"|\"${version}\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_desc\"|\"Stable version\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" dist/.bintray-${output_type}.json
 
    # Stable repo
    if [ "${output_type}" = "deb" ]; then
-      sed -i -e "s/sed_version_repo/alignak-deb-stable/g" .bintray-${output_type}.json
+      sed -i -e "s/sed_version_repo/alignak-deb-stable/g" dist/.bintray-${output_type}.json
    else
-      sed -i -e "s/sed_version_repo/alignak-rpm-stable/g" .bintray-${output_type}.json
+      sed -i -e "s/sed_version_repo/alignak-rpm-stable/g" dist/.bintray-${output_type}.json
    fi
 elif [ "${git_branch}" = "develop" ]; then
    # Updating deploy script for Alignak develop version
-   sed -i -e "s|\"sed_package_name\"|\"${pkg_name}\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_name\"|\"${version_date}\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_desc\"|\"Development version\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray-${output_type}.json
+   sed -i -e "s|\"sed_package_name\"|\"${pkg_name}\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_name\"|\"${version_date}\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_desc\"|\"Development version\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" dist/.bintray-${output_type}.json
 
    # Testing repo
    if [ "${output_type}" = "deb" ]; then
-      sed -i -e "s/sed_version_repo/alignak-deb-testing/g" .bintray-${output_type}.json
+      sed -i -e "s/sed_version_repo/alignak-deb-testing/g" dist/.bintray-${output_type}.json
    else
-      sed -i -e "s/sed_version_repo/alignak-rpm-testing/g" .bintray-${output_type}.json
+      sed -i -e "s/sed_version_repo/alignak-rpm-testing/g" dist/.bintray-${output_type}.json
    fi
 
    # Version
    version="${version}-dev"
 else
    # Updating deploy script for any other branch / tag
-   sed -i -e "s|\"sed_package_name\"|\"${pkg_name}\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_name\"|\"$1\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_desc\"|\"Branch $1 version\"|g" .bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" .bintray-${output_type}.json
+   sed -i -e "s|\"sed_package_name\"|\"${pkg_name}\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_name\"|\"$1\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_desc\"|\"Branch $1 version\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" dist/.bintray-${output_type}.json
 
    # Testing repo
    if [ "${output_type}" = "deb" ]; then
-      sed -i -e "s/sed_version_repo/alignak-deb-testing/g" .bintray-${output_type}.json
+      sed -i -e "s/sed_version_repo/alignak-deb-testing/g" dist/.bintray-${output_type}.json
    else
-      sed -i -e "s/sed_version_repo/alignak-rpm-testing/g" .bintray-${output_type}.json
+      sed -i -e "s/sed_version_repo/alignak-rpm-testing/g" dist/.bintray-${output_type}.json
    fi
 
    # Version
@@ -128,7 +131,7 @@ fi
 echo "----------"
 echo "BinTray configuration file:"
 echo "----------"
-cat .bintray-${output_type}.json
+cat dist/.bintray-${output_type}.json
 echo "----------"
 
 # Run fpm:
@@ -144,7 +147,7 @@ if [ "${output_type}" = "deb" ]; then
       --force \
       --input-type ${input_type} \
       --output-type ${output_type} \
-      --package "./bin" \
+      --package "./dist" \
       --architecture all \
       --license AGPL \
       --version ${version} \
@@ -153,7 +156,11 @@ if [ "${output_type}" = "deb" ]; then
       --url "${pkg_url}" \
       --vendor "${pkg_team}" \
       --maintainer "${pkg_team}" \
-      --python-bin '/usr/bin/python' \
+      --python-package-name-prefix "${python_prefix}" \
+      --python-scripts-executable "python" \
+      --python-install-lib "/usr/lib/${python_prefix}/dist-packages" \
+      --python-bin 'python' \
+      --python-pip 'pip' \
       --python-install-data '/usr/local' \
       --python-install-bin '/usr/local/bin' \
       --no-python-dependencies \
@@ -173,7 +180,7 @@ elif [ "${output_type}" = "rpm" ]; then
       --force \
       --input-type ${input_type} \
       --output-type ${output_type} \
-      --package "./bin" \
+      --package "./dist" \
       --architecture all \
       --license AGPL \
       --version ${version} \
@@ -182,7 +189,12 @@ elif [ "${output_type}" = "rpm" ]; then
       --url "${pkg_url}" \
       --vendor "${pkg_team}" \
       --maintainer "${pkg_team}" \
-      --python-bin '/usr/bin/python' \
+      --python-fix-name \
+      --python-package-name-prefix "${python_prefix}" \
+      --python-scripts-executable "python" \
+      --python-install-lib "/usr/lib/${python_prefix}/dist-packages" \
+      --python-bin 'python' \
+      --python-pip 'pip' \
       --python-install-data '/usr/local' \
       --python-install-bin '/usr/local/bin' \
       --no-python-dependencies \
@@ -203,6 +215,7 @@ else
       --vendor "${pkg_team}" \
       --maintainer "${pkg_team}" \
       --python-bin '/usr/bin/python' \
+      --python-pip 'pip' \
       --python-install-data '/usr/local' \
       --python-install-bin '/usr/local/bin' \
       --no-python-dependencies \

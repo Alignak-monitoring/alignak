@@ -58,7 +58,9 @@ with open(os.path.join('alignak', 'version.py')) as fh:
 # Get default configuration files recursively
 data_files = [
     ('share/alignak', ['requirements.txt']),
-    ('share/alignak', ['bin/post-install.sh', 'bin/alignak.ico'])
+    ('share/alignak', ['bin/post-install.sh',
+                       'bin/alignak-log-rotate',
+                       'bin/alignak.ico'])
 ]
 for dir in ['etc', 'bin/manpages/manpages', 'bin/rc.d', 'bin/systemd', 'bin/systemV']:
     for subdir, dirs, files in os.walk(dir):

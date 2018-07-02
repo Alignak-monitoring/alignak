@@ -621,6 +621,8 @@ class Daemon(object):
                 else:
                     self.use_log_file = False
                     print("Daemon '%s' will not log to a file: %s" % (self.name))
+            else:
+                self.logdir = os.path.dirname(self.log_filename)
             print("Daemon '%s' is started with an overridden log file: %s"
                   % (self.name, self.log_filename))
 
@@ -1287,7 +1289,7 @@ class Daemon(object):
                 self.fpid = open(self.pid_filename, 'w+')
         except Exception as exp:  # pylint: disable=broad-except
             self.exit_on_error("Error opening pid file: %s. Error: %s. "
-                               "Check the %s/%s account permissions to write this file."
+                               "Check the %s:%s account permissions to write this file."
                                % (self.pid_filename, str(exp), self.user, self.group), exit_code=3)
 
     def check_parallel_run(self):  # pragma: no cover, not with unit tests...
