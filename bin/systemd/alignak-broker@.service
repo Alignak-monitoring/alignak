@@ -15,7 +15,7 @@ Type=forking
 PIDFile=/var/run/alignak/broker-%i.pid
 
 ExecStartPre=/bin/echo Alignak starting broker %i - /usr/local/bin/alignak-broker -d -n broker-%i -e "${ALIGNAK_CONFIGURATION_FILE}"
-ExecStart=/usr/local/bin/alignak-broker -d -n broker-%i -e "${ALIGNAK_CONFIGURATION_FILE}"
+ExecStart=/usr/local/bin/alignak-broker -d -n broker-%i -e "${ALIGNAK_CONFIGURATION_FILE}" --pid_file /var/run/alignak/broker-%i.pid --log_file /var/log/alignak/broker-%i.pid
 
 # See man systemd.kill
 KillMode=control-group
