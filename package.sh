@@ -184,7 +184,7 @@ elif [ "${output_type}" = "rpm" ]; then
       --architecture all \
       --license AGPL \
       --version ${version} \
-      --name "${pkg_name}" \
+      --name "${python_prefix}-${pkg_name}" \
       --description "${pkg_description}" \
       --url "${pkg_url}" \
       --vendor "${pkg_team}" \
@@ -205,7 +205,7 @@ else
       --force \
       --input-type ${input_type} \
       --output-type ${output_type} \
-      --package "./bin" \
+      --package "./dist" \
       --architecture all \
       --license AGPL \
       --version ${version} \
@@ -214,10 +214,11 @@ else
       --url "${pkg_url}" \
       --vendor "${pkg_team}" \
       --maintainer "${pkg_team}" \
-      --python-bin '/usr/bin/python' \
+      --python-bin 'python' \
       --python-pip 'pip' \
       --python-install-data '/usr/local' \
       --python-install-bin '/usr/local/bin' \
       --no-python-dependencies \
+      --after-install './bin/post-install.sh' \
       ./setup.py
 fi
