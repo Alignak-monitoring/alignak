@@ -60,21 +60,20 @@ jobs:
         on:
           branch: develop
           tags: true
-    - stage: Bintray deployment
+    - stage: Debian packaging
+      python: 3.6
       install:
         # Install packaging requirements
         - echo "Installing packaging requirements..."
         - sudo apt-get install -y rpm
         - sudo pip install virtualenv virtualenv-tools
         - sudo pip install --upgrade distribute
-      script: |
-                echo "Deploying to BinTray packages...";
-                echo "Branch: $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION";
-                # Package Alignak for deb/rpm
-                ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION deb;
-                ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION rpm;
-                # Not yet available
-                # ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION freebsd;
+      script:
+        - echo "Deploying to BinTray packages..."
+        # Package Alignak for debian
+        - ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION deb
+        # Not yet available
+        # ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION freebsd;
       deploy:
       - provider: bintray
         skip_cleanup: true
@@ -84,6 +83,20 @@ jobs:
           secure: "xcvRMpwT+Gk0F+EpelwxSxixkrgb+XLS2310zj3j7+eQ2ahPD20yKX7sZsvIJs3DQjUtJwTemvgW6Yi7TFFJyYK9UA3csPbSojTonXUULjxLP8J3tmaioC2l0L3g+rzeVRbGdsBg5MBMgiz1xdheA3dlaoadL7UXIKx+ZiIjSIkcQJNZWUAPtgsnHGpNx94YGDv4zKp9sBm1Y34QPY8sRXRdlYfmBtp1k1wXVqiVk0K81c6PYoL7bGg9tywfZCGAlhzW0F4Dq9GsB+J1aKgT/QnNVS3HKID8W3wXmlIqGfiidECKjRgZuKcC7ayinuGTOhlitPRtlsAs55Suq7EbAUu4SF8QKV8q5wjtdVxln3zxLrJTAAG2rHQYI4JICjUtPocajZd5661IdHu/UnhqKKWcORK00zwTiQqly9Px/FN0C1qCmnz+1nZOECAQpUxUUXISgKQhYHFKCQK3V4DMryPzPsDuvq4aAIrjjzedca1QwC8FvQgRE13TyLm9wtgsCCZ2TM5moigY37Ea1Gw0leDnAnx6sN5ZERLRE59VxWjhO5O617+kuvxlOcAwkiRYtUPuCVlv00TySqKxtjlY9Rkpc1YLqiLiYJQYCm7ubcFMje9Cy6c8xzS0kTO7HBdPbfJ9ODEKHpOZLYD39iOUk/T60IWMIvsM1RhLTVr7z5Y="
         on:
           branch: develop
+          tags: true
+    - stage: RPM packaging for Python 2
+      python: 2.7
+      install:
+        # Install packaging requirements
+        - echo "Installing packaging requirements..."
+        - sudo apt-get install -y rpm
+        - sudo pip install virtualenv virtualenv-tools
+        - sudo pip install --upgrade distribute
+      script:
+        - echo "Deploying to BinTray packages..."
+        # Package Alignak for rpm
+        - ./package.sh $TRAVIS_BRANCH $TRAVIS_PYTHON_VERSION rpm
+      deploy:
       - provider: bintray
         skip_cleanup: true
         file: .bintray-deb.json
@@ -91,21 +104,5 @@ jobs:
         key:
           secure: "xcvRMpwT+Gk0F+EpelwxSxixkrgb+XLS2310zj3j7+eQ2ahPD20yKX7sZsvIJs3DQjUtJwTemvgW6Yi7TFFJyYK9UA3csPbSojTonXUULjxLP8J3tmaioC2l0L3g+rzeVRbGdsBg5MBMgiz1xdheA3dlaoadL7UXIKx+ZiIjSIkcQJNZWUAPtgsnHGpNx94YGDv4zKp9sBm1Y34QPY8sRXRdlYfmBtp1k1wXVqiVk0K81c6PYoL7bGg9tywfZCGAlhzW0F4Dq9GsB+J1aKgT/QnNVS3HKID8W3wXmlIqGfiidECKjRgZuKcC7ayinuGTOhlitPRtlsAs55Suq7EbAUu4SF8QKV8q5wjtdVxln3zxLrJTAAG2rHQYI4JICjUtPocajZd5661IdHu/UnhqKKWcORK00zwTiQqly9Px/FN0C1qCmnz+1nZOECAQpUxUUXISgKQhYHFKCQK3V4DMryPzPsDuvq4aAIrjjzedca1QwC8FvQgRE13TyLm9wtgsCCZ2TM5moigY37Ea1Gw0leDnAnx6sN5ZERLRE59VxWjhO5O617+kuvxlOcAwkiRYtUPuCVlv00TySqKxtjlY9Rkpc1YLqiLiYJQYCm7ubcFMje9Cy6c8xzS0kTO7HBdPbfJ9ODEKHpOZLYD39iOUk/T60IWMIvsM1RhLTVr7z5Y="
         on:
+          branch: develop
           tags: true
-      - provider: bintray
-        skip_cleanup: true
-        file: .bintray-rpm.json
-        user: mohierf
-        key:
-          secure: "xcvRMpwT+Gk0F+EpelwxSxixkrgb+XLS2310zj3j7+eQ2ahPD20yKX7sZsvIJs3DQjUtJwTemvgW6Yi7TFFJyYK9UA3csPbSojTonXUULjxLP8J3tmaioC2l0L3g+rzeVRbGdsBg5MBMgiz1xdheA3dlaoadL7UXIKx+ZiIjSIkcQJNZWUAPtgsnHGpNx94YGDv4zKp9sBm1Y34QPY8sRXRdlYfmBtp1k1wXVqiVk0K81c6PYoL7bGg9tywfZCGAlhzW0F4Dq9GsB+J1aKgT/QnNVS3HKID8W3wXmlIqGfiidECKjRgZuKcC7ayinuGTOhlitPRtlsAs55Suq7EbAUu4SF8QKV8q5wjtdVxln3zxLrJTAAG2rHQYI4JICjUtPocajZd5661IdHu/UnhqKKWcORK00zwTiQqly9Px/FN0C1qCmnz+1nZOECAQpUxUUXISgKQhYHFKCQK3V4DMryPzPsDuvq4aAIrjjzedca1QwC8FvQgRE13TyLm9wtgsCCZ2TM5moigY37Ea1Gw0leDnAnx6sN5ZERLRE59VxWjhO5O617+kuvxlOcAwkiRYtUPuCVlv00TySqKxtjlY9Rkpc1YLqiLiYJQYCm7ubcFMje9Cy6c8xzS0kTO7HBdPbfJ9ODEKHpOZLYD39iOUk/T60IWMIvsM1RhLTVr7z5Y="
-        on:
-          tags: true
-# Not yet available
-#  - provider: bintray
-#    skip_cleanup: true
-#    file: .bintray-freebsd.json
-#    user: mohierf
-#    key:
-#      secure: "xcvRMpwT+Gk0F+EpelwxSxixkrgb+XLS2310zj3j7+eQ2ahPD20yKX7sZsvIJs3DQjUtJwTemvgW6Yi7TFFJyYK9UA3csPbSojTonXUULjxLP8J3tmaioC2l0L3g+rzeVRbGdsBg5MBMgiz1xdheA3dlaoadL7UXIKx+ZiIjSIkcQJNZWUAPtgsnHGpNx94YGDv4zKp9sBm1Y34QPY8sRXRdlYfmBtp1k1wXVqiVk0K81c6PYoL7bGg9tywfZCGAlhzW0F4Dq9GsB+J1aKgT/QnNVS3HKID8W3wXmlIqGfiidECKjRgZuKcC7ayinuGTOhlitPRtlsAs55Suq7EbAUu4SF8QKV8q5wjtdVxln3zxLrJTAAG2rHQYI4JICjUtPocajZd5661IdHu/UnhqKKWcORK00zwTiQqly9Px/FN0C1qCmnz+1nZOECAQpUxUUXISgKQhYHFKCQK3V4DMryPzPsDuvq4aAIrjjzedca1QwC8FvQgRE13TyLm9wtgsCCZ2TM5moigY37Ea1Gw0leDnAnx6sN5ZERLRE59VxWjhO5O617+kuvxlOcAwkiRYtUPuCVlv00TySqKxtjlY9Rkpc1YLqiLiYJQYCm7ubcFMje9Cy6c8xzS0kTO7HBdPbfJ9ODEKHpOZLYD39iOUk/T60IWMIvsM1RhLTVr7z5Y="
-#    on:
-#      tags: true

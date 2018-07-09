@@ -264,7 +264,6 @@ class AlignakConfigParser(object):
         found_sections = {}
         # Get the daemons related properties
         for section in self.config.sections():
-            print("Section: %s" % section)
             if not section.startswith(searched_sections):
                 continue
 

@@ -338,26 +338,25 @@ alignak_daemon_start()
       echo "${command} ${command_args} -i ${alignak_daemon_pid_file}"
       ${command} ${command_args} "-i ${alignak_daemon_pid_file}"
    fi
-   ### ${command} ${command_args}
    info "Started"
 }
 
 alignak_daemon_stop()
 {
    if [ -e "${alignak_daemon_pid_file}" ]; then
-      echo "Stopping ${name} - ${type} ${instance}..."
+      info "Stopping ${name} - ${type} ${instance}..."
       kill -s TERM `cat ${alignak_daemon_pid_file}`
-      echo "Stopped"
+      info "Stopped"
    else
-      echo "${name} - ${type} ${instance} is not running"
+      info "${name} - ${type} ${instance} is not running"
    fi
 }
 
 alignak_daemon_status() {
    if [ -e "${alignak_daemon_pid_file}" ]; then
-      echo "${name} - ${type} ${instance} is running as pid `cat ${alignak_daemon_pid_file}`"
+      info "${name} - ${type} ${instance} is running as pid `cat ${alignak_daemon_pid_file}`"
    else
-      echo "${name} - ${type} ${instance} is not running"
+      info "${name} - ${type} ${instance} is not running"
    fi
 }
 

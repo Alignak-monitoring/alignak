@@ -52,21 +52,56 @@ else
    fi
 fi
 
-echo "Installing python packages dependencies from requirements.txt..."
-sudo pip install -r $PREFIX/share/alignak/requirements.txt
-echo "Installed."
+echo "Detecting Python version"
+pyver=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:1])))') 2> /dev/null
+if [ $? -eq 0 ]
+then
+   pyver=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))') 2> /dev/null
+   echo "Python 3 ($pyver) detected"
+   exe_pip=$(pip3 --version) 2> /dev/null
+   if [ $? -eq 0 ]
+   then
+      echo "Installing python 3 packages dependencies from requirements.txt..."
+      sudo pip3 install -r $PREFIX/share/alignak-backend/requirements.txt
+      echo "Installed."
+   else
+      echo "pip3 is not available. You can install it by typing: sudo apt install python3-pip"
+      echo "You can then run: sudo /usr/local/var/log/alignak-backend/post-install.sh"
+      exit 1
+   fi
+else
+   pyver=$(python -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
+   if [ "$pyver" = "2.7" ]; then
+      echo "Python 2.7 ($pyver) detected"
+      exe_pip=$(pip --version) 2> /dev/null
+      if [ $? -eq 0 ]
+      then
+         echo "Installing python 2 packages dependencies from requirements.txt..."
+         sudo pip install -r $PREFIX/share/alignak-backend/requirements.txt
+         echo "Installed."
+      else
+         echo "pip is not available. You can install it by typing: sudo apt install python-pip"
+         echo "You can then run: /usr/local/var/log/alignak-backend/post-install.sh"
+         exit 1
+      fi
+   else
+      echo "No valid Python version detected"
+      exit 1
+   fi
+fi
+
 echo "Creating some necessary directories"
-mkdir -p $PREFIX/var/run/alignak
-chown -R $ACCOUNT:$ACCOUNT $PREFIX/var/run/alignak
-echo "$ACCOUNT user and members of its group $ACCOUNT are granted 775 on $PREFIX/var/run/alignak"
-chmod -R 775 $PREFIX/var/run/alignak
-mkdir -p $PREFIX/var/log/alignak
-chown -R $ACCOUNT:$ACCOUNT $PREFIX/var/log/alignak
-echo "$ACCOUNT user and members of its group $ACCOUNT are granted 775 on $PREFIX/var/run/alignak"
-chmod -R 775 $PREFIX/var/run/alignak
+mkdir -p $PREFIX/var/run/alignak-backend
+chown -R $ACCOUNT:$ACCOUNT $PREFIX/var/run/alignak-backend
+chmod -R 775 $PREFIX/var/run/alignak-backend
+echo "$ACCOUNT user and members of its group $ACCOUNT are granted 775 on $PREFIX/var/run/alignak-backend"
+mkdir -p $PREFIX/var/log/alignak-backend
+chown -R $ACCOUNT:$ACCOUNT $PREFIX/var/log/alignak-backend
+echo "$ACCOUNT user and members of its group $ACCOUNT are granted 775 on $PREFIX/var/log/alignak-backend"
+chmod -R 775 $PREFIX/var/log/alignak-backend
 echo "Add your own user account as a member of $ACCOUNT group to run daemons from your shell!"
 echo "Created."
 
 echo "Installing log rotation script"
-cp $PREFIX/share/alignak/alignak-log-rotate /etc/logrotate.d/
+cp $PREFIX/share/alignak-backend/alignak-backend-log-rotate /etc/logrotate.d/
 echo "Installed."

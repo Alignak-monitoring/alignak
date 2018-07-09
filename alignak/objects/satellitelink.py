@@ -616,7 +616,8 @@ class SatelliteLink(Item):
                                        "cannot be connected: %s", link.type, link.name, exp)
                     else:
                         logger.info("Stopping... daemon (%s/%s) cannot be connected. "
-                                    "It is also probably stopping.", link.type, link.name)
+                                    "It is also probably stopping or yet stopped.",
+                                    link.type, link.name)
                     link.set_dead()
                 except (LinkError, HTTPClientTimeoutException) as exp:
                     link.add_failed_check_attempt("Connection timeout "
