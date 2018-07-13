@@ -99,7 +99,7 @@ class Itemgroup(Item):
         Members need to be filled after manually
 
         :return: Itemgroup object
-        :rtype: object
+        :rtype: alignak.objects.itemgroup.Itemgroup
         :return: None
         """
         cls = self.__class__

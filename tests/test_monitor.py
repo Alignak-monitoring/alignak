@@ -119,7 +119,7 @@ class TestMonitor(AlignakTest):
             self.clear_logs()
             # frozen_datetime.tick(delta=datetime.timedelta(seconds=5))
 
-            my_arbiter.push_passive_check(details=False)
+            my_arbiter.get_alignak_status(details=False)
 
             self.show_logs()
 

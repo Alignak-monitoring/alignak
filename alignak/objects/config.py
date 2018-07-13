@@ -403,6 +403,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'log_active_checks':
             BoolProp(default=False, fill_brok=['full_status']),
 
+        'log_alignak_checks':
+            BoolProp(default=False, fill_brok=['full_status']),
+
         # Event handlers
         'global_host_event_handler':
             StringProp(default='', fill_brok=['full_status'],
@@ -725,6 +728,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'CONFIGFILES': 'config_files',
         'MAINCONFIGFILE': 'main_config_file',
         'MAINCONFIGDIR': 'config_base_dir',
+        'RETENTION_FILE': 'state_retention_file',
         # The following one are Nagios specific features...
         'STATUSDATAFILE': '',
         'COMMENTDATAFILE': '',
@@ -2094,6 +2098,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 'enabled': True
             }
             if getattr(self, 'state_retention_file', None):
+                mod_configuration['retention_file'] = getattr(self, 'state_retention_file')
+            if getattr(self, 'retention_update_interval', None):
+                self.tick_update_retention = int(self.retention_update_interval) * 60
                 mod_configuration['retention_file'] = getattr(self, 'state_retention_file')
             modules.append((
                 'scheduler', mod_configuration

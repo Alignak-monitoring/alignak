@@ -110,6 +110,7 @@ class AlignakTest(unittest2.TestCase):
         # except OSError as exp:
         #     pass
         self.former_log_level = None
+        # Call with empty parameters to force log file truncation!
         setup_logger(logger_configuration_file, log_dir=None, process_name='', log_file='')
         self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
         self.logger_.warning("Test: %s", self.id())
@@ -595,6 +596,8 @@ define host {
         print("Get information from log files...")
         travis_run = 'TRAVIS' in os.environ
 
+        if ignored_errors is None:
+            ignored_errors = []
         if ignored_warnings is None:
             ignored_warnings = []
         ignored_warnings.extend([
@@ -993,7 +996,7 @@ define host {
         macroresolver.init(scheduler.my_daemon.sched.pushed_conf)
 
         for num in range(count):
-            # print("Scheduler loop turn: %s" % num)
+            print("Scheduler loop turn: %s" % num)
             for (item, exit_status, output) in items:
                 print("- item checks creation turn: %s" % item)
                 if len(item.checks_in_progress) == 0:
@@ -1011,7 +1014,8 @@ define host {
                     # else:
                         #     print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
                 else:
-                    print("Check is still in progress for %s" % (item.get_full_name()))
+                    print("*** check is still in progress for %s!" % (item.get_full_name()))
+
                 self.assertGreater(len(item.checks_in_progress), 0)
                 chk = scheduler.checks[item.checks_in_progress[0]]
                 chk.set_type_active()
@@ -1031,6 +1035,7 @@ define host {
                         fun()
                     except Exception as exp:
                         print("Exception: %s\n%s" % (exp, traceback.format_exc()))
+                        assert False
                 # else:
                 #     print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
         self.assert_no_log_match("External command Brok could not be sent to any daemon!")

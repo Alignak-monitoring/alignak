@@ -390,7 +390,7 @@ class GenericInterface(object):
     @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
-    def get_stats(self, details=False):
+    def stats(self, details=False):
         """Get statistics and information from the daemon
 
         Returns an object with the daemon identity, the daemon start_time

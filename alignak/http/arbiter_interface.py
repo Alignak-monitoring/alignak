@@ -26,6 +26,7 @@ import cherrypy
 from alignak.http.generic_interface import GenericInterface
 from alignak.util import split_semicolon
 from alignak.external_command import ExternalCommand
+from alignak.misc.serialization import serialize, unserialize
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -248,7 +249,7 @@ class ArbiterInterface(GenericInterface):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_alignak_status(self, details=False):
+    def alignak_status(self, details=False):
         """Get the overall alignak status
 
         Returns a list of the satellites as in:
@@ -259,7 +260,7 @@ class ArbiterInterface(GenericInterface):
         }
 
         :param details: Details are required (different from 0)
-        :type details str
+        :type details bool
 
         :return: dict with key *daemon_type* and value list of daemon name
         :rtype: dict
@@ -267,11 +268,11 @@ class ArbiterInterface(GenericInterface):
         if details is not False:
             details = bool(details)
 
-        return self.app.push_passive_check(details=details)
+        return self.app.get_alignak_status(details=details)
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_satellites_list(self, daemon_type=''):
+    def satellites_list(self, daemon_type=''):
         """Get the arbiter satellite names sorted by type
 
         Returns a list of the satellites as in:
@@ -302,7 +303,7 @@ class ArbiterInterface(GenericInterface):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_satellites_configuration(self):
+    def satellites_configuration(self):
         """Return all the configuration data of satellites
 
         :return: dict containing satellites data
@@ -360,7 +361,7 @@ class ArbiterInterface(GenericInterface):
         :rtype: list
         """
         return {'_status': u'ERR',
-                '_message': u"Deprecated in favor of the get_stats endpoint."}
+                '_message': u"Deprecated in favor of the stats endpoint."}
 
     @cherrypy.expose
     @cherrypy.tools.json_in()
@@ -377,7 +378,7 @@ class ArbiterInterface(GenericInterface):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_monitoring_problems(self):
+    def monitoring_problems(self):
         """Get Alignak detailed monitoring status
 
         This will return an object containing the properties of the `get_id`, plus a `problems`
@@ -434,7 +435,7 @@ class ArbiterInterface(GenericInterface):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_livesynthesis(self):
+    def livesynthesis(self):
         """Get Alignak live synthesis
 
         This will return an object containing the properties of the `get_id`, plus a `livesynthesis`
@@ -524,3 +525,78 @@ class ArbiterInterface(GenericInterface):
         res.update(self.get_start_time())
         res.update(self.app.get_livesynthesis())
         return res
+
+    @cherrypy.expose
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def object(self, o_type, o_name='None'):
+        """Get a monitored object from the arbiter.
+
+        Indeed, the arbiter requires the object from its schedulers. It will iterate in
+        its schedulers list until a matching object is found. Else it will return a Json
+        structure containing _status and _message properties.
+
+        When found, the result is a serialized object which is a Json structure containing:
+        - content: the serialized object content
+        - __sys_python_module__: the python class of the returned object
+
+        The Alignak unserialize function of the alignak.misc.serialization package allows
+        to restore the initial object.
+
+        .. code-block:: python
+
+            from alignak.misc.serialization import unserialize
+            from alignak.objects.hostgroup import Hostgroup
+            raw_data = req.get("http://127.0.0.1:7768/object/hostgroup/allhosts")
+            print("Got: %s / %s" % (raw_data.status_code, raw_data.content))
+            assert raw_data.status_code == 200
+            object = raw_data.json()
+            group = unserialize(object, True)
+            assert group.__class__ == Hostgroup
+            assert group.get_name() == 'allhosts'
+
+        As an example:
+        {
+            "__sys_python_module__": "alignak.objects.hostgroup.Hostgroup",
+            "content": {
+                "uuid": "32248642-97dd-4f39-aaa2-5120112a765d",
+                "name": "",
+                "hostgroup_name": "allhosts",
+                "use": [],
+                "tags": [],
+                "alias": "All Hosts",
+                "notes": "",
+                "definition_order": 100,
+                "register": true,
+                "unknown_members": [],
+                "notes_url": "",
+                "action_url": "",
+
+                "imported_from": "unknown",
+                "conf_is_correct": true,
+                "configuration_errors": [],
+                "configuration_warnings": [],
+                "realm": "",
+                "downtimes": {},
+                "hostgroup_members": [],
+                "members": [
+                    "553d47bc-27aa-426c-a664-49c4c0c4a249",
+                    "f88093ca-e61b-43ff-a41e-613f7ad2cea2",
+                    "df1e2e13-552d-43de-ad2a-fe80ad4ba979",
+                    "d3d667dd-f583-4668-9f44-22ef3dcb53ad"
+                ]
+            }
+        }
+
+        :param o_type: searched object type
+        :type o_type: str
+        :param o_name: searched object name (or uuid)
+        :type o_name: str
+        :return: serialized object information
+        :rtype: str
+        """
+        for scheduler_link in self.app.conf.schedulers:
+            o_found = scheduler_link.get_object(o_type, o_name)
+            if isinstance(o_found, dict) and 'content' in o_found:
+                return o_found
+        return {'_status': u'ERR', '_message': u'Required %s not found.' % o_type}

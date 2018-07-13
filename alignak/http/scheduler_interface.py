@@ -211,11 +211,12 @@ class SchedulerInterface(GenericInterface):
 
         return o_list
 
-    def _get_object(self, o_type, name='None'):
+    def _get_object(self, o_type, o_name='None'):
         """Get an object from the scheduler
 
         Returns None if the required object type (`o_type`) is not known.
-        Else returns the serialized object if found
+        Else returns the serialized object if found. The object is searched first with
+        o_name as its name and then with o_name as its uuid.
 
         :param o_type: searched object type
         :type o_type: str
@@ -228,52 +229,90 @@ class SchedulerInterface(GenericInterface):
             o_found = None
             o_list = self._get_objects(o_type)
             if o_list:
-                o_found = o_list.find_by_name(name)
+                if o_name == 'None':
+                    return serialize(o_list, True) if o_list else None
+                # We expected a name...
+                o_found = o_list.find_by_name(o_name)
                 if not o_found:
-                    o_found = o_list[name]
+                    # ... but perharps we got an object uuid
+                    o_found = o_list[o_name]
         except Exception:  # pylint: disable=broad-except
             return None
         return serialize(o_found, True) if o_found else None
 
     @cherrypy.expose
+    @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
-    def get_host(self, host_name='None'):
-        """Get host configuration from the scheduler, used mainly by the receiver
+    def object(self, o_type, o_name='None'):
+        """Get an object from the scheduler.
 
-        :param host_name: searched host name
-        :type host_name: str
-        :return: serialized host information
+        The result is a serialized object which is a Json structure containing:
+        - content: the serialized object content
+        - __sys_python_module__: the python class of the returned object
+
+        The Alignak unserialize function of the alignak.misc.serialization package allows
+        to restore the initial object.
+
+        .. code-block:: python
+
+            from alignak.misc.serialization import unserialize
+            from alignak.objects.hostgroup import Hostgroup
+            raw_data = req.get("http://127.0.0.1:7768/object/hostgroup/allhosts")
+            print("Got: %s / %s" % (raw_data.status_code, raw_data.content))
+            assert raw_data.status_code == 200
+            object = raw_data.json()
+            group = unserialize(object, True)
+            assert group.__class__ == Hostgroup
+            assert group.get_name() == 'allhosts'
+
+        As an example:
+        {
+            "__sys_python_module__": "alignak.objects.hostgroup.Hostgroup",
+            "content": {
+                "uuid": "32248642-97dd-4f39-aaa2-5120112a765d",
+                "name": "",
+                "hostgroup_name": "allhosts",
+                "use": [],
+                "tags": [],
+                "alias": "All Hosts",
+                "notes": "",
+                "definition_order": 100,
+                "register": true,
+                "unknown_members": [],
+                "notes_url": "",
+                "action_url": "",
+
+                "imported_from": "unknown",
+                "conf_is_correct": true,
+                "configuration_errors": [],
+                "configuration_warnings": [],
+                "realm": "",
+                "downtimes": {},
+                "hostgroup_members": [],
+                "members": [
+                    "553d47bc-27aa-426c-a664-49c4c0c4a249",
+                    "f88093ca-e61b-43ff-a41e-613f7ad2cea2",
+                    "df1e2e13-552d-43de-ad2a-fe80ad4ba979",
+                    "d3d667dd-f583-4668-9f44-22ef3dcb53ad"
+                ]
+            }
+        }
+
+        :param o_type: searched object type
+        :type o_type: str
+        :param o_name: searched object name (or uuid)
+        :type o_name: str
+        :return: serialized object information
         :rtype: str
         """
-        return self._get_object('host', name=host_name)
+        o_found = self._get_object(o_type=o_type, o_name=o_name)
+        if not o_found:
+            return {'_status': u'ERR', '_message': u'Required %s not found.' % o_type}
+        return o_found
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_hostgroup(self, hostgroup_name='None'):
-        """Get hostgroup configuration from the scheduler, used mainly by the receiver
-
-        :param hostgroup_name: searched host name
-        :type hostgroup_name: str
-        :return: serialized hostgroup information
-        :rtype: str
-        """
-        return self._get_object('hostgroup', name=hostgroup_name)
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def get_realm(self, realm_name='None'):
-        """Get realm configuration from the scheduler, used mainly by the receiver
-
-        :param realm_name: searched host name
-        :type realm_name: str
-        :return: serialized host information
-        :rtype: str
-        """
-        return self._get_object('realm', name=realm_name)
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def get_monitoring_problems(self):
+    def monitoring_problems(self):
         """Get Alignak scheduler monitoring status
 
         Returns an object with the scheduler livesynthesis

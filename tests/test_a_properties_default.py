@@ -182,6 +182,7 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('log_initial_states', True),
         ('log_external_commands', True),
         ('log_passive_checks', False),
+        ('log_alignak_checks', False),
         ('global_host_event_handler', ''),
         ('global_service_event_handler', ''),
         ('max_service_check_spread', 5),

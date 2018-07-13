@@ -356,7 +356,7 @@ class Daemon(object):
         'alignak_monitor':
             StringProp(default=u''),
         'alignak_monitor_period':
-            IntegerProp(default=30),
+            IntegerProp(default=60),
         'alignak_monitor_username':
             StringProp(default=u''),
         'alignak_monitor_password':
@@ -651,6 +651,8 @@ class Daemon(object):
             # Make it an absolute path file in the pid directory
             if self.pid_filename != os.path.abspath(self.pid_filename):
                 self.pid_filename = os.path.abspath(os.path.join(self.workdir, self.pid_filename))
+            self.workdir = os.path.dirname(self.pid_filename)
+            print("Daemon working directory: %s" % self.workdir)
         print("Daemon '%s' pid file: %s" % (self.name, self.pid_filename))
         self.pre_log.append(("INFO",
                              "Daemon '%s' pid file: %s" % (self.name, self.pid_filename)))
@@ -1342,6 +1344,7 @@ class Daemon(object):
         self.pre_log.append(("DEBUG", "Replacing former instance: %d" % pid))
         try:
             pgid = os.getpgid(pid)
+            # SIGQUIT to terminate and dump core
             os.killpg(pgid, signal.SIGQUIT)
         except os.error as err:
             if err.errno != errno.ESRCH:

@@ -358,7 +358,7 @@ class TestDowntime(AlignakTest):
                  u'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STARTED; '
                  u'Service has entered a period of scheduled downtime'),
                 ('info',
-                 u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;DOWNTIMESTART (OK);notify-service;OK'),
+                 u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;DOWNTIMESTART (OK);0;notify-service;OK'),
                 ('info',
                  u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;OK'),
                 ('error',
@@ -376,7 +376,7 @@ class TestDowntime(AlignakTest):
                 ('info',
                  u'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;OK'),
                 ('info',
-                 u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;DOWNTIMEEND (OK);notify-service;OK'),
+                 u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;DOWNTIMEEND (OK);0;notify-service;OK'),
                 ('error',
                  u'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;BAD'),
                 ('error',
@@ -386,7 +386,7 @@ class TestDowntime(AlignakTest):
                 ('error',
                  u'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;BAD'),
                 ('error',
-                 u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;notify-service;BAD'),
+                 u'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;1;notify-service;BAD'),
             ]
             self.check_monitoring_events_log(expected_logs)
 
@@ -573,16 +573,16 @@ class TestDowntime(AlignakTest):
             ('info', 'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STARTED; '
                       'Service has entered a period of scheduled downtime'),
             ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      'DOWNTIMESTART (CRITICAL);notify-service;BAD'),
+                      'DOWNTIMESTART (CRITICAL);0;notify-service;BAD'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;OK'),
             ('info', 'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STOPPED; '
                       'Service has exited from a period of scheduled downtime'),
             ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      'DOWNTIMEEND (OK);notify-service;OK'),
+                      'DOWNTIMEEND (OK);0;notify-service;OK'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;BAD'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;BAD'),
             ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                       'CRITICAL;notify-service;BAD')
+                       'CRITICAL;1;notify-service;BAD')
         ]
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_events
@@ -836,21 +836,21 @@ class TestDowntime(AlignakTest):
                 ('info', 'HOST DOWNTIME ALERT: test_host_0;STARTED; '
                           'Host has entered a period of scheduled downtime'),
                 ('info', 'HOST NOTIFICATION: test_contact;test_host_0;'
-                          'DOWNTIMESTART (UP);notify-host;UP'),
+                          'DOWNTIMESTART (UP);0;notify-host;UP'),
                 ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN'),
                 ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;2;DOWN'),
                 ('error', 'HOST ALERT: test_host_0;DOWN;HARD;3;DOWN'),
                 ('info', 'HOST DOWNTIME ALERT: test_host_0;STOPPED; '
                           'Host has exited from a period of scheduled downtime'),
-                # ('info', 'HOST NOTIFICATION: test_contact;test_host_0;'
-                #           'DOWNTIMEEND (DOWN);notify-host;DOWN'),
-                ('error', 'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;DOWN'),
+                ('info', 'HOST NOTIFICATION: test_contact;test_host_0;'
+                          'DOWNTIMEEND (UP);0;notify-host;UP'),
+                ('error', 'HOST NOTIFICATION: test_contact;test_host_0;DOWN;1;notify-host;DOWN'),
                 ('info', 'HOST ALERT: test_host_0;UP;HARD;3;UP'),
                 # ('info', 'HOST NOTIFICATION: test_contact;test_host_0;UP;notify-host;UP'),
                 ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN'),
                 ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;2;DOWN'),
                 ('error', 'HOST ALERT: test_host_0;DOWN;HARD;3;DOWN'),
-                ('error', 'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;DOWN')
+                ('error', 'HOST NOTIFICATION: test_contact;test_host_0;DOWN;1;notify-host;DOWN')
             ]
             for log_level, log_message in expected_logs:
                 assert (log_level, log_message) in monitoring_events, "Not found: %s" % log_message
@@ -1051,7 +1051,7 @@ class TestDowntime(AlignakTest):
                     now, now, now + duration, duration)),
                 ('info', 'HOST DOWNTIME ALERT: test_host_0;STARTED; '
                           'Host has entered a period of scheduled downtime'),
-                ('info', 'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (UP);notify-host;UP'),
+                ('info', 'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (UP);0;notify-host;UP'),
                 ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN'),
                 ('error', 'HOST ALERT: test_host_0;DOWN;SOFT;2;DOWN'),
                 ('error', 'HOST ALERT: test_host_0;DOWN;HARD;3;DOWN'),

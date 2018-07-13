@@ -118,7 +118,10 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
     If a log_dir and process_name are provided, the format and filename in the configuration file
     are updated with the provided values if they contain the patterns %(logdir)s and %(daemon)s
 
-    If a log file name is provide, it will override the default defined log file name.
+    If no log_dir and process_name are provided, this function will truncate the log file
+    defined in the configuration file.
+
+    If a log file name is provided, it will override the default defined log file name.
 
     At first, this function checks if the logger is still existing and initialized to
     update the handlers and formatters. This mainly happens during the unit tests.
@@ -133,7 +136,6 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
     :rtype log_file: str
     :return: None
     """
-    # print("Setting up the logger: %s - %s" % (process_name, logger_configuration_file))
     logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
     for handler in logger_.handlers:
         if not process_name:
@@ -181,7 +183,7 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
             for hdlr in config['handlers']:
                 if 'filename' not in config['handlers'][hdlr]:
                     continue
-                if log_file:
+                if log_file and hdlr == 'daemons':
                     config['handlers'][hdlr]['filename'] = log_file
                 else:
                     config['handlers'][hdlr]['filename'] = \

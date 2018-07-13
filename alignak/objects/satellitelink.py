@@ -766,7 +766,7 @@ class SatelliteLink(Item):
         :rtype: dict
         """
         logger.debug("Get daemon statistics for %s, %s %s", self.name, self.alive, self.reachable)
-        return self.con.get('get_stats%s' % ('?details=1' if details else ''))
+        return self.con.get('stats%s' % ('?details=1' if details else ''))
 
     @valid_connection()
     @communicate()
@@ -1011,19 +1011,21 @@ class SatelliteLink(Item):
         return unserialize(res, True)
 
     @valid_connection()
-    def get_host(self, host_name):
+    def get_object(self, o_type, o_name):
         """Send a HTTP request to the scheduler (GET /get_host)
         Get host information from the scheduler.
         Un-serialize data received.
 
-        :param params: the request parameters
-        :type params: str
-        :return: Actions list on success, [] on failure
-        :rtype: list
+        :param o_type: searched object type
+        :type o_type: str
+        :param o_name: searched object name (or uuid)
+        :type o_name: str
+        :return: serialized object information
+        :rtype: str
         """
-        res = self.con.get('get_host', host_name, wait=True)
-        logger.debug("Got an host from %s: %s", self.name, res)
-        return unserialize(res, True)
+        res = self.con.get('object', {'o_type': o_type, 'o_name': o_name}, wait=True)
+        logger.debug("Got an %s object from %s: %s", o_type, self.name, res)
+        return res
 
 
 class SatelliteLinks(Items):

@@ -91,41 +91,60 @@ if [ "${git_branch}" = "master" ]; then
    # Stable repo
    if [ "${output_type}" = "deb" ]; then
       sed -i -e "s/sed_version_repo/alignak-deb-stable/g" dist/.bintray-${output_type}.json
-   else
+   elif [ "${output_type}" = "rpm" ]; then
       sed -i -e "s/sed_version_repo/alignak-rpm-stable/g" dist/.bintray-${output_type}.json
+   elif [ "${output_type}" = "freebsd" ]; then
+      sed -i -e "s/sed_version_repo/alignak-freebsd-stable/g" dist/.bintray-${output_type}.json
+   else
+      echo "Unmanaged output type: ${output_type}"
+      exit 1
    fi
 elif [ "${git_branch}" = "develop" ]; then
+   # Version
+#   version="${version}-dev"
+   version="-dev"
+
    # Updating deploy script for Alignak develop version
    sed -i -e "s|\"sed_package_name\"|\"${pkg_name}\"|g" dist/.bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_name\"|\"${version_date}\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_name\"|\"develop-${version_date}\"|g" dist/.bintray-${output_type}.json
+#   sed -i -e "s|\"sed_version_name\"|\"${version_date}\"|g" dist/.bintray-${output_type}.json
    sed -i -e "s|\"sed_version_desc\"|\"Development version\"|g" dist/.bintray-${output_type}.json
    sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" dist/.bintray-${output_type}.json
 
    # Testing repo
    if [ "${output_type}" = "deb" ]; then
       sed -i -e "s/sed_version_repo/alignak-deb-testing/g" dist/.bintray-${output_type}.json
-   else
+   elif [ "${output_type}" = "rpm" ]; then
       sed -i -e "s/sed_version_repo/alignak-rpm-testing/g" dist/.bintray-${output_type}.json
+   elif [ "${output_type}" = "freebsd" ]; then
+      sed -i -e "s/sed_version_repo/alignak-freebsd-testing/g" dist/.bintray-${output_type}.json
+   else
+      echo "Unmanaged output type: ${output_type}"
+      exit 1
    fi
-
-   # Version
-   version="${version}-dev"
 else
+   # Version
+#   version="${version}-${git_branch}"
+   version="-${git_branch}"
+
    # Updating deploy script for any other branch / tag
    sed -i -e "s|\"sed_package_name\"|\"${pkg_name}\"|g" dist/.bintray-${output_type}.json
-   sed -i -e "s|\"sed_version_name\"|\"$1\"|g" dist/.bintray-${output_type}.json
+#   sed -i -e "s|\"sed_version_name\"|\"$1\"|g" dist/.bintray-${output_type}.json
+   sed -i -e "s|\"sed_version_name\"|\"${version}-${version_date}\"|g" dist/.bintray-${output_type}.json
    sed -i -e "s|\"sed_version_desc\"|\"Branch $1 version\"|g" dist/.bintray-${output_type}.json
    sed -i -e "s|\"sed_version_released\"|\"${version_date}\"|g" dist/.bintray-${output_type}.json
 
    # Testing repo
    if [ "${output_type}" = "deb" ]; then
       sed -i -e "s/sed_version_repo/alignak-deb-testing/g" dist/.bintray-${output_type}.json
-   else
+   elif [ "${output_type}" = "rpm" ]; then
       sed -i -e "s/sed_version_repo/alignak-rpm-testing/g" dist/.bintray-${output_type}.json
+   elif [ "${output_type}" = "freebsd" ]; then
+      sed -i -e "s/sed_version_repo/alignak-freebsd-testing/g" dist/.bintray-${output_type}.json
+   else
+      echo "Unmanaged output type: ${output_type}"
+      exit 1
    fi
-
-   # Version
-   version="${version}-${git_branch}"
 fi
 
 echo "----------"

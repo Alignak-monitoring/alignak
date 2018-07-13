@@ -39,7 +39,8 @@ from .alignak_test import AlignakTest
 
 from alignak.misc.serialization import unserialize
 from alignak.objects.host import Host
-from alignak.objects.hostgroup import Hostgroup
+from alignak.objects.hostgroup import Hostgroup, Hostgroups
+from alignak.objects.service import Service
 from alignak.objects.realm import Realm
 from alignak.http.generic_interface import GenericInterface
 from alignak.http.arbiter_interface import ArbiterInterface
@@ -289,9 +290,9 @@ class TestDaemonsApi(AlignakTest):
         # -----
 
         # -----
-        print("Testing get_satellites_list")
+        print("Testing satellites_list")
         # Arbiter only
-        raw_data = req.get("%s://localhost:%s/get_satellites_list" %
+        raw_data = req.get("%s://localhost:%s/satellites_list" %
                            (scheme, satellite_map['arbiter']), verify=False)
         assert raw_data.status_code == 200
         expected_data = {"reactionner": ["reactionner-master"],
@@ -308,9 +309,9 @@ class TestDaemonsApi(AlignakTest):
         # -----
 
         # -----
-        print("Testing get_alignak_status")
+        print("Testing alignak_status")
         # Arbiter only
-        raw_data = req.get("%s://localhost:%s/get_alignak_status" %
+        raw_data = req.get("%s://localhost:%s/alignak_status" %
                            (scheme, satellite_map['arbiter']), verify=False)
         assert raw_data.status_code == 200
         data = raw_data.json()
@@ -358,7 +359,7 @@ class TestDaemonsApi(AlignakTest):
         # -----
 
         # -----
-        print("Testing get_stats")
+        print("Testing stats")
 
         doc = []
         doc.append(".. _alignak_features/daemons_stats:")
@@ -369,8 +370,8 @@ class TestDaemonsApi(AlignakTest):
         doc.append("==========================")
         for name, port in list(satellite_map.items()):
             print("- for %s" % (name))
-            raw_data = req.get("%s://localhost:%s/get_stats" % (scheme, port), verify=False)
-            print("%s, my stats: %s" % (name, raw_data.text))
+            raw_data = req.get("%s://localhost:%s/stats" % (scheme, port), verify=False)
+            print("Got /stats: %s" % raw_data.content)
             assert raw_data.status_code == 200
             data = raw_data.json()
             print("%s, my stats: %s" % (name, json.dumps(data)))
@@ -399,12 +400,19 @@ class TestDaemonsApi(AlignakTest):
             if name in ['arbiter']:
                 assert "livestate" in data
                 livestate = data['livestate']
+                print("Livestate: %s" % livestate)
+                l = {
+                    'daemons': {'reactionner-master': 1, 'poller-master': 1, 'broker-master': 1,
+                                'receiver-master': 1, 'scheduler-master': 1},
+                    'state': 1, 'timestamp': 1531487166,
+                    'output': 'warning because some daemons are not reachable.'}
                 assert "timestamp" in livestate
                 assert "state" in livestate
                 assert "output" in livestate
                 assert "daemons" in livestate
                 for daemon_state in livestate['daemons']:
                     assert livestate['daemons'][daemon_state] == 0
+                    # assert daemon_state in satellite_map.keys()
 
                 assert "daemons_states" in data
                 daemons_state = data['daemons_states']
@@ -438,15 +446,15 @@ class TestDaemonsApi(AlignakTest):
             with open(rst_write, mode='wt') as out:
                 out.write('\n'.join(doc))
 
-        print("Testing get_stats (detailed)")
+        print("Testing stats (detailed)")
         for name, port in list(satellite_map.items()):
             print("- for %s" % (name))
-            raw_data = req.get("%s://localhost:%s/get_stats?details=1" % (scheme, port), verify=False)
-            print("%s, my stats: %s" % (name, raw_data.text))
+            raw_data = req.get("%s://localhost:%s/stats?details=1" % (scheme, port), verify=False)
+            print("Got /stats?details=1: %s" % raw_data.content)
             assert raw_data.status_code == 200
             # print("%s, my stats: %s" % (name, raw_data.text))
             data = raw_data.json()
-            print("%s, my stats: %s" % (name, json.dumps(data)))
+            print("%s, my stats (detailed): %s" % (name, json.dumps(data)))
             # Too complex to check all this stuff
             # expected = {
             #     "alignak": "My Alignak", "type": "arbiter", "name": "Default-arbiter",
@@ -622,9 +630,9 @@ class TestDaemonsApi(AlignakTest):
         # -----
 
         # -----
-        print("Testing get_satellites_configuration")
+        print("Testing satellites_configuration")
         # Arbiter only
-        raw_data = req.get("%s://localhost:%s/get_satellites_configuration" %
+        raw_data = req.get("%s://localhost:%s/satellites_configuration" %
                            (scheme, satellite_map['arbiter']), verify=False)
         assert raw_data.status_code == 200
         data = raw_data.json()
@@ -646,23 +654,14 @@ class TestDaemonsApi(AlignakTest):
         # -----
         # todo: deprecate this! or not ?
         print("Testing get_objects_properties")
-        for object in ['host', 'service', 'contact',
-                       'hostgroup', 'servicegroup', 'contactgroup',
-                       'command', 'timeperiod',
-                       'notificationway', 'escalation',
-                       'checkmodulation', 'macromodulation', 'resultmodulation',
-                       'businessimpactmodulation'
-                       'hostdependencie', 'servicedependencie',
-                       'realm',
-                       'arbiter', 'scheduler', 'poller', 'broker', 'reactionner', 'receiver']:
-            # Arbiter only
-            raw_data = req.get("%s://localhost:%s/get_objects_properties" %
-                               (scheme, satellite_map['arbiter']),
-                               params={'table': '%ss' % object}, verify=False)
-            assert raw_data.status_code == 200
-            data = raw_data.json()
-            assert data == {"_status": u"ERR",
-                            "_message": u"Deprecated in favor of the get_stats endpoint."}
+        # Arbiter only
+        raw_data = req.get("%s://localhost:%s/get_objects_properties" %
+                           (scheme, satellite_map['arbiter']),
+                           params={'table': '%ss' % object}, verify=False)
+        assert raw_data.status_code == 200
+        data = raw_data.json()
+        assert data == {"_status": u"ERR",
+                        "_message": u"Deprecated in favor of the stats endpoint."}
         # -----
 
         # -----
@@ -871,8 +870,25 @@ class TestDaemonsApi(AlignakTest):
             data = raw_data.json()
             assert data is True
 
-    def test_get_host(self):
-        """ Running all the Alignak daemons - get host from the scheduler
+    def test_get_objects_from_scheduler(self):
+        """ Running all the Alignak daemons - get host and other objects
+        from the scheduler
+
+        :return:
+        """
+        self._get_objects('http://localhost:7768')
+
+    def test_get_objects_from_arbiter(self):
+        """ Running all the Alignak daemons - get host and other objects
+        from the arbiter
+
+        :return:
+        """
+        self._get_objects('http://localhost:7770')
+
+    def _get_objects(self, endpoint):
+        """ Running all the Alignak daemons - get host and other objects
+        from the scheduler or from the arbiter
 
         :return:
         """
@@ -953,94 +969,115 @@ class TestDaemonsApi(AlignakTest):
         # The scheduler has a service to get some objects information. This may be used to know if
         # an host exist in Alignak and to get its configuration and state
 
-        # Only for the scheduler daemon
+        # Only for the scheduler and arbiter daemons
 
         # ---
+        # Get an unknown type object
+        # Query parameter
+        raw_data = req.get("%s/object?o_type=unknown" % endpoint)
+        print("Got: %s / %s" % (raw_data.status_code, raw_data.content))
+        assert raw_data.status_code == 200
+        object = unserialize(raw_data.json(), True)
+        # => error message
+        assert object == {'_message': 'Required unknown not found.', '_status': 'ERR'}
+
+        # Get an unknown object
+        # Query parameter
+        raw_data = req.get("%s/object?o_type=realm&o_name=unknown_realm" % endpoint)
+        print("Got: %s / %s" % (raw_data.status_code, raw_data.content))
+        assert raw_data.status_code == 200
+        object = unserialize(raw_data.json(), True)
+        assert object == {'_message': 'Required realm not found.', '_status': 'ERR'}
+
         # Get an unknown realm
-        raw_data = req.get("http://localhost:7768/get_realm?realm_name=unknown_realm", verify=False)
+        raw_data = req.get("%s/object/realm/unknown_realm" % endpoint)
+        print("Got: %s / %s" % (raw_data.status_code, raw_data.content))
         assert raw_data.status_code == 200
-        realm = unserialize(raw_data.json(), True)
-        print("Got realm: %s" % realm)
-        assert realm is None
+        object = unserialize(raw_data.json(), True)
+        assert object == {'_message': 'Required realm not found.', '_status': 'ERR'}
 
-        # ---
+        # Get an unknown realm - case sensitivity!
+        raw_data = req.get("%s/object/realm/all" % endpoint)
+        print("Got: %s / %s" % (raw_data.status_code, raw_data.content))
+        assert raw_data.status_code == 200
+        object = unserialize(raw_data.json(), True)
+        assert object == {'_message': 'Required realm not found.', '_status': 'ERR'}
+
         # Get a known realm
-        raw_data = req.get("http://localhost:7768/get_realm?realm_name=All", verify=False)
+        raw_data = req.get("%s/object/realm/All" % endpoint)
+        print("Got: %s / %s" % (raw_data.status_code, raw_data.content))
         assert raw_data.status_code == 200
-        print("get_realm, got (raw): %s" % raw_data)
-        print("get_realm, got (json): %s" % raw_data.json())
-        pprint(raw_data.json())
-        realm = unserialize(raw_data.json(), True)
-        print("Got realm: %s" % realm)
-        # todo : The scheduler did not receive the realm All in its configuration!
-        assert realm is None
-        # assert realm.__class__ == Realm
-        # assert realm.get_name() == 'All'
+        # # It should be this:
+        # object = raw_data.json()
+        # object = object['content']
+        # print("Got object: %s" % object['realm_name'])
+        # assert object['realm_name'] == 'All'
+        # # but the scheduler seem to not have received any realm !
+        # # todo: investigate this!
 
-        # ---
-        # Get an unknown hostgroup
-        raw_data = req.get("http://localhost:7768/get_hostgroup?hostgroup_name=unknown_hostgroup")
-        assert raw_data.status_code == 200
-        print("get_hostgroup, got (raw): %s" % raw_data)
-        hostgroup = unserialize(raw_data.json(), True)
-        print("Got: %s" % hostgroup)
-        assert hostgroup is None
-
-        # ---
-        # Get a known hostgroup
-        raw_data = req.get("http://localhost:7768/get_hostgroup?hostgroup_name=allhosts")
-        assert raw_data.status_code == 200
-        print("get_hostgroup, got (raw): %s" % raw_data)
-        print("get_hostgroup, got (json): %s" % raw_data.json())
-        pprint(raw_data.json())
-        hostgroup = unserialize(raw_data.json(), True)
-        print("Got: %s" % hostgroup)
-        assert hostgroup.__class__ == Hostgroup
-        assert hostgroup.get_name() == 'allhosts'
-        for m in hostgroup.members:
-            raw_data = req.get("http://localhost:7768/get_host?host_name=%s" % m, verify=False)
-            assert raw_data.status_code == 200
-            print("get_host member, got (raw): %s" % raw_data)
-            host = raw_data.json()
-            host = host['content']
-            print("get_hostgroup member, got: %s" % host['host_name'])
-        # assert len(hostgroup.members) == 13
-
-        # ---
-        # Get an unknown host
-        raw_data = req.get("http://localhost:7768/get_host?host_name=unknown_host", verify=False)
-        assert raw_data.status_code == 200
-        print("get_host, got (raw): %s" % raw_data)
-        host = unserialize(raw_data.json(), True)
-        print("Got: %s" % host)
-        assert host is None
-
-        # ---
         # Get a known host
-        raw_data = req.get("http://localhost:7768/get_host?host_name=localhost", verify=False)
+        raw_data = req.get("%s/object/host/localhost" % endpoint)
+        print("Got: %s / %s" % (raw_data.status_code, raw_data.content))
         assert raw_data.status_code == 200
-        print("get_host, got (raw): %s" % raw_data)
-        print("get_host, got (json): %s" % raw_data.json())
-        pprint(raw_data.json())
-        host = unserialize(raw_data.json(), True)
-        print("Got: %s" % host)
-        assert host.__class__ == Host
-        assert host.get_name() == 'localhost'
+        object = raw_data.json()
+        print("Got object: %s" % object['content']['host_name'])
+        assert object['content']['host_name'] == 'localhost'
+
+        # Get a known host from its uuid
+        raw_data = req.get("%s/object/host/%s" % (endpoint, object['content']['uuid']))
+        print("Got: %s / %s" % (raw_data.status_code, raw_data.content))
+        assert raw_data.status_code == 200
+        object = raw_data.json()
+        print("Got object: %s" % object['content']['host_name'])
+        assert object['content']['host_name'] == 'localhost'
 
         # ---
-        # Get the other hosts
-        for index in range(hosts_count):
-            raw_data = req.get("http://localhost:7768/get_host?host_name=host-all-%d" % index, verify=False)
-            assert raw_data.status_code == 200
-            # print("get_host, got (raw): %s" % raw_data)
-            # print("get_host, got (json): %s" % raw_data.json())
-            pprint(raw_data.json())
-            host = unserialize(raw_data.json(), True)
-            print("Got: %s" % host)
-            assert host.__class__ == Host
-            assert host.get_name() == 'host-all-%d' % index
+        # Get all hostgroups
+        raw_data = req.get("%s/object/hostgroup" % endpoint)
+        print("Got: %s / %s" % (raw_data.status_code, raw_data.content))
+        assert raw_data.status_code == 200
+        object = raw_data.json()
+        groups = unserialize(object, True)
+        assert groups.__class__ == Hostgroups
+        for group in groups:
+            print("Group: %s" % group.get_name())
+            assert group.__class__ == Hostgroup
 
-        # This function will only send a SIGTERM to the arbiter daemon
+        # ---
+        # Get a hostgroup
+        raw_data = req.get("%s/object/hostgroup/allhosts" % endpoint)
+        print("Got: %s / %s" % (raw_data.status_code, raw_data.content))
+        assert raw_data.status_code == 200
+        object = raw_data.json()
+        print("Got hostgroup: %s / %s" % (type(object), object['content']['hostgroup_name']))
+        assert object['content']['hostgroup_name'] == 'allhosts'
+        group = unserialize(object, True)
+        assert group.__class__ == Hostgroup
+        assert group.get_name() == 'allhosts'
+
+        # ---
+        # Get all hosts from the hostgroup
+        for m in group.members:
+            raw_data = req.get("%s/object/host/%s" % (endpoint, m))
+            print("Got: %s / %s" % (raw_data.status_code, raw_data.content))
+            assert raw_data.status_code == 200
+            member = raw_data.json()
+            group_host = unserialize(member, True)
+            assert group_host.__class__ == Host
+            print("- group member: %s" % group_host.get_name())
+
+            # ---
+            # Get all the services from the host
+            for s in group_host.child_dependencies:
+                print("Get service: %s/%s" % (group_host.get_name(), s))
+                raw_data = req.get("%s/object/service/%s" % (endpoint, s))
+                print("Got: %s / %s" % (raw_data.status_code, raw_data.content))
+                assert raw_data.status_code == 200
+                member = raw_data.json()
+                host_service = unserialize(member, True)
+                assert host_service.__class__ == Service
+                print("  . service: %s" % host_service.get_full_name())
+
         self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7770')
 
     def test_get_external_commands(self):
@@ -1251,10 +1288,10 @@ class TestDaemonsApi(AlignakTest):
         """Get and check daemons statistics"""
         problems = []
 
-        print("--- get_stats")
+        print("--- stats")
         for name, port in list(satellite_map.items()):
             print("- for %s" % (name))
-            raw_data = req.get("http://localhost:%s/get_stats%s" % (port, '?details=1' if details else ''), verify=False)
+            raw_data = req.get("http://localhost:%s/stats%s" % (port, '?details=1' if details else ''), verify=False)
             print("%s, my stats: %s" % (name, raw_data.text))
             assert raw_data.status_code == 200
             data = raw_data.json()
@@ -1397,7 +1434,7 @@ class TestDaemonsApi(AlignakTest):
         # -----
         # 1/ get Alignak overall problems
         print("--- get monitoring problems")
-        raw_data = req.get("http://localhost:7770/get_monitoring_problems")
+        raw_data = req.get("http://localhost:7770/monitoring_problems")
         print("Alignak problems: %s" % (raw_data.text))
         assert raw_data.status_code == 200
         data = raw_data.json()
@@ -1437,7 +1474,7 @@ class TestDaemonsApi(AlignakTest):
         # -----
         # 4/ get Alignak overall problems
         print("--- get monitoring problems")
-        raw_data = req.get("http://localhost:7770/get_monitoring_problems")
+        raw_data = req.get("http://localhost:7770/monitoring_problems")
         print("Alignak problems: %s" % (raw_data.text))
         assert raw_data.status_code == 200
         data = raw_data.json()
@@ -1458,10 +1495,57 @@ class TestDaemonsApi(AlignakTest):
             problem = data['problems']['scheduler-master']['problems'][problem]
             print("A problem: %s" % (problem))
 
+        # 4/ get Alignak scheduler problems
+        print("--- get monitoring problems")
+        raw_data = req.get("http://localhost:7768/monitoring_problems")
+        print("Alignak problems: %s" % (raw_data.text))
+        assert raw_data.status_code == 200
+        data2 = raw_data.json()
+        assert 'alignak' in data2
+        assert 'type' in data2
+        assert 'name' in data2
+        assert 'version' in data2
+        assert 'start_time' in data2
+
+        doc = []
+        doc.append(".. _alignak_features/monitoring_problems:")
+        doc.append("")
+        doc.append(".. Built from the test_daemons_api.py unit test last run!")
+        doc.append("")
+        doc.append("===========================")
+        doc.append("Alignak monitoring problems")
+        doc.append("===========================")
+        doc.append("")
+        doc.append("On a scheduler endpoint: ``/monitoring_problems``")
+        doc.append("")
+        doc.append("::")
+        doc.append("")
+        doc.append("    %s" % json.dumps(data2, sort_keys=True, indent=4))
+        doc.append("")
+        doc.append("On the arbiter endpoint: ``/monitoring_problems``")
+        doc.append("")
+        doc.append("::")
+        doc.append("")
+        doc.append("    %s" % json.dumps(data, sort_keys=True, indent=4))
+        doc.append("")
+        doc.append("")
+
+        rst_write = None
+        rst_file = "alignak_monitoring_problems.rst"
+        if os.path.exists("../doc/source/api"):
+            rst_write = "../doc/source/api/%s" % rst_file
+        if os.path.exists("../../alignak-doc/source/07_alignak_features/api"):
+            rst_write = "../../alignak-doc/source/07_alignak_features/api/%s" % rst_file
+        if rst_write:
+            with open(rst_write, mode='wt') as out:
+                # with open(rst_write, mode='wt', encoding='utf-8') as out:
+                out.write('\n'.join(doc))
+        # -----
+
         # -----
         # 5/ get Alignak overall live synthesis
         print("--- get livesynthesis")
-        raw_data = req.get("http://localhost:7770/get_livesynthesis")
+        raw_data = req.get("http://localhost:7770/livesynthesis")
         print("Alignak livesynthesis: %s" % (raw_data.text))
         assert raw_data.status_code == 200
         data = raw_data.json()
@@ -1479,6 +1563,36 @@ class TestDaemonsApi(AlignakTest):
         assert 'livesynthesis' in data['livesynthesis']['scheduler-master']
         livesynthesis = data['livesynthesis']['scheduler-master']['livesynthesis']
         print("LS: %s" % livesynthesis)
+
+        doc = []
+        doc.append(".. _alignak_features/livesynthesis:")
+        doc.append("")
+        doc.append(".. Built from the test_daemons_api.py unit test last run!")
+        doc.append("")
+        doc.append("=====================")
+        doc.append("Alignak livesynthesis")
+        doc.append("=====================")
+        doc.append("")
+        doc.append("")
+        doc.append("On the arbiter endpoint: ``/livesynthesis``")
+        doc.append("")
+        doc.append("::")
+        doc.append("")
+        doc.append("    %s" % json.dumps(data, sort_keys=True, indent=4))
+        doc.append("")
+        doc.append("")
+
+        rst_write = None
+        rst_file = "alignak_livesynthesis.rst"
+        if os.path.exists("../doc/source/api"):
+            rst_write = "../doc/source/api/%s" % rst_file
+        if os.path.exists("../../alignak-doc/source/07_alignak_features/api"):
+            rst_write = "../../alignak-doc/source/07_alignak_features/api/%s" % rst_file
+        if rst_write:
+            with open(rst_write, mode='wt') as out:
+                # with open(rst_write, mode='wt', encoding='utf-8') as out:
+                out.write('\n'.join(doc))
+        # -----
 
         # This function will request the arbiter daemon to stop
         self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7770')

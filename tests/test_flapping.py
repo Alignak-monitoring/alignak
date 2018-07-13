@@ -264,11 +264,13 @@ class TestFlapping(AlignakTest):
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
             ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Crit'),
-            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;notify-service;Crit'),
+            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      'CRITICAL;1;notify-service;Crit'),
             ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;2;Crit'),
             ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;2;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Ok'),
-            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;notify-service;Ok'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                     'OK;0;notify-service;Ok'),
             ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
             ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
@@ -300,7 +302,7 @@ class TestFlapping(AlignakTest):
             ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
             ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;FLAPPINGSTART '
-                     '(OK);notify-service;Ok'),
+                     '(OK);0;notify-service;Ok'),
             ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
             ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
@@ -334,11 +336,13 @@ class TestFlapping(AlignakTest):
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
             ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Crit'),
-            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;notify-service;Crit'),
+            ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                      'CRITICAL;1;notify-service;Crit'),
             ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;2;Crit'),
             ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;2;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Ok'),
-            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;notify-service;Ok'),
+            ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                     'OK;0;notify-service;Ok'),
             ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
             ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
@@ -370,7 +374,7 @@ class TestFlapping(AlignakTest):
             ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;SOFT;2;Ok'),
             ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;FLAPPINGSTART '
-                     '(OK);notify-service;Ok'),
+                     '(OK);0;notify-service;Ok'),
             ('error', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Crit'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Crit'),
             ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
@@ -397,7 +401,7 @@ class TestFlapping(AlignakTest):
                      'Service appears to have stopped flapping (21.5% change < 25.0% threshold)'),
             ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;FLAPPINGSTOP '
-                     '(OK);notify-service;Ok'),
+                     '(OK);0;notify-service;Ok'),
             ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),
             ('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Ok'),

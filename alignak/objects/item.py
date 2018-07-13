@@ -67,6 +67,8 @@ import logging
 from copy import copy
 from six import string_types
 
+from alignak.misc.serialization import serialize
+
 from alignak.property import (StringProp, ListProp, BoolProp, SetProp, DictProp,
                               IntegerProp, ToGuessProp, PythonizeError)
 
@@ -202,8 +204,8 @@ class Item(AlignakObject):
                                      self.get_full_name(), key, val)
                     # After this a macro is always containing a string value!
                 else:
-                    logger.debug("Guessing the property '%s' type because it "
-                                 "is not in %s object properties", key, self.__class__.__name__)
+                    # logger.debug("Guessing the property '%s' type because it "
+                    #              "is not in %s object properties", key, self.__class__.__name__)
                     val = ToGuessProp().pythonize(params[key])
                     logger.debug("Set the property '%s' type as %s", key, type(val))
             except (PythonizeError, ValueError) as expt:
@@ -329,18 +331,11 @@ class Item(AlignakObject):
         # id is not in *_properties
         res = {'uuid': self.uuid}
         for prop in cls.properties:
-            if hasattr(self, prop):
-                if isinstance(cls.properties[prop], SetProp):
-                    res[prop] = list(getattr(self, prop))
-                else:
-                    res[prop] = getattr(self, prop)
-
+            if hasattr(self, prop) and getattr(self, prop, None) is not None:
+                res[prop] = serialize(getattr(self, prop), True)
         for prop in cls.running_properties:
-            if hasattr(self, prop):
-                if isinstance(cls.running_properties[prop], SetProp):
-                    res[prop] = list(getattr(self, prop))
-                else:
-                    res[prop] = getattr(self, prop)
+            if hasattr(self, prop) and getattr(self, prop, None) is not None:
+                res[prop] = serialize(getattr(self, prop), True)
 
         return res
 
@@ -788,23 +783,6 @@ class Items(object):
     def __contains__(self, key):
         return key in self.items
 
-    @staticmethod
-    def get_source(item):  # pragma: no cover, never called
-        """Get source, so with what system we import this item
-
-        TODO: still useful?
-
-        :param item: item object
-        :type item: object
-        :return: name of the source
-        :rtype: str
-        """
-        source = getattr(item, 'imported_from', None)
-        if source:
-            return " in %s" % source
-
-        return ""
-
     def add_error(self, txt):
         """Add a message in the configuration errors list so we can print them
          all in one place
@@ -833,7 +811,7 @@ class Items(object):
         Add items to template if is template, else add in item list
 
         :param items: items list to add
-        :type items: object
+        :type items: alignak.objects.item.Items
         :param index_items: Flag indicating if the items should be indexed on the fly.
         :type index_items: bool
         :return: None
@@ -862,7 +840,7 @@ class Items(object):
         existing is removed for the new to replace it.
 
         :param item: object to check for conflict
-        :type item: object
+        :type item: alignak.objects.item.Item
         :param name: name of the object
         :type name: str
         :return: 'item' parameter modified
@@ -908,7 +886,7 @@ class Items(object):
         Add and index a template into the `templates` container.
 
         :param tpl: The template to add
-        :type tpl: object
+        :type tpl: alignak.objects.item.Item
         :return: None
         """
         tpl = self.index_template(tpl)
@@ -919,7 +897,7 @@ class Items(object):
         Indexes a template by `name` into the `name_to_template` dictionary.
 
         :param tpl: The template to index
-        :type tpl: object
+        :type tpl: alignak.objects.item.Item
         :return: None
         """
         objcls = self.inner_class.my_type
@@ -940,7 +918,7 @@ class Items(object):
         Removes and un-index a template from the `templates` container.
 
         :param tpl: The template to remove
-        :type tpl: object
+        :type tpl: alignak.objects.item.Item
         :return: None
         """
         try:
@@ -954,7 +932,7 @@ class Items(object):
         Unindex a template from the `templates` container.
 
         :param tpl: The template to un-index
-        :type tpl: object
+        :type tpl: alignak.objects.item.Item
         :return: None
         """
         name = getattr(tpl, 'name', '')
@@ -968,7 +946,7 @@ class Items(object):
         Add an item into our containers, and index it depending on the `index` flag.
 
         :param item: object to add
-        :type item: object
+        :type item: alignak.objects.item.Item
         :param index: Flag indicating if the item should be indexed
         :type index: bool
         :return: None
@@ -983,7 +961,7 @@ class Items(object):
         Remove (and un-index) an object
 
         :param item: object to remove
-        :type item: object
+        :type item: alignak.objects.item.Item
         :return: None
         """
         self.unindex_item(item)
@@ -996,7 +974,7 @@ class Items(object):
         then the conflict is managed by the `manage_conflict` method.
 
         :param item: item to index
-        :type item: object
+        :type item: alignak.objects.item.Item
         :return: item modified
         :rtype: object
         """
@@ -1016,7 +994,7 @@ class Items(object):
         """
         Un-index an item from our name_to_item dict.
         :param item: the item to un-index
-        :type item: object
+        :type item: alignak.objects.item.Item
         :return: None
         """
         name_property = getattr(self.__class__, "name_property", None)
@@ -1082,7 +1060,7 @@ class Items(object):
         Link templates
 
         :param item: an item
-        :type item: Item
+        :type item: alignak.objects.item.Item
         :return: None
         """
         tpls = []
@@ -1260,7 +1238,7 @@ class Items(object):
         Link items with contacts items
 
         :param contacts: all contacts object
-        :type contacts: object
+        :type contacts: alignak.objects.contact.Contact
         :return: None
         """
         for i in self:
@@ -1284,7 +1262,7 @@ class Items(object):
         Link with escalations
 
         :param escalations: all escalations object
-        :type escalations: object
+        :type escalations: alignak.objects.escalation.Escalations
         :return: None
         """
         for i in self:
@@ -1308,7 +1286,7 @@ class Items(object):
         Link items with resultmodulations items
 
         :param resultmodulations: all resultmodulations object
-        :type resultmodulations: object
+        :type resultmodulations: alignak.resultmodulation.Resultmodulations
         :return: None
         """
         for i in self:
@@ -1332,7 +1310,7 @@ class Items(object):
         Link items with business impact objects
 
         :param business_impact_modulations: all business impacts object
-        :type business_impact_modulations: object
+        :type business_impact_modulations: alignak.objects.businessmodulation.Businessmodulations
         :return: None
         """
         for i in self:
@@ -1361,7 +1339,7 @@ class Items(object):
         :param item: item where have contact_groups property
         :type item: object
         :param contactgroups: all contactgroups object
-        :type contactgroups: object
+        :type contactgroups: alignak.objects.contactgroup.Contactgroups
         :return: None
         """
         if hasattr(item, 'contact_groups'):
@@ -1392,7 +1370,7 @@ class Items(object):
         Link items with timeperiods items
 
         :param timeperiods: all timeperiods object
-        :type timeperiods: object
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :param prop: property name
         :type prop: str
         :return: None
@@ -1421,7 +1399,7 @@ class Items(object):
         Link checkmodulation object
 
         :param checkmodulations: checkmodulations object
-        :type checkmodulations: object
+        :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
         :return: None
         """
         for i in self:
@@ -1445,7 +1423,7 @@ class Items(object):
         Link macromodulations
 
         :param macromodulations: macromodulations object
-        :type macromodulations: object
+        :type macromodulations: alignak.objects.macromodulation.Macromodulations
         :return: None
         """
         for i in self:
@@ -1469,7 +1447,7 @@ class Items(object):
         Link modules to items
 
         :param modules: Modules object (list of all the modules found in the configuration)
-        :type modules: Modules
+        :type modules: alignak.objects.module.Modules
         :return: None
         """
         for i in self:
@@ -1493,9 +1471,9 @@ class Items(object):
         :param expr: an expression
         :type expr: str
         :param hosts: hosts object (all hosts)
-        :type hosts: object
+        :type hosts: alignak.objects.host.Hosts
         :param hostgroups: hostgroups object (all hostgroups)
-        :type hostgroups: object
+        :type hostgroups: alignak.objects.hostgroup.Hostgroups
         :param look_in: item name where search
         :type look_in: str
         :return: return list of hostgroups
@@ -1523,7 +1501,7 @@ class Items(object):
         :param hgname: hostgroup name
         :type hgname: str
         :param hostgroups: hostgroups object (all hostgroups)
-        :type hostgroups: object
+        :type hostgroups: alignak.objects.hostgroup.Hostgroups
         :return: list of hosts
         :rtype: list
         """
@@ -1545,11 +1523,11 @@ class Items(object):
         Get all hosts of hostgroups and add all in host_name container
 
         :param item: the item object
-        :type item: object
+        :type item: alignak.objects.item.Item
         :param hosts: hosts object
-        :type hosts: object
+        :type hosts: alignak.objects.host.Hosts
         :param hostgroups: hostgroups object
-        :type hostgroups: object
+        :type hostgroups: alignak.objects.hostgroup.Hostgroups
         :return: None
         """
         hnames_list = []
@@ -1661,6 +1639,8 @@ class Items(object):
         Get the property asked in parameter to this object or from defined templates of this
         object
 
+        :param obj: the oject to search the property
+        :type obj: alignak.objects.item.Item
         :param prop: name of property
         :type prop: str
         :return: Value of property of this object or of a template
@@ -1760,6 +1740,8 @@ class Items(object):
         """
         Get custom properties from the templates defined in this object
 
+        :param obj: the oject to search the property
+        :type obj: alignak.objects.item.Item
         :return: list of custom properties
         :rtype: list
         """

@@ -105,7 +105,7 @@ class TestMonitoringLogs(AlignakTest):
                        [('error', 'ACTIVE HOST CHECK: test_host_0;DOWN;2;Host is DOWN'),
                         ('error', 'HOST ALERT: test_host_0;DOWN;HARD;3;Host is DOWN'),
                         ('error', 'HOST EVENT HANDLER: test_host_0;DOWN;HARD;3;eventhandler'),
-                        ('error', 'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;Host is DOWN')])
+                        ('error', 'HOST NOTIFICATION: test_contact;test_host_0;DOWN;1;notify-host;Host is DOWN')])
 
             # Notification not raised - too soon!
             self.check(frozen_datetime, host, 2, 'Host is DOWN',
@@ -121,7 +121,7 @@ class TestMonitoringLogs(AlignakTest):
                        [('info', 'ACTIVE HOST CHECK: test_host_0;UP;3;Host is UP'),
                         ('info', 'HOST ALERT: test_host_0;UP;HARD;3;Host is UP'),
                         ('info', 'HOST EVENT HANDLER: test_host_0;UP;HARD;3;eventhandler'),
-                        ('info', 'HOST NOTIFICATION: test_contact;test_host_0;UP;notify-host;Host is UP')
+                        ('info', 'HOST NOTIFICATION: test_contact;test_host_0;UP;0;notify-host;Host is UP')
                         ])
 
             self.check(frozen_datetime, host, 0, 'Host is UP',
@@ -191,7 +191,7 @@ class TestMonitoringLogs(AlignakTest):
                          'SERVICE EVENT HANDLER: test_host_0;test_ok_0;WARNING;HARD;2;eventhandler'),
                         ('warning',
                          'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                         'WARNING;notify-service;Service is WARNING'),
+                         'WARNING;1;notify-service;Service is WARNING'),
                         ])
     
             # Notification not raised - too soon!
@@ -213,8 +213,8 @@ class TestMonitoringLogs(AlignakTest):
                         ('info',
                          'SERVICE EVENT HANDLER: test_host_0;test_ok_0;OK;HARD;2;eventhandler'),
                         ('info',
-                         'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;notify-service;'
-                         'Service is OK')
+                         'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;0;'
+                         'notify-service;Service is OK')
                         ])
     
             self.check(frozen_datetime, svc, 0, 'Service is OK',
@@ -240,7 +240,7 @@ class TestMonitoringLogs(AlignakTest):
                          'SERVICE EVENT HANDLER: test_host_0;test_ok_0;CRITICAL;HARD;2;eventhandler'),
                         ('error',
                          'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                            'CRITICAL;notify-service;Service is CRITICAL')
+                            'CRITICAL;1;notify-service;Service is CRITICAL')
                         ])
     
             # Service goes OK
@@ -252,7 +252,8 @@ class TestMonitoringLogs(AlignakTest):
                         ('info',
                          'SERVICE EVENT HANDLER: test_host_0;test_ok_0;OK;HARD;2;eventhandler'),
                         ('info',
-                         'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;notify-service;Service is OK')
+                         'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
+                         'OK;0;notify-service;Service is OK')
                         ])
     
     
@@ -482,7 +483,7 @@ class TestMonitoringLogs(AlignakTest):
             ('error',
              'HOST ALERT: test_host_0;DOWN;HARD;3;Host is dead'),
             ('error',
-             'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;Host is dead')
+             'HOST NOTIFICATION: test_contact;test_host_0;DOWN;1;notify-host;Host is dead')
         ]
         if log_passive_checks:
             expected_logs.extend([

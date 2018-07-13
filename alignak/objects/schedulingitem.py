@@ -495,9 +495,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         for prop in ['check_command', 'event_handler', 'snapshot_command', 'business_rule',
                      'acknowledgement']:
-            if getattr(self, prop, None) is None:
-                res[prop] = None
-            else:
+            res[prop] = None
+            if getattr(self, prop, None) is not None:
                 res[prop] = getattr(self, prop).serialize()
 
         return res
@@ -990,6 +989,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         Check if all dependencies are down, if yes set this object
         as unreachable.
 
+        todo: this function do not care about execution_failure_criteria!
+
         :param hosts: hosts objects, used to get object in act_depend_of
         :type hosts: alignak.objects.host.Hosts
         :param services: services objects,  used to get object in act_depend_of
@@ -1209,8 +1210,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # If not force_time, try to schedule
         if force_time is None:
-
-            check_period = timeperiods[self.check_period]
+            check_period = None
+            if getattr(self, 'check_period', None) is not None:
+                check_period = timeperiods[self.check_period]
 
             # Do not calculate next_chk based on current time, but
             # based on the last check execution time.
@@ -1608,8 +1610,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                  self.get_full_name(), chk.exit_status, chk.output)
 
         # ============ MANAGE THE CHECK ============ #
-        # Not OK, waitconsume and have dependencies, put this check in waitdep, create if
-        # necessary the check of dependent items and nothing else ;)
+        # Check is not OK, waiting to consume the results but it has some dependencies
+        # We put this check in waitdep state, and we create the checks of dependent items
+        # and nothing else ;)
         if chk.exit_status != 0 and chk.status == ACT_STATUS_WAIT_CONSUME and self.act_depend_of:
             chk.status = ACT_STATUS_WAIT_DEPEND
             # Make sure the check know about his dep
@@ -1683,6 +1686,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Used to know if a notification is raised or not
         enable_action = True
 
+        # This check was waiting for a check of items it depends
         if chk.status == ACT_STATUS_WAIT_DEPEND:
             # Check dependencies
             enable_action = self.is_enable_action_dependent(hosts, services)
@@ -2800,7 +2804,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 state = 3
                 check.output = u'Malformed service internal check'
             else:
-                state = check_result[0]
+                state = 3
+                try:
+                    state = int(check_result[1])
+                except ValueError:
+                    pass
                 check.output = u'Service internal check result: %d' % state
                 if len(check_result) > 1:
                     check.output = check_result[1]
@@ -3084,8 +3092,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.state_id_before_impact = self.state_id
             # This flag will know if we override the impact state
             self.state_changed_since_impact = False
-            self.state = u'UNREACHABLE'
-            self.state_id = 4
+            # Set unreachable
+            self.set_unreachable()
 
     def unset_impact_state(self):
         """Unset impact, only if impact state change is set in configuration
@@ -3111,10 +3119,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         :return:None
         """
-        now = time.time()
         self.state_id = 4
-        self.state = 'UNREACHABLE'
-        self.last_time_unreachable = int(now)
+        self.state = u'UNREACHABLE'
+        self.last_time_unreachable = int(time.time())
 
     def manage_stalking(self, check):  # pragma: no cover, base function
         """Check if the item need stalking or not (immediate recheck)

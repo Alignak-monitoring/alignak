@@ -351,7 +351,7 @@ class BaseModule(object):
 
         if sig == signal.SIGHUP:
             # if SIGHUP, reload configuration in arbiter
-            logger.info("Module are not able to reload their configuration. "
+            logger.info("Modules are not able to reload their configuration. "
                         "Stopping the module...")
 
         logger.info("Request to stop the module")

@@ -139,7 +139,7 @@ class MacroModulations(Items):
         Link with timeperiod
 
         :param timeperiods: Timeperiod object
-        :type timeperiods: object
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: None
         """
         self.linkify_with_timeperiods(timeperiods, 'modulation_period')

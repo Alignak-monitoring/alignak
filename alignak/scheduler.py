@@ -1452,6 +1452,10 @@ class Scheduler(object):  # pylint: disable=R0902
         :type data: dict
         :return: None
         """
+        if 'hosts' not in data:
+            logger.warning("Retention data are not correct, no 'hosts' property!")
+            return
+
         for host_name in data['hosts']:
             # We take the dict of our value to load
             host = self.hosts.find_by_name(host_name)

@@ -84,7 +84,8 @@ class TestConfigClassBase(AlignakTest):
             'OBJECTCACHEFILE': '', 'COMMENTDATAFILE': '', 'TEMPPATH': '', 'SERVICEPERFDATAFILE': '',
             'RESOURCEFILE': '', 'COMMANDFILE': '', 'DOWNTIMEDATAFILE': '',
             'HOSTPERFDATAFILE': '', 'LOGFILE': '', 'TEMPFILE': '', 'RETENTIONDATAFILE': '',
-            'STATUSDATAFILE': ''
+            'STATUSDATAFILE': '',
+            'RETENTION_FILE': 'state_retention_file'
         }
         # The 64 "USER" macros.
         for i in range(1, 63):

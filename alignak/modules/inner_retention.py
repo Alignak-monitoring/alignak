@@ -137,8 +137,8 @@ class InnerRetention(BaseModule):
                 logger.warning("Error when loading retention data from %s", self.retention_file)
                 logger.exception(exp)
             else:
-                for host in response:
-                    hostname = host['host']
+                for host in response.values():
+                    hostname = host['name']
                     service_key = 'key'
                     if 'retention_services' in host:
                         service_key = 'retention_services'

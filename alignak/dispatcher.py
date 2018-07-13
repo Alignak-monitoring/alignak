@@ -450,7 +450,7 @@ class Dispatcher(object):
         List is ordered as: alive first, then spare (if any), then dead scheduler links
 
         :param realm: realm we want scheduler from
-        :type realm: object
+        :type realm: alignak.objects.realm.Realm
         :return: sorted scheduler list
         :rtype: list[alignak.objects.schedulerlink.SchedulerLink]
         """

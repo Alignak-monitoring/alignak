@@ -22,6 +22,7 @@
 This file test retention
 """
 
+import os
 import time
 import json
 import pprint
@@ -66,6 +67,7 @@ class TestRetention(AlignakTest):
         self._scheduler.update_recurrent_works_tick({'tick_check_freshness': 1})
 
         self.scheduler_loop(10, [])
+        time.sleep(1)
 
         expected_logs = [
             ('info', 'RETENTION LOAD: scheduler-master scheduler')
@@ -73,12 +75,17 @@ class TestRetention(AlignakTest):
         self.check_monitoring_events_log(expected_logs)
 
     def test_scheduler_retention(self):
-        """ Test restore retention data
+        """ Test save and restore retention data
 
         :return: None
         """
+        # Delete an hypothetic retention file...
+        if os.path.exists('/tmp/alignak-livestate.json'):
+            os.remove('/tmp/alignak-livestate.json')
+
+
         self.setup_with_file('cfg/cfg_default_retention.cfg')
-        # Default configuration has no retention configured
+        # Retention is configured
         assert self._scheduler.pushed_conf.retention_update_interval == 5
 
         router = self._scheduler.hosts.find_by_name("test_router_0")
@@ -90,25 +97,24 @@ class TestRetention(AlignakTest):
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self._scheduler.services.find_srv_by_name_and_hostname(
-            "test_host_0", "test_ok_0")
-        # To make tests quicker we make notifications send very quickly
-        svc.notification_interval = 0.001
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
         self.scheduler_loop(1, [[router, 0, 'UP and OK']])
-        time.sleep(0.1)
-        self.scheduler_loop(1, [[host, 2, 'DOWN!'], [svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
-        self.scheduler_loop(1, [[host, 2, 'DOWN!'], [svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
-        self.scheduler_loop(1, [[host, 2, 'DOWN!'], [svc, 2, 'CRITICAL']])
+        self.scheduler_loop(3, [[host, 2, 'DOWN!']])
         time.sleep(1.0)
         self.scheduler_loop(1)
+        # time.sleep(1.0)
+        # self.scheduler_loop(1)
+
+        assert host.state_type == 'HARD'
+        assert host.state == 'DOWN'
+        assert svc.state_type == 'HARD'
+        assert svc.state == 'UNREACHABLE'   # Because it is impacted by its host which is DOWN
 
         now = int(time.time())
-        # downtime host
+        # Scheduler a downtime for the host
         excmd = '[%d] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;test_contact;My downtime' \
                 % (now, now, now + 1200)
         self._scheduler.run_external_commands([excmd])
@@ -117,51 +123,54 @@ class TestRetention(AlignakTest):
         expected_logs = [
             ("info", "RETENTION LOAD: scheduler-master scheduler"),
             ("info", "ACTIVE HOST CHECK: test_router_0;UP;0;UP and OK"),
-            ("error", "ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;0;CRITICAL"),
-            ("error", "SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;CRITICAL"),
-            ("error", "SERVICE EVENT HANDLER: test_host_0;test_ok_0;CRITICAL;SOFT;1;eventhandler"),
             ("error", "ACTIVE HOST CHECK: test_host_0;DOWN;0;DOWN!"),
             ("error", "HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN!"),
             ("error", "ACTIVE HOST CHECK: test_host_0;DOWN;1;DOWN!"),
             ("error", "HOST ALERT: test_host_0;DOWN;SOFT;2;DOWN!"),
-            ("error", "ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;CRITICAL"),
-            ("error", "SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;CRITICAL"),
-            ("error", "SERVICE EVENT HANDLER: test_host_0;test_ok_0;CRITICAL;HARD;2;eventhandler"),
             ("error", "ACTIVE HOST CHECK: test_host_0;DOWN;2;DOWN!"),
             ("error", "HOST ALERT: test_host_0;DOWN;HARD;3;DOWN!"),
-            ("error", "ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;2;CRITICAL"),
-            ("error", "HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;DOWN!"),
+            ("error", "HOST NOTIFICATION: test_contact;test_host_0;DOWN;1;notify-host;DOWN!"),
             ("info", "EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;test_contact;My downtime" % (now, now, now + 1200)),
             ("info", "HOST DOWNTIME ALERT: test_host_0;STARTED; Host has entered a period of scheduled downtime"),
             ("info", "HOST ACKNOWLEDGE ALERT: test_host_0;STARTED; Host problem has been acknowledged"),
             ("info", "SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;STARTED; Service problem has been acknowledged"),
-            ("info", "HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (DOWN);notify-host;DOWN!")
+            ("info", "HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (DOWN);1;notify-host;DOWN!")
         ]
         self.check_monitoring_events_log(expected_logs)
+        # The host is DOWN and downtimed...
 
-        assert 2 == len(host.comments)
+        host_notifications = []
+        print("Notifications:")
+        for notification_uuid, notification in host.notifications_in_progress.items():
+            print("- %s" % (notification))
+            host_notifications.append(notification)
+        # Master notification
+        # Notification for host problem
+        # Notification for host downtime
         assert 3 == len(host.notifications_in_progress)
 
         host_comments = []
         host_comment_id = None
+        print("Comments (host):")
         for comm_uuid, comment in host.comments.items():
+            print("- %s" % (comment))
             host_comments.append(comment.comment)
             if comment.entry_type == 4:
                 host_comment_id = comment.uuid
-        print("Comments: %s" % host_comments)
-        # ['Acknowledged because of an host downtime',
-        # 'This host has been scheduled for fixed downtime from
-        # 2018-06-05 07:22:15 to 2018-06-05 07:42:15.
-        # Notifications for the host will not be sent out during that time period.']
+        # Comment for host problem
+        # Comment for host ack because of the downtime
+        assert 2 == len(host.comments)
 
         service_comments = []
         service_comment_id = None
+        print("Comments (service):")
         for comm_uuid, comment in svc.comments.items():
+            print("- %s" % (comment))
             service_comments.append(comment.comment)
             if comment.entry_type == 4:
                 service_comment_id = comment.uuid
-        print("Comments (service): %s" % service_comments)
-        # ['Acknowledged because of an host downtime']
+        # Comment for svc ack because of the host downtime
+        assert 1 == len(svc.comments)
 
         assert True == host.problem_has_been_acknowledged
         assert host.acknowledgement.__dict__ == {
@@ -211,8 +220,8 @@ class TestRetention(AlignakTest):
         print('Hosts retention:')
         for host_name in retention['hosts']:
             try:
-                print('- %s:' % host_name)
-                pprint.pprint(retention['hosts'][host_name], indent=3)
+                # print('- %s:' % host_name)
+                # pprint.pprint(retention['hosts'][host_name], indent=3)
                 t = json.dumps(retention['hosts'][host_name])
             except Exception as err:
                 assert False, 'Json dumps impossible: %s' % str(err)
@@ -229,38 +238,72 @@ class TestRetention(AlignakTest):
             assert "downtimes" in t
             assert "acknowledgement" in t
 
-        # Test that after get retention does not have broke anything
-        self.scheduler_loop(1, [[host, 2, 'DOWN'], [svc, 2, 'CRITICAL']])
+        self._scheduler.update_recurrent_works_tick({'tick_update_retention': 1})
+
+        # Test that after get retention nothing got broken
+        self.scheduler_loop(1, [[host, 2, 'DOWN!']])
         time.sleep(0.1)
+        expected_logs += [
+            ("info", "RETENTION SAVE: scheduler-master scheduler"),
+            ("error", "ACTIVE HOST CHECK: test_host_0;DOWN;3;DOWN!"),
+        ]
+        self.check_monitoring_events_log(expected_logs)
+        assert os.path.exists('/tmp/alignak-livestate.json')
+        with open('/tmp/alignak-livestate.json', "r") as fd:
+            retention_check = json.load(fd)
+        pprint.pprint(retention_check)
+        for host_check in retention_check.values():
+            assert 'name' in host_check
 
         # ************** test the restoration of retention ************** #
         # new conf
         self.setup_with_file('cfg/cfg_default.cfg')
+
         hostn = self._scheduler.hosts.find_by_name("test_host_0")
         hostn.checks_in_progress = []
         hostn.act_depend_of = []  # ignore the router
         hostn.event_handler_enabled = False
 
-        svcn = self._scheduler.services.find_srv_by_name_and_hostname(
-            "test_host_0", "test_ok_0")
-        # To make tests quicker we make notifications send very quickly
-        svcn.notification_interval = 0.001
+        svcn = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svcn.checks_in_progress = []
         svcn.act_depend_of = []  # no hostchecks on critical checkresults
 
         self.scheduler_loop(1, [[hostn, 0, 'UP'], [svcn, 1, 'WARNING']])
         time.sleep(1.0)
         self.scheduler_loop(1)
+
+        expected_logs = [
+            ('info', 'ACTIVE HOST CHECK: test_host_0;UP;0;UP'),
+            ('warning', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;WARNING;0;WARNING'),
+            ('warning', 'SERVICE ALERT: test_host_0;test_ok_0;WARNING;SOFT;1;WARNING'),
+            ('warning', 'SERVICE EVENT HANDLER: test_host_0;test_ok_0;WARNING;SOFT;1;eventhandler')
+        ]
+        self.check_monitoring_events_log(expected_logs)
+
+        # Host and service are freshly loaded without retention data !
         assert 0 == len(hostn.comments)
         assert 0 == len(hostn.notifications_in_progress)
+
+        assert hostn.state_type == 'HARD'
+        assert hostn.state == 'UP'
+        assert svcn.state_type == 'SOFT'
+        assert svcn.state == 'WARNING'
 
         self._main_broker.broks = []
         self._scheduler.restore_retention_data(retention)
 
+        # Host and service should be restored with the former states
+        assert hostn.state_type == 'HARD'
+        assert hostn.state == 'DOWN'
+        assert svcn.state_type == 'HARD'
+        assert svcn.state == 'UNREACHABLE'
+
         assert hostn.last_state == 'DOWN'
-        assert svcn.last_state == 'CRITICAL'
+        assert svcn.last_state == 'PENDING' # Never tested!
 
         # Not the same identifier
+        print(host.uuid)
+        print(hostn.uuid)
         assert host.uuid != hostn.uuid
 
         # check downtimes (only for host and not for service)

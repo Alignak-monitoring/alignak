@@ -261,13 +261,13 @@ class Service(SchedulingItem):
         :return: None
         """
         if self.initial_state == 'w':
-            self.state = 'WARNING'
+            self.state = u'WARNING'
         elif self.initial_state == 'u':
-            self.state = 'UNKNOWN'
+            self.state = u'UNKNOWN'
         elif self.initial_state == 'c':
-            self.state = 'CRITICAL'
+            self.state = u'CRITICAL'
         elif self.initial_state == 'x':
-            self.state = 'UNREACHABLE'
+            self.state = u'UNREACHABLE'
 
     @property
     def unique_key(self):  # actually only used for (un)indexitem() via name_property..
@@ -611,9 +611,9 @@ class Service(SchedulingItem):
         :return: None
         """
         log_level = 'info'
-        if self.state in ['WARNING', 'UNREACHABLE']:
+        if self.state in [u'WARNING', u'UNREACHABLE']:
             log_level = 'warning'
-        elif self.state == 'CRITICAL':
+        elif self.state == u'CRITICAL':
             log_level = 'error'
         brok = make_monitoring_log(
             log_level, 'ACTIVE SERVICE CHECK: %s;%s;%s;%d;%s' % (self.host_name, self.get_name(),
@@ -702,23 +702,22 @@ class Service(SchedulingItem):
                 log_level = 'error'
 
         brok = make_monitoring_log(
-            log_level, "SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s" % (
-                contact.get_name(),
-                host_ref.get_name(), self.get_name(), state,
-                command.get_name(), self.output
+            log_level, "SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s;%s" % (
+                contact.get_name(), host_ref.get_name(), self.get_name(), state,
+                notif.notif_nb, command.get_name(), self.output
             )
         )
         self.broks.append(brok)
 
         if 'ALIGNAK_LOG_NOTIFICATIONS' in os.environ:
             if os.environ['ALIGNAK_LOG_NOTIFICATIONS'] == 'WARNING':
-                logger.warning("SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s", contact.get_name(),
-                               host_ref.get_name(), self.get_name(), state,
-                               command.get_name(), self.output)
+                logger.warning("SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s;%s",
+                               contact.get_name(), host_ref.get_name(), self.get_name(), state,
+                               notif.notif_nb, command.get_name(), self.output)
             else:
-                logger.info("SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s", contact.get_name(),
-                            host_ref.get_name(), self.get_name(), state,
-                            command.get_name(), self.output)
+                logger.info("SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s",
+                            contact.get_name(), host_ref.get_name(), self.get_name(), state,
+                            notif.notif_nb, command.get_name(), self.output)
 
     def raise_event_handler_log_entry(self, command):
         """Raise SERVICE EVENT HANDLER entry (critical level)
@@ -1550,7 +1549,7 @@ class Services(SchedulingItems):
     def clean(self):
         """Remove services without host object linked to
 
-        Note that this sould not happen!
+        Note that this should not happen!
 
         :return: None
         """

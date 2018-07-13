@@ -192,9 +192,9 @@ class TestEscalations(AlignakTest):
                 ('error',
                  'SERVICE ALERT: test_host_0_esc;test_svc_esc;CRITICAL;HARD;2;BAD'),
                 ('error',
-                 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc;CRITICAL;notify-service;BAD'),
+                 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc;CRITICAL;1;notify-service;BAD'),
                 ('error',
-                 'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc;CRITICAL;notify-service;BAD'),
+                 'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc;CRITICAL;1;notify-service;BAD'),
             ]
             self.check_monitoring_events_log(expected_logs, dump=True)
 
@@ -221,7 +221,7 @@ class TestEscalations(AlignakTest):
                 ('error',
                  'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;2;BAD'),
                 ('error',
-                 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;CRITICAL;notify-service;BAD')
+                 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;CRITICAL;2;notify-service;BAD')
             ]
             self.check_monitoring_events_log(expected_logs)
 
@@ -245,7 +245,7 @@ class TestEscalations(AlignakTest):
             expected_logs += [
                 ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;2;BAD'),
                 ('error', 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
-                           'CRITICAL;notify-service;BAD')
+                           'CRITICAL;3;notify-service;BAD')
             ]
             self.check_monitoring_events_log(expected_logs)
 
@@ -269,7 +269,7 @@ class TestEscalations(AlignakTest):
             expected_logs += [
                 ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;2;BAD'),
                 ('error', 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
-                           'CRITICAL;notify-service;BAD')
+                           'CRITICAL;4;notify-service;BAD')
             ]
             self.check_monitoring_events_log(expected_logs)
 
@@ -293,7 +293,7 @@ class TestEscalations(AlignakTest):
             expected_logs += [
                 ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;2;BAD'),
                 ('error', 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
-                           'CRITICAL;notify-service;BAD'),
+                           'CRITICAL;4;notify-service;BAD'),
             ]
             self.check_monitoring_events_log(expected_logs)
 
@@ -317,7 +317,7 @@ class TestEscalations(AlignakTest):
             expected_logs += [
                 ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;2;BAD'),
                 ('error', 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc;'
-                           'CRITICAL;notify-service;BAD')
+                           'CRITICAL;5;notify-service;BAD')
             ]
             self.check_monitoring_events_log(expected_logs)
 
@@ -346,7 +346,7 @@ class TestEscalations(AlignakTest):
                 expected_logs += [
                     ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;CRITICAL;2;BAD'),
                     ('error', 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc;'
-                               'CRITICAL;notify-service;BAD')
+                               'CRITICAL;%d;notify-service;BAD' % (7 + i))
                 ]
                 self.check_monitoring_events_log(expected_logs)
 
@@ -365,13 +365,13 @@ class TestEscalations(AlignakTest):
                 ('info', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;OK;2;OK'),
                 ('info', 'SERVICE ALERT: test_host_0_esc;test_svc_esc;OK;HARD;2;OK'),
                 ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc;'
-                          'OK;notify-service;OK'),
+                          'OK;0;notify-service;OK'),
                 ('info', 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc;'
-                          'OK;notify-service;OK'),
+                          'OK;0;notify-service;OK'),
                 ('info', 'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc;'
-                          'OK;notify-service;OK'),
+                          'OK;0;notify-service;OK'),
                 ('info', 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc;'
-                          'OK;notify-service;OK'),
+                          'OK;0;notify-service;OK'),
                 ('info', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc;OK;1;OK')
             ]
             self.check_monitoring_events_log(expected_logs)
@@ -508,9 +508,9 @@ class TestEscalations(AlignakTest):
                 ('error',
                  'SERVICE ALERT: test_host_0_esc;test_svc_esc_time;CRITICAL;SOFT;1;BAD'),
                 ('error',
-                 'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc_time;CRITICAL;notify-service;BAD'),
+                 'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc_time;CRITICAL;1;notify-service;BAD'),
                 ('error',
-                 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;CRITICAL;notify-service;BAD'),
+                 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;CRITICAL;1;notify-service;BAD'),
             ]
             self.check_monitoring_events_log(expected_logs)
 
@@ -542,7 +542,7 @@ class TestEscalations(AlignakTest):
                 # ('info',
                 #  'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;Host assumed to be UP'),
                 ('error',
-                 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc_time;CRITICAL;notify-service;BAD'),
+                 'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc_time;CRITICAL;2;notify-service;BAD'),
             ]
             self.check_monitoring_events_log(expected_logs)
 
@@ -569,7 +569,7 @@ class TestEscalations(AlignakTest):
                 ('error',
                  'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;2;BAD'),
                 ('error',
-                 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;CRITICAL;notify-service;BAD'),
+                 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;CRITICAL;3;notify-service;BAD'),
             ]
             self.check_monitoring_events_log(expected_logs)
 
@@ -595,7 +595,7 @@ class TestEscalations(AlignakTest):
             expected_logs += [
                 ('error', 'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;2;BAD'),
                 ('error', 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;'
-                           'CRITICAL;notify-service;BAD'),
+                          'CRITICAL;3;notify-service;BAD'),
                 # ('info',
                 #  'ACTIVE HOST CHECK: test_host_0_esc;UP;HARD;1;Host assumed to be UP'),
             ]
@@ -628,7 +628,7 @@ class TestEscalations(AlignakTest):
                      'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;2;BAD'),
                     ('error',
                      'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;'
-                     'CRITICAL;notify-service;BAD'),
+                     'CRITICAL;%d;notify-service;BAD' % (5 + i)),
                 ]
                 self.check_monitoring_events_log(expected_logs)
 
@@ -657,10 +657,10 @@ class TestEscalations(AlignakTest):
                  'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;CRITICAL;2;BAD'),
                 ('error',
                  'SERVICE NOTIFICATION: all_services_1_hour;test_host_0_esc;test_svc_esc_time;'
-                 'CRITICAL;notify-service;BAD'),
+                 'CRITICAL;15;notify-service;BAD'),
                 ('error',
                  'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;'
-                 'CRITICAL;notify-service;BAD'),
+                 'CRITICAL;15;notify-service;BAD'),
             ]
             self.check_monitoring_events_log(expected_logs)
 
@@ -682,20 +682,20 @@ class TestEscalations(AlignakTest):
                  'ACTIVE SERVICE CHECK: test_host_0_esc;test_svc_esc_time;OK;2;OK'),
                 ('info',
                  'SERVICE ALERT: test_host_0_esc;test_svc_esc_time;OK;HARD;2;OK'),
-                ('error',
+                ('info',
                  'SERVICE NOTIFICATION: all_services_1_hour;test_host_0_esc;test_svc_esc_time;'
-                 'CRITICAL;notify-service;BAD'),
+                 'OK;0;notify-service;OK'),
                 ('info',
-                 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;OK;'
-                 'notify-service;OK'),
+                 'SERVICE NOTIFICATION: test_contact;test_host_0_esc;test_svc_esc_time;'
+                 'OK;0;notify-service;OK'),
                 ('info',
-                 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;OK;'
-                 'notify-service;OK'),
+                 'SERVICE NOTIFICATION: level3;test_host_0_esc;test_svc_esc_time;'
+                 'OK;0;notify-service;OK'),
                 ('info',
                  'SERVICE NOTIFICATION: level2;test_host_0_esc;test_svc_esc_time;'
-                 'OK;notify-service;OK'),
+                 'OK;0;notify-service;OK'),
                 ('info',
                  'SERVICE NOTIFICATION: level1;test_host_0_esc;test_svc_esc_time;'
-                 'OK;notify-service;OK')
+                 'OK;0;notify-service;OK')
             ]
             self.check_monitoring_events_log(expected_logs)

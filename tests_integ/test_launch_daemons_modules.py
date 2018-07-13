@@ -40,24 +40,24 @@ class TestLaunchDaemonsModules(AlignakTest):
     def setUp(self):
         super(TestLaunchDaemonsModules, self).setUp()
 
-        # copy the default shipped configuration files in /tmp/etc and change the root folder
-        # used by the daemons for pid and log files in the alignak.ini file
-        if os.path.exists('/tmp/etc/alignak'):
-            shutil.rmtree('/tmp/etc/alignak')
-
-        if os.path.exists('/tmp/alignak.log'):
-            os.remove('/tmp/alignak.log')
-
-        if os.path.exists('/tmp/alignak-events.log'):
-            os.remove('/tmp/alignak-events.log')
-
-        print("Preparing configuration...")
-        shutil.copytree('../etc', '/tmp/etc/alignak')
-        files = ['/tmp/etc/alignak/alignak.ini']
-        replacements = {
-            '_dist=/usr/local/': '_dist=/tmp'
-        }
-        self._files_update(files, replacements)
+        # # copy the default shipped configuration files in /tmp/etc and change the root folder
+        # # used by the daemons for pid and log files in the alignak.ini file
+        # if os.path.exists('/tmp/etc/alignak'):
+        #     shutil.rmtree('/tmp/etc/alignak')
+        #
+        # if os.path.exists('/tmp/alignak.log'):
+        #     os.remove('/tmp/alignak.log')
+        #
+        # if os.path.exists('/tmp/alignak-events.log'):
+        #     os.remove('/tmp/alignak-events.log')
+        #
+        # print("Preparing configuration...")
+        # shutil.copytree('../etc', '/tmp/etc/alignak')
+        # files = ['/tmp/etc/alignak/alignak.ini']
+        # replacements = {
+        #     '_dist=/usr/local/': '_dist=/tmp'
+        # }
+        # self._files_update(files, replacements)
 
         # Clean the former existing pid and log files
         print("Cleaning pid and log files...")

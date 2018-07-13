@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+ # -*- coding: utf-8 -*-
 #
 # Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
@@ -130,7 +130,7 @@ class Servicegroup(Itemgroup):
         Get all services of this servicegroup and add it in members container
 
         :param servicegroups: servicegroups object
-        :type servicegroups: object
+        :type servicegroups: alignak.objects.servicegroup.Servicegroups
         :return: return empty string or list of members
         :rtype: str or list
         """
@@ -178,9 +178,9 @@ class Servicegroups(Itemgroups):
         Link services with host
 
         :param hosts: hosts object
-        :type hosts: object
+        :type hosts: alignak.objects.host.Hosts
         :param services: services object
-        :type services: object
+        :type services: alignak.objects.service.Services
         :return: None
         """
         self.linkify_sg_by_srv(hosts, services)
@@ -193,9 +193,9 @@ class Servicegroups(Itemgroups):
         not service one
 
         :param hosts: hosts object
-        :type hosts: object
+        :type hosts: alignak.objects.host.Hosts
         :param services: services object
-        :type services: object
+        :type services: alignak.objects.service.Services
         :return: None
         """
         for servicegroup in self:

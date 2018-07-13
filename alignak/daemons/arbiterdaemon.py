@@ -121,8 +121,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.daemons_last_reachable_check = 0
         self.my_daemons = {}
 
-        # My report monitor interface
+        # My report monitor interface and status
         self.my_monitor = None
+        self.my_status = 0
 
         super(Arbiter, self).__init__(kwargs.get('daemon_name', 'Default-Arbiter'), **kwargs)
 
@@ -1546,8 +1547,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             self.wait_for_master_death()
             return
 
-        if self.alignak_monitor and (self.loop_count % self.alignak_monitor_period == 1):
-            self.push_passive_check(details=True)
+        if self.loop_count % self.alignak_monitor_period == 1:
+            self.get_alignak_status(details=True)
 
         # Maybe an external process requested Alignak stop...
         if self.kill_request:
@@ -1806,7 +1807,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             if not satellite.active:
                 continue
 
-            if 'problems' in satellite.statistics:
+            if satellite.statistics and 'problems' in satellite.statistics:
                 res['problems'][satellite.name] = {
                     '_freshness': satellite.statistics['_freshness'],
                     'problems': satellite.statistics['problems']
@@ -1872,14 +1873,14 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     'livesynthesis': satellite.statistics['livesynthesis']
                 }
                 # Cumulated live synthesis
-                for prop in res['livesynthesis']['_overall']:
+                for prop in res['livesynthesis']['_overall']['livesynthesis']:
                     if prop in satellite.statistics['livesynthesis']:
                         res['livesynthesis']['_overall']['livesynthesis'][prop] += \
                             satellite.statistics['livesynthesis'][prop]
 
         return res
 
-    def push_passive_check(self, details=False):
+    def get_alignak_status(self, details=False):
         # pylint: disable=too-many-locals
         """Push the alignak overall state as a passive check
 
@@ -2020,6 +2021,22 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 ][state],
                 "long_output": '\n'.join(long_output)
             })
+            log_level = 'info'
+            if state == 1:  # DOWN
+                log_level = 'error'
+            if state == 2:  # UNREACHABLE
+                log_level = 'warning'
+            if self.conf.log_alignak_checks or state > 0:
+                self.add(make_monitoring_log(log_level, 'ALIGNAK CHECK;%s;%d;%s;%s' % (
+                    self.alignak_name, state, res['livestate']['output'],
+                    res['livestate']['long_output']
+                )))
+            if self.my_status != state:
+                self.my_status = state
+                self.add(make_monitoring_log(log_level, 'ALIGNAK ALERT;%s;%d;%s;%s' % (
+                    self.alignak_name, state, res['livestate']['output'],
+                    res['livestate']['long_output']
+                )))
 
         if self.alignak_monitor:
             logger.debug("Pushing Alignak passive check to %s: %s", self.alignak_monitor, res)
@@ -2035,6 +2052,13 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             logger.debug("Monitor reporting result: %s", result)
         else:
             logger.debug("No configured Alignak monitor to receive: %s", res)
+
+        # Send our own events to the Alignak logger
+        for event in self.events:
+            event.prepare()
+            make_monitoring_log(event.data['level'], event.data['message'],
+                                timestamp=event.creation_time, to_logger=True)
+        self.events = []
 
         return res
 

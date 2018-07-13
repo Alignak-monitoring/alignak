@@ -1048,22 +1048,23 @@ class TestDependencies(AlignakTest):
         host.checks_in_progress = []
         host.max_check_attempts = 1
         host.event_handler_enabled = False
+        print("%s depends of %s" % (host.get_full_name(), host.act_depend_of))
 
-        svc1 = self._scheduler.services.find_srv_by_name_and_hostname(
-            "test_host_00", "test_ok_0")
+        svc1 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_0")
         # To make tests quicker we make notifications send very quickly
         svc1.notification_interval = 20
         svc1.checks_in_progress = []
         svc1.max_check_attempts = 1
         svc1.event_handler_enabled = False
+        print("%s depends of %s" % (svc1.get_full_name(), svc1.act_depend_of))
 
-        svc2 = self._scheduler.services.find_srv_by_name_and_hostname(
-            "test_host_00", "test_ok_1")
+        svc2 = self._scheduler.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_1")
         # To make tests quicker we make notifications send very quickly
         svc2.notification_interval = 20
         svc2.checks_in_progress = []
         svc2.max_check_attempts = 1
         svc2.event_handler_enabled = False
+        print("%s depends of %s" % (svc2.get_full_name(), svc2.act_depend_of))
 
         # # notification_interval is in minute, configure to have one per minute
         # svc.notification_interval = 1

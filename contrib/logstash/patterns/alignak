@@ -25,6 +25,9 @@ ALIGNAK_TIME \[%{DATA:[alignak][timestamp]}\]
 ### -----
 ### This section defines patterns for each log event type
 ##################################################################################
+ALIGNAK_CHECK ALIGNAK CHECK
+ALIGNAK_ALERT ALIGNAK ALERT
+
 ALIGNAK_TYPE_CURRENT_SERVICE_STATE CURRENT SERVICE STATE
 ALIGNAK_TYPE_CURRENT_HOST_STATE CURRENT HOST STATE
 
@@ -81,6 +84,10 @@ ALIGNAK_TYPE_EXTERNAL_COMMAND EXTERNAL COMMAND
 ### - [alignak][message] is the remaining event information
 ##################################################################################
 
+# [1510657614] INFO: ALIGNAK CHECK;My Alignak;0;All my daemons are up and running.;broker-master - daemon is alive and reachable.\npoller-master - daemon is alive and reachable.\nreactionner-master - daemon is alive and reachable.\nreceiver-master - daemon is alive and reachable.\nscheduler-master - daemon is alive and reachable.
+ALIGNAK_CHECK %{ALIGNAK_CHECK:[alignak][event]}: %{DATA:[alignak][alignak_name]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][check_result]}
+ALIGNAK_ALERT %{ALIGNAK_ALERT:[alignak][event]}: %{DATA:[alignak][alignak_name]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][check_result]}
+
 # [1510657614] INFO: CURRENT SERVICE STATE: simulated_host_49;dev_Reader;UNREACHABLE;HARD;0;
 ALIGNAK_CURRENT_SERVICE_STATE %{ALIGNAK_TYPE_CURRENT_SERVICE_STATE:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{DATA:[alignak][state_type]};%{DATA:[alignak][attempt]};%{GREEDYDATA:[alignak][message]}
 
@@ -93,11 +100,12 @@ ALIGNAK_SERVICE_ALERT %{ALIGNAK_TYPE_SERVICE_ALERT:[alignak][event]}: %{DATA:[al
 # host;state;state type;current attempt;output
 ALIGNAK_HOST_ALERT %{ALIGNAK_TYPE_HOST_ALERT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{DATA:[alignak][state_type]};%{NUMBER:[alignak][attempt]};%{GREEDYDATA:[alignak][message]}
 
-# contact;host;service;state;command;output
-ALIGNAK_SERVICE_NOTIFICATION %{ALIGNAK_TYPE_SERVICE_NOTIFICATION:[alignak][event]}: %{DATA:[alignak][contact]};%{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{DATA:[alignak][command]};%{GREEDYDATA:[alignak][message]}
 
-# contact;host;state;command;output
-ALIGNAK_HOST_NOTIFICATION %{ALIGNAK_TYPE_HOST_NOTIFICATION:[alignak][event]}: %{DATA:[alignak][contact]};%{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{DATA:[alignak][command]};%{GREEDYDATA:[alignak][message]}
+# contact;host;service;state;count;command;output
+ALIGNAK_SERVICE_NOTIFICATION %{ALIGNAK_TYPE_SERVICE_NOTIFICATION:[alignak][event]}: %{DATA:[alignak][contact]};%{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{NUMBER:[alignak][notification_count]};%{DATA:[alignak][command]};%{GREEDYDATA:[alignak][message]}
+
+# contact;host;state;count;command;output
+ALIGNAK_HOST_NOTIFICATION %{ALIGNAK_TYPE_HOST_NOTIFICATION:[alignak][event]}: %{DATA:[alignak][contact]};%{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{NUMBER:[alignak][notification_count]};%{DATA:[alignak][command]};%{GREEDYDATA:[alignak][message]}
 
 # host;service;state
 ALIGNAK_SERVICE_FLAPPING_ALERT %{ALIGNAK_TYPE_SERVICE_FLAPPING_ALERT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][message]}

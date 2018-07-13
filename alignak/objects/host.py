@@ -673,19 +673,22 @@ class Host(SchedulingItem):  # pylint: disable=R0904
                 log_level = 'error'
 
         brok = make_monitoring_log(
-            log_level, "HOST NOTIFICATION: %s;%s;%s;%s;%s" % (
-                contact.get_name(), self.get_name(), state, command.get_name(), self.output
+            log_level, "HOST NOTIFICATION: %s;%s;%s;%s;%s;%s" % (
+                contact.get_name(), self.get_name(), state,
+                notif.notif_nb, command.get_name(), self.output
             )
         )
         self.broks.append(brok)
 
         if 'ALIGNAK_LOG_NOTIFICATIONS' in os.environ:
             if os.environ['ALIGNAK_LOG_NOTIFICATIONS'] == 'WARNING':
-                logger.warning("HOST NOTIFICATION: %s;%s;%s;%s;%s", contact.get_name(),
-                               self.get_name(), state, command.get_name(), self.output)
+                logger.warning("HOST NOTIFICATION: %s;%s;%s;%s;%s;%s",
+                               contact.get_name(), self.get_name(), state,
+                               notif.notif_nb, command.get_name(), self.output)
             else:
-                logger.info("HOST NOTIFICATION: %s;%s;%s;%s;%s", contact.get_name(),
-                            self.get_name(), state, command.get_name(), self.output)
+                logger.info("HOST NOTIFICATION: %s;%s;%s;%s;%s;%s",
+                            contact.get_name(), self.get_name(), state,
+                            notif.notif_nb, command.get_name(), self.output)
 
     def raise_event_handler_log_entry(self, command):
         """Raise HOST EVENT HANDLER entry (critical level)

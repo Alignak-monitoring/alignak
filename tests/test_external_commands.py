@@ -1094,7 +1094,7 @@ class TestExternalCommands(AlignakTest):
             ('info',
              u'EXTERNAL COMMAND: [1496341800] ACKNOWLEDGE_HOST_PROBLEM;test_router_0;2;1;1;Big brother;test'),
             ('info',
-             u'HOST NOTIFICATION: test_contact;test_router_0;ACKNOWLEDGEMENT (DOWN);notify-host;Host is DOWN'),
+             u'HOST NOTIFICATION: test_contact;test_router_0;ACKNOWLEDGEMENT (DOWN);0;notify-host;Host is DOWN'),
             ('info',
              u'EXTERNAL COMMAND: [1496341800] REMOVE_HOST_ACKNOWLEDGEMENT;test_router_0'),
             ('info',
@@ -1181,7 +1181,8 @@ class TestExternalCommands(AlignakTest):
             ('info',
              'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;STARTED; Service problem has been acknowledged'),
             ('info',
-             'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;ACKNOWLEDGEMENT (WARNING);notify-service;Service is WARNING'),
+             'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;ACKNOWLEDGEMENT (WARNING);'
+             '0;notify-service;Service is WARNING'),
             ('info',
              'EXTERNAL COMMAND: [%s] REMOVE_SVC_ACKNOWLEDGEMENT;test_host_0;test_ok_0' % now),
             ('info',
@@ -1300,14 +1301,14 @@ class TestExternalCommands(AlignakTest):
                  u'HOST DOWNTIME ALERT: test_host_0;STARTED; Host has entered a period '
                  u'of scheduled downtime'),
                 ('info',
-                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (UP);notify-host;'
+                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (UP);0;notify-host;'
                  u'Host is alive'),
 
                 ('info',
                  u'HOST DOWNTIME ALERT: test_host_0;STOPPED; Host has exited from a period '
                  u'of scheduled downtime'),
                 ('info',
-                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMEEND (UP);notify-host;'
+                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMEEND (UP);0;notify-host;'
                  u'Host is alive')
             ]
             self.check_monitoring_events_log(expected_logs)
@@ -1423,11 +1424,31 @@ class TestExternalCommands(AlignakTest):
             self.show_actions()
             self.assert_actions_count(3)
             # The host problem is notified
-            self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --notificationtype PROBLEM --hoststate DOWN --hostoutput Host is dead ', 'command')
-            self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+            self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 '
+                                         '--notificationtype PROBLEM --hoststate DOWN '
+                                         '--hostoutput Host is dead ', 'command')
+            self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, '
+                                         'NOTIFICATIONRECIPIENTS=test_contact, '
+                                         'NOTIFICATIONISESCALATED=False, '
+                                         'NOTIFICATIONAUTHOR=n/a, '
+                                         'NOTIFICATIONAUTHORNAME=n/a, '
+                                         'NOTIFICATIONAUTHORALIAS=n/a, '
+                                         'NOTIFICATIONCOMMENT=n/a, '
+                                         'HOSTNOTIFICATIONNUMBER=1, '
+                                         'SERVICENOTIFICATIONNUMBER=1', 'command')
             # And the downtime
-            self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMESTART --hoststate DOWN --hostoutput Host is dead ', 'command')
-            self.assert_actions_match(1, 'NOTIFICATIONTYPE=DOWNTIMESTART, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=test_contact, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=My first downtime, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+            self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 '
+                                         '--notificationtype DOWNTIMESTART --hoststate DOWN '
+                                         '--hostoutput Host is dead ', 'command')
+            self.assert_actions_match(1, 'NOTIFICATIONTYPE=DOWNTIMESTART, '
+                                         'NOTIFICATIONRECIPIENTS=test_contact, '
+                                         'NOTIFICATIONISESCALATED=False, '
+                                         'NOTIFICATIONAUTHOR=test_contact, '
+                                         'NOTIFICATIONAUTHORNAME=Not available, '
+                                         'NOTIFICATIONAUTHORALIAS=Not available, '
+                                         'NOTIFICATIONCOMMENT=My first downtime, '
+                                         'HOSTNOTIFICATIONNUMBER=1, '
+                                         'SERVICENOTIFICATIONNUMBER=1', 'command')
 
             self.assert_actions_match(2, 'VOID', 'command')
 
@@ -1441,15 +1462,45 @@ class TestExternalCommands(AlignakTest):
             # Host problem and acknowledgement only...
             self.assert_actions_count(4)
             # The host problem is notified
-            self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 --notificationtype PROBLEM --hoststate DOWN --hostoutput Host is dead ', 'command')
-            self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=n/a, NOTIFICATIONAUTHORNAME=n/a, NOTIFICATIONAUTHORALIAS=n/a, NOTIFICATIONCOMMENT=n/a, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+            self.assert_actions_match(0, 'notifier.pl --hostname test_host_0 '
+                                         '--notificationtype PROBLEM --hoststate DOWN '
+                                         '--hostoutput Host is dead ', 'command')
+            self.assert_actions_match(0, 'NOTIFICATIONTYPE=PROBLEM, '
+                                         'NOTIFICATIONRECIPIENTS=test_contact, '
+                                         'NOTIFICATIONISESCALATED=False, '
+                                         'NOTIFICATIONAUTHOR=n/a, '
+                                         'NOTIFICATIONAUTHORNAME=n/a, '
+                                         'NOTIFICATIONAUTHORALIAS=n/a, '
+                                         'NOTIFICATIONCOMMENT=n/a, '
+                                         'HOSTNOTIFICATIONNUMBER=1, '
+                                         'SERVICENOTIFICATIONNUMBER=1', 'command')
             # And the downtime
-            self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMESTART --hoststate DOWN --hostoutput Host is dead ', 'command')
-            self.assert_actions_match(1, 'NOTIFICATIONTYPE=DOWNTIMESTART, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=test_contact, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=My first downtime, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+            self.assert_actions_match(1, 'notifier.pl --hostname test_host_0 '
+                                         '--notificationtype DOWNTIMESTART --hoststate DOWN '
+                                         '--hostoutput Host is dead ', 'command')
+            self.assert_actions_match(1, 'NOTIFICATIONTYPE=DOWNTIMESTART, '
+                                         'NOTIFICATIONRECIPIENTS=test_contact, '
+                                         'NOTIFICATIONISESCALATED=False, '
+                                         'NOTIFICATIONAUTHOR=test_contact, '
+                                         'NOTIFICATIONAUTHORNAME=Not available, '
+                                         'NOTIFICATIONAUTHORALIAS=Not available, '
+                                         'NOTIFICATIONCOMMENT=My first downtime, '
+                                         'HOSTNOTIFICATIONNUMBER=1, '
+                                         'SERVICENOTIFICATIONNUMBER=1', 'command')
 
             # And the downtime end
-            self.assert_actions_match(2, 'notifier.pl --hostname test_host_0 --notificationtype DOWNTIMEEND --hoststate DOWN --hostoutput Host is dead ', 'command')
-            self.assert_actions_match(2, 'NOTIFICATIONTYPE=DOWNTIMEEND, NOTIFICATIONRECIPIENTS=test_contact, NOTIFICATIONISESCALATED=False, NOTIFICATIONAUTHOR=test_contact, NOTIFICATIONAUTHORNAME=Not available, NOTIFICATIONAUTHORALIAS=Not available, NOTIFICATIONCOMMENT=My first downtime, HOSTNOTIFICATIONNUMBER=1, SERVICENOTIFICATIONNUMBER=1', 'command')
+            self.assert_actions_match(2, 'notifier.pl --hostname test_host_0 '
+                                         '--notificationtype DOWNTIMEEND --hoststate DOWN '
+                                         '--hostoutput Host is dead ', 'command')
+            self.assert_actions_match(2, 'NOTIFICATIONTYPE=DOWNTIMEEND, '
+                                         'NOTIFICATIONRECIPIENTS=test_contact, '
+                                         'NOTIFICATIONISESCALATED=False, '
+                                         'NOTIFICATIONAUTHOR=test_contact, '
+                                         'NOTIFICATIONAUTHORNAME=Not available, '
+                                         'NOTIFICATIONAUTHORALIAS=Not available, '
+                                         'NOTIFICATIONCOMMENT=My first downtime, '
+                                         'HOSTNOTIFICATIONNUMBER=1, '
+                                         'SERVICENOTIFICATIONNUMBER=1', 'command')
 
             self.assert_actions_match(3, 'VOID', 'command')
 
@@ -1476,7 +1527,7 @@ class TestExternalCommands(AlignakTest):
                  u'HOST ALERT: test_host_0;DOWN;HARD;3;Host is dead'),
 
                 ('error',
-                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;Host is dead'),
+                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;1;notify-host;Host is dead'),
 
                 ('info',
                  u'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;'
@@ -1492,9 +1543,9 @@ class TestExternalCommands(AlignakTest):
                 ('info',
                  u'HOST DOWNTIME ALERT: test_host_0;STOPPED; Host has exited from a period of scheduled downtime'),
                 ('info',
-                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMEEND (DOWN);notify-host;Host is dead'),
+                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMEEND (DOWN);1;notify-host;Host is dead'),
                 ('info',
-                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (DOWN);notify-host;Host is dead'),
+                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (DOWN);1;notify-host;Host is dead'),
             ]
         self.check_monitoring_events_log(expected_logs)
 
@@ -1695,20 +1746,20 @@ class TestExternalCommands(AlignakTest):
                  u'HOST ALERT: test_host_0;DOWN;HARD;3;Host is dead'),
 
                 ('error',
-                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;Host is dead'),
+                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;1;notify-host;Host is dead'),
 
                 ('info',
                  u'EXTERNAL COMMAND: [%s] SCHEDULE_HOST_DOWNTIME;test_host_0;%s;%s;1;0;1200;'
                  u'test_contact;My first downtime' % (now, now + 2, now + 15*60)),
                 ('error',
-                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;notify-host;Host is dead'),
+                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWN;2;notify-host;Host is dead'),
 
                 ('info',
                  u'HOST DOWNTIME ALERT: test_host_0;STARTED; Host has entered a period of scheduled downtime'),
                 ('info',
                  u'HOST ACKNOWLEDGE ALERT: test_host_0;STARTED; Host problem has been acknowledged'),
                 ('info',
-                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (DOWN);notify-host;Host is dead'),
+                 u'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMESTART (DOWN);2;notify-host;Host is dead'),
                 ('info',
                  u'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;STARTED; Service problem has been acknowledged'),
 
