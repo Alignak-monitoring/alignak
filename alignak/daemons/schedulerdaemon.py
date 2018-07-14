@@ -450,8 +450,8 @@ class Alignak(BaseSatellite):
                 # Once loaded, the scheduler has an inner pushed_conf object
                 logger.info("Loaded: %s", self.sched.pushed_conf)
 
-                # Update the scheduler ticks according to the configuration
-                self.sched.update_recurrent_works_tick(self_conf)
+                # Update the scheduler ticks according to the daemon configuration
+                self.sched.update_recurrent_works_tick(self)
 
                 # We must update our pushed configuration macros with correct values
                 # from the configuration parameters

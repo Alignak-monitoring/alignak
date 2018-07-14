@@ -63,14 +63,11 @@ class TestRetention(AlignakTest):
         # Force retention for the test
         self._scheduler.pushed_conf.retention_update_interval = 5
 
-        # Check freshness on each scheduler tick
-        self._scheduler.update_recurrent_works_tick({'tick_check_freshness': 1})
-
         self.scheduler_loop(10, [])
         time.sleep(1)
 
         expected_logs = [
-            ('info', 'RETENTION LOAD: scheduler-master scheduler')
+            ('info', 'RETENTION LOAD: scheduler-master')
         ]
         self.check_monitoring_events_log(expected_logs)
 
@@ -121,7 +118,7 @@ class TestRetention(AlignakTest):
         self.external_command_loop()
         time.sleep(1.0)
         expected_logs = [
-            ("info", "RETENTION LOAD: scheduler-master scheduler"),
+            ("info", "RETENTION LOAD: scheduler-master"),
             ("info", "ACTIVE HOST CHECK: test_router_0;UP;0;UP and OK"),
             ("error", "ACTIVE HOST CHECK: test_host_0;DOWN;0;DOWN!"),
             ("error", "HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN!"),
@@ -244,7 +241,7 @@ class TestRetention(AlignakTest):
         self.scheduler_loop(1, [[host, 2, 'DOWN!']])
         time.sleep(0.1)
         expected_logs += [
-            ("info", "RETENTION SAVE: scheduler-master scheduler"),
+            ("info", "RETENTION SAVE: scheduler-master"),
             ("error", "ACTIVE HOST CHECK: test_host_0;DOWN;3;DOWN!"),
         ]
         self.check_monitoring_events_log(expected_logs)

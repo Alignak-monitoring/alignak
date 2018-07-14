@@ -3168,7 +3168,7 @@ class ExternalCommandManager(object):
         self.process_service_check_result(service, service.state_id, plugin_output)
 
     def read_state_information(self):
-        """DOES NOTHING (What it is supposed to do?)
+        """Request to load the live state from the retention storage
         Format of the line that triggers function call::
 
         READ_STATE_INFORMATION
@@ -3275,7 +3275,7 @@ class ExternalCommandManager(object):
         self.send_an_element(make_monitoring_log(log_level, "RELOAD: %s" % (e_handler.output)))
 
     def save_state_information(self):
-        """DOES NOTHING (What it is supposed to do?)
+        """Request to save the live state to the retention
         Format of the line that triggers function call::
 
         SAVE_STATE_INFORMATION

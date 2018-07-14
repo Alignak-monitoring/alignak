@@ -719,7 +719,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             IntegerProp(default=5),
 
         'daemons_stop_timeout':
-            IntegerProp(default=15)
+            IntegerProp(default=5)
     }
 
     macros = {

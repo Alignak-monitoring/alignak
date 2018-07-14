@@ -105,14 +105,14 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Scheduler(object):  # pylint: disable=R0902
-    """Scheduler class. Mostly handle scheduling items (host service) to schedule check
-    raise alert, enter downtime etc."""
+    """Scheduler class. Mostly handle scheduling items (host service) to schedule checks
+    raise alerts, manage downtimes, etc."""
 
     def __init__(self, scheduler_daemon):
-        """
+        """Receives the daemon this Scheduler is attached to
+
         :param scheduler_daemon: schedulerdaemon
         :type scheduler_daemon: alignak.daemons.schedulerdaemon.Alignak
-        :return: None
         """
         self.my_daemon = scheduler_daemon
 
@@ -403,13 +403,24 @@ class Scheduler(object):  # pylint: disable=R0902
         The provided configuration may contain some tick-function_name keys that contain
         a tick value to be updated. Those parameters are defined in the alignak environment file.
 
+        Indeed this function is called with the Scheduler daemon object. Note that the ``conf``
+        parameter may also be a dictionary.
+
         :param conf: the daemon link configuration to search in
+        :type conf: alignak.daemons.schedulerdaemon.Alignak
         :return: None
         """
         for key in self.recurrent_works:
             (name, fun, _) = self.recurrent_works[key]
-            new_tick = conf.get('tick_%s' % name, None)
-            if new_tick is None:
+            if isinstance(conf, dict):
+                new_tick = conf. get('tick_%s' % name, None)
+            else:
+                new_tick = getattr(conf, 'tick_%s' % name, None)
+
+            if new_tick is not None:
+                logger.debug("Requesting to change the default tick to %d for the action %s",
+                             new_tick, name)
+            else:
                 continue
             # Update the default scheduler tick for this function
             try:
@@ -1351,14 +1362,14 @@ class Scheduler(object):  # pylint: disable=R0902
         # If we set the retention update to 0, we do not want to manage retention
         # If we are not forced (like at stopping)
         if self.pushed_conf.retention_update_interval == 0 and not forced:
-            logger.debug("Sould have saved retention but it is not enabled")
+            logger.debug("Should have saved retention but it is not enabled")
             return
 
         _t0 = time.time()
         self.hook_point('save_retention')
         statsmgr.timer('hook.retention-save', time.time() - _t0)
 
-        self.add(make_monitoring_log('INFO', 'RETENTION SAVE: %s' % self.name))
+        self.add(make_monitoring_log('INFO', 'RETENTION SAVE: %s' % self.my_daemon.name))
         logger.info('Retention data saved: %.2f seconds', time.time() - _t0)
 
     def retention_load(self, forced=False):
@@ -1372,14 +1383,14 @@ class Scheduler(object):  # pylint: disable=R0902
         # If we set the retention update to 0, we do not want to manage retention
         # If we are not forced (like at stopping)
         if self.pushed_conf.retention_update_interval == 0 and not forced:
-            logger.debug("Sould have loaded retention but it is not enabled")
+            logger.debug("Should have loaded retention but it is not enabled")
             return
 
         _t0 = time.time()
         self.hook_point('load_retention')
         statsmgr.timer('hook.retention-load', time.time() - _t0)
 
-        self.add(make_monitoring_log('INFO', 'RETENTION LOAD: %s' % self.name))
+        self.add(make_monitoring_log('INFO', 'RETENTION LOAD: %s' % self.my_daemon.name))
         logger.info('Retention data loaded: %.2f seconds', time.time() - _t0)
 
     def get_retention_data(self):  # pylint: disable=too-many-branches,too-many-statements

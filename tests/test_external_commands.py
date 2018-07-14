@@ -1167,7 +1167,7 @@ class TestExternalCommands(AlignakTest):
 
         expected_logs = [
             # ('info',
-            #  'RETENTION LOAD: scheduler-master scheduler'),
+            #  'RETENTION LOAD: scheduler-master'),
             ('warning',
              'PASSIVE SERVICE CHECK: test_host_0;test_ok_0;1;Service is WARNING;;'),
             ('info',
