@@ -1442,7 +1442,6 @@ class TestDaemonsApi(AlignakTest):
         assert 'type' in data
         assert 'name' in data
         assert 'version' in data
-        assert 'start_time' in data
 
         # No problems exist for the scheduler master!
         assert 'problems' in data
@@ -1476,18 +1475,28 @@ class TestDaemonsApi(AlignakTest):
         print("--- get monitoring problems")
         raw_data = req.get("http://localhost:7770/monitoring_problems")
         print("Alignak problems: %s" % (raw_data.text))
+        p = {
+            "version": "1.1.0rc8", "alignak": "My Alignak", "name": "arbiter-master", "type": "arbiter",
+            "problems": {
+                "scheduler-master": {
+                    "problems": {
+                        "5c1b1fea-0a89-44a1-8d7d-8e98eecc4318": {"last_state_update": 1531583136, "state": "WARNING", "host": "host-all-6", "last_state_type": "SOFT", "last_state_change": 1531583076, "last_state": "WARNING", "service": "dummy_warning", "last_hard_state_change": 1531583136, "state_type": "HARD", "output": "Hi, checking host-all-6/dummy_warning -> exit=1", "last_hard_state": "WARNING"},
+                        "a769e122-c056-494b-855e-677a429a1964": {"last_state_update": 1531583137, "state": "CRITICAL", "host": "host-all-0", "last_state_type": "SOFT", "last_state_change": 1531583077, "last_state": "CRITICAL", "service": "dummy_critical", "last_hard_state_change": 1531583137, "state_type": "HARD", "output": "Hi, checking host-all-0/dummy_critical -> exit=2", "last_hard_state": "CRITICAL"}, "a2afeba5-5e75-44f0-8780-188b3cb16626": {"last_state_update": 1531583122, "state": "WARNING", "host": "host-all-7", "last_state_type": "SOFT", "last_state_change": 1531583062, "last_state": "WARNING", "service": "dummy_warning", "last_hard_state_change": 1531583122, "state_type": "HARD", "output": "Hi, checking host-all-7/dummy_warning -> exit=1", "last_hard_state": "WARNING"}, "8b39ad0d-6cff-4ba2-9f6d-297fa770074b": {"last_state_update": 1531583115, "state": "CRITICAL", "host": "host-all-9", "last_state_type": "SOFT", "last_state_change": 1531583055, "last_state": "CRITICAL", "service": "dummy_critical", "last_hard_state_change": 1531583115, "state_type": "HARD", "output": "Hi, checking host-all-9/dummy_critical -> exit=2", "last_hard_state": "CRITICAL"}, "3775180a-ac3a-467a-b678-3a9797e0cdd5": {"last_state_update": 1531583138, "state": "CRITICAL", "host": "host-all-8", "last_state_type": "SOFT", "last_state_change": 1531583078, "last_state": "CRITICAL", "service": "dummy_critical", "last_hard_state_change": 1531583138, "state_type": "HARD", "output": "Hi, checking host-all-8/dummy_critical -> exit=2", "last_hard_state": "CRITICAL"}, "814fcd5a-55e6-42af-b2ae-a9530d1fb0fb": {"last_state_update": 1531583122, "state": "CRITICAL", "host": "host-all-7", "last_state_type": "SOFT", "last_state_change": 1531583062, "last_state": "CRITICAL", "service": "dummy_critical", "last_hard_state_change": 1531583122, "state_type": "HARD", "output": "Hi, checking host-all-7/dummy_critical -> exit=2", "last_hard_state": "CRITICAL"}, "6a23b042-1667-4aff-967b-12686d59c52e": {"last_state_update": 1531583149, "state": "WARNING", "host": "host-all-4", "last_state_type": "SOFT", "last_state_change": 1531583089, "last_state": "WARNING", "service": "dummy_warning", "last_hard_state_change": 1531583149, "state_type": "HARD", "output": "Hi, checking host-all-4/dummy_warning -> exit=1", "last_hard_state": "WARNING"}, "219c16ee-2d3a-4cea-be9a-3fcbe6ef3e3b": {"last_state_update": 1531583124, "state": "WARNING", "host": "host-all-1", "last_state_type": "SOFT", "last_state_change": 1531583063, "last_state": "WARNING", "service": "dummy_warning", "last_hard_state_change": 1531583124, "state_type": "HARD", "output": "Hi, checking host-all-1/dummy_warning -> exit=1", "last_hard_state": "WARNING"},
+                        "63773c8a-d008-4124-b3fb-d61e5ef30e20": {"last_state_update": 1531583124, "state": "CRITICAL", "host": "host-all-1", "last_state_type": "SOFT", "last_state_change": 1531583063, "last_state": "CRITICAL", "service": "dummy_critical", "last_hard_state_change": 1531583124, "state_type": "HARD", "output": "Hi, checking host-all-1/dummy_critical -> exit=2", "last_hard_state": "CRITICAL"},
+                        "0727168a-3bec-4e50-a37c-a25ed2ec07e6": {"last_state_update": 1531583137, "state": "WARNING", "host": "host-all-0", "last_state_type": "SOFT", "last_state_change": 1531583077, "last_state": "WARNING", "service": "dummy_warning", "last_hard_state_change": 1531583137, "state_type": "HARD", "output": "Hi, checking host-all-0/dummy_warning -> exit=1", "last_hard_state": "WARNING"
+                                                                 }
+                    }}}}
         assert raw_data.status_code == 200
         data = raw_data.json()
         assert 'alignak' in data
         assert 'type' in data
         assert 'name' in data
         assert 'version' in data
-        assert 'start_time' in data
 
         # Now, some problems exist for the scheduler master!
         assert 'problems' in data
+        assert '_freshness' in data
         assert 'scheduler-master' in data['problems']
-        assert '_freshness' in data['problems']['scheduler-master']
         assert 'problems' in data['problems']['scheduler-master']
         # I have some problems
         assert len(data['problems']['scheduler-master']) > 0

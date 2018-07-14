@@ -661,9 +661,9 @@ class Service(SchedulingItem):
         :return: None
         """
         log_level = 'info'
-        if self.state == 'WARNING':
+        if self.state in ['WARNING', 'UNREACHABLE']:
             log_level = 'warning'
-        if self.state == 'CRITICAL':
+        if self.state in ['CRITICAL', 'UNKNOWN']:
             log_level = 'error'
         if self.__class__.log_initial_states:
             brok = make_monitoring_log(

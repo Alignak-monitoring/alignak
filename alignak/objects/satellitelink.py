@@ -781,7 +781,7 @@ class SatelliteLink(Item):
         :type: bool
         """
         logger.debug("Getting initial broks for %s, %s %s", self.name, self.alive, self.reachable)
-        return self.con.get('fill_initial_broks', {'broker_name': broker_name}, wait='long')
+        return self.con.get('fill_initial_broks', {'broker_name': broker_name}, wait=True)
 
     @valid_connection()
     @communicate()
@@ -814,7 +814,7 @@ class SatelliteLink(Item):
             return True
         # ----------
 
-        return self.con.post('push_configuration', {'conf': configuration}, wait='long')
+        return self.con.post('push_configuration', {'conf': configuration}, wait=True)
 
     @valid_connection()
     @communicate()
@@ -885,7 +885,7 @@ class SatelliteLink(Item):
         :rtype: bool
         """
         logger.debug("[%s] Pushing %d broks", self.name, len(broks))
-        return self.con.post('push_broks', {'broks': broks}, wait='long')
+        return self.con.post('push_broks', {'broks': broks}, wait=True)
 
     @valid_connection()
     @communicate()
@@ -903,7 +903,7 @@ class SatelliteLink(Item):
         logger.debug("Pushing %d actions from %s", len(actions), scheduler_instance_id)
         return self.con.post('push_actions', {'actions': actions,
                                               'scheduler_instance_id': scheduler_instance_id},
-                             wait='long')
+                             wait=True)
 
     @valid_connection()
     @communicate()
@@ -921,7 +921,7 @@ class SatelliteLink(Item):
         """
         logger.debug("Pushing %d results", len(results))
         result = self.con.post('put_results', {'results': results, 'from': scheduler_name},
-                               wait='long')
+                               wait=True)
         return result
 
     @valid_connection()
@@ -936,7 +936,7 @@ class SatelliteLink(Item):
         :rtype: bool
         """
         logger.debug("Pushing %d external commands", len(commands))
-        return self.con.post('run_external_commands', {'cmds': commands}, wait='long')
+        return self.con.post('run_external_commands', {'cmds': commands}, wait=True)
 
     @valid_connection()
     @communicate()
@@ -947,7 +947,7 @@ class SatelliteLink(Item):
         :return: External Command list on success, [] on failure
         :rtype: list
         """
-        res = self.con.get('get_external_commands', wait=True)
+        res = self.con.get('get_external_commands', wait=False)
         logger.debug("Got %d external commands from %s: %s", len(res), self.name, res)
         return unserialize(res, True)
 
@@ -963,7 +963,7 @@ class SatelliteLink(Item):
         :return: Broks list on success, [] on failure
         :rtype: list
         """
-        res = self.con.get('get_broks', {'broker_name': broker_name}, wait=True)
+        res = self.con.get('get_broks', {'broker_name': broker_name}, wait=False)
         logger.debug("Got broks from %s: %s", self.name, res)
         return unserialize(res, True)
 
@@ -976,7 +976,7 @@ class SatelliteLink(Item):
         :return: Broks list on success, [] on failure
         :rtype: list
         """
-        res = self.con.get('get_events', wait=True)
+        res = self.con.get('get_events', wait=False)
         logger.debug("Got events from %s: %s", self.name, res)
         return unserialize(res, True)
 
@@ -991,7 +991,7 @@ class SatelliteLink(Item):
         :rtype: list
         """
         res = self.con.get('get_results', {'scheduler_instance_id': scheduler_instance_id},
-                           wait='long')
+                           wait=True)
         logger.debug("Got %d results from %s: %s", len(res), self.name, res)
         return res
 
@@ -1009,23 +1009,6 @@ class SatelliteLink(Item):
         res = self.con.get('get_checks', params, wait=True)
         logger.debug("Got actions from %s: %s", self.name, res)
         return unserialize(res, True)
-
-    @valid_connection()
-    def get_object(self, o_type, o_name):
-        """Send a HTTP request to the scheduler (GET /get_host)
-        Get host information from the scheduler.
-        Un-serialize data received.
-
-        :param o_type: searched object type
-        :type o_type: str
-        :param o_name: searched object name (or uuid)
-        :type o_name: str
-        :return: serialized object information
-        :rtype: str
-        """
-        res = self.con.get('object', {'o_type': o_type, 'o_name': o_name}, wait=True)
-        logger.debug("Got an %s object from %s: %s", o_type, self.name, res)
-        return res
 
 
 class SatelliteLinks(Items):

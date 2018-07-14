@@ -1393,6 +1393,16 @@ class Scheduler(object):  # pylint: disable=R0902
         self.add(make_monitoring_log('INFO', 'RETENTION LOAD: %s' % self.my_daemon.name))
         logger.info('Retention data loaded: %.2f seconds', time.time() - _t0)
 
+    def log_initial_states(self):
+        """Log hosts and services initial state
+
+        :return: None
+        """
+        if getattr(self.my_daemon, 'log_initial_states', False):
+            # Raise current state log
+            for elt in self.all_my_hosts_and_services():
+                elt.raise_initial_state()
+
     def get_retention_data(self):  # pylint: disable=too-many-branches,too-many-statements
         # pylint: disable=too-many-locals
         """Get all hosts and services data to be sent to the retention storage.
@@ -1571,14 +1581,12 @@ class Scheduler(object):  # pylint: disable=R0902
         item.notified_contacts = new_notified_contacts
         item.notified_contacts_ids = new_notified_contacts_ids
 
-    def fill_initial_broks(self, broker_name, with_logs=False):
+    def fill_initial_broks(self, broker_name):
         # pylint: disable=too-many-branches
         """Create initial broks for a specific broker
 
         :param broker_name: broker name
         :type broker_name: str
-        :param with_logs: tell if we raise some broks to log the initial states for hosts/services
-        :type with_logs: bool
         :return: number of created broks
         """
         broker_uuid = None
@@ -1631,14 +1639,6 @@ class Scheduler(object):  # pylint: disable=R0902
                         member_items = getattr(self, item.my_type.replace("group", "s"))
                     brok = item.get_initial_status_brok(member_items)
                     self.add_brok(brok, broker_uuid)
-
-        # Only raises the all logs at the scheduler startup
-        if with_logs:
-            # Ask for INITIAL logs for services and hosts
-            for item in self.hosts:
-                item.raise_initial_state()
-            for item in self.services:
-                item.raise_initial_state()
 
         # Add a brok to say that we finished all initial_pass
         brok = Brok({'type': 'initial_broks_done', 'data': {'instance_id': self.instance_id}})
@@ -2107,6 +2107,7 @@ class Scheduler(object):  # pylint: disable=R0902
              'hosts': len(self.hosts),
              'services': len(self.services),
              'commands': [{'cmd': c, 'u_time': u_time, 's_time': s_time}, ...] (10 first)
+             'livesynthesis': {...}
            }
 
         :rtype: dict
@@ -2114,6 +2115,7 @@ class Scheduler(object):  # pylint: disable=R0902
         m_solver = MacroResolver()
 
         res = {
+            '_freshness': int(time.time()),
             'counters': {},
             'latency': self.stats['latency'],
             'monitored_objects': {},

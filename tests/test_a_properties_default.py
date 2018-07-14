@@ -266,7 +266,7 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('daemons_start_timeout', 1),
         ('daemons_dispatch_timeout', 5),
         ('daemons_new_conf_timeout', 1),
-        ('daemons_stop_timeout', 15),
+        ('daemons_stop_timeout', 5),
         ('daemons_failure_kill', True),
 
         ('alignak_env', []),

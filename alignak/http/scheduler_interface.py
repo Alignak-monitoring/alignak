@@ -163,7 +163,7 @@ class SchedulerInterface(GenericInterface):
         """
         with self.app.conf_lock:
             logger.info("A new broker just connected : %s", broker_name)
-            return self.app.sched.fill_initial_broks(broker_name, with_logs=True)
+            return self.app.sched.fill_initial_broks(broker_name)
 
     @cherrypy.expose
     @cherrypy.tools.json_in()

@@ -139,12 +139,12 @@ class InnerRetention(BaseModule):
             else:
                 for host in response.values():
                     hostname = host['name']
-                    service_key = 'key'
+                    service_key = 'services'
                     if 'retention_services' in host:
                         service_key = 'retention_services'
                     if service_key in host:
                         for service in host[service_key]:
-                            all_data[service_key][(host['host'], service)] = \
+                            all_data['services'][(host['name'], service)] = \
                                 host[service_key][service]
                     all_data['hosts'][hostname] = host
 

@@ -429,8 +429,17 @@ class ArbiterInterface(GenericInterface):
         :rtype: dict
         """
         res = self.get_id()
-        res.update(self.get_start_time())
-        res.update(self.app.get_monitoring_problems())
+        res['problems'] = {}
+        for scheduler_link in self.app.conf.schedulers:
+            print("Scheduler link: %s" % scheduler_link)
+            sched_res = scheduler_link.con.get('monitoring_problems', wait=True)
+            res['problems'][scheduler_link.name] = {}
+            if '_freshness' in sched_res:
+                res['problems'][scheduler_link.name].update({'_freshness': sched_res['_freshness']})
+            if 'problems' in sched_res:
+                res['problems'][scheduler_link.name].update({'problems': sched_res['problems']})
+        res['_freshness'] = int(time.time())
+
         return res
 
     @cherrypy.expose
@@ -596,7 +605,8 @@ class ArbiterInterface(GenericInterface):
         :rtype: str
         """
         for scheduler_link in self.app.conf.schedulers:
-            o_found = scheduler_link.get_object(o_type, o_name)
-            if isinstance(o_found, dict) and 'content' in o_found:
-                return o_found
+            sched_res = scheduler_link.con.get('object', {'o_type': o_type, 'o_name': o_name},
+                                               wait=True)
+            if isinstance(sched_res, dict) and 'content' in sched_res:
+                return sched_res
         return {'_status': u'ERR', '_message': u'Required %s not found.' % o_type}

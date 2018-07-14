@@ -473,6 +473,9 @@ class Alignak(BaseSatellite):
                 # Ok now we can load the retention data
                 self.sched.retention_load()
 
+                # Log hosts/services initial states
+                self.sched.log_initial_states()
+
             # Create brok new conf
             brok = Brok({'type': 'new_conf', 'data': {}})
             self.sched.add_brok(brok)

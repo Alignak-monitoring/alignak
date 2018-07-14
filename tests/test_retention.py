@@ -53,21 +53,23 @@ class TestRetention(AlignakTest):
         self.check_monitoring_events_log(expected_logs)
 
     def test_retention_enabled(self):
-        """ Test that when retention is enabled when have a log
+        """ Test that when retention is enabled whe have a log
 
         :return: None
         """
         self.setup_with_file('cfg/cfg_default_retention.cfg')
         # Default configuration has no retention configured
         assert self._scheduler.pushed_conf.retention_update_interval == 5
-        # Force retention for the test
-        self._scheduler.pushed_conf.retention_update_interval = 5
 
-        self.scheduler_loop(10, [])
+        self.scheduler_loop(5, [])
         time.sleep(1)
 
         expected_logs = [
-            ('info', 'RETENTION LOAD: scheduler-master')
+            ('info', 'RETENTION LOAD: scheduler-master'),
+            # State from the previous executed test...
+            ('error', 'CURRENT HOST STATE: test_host_0;DOWN;HARD;3;DOWN!'),
+            ('info', 'CURRENT HOST STATE: test_router_0;UP;HARD;1;UP and OK'),
+            ('warning', 'CURRENT SERVICE STATE: test_host_0;test_ok_0;UNREACHABLE;HARD;0;')
         ]
         self.check_monitoring_events_log(expected_logs)
 
@@ -119,6 +121,9 @@ class TestRetention(AlignakTest):
         time.sleep(1.0)
         expected_logs = [
             ("info", "RETENTION LOAD: scheduler-master"),
+            ('info', 'CURRENT HOST STATE: test_router_0;UP;HARD;0;'),
+            ('info', 'CURRENT HOST STATE: test_host_0;UP;HARD;0;'),
+            ('info', 'CURRENT SERVICE STATE: test_host_0;test_ok_0;OK;HARD;0;'),
             ("info", "ACTIVE HOST CHECK: test_router_0;UP;0;UP and OK"),
             ("error", "ACTIVE HOST CHECK: test_host_0;DOWN;0;DOWN!"),
             ("error", "HOST ALERT: test_host_0;DOWN;SOFT;1;DOWN!"),
@@ -254,7 +259,12 @@ class TestRetention(AlignakTest):
 
         # ************** test the restoration of retention ************** #
         # new conf
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default_retention.cfg')
+
+        expected_logs = [
+            ('info', 'RETENTION LOAD: scheduler-master'),
+        ]
+        self.check_monitoring_events_log(expected_logs)
 
         hostn = self._scheduler.hosts.find_by_name("test_host_0")
         hostn.checks_in_progress = []
@@ -264,30 +274,6 @@ class TestRetention(AlignakTest):
         svcn = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svcn.checks_in_progress = []
         svcn.act_depend_of = []  # no hostchecks on critical checkresults
-
-        self.scheduler_loop(1, [[hostn, 0, 'UP'], [svcn, 1, 'WARNING']])
-        time.sleep(1.0)
-        self.scheduler_loop(1)
-
-        expected_logs = [
-            ('info', 'ACTIVE HOST CHECK: test_host_0;UP;0;UP'),
-            ('warning', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;WARNING;0;WARNING'),
-            ('warning', 'SERVICE ALERT: test_host_0;test_ok_0;WARNING;SOFT;1;WARNING'),
-            ('warning', 'SERVICE EVENT HANDLER: test_host_0;test_ok_0;WARNING;SOFT;1;eventhandler')
-        ]
-        self.check_monitoring_events_log(expected_logs)
-
-        # Host and service are freshly loaded without retention data !
-        assert 0 == len(hostn.comments)
-        assert 0 == len(hostn.notifications_in_progress)
-
-        assert hostn.state_type == 'HARD'
-        assert hostn.state == 'UP'
-        assert svcn.state_type == 'SOFT'
-        assert svcn.state == 'WARNING'
-
-        self._main_broker.broks = []
-        self._scheduler.restore_retention_data(retention)
 
         # Host and service should be restored with the former states
         assert hostn.state_type == 'HARD'
@@ -299,9 +285,28 @@ class TestRetention(AlignakTest):
         assert svcn.last_state == 'PENDING' # Never tested!
 
         # Not the same identifier
-        print(host.uuid)
-        print(hostn.uuid)
         assert host.uuid != hostn.uuid
+
+        self.scheduler_loop(1, [[hostn, 0, 'UP'], [svcn, 1, 'WARNING']])
+        time.sleep(1.0)
+        self.scheduler_loop(1)
+
+        expected_logs += [
+            ('info', 'CURRENT HOST STATE: test_router_0;UP;HARD;1;UP and OK'),
+            ('error', 'CURRENT HOST STATE: test_host_0;DOWN;HARD;3;DOWN!'),
+            ('warning', 'CURRENT SERVICE STATE: test_host_0;test_ok_0;UNREACHABLE;HARD;0;'),
+            ('warning', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;WARNING;0;WARNING'),
+            ('info', 'SERVICE ACKNOWLEDGE ALERT: test_host_0;test_ok_0;EXPIRED; Service problem acknowledge expired'),
+            ('warning', 'SERVICE ALERT: test_host_0;test_ok_0;WARNING;HARD;0;WARNING'),
+            ('warning', 'SERVICE EVENT HANDLER: test_host_0;test_ok_0;WARNING;HARD;0;eventhandler'),
+            ('info', 'ACTIVE HOST CHECK: test_host_0;UP;3;UP'),
+            ('info', 'HOST ACKNOWLEDGE ALERT: test_host_0;EXPIRED; Host problem acknowledge expired'),
+            ('info', 'HOST ALERT: test_host_0;UP;HARD;3;UP'),
+        ]
+        self.check_monitoring_events_log(expected_logs)
+
+        assert 2 == len(hostn.comments)
+        assert 2 == len(hostn.notifications_in_progress)
 
         # check downtimes (only for host and not for service)
         print("Host downtimes: ")
@@ -330,7 +335,7 @@ class TestRetention(AlignakTest):
             assert host.notifications_in_progress[notif_uuid].t_to_go == \
                              notification.t_to_go
         # Notifications: host ack, service ack, host downtime
-        assert 3 == len(hostn.notifications_in_progress)
+        assert 2 == len(hostn.notifications_in_progress)
 
         # check comments for host
         assert len(host.comments) == len(hostn.comments)

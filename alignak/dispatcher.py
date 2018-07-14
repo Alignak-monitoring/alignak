@@ -304,7 +304,8 @@ class Dispatcher(object):
                 continue
 
             try:
-                daemon_link.statistics = daemon_link.get_daemon_stats(details=True)
+                # Do not get the details to avoid overloading the communication
+                daemon_link.statistics = daemon_link.get_daemon_stats(details=False)
                 if daemon_link.statistics:
                     daemon_link.statistics['_freshness'] = int(time.time())
                     statistics[daemon_link.name] = daemon_link.statistics
