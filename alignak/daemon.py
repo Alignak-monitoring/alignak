@@ -985,7 +985,6 @@ class Daemon(object):
         :return: None
         """
         logger.debug("Nothing to do before the main loop")
-        return
 
     def do_main_loop(self):
         # pylint: disable=too-many-branches, too-many-statements, too-many-locals

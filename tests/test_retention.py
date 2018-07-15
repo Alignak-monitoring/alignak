@@ -67,11 +67,11 @@ class TestRetention(AlignakTest):
         expected_logs = [
             ('info', 'RETENTION LOAD: scheduler-master'),
             # State from the previous executed test...
-            ('error', 'CURRENT HOST STATE: test_host_0;DOWN;HARD;3;DOWN!'),
-            ('info', 'CURRENT HOST STATE: test_router_0;UP;HARD;1;UP and OK'),
-            ('warning', 'CURRENT SERVICE STATE: test_host_0;test_ok_0;UNREACHABLE;HARD;0;')
+            ('info', 'CURRENT HOST STATE: test_router_0;UP;HARD;0;'),
+            ('info', 'CURRENT HOST STATE: test_host_0;UP;HARD;0;'),
+            ('info', 'CURRENT SERVICE STATE: test_host_0;test_ok_0;OK;HARD;0;')
         ]
-        self.check_monitoring_events_log(expected_logs)
+        self.check_monitoring_events_log(expected_logs, assert_length=False)
 
     def test_scheduler_retention(self):
         """ Test save and restore retention data

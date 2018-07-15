@@ -66,7 +66,7 @@ import os
 import re
 import random
 import time
-import datetime
+from datetime import datetime
 import traceback
 import logging
 
@@ -1167,7 +1167,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type force_time: None | int
         :return: None
         """
-        # next_chk il already set, do not change
+        # next_chk is already set, do not change
         # unless we force the check or the time
         if self.in_checking and not (force or force_time):
             return None
@@ -1185,8 +1185,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if self.check_interval == 0 and not force:
             if cls.my_type == 'service':
                 return None
-            else:  # host
-                self.check_interval = 300 / cls.interval_length
+
+            self.check_interval = 300 / cls.interval_length
 
         # Interval change is in a HARD state or not
         # If the retry is 0, take the normal value
@@ -1252,8 +1252,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         logger.debug("-> schedule: %s / %s (interval: %d, added: %d)",
                      self.get_full_name(),
-                     datetime.datetime.fromtimestamp(self.next_chk).strftime('%Y-%m-%d %H:%M:%S'),
+                     datetime.utcfromtimestamp(self.next_chk).strftime('%Y-%m-%d %H:%M:%S'),
                      interval, time_add)
+        if os.getenv('ALIGNAK_LOG_CHECKS', None):
+            logger.info("--ALC-- -> next check for %s at %s (interval: %d, added: %d)",
+                        self.get_full_name(),
+                        datetime.utcfromtimestamp(self.next_chk).strftime('%Y-%m-%d %H:%M:%S'),
+                        interval, time_add)
         # Get the command to launch, and put it in queue
         return self.launch_check(self.next_chk, hosts, services, timeperiods, macromodulations,
                                  checkmodulations, checks, force=force)
@@ -1586,27 +1591,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 logger.info("Got check result: %d for %s",
                             chk.exit_status, self.get_full_name())
 
-        # # Protect against bad type output
-        # try:
-        #     # if str, convert to unicode
-        #     if isinstance(chk.output, str):
-        #         chk.output = chk.output.decode('utf8', 'ignore')
-        #         chk.long_output = chk.long_output.decode('utf8', 'ignore')
-        # except AttributeError:
-        #     # Python 3 raises an exception!
-        #     pass
-        #
-        # try:
-        #     if isinstance(chk.perf_data, str):
-        #         chk.perf_data = chk.perf_data.decode('utf8', 'ignore')
-        # except AttributeError:
-        #     # Python 3 raises an exception!
-        #     pass
-
         if os.getenv('ALIGNAK_LOG_CHECKS', None):
             level = ['info', 'warning', 'error', 'critical'][min(chk.exit_status, 3)]
             func = getattr(logger, level)
-            func("Check result for '%s', exit: %d, output: %s",
+            func("--ALC-- check result for %s, exit: %d, output: %s",
                  self.get_full_name(), chk.exit_status, chk.output)
 
         # ============ MANAGE THE CHECK ============ #
@@ -1928,7 +1916,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 SchedulingItem.current_problem_id += 1
                 self.last_problem_id = self.current_problem_id
                 self.current_problem_id = SchedulingItem.current_problem_id
-            elif self.state != ok_up and self.last_state != ok_up:
+            elif ok_up not in (self.state, self.last_state):
                 # State transitions between non-OK states
                 # (e.g. WARNING to CRITICAL) do not cause
                 # this problem id to increase.
@@ -2718,6 +2706,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return: None
         """
         logger.debug("Internal check: %s - %s", self.get_full_name(), check.command)
+        if os.getenv('ALIGNAK_LOG_CHECKS', None):
+            logger.info("--ALC-- Internal check: %s - %s", self.get_full_name(), check.command)
+        # Business rule
         if check.command.startswith('bp_'):
             try:
                 # Re evaluate the business rule to take into account macro
@@ -2744,6 +2735,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 logger.debug("[%s] Error while re-evaluating business rule:\n%s",
                              self.get_name(), traceback.format_exc())
                 state = 3
+
         # _internal_host_up is for putting host as UP
         elif check.command == '_internal_host_up':
             state = 0
@@ -2777,14 +2769,21 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 state = 3
                 check.output = u'Malformed host internal check'
             else:
-                state = 3
+                state = check_result[1].strip()
+                # If multiple possible states - choose a random one
+                if ',' in check_result[1]:
+                    states = check_result[1].split(',')
+                    state = states[random.randint(0, len(states) - 1)]
+
                 try:
-                    state = int(check_result[1])
+                    state = int(state)
                 except ValueError:
                     pass
                 check.output = u'Host internal check result: %d' % state
-                if len(check_result) > 2:
+                if len(check_result) > 2 and check_result[2]:
                     check.output = check_result[2]
+                    if '%d' in check.output:
+                        check.output = check.output % state
 
             check.execution_time = 0
             if 'ALIGNAK_LOG_ACTIONS' in os.environ:
@@ -2804,14 +2803,25 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 state = 3
                 check.output = u'Malformed service internal check'
             else:
-                state = 3
+                state = check_result[1].strip()
+                # If multiple possible states - choose a random one
+                if ',' in check_result[1]:
+                    states = check_result[1].split(',')
+                    state = states[random.randint(0, len(states) - 1)]
+
+                    # In SOFT state type, do not change current state - let the new state go to HARD
+                    if self.state_type == 'SOFT':
+                        state = self.state_id
+
                 try:
-                    state = int(check_result[1])
+                    state = int(state)
                 except ValueError:
                     pass
                 check.output = u'Service internal check result: %d' % state
-                if len(check_result) > 1:
-                    check.output = check_result[1]
+                if len(check_result) > 2 and check_result[2]:
+                    check.output = check_result[2]
+                    if '%d' in check.output:
+                        check.output = check.output % state
 
             check.execution_time = 0
             if 'ALIGNAK_LOG_ACTIONS' in os.environ:
@@ -3105,14 +3115,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.state = self.state_before_impact
             self.state_id = self.state_id_before_impact
 
-    def last_time_non_ok_or_up(self):  # pragma: no cover, base function
-        """Get the last time the item was in a non-OK state
-
-        :return: return 0
-        :rtype: int
-        """
-        pass
-
+    # def last_time_non_ok_or_up(self):  # pragma: no cover, base function
+    #     """Get the last time the item was in a non-OK state
+    #
+    #     :return: return 0
+    #     :rtype: int
+    #     """
+    #     pass
+    #
     def set_unreachable(self):
         """Set unreachable: all our parents (dependencies) are not ok
         Unreachable is different from down/critical

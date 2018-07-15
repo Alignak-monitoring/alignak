@@ -425,7 +425,7 @@ class Scheduler(object):  # pylint: disable=R0902
             # Update the default scheduler tick for this function
             try:
                 new_tick = int(new_tick)
-                logger.warning("Changing the default tick to %d for the action %s", new_tick, name)
+                logger.info("Changing the default tick to %d for the action %s", new_tick, name)
                 self.recurrent_works[key] = (name, fun, new_tick)
             except ValueError:
                 logger.warning("Changing the default tick for '%s' to '%s' failed!", new_tick, name)
@@ -1890,7 +1890,7 @@ class Scheduler(object):  # pylint: disable=R0902
             self.add(brok)
 
     def schedule(self, elements=None):
-        """Iter over all hosts and services and call schedule method
+        """Iterate over all hosts and services and call schedule method
         (schedule next check)
 
         If elements is None all our hosts and services are scheduled for a check.

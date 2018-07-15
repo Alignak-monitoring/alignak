@@ -996,7 +996,7 @@ define host {
         macroresolver.init(scheduler.my_daemon.sched.pushed_conf)
 
         for num in range(count):
-            print("Scheduler loop turn: %s" % num)
+            # print("Scheduler loop turn: %s" % num)
             for (item, exit_status, output) in items:
                 print("- item checks creation turn: %s" % item)
                 if len(item.checks_in_progress) == 0:
@@ -1101,18 +1101,6 @@ define host {
         :return:
         """
         self.scheduler_loop(count=count)
-        # macroresolver = MacroResolver()
-        # macroresolver.init(self._scheduler.my_daemon.sched.pushed_conf)
-        #
-        # print("*** Scheduler external command loop turn:")
-        # for i in self._scheduler.recurrent_works:
-        #     (name, fun, nb_ticks) = self._scheduler.recurrent_works[i]
-        #     if nb_ticks == 1:
-        #         # print(" . %s ...running." % name)
-        #         fun()
-        #     else:
-        #         print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
-        # self.assert_no_log_match("External command Brok could not be sent to any daemon!")
 
     def worker_loop(self, verbose=True):
         self._scheduler.delete_zombie_checks()
@@ -1203,6 +1191,21 @@ define host {
         for check in checks:
             print("- %s" % check)
         print("<<< checks ---")
+
+    def show_events(self):
+        """
+        Show the events
+
+        :return:
+        """
+        my_broker = [b for b in list(self._scheduler.my_daemon.brokers.values())][0]
+
+        monitoring_logs = []
+        for event in self._scheduler_daemon.events:
+            data = unserialize(event.data)
+            monitoring_logs.append((data['level'], data['message']))
+        for log in monitoring_logs:
+            print(log)
 
     def show_and_clear_actions(self):
         self.show_actions()
@@ -1619,12 +1622,13 @@ define host {
 
         return monitoring_logs
 
-    def check_monitoring_events_log(self, expected_logs, dump=True):
+    def check_monitoring_events_log(self, expected_logs, dump=True, assert_length=True):
         """
         Get the monitoring_log broks and check that they match with the expected_logs provided
 
         :param expected_logs: expected monitoring logs
         :param dump: True to print out the monitoring logs
+        :param assert_length: True to compare list lengths
         :return:
         """
         # We got 'monitoring_log' broks for logging to the monitoring events..
@@ -1640,6 +1644,9 @@ define host {
                 assert (log_level, log_message) in monitoring_events, "Not found :%s" % log_message
             except UnicodeDecodeError:
                 assert (log_level.decode('utf8', 'ignore'), log_message.decode('utf8', 'ignore')) in monitoring_events, "Not found :%s" % log_message
+
+        if not assert_length:
+            return
 
         assert len(expected_logs) == len(monitoring_events), "Length do not match: %d" \
                                                              % len(monitoring_events)

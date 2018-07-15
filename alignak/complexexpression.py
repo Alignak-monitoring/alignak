@@ -186,7 +186,7 @@ class ComplexExpressionFactory(object):
         tmp = ''
         stacked_par = 0
         for char in pattern:
-            if char == ',' or char == '|':
+            if char in (',', '|'):
                 # Maybe we are in a par, if so, just stack it
                 if in_par:
                     tmp += char
@@ -199,7 +199,7 @@ class ComplexExpressionFactory(object):
                         node.sons.append(son)
                     tmp = ''
 
-            elif char == '&' or char == '+':
+            elif char in ('&', '+'):
                 # Maybe we are in a par, if so, just stack it
                 if in_par:
                     tmp += char
@@ -298,7 +298,6 @@ class ComplexExpressionFactory(object):
                 elts.remove('*')
             return elts, error
 
-        else:  # templates
-            obj = self.grps.find_hosts_that_use_template(pattern)
+        obj = self.grps.find_hosts_that_use_template(pattern)
 
         return obj, error

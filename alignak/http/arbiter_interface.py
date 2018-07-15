@@ -26,7 +26,6 @@ import cherrypy
 from alignak.http.generic_interface import GenericInterface
 from alignak.util import split_semicolon
 from alignak.external_command import ExternalCommand
-from alignak.misc.serialization import serialize, unserialize
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -431,7 +430,6 @@ class ArbiterInterface(GenericInterface):
         res = self.get_id()
         res['problems'] = {}
         for scheduler_link in self.app.conf.schedulers:
-            print("Scheduler link: %s" % scheduler_link)
             sched_res = scheduler_link.con.get('monitoring_problems', wait=True)
             res['problems'][scheduler_link.name] = {}
             if '_freshness' in sched_res:

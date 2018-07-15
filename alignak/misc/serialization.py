@@ -112,7 +112,7 @@ def unserialize(j_obj, no_load=False):
             data_dict[key] = unserialize(value, True)
         return data_dict
 
-    elif isinstance(data, list):
+    if isinstance(data, list):
         return [unserialize(item, True) for item in data]
 
     return data

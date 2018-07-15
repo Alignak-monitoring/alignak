@@ -551,13 +551,6 @@ if os.name != 'nt':
             # 2.7 and higher Python version need a list of arguments for the started command
             cmd = self.command
             if not force_shell:
-                # todo: perharps necessary, to be investigated!
-                # try:
-                #     self.command = self.command.encode('utf8')
-                # except Exception as exp:
-                #     print(exp)
-                #     pass
-
                 try:
                     cmd = shlex.split(self.command)
                 except Exception as exp:  # pylint: disable=broad-except

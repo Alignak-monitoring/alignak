@@ -300,7 +300,6 @@ class Realm(Itemgroup):
 
         :return: None
         """
-        # print("- set: %s (%s)" % (self.get_name(), self.uuid))
         self.level = level
         self.all_sub_members = []
         self.all_sub_members_names = []
@@ -318,8 +317,6 @@ class Realm(Itemgroup):
                     grand_child = realms.find_by_name(grand_child)
                     if grand_child:
                         self.all_sub_members.append(grand_child.uuid)
-        # print("-> : %s" % self.all_sub_members)
-        # print("-> : %s" % self.all_sub_members_names)
         return self.all_sub_members_names
 
     def get_all_subs_satellites_by_type(self, sat_type, realms):

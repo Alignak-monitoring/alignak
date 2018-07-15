@@ -1881,7 +1881,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         return res
 
     def get_alignak_status(self, details=False):
-        # pylint: disable=too-many-locals
+        # pylint: disable=too-many-locals, too-many-branches
         """Push the alignak overall state as a passive check
 
         Build all the daemons overall state as a passive check that can be notified

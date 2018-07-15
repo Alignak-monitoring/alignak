@@ -669,7 +669,8 @@ class Timeperiod(Item):
                         'skip_interval': skip_interval, 'other': other}
                 dateranges.append(WeekDayDaterange(data))
                 return
-            elif t00 in Daterange.months and t01 in Daterange.months:
+
+            if t00 in Daterange.months and t01 in Daterange.months:
                 smon = Daterange.get_month_id(t00)
                 emon = Daterange.get_month_id(t01)
                 data = {'syear': 0, 'smon': smon, 'smday': smday, 'swday': 0, 'swday_offset': 0,
@@ -677,7 +678,8 @@ class Timeperiod(Item):
                         'skip_interval': skip_interval, 'other': other}
                 dateranges.append(MonthDateDaterange(data))
                 return
-            elif t00 == 'day' and t01 == 'day':
+
+            if t00 == 'day' and t01 == 'day':
                 data = {'syear': 0, 'smon': 0, 'smday': smday, 'swday': 0, 'swday_offset': 0,
                         'eyear': 0, 'emon': 0, 'emday': emday, 'ewday': 0, 'ewday_offset': 0,
                         'skip_interval': skip_interval, 'other': other}
@@ -698,7 +700,8 @@ class Timeperiod(Item):
                         'skip_interval': skip_interval, 'other': other}
                 dateranges.append(WeekDayDaterange(data))
                 return
-            elif t00 in Daterange.months:
+
+            if t00 in Daterange.months:
                 smon = Daterange.get_month_id(t00)
                 emon = smon
                 data = {'syear': 0, 'smon': smon, 'smday': smday, 'swday': 0, 'swday_offset': 0,
@@ -706,7 +709,8 @@ class Timeperiod(Item):
                         'skip_interval': skip_interval, 'other': other}
                 dateranges.append(MonthDateDaterange(data))
                 return
-            elif t00 == 'day':
+
+            if t00 == 'day':
                 data = {'syear': 0, 'smon': 0, 'smday': smday, 'swday': 0, 'swday_offset': 0,
                         'eyear': 0, 'emon': 0, 'emday': emday, 'ewday': 0, 'ewday_offset': 0,
                         'skip_interval': skip_interval, 'other': other}
@@ -743,7 +747,8 @@ class Timeperiod(Item):
                         'other': other}
                 dateranges.append(WeekDayDaterange(data))
                 return
-            elif t00 in Daterange.months:
+
+            if t00 in Daterange.months:
                 smon = Daterange.get_month_id(t00)
                 emon = smon
                 data = {'syear': 0, 'smon': smon, 'smday': smday, 'swday': 0,
@@ -752,7 +757,8 @@ class Timeperiod(Item):
                         'other': other}
                 dateranges.append(MonthDateDaterange(data))
                 return
-            elif t00 == 'day':
+
+            if t00 == 'day':
                 data = {'syear': 0, 'smon': 0, 'smday': smday, 'swday': 0,
                         'swday_offset': 0, 'eyear': 0, 'emon': 0, 'emday': emday,
                         'ewday': 0, 'ewday_offset': 0, 'skip_interval': 0,
@@ -774,7 +780,8 @@ class Timeperiod(Item):
                         'other': other}
                 dateranges.append(WeekDayDaterange(data))
                 return
-            elif t00 in Daterange.months and t01 in Daterange.months:
+
+            if t00 in Daterange.months and t01 in Daterange.months:
                 smon = Daterange.get_month_id(t00)
                 emon = Daterange.get_month_id(t01)
                 data = {'syear': 0, 'smon': smon, 'smday': smday, 'swday': 0,
@@ -783,7 +790,8 @@ class Timeperiod(Item):
                         'other': other}
                 dateranges.append(MonthDateDaterange(data))
                 return
-            elif t00 == 'day' and t01 == 'day':
+
+            if t00 == 'day' and t01 == 'day':
                 data = {'syear': 0, 'smon': 0, 'smday': smday, 'swday': 0,
                         'swday_offset': 0, 'eyear': 0, 'emon': 0, 'emday': emday,
                         'ewday': 0, 'ewday_offset': 0, 'skip_interval': 0,

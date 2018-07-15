@@ -864,7 +864,7 @@ class Items(object):
         if existing_prio < item_prio:
             # Existing item has lower priority, so it has precedence.
             return existing
-        elif existing_prio > item_prio:
+        if existing_prio > item_prio:
             # New item has lower priority, so it has precedence.
             # Existing item will be deleted below
             pass

@@ -3032,7 +3032,7 @@ class ExternalCommandManager(object):
                          plugin_output)
             return
 
-        chk = host.launch_check(int(now), self.hosts, self.services, self.timeperiods,
+        chk = host.launch_check(now, self.hosts, self.services, self.timeperiods,
                                 self.daemon.macromodulations, self.daemon.checkmodulations,
                                 self.daemon.checks, force=True)
         # We will not have a check if an host/service is checked but it has no defined check_command
@@ -3519,7 +3519,7 @@ class ExternalCommandManager(object):
         host.add_downtime(downtime)
 
         self.daemon.get_and_register_status_brok(host)
-        if trigger_id != '' and trigger_id != 0:
+        if trigger_id not in ('', 0):
             for item in self.daemon.hosts:
                 if trigger_id in item.downtimes:
                     host.downtimes[trigger_id].trigger_me(downtime.uuid)
@@ -3682,7 +3682,7 @@ class ExternalCommandManager(object):
         downtime.add_automatic_comment(service)
         service.add_downtime(downtime)
         self.daemon.get_and_register_status_brok(service)
-        if trigger_id != '' and trigger_id != 0:
+        if trigger_id not in ('', 0):
             for item in self.daemon.services:
                 if trigger_id in item.downtimes:
                     service.downtimes[trigger_id].trigger_me(downtime.uuid)

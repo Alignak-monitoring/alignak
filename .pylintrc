@@ -132,7 +132,10 @@ disable=print-statement,
         no-member,
         fixme,
         invalid-name,
-        access-member-before-definition
+        access-member-before-definition,
+        useless-object-inheritance,
+        consider-using-dict-comprehension,
+        consider-using-set-comprehension
 
 # Enable the message, report, category or checker with the given id(s). You can
 # either give multiple identifier separated by comma (,) or put this option

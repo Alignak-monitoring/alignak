@@ -715,7 +715,7 @@ class Service(SchedulingItem):
                                contact.get_name(), host_ref.get_name(), self.get_name(), state,
                                notif.notif_nb, command.get_name(), self.output)
             else:
-                logger.info("SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s",
+                logger.info("SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s;%s",
                             contact.get_name(), host_ref.get_name(), self.get_name(), state,
                             notif.notif_nb, command.get_name(), self.output)
 
@@ -1789,9 +1789,6 @@ class Services(SchedulingItems):
                     self.explode_services_from_hosts(hosts, serv, hnames)
                 # Delete expanded source service, even if some errors exist
                 self.remove_item(serv)
-                # if not serv.configuration_errors:
-                #     print("Remove duplicated service!")
-                #     self.remove_item(serv)
 
         for s_id in self.templates:
             template = self.templates[s_id]

@@ -560,11 +560,11 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         if status == self.state:
             return True
         # Now low status
-        elif status == 'o' and self.state == u'UP':
+        if status == 'o' and self.state == u'UP':
             return True
-        elif status == 'd' and self.state == u'DOWN':
+        if status == 'd' and self.state == u'DOWN':
             return True
-        elif status in ['u', 'x'] and self.state == u'UNREACHABLE':
+        if status in ['u', 'x'] and self.state == u'UNREACHABLE':
             return True
         return False
 

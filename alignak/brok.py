@@ -52,7 +52,7 @@ import time
 from datetime import datetime
 
 from alignak.alignakobject import get_a_new_object_id
-from alignak.misc.serialization import serialize, unserialize, AlignakClassLookupException
+from alignak.misc.serialization import serialize, unserialize
 
 
 class Brok(object):
@@ -149,10 +149,7 @@ class Brok(object):
         # Maybe the Brok is a old daemon one or was already prepared
         # if so, the data is already ok
         if hasattr(self, 'prepared') and not self.prepared:
-            try:
-                self.data = unserialize(self.data)
-            except AlignakClassLookupException:  # pragma: no cover, should never happen...
-                raise
+            self.data = unserialize(self.data)
             if self.instance_id:
                 self.data['instance_id'] = self.instance_id
         self.prepared = True

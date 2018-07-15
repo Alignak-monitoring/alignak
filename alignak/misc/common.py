@@ -49,13 +49,14 @@ from collections import namedtuple
 try:
     from setproctitle import setproctitle  # pylint: disable=unused-import
 except ImportError as err:  # pragma: no cover, setproctitle is in the requirements.txt
-    def setproctitle(title):  # pylint: disable=unused-argument
+    def setproctitle(title):  # pylint: disable=unused-argument, useless-return
         """
         Return name
         :param title: name of process
         :type title: str
         :return: None
         """
+        # Do nothing...
         return None
 
 # Friendly names for the system signals

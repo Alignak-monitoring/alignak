@@ -75,7 +75,7 @@ CHECK_RESULT = 'check_result'
 NONE_OBJECT = object()
 
 
-class Property(object):
+class Property(object):  # pylint: disable=useless-object-inheritance
     # pylint: disable=too-many-instance-attributes
     """Baseclass of all properties.
 
@@ -239,8 +239,8 @@ class BoolProp(Property):
         val = unique_value(val).lower()
         if val in list(__boolean_states__.keys()):
             return __boolean_states__[val]
-        else:
-            raise PythonizeError("Cannot convert '%s' to a boolean value" % val)
+
+        raise PythonizeError("Cannot convert '%s' to a boolean value" % val)
 
 
 class IntegerProp(Property):

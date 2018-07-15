@@ -109,6 +109,8 @@ class TestDaemonsApi(AlignakTest):
             cfg.set('alignak-configuration', 'min_workers', '1')
             cfg.set('alignak-configuration', 'max_workers', '1')
 
+            cfg.set('alignak-configuration', 'log_cherrypy', '1')
+
             # A macro for the check script directory
             cfg.set('alignak-configuration', '_EXEC_DIR', self.cfg_folder)
             for daemon in daemons_list:
@@ -143,6 +145,25 @@ class TestDaemonsApi(AlignakTest):
         """
         # disable ssl warning
         # requests.packages.urllib3.disable_warnings()
+
+        # Update the default configuration files
+        files = ['%s/etc/alignak.ini' % self.cfg_folder]
+        try:
+            cfg = configparser.ConfigParser()
+            cfg.read(files)
+
+            cfg.set('alignak-configuration', 'use_ssl', '1')
+
+            cfg.set('alignak-configuration', 'server_cert', '%s/etc/certs/certificate_test.csr' % self.cfg_folder)
+            cfg.set('alignak-configuration', 'server_key', '%s/etc/certs/certificate_test.key' % self.cfg_folder)
+            # cfg.set('alignak-configuration', 'ca_cert', '%s/etc/certs/dhparams.pem' % self.cfg_folder)
+
+            with open('%s/etc/alignak.ini' % self.cfg_folder, "w") as modified:
+                cfg.write(modified)
+        except Exception as exp:
+            print("* parsing error in config file: %s" % exp)
+            assert False
+
         self._run_daemons_and_test_api(ssl=True)
 
     def _run_daemons_and_test_api(self, ssl=False):
