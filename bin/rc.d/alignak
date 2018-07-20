@@ -196,6 +196,8 @@ if [ -n "$3" ]; then
    # $1 is the command and $2 is the daemon type and $3 is the daemon name
    if [ "$1" = "check" ]; then
       echo "Start checking Alignak configuration..."
+   elif [ "$1" = "reload" ]; then
+      echo "Start reloading Alignak configuration..."
    else
       type="$2"
       # Remove space characters and replace non alphanumeric with an underscore
@@ -242,6 +244,8 @@ elif [ -n "$2" ]; then
    # $1 is the command and $2 is the daemon type
    if [ "$1" = "check" ]; then
       echo "Start checking Alignak configuration..."
+   elif [ "$1" = "reload" ]; then
+      echo "Start reloading Alignak configuration..."
    else
       echo "Single instance command: $1 - $2"
       if [ -n "${alignak_types}" -a -n "$1" ]; then
@@ -269,6 +273,10 @@ else
    echo "All instances command: $1"
    if [ "$1" = "check" ]; then
       debug "Require Alignak configuration checking..."
+   elif [ "$1" = "reload" ]; then
+      echo "Start reloading Alignak configuration..."
+      type="arbiter"
+      instance="arbiter_master"
    elif [ -n "${alignak_types}" -a -n "$1" ]; then
       for type in ${alignak_types}; do
          eval type_instances="\${alignak_${type}_instances:""}"
@@ -337,10 +345,9 @@ stop_cmd="${name}_stop"
 start_cmd="${name}_start"
 status_cmd="${name}_status"
 start_precmd="${name}_precmd"
+reload_cmd="${name}_reload"
 check_cmd="${name}_check"
-extra_commands="check"
-
-required_files="${alignak_wsgi}"
+extra_commands="reload check"
 
 # Force define the Alignak user:group in the environment to override the one defined in the configuration file!
 if [ ! -z "$alignak_user" ]; then
@@ -400,6 +407,35 @@ alignak_check() {
    info "Checking Alignak configuration..."
    debug "/usr/local/bin/alignak-arbiter -V --environment ${alignak_configuration} --pid_file ${alignak_pid_file} --log_file ${alignak_log_file} $*"
    /usr/local/bin/alignak-arbiter -V --environment ${alignak_configuration} --pid_file ${alignak_pid_file} --log_file ${alignak_log_file} $*
+   exit_code=$?
+   info "Configuration checked, result: $exit_code"
+   cat ${alignak_log_file}
+
+   if [ $exit_code -eq 0 ]
+   then
+      info "-----"
+      info "The checked configuration did not raise any error."
+      info "-----"
+   else
+      info "*****"
+      echo "*****"
+      err $exit_code "Some errors were raised during the configuration check!"
+      info "*****"
+      echo "*****"
+   fi
+}
+
+alignak_reload() {
+   info "Reloading Alignak configuration..."
+
+   alignak_pid_file="${alignak_prefix}/var/run/alignak/${type}-${instance}.pid"
+   if [ -e "${alignak_pid_file}" ]; then
+      info "Asking configuration reload to ${name} - ${type} ${instance}i, pid=(`cat ${alignak_pid_file}`)..."
+      kill -s HUP `cat ${alignak_pid_file}`
+      info "Signal sent"
+   else
+      info "${name} - ${type} ${instance} is not running"
+   fi
 }
 
 [ -z "${alignak_enable}" ] && alignak_enable="NO"

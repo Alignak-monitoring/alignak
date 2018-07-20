@@ -772,13 +772,14 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         # We check for new check in each schedulers and put the result in new_checks
         scheduler_link = None
         for scheduler_id in self.schedulers:
+            logger.debug("Trying to add an action, scheduler: %s", self.schedulers[scheduler_id])
             if scheduler_instance_id == self.schedulers[scheduler_id].instance_id:
                 scheduler_link = self.schedulers[scheduler_id]
                 break
-            else:
-                logger.error("Trying to add actions from an unknwown scheduler: %s",
-                             scheduler_instance_id)
-                return
+        else:
+            logger.error("Trying to add actions from an unknwown scheduler: %s",
+                         scheduler_instance_id)
+            return
         if not scheduler_link:
             logger.error("Trying to add actions, but scheduler link is not found for: %s, "
                          "actions: %s", scheduler_instance_id, actions_list)
@@ -1068,7 +1069,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
             # Initialize connection with all our satellites
             logger.info("Initializing connection with my satellites:")
-            my_satellites = self.get_links_of_type(s_type=None)
+            my_satellites = self.get_links_of_type(s_type='')
             for satellite in list(my_satellites.values()):
                 logger.info("- : %s/%s", satellite.type, satellite.name)
                 if not self.daemon_connection_init(satellite):
@@ -1116,6 +1117,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
 
                 # Now main loop
                 self.do_main_loop()
+                logger.info("Exited from the main loop.")
 
             self.request_stop()
         except Exception:  # pragma: no cover, this should never happen indeed ;)

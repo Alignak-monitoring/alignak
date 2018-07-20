@@ -365,7 +365,6 @@ class Realm(Itemgroup):
 
         matching_satellites = []
         for sat_link in satellites:
-            print("- : %s" % sat_link)
             if sat_link.uuid in getattr(self, s_type + 's'):
                 matching_satellites.append(sat_link)
         if matching_satellites:

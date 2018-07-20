@@ -883,7 +883,7 @@ class Daemon(object):
         logger.info("Stopped %s.", self.name)
         sys.exit(exit_code)
 
-    def get_links_of_type(self, s_type=None):
+    def get_links_of_type(self, s_type=''):
         """Return the `s_type` satellite list (eg. schedulers)
 
         If s_type is None, returns a dictionary of all satellites, else returns the dictionary
@@ -1037,7 +1037,7 @@ class Daemon(object):
                 self.setup_new_conf()
 
             # Trying to restore our related daemons lost connections
-            for satellite in list(self.get_links_of_type(s_type=None).values()):
+            for satellite in list(self.get_links_of_type(s_type='').values()):
                 # Not for configuration disabled satellites
                 if not satellite.active:
                     continue
@@ -1162,6 +1162,7 @@ class Daemon(object):
                 logger.debug('Dumping memory')
                 self.dump_environment()
                 self.need_dump_environment = False
+        logger.info("stopped main loop: %.2f", time.time())
 
     def do_load_modules(self, modules):
         """Wrapper for calling load_and_init method of modules_manager attribute

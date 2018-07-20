@@ -484,7 +484,7 @@ class Alignak(BaseSatellite):
 
             # Initialize connection with all our satellites
             logger.info("Initializing connection with my satellites:")
-            my_satellites = self.get_links_of_type()
+            my_satellites = self.get_links_of_type(s_type='')
             for satellite in list(my_satellites.values()):
                 logger.info("- : %s/%s", satellite.type, satellite.name)
                 if not self.daemon_connection_init(satellite):
@@ -590,6 +590,7 @@ class Alignak(BaseSatellite):
 
                 # Now the main loop
                 self.do_main_loop()
+                logger.info("Exited from the main loop.")
 
                 # On main loop exit, call the scheduler after run process
                 self.sched.after_run()

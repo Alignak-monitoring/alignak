@@ -558,7 +558,7 @@ class Service(SchedulingItem):
         if state_code in self.flap_detection_options:
             self.add_flapping_change(self.state != self.last_state)
             # Now we add a value, we update the is_flapping prop
-            self.update_flapping(notif_period, hosts, services)
+            self.update_flapping (notif_period, hosts, services)
         if self.state != self.last_state:
             self.last_state_change = self.last_state_update
 
@@ -1411,27 +1411,21 @@ class Services(SchedulingItems):
                 # Checks service override syntax
                 match = ovr_re.search(ovr)
                 if match is None:
-                    err = "Error: invalid service override syntax: %s" % ovr
-                    host.add_error(err)
+                    host.add_error("Error: invalid service override syntax: %s" % ovr)
                     continue
                 sdescr, prop, value = match.groups()
                 # Looks for corresponding service
-                service = self.find_srv_by_name_and_hostname(
-                    getattr(host, "host_name", ""), sdescr
-                )
+                service = self.find_srv_by_name_and_hostname(getattr(host, "host_name", ""), sdescr)
                 if service is None:
-                    err = "Error: trying to override property '%s' on service '%s' " \
-                          "but it's unknown for this host" % (prop, sdescr)
-                    host.add_error(err)
+                    host.add_error("Error: trying to override property '%s' on service '%s' "
+                                   "but it's unknown for this host" % (prop, sdescr))
                     continue
                 # Checks if override is allowed
                 excludes = ['host_name', 'service_description', 'use',
                             'servicegroups', 'trigger_name']
                 if prop in excludes:
-                    err = "Error: trying to override '%s', " \
-                          "a forbidden property for service '%s'" % \
-                          (prop, sdescr)
-                    host.add_error(err)
+                    host.add_error("Error: trying to override '%s', "
+                                   "a forbidden property for service '%s'" % (prop, sdescr))
                     continue
 
                 # Pythonize the value because here value is str.

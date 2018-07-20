@@ -840,13 +840,13 @@ class TestConfig(AlignakTest):
         self.assert_any_cfg_log_match(re.escape(
             "the host test_host_realm3 got an invalid realm (Realm3)!"))
         self.assert_any_cfg_log_match(re.escape(
-            "in host::test_host_realm3 is incorrect; from: /home/alignak/alignak/tests/cfg/config/host_bad_realm.cfg:31"))
+            "in host::test_host_realm3 is incorrect; from: "))
         self.assert_any_cfg_log_match(re.escape(
             "hosts configuration is incorrect!"))
         self.assert_any_cfg_log_match(re.escape(
             "[realm::Realm4] as realm, got unknown member 'UNKNOWN_REALM'"))
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in realm::Realm4 is incorrect; from: /home/alignak/alignak/tests/cfg/config/realm_bad_member.cfg:19"))
+            "Configuration in realm::Realm4 is incorrect; from: "))
         self.assert_any_cfg_log_match(re.escape(
             "realms configuration is incorrect!"))
         self.assert_any_cfg_log_match(re.escape(

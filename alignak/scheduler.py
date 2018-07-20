@@ -1732,7 +1732,13 @@ class Scheduler(object):  # pylint: disable=R0902
             if chk.status == ACT_STATUS_WAIT_CONSUME:
                 logger.debug("Consuming: %s", chk)
                 item = self.find_item_by_id(chk.ref)
-                notification_period = self.timeperiods[item.notification_period]
+                if not item:
+                    logger.warning("Consuming a check result, "
+                                   "missing item for the check result: %s", chk)
+                    continue
+                notification_period = None
+                if item.notification_period is not None:
+                    notification_period = self.timeperiods[item.notification_period]
 
                 dep_checks = item.consume_result(chk, notification_period, self.hosts,
                                                  self.services, self.timeperiods,
@@ -1742,7 +1748,7 @@ class Scheduler(object):  # pylint: disable=R0902
                                                  self.pushed_conf.log_active_checks and
                                                  not chk.passive_check)
 
-                # # Raise the log only when the check got consumed!
+                # # Raise the log only when the check got consumed!
                 # # Else the item information are not up-to-date :/
                 # if self.pushed_conf.log_active_checks and not chk.passive_check:
                 #     item.raise_check_result()

@@ -2093,6 +2093,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             # And go for the main loop
             while True:
                 self.do_main_loop()
+                logger.info("Exited from the main loop.")
 
                 # Exiting the main loop because of a configuration reload
                 if not self.need_config_reload:

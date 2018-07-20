@@ -546,6 +546,7 @@ class Broker(BaseSatellite):
 
                 # Now the main loop
                 self.do_main_loop()
+                logger.info("Exited from the main loop.")
 
             self.request_stop()
         except Exception:  # pragma: no cover, this should never happen indeed ;)
