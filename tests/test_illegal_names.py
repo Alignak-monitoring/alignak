@@ -72,13 +72,37 @@ class TestIllegalNames(AlignakTest):
         assert host.is_correct()
 
         # Now change the name with incorrect caract
+        host.configuration_errors=[]
         for charact in illegal_characts:
             host.host_name = 'test_host_0' + charact
             # and Now I want an incorrect here
             assert False == host.is_correct()
-
+        print(host.configuration_errors)
+        assert host.configuration_errors == [
+            '[host::test_host_0`] host_name contains an illegal character: `',
+            '[host::test_host_0~] host_name contains an illegal character: ~',
+            '[host::test_host_0!] host_name contains an illegal character: !',
+            '[host::test_host_0$] host_name contains an illegal character: $',
+            '[host::test_host_0%] host_name contains an illegal character: %',
+            '[host::test_host_0^] host_name contains an illegal character: ^',
+            '[host::test_host_0&] host_name contains an illegal character: &',
+            '[host::test_host_0*] host_name contains an illegal character: *',
+            '[host::test_host_0"] host_name contains an illegal character: "',
+            '[host::test_host_0|] host_name contains an illegal character: |',
+            "[host::test_host_0'] host_name contains an illegal character: '",
+            '[host::test_host_0<] host_name contains an illegal character: <',
+            '[host::test_host_0>] host_name contains an illegal character: >',
+            '[host::test_host_0?] host_name contains an illegal character: ?',
+            '[host::test_host_0,] host_name contains an illegal character: ,',
+            '[host::test_host_0(] host_name contains an illegal character: (',
+            '[host::test_host_0)] host_name contains an illegal character: )',
+            '[host::test_host_0=] host_name contains an illegal character: =']
         # test special cases manually to be sure
+        host.configuration_errors=[]
         for charact in ['!']:
             host.host_name = 'test_host_0' + charact
             # and Now I want an incorrect here
             assert False == host.is_correct()
+        assert host.configuration_errors == [
+            '[host::test_host_0!] host_name contains an illegal character: !'
+        ]

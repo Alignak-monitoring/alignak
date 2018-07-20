@@ -66,7 +66,7 @@ import time
 import random
 
 from alignak.misc.serialization import serialize
-from alignak.util import alive_then_spare_then_deads, master_then_spare
+from alignak.util import master_then_spare
 from alignak.objects.satellitelink import LinkError
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -369,9 +369,13 @@ class Dispatcher(object):
                 if not cfg_part.scheduler_link.manages(cfg_part):
                     # We ask for a new dispatching
                     self.dispatch_ok = False
-                    logger.warning("    the assigned scheduler %s does not manage the "
-                                   "configuration; asking for a new configuration dispatch.",
-                                   cfg_part.scheduler_link.name)
+                    if cfg_part.scheduler_link.cfg_managed is None:
+                        logger.warning("    %s not yet !.",
+                                       cfg_part.scheduler_link.name)
+                    else:
+                        logger.warning("    the assigned scheduler %s does not manage the "
+                                       "configuration; asking for a new configuration dispatch.",
+                                       cfg_part.scheduler_link.name)
                     cfg_part.scheduler_link.cfg_to_manage = None
                     cfg_part.scheduler_link.push_flavor = ''
                     cfg_part.scheduler_link.hash = ''
@@ -461,9 +465,21 @@ class Dispatcher(object):
             scheduler_links.append(self.schedulers[scheduler_link_uuid])
 
         # Now we sort the schedulers so we take alive, then spare, then dead,
-        # but we do not care about them!
-        # todo: why do not care?
-        scheduler_links = alive_then_spare_then_deads(scheduler_links)
+        alive = []
+        spare = []
+        deads = []
+        for sdata in scheduler_links:
+            if sdata.alive and not sdata.spare:
+                alive.append(sdata)
+            elif sdata.alive and sdata.spare:
+                spare.append(sdata)
+            else:
+                deads.append(sdata)
+        scheduler_links = []
+        scheduler_links.extend(alive)
+        scheduler_links.extend(spare)
+        scheduler_links.extend(deads)
+
         scheduler_links.reverse()  # I need to pop the list, so reverse the list...
         return scheduler_links
 
@@ -573,15 +589,13 @@ class Dispatcher(object):
                 logger.info('  no configuration to dispatch for this realm!')
                 continue
 
-            # Now we get all the schedulers of this realm and upper
-            schedulers = self.get_scheduler_ordered_list(realm)
-
             logger.info(" preparing the dispatch for schedulers:")
 
-            # Only prepare the configuration for active schedulers
-            schedulers = [s for s in schedulers if s.active]
+            # Now we get all the schedulers of this realm and upper
+            schedulers = self.get_scheduler_ordered_list(realm)
+            schedulers = realm.get_potential_satellites_by_type(self.get_satellites_list('schedulers'), 'scheduler')
             if not schedulers:
-                logger.error('  no active schedulers in this realm!')
+                logger.error('  no available schedulers in this realm (%s)!' % realm)
                 continue
             logger.info("  realm schedulers: %s",
                         ','.join([s.get_name() for s in schedulers]))
@@ -700,9 +714,8 @@ class Dispatcher(object):
                         logger.debug("   no need to dispatch to %ss", sat_type)
                         return
 
-                    # Get the list of the concerned satellites uuid (only reachable satellites)
-                    satellites = realm.get_potential_satellites_by_type(self.satellites, sat_type,
-                                                                        reachable=False)
+                    # Get the list of the concerned satellites
+                    satellites = realm.get_potential_satellites_by_type(self.satellites, sat_type)
                     if satellites:
                         logger.info("  realm %ss: %s",
                                     sat_type, ','.join([s.get_name() for s in satellites]))
@@ -716,10 +729,16 @@ class Dispatcher(object):
                             # I exclude the daemons that are not active
                             continue
 
-                        if nb_cfg_prepared >= realm.get_nb_of_must_have_satellites(sat_type):
-                            raise DispatcherError("Too much configuration parts prepared "
-                                                  "for the expected satellites count. "
-                                                  "This should never happen!")
+                        if nb_cfg_prepared > realm.get_nb_of_must_have_satellites(sat_type):
+                            logger.warning("Too much configuration parts prepared "
+                                           "for the expected satellites count. "
+                                           "Realm: %s, satellite: %s - prepared: %d out of %d"
+                                           % (realm.name, sat_link.name, nb_cfg_prepared,
+                                              realm.get_nb_of_must_have_satellites(sat_type)))
+                            # Fred - 2018-07-20 - temporary disable this error raising!
+                            # raise DispatcherError("Too much configuration parts prepared "
+                            #                       "for the expected satellites count. "
+                            #                       "This should never happen!")
 
                         logger.info("   preparing configuration part '%s' for the %s '%s'",
                                     cfg_part.instance_id, sat_type, sat_link.name)
@@ -791,12 +810,10 @@ class Dispatcher(object):
         :return: None
         """
         if not self.new_to_dispatch:
-            logger.info("1")
             raise DispatcherError("Dispatcher cannot dispatch, "
                                   "because no configuration is prepared!")
 
         if self.first_dispatch_done:
-            logger.info("2")
             raise DispatcherError("Dispatcher cannot dispatch, "
                                   "because the configuration is still dispatched!")
 
@@ -805,6 +822,7 @@ class Dispatcher(object):
             return
 
         logger.info("Trying to send configuration to the satellites...")
+        print("Trying to send configuration to the satellites...")
 
         self.dispatch_ok = True
 

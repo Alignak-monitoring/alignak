@@ -126,7 +126,7 @@ class TestDispatcher(AlignakTest):
                     mr.post('http://%s:%s/push_configuration' % (link.address, link.port),
                             json=True)
                     mr.get('http://%s:%s/get_managed_configurations' % (link.address, link.port),
-                           json=link.cfg_managed)
+                           json={})
                     mr.get('http://%s:%s/do_not_run' % (link.address, link.port),
                            json=True)
 
@@ -214,7 +214,7 @@ class TestDispatcher(AlignakTest):
                 ))
                 # All links have a hash, push_flavor and cfg_to_manage
                 for link in my_dispatcher.all_daemons_links:
-                    print(("Link: %s" % link))
+                    print("Link: %s" % link)
                     assert getattr(link, 'hash', None) is not None
                     assert getattr(link, 'push_flavor', None) is not None
                     assert getattr(link, 'cfg_to_manage', None) is not None
@@ -349,7 +349,7 @@ class TestDispatcher(AlignakTest):
                                     'managed_conf_id': conf['managed_conf_id']
                                 }
                             }
-                            print(("Managed: %s" % link.cfg_managed))
+                            print("Managed: %s" % link.cfg_managed)
 
                             # The scheduler got the same objects count as the arbiter prepared!
                             for _, _, strclss, _, _ in list(managed_conf_part.types_creations.values()):
@@ -377,16 +377,19 @@ class TestDispatcher(AlignakTest):
                     mr.get('http://%s:%s/get_managed_configurations' % (link.address, link.port),
                            json=link.cfg_managed)
 
-                print("Check dispatching")
+                print("Check dispatching:")
                 self.clear_logs()
-                assert my_dispatcher.check_dispatch() is True
+                # assert my_dispatcher.check_dispatch() is True
+                dispatched = my_dispatcher.check_dispatch()
+                self.show_logs()
+                assert dispatched
 
                 for loop_count in range(0, loops):
                     for tw in range(0, 4):
                         # Time warp 1 second
                         frozen_datetime.tick(delta=datetime.timedelta(seconds=1))
 
-                        print(("Check reachable %s" % tw))
+                        print("Check reachable %s" % tw)
                         self.clear_logs()
                         my_dispatcher.check_reachable()
                         # Only for Python > 2.7, DEBUG logs ...
@@ -404,6 +407,7 @@ class TestDispatcher(AlignakTest):
                     print("Check reachable response")
                     self.clear_logs()
                     my_dispatcher.check_reachable()
+                    self.show_logs()
                     # Only for Python > 2.7, DEBUG logs ...
                     if os.sys.version_info > (2, 7):
                         for link in my_dispatcher.all_daemons_links:

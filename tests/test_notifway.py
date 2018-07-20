@@ -115,6 +115,7 @@ class TestNotificationWay(AlignakTest):
         test=copy.deepcopy(email_in_day)
         test.__dict__.pop('host_notification_commands')
         test.__dict__.pop('service_notification_commands')
+        test.configuration_errors = []
         assert not test.is_correct()
         assert test.configuration_errors == [
             '[notificationway::email_in_day] do not have any service_notification_commands defined',
@@ -126,6 +127,7 @@ class TestNotificationWay(AlignakTest):
         test.host_notification_commands = [None]
         test.service_notification_period = None
         test.service_notification_commands = [None]
+        test.configuration_errors = []
         assert not test.is_correct()
         pprint(test.__dict__)
         assert '[notificationway::email_in_day] a service_notification_command is missing' \

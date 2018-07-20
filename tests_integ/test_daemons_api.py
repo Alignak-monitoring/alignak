@@ -64,17 +64,24 @@ class TestDaemonsApi(AlignakTest):
 
         super(TestDaemonsApi, self).setUp()
 
+    def tearDown(self):
+        del os.environ['ALIGNAK_LOG_ACTIVITY']
+        del os.environ['ALIGNAK_DAEMON_MONITORING']
+        del os.environ['ALIGNAK_LOG_ACTIONS']
+
+        print("Test terminated!")
+
+    def _prepare_my_configuration(self, daemons_list=None, remove_daemons=None):
         self.cfg_folder = '/tmp/alignak'
         if os.path.exists(self.cfg_folder):
             shutil.rmtree(self.cfg_folder)
         cfg_dir = 'default_many_hosts'
         hosts_count = 10
-        daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
-                        'receiver-master', 'scheduler-master']
-        satellite_map = {
-            'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
-            'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
-        }
+        if remove_daemons is None:
+            remove_daemons = []
+        if daemons_list is None:
+            daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
+                            'receiver-master', 'scheduler-master']
 
         # Default shipped configuration preparation
         self._prepare_configuration(copy=True, cfg_folder=self.cfg_folder)
@@ -113,9 +120,18 @@ class TestDaemonsApi(AlignakTest):
 
             # A macro for the check script directory
             cfg.set('alignak-configuration', '_EXEC_DIR', self.cfg_folder)
+
             for daemon in daemons_list:
                 if cfg.has_section('daemon.%s' % daemon):
                     cfg.set('daemon.%s' % daemon, 'alignak_launched', '1')
+            for daemon in remove_daemons:
+                if cfg.has_section('daemon.%s' % daemon):
+                    print("Remove daemon: %s" % daemon)
+                    cfg.remove_section('daemon.%s' % daemon)
+
+            if os.path.exists('%s/etc/alignak.d' % self.cfg_folder):
+                print("- removing %s/etc/alignak.d" % self.cfg_folder)
+                shutil.rmtree('%s/etc/alignak.d' % self.cfg_folder)
 
             with open('%s/etc/alignak.ini' % self.cfg_folder, "w") as modified:
                 cfg.write(modified)
@@ -123,18 +139,12 @@ class TestDaemonsApi(AlignakTest):
             print("* parsing error in config file: %s" % exp)
             assert False
 
-    def tearDown(self):
-        del os.environ['ALIGNAK_LOG_ACTIVITY']
-        del os.environ['ALIGNAK_DAEMON_MONITORING']
-        del os.environ['ALIGNAK_LOG_ACTIONS']
-
-        print("Test terminated!")
-
     def test_daemons_api_no_ssl(self):
         """ Running all the Alignak daemons - no SSL
 
         :return:
         """
+        self._prepare_my_configuration()
         self._run_daemons_and_test_api(ssl=False)
 
     @pytest.mark.skip("See #986 - SSL is broken with test files!")
@@ -145,6 +155,8 @@ class TestDaemonsApi(AlignakTest):
         """
         # disable ssl warning
         # requests.packages.urllib3.disable_warnings()
+
+        self._prepare_my_configuration()
 
         # Update the default configuration files
         files = ['%s/etc/alignak.ini' % self.cfg_folder]
@@ -788,25 +800,45 @@ class TestDaemonsApi(AlignakTest):
 
         :return:
         """
+        self._prepare_my_configuration()
         self._run_daemons_and_configure(ssl=False)
 
-    def _run_daemons_and_configure(self, ssl=False):
+    def test_daemons_configuration_no_receiver(self):
+        """ Running all the Alignak daemons to check their correct configuration
+
+        Do not include any receiver in the daemons list
+
+        :return:
+        """
+        daemons_list=['broker-master', 'poller-master', 'reactionner-master', 'scheduler-master']
+        self._prepare_my_configuration(daemons_list=daemons_list,
+                                       remove_daemons=['receiver-master'])
+        self._run_daemons_and_configure(ssl=False, daemons_list=daemons_list)
+
+    def _run_daemons_and_configure(self, ssl=False, daemons_list=None):
         """ Running all the Alignak daemons to check their correct launch and API
 
         Tests for the configuration dispatch API
 
         :return:
         """
-        satellite_map = {
+        full_satellite_map = {
             'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
             'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
         }
 
-        daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
-                        'receiver-master', 'scheduler-master']
+        if daemons_list is None:
+            daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
+                            'receiver-master', 'scheduler-master']
 
-        self._run_alignak_daemons(cfg_folder=self.cfg_folder,
-                                  daemons_list=daemons_list, runtime=5)
+        satellite_map = {'arbiter': '7770'}
+        for sat in full_satellite_map:
+            if "%s-master" % sat in daemons_list:
+                satellite_map[sat] = full_satellite_map[sat]
+
+        print("Satellites map: %s" % satellite_map)
+        self._run_alignak_daemons(cfg_folder=self.cfg_folder, daemons_list=daemons_list, runtime=5,
+                                  update_configuration=False)
 
         scheme = 'http'
         if ssl:
@@ -836,7 +868,7 @@ class TestDaemonsApi(AlignakTest):
             if name == 'arbiter-master':
                 continue
             raw_data = req.get("%s://localhost:%s/have_conf" % (scheme, port), verify=False)
-            print("have_conf, got (raw): %s" % raw_data)
+            print("have_conf %s, got (raw): %s" % (name, raw_data))
             data = raw_data.json()
             print("%s, have_conf: %s" % (name, data))
             assert data == True, "Daemon %s should have a conf!" % name
@@ -848,7 +880,7 @@ class TestDaemonsApi(AlignakTest):
             if name == 'arbiter-master':
                 continue
             raw_data = req.get("%s://localhost:%s/wait_new_conf" % (scheme, port), verify=False)
-            print("wait_new_conf, got (raw): %s" % raw_data)
+            print("wait_new_conf %s, got (raw): %s" % (name, raw_data))
             data = raw_data.json()
             assert data == None
         # -----
@@ -861,7 +893,7 @@ class TestDaemonsApi(AlignakTest):
             if name == 'arbiter-master':
                 continue
             raw_data = req.get("%s://localhost:%s/have_conf" % (scheme, port), verify=False)
-            print("have_conf, got (raw): %s" % raw_data)
+            print("have_conf %s, got (raw): %s" % (name, raw_data))
             data = raw_data.json()
             print("%s, have_conf: %s" % (name, data))
             assert data == False, "Daemon %s should not have a conf!" % name
@@ -897,6 +929,7 @@ class TestDaemonsApi(AlignakTest):
 
         :return:
         """
+        self._prepare_my_configuration()
         self._get_objects('http://localhost:7768')
 
     def test_get_objects_from_arbiter(self):
@@ -905,6 +938,7 @@ class TestDaemonsApi(AlignakTest):
 
         :return:
         """
+        self._prepare_my_configuration()
         self._get_objects('http://localhost:7770')
 
     def _get_objects(self, endpoint):
@@ -1113,6 +1147,7 @@ class TestDaemonsApi(AlignakTest):
 
         daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
                         'receiver-master', 'scheduler-master']
+        self._prepare_my_configuration(daemons_list=daemons_list)
 
         self._run_alignak_daemons(cfg_folder=self.cfg_folder,
                                   daemons_list=daemons_list, runtime=5)
@@ -1432,6 +1467,7 @@ class TestDaemonsApi(AlignakTest):
 
         daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
                         'receiver-master', 'scheduler-master']
+        self._prepare_my_configuration(daemons_list=daemons_list)
 
         self._run_alignak_daemons(cfg_folder=self.cfg_folder, arbiter_only=True,
                                   daemons_list=daemons_list, runtime=5, update_configuration=False)

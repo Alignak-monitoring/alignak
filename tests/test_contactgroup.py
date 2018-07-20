@@ -76,7 +76,7 @@ class TestContactGroup(AlignakTest):
         assert isinstance(cg, Contactgroup)
         assert cg.get_name() == "allcontacts_and_groups"
 
-        assert len(self._scheduler.contactgroups.get_members_by_name(
+        assert len(self._scheduler.contactgroups.get_members_of_group(
                 "allcontacts_and_groups"
             )) == \
             2
@@ -109,7 +109,7 @@ class TestContactGroup(AlignakTest):
         assert isinstance(cg, Contactgroup)
         assert cg.get_name() == "allcontacts_and_groups"
 
-        assert len(self._scheduler.contactgroups.get_members_by_name(
+        assert len(self._scheduler.contactgroups.get_members_of_group(
                 "allcontacts_and_groups"
             )) == \
             2
@@ -160,7 +160,7 @@ class TestContactGroup(AlignakTest):
         assert isinstance(cg, Contactgroup)
         assert cg.get_name() == "void"
 
-        assert len(self._scheduler.contactgroups.get_members_by_name("void")) == \
+        assert len(self._scheduler.contactgroups.get_members_of_group("void")) == \
             0
 
         print(("Contacts: %s" % cg.get_contactgroup_members()))
@@ -185,7 +185,7 @@ class TestContactGroup(AlignakTest):
 
         assert self._scheduler.contactgroups.find_by_name("test_With Spaces").get_name() == \
             "test_With Spaces"
-        assert self._scheduler.contactgroups.get_members_by_name(
+        assert self._scheduler.contactgroups.get_members_of_group(
                 "test_With Spaces"
             ) is not \
             []

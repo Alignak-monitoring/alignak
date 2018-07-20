@@ -21,37 +21,12 @@
 
 from .alignak_test import AlignakTest
 from collections import namedtuple
-from alignak.util import alive_then_spare_then_deads, average_percentile
+from alignak.util import average_percentile
 
 
 class TestUtils(AlignakTest):
     def setUp(self):
         super(TestUtils, self).setUp()
-
-    def test_sort_alive_then_spare_then_deads(self):
-        SmallSat = namedtuple("SmallSat", ["alive", "spare"])
-
-        sat_list = [SmallSat(alive=True, spare=False),
-                    SmallSat(alive=True, spare=True),
-                    SmallSat(alive=True, spare=True),
-                    SmallSat(alive=False, spare=True),
-                    SmallSat(alive=False, spare=False),
-                    SmallSat(alive=False, spare=False),
-                    SmallSat(alive=False, spare=True),
-                    SmallSat(alive=True, spare=False),
-                    SmallSat(alive=False, spare=False),
-                    SmallSat(alive=True, spare=True)]
-
-        expected_sat_list = [SmallSat(alive=True, spare=False),
-                             SmallSat(alive=True, spare=False),
-                             SmallSat(alive=True, spare=True),
-                             SmallSat(alive=True, spare=True),
-                             SmallSat(alive=True, spare=True)]
-
-        sat_list = alive_then_spare_then_deads(sat_list)
-
-        assert sat_list[:5] == expected_sat_list, \
-               "Function alive_then_spare_then_deads does not sort as exepcted!"
 
     def test_average_percentile(self):
         # No values

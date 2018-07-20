@@ -296,6 +296,12 @@ class Item(AlignakObject):
                 delattr(self, prop)
             except AttributeError:
                 pass
+        for prop in ('configuration_warnings', 'configuration_errors'):
+            try:
+                if getattr(self, prop, None) is not None and not getattr(self, prop):
+                    delattr(self, prop)
+            except AttributeError:
+                pass
 
     def get_name(self):
         """
@@ -1114,18 +1120,6 @@ class Items(object):
         """
         # we are ok at the beginning. Hope we are still ok at the end...
         valid = True
-        # Some class do not have twins, because they do not have names
-        # like servicedependencies
-        # todo: seems not used anywhere else!
-        # pylint: disable=not-an-iterable
-        twins = getattr(self, 'twins', None)
-        if twins is not None:
-            # Ok, look at no twins (it's bad!)
-            for t_id in twins:
-                i = self.items[t_id]
-                msg = "[items] %s.%s is duplicated from %s" % (i.__class__.my_type, i.get_name(),
-                                                               i.imported_from)
-                self.add_warning(msg)
 
         # Better check individual items before displaying the global items list errors and warnings
         for i in self:
@@ -1342,28 +1336,28 @@ class Items(object):
         :type contactgroups: alignak.objects.contactgroup.Contactgroups
         :return: None
         """
-        if hasattr(item, 'contact_groups'):
-            # TODO : See if we can remove this if
-            if isinstance(item.contact_groups, list):
-                cgnames = item.contact_groups
-            else:
-                cgnames = item.contact_groups.split(',')
-            cgnames = strip_and_uniq(cgnames)
-            for cgname in cgnames:
-                contactgroup = contactgroups.find_by_name(cgname)
-                if contactgroup is None:
-                    err = "The contact group '%s' defined on the %s '%s' do " \
-                          "not exist" % (cgname, item.__class__.my_type,
-                                         item.get_name())
-                    item.add_error(err)
-                    continue
-                cnames = contactgroups.get_members_by_name(cgname)
-                # We add contacts into our contacts
-                if cnames != []:
-                    if hasattr(item, 'contacts'):
-                        item.contacts.extend(cnames)
-                    else:
-                        item.contacts = cnames
+        if not hasattr(item, 'contact_groups'):
+            return
+
+        # TODO : See if we can remove this if
+        if isinstance(item.contact_groups, list):
+            cgnames = item.contact_groups
+        else:
+            cgnames = item.contact_groups.split(',')
+        cgnames = strip_and_uniq(cgnames)
+        for cgname in cgnames:
+            contactgroup = contactgroups.find_by_name(cgname)
+            if not contactgroup:
+                item.add_error("The contact group '%s' defined on the %s '%s' do not exist"
+                               % (cgname, item.__class__.my_type, item.get_name()))
+                continue
+            cnames = contactgroups.get_members_of_group(cgname)
+            # We add contacts into our contacts
+            if cnames:
+                if hasattr(item, 'contacts'):
+                    item.contacts.extend(cnames)
+                else:
+                    item.contacts = cnames
 
     def linkify_with_timeperiods(self, timeperiods, prop):
         """

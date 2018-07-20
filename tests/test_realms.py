@@ -79,10 +79,6 @@ class TestRealms(AlignakTest):
         self.assert_any_log_match(re.escape("No poller defined, I am adding one on 127.0.0.1:10001"))
         self.assert_any_log_match(re.escape("No broker defined, I am adding one on 127.0.0.1:10002"))
         self.assert_any_log_match(re.escape("No receiver defined, I am adding one on 127.0.0.1:10003"))
-        self.assert_any_log_match(re.escape("Tagging Default-Poller with realm All"))
-        self.assert_any_log_match(re.escape("Tagging Default-Broker with realm All"))
-        self.assert_any_log_match(re.escape("Tagging Default-Reactionner with realm All"))
-        # self.assert_any_log_match(re.escape("Prepare dispatching for this realm"))
 
         # Only one realm in the configuration
         assert len(self._arbiter.conf.realms) == 1
@@ -121,15 +117,10 @@ class TestRealms(AlignakTest):
         assert self.conf_is_correct
         self.show_logs()
 
-        self.assert_any_log_match(re.escape("No realms defined, I am adding one as All"))
         self.assert_any_log_match(re.escape("No reactionner defined, I am adding one on 127.0.0.1:10000"))
         self.assert_any_log_match(re.escape("No poller defined, I am adding one on 127.0.0.1:10001"))
         self.assert_any_log_match(re.escape("No broker defined, I am adding one on 127.0.0.1:10002"))
         self.assert_any_log_match(re.escape("No receiver defined, I am adding one on 127.0.0.1:10003"))
-        self.assert_any_log_match(re.escape("Tagging Default-Poller with realm All"))
-        self.assert_any_log_match(re.escape("Tagging Default-Broker with realm All"))
-        self.assert_any_log_match(re.escape("Tagging Default-Reactionner with realm All"))
-        self.assert_any_log_match(re.escape("Tagging Default-Receiver with realm All"))
 
         # Only one realm in the configuration
         assert len(self._arbiter.conf.realms) == 1
@@ -165,20 +156,20 @@ class TestRealms(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/realms/no_defined_daemons.cfg', 'cfg/realms/no_defined_daemons.ini', verbose=True)
+        self.setup_with_file('cfg/realms/no_defined_daemons.cfg',
+                             'cfg/realms/no_defined_daemons.ini', verbose=True)
         assert self.conf_is_correct
         self.show_logs()
 
-        self.assert_any_log_match(re.escape("No realms defined, I am adding one as All"))
-        self.assert_any_log_match(re.escape("No scheduler defined, I am adding one on 127.0.0.1:7800"))
-        self.assert_any_log_match(re.escape("No reactionner defined, I am adding one on 127.0.0.1:7801"))
-        self.assert_any_log_match(re.escape("No poller defined, I am adding one on 127.0.0.1:7802"))
-        self.assert_any_log_match(re.escape("No broker defined, I am adding one on 127.0.0.1:7803"))
-        self.assert_any_log_match(re.escape("No receiver defined, I am adding one on 127.0.0.1:7804"))
-        self.assert_any_log_match(re.escape("Tagging Default-Poller with realm All"))
-        self.assert_any_log_match(re.escape("Tagging Default-Broker with realm All"))
-        self.assert_any_log_match(re.escape("Tagging Default-Reactionner with realm All"))
-        self.assert_any_log_match(re.escape("Tagging Default-Scheduler with realm All"))
+        self.assert_any_log_match(re.escape("No scheduler defined, I am adding one on 127.0.0.1:10000"))
+        self.assert_any_log_match(re.escape("No reactionner defined, I am adding one on 127.0.0.1:10001"))
+        self.assert_any_log_match(re.escape("No poller defined, I am adding one on 127.0.0.1:10002"))
+        self.assert_any_log_match(re.escape("No broker defined, I am adding one on 127.0.0.1:10003"))
+        self.assert_any_log_match(re.escape("No receiver defined, I am adding one on 127.0.0.1:10004"))
+        # self.assert_any_log_match(re.escape("Tagging Default-Poller with realm All"))
+        # self.assert_any_log_match(re.escape("Tagging Default-Broker with realm All"))
+        # self.assert_any_log_match(re.escape("Tagging Default-Reactionner with realm All"))
+        # self.assert_any_log_match(re.escape("Tagging Default-Scheduler with realm All"))
         # self.assert_any_log_match(re.escape("Prepare dispatching for this realm"))
 
         scheduler_link = self._arbiter.conf.schedulers.find_by_name('Default-Scheduler')
@@ -206,7 +197,7 @@ class TestRealms(AlignakTest):
         realm = self._arbiter.conf.realms.find_by_name("All")
         assert realm is not None
         assert realm.realm_name == 'All'
-        assert realm.alias == 'Self created default realm'
+        assert realm.alias == 'All'
         assert realm.default
 
         # 'All' realm is the default realm
@@ -219,7 +210,7 @@ class TestRealms(AlignakTest):
 
         # Hosts without realm definition are in the Default realm
         hosts = self._arbiter.conf.hosts
-        assert len(hosts) == 2
+        assert len(hosts) == 4
         for host in hosts:
             assert host.realm == default_realm.uuid
             assert host.realm_name == default_realm.get_name()
@@ -228,29 +219,49 @@ class TestRealms(AlignakTest):
         """ Test missing scheduler in realm
         A realm is defined but no scheduler, nor broker, nor poller exist for this realm
 
+        Configuration is not correct
+
         :return: None
         """
-        self.setup_with_file('cfg/realms/no_scheduler_in_realm.cfg')
+        with pytest.raises(SystemExit):
+            self.setup_with_file('cfg/realms/no_scheduler_in_realm.cfg')
+        self.show_logs()
+        assert not self.conf_is_correct
+
+    def test_no_scheduler_in_realm_self_add(self):
+        """ Test missing scheduler in realm, self add a scheduler
+        A realm is defined but no scheduler, nor broker, nor poller exist for this realm
+
+        :return: None
+        """
+        self.setup_with_file('cfg/realms/no_scheduler_in_realm_self_add.cfg')
         self.show_logs()
         assert self.conf_is_correct
 
         self.assert_any_log_match(re.escape("Adding a scheduler for the realm: Distant"))
         self.assert_any_log_match(re.escape("Adding a poller for the realm: Distant"))
-        self.assert_any_log_match(re.escape("Adding a broker for the realm: Distant"))
-        # self.assert_any_log_match(re.escape("Adding a reactionner for the realm: Distant"))
-        # self.assert_any_log_match(re.escape("Adding a receiver for the realm: Distant"))
-        self.assert_any_log_match(re.escape("All: (in/potential) (schedulers:1) (pollers:1/1) "
-                                            "(reactionners:1/1) (brokers:2/2) (receivers:1/1)"))
-        self.assert_any_log_match(re.escape("Distant: (in/potential) (schedulers:1) (pollers:1/1) "
-                                            "(reactionners:0/0) (brokers:1/1) (receivers:0/0)"))
+        # self.assert_any_log_match(re.escape("Adding a broker for the realm: Distant"))
+        self.assert_any_log_match(re.escape("Adding a reactionner for the realm: Distant"))
+        self.assert_any_log_match(re.escape("Adding a receiver for the realm: Distant"))
+        self.assert_any_log_match(re.escape("Realm All: (in/potential) (schedulers:1/0) "
+                                            "(pollers:1/0) (reactionners:1/0) (brokers:1/0) "
+                                            "(receivers:1/0)"))
+        self.assert_any_log_match(re.escape("Realm Distant: (in/potential) (schedulers:1/0) "
+                                            "(pollers:1/0) (reactionners:1/0) (brokers:1/0) "
+                                            "(receivers:1/0)"))
 
         assert "Some hosts exist in the realm 'Distant' " \
-               "but no scheduler is defined for this realm" in self.configuration_warnings
+               "but no scheduler is defined for this realm." in self.configuration_warnings
         assert "Some hosts exist in the realm 'Distant' " \
-               "but no poller is defined for this realm" in self.configuration_warnings
+               "but no reactionner is defined for this realm." in self.configuration_warnings
+        assert "Some hosts exist in the realm 'Distant' " \
+               "but no receiver is defined for this realm." in self.configuration_warnings
+        assert "Some hosts exist in the realm 'Distant' " \
+               "but no scheduler is defined for this realm." in self.configuration_warnings
 
         # Scheduler added for the realm
         for link in self._arbiter.conf.schedulers:
+            print("Arbiter scheduler: %s" % link)
             if link.name == 'scheduler-Distant':
                 break
         else:
@@ -258,7 +269,8 @@ class TestRealms(AlignakTest):
 
         # Broker added for the realm
         for link in self._arbiter.conf.brokers:
-            if link.name == 'broker-Distant':
+            print("Arbiter broker: %s" % link)
+            if link.name == 'Broker-distant':
                 break
         else:
             assert False
@@ -270,19 +282,19 @@ class TestRealms(AlignakTest):
         else:
             assert False
 
-        # # Reactionner added for the realm
-        # for link in self._arbiter.conf.reactionners:
-        #     if link.name == 'reactionner-Distant':
-        #         break
-        # else:
-        #     assert False
-        #
-        # # Receiver added for the realm
-        # for link in self._arbiter.conf.receivers:
-        #     if link.name == 'receiver-Distant':
-        #         break
-        # else:
-        #     assert False
+        # Reactionner added for the realm
+        for link in self._arbiter.conf.reactionners:
+            if link.name == 'reactionner-Distant':
+                break
+        else:
+            assert False
+
+        # Receiver added for the realm
+        for link in self._arbiter.conf.receivers:
+            if link.name == 'receiver-Distant':
+                break
+        else:
+            assert False
 
     def test_no_broker_in_realm(self):
         """ Test missing broker in realm
@@ -368,13 +380,10 @@ class TestRealms(AlignakTest):
         self.show_logs()
         assert not self.conf_is_correct
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in scheduler::Scheduler-distant is incorrect; "
+            "The scheduler 'Scheduler-distant' is affected to an unknown realm: 'Distant'"
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "The scheduler Scheduler-distant has an unknown realm 'Distant'"
-        ))
-        self.assert_any_cfg_log_match(re.escape(
-            "schedulers configuration is incorrect!"
+            "The host 'bad_host' is affected to an unknown realm: 'Distant'"
         ))
 
     def test_realm_hostgroup_assignation(self):
@@ -461,9 +470,10 @@ class TestRealms(AlignakTest):
                              verbose=False)
         assert self.conf_is_correct
 
-        print(("Realms: %s" % self._arbiter.conf.realms))
+        print("Realms: %s" % self._arbiter.conf.realms)
 
         world = self._arbiter.conf.realms.find_by_name('World')
+        print(world)
         assert world is not None
         europe = self._arbiter.conf.realms.find_by_name('Europe')
         assert europe is not None
@@ -480,25 +490,44 @@ class TestRealms(AlignakTest):
 
         # Get satellites of the Europe realm
         assert len(europe.get_satellites_by_type('arbiter')) == 0
-        assert len(europe.get_satellites_by_type('scheduler')) == 1
-        assert len(europe.get_satellites_by_type('broker')) == 1
+        assert len(europe.get_satellites_by_type('scheduler')) == 0
+        assert len(europe.get_satellites_by_type('broker')) == 0
         assert len(europe.get_satellites_by_type('poller')) == 0
-        assert len(europe.get_satellites_by_type('receiver')) == 1
-        assert len(europe.get_satellites_by_type('reactionner')) == 1
+        assert len(europe.get_satellites_by_type('receiver')) == 0
+        assert len(europe.get_satellites_by_type('reactionner')) == 0
 
         # Get satellites of the Paris realm
         assert len(europe.get_satellites_by_type('arbiter')) == 0
-        assert len(europe.get_satellites_by_type('scheduler')) == 1
-        assert len(europe.get_satellites_by_type('broker')) == 1
+        assert len(europe.get_satellites_by_type('scheduler')) == 0
+        assert len(europe.get_satellites_by_type('broker')) == 0
         assert len(europe.get_satellites_by_type('poller')) == 0
-        assert len(europe.get_satellites_by_type('receiver')) == 1
-        assert len(europe.get_satellites_by_type('reactionner')) == 1
+        assert len(europe.get_satellites_by_type('receiver')) == 0
+        assert len(europe.get_satellites_by_type('reactionner')) == 0
 
         assert europe.uuid in world.all_sub_members
         assert paris.uuid in europe.all_sub_members
 
     def test_sub_realms_assignations(self):
-        """ Test realm / sub-realm for broker
+        """ Test realm / sub-realm assignation
+
+        Realms:
+            World (default)
+            -> Europe
+                -> Paris
+
+        Satellites:
+            arbiter-master, manage_sub_realms=1
+            scheduler-master, manage_sub_realms=1
+            poller-master, manage_sub_realms=0
+            reactionner-master, manage_sub_realms=1
+            broker-master, manage_sub_realms=0
+            broker-B-world, manage_sub_realms=1
+            receiver-master, manage_sub_realms=1
+
+        One sub-realm brokers for the realm World : ok
+        One "not sub-realm" broker for the default realm, should not disturb !
+        On "not sub-realm" poller for the default realm, I should not have any poller
+        for the sub realms !
 
         :return: None
         """
@@ -506,7 +535,7 @@ class TestRealms(AlignakTest):
                              verbose=False)
         assert self.conf_is_correct
 
-        print(("Realms: %s" % self._arbiter.conf.realms))
+        print("Realms: \n%s" % self._arbiter.conf.realms)
 
         world = self._arbiter.conf.realms.find_by_name('World')
         assert world is not None
@@ -514,19 +543,89 @@ class TestRealms(AlignakTest):
         assert europe is not None
         paris = self._arbiter.conf.realms.find_by_name('Paris')
         assert paris is not None
-        # Get the broker in the realm level
-        bworld = self._arbiter.conf.brokers.find_by_name('B-world')
+
+        # Get the B-world broker
+        # This broker is defined in the realm World and it manages sub-realms
+        bworld = self._arbiter.conf.brokers.find_by_name('broker-B-world')
         assert bworld is not None
 
         # broker should be in the world level
-        assert (bworld.uuid in world.potential_brokers) is True
+        assert (bworld.uuid in world.brokers) is True
         # in europe too
         assert (bworld.uuid in europe.potential_brokers) is True
         # and in paris too
         assert (bworld.uuid in paris.potential_brokers) is True
 
+        # Get the master broker
+        # This broker is defined in the realm World and it does not manage sub-realms!
+        bmaster = self._arbiter.conf.brokers.find_by_name('broker-master')
+        assert bmaster is not None
+
+        # broker should be in the world level
+        assert (bmaster.uuid in world.brokers) is True
+        # but not in Europe !
+        assert (bmaster.uuid not in europe.potential_brokers) is True
+        # nor in paris!
+        assert (bmaster.uuid not in paris.potential_brokers) is True
+
+        # Get the master poller
+        # This poller is defined in the realm World and it does not manage sub-realms
+        sat = self._arbiter.conf.pollers.find_by_name('poller-master')
+        assert sat is not None
+
+        # poller should be in the world level
+        assert (sat.uuid in world.pollers) is True
+        # but not in Europe !
+        assert (sat.uuid not in europe.potential_pollers) is True
+        # nor in paris!
+        assert (sat.uuid not in paris.potential_pollers) is True
+
+        # Get the scheduler master that should be in all realms
+        sat = self._arbiter.conf.schedulers.find_by_name('scheduler-master')
+        assert (sat.uuid in world.schedulers) is True
+        assert (sat.uuid in europe.potential_schedulers) is True
+        assert (sat.uuid in paris.potential_schedulers) is True
+
+        # Get the reactionner master that should be in all realms
+        sat = self._arbiter.conf.reactionners.find_by_name('reactionner-master')
+        assert (sat.uuid in world.reactionners) is True
+        assert (sat.uuid in europe.potential_reactionners) is True
+        assert (sat.uuid in paris.potential_reactionners) is True
+
+        # Get the receiver master that should be in all realms
+        sat = self._arbiter.conf.receivers.find_by_name('receiver-master')
+        assert (sat.uuid in world.receivers) is True
+        assert (sat.uuid in europe.potential_receivers) is True
+        assert (sat.uuid in paris.potential_receivers) is True
+
     def test_sub_realms_multi_levels(self):
         """ Test realm / sub-realm / sub-sub-realms...
+
+        Realms:
+            World (default)
+            + Asia
+            ++ Japan
+            +++ Tokyo
+            +++ Osaka
+            + Europe
+            ++ Italy
+            +++ Torino
+            +++ Roma
+            ++ France
+            +++ Paris
+            +++ Lyon
+            World2 (also references Asia as a sub-realm)
+
+        Satellites (declared):
+            arbiter-master, manage_sub_realms=1
+            scheduler-master, manage_sub_realms=1
+            poller-master, manage_sub_realms=1
+            reactionner-master, manage_sub_realms=1
+            broker-master, manage_sub_realms=1
+            receiver-master, manage_sub_realms=1
+
+            broker-france, manage_sub_realms=0 -> realm France
+            scheduler-france, manage_sub_realms=0 -> realm France
 
         :return: None
         """
@@ -534,6 +633,9 @@ class TestRealms(AlignakTest):
                              'cfg/realms/sub_realms_multi_levels.ini',
                              verbose=False)
         assert self.conf_is_correct
+        self.show_logs()
+
+        print("Realms: \n%s " % self._arbiter.conf.realms)
 
         Osaka = self._arbiter.conf.realms.find_by_name('Osaka')
         assert Osaka is not None
@@ -547,8 +649,8 @@ class TestRealms(AlignakTest):
         Asia = self._arbiter.conf.realms.find_by_name('Asia')
         assert Asia is not None
 
-        Turin = self._arbiter.conf.realms.find_by_name('Turin')
-        assert Turin is not None
+        Torino = self._arbiter.conf.realms.find_by_name('Torino')
+        assert Torino is not None
 
         Roma = self._arbiter.conf.realms.find_by_name('Roma')
         assert Roma is not None
@@ -581,7 +683,7 @@ class TestRealms(AlignakTest):
         assert Japan.realm_members == [Osaka.get_name(), Tokyo.get_name()]
         print(("Europe: %s" % (Europe)))
         assert Europe.realm_members == [France.get_name(), Italy.get_name()]
-        assert Italy.realm_members == [Roma.get_name(), Turin.get_name()]
+        assert Italy.realm_members == [Roma.get_name(), Torino.get_name()]
         assert France.realm_members == [Lyon.get_name(), Paris.get_name()]
 
         # Check all_sub_members for each realm - ordered lists!
@@ -589,9 +691,9 @@ class TestRealms(AlignakTest):
         assert Paris.all_sub_members == []
         assert France.all_sub_members == [Lyon.uuid, Paris.uuid]
 
-        assert Turin.all_sub_members == []
+        assert Torino.all_sub_members == []
         assert Roma.all_sub_members == []
-        assert Italy.all_sub_members == [Roma.uuid, Turin.uuid]
+        assert Italy.all_sub_members == [Roma.uuid, Torino.uuid]
 
         assert Osaka.all_sub_members == []
         assert Tokyo.all_sub_members == []
@@ -599,53 +701,98 @@ class TestRealms(AlignakTest):
         assert Asia.all_sub_members == [Japan.uuid, Osaka.uuid, Tokyo.uuid]
 
         assert Europe.all_sub_members == [France.uuid, Lyon.uuid, Paris.uuid,
-                                          Italy.uuid, Roma.uuid, Turin.uuid]
+                                          Italy.uuid, Roma.uuid, Torino.uuid]
 
         assert World.all_sub_members_names == [
             'Asia',
                 'Japan', 'Osaka', 'Tokyo',
             'Europe',
                 'France', 'Lyon', 'Paris',
-                'Italy', 'Roma', 'Turin']
+                'Italy', 'Roma', 'Torino']
         assert World.all_sub_members == [
             Asia.uuid,
                 Japan.uuid, Osaka.uuid, Tokyo.uuid,
             Europe.uuid,
                 France.uuid, Lyon.uuid, Paris.uuid,
-                Italy.uuid, Roma.uuid, Turin.uuid]
+                Italy.uuid, Roma.uuid, Torino.uuid]
 
-        # check satellites defined in each realms
-        broker_uuid = self._arbiter.conf.brokers.find_by_name('broker-master').uuid
-        print("Broker uuid: %s" % (broker_uuid))
+
+        # Check satellites defined in each realms
         poller_uuid = self._arbiter.conf.pollers.find_by_name('poller-master').uuid
         receiver_uuid = self._arbiter.conf.receivers.find_by_name('receiver-master').uuid
         reactionner_uuid = self._arbiter.conf.reactionners.find_by_name('reactionner-master').uuid
+        scheduler_uuid = self._arbiter.conf.schedulers.find_by_name('scheduler-master').uuid
+        broker_uuid = self._arbiter.conf.brokers.find_by_name('broker-master').uuid
+        # Specific France realm satellites
+        scheduler_france1_uuid = self._arbiter.conf.schedulers.find_by_name('scheduler-france1').uuid
+        scheduler_france2_uuid = self._arbiter.conf.schedulers.find_by_name('scheduler-france2').uuid
+        broker_france_uuid = self._arbiter.conf.brokers.find_by_name('broker-france').uuid
 
         for broker in self._arbiter.conf.brokers:
             print("Broker: %s" % (broker))
 
-        for realm in [Osaka, Tokyo, Japan, Asia, Turin, Roma, Italy, Lyon, Paris, France, Europe, World]:
-            print("Realm %s, brokers: %s" % (realm.realm_name, realm.brokers))
-            if realm.realm_name != 'France':
-                assert broker_uuid in realm.brokers
-                assert broker_uuid in realm.potential_brokers
-                assert realm.nb_brokers > 1
+        # World has some satellites
+        for realm in [World]:
             assert realm.pollers == [poller_uuid]
             assert realm.receivers == [receiver_uuid]
             assert realm.reactionners == [reactionner_uuid]
+            assert realm.schedulers == [scheduler_uuid]
+            assert realm.brokers == [broker_uuid]
+
+            assert realm.potential_brokers == []
+            assert realm.potential_schedulers == []
+            assert realm.potential_pollers == []
+            assert realm.potential_receivers == []
+            assert realm.potential_reactionners == []
+
+        # These realms have some potential satellites but no direct ones
+        for realm in [Europe, Italy, Roma, Torino, Asia, Japan, Osaka, Tokyo]:
+            assert realm.brokers == []
+            assert realm.schedulers == []
+            assert realm.pollers == []
+            assert realm.receivers == []
+            assert realm.reactionners == []
+
             assert realm.potential_pollers == [poller_uuid]
             assert realm.potential_receivers == [receiver_uuid]
             assert realm.potential_reactionners == [reactionner_uuid]
+            assert realm.potential_schedulers == [scheduler_uuid]
+            assert realm.potential_brokers == [broker_uuid]
 
-        print("France brokers: %s" % France.brokers)
-        print("France potential brokers: %s" % France.potential_brokers)
-        assert set(France.brokers) == set([self._arbiter.conf.brokers.find_by_name('B-world').uuid,
-                                           self._arbiter.conf.brokers.find_by_name('broker-master').uuid,
-                                           self._arbiter.conf.brokers.find_by_name('broker-france').uuid])
-        assert set(France.potential_brokers) == set([self._arbiter.conf.brokers.find_by_name('B-world').uuid,
-                                                     self._arbiter.conf.brokers.find_by_name('broker-master').uuid,
-                                                     self._arbiter.conf.brokers.find_by_name('broker-france').uuid])
-        assert France.nb_brokers == 3
+        # France has some direct satellites
+        for realm in [France]:
+            assert realm.brokers == [broker_france_uuid]
+            assert scheduler_france1_uuid in realm.schedulers
+            assert scheduler_france2_uuid in realm.schedulers
+            assert len(realm.schedulers) == 2
+            assert realm.pollers == []
+            assert realm.receivers == []
+            assert realm.reactionners == []
+
+            assert realm.potential_pollers == [poller_uuid]
+            assert realm.potential_receivers == [receiver_uuid]
+            assert realm.potential_reactionners == [reactionner_uuid]
+            assert realm.potential_schedulers == [scheduler_uuid]
+            assert realm.potential_brokers == [broker_uuid]
+
+        # France sub-realms have some potential satellites
+        for realm in [Paris, Lyon]:
+            assert realm.brokers == []
+            assert realm.schedulers == []
+            assert realm.pollers == []
+            assert realm.receivers == []
+            assert realm.reactionners == []
+
+            assert realm.potential_pollers == [poller_uuid]
+            assert realm.potential_receivers == [receiver_uuid]
+            assert realm.potential_reactionners == [reactionner_uuid]
+            assert scheduler_uuid in realm.potential_schedulers
+            assert scheduler_france2_uuid in realm.potential_schedulers
+            assert scheduler_france2_uuid in realm.potential_schedulers
+            assert len(realm.potential_schedulers) == 3
+            assert broker_uuid in realm.potential_brokers
+            # assert broker_france_uuid in realm.potential_brokers
+            assert len(realm.potential_brokers) == 1
 
     def test_sub_realms_multi_levels_loop(self):
         """ Test realm / sub-realm / sub-sub-realms... with a loop, so exit with error message

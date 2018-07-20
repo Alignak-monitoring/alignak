@@ -64,11 +64,11 @@ class Servicegroup(Itemgroup):
     A servicegroup is used to group services
     """
     my_type = 'servicegroup'
+    members_property = "members"
+    group_members_property = "servicegroup_members"
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        # 'uuid':
-        #     StringProp(fill_brok=['full_status']),
         'servicegroup_name':
             StringProp(fill_brok=['full_status']),
         'alias':
@@ -84,45 +84,33 @@ class Servicegroup(Itemgroup):
     })
 
     macros = {
-        'SERVICEGROUPALIAS':     'alias',
-        'SERVICEGROUPMEMBERS':   'members',
-        'SERVICEGROUPNOTES':     'notes',
-        'SERVICEGROUPNOTESURL':  'notes_url',
+        'SERVICEGROUPNAME': 'servicegroup_name',
+        'SERVICEGROUPALIAS': 'alias',
+        'SERVICEGROUPMEMBERS': 'members',
+        'SERVICEGROUPNOTES': 'notes',
+        'SERVICEGROUPNOTESURL': 'notes_url',
         'SERVICEGROUPACTIONURL': 'action_url'
     }
 
+    def get_name(self):
+        """Get the group name"""
+        return getattr(self, 'servicegroup_name', 'Unnamed')
+
     def get_services(self):
-        """
-        Get services of this servicegroup
+        """Get the services of the group
 
         :return: list of services (members)
         :rtype: list
         """
-        if getattr(self, 'members', None) is not None:
-            return self.members
-
-        return []
-
-    def get_name(self):
-        """
-        Get list of groups members of this servicegroup
-
-        :return: the servicegroup name string
-        :rtype: str
-        """
-        return self.servicegroup_name
+        return super(Servicegroup, self).get_members()
 
     def get_servicegroup_members(self):
-        """
-        Get list of members of this servicegroup
+        """Get the groups members of the group
 
         :return: list of services
         :rtype: list | str
         """
-        if hasattr(self, 'servicegroup_members'):
-            return self.servicegroup_members
-
-        return []
+        return getattr(self, 'servicegroup_members', [])
 
     def get_services_by_explosion(self, servicegroups):
         # pylint: disable=access-member-before-definition
@@ -158,7 +146,7 @@ class Servicegroup(Itemgroup):
             if servicegroup is not None:
                 value = servicegroup.get_services_by_explosion(servicegroups)
                 if value is not None:
-                    self.add_string_member(value)
+                    self.add_members(value)
 
         if hasattr(self, 'members'):
             return self.members
@@ -170,8 +158,39 @@ class Servicegroups(Itemgroups):
     """
     Class to manage all servicegroups
     """
-    name_property = "servicegroup_name"  # is used for finding servicegroup
+    name_property = "servicegroup_name"
     inner_class = Servicegroup
+
+    def add_member(self, service_name, servicegroup_name):
+        """Add a member (service) to this servicegroup
+
+        :param service_name: member (service) name
+        :type service_name: str
+        :param servicegroup_name: servicegroup name
+        :type servicegroup_name: str
+        :return: None
+        """
+        servicegroup = self.find_by_name(servicegroup_name)
+        if not servicegroup:
+            servicegroup = Servicegroup({'servicegroup_name': servicegroup_name,
+                                         'alias': servicegroup_name,
+                                         'members': service_name})
+            self.add(servicegroup)
+        else:
+            servicegroup.add_members(service_name)
+
+    def get_members_of_group(self, gname):
+        """Get all members of a group which name is given in parameter
+
+        :param gname: name of the group
+        :type gname: str
+        :return: list of the services in the group
+        :rtype: list[alignak.objects.service.Service]
+        """
+        hostgroup = self.find_by_name(gname)
+        if hostgroup:
+            return hostgroup.get_services()
+        return []
 
     def linkify(self, hosts, services):
         """
@@ -183,9 +202,9 @@ class Servicegroups(Itemgroups):
         :type services: alignak.objects.service.Services
         :return: None
         """
-        self.linkify_sg_by_srv(hosts, services)
+        self.linkify_servicegroups_services(hosts, services)
 
-    def linkify_sg_by_srv(self, hosts, services):
+    def linkify_servicegroups_services(self, hosts, services):
         """
         We just search for each host the id of the host
         and replace the name by the id
@@ -205,9 +224,11 @@ class Servicegroups(Itemgroups):
             seek = 0
             host_name = ''
             if len(mbrs) == 1 and mbrs[0] != '':
-                servicegroup.add_string_unknown_member('%s' % mbrs[0])
+                servicegroup.add_unknown_members('%s' % mbrs[0])
 
             for mbr in mbrs:
+                if not mbr:
+                    continue
                 if seek % 2 == 0:
                     host_name = mbr.strip()
                 else:
@@ -218,8 +239,7 @@ class Servicegroups(Itemgroups):
                     else:
                         host = hosts.find_by_name(host_name)
                         if not (host and host.is_excluded_for_sdesc(service_desc)):
-                            servicegroup.add_string_unknown_member('%s,%s' %
-                                                                   (host_name, service_desc))
+                            servicegroup.add_unknown_members('%s,%s' % (host_name, service_desc))
                         elif host:
                             self.add_warning('servicegroup %r : %s is excluded from the '
                                              'services of the host %s'
@@ -237,24 +257,6 @@ class Servicegroups(Itemgroups):
                 # and make this uniq
                 serv.servicegroups = list(set(serv.servicegroups))
 
-    def add_member(self, cname, sgname):
-        """
-        Add a member (service) to this servicegroup
-
-        :param cname: member (service) name
-        :type cname: str
-        :param sgname: servicegroup name
-        :type sgname: str
-        :return: None
-        """
-        svcgp = self.find_by_name(sgname)
-        # if the id do not exist, create the cg
-        if svcgp is None:
-            svcgp = Servicegroup({'servicegroup_name': sgname, 'alias': sgname, 'members': cname})
-            self.add(svcgp)
-        else:
-            svcgp.add_string_member(cname)
-
     def explode(self):
         """
         Get services and put them in members container
@@ -263,22 +265,21 @@ class Servicegroups(Itemgroups):
         """
         # We do not want a same service group to be exploded again and again
         # so we tag it
-        for servicegroup in list(self.items.values()):
-            servicegroup.already_exploded = False
+        for tmp_sg in list(self.items.values()):
+            tmp_sg.already_exploded = False
 
         for servicegroup in list(self.items.values()):
-            if hasattr(servicegroup, 'servicegroup_members') and not \
-                    servicegroup.already_exploded:
-                # get_services_by_explosion is a recursive
-                # function, so we must tag hg so we do not loop
-                for sg2 in list(self.items.values()):
-                    sg2.rec_tag = False
-                servicegroup.get_services_by_explosion(self)
+            if servicegroup.already_exploded:
+                continue
+
+            # get_services_by_explosion is a recursive
+            # function, so we must tag hg so we do not loop
+            for tmp_sg in list(self.items.values()):
+                tmp_sg.rec_tag = False
+            servicegroup.get_services_by_explosion(self)
 
         # We clean the tags
-        for servicegroup in list(self.items.values()):
-            try:
-                del servicegroup.rec_tag
-            except AttributeError:
-                pass
-            del servicegroup.already_exploded
+        for tmp_sg in list(self.items.values()):
+            if hasattr(tmp_sg, 'rec_tag'):
+                del tmp_sg.rec_tag
+            del tmp_sg.already_exploded

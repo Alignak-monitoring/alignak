@@ -149,7 +149,7 @@ class TestHostGroup(AlignakTest):
         assert isinstance(hg, Hostgroup)
         assert hg.get_name() == "allhosts_and_groups"
 
-        assert len(self._scheduler.hostgroups.get_members_by_name("allhosts_and_groups")) == \
+        assert len(self._scheduler.hostgroups.get_members_of_group("allhosts_and_groups")) == \
             2
 
         assert len(hg.hostgroup_members) == 4
@@ -168,7 +168,7 @@ class TestHostGroup(AlignakTest):
         assert isinstance(hg, Hostgroup)
         assert hg.get_name() == "allhosts_and_groups"
 
-        assert len(self._scheduler.hostgroups.get_members_by_name("allhosts_and_groups")) == 2
+        assert len(self._scheduler.hostgroups.get_members_of_group("allhosts_and_groups")) == 2
 
         assert len(hg.get_hosts()) == 2
         print("List hostgroup hosts:")
@@ -214,7 +214,7 @@ class TestHostGroup(AlignakTest):
         assert isinstance(hg, Hostgroup)
         assert hg.get_name() == "void"
 
-        assert len(self._scheduler.hostgroups.get_members_by_name("void")) == 0
+        assert len(self._scheduler.hostgroups.get_members_of_group("void")) == 0
 
         assert len(hg.get_hostgroup_members()) == 0
 
@@ -234,14 +234,14 @@ class TestHostGroup(AlignakTest):
 
         assert self._scheduler.hostgroups.find_by_name("test_With Spaces").get_name() == \
                "test_With Spaces"
-        assert self._scheduler.hostgroups.get_members_by_name(
+        assert self._scheduler.hostgroups.get_members_of_group(
                 "test_With Spaces"
             ) is not \
             []
 
         assert self._scheduler.hostgroups.find_by_name("test_With another Spaces").get_name() == \
             "test_With another Spaces"
-        assert self._scheduler.hostgroups.get_members_by_name(
+        assert self._scheduler.hostgroups.get_members_of_group(
                 "test_With another Spaces"
             ) is not \
             []
@@ -258,7 +258,7 @@ class TestHostGroup(AlignakTest):
         assert isinstance(hg, Hostgroup)
         print((hg.__dict__))
 
-        assert len(self._scheduler.hostgroups.get_members_by_name("tcp_hosts")) == 3
+        assert len(self._scheduler.hostgroups.get_members_of_group("tcp_hosts")) == 3
 
         assert len(hg.members) == 3
         assert len(hg.hostgroup_members) == 0

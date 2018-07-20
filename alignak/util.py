@@ -734,35 +734,6 @@ def master_then_spare(data):
     return rdata
 
 
-def alive_then_spare_then_deads(data):
-    """Return the provided satellites list sorted as:
-        - alive first,
-        - then spare
-        - then dead
-        satellites.
-
-    :param data: the SatelliteLink list
-    :type data: list
-    :return: sorted list
-    :rtype: list
-    """
-    alive = []
-    spare = []
-    deads = []
-    for sdata in data:
-        if sdata.alive and not sdata.spare:
-            alive.append(sdata)
-        elif sdata.alive and sdata.spare:
-            spare.append(sdata)
-        else:
-            deads.append(sdata)
-    rdata = []
-    rdata.extend(alive)
-    rdata.extend(spare)
-    rdata.extend(deads)
-    return rdata
-
-
 def sort_by_number_values(x00, y00):  # pragma: no cover, looks like not used!
     """Compare x00, y00 base on number of values
 
@@ -952,8 +923,6 @@ def filter_none(ref):
     """Filter for host
     Filter all
 
-    :param name: name to filter
-    :type name: str
     :return: Filter
     :rtype: bool
     """

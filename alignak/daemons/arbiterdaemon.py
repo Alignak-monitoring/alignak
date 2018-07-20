@@ -441,17 +441,18 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             # got from the environment
             logger.info("Getting Alignak configuration...")
             alignak_configuration = self.alignak_env.get_alignak_configuration()
-            for key in sorted(alignak_configuration.keys()):
-                value = alignak_configuration[key]
-                if key.startswith('_'):
-                    # Ignore configuration variables prefixed with _
-                    continue
-                if key in self.conf.properties:
-                    entry = self.conf.properties[key]
-                    setattr(self.conf, key, entry.pythonize(value))
-                else:
-                    setattr(self.conf, key, value)
-                logger.debug("- setting '%s' as %s", key, getattr(self.conf, key))
+            if alignak_configuration:
+                for key in sorted(alignak_configuration.keys()):
+                    value = alignak_configuration[key]
+                    if key.startswith('_'):
+                        # Ignore configuration variables prefixed with _
+                        continue
+                    if key in self.conf.properties:
+                        entry = self.conf.properties[key]
+                        setattr(self.conf, key, entry.pythonize(value))
+                    else:
+                        setattr(self.conf, key, value)
+                    logger.debug("- setting '%s' as %s", key, getattr(self.conf, key))
 
         # Read and parse the legacy configuration files
         raw_objects = self.conf.read_config_buf(
@@ -459,6 +460,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                                             self.alignak_env.cfg_files if self.alignak_env
                                             else None)
         )
+        if 'module' not in raw_objects:
+            raw_objects['module'] = []
         if macros:
             self.conf.load_params(macros)
 
@@ -477,8 +480,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         extra_modules = self.conf.hack_old_nagios_parameters()
         if extra_modules:
             logger.info("Some inner modules were configured for Nagios legacy parameters")
-            if 'module' not in raw_objects:
-                raw_objects['module'] = []
             for _, module in extra_modules:
                 raw_objects['module'].append(module)
         logger.debug("Extra modules: %s", extra_modules)

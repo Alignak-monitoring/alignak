@@ -459,18 +459,20 @@ class Daemon(object):
                 self.alignak_env = AlignakConfigParser(args)
                 self.alignak_env.parse()
 
-                for prop, value in list(self.alignak_env.get_legacy_cfg_files().items()):
-                    self.pre_log.append(("DEBUG",
-                                         "Found Alignak monitoring "
-                                         "configuration parameter, %s = %s" % (prop, value)))
-                    # Ignore empty value
-                    if not value:
-                        continue
+                legacy_cfg_files = self.alignak_env.get_legacy_cfg_files()
+                if legacy_cfg_files:
+                    for prop, value in list(self.alignak_env.get_legacy_cfg_files().items()):
+                        self.pre_log.append(("DEBUG",
+                                             "Found Alignak monitoring "
+                                             "configuration parameter, %s = %s" % (prop, value)))
+                        # Ignore empty value
+                        if not value:
+                            continue
 
-                    # Make the path absolute
-                    if not os.path.isabs(value):
-                        value = os.path.abspath(os.path.join(configuration_dir, value))
-                    self.legacy_cfg_files.append(value)
+                        # Make the path absolute
+                        if not os.path.isabs(value):
+                            value = os.path.abspath(os.path.join(configuration_dir, value))
+                        self.legacy_cfg_files.append(value)
                 if self.type == 'arbiter' and not self.legacy_cfg_files:
                     self.pre_log.append(("WARNING",
                                          "No Nagios-like legacy configuration files configured."))
@@ -506,18 +508,20 @@ class Daemon(object):
                     # as the current daemon properties
                     self.pre_log.append(("INFO",
                                          "Get alignak configuration to configure the daemon..."))
-                    for prop, value in list(self.alignak_env.get_alignak_configuration().items()):
-                        if prop in ['name'] or prop.startswith('_'):
+                    alignak_configuration = self.alignak_env.get_alignak_configuration()
+                    if alignak_configuration:
+                        for prop, value in list(alignak_configuration.items()):
+                            if prop in ['name'] or prop.startswith('_'):
+                                self.pre_log.append(("DEBUG",
+                                                     "- ignoring '%s' variable." % prop))
+                                continue
+                            if prop in self.properties:
+                                entry = self.properties[prop]
+                                setattr(self, prop, entry.pythonize(value))
+                            else:
+                                setattr(self, prop, value)
                             self.pre_log.append(("DEBUG",
-                                                 "- ignoring '%s' variable." % prop))
-                            continue
-                        if prop in self.properties:
-                            entry = self.properties[prop]
-                            setattr(self, prop, entry.pythonize(value))
-                        else:
-                            setattr(self, prop, value)
-                        self.pre_log.append(("DEBUG",
-                                             "- setting '%s' as %s" % (prop, getattr(self, prop))))
+                                                 "- setting '%s' as %s" % (prop, getattr(self, prop))))
 
             except configparser.ParsingError as exp:
                 self.exit_on_exception(EnvironmentFile(exp.message))

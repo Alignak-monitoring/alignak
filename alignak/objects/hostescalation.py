@@ -80,9 +80,9 @@ class Hostescalation(Item):
         'escalation_options':
             ListProp(default=['d', 'x', 'r']),
         'contacts':
-            StringProp(),
+            ListProp(default=[], merging='join', split_on_comma=True),
         'contact_groups':
-            StringProp(),
+            ListProp(default=[], merging='join', split_on_comma=True),
         'first_notification_time':
             IntegerProp(),
         'last_notification_time':

@@ -1249,8 +1249,8 @@ class Hosts(SchedulingItems):
     """Class for the hosts lists. It's mainly for configuration
 
     """
-    name_property = "host_name"  # use for the search by name
-    inner_class = Host  # use for know what is in items
+    name_property = "host_name"
+    inner_class = Host
 
     def linkify(self, timeperiods=None, commands=None, contacts=None,  # pylint: disable=R0913
                 realms=None, resultmodulations=None, businessimpactmodulations=None,
@@ -1348,8 +1348,8 @@ class Hosts(SchedulingItems):
             if host.realm != '':
                 realm = realms.find_by_name(host.realm.strip())
                 if realm is None:
-                    err = "the host %s got an invalid realm (%s)!" % (host.get_name(), host.realm)
-                    host.add_error(err)
+                    host.add_error("the host %s got an invalid realm (%s)!"
+                                   % (host.get_name(), host.realm))
                     # This to avoid having an host.realm as a string name
                     host.realm_name = host.realm
                     host.realm = None

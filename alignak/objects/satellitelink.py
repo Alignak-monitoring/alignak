@@ -210,7 +210,7 @@ class SatelliteLink(Item):
         'last_check':
             IntegerProp(default=0, fill_brok=['full_status']),
         'cfg_managed':
-            DictProp(default={}),
+            DictProp(default=None),
         'cfg_to_manage':
             DictProp(default={}),
         'configuration_sent':
@@ -282,9 +282,10 @@ class SatelliteLink(Item):
         self.create_connection()
 
     def __repr__(self):  # pragma: no cover
-        return '<%s - %s/%s, %s//%s:%s, rid: %s, spare: %s, managing: %s (%s) />' \
+        return '<%s - %s/%s, %s//%s:%s, rid: %s, spare: %s, realm: %s, sub-realms: %s, managing: %s (%s) />' \
                % (self.instance_id, self.type, self.name,
-                  self.scheme, self.address, self.port, self.running_id, self.spare,
+                  self.scheme, self.address, self.port, self.running_id,
+                  self.spare, self.realm, self.manage_sub_realms,
                   self.managed_conf_id, self.push_flavor)
     __str__ = __repr__
 
@@ -853,6 +854,7 @@ class SatelliteLink(Item):
         if test:
             self.cfg_managed = {}
             self.have_conf = True
+            logger.debug("Get managed configuration test ...")
             if getattr(self, 'unit_test_pushed_configuration', None) is not None:
                 # Note this is a dict not a SatelliteLink object !
                 for scheduler_link in self.unit_test_pushed_configuration['schedulers'].values():
@@ -1022,51 +1024,12 @@ class SatelliteLinks(Items):
                (self.__class__.__name__, len(self), ', '.join([s.name for s in self]))
     __str__ = __repr__
 
-    def linkify(self, realms, modules):
-        """Link realms and modules in all SatelliteLink
-        (Link a real Realm / Module python object to the SatelliteLink attribute)
+    def linkify(self, modules):
+        """Link modules and Satellite links
 
-        :param realms: Realm object list
-        :type realms: list
         :param modules: Module object list
-        :type modules: list
+        :type modules: alignak.objects.module.Modules
         :return: None
         """
-        logger.debug("Linkify %s with %s and %s", self, realms, modules)
-        self.linkify_s_by_realm(realms)
+        logger.debug("Linkify %s with %s", self, modules)
         self.linkify_s_by_module(modules)
-
-    def linkify_s_by_realm(self, realms):
-        """Link realms in all SatelliteLink
-
-        :param realms: Realm object list
-        :type realms: list
-        :return: None
-        """
-        for link in self:
-            try:
-                realm_name = link.realm.strip()
-                # If no realm name, use the default one
-                if not realm_name:
-                    realm = realms.get_default()
-                else:  # find the realm one
-                    realm = realms.find_by_name(realm_name)
-            except AttributeError:
-                realm = link.realm
-
-            # Check if what we get is OK or not
-            if not realm:
-                link.add_error("The %s %s has an unknown realm '%s'"
-                               % (link.type, link.name, realm_name))
-                continue
-
-            link.realm = realm.uuid
-            link.realm_name = realm.get_name()
-            logger.debug("Linkify %s with %s", link, realm)
-            getattr(realm, '%ss' % link.my_type).append(link.uuid)
-
-            # case SatelliteLink has manage_sub_realms
-            if getattr(link, 'manage_sub_realms', False):
-                for realm_uuid in realm.all_sub_members:
-                    logger.debug("Linkify %s with %s", link, realms[realm_uuid])
-                    getattr(realms[realm_uuid], '%ss' % link.my_type).append(link.uuid)

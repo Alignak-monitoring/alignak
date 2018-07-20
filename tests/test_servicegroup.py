@@ -76,7 +76,7 @@ class TestServiceGroup(AlignakTest):
         assert isinstance(sg, Servicegroup)
         assert sg.get_name() == "allservices_and_groups"
 
-        assert len(self._scheduler.servicegroups.get_members_by_name("allservices_and_groups")) == \
+        assert len(self._scheduler.servicegroups.get_members_of_group("allservices_and_groups")) == \
             1
 
         assert len(sg.get_services()) == 1
@@ -96,10 +96,8 @@ class TestServiceGroup(AlignakTest):
         assert isinstance(sg, Servicegroup)
         assert sg.get_name() == "allservices_and_groups"
 
-        assert len(self._scheduler.servicegroups.get_members_by_name(
-                "allservices_and_groups"
-            )) == \
-            1
+        assert len(self._scheduler.servicegroups.get_members_of_group("allservices_and_groups")) \
+               == 1
 
         assert len(sg.get_services()) == 1
         print("List servicegroup services:")
@@ -138,7 +136,7 @@ class TestServiceGroup(AlignakTest):
         assert isinstance(sg, Servicegroup)
         assert sg.get_name() == "void"
 
-        assert len(self._scheduler.servicegroups.get_members_by_name("void")) == \
+        assert len(self._scheduler.servicegroups.get_members_of_group("void")) == \
             0
 
         print(("Services: %s" % sg.get_servicegroup_members()))
@@ -164,14 +162,14 @@ class TestServiceGroup(AlignakTest):
 
         assert self._scheduler.servicegroups.find_by_name("test_With Spaces").get_name() == \
             "test_With Spaces"
-        assert self._scheduler.servicegroups.get_members_by_name(
+        assert self._scheduler.servicegroups.get_members_of_group(
                 "test_With Spaces"
             ) is not \
             []
 
         assert self._scheduler.servicegroups.find_by_name("test_With another Spaces").get_name() == \
             "test_With another Spaces"
-        assert self._scheduler.servicegroups.get_members_by_name(
+        assert self._scheduler.servicegroups.get_members_of_group(
                 "test_With another Spaces"
             ) is not \
             []

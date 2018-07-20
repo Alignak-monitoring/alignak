@@ -81,9 +81,9 @@ class Serviceescalation(Item):
         'escalation_options':
             ListProp(default=['w', 'x', 'c', 'r'], split_on_comma=True),
         'contacts':
-            StringProp(),
+            ListProp(default=[], merging='join', split_on_comma=True),
         'contact_groups':
-            StringProp(),
+            ListProp(default=[], merging='join', split_on_comma=True),
         'first_notification_time':
             IntegerProp(),
         'last_notification_time':

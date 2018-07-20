@@ -821,6 +821,9 @@ define host {
                 mr.get('http://%s:%s/get_managed_configurations' % (link.address, link.port), json={})
 
             self._arbiter.dispatcher.check_reachable(test=True)
+
+            # self._arbiter.dispatcher.dispatch(test=True)
+
             self._arbiter.dispatcher.check_dispatch()
             print("-----\nConfiguration got dispatched.")
 
@@ -928,7 +931,8 @@ define host {
         self._arbiter.modules_manager.stop_all()
         self._broker_daemon.modules_manager.stop_all()
         self._scheduler_daemon.modules_manager.stop_all()
-        self._receiver_daemon.modules_manager.stop_all()
+        if self._receiver:
+            self._receiver_daemon.modules_manager.stop_all()
 
     def fake_check(self, ref, exit_status, output="OK"):
         """

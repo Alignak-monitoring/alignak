@@ -338,20 +338,22 @@ class Alignak(BaseSatellite):
             except AssertionError as exp:
                 # This to indicate that no configuration is managed by this scheduler...
                 logger.warning("No managed configuration received from arbiter")
-            except AlignakClassLookupException:  # pragma: no cover
+            except AlignakClassLookupException as exp:  # pragma: no cover
                 # This to indicate that the new configuration is not managed...
                 self.new_conf = {
-                    "_status": "Cannot un-serialize configuration received from arbiter"
+                    "_status": "Cannot un-serialize configuration received from arbiter",
+                    "_error": str(exp)
                 }
-                logger.error(self.new_conf['_status'])
+                logger.error(self.new_conf)
                 logger.error("Back trace of the error:\n%s", traceback.format_exc())
                 return
             except Exception as exp:  # pylint: disable=broad-except
                 # This to indicate that the new configuration is not managed...
                 self.new_conf = {
-                    "_status": "Cannot un-serialize configuration received from arbiter"
+                    "_status": "Cannot un-serialize configuration received from arbiter",
+                    "_error": str(exp)
                 }
-                logger.error(self.new_conf['_status'])
+                logger.error(self.new_conf)
                 self.exit_on_exception(exp, str(self.new_conf))
 
             # if not received_conf_part:

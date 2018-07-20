@@ -61,15 +61,19 @@ from alignak.property import ListProp
 class Itemgroup(Item):
     """
     Class to manage a group of items
-    An itemgroup is used to regroup items (group)
+    An Itemgroup is used to group items (eg. Host, Service,...)
     """
+    members_property = "members"
+    group_members_property = ""
 
     properties = Item.properties.copy()
     properties.update({
         'members':
-            ListProp(fill_brok=['full_status'], default=None, split_on_comma=True),
-        # Alignak specific
-        # todo: should be a running property...
+            ListProp(fill_brok=['full_status'], default=None, split_on_comma=True)
+    })
+
+    running_properties = Item.running_properties.copy()
+    running_properties.update({
         'unknown_members':
             ListProp(default=[]),
     })
@@ -126,34 +130,46 @@ class Itemgroup(Item):
         """
         self.members = members
 
-    def add_string_member(self, member):
+    def get_members(self):
+        """Get the members of the group
+
+        :return: list of members
+        :rtype: list
         """
-        Add new entry(member) to members list
+        members = getattr(self, 'members', [])
+        if members is None:
+            return []
+        return members
+
+    def add_members(self, members):
+        """Add a new member to the members list
+
+        :param members: member name
+        :type members: str
+        :return: None
+        """
+        if not isinstance(members, list):
+            members = [members]
+
+        if not hasattr(self, 'members'):
+            self.members = members
+        else:
+            self.members.extend(members)
+
+    def add_unknown_members(self, members):
+        """Add a new member to the unknown members list
 
         :param member: member name
         :type member: str
         :return: None
         """
-        # Avoid empty elements in lists ...
-        if not member:
-            return
-        add_fun = list.extend if isinstance(member, list) else list.append
-        if not hasattr(self, "members"):
-            self.members = []
-        add_fun(self.members, member)
+        if not isinstance(members, list):
+            members = [members]
 
-    def add_string_unknown_member(self, member):
-        """
-        Add new entry(member) to unknown members list
-
-        :param member: member name
-        :type member: str
-        :return: None
-        """
-        add_fun = list.extend if isinstance(member, list) else list.append
-        if not hasattr(self, 'unknown_members') or not self.unknown_members:
-            self.unknown_members = []
-        add_fun(self.unknown_members, member)
+        if not hasattr(self, 'unknown_members'):
+            self.unknown_members = members
+        else:
+            self.unknown_members.extend(members)
 
     def is_correct(self):
         """
@@ -219,16 +235,16 @@ class Itemgroups(Items):
         """
         self.add_item(itemgroup)
 
-    def get_members_by_name(self, gname):
-        """
-        Get members of groups have name in parameter
-
-        :param gname: name of group
-        :rtype gname: str
-        :return: list of members
-        :rtype: list
-        """
-        group = self.find_by_name(gname)
-        if group is None:
-            return []
-        return getattr(group, 'members', [])
+    # def get_members_of_group(self, gname):
+    #     """
+    #     Get members of groups have name in parameter
+    #
+    #     :param gname: name of group
+    #     :rtype gname: str
+    #     :return: list of members
+    #     :rtype: list
+    #     """
+    #     group = self.find_by_name(gname)
+    #     if group is None:
+    #         return []
+    #     return getattr(group, 'members', [])

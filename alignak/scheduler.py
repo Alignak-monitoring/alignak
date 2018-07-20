@@ -419,7 +419,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
             if new_tick is not None:
                 logger.debug("Requesting to change the default tick to %d for the action %s",
-                             new_tick, name)
+                             int(new_tick), name)
             else:
                 continue
             # Update the default scheduler tick for this function

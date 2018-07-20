@@ -147,7 +147,7 @@ class TestConfig(PropertiesTester, AlignakTest):
         # ('active_service_checks_enabled', True),
         ('event_handlers_enabled', True),
         # ('flap_detection_enabled', True),
-        # ('notifications_enabled', True),
+        # ('notifications_enabled', False),
         ('daemon_mode', True),
         # ('instance_name', ''),
         ('instance_id', ''),
@@ -319,7 +319,7 @@ class TestContactgroup(PropertiesTester, AlignakTest):
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
-        ('unknown_members', []),
+        # ('unknown_members', []),
         ('contactgroup_members', []),
         ])
 
@@ -438,7 +438,6 @@ class TestHostescalation(PropertiesTester, AlignakTest):
     without_default = [
         'host_name', 'hostgroup_name',
         'first_notification', 'last_notification',
-        'contacts', 'contact_groups',
         'first_notification_time', 'last_notification_time',
         ]
 
@@ -451,6 +450,8 @@ class TestHostescalation(PropertiesTester, AlignakTest):
         ('notification_interval', 30),
         ('escalation_period', ''),
         ('escalation_options', ['d','x','r']),
+        ('contacts', []),
+        ('contact_groups', []),
         ])
 
     def setUp(self):
@@ -501,7 +502,7 @@ class TestHostgroup(PropertiesTester, AlignakTest):
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
-        ('unknown_members', []),
+        # ('unknown_members', []),
         ('notes', ''),
         ('notes_url', ''),
         ('action_url', ''),
@@ -686,12 +687,10 @@ class TestRealm(PropertiesTester, AlignakTest):
         ('definition_order', 100),
         ('realm_name', ''),
         ('name', ''),
-        ('unknown_members', []),
+        # ('unknown_members', []),
         ('realm_members', []),
         ('higher_realms', []),
         ('default', False),
-        ('passively_checked_hosts', None),
-        ('actively_checked_hosts', None)
         ])
 
     def setUp(self):
@@ -758,7 +757,6 @@ class TestServiceescalation(PropertiesTester, AlignakTest):
         'host_name', 'hostgroup_name',
         'service_description',
         'first_notification', 'last_notification',
-        'contacts', 'contact_groups',
         'first_notification_time', 'last_notification_time']
 
     properties = dict([
@@ -770,6 +768,8 @@ class TestServiceescalation(PropertiesTester, AlignakTest):
         ('notification_interval', 30),
         ('escalation_period', ''),
         ('escalation_options', ['w','x','c','r']),
+        ('contacts', []),
+        ('contact_groups', []),
         ])
 
     def setUp(self):
@@ -816,7 +816,7 @@ class TestServicegroup(PropertiesTester, AlignakTest):
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
-        ('unknown_members', []),
+        # ('unknown_members', []),
         ('notes', ''),
         ('notes_url', ''),
         ('action_url', ''),

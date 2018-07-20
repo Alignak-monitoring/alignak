@@ -67,11 +67,11 @@ class Hostgroup(Itemgroup):
     A Hostgroup is used to manage a group of hosts
     """
     my_type = 'hostgroup'
+    members_property = "members"
+    group_members_property = "hostgroup_members"
 
     properties = Itemgroup.properties.copy()
     properties.update({
-        # 'uuid':
-        #     StringProp(fill_brok=['full_status']),
         'hostgroup_name':
             StringProp(fill_brok=['full_status']),
         'alias':
@@ -89,45 +89,34 @@ class Hostgroup(Itemgroup):
     })
 
     macros = {
-        'HOSTGROUPALIAS':     'alias',
-        'HOSTGROUPMEMBERS':   'members',
-        'HOSTGROUPNOTES':     'notes',
-        'HOSTGROUPNOTESURL':  'notes_url',
+        'HOSTGROUPNAME': 'hostgroup_name',
+        'HOSTGROUPALIAS': 'alias',
+        'HOSTGROUPMEMBERS': 'members',
+        'HOSTGROUPGROUPMEMBERS': 'hostgroup_members',
+        'HOSTGROUPNOTES':  'notes',
+        'HOSTGROUPNOTESURL': 'notes_url',
         'HOSTGROUPACTIONURL': 'action_url'
     }
 
     def get_name(self):
-        """
-        Get name of group
-
-        :return: Name of hostgroup
-        :rtype: str
-        """
-        return self.hostgroup_name
+        """Get the group name"""
+        return getattr(self, 'hostgroup_name', 'Unnamed')
 
     def get_hosts(self):
-        """
-        Get list of hosts of this group
+        """Get the hosts of the group
 
         :return: list of hosts
         :rtype: list
         """
-        if getattr(self, 'members', None) is not None:
-            return self.members
-
-        return []
+        return super(Hostgroup, self).get_members()
 
     def get_hostgroup_members(self):
-        """
-        Get list of groups members of this hostgroup
+        """Get the groups members of the group
 
         :return: list of hosts
         :rtype: list
         """
-        if hasattr(self, 'hostgroup_members'):
-            return self.hostgroup_members
-
-        return []
+        return getattr(self, 'hostgroup_members', [])
 
     def get_hosts_by_explosion(self, hostgroups):
         # pylint: disable=access-member-before-definition
@@ -160,7 +149,7 @@ class Hostgroup(Itemgroup):
             if hostgroup is not None:
                 value = hostgroup.get_hosts_by_explosion(hostgroups)
                 if value is not None:
-                    self.add_string_member(value)
+                    self.add_members(value)
 
         return self.get_hosts()
 
@@ -170,22 +159,40 @@ class Hostgroups(Itemgroups):
     Class to manage list of Hostgroup
     Hostgroups is used to regroup all Hostgroup
     """
-    name_property = "hostgroup_name"  # is used for finding hostgroups
+    name_property = "hostgroup_name"
     inner_class = Hostgroup
 
-    def get_members_by_name(self, gname):
-        """
-        Get all members by name given in parameter
+    def add_member(self, host_name, hostgroup_name):
+        """Add a host string to a hostgroup member
+        if the host group do not exist, create it
 
-        :param hgname: name of members
-        :type hgname: str
-        :return: list of hosts with this name
-        :rtype: list
+        :param host_name: host name
+        :type host_name: str
+        :param hostgroup_name:hostgroup name
+        :type hostgroup_name: str
+        :return: None
+        """
+        hostgroup = self.find_by_name(hostgroup_name)
+        if not hostgroup:
+            hostgroup = Hostgroup({'hostgroup_name': hostgroup_name,
+                                   'alias': hostgroup_name,
+                                   'members': host_name})
+            self.add(hostgroup)
+        else:
+            hostgroup.add_members(host_name)
+
+    def get_members_of_group(self, gname):
+        """Get all members of a group which name is given in parameter
+
+        :param gname: name of the group
+        :type gname: str
+        :return: list of the hosts in the group
+        :rtype: list[alignak.objects.host.Host]
         """
         hostgroup = self.find_by_name(gname)
-        if hostgroup is None:
-            return []
-        return hostgroup.get_hosts()
+        if hostgroup:
+            return hostgroup.get_hosts()
+        return []
 
     def linkify(self, hosts=None, realms=None):
         """
@@ -197,10 +204,10 @@ class Hostgroups(Itemgroups):
         :type realms: alignak.objects.realm.Realms
         :return: None
         """
-        self.linkify_hg_by_hst(hosts)
-        self.linkify_hg_by_realms(realms, hosts)
+        self.linkify_hostgroups_hosts(hosts)
+        self.linkify_hostgroups_realms(realms, hosts)
 
-    def linkify_hg_by_hst(self, hosts):
+    def linkify_hostgroups_hosts(self, hosts):
         """
         We just search for each hostgroup the id of the hosts
         and replace the name by the id
@@ -215,7 +222,7 @@ class Hostgroups(Itemgroups):
             new_mbrs = []
             for mbr in mbrs:
                 mbr = mbr.strip()  # protect with strip at the beginning so don't care about spaces
-                if mbr == '':  # void entry, skip this
+                if not mbr:  # void entry, skip this
                     continue
                 elif mbr == '*':
                     new_mbrs.extend(list(hosts.items.keys()))
@@ -227,7 +234,7 @@ class Hostgroups(Itemgroups):
                         # and be sure we are uniq in it
                         host.hostgroups = list(set(host.hostgroups))
                     else:
-                        hostgroup.add_string_unknown_member(mbr)
+                        hostgroup.add_unknown_members(mbr)
 
             # Make members uniq
             new_mbrs = list(set(new_mbrs))
@@ -235,7 +242,7 @@ class Hostgroups(Itemgroups):
             # We find the id, we replace the names
             hostgroup.replace_members(new_mbrs)
 
-    def linkify_hg_by_realms(self, realms, hosts):
+    def linkify_hostgroups_realms(self, realms, hosts):
         """
         More than an explode function, but we need to already
         have members so... Will be really linkify just after
@@ -283,25 +290,6 @@ class Hostgroups(Itemgroups):
                                               "than its hostgroup %s"
                                               % (host.get_name(), hostgroup.get_name()))
 
-    def add_member(self, hname, hgname):
-        """
-        Add a host string to a hostgroup member
-        if the host group do not exist, create it
-
-        :param hname: host name
-        :type hname: str
-        :param hgname:hostgroup name
-        :type hgname: str
-        :return: None
-        """
-        hostgroup = self.find_by_name(hgname)
-        # if the id do not exist, create the hg
-        if hostgroup is None:
-            hostgroup = Hostgroup({'hostgroup_name': hgname, 'alias': hgname, 'members': hname})
-            self.add(hostgroup)
-        else:
-            hostgroup.add_string_member(hname)
-
     def explode(self):
         """
         Fill members with hostgroup_members
@@ -312,13 +300,16 @@ class Hostgroups(Itemgroups):
         # so we tag it
         for tmp_hg in list(self.items.values()):
             tmp_hg.already_exploded = False
+
         for hostgroup in list(self.items.values()):
-            if hasattr(hostgroup, 'hostgroup_members') and not hostgroup.already_exploded:
-                # get_hosts_by_explosion is a recursive
-                # function, so we must tag hg so we do not loop
-                for tmp_hg in list(self.items.values()):
-                    tmp_hg.rec_tag = False
-                hostgroup.get_hosts_by_explosion(self)
+            if hostgroup.already_exploded:
+                continue
+
+            # get_hosts_by_explosion is a recursive
+            # function, so we must tag hg so we do not loop
+            for tmp_hg in list(self.items.values()):
+                tmp_hg.rec_tag = False
+            hostgroup.get_hosts_by_explosion(self)
 
         # We clean the tags
         for tmp_hg in list(self.items.values()):

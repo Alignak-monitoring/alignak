@@ -1468,7 +1468,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
     def linkify(self):
         """ Make 'links' between elements, like a host got a services list
-        with all it's services in it
+        with all its services in it
 
         :return: None
         """
@@ -1535,22 +1535,26 @@ class Config(Item):  # pylint: disable=R0904,R0902
         self.escalations.linkify(self.timeperiods, self.contacts,
                                  self.services, self.hosts)
 
-        self.realms.linkify()
+        # Link all satellite links with modules
+        self.schedulers.linkify(self.modules)
+        self.brokers.linkify(self.modules)
+        self.receivers.linkify(self.modules)
+        self.reactionners.linkify(self.modules)
+        self.pollers.linkify(self.modules)
 
-        # Link all satellite links with realms
-        self.schedulers.linkify(self.realms, self.modules)
-        self.brokers.linkify(self.realms, self.modules)
-        self.receivers.linkify(self.realms, self.modules)
-        self.reactionners.linkify(self.realms, self.modules)
-        self.pollers.linkify(self.realms, self.modules)
-
-        # Ok, now update all realms with backlinks of satellites
-        satellites = []
-        satellites.extend(self.pollers)
-        satellites.extend(self.reactionners)
-        satellites.extend(self.receivers)
-        satellites.extend(self.brokers)
-        self.realms.prepare_for_satellites_conf(satellites)
+        # Ok, now update all realms with back links of satellites
+        satellites = {}
+        for sat in self.schedulers:
+            satellites[sat.uuid] = sat
+        for sat in self.pollers:
+            satellites[sat.uuid] = sat
+        for sat in self.reactionners:
+            satellites[sat.uuid] = sat
+        for sat in self.receivers:
+            satellites[sat.uuid] = sat
+        for sat in self.brokers:
+            satellites[sat.uuid] = sat
+        self.realms.prepare_satellites(satellites)
 
     def clean(self):
         """Wrapper for calling the clean method of services attribute
@@ -1725,16 +1729,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 inner_object.fill_default()
 
         # Now fill some fields we can predict (like address for hosts)
-        self.fill_predictive_missing_parameters()
-
-    def fill_predictive_missing_parameters(self):
-        """Wrapper for calling fill_predictive_missing_parameters method of hosts attribute
-        Here is a special functions to fill some special
-        properties that are not filled and should be like
-        address for host (if not set, put host_name)
-
-        :return: None
-        """
         self.hosts.fill_predictive_missing_parameters()
         self.services.fill_predictive_missing_parameters()
 
@@ -1745,8 +1739,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         :return: None
         """
-        if not self.realms:
-            # Create a default realm so all hosts without realm will be link with it
+        if not getattr(self, 'realms', None):
+            # Create a default realm so all hosts without realm will be linked with it
             default = Realm({
                 'realm_name': u'All', 'alias': u'Self created default realm', 'default': '1'
             })
@@ -1754,7 +1748,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             logger.warning("No realms defined, I am adding one as %s", default.get_name())
 
         # Check that a default realm (and only one) is defined and get this default realm
-        self.realms.get_default(check=True)
+        self.realms.fill_default()
 
     def log_daemons_list(self):
         """Log Alignak daemons list
@@ -1784,18 +1778,20 @@ class Config(Item):  # pylint: disable=R0904,R0902
         logger.debug("Alignak configured daemons list:")
         self.log_daemons_list()
 
-        # Get realms names and ids
-        realms_names = []
-        realms_names_ids = {}
-        for realm in self.realms:
-            realms_names.append(realm.get_name())
-            realms_names_ids[realm.get_name()] = realm.uuid
-        default_realm = self.realms.get_default()
+        # We must create relations betweens the realms first. This is necessary to have
+        # an accurate map of the situation!
+        self.realms.linkify()
+        self.realms.get_default(check=True)
 
+        # Get list of known realms
+        realms_names = [realm.get_name() for realm in self.realms]
+
+        # Create one instance of each satellite type if it does not exist...
         if not self.schedulers:
             logger.warning("No scheduler defined, I am adding one on 127.0.0.1:%d",
                            self.daemons_initial_port)
             satellite = SchedulerLink({'type': 'scheduler', 'name': 'Default-Scheduler',
+                                       'realm': self.realms.default.get_name(),
                                        'alignak_launched': alignak_launched,
                                        'missing_daemon': True,
                                        'spare': '0', 'manage_sub_realms': '0',
@@ -1807,6 +1803,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             logger.warning("No reactionner defined, I am adding one on 127.0.0.1:%d",
                            self.daemons_initial_port)
             satellite = ReactionnerLink({'type': 'reactionner', 'name': 'Default-Reactionner',
+                                         'realm': self.realms.default.get_name(),
                                          'alignak_launched': alignak_launched,
                                          'missing_daemon': True,
                                          'spare': '0', 'manage_sub_realms': '0',
@@ -1818,6 +1815,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             logger.warning("No poller defined, I am adding one on 127.0.0.1:%d",
                            self.daemons_initial_port)
             satellite = PollerLink({'type': 'poller', 'name': 'Default-Poller',
+                                    'realm': self.realms.default.get_name(),
                                     'alignak_launched': alignak_launched,
                                     'missing_daemon': True,
                                     'spare': '0', 'manage_sub_realms': '0',
@@ -1829,6 +1827,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             logger.warning("No broker defined, I am adding one on 127.0.0.1:%d",
                            self.daemons_initial_port)
             satellite = BrokerLink({'type': 'broker', 'name': 'Default-Broker',
+                                    'realm': self.realms.default.get_name(),
                                     'alignak_launched': alignak_launched,
                                     'missing_daemon': True,
                                     'spare': '0', 'manage_sub_realms': '0',
@@ -1849,23 +1848,77 @@ class Config(Item):  # pylint: disable=R0904,R0902
             self.missing_daemons.append(satellite)
 
         # Assign default realm to the satellites that do not have a defined realm
-        satellites = [self.pollers, self.brokers, self.reactionners,
-                      self.receivers, self.schedulers]
-        for satellites_list in satellites:
+        for satellites_list in [self.pollers, self.brokers, self.reactionners,
+                                self.receivers, self.schedulers]:
             for satellite in satellites_list:
-                if not satellite.realm:
-                    # Beware: realm is not yet a real realm object uuid ... but still a realm name !
-                    satellite.realm = default_realm.get_name()
-                    satellite.realm_name = default_realm.get_name()
-                    logger.info("Tagging %s with realm %s", satellite.name, satellite.realm_name)
+                # Alert for spare daemons
+                if getattr(satellite, 'spare', False):
+                    self.add_warning("The %s '%s' is declared as a spare daemon. "
+                                     "Spare mode is not yet implemented and it will be ignored."
+                                     % (satellite.type, satellite.name))
+                    continue
+
+                # Alert for non active daemons
+                if not getattr(satellite, 'active', False):
+                    self.add_warning("The %s '%s' is declared as a non active daemon. "
+                                     "It will be ignored."
+                                     % (satellite.type, satellite.name))
+                    continue
+
+                # Here the 'realm' property is not yet a real realm object uuid ...
+                # but still a realm name! Make it a realm uuid
+                if not getattr(satellite, 'realm', None):
+                    satellite.realm = self.realms.default.get_name()
+                sat_realm = self.realms.find_by_name(satellite.realm)
+                if not sat_realm:
+                    self.add_error("The %s '%s' is affected to an unknown realm: '%s'"
+                                   % (satellite.type, satellite.name, satellite.realm))
+                    continue
+
+                # satellite.realm_name = sat_realm.get_name()
+                logger.info("Tagging satellite '%s' with realm %s", satellite.name, satellite.realm)
+                satellite.realm = sat_realm.uuid
+
+                # And tell the realm that it knows the satellite
+                realm_satellites = getattr(sat_realm, '%ss' % satellite.type)
+                if satellite.uuid not in realm_satellites:
+                    realm_satellites.append(satellite.uuid)
+
+                # If the satellite manages sub realms...
+                # We update the "potential_" satellites that may be used for this realm
+                if satellite.manage_sub_realms:
+                    for realm_uuid in sat_realm.all_sub_members:
+                        logger.debug("Linkify %s '%s' with realm %s",
+                                     satellite.type, satellite.name,
+                                     self.realms[realm_uuid].get_name())
+                        realm_satellites = getattr(self.realms[realm_uuid],
+                                                   'potential_%ss' % satellite.type)
+                        if satellite.uuid not in realm_satellites:
+                            realm_satellites.append(satellite.uuid)
 
         # Parse hosts for realms and set host in the default realm if no realm is set
         hosts_realms_names = set()
+        logger.debug("Hosts realm configuration:")
         for host in self.hosts:
-            host_realm_name = getattr(host, 'realm', None)
-            if host_realm_name is None or not host_realm_name:
-                host.realm = default_realm.get_name()
+            if not getattr(host, 'realm', None):
+                host.realm = self.realms.default.get_name()
                 host.got_default_realm = True
+            host_realm = self.realms.find_by_name(host.realm)
+            if not host_realm:
+                self.add_error("The host '%s' is affected to an unknown realm: '%s'"
+                               % (host.get_name(), host.realm))
+                continue
+            host.realm_name = host_realm.get_name()
+            logger.debug("Tagging host '%s' with realm %s", host.get_name(), host.realm_name)
+            hosts_realms_names.add(host.realm_name)
+
+            logger.info(" - %s: realm %s, active %s, passive %s",
+                        host.get_name(), host_realm.get_name(),
+                        host.active_checks_enabled, host.passive_checks_enabled)
+            host_realm.passively_checked_hosts = \
+                host_realm.passively_checked_hosts or host.passive_checks_enabled
+            host_realm.actively_checked_hosts = \
+                host_realm.actively_checked_hosts or host.passive_checks_enabled
             hosts_realms_names.add(host.realm)
 
         # todo: Check the realm / sub-realms relation and the manage_sub_realms daemons
@@ -1874,59 +1927,57 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # As of now, we consider the reactionner and receiver are managing sub-realms
         # and thus do not create if missing in realms
 
-        # Check that all daemons and realms are coherent (scheduler, broker, poller)
-        satellites = [self.schedulers, self.pollers, self.brokers]
-        for satellites_list in satellites:
-            # Check that all schedulers and realms are coherent
+        # Check that all daemons and realms are coherent
+        for satellites_list in [self.pollers, self.brokers, self.reactionners,
+                                self.receivers, self.schedulers]:
             sat_class = satellites_list.inner_class
+            # Collect the names of all the realms that are managed by all the satellites
             sat_realms_names = set()
             for satellite in satellites_list:
-                # Beware: realm is not yet a real realm object uuid ... but still a realm name !
-                if not satellite.realm:
-                    logger.warning("The %s %s do not have a defined realm",
-                                   satellite.type, satellite.name)
-                    continue
-
-                if satellite.realm not in realms_names:
-                    logger.warning("The %s %s is affected to an unknown realm: '%s' (%s)",
-                                   satellite.type, satellite.name,
-                                   satellite.realm, realms_names)
-                    continue
-                sat_realms_names.add(satellite.realm)
-
-                # If the daemon manages sub realms, include the sub realms
-                if satellite.manage_sub_realms:
-                    for realm in self.realms[realms_names_ids[satellite.realm]].all_sub_members:
-                        sat_realms_names.add(realm)
+                for realm in self.realms:
+                    realm_satellites = getattr(realm, '%ss' % satellite.type)
+                    realm_potential_satellites = getattr(realm, 'potential_%ss' % satellite.type)
+                    if satellite.uuid in realm_satellites or \
+                            satellite.uuid in realm_potential_satellites:
+                        sat_realms_names.add(realm.get_name())
 
             if not hosts_realms_names.issubset(sat_realms_names):
-                for realm in hosts_realms_names.difference(sat_realms_names):
+                # Check if a daemon is able to manage the concerned hosts...
+                for realm_name in hosts_realms_names.difference(sat_realms_names):
+                    realm = self.realms.find_by_name(realm_name)
+
                     self.add_warning("Some hosts exist in the realm '%s' but no %s is "
-                                     "defined for this realm" % (realm, satellite.type))
+                                     "defined for this realm." % (realm_name, sat_class.my_type))
+
+                    if not alignak_launched:
+                        continue
 
                     # Add a self-generated daemon
-                    logger.warning("Adding a %s for the realm: %s", satellite.type, realm)
+                    logger.warning("Adding a %s for the realm: %s", satellite.type, realm_name)
                     new_daemon = sat_class({
-                        'type': satellite.type, 'name': '%s-%s' % (satellite.type, realm),
+                        'type': satellite.type, 'name': '%s-%s' % (satellite.type, realm_name),
                         'alignak_launched': True, 'missing_daemon': True,
-                        'realm': realm, 'spare': '0', 'manage_sub_realms': '0',
+                        'realm': realm.uuid, 'manage_sub_realms': '0', 'spare': '0',
                         'address': '127.0.0.1', 'port': self.daemons_initial_port
                     })
+                    satellites_list.add_item(new_daemon)
+
+                    # And tell the realm that it knows the satellite
+                    realm_satellites = getattr(realm, '%ss' % satellite.type)
+                    if new_daemon.uuid not in realm_satellites:
+                        realm_satellites.append(new_daemon.uuid)
+
                     self.add_warning("Added a %s (%s, %s) for the realm '%s'"
-                                     % (satellite.type, '%s-%s' % (satellite.type, realm),
-                                        satellite.uri, realm))
+                                     % (satellite.type, '%s-%s' % (satellite.type, realm_name),
+                                        satellite.uri, realm_name))
                     self.daemons_initial_port = self.daemons_initial_port + 1
                     self.missing_daemons.append(new_daemon)
 
-        # Now we have a list of the missing daemons, parse this list and
-        # add the daemons to their respective list
-        satellites = [self.pollers, self.brokers, self.reactionners,
-                      self.receivers, self.schedulers]
-        for satellites_list in satellites:
-            sat_class = satellites_list.inner_class
-            for satellite in self.missing_daemons:
-                if satellite.__class__ == sat_class:
-                    satellites_list.add_item(satellite)
+        logger.debug("Realms hosts configuration:")
+        for realm in self.realms:
+            logger.debug("Realm: %s, actively checked hosts %s, passively checked hosts %s",
+                         realm.get_name(), realm.actively_checked_hosts,
+                         realm.passively_checked_hosts)
 
         # Log all satellites list
         logger.debug("Alignak definitive daemons list:")
@@ -2252,6 +2303,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
             self.add_error(msg)
             valid = False
 
+        if not self.read_config_silent:
+            logger.info('Checked')
+
         classes = [strclss for _, _, strclss, _, _ in list(self.types_creations.values())]
         for strclss in sorted(classes):
             if strclss in ['hostescalations', 'serviceescalations']:
@@ -2277,9 +2331,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 logger.error("%s configuration is incorrect!", strclss)
             if checked_list.configuration_warnings:
                 self.configuration_warnings += checked_list.configuration_warnings
-                logger.warning("\t%s configuration warnings: %d, total: %d", strclss,
-                               len(checked_list.configuration_warnings),
-                               len(self.configuration_warnings))
+                logger.info("    %d warning(s), total: %d",
+                            len(checked_list.configuration_warnings),
+                            len(self.configuration_warnings))
 
             if not self.read_config_silent:
                 try:
@@ -2544,11 +2598,15 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # but add a entry in the round-robin tourniquet for
             # every weight point schedulers (so Weight round robin)
             weight_list = []
-            no_spare_schedulers = [s_id for s_id in realm.schedulers
-                                   if self.schedulers[s_id].active and
-                                   not self.schedulers[s_id].spare]
+            no_spare_schedulers = realm.schedulers
+            if not no_spare_schedulers:
+                if realm.potential_schedulers:
+                    no_spare_schedulers = [realm.potential_schedulers[0]]
             nb_schedulers = len(no_spare_schedulers)
-            logger.info("  %d scheduler(s) in the realm %s", nb_schedulers, realm.get_name())
+            if nb_schedulers:
+                logger.info("  %d scheduler(s) for the realm %s", nb_schedulers, realm.get_name())
+            else:
+                logger.warning("  no scheduler for the realm %s", realm.get_name())
 
             # Maybe there is no scheduler in the realm, it can be a
             # big problem if there are elements in packs
@@ -2558,15 +2616,16 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 nb_elements_all_realms += len(hosts_pack)
             realm.hosts_count = nb_elements
             if nb_elements:
+                if not nb_schedulers:
+                    self.add_error("The realm %s has %d hosts but no scheduler!"
+                                   % (realm.get_name(), nb_elements))
+                    realm.packs = []  # Dumb pack
+                    continue
+
                 logger.info("  %d hosts in the realm %s, distributed in %d linked packs",
                             nb_elements, realm.get_name(), len(realm.packs))
             else:
                 logger.info("  no hosts in the realm %s", realm.get_name())
-
-            if nb_schedulers == 0 and nb_elements != 0:
-                self.add_error("The realm %s has hosts but no scheduler!" % realm.get_name())
-                realm.packs = []  # Dumb pack
-                continue
 
             # Create a relation between a pack and each scheduler in the realm
             packindex = 0
@@ -2654,16 +2713,18 @@ class Config(Item):  # pylint: disable=R0904,R0902
         logger.info("Splitting the configuration into parts:")
         nb_parts = 0
         for realm in self.realms:
-            no_spare_schedulers = [s_id for s_id in realm.schedulers
-                                   if self.schedulers[s_id].active and
-                                   not self.schedulers[s_id].spare]
+            no_spare_schedulers = realm.schedulers
+            if not no_spare_schedulers:
+                if realm.potential_schedulers:
+                    no_spare_schedulers = [realm.potential_schedulers[0]]
             nb_schedulers = len(no_spare_schedulers)
             nb_parts += nb_schedulers
-            logger.info(" - %d scheduler(s) in the realm %s", nb_schedulers, realm.get_name())
+            if nb_schedulers:
+                logger.info("  %d scheduler(s) for the realm %s", nb_schedulers, realm.get_name())
+            else:
+                logger.warning("  no scheduler for the realm %s", realm.get_name())
 
         if nb_parts == 0:
-            logger.warning("Splitting the configuration into parts but I found no scheduler. "
-                           "Considering that one exist anyway...")
             nb_parts = 1
 
         # We create dummy configurations for schedulers:
@@ -2733,9 +2794,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
         for realm in self.realms:
             logger.info(" - realm: %s", realm)
             for idx in realm.packs:
-                logger.info("   - pack: %s / %d hosts", idx, len(realm.packs[idx]))
-                logger.info("    : %s", ','.join([self.hosts[host_id].get_name()
-                                                  for host_id in realm.packs[idx]]))
+                logger.info("   - pack: %s / %d hosts (%s)",
+                            idx, len(realm.packs[idx]), ','.join([self.hosts[host_id].get_name()
+                                                                  for host_id in realm.packs[idx]]))
 
         # We have packs for realms and elements into configurations, let's merge this...
         logger.info("Realms:")

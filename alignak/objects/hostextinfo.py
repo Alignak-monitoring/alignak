@@ -128,8 +128,8 @@ class HostsExtInfo(Items):
     into Hosts if necessary
 
     """
-    name_property = "host_name"  # use for the search by name
-    inner_class = HostExtInfo  # use for know what is in items
+    name_property = "host_name"
+    inner_class = HostExtInfo
 
     def merge(self, hosts):
         """Merge extended host information into services
