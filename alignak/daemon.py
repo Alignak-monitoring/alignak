@@ -267,6 +267,8 @@ class Daemon(object):
         # Interface the daemon will listen to
         'host':
             StringProp(default=u'0.0.0.0'),
+        'address':
+            StringProp(default=u'127.0.0.1'),
         # Server hostname
         'host_name':
             StringProp(default=u'localhost'),
@@ -403,6 +405,8 @@ class Daemon(object):
 
         # I got my name
         self.name = name
+        self.host_name = socket.getfqdn()
+        self.address = '127.0.0.1'
 
         # Check if /dev/shm exists and usable...
         self.check_shm()

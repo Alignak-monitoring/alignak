@@ -830,7 +830,9 @@ class Scheduler(object):  # pylint: disable=R0902
             # notification_commands) which are executed in the reactionner.
             item = self.find_item_by_id(notification.ref)
             children = []
-            notification_period = self.timeperiods[item.notification_period]
+            notification_period = None
+            if getattr(item, 'notification_period', None) is not None:
+                notification_period = self.timeperiods[item.notification_period]
             if not item.is_blocking_notifications(notification_period,
                                                   self.hosts, self.services,
                                                   notification.type, now):
@@ -1029,22 +1031,22 @@ class Scheduler(object):  # pylint: disable=R0902
 
         return res
 
-    def put_results(self, action):  # pylint: disable=too-many-branches,too-many-statements
+    def manage_results(self, action):  # pylint: disable=too-many-branches,too-many-statements
         """Get result from pollers/reactionners (actives ones)
 
         :param action: check / action / event handler to handle
         :type action:
         :return: None
         """
-        logger.debug('put_results: %s ', action)
+        logger.debug('manage_results: %s ', action)
         if action.is_a == 'notification':
             try:
                 _ = self.actions[action.uuid]
             except KeyError as exp:  # pragma: no cover, simple protection
                 # Cannot find notification - drop it
-                logger.warning('put_results:: get unknown notification : %s ', str(exp))
+                logger.warning('manage_results:: get unknown notification : %s ', str(exp))
                 for uuid in self.actions:
-                    logger.debug('put_results:: known action: %s ', self.actions[uuid])
+                    logger.debug('manage_results:: known action: %s ', self.actions[uuid])
                 return
 
             # We will only see child notifications here
@@ -1114,16 +1116,16 @@ class Scheduler(object):  # pylint: disable=R0902
 
             except (ValueError, AttributeError) as exp:  # pragma: no cover, simple protection
                 # bad object, drop it
-                logger.warning('put_results:: got bad notification : %s ', str(exp))
+                logger.warning('manage_results:: got bad notification : %s ', str(exp))
 
         elif action.is_a == 'check':
             try:
                 self.checks[action.uuid]
             except KeyError as exp:  # pragma: no cover, simple protection
                 # Cannot find check - drop it
-                logger.warning('put_results:: get unknown check: %s ', action)
+                logger.warning('manage_results:: get unknown check: %s ', action)
                 for uuid in self.checks:
-                    logger.debug('put_results:: known check: %s ', self.checks[uuid])
+                    logger.debug('manage_results:: known check: %s ', self.checks[uuid])
                 return
 
             try:
@@ -1162,7 +1164,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 self.checks[action.uuid].status = ACT_STATUS_WAIT_CONSUME
             except (ValueError, AttributeError) as exp:  # pragma: no cover, simple protection
                 # bad object, drop it
-                logger.warning('put_results:: got bad check: %s ', str(exp))
+                logger.warning('manage_results:: got bad check: %s ', str(exp))
 
         elif action.is_a == 'eventhandler':
             try:
@@ -1171,7 +1173,7 @@ class Scheduler(object):  # pylint: disable=R0902
             except KeyError as exp:  # pragma: no cover, simple protection
                 # cannot find old action
                 # bad object, drop it
-                logger.warning('put_results:: get bad check: %s ', str(exp))
+                logger.warning('manage_results:: get bad check: %s ', str(exp))
                 return
 
             try:
@@ -1212,7 +1214,7 @@ class Scheduler(object):  # pylint: disable=R0902
                     self.add(s_item.get_snapshot_brok(old_action.output, old_action.exit_status))
             except (ValueError, AttributeError) as exp:  # pragma: no cover, simple protection
                 # bad object, drop it
-                logger.warning('put_results:: got bad event handler: %s ', str(exp))
+                logger.warning('manage_results:: got bad event handler: %s ', str(exp))
 
         else:  # pragma: no cover, simple protection, should not happen!
             logger.error("The received result type in unknown! %s", str(action.is_a))
@@ -1361,7 +1363,7 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         # If we set the retention update to 0, we do not want to manage retention
         # If we are not forced (like at stopping)
-        if self.pushed_conf.retention_update_interval == 0 and not forced:
+        if self.pushed_conf.retention_update_interval == 0:
             logger.debug("Should have saved retention but it is not enabled")
             return
 
@@ -1725,19 +1727,15 @@ class Scheduler(object):  # pylint: disable=R0902
         # We need to get them first
         queue_size = self.waiting_results.qsize()
         for _ in range(queue_size):
-            self.put_results(self.waiting_results.get())
+            self.manage_results(self.waiting_results.get())
 
         # Then we consume them
         for chk in list(self.checks.values()):
             if chk.status == ACT_STATUS_WAIT_CONSUME:
                 logger.debug("Consuming: %s", chk)
                 item = self.find_item_by_id(chk.ref)
-                if not item:
-                    logger.warning("Consuming a check result, "
-                                   "missing item for the check result: %s", chk)
-                    continue
                 notification_period = None
-                if item.notification_period is not None:
+                if getattr(item, 'notification_period', None) is not None:
                     notification_period = self.timeperiods[item.notification_period]
 
                 dep_checks = item.consume_result(chk, notification_period, self.hosts,
@@ -1775,7 +1773,9 @@ class Scheduler(object):  # pylint: disable=R0902
             for chk in list(self.checks.values()):
                 if chk.status == ACT_STATUS_WAIT_DEPEND and not chk.depend_on:
                     item = self.find_item_by_id(chk.ref)
-                    notification_period = self.timeperiods[item.notification_period]
+                    notification_period = None
+                    if getattr(item, 'notification_period', None) is not None:
+                        notification_period = self.timeperiods[item.notification_period]
                     dep_checks = item.consume_result(chk, notification_period, self.hosts,
                                                      self.services, self.timeperiods,
                                                      self.macromodulations, self.checkmodulations,

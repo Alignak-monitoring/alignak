@@ -97,19 +97,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
     # though, as these 2 attributes are to be relatively low used it's not
     # that bad to have the default be defined only once here at the class level.
 
-    # properties defined by configuration
-    # *required: is required in conf
-    # *default: default value if no set in conf
-    # *pythonize: function to call when transforming string to python object
-    # *fill_brok: if set, send to broker.
-    #    there are two categories:
-    #       full_status for initial and update status, check_result for check results
-    # *no_slots: do not take this property for __slots__
-    #  Only for the initial call
-    # conf_send_preparation: if set, will pass the property to this function. It's used to "flatten"
-    #  some dangerous properties like realms that are too 'linked' to be sent like that.
-    # brok_transformation: if set, will call the function with the value of the property
-    #  the major times it will be to flatten the data (like realm_name instead of the realm object).
     properties = SchedulingItem.properties.copy()
     properties.update({
         'host_name':
@@ -193,50 +180,50 @@ class Host(SchedulingItem):  # pylint: disable=R0904
     # the prop can be callable or not
     macros = SchedulingItem.macros.copy()
     macros.update({
-        'HOSTNAME':          'host_name',
-        'HOSTDISPLAYNAME':   'display_name',
-        'HOSTALIAS':         'alias',
-        'HOSTADDRESS':       'address',
-        'HOSTSTATE':         'state',
-        'HOSTSTATEID':       'state_id',
-        'LASTHOSTSTATE':     'last_state',
-        'LASTHOSTSTATEID':   'last_state_id',
-        'HOSTSTATETYPE':     'state_type',
-        'HOSTATTEMPT':       'attempt',
-        'MAXHOSTATTEMPTS':   'max_check_attempts',
-        'HOSTEVENTID':       'current_event_id',
-        'LASTHOSTEVENTID':   'last_event_id',
-        'HOSTPROBLEMID':     'current_problem_id',
+        'HOSTNAME': 'host_name',
+        'HOSTDISPLAYNAME': 'display_name',
+        'HOSTALIAS': 'alias',
+        'HOSTADDRESS': 'address',
+        'HOSTSTATE': 'state',
+        'HOSTSTATEID': 'state_id',
+        'LASTHOSTSTATE': 'last_state',
+        'LASTHOSTSTATEID': 'last_state_id',
+        'HOSTSTATETYPE': 'state_type',
+        'HOSTATTEMPT': 'attempt',
+        'MAXHOSTATTEMPTS': 'max_check_attempts',
+        'HOSTEVENTID': 'current_event_id',
+        'LASTHOSTEVENTID': 'last_event_id',
+        'HOSTPROBLEMID': 'current_problem_id',
         'LASTHOSTPROBLEMID': 'last_problem_id',
-        'HOSTLATENCY':       'latency',
+        'HOSTLATENCY': 'latency',
         'HOSTEXECUTIONTIME': 'execution_time',
-        'HOSTDURATION':      'get_duration',
-        'HOSTDURATIONSEC':   'get_duration_sec',
-        'HOSTDOWNTIME':      'get_downtime',
+        'HOSTDURATION': 'get_duration',
+        'HOSTDURATIONSEC': 'get_duration_sec',
+        'HOSTDOWNTIME': 'get_downtime',
         'HOSTPERCENTCHANGE': 'percent_state_change',
-        'HOSTGROUPNAME':     ('get_groupname', ['hostgroups']),
-        'HOSTGROUPNAMES':    ('get_groupnames', ['hostgroups']),
-        'HOSTGROUPALIAS':    ('get_groupalias', ['hostgroups']),
-        'HOSTGROUPALIASES':  ('get_groupaliases', ['hostgroups']),
-        'LASTHOSTCHECK':     'last_chk',
+        'HOSTGROUPNAME': ('get_groupname', ['hostgroups']),
+        'HOSTGROUPNAMES': ('get_groupnames', ['hostgroups']),
+        'HOSTGROUPALIAS': ('get_groupalias', ['hostgroups']),
+        'HOSTGROUPALIASES': ('get_groupaliases', ['hostgroups']),
+        'LASTHOSTCHECK': 'last_chk',
         'LASTHOSTSTATECHANGE': 'last_state_change',
-        'LASTHOSTUP':        'last_time_up',
-        'LASTHOSTDOWN':      'last_time_down',
+        'LASTHOSTUP': 'last_time_up',
+        'LASTHOSTDOWN': 'last_time_down',
         'LASTHOSTUNREACHABLE': 'last_time_unreachable',
-        'HOSTOUTPUT':        'output',
-        'LONGHOSTOUTPUT':    'long_output',
-        'HOSTPERFDATA':      'perf_data',
-        'LASTHOSTPERFDATA':  'last_perf_data',
-        'HOSTCHECKCOMMAND':  'get_check_command',
+        'HOSTOUTPUT': 'output',
+        'LONGHOSTOUTPUT': 'long_output',
+        'HOSTPERFDATA': 'perf_data',
+        'LASTHOSTPERFDATA': 'last_perf_data',
+        'HOSTCHECKCOMMAND': 'get_check_command',
         'HOSTSNAPSHOTCOMMAND': 'get_snapshot_command',
-        'HOSTACKAUTHOR':     'get_ack_author_name',
+        'HOSTACKAUTHOR': 'get_ack_author_name',
         'HOSTACKAUTHORNAME': 'get_ack_author_name',
         'HOSTACKAUTHORALIAS': 'get_ack_author_name',
-        'HOSTACKCOMMENT':    'get_ack_comment',
-        'HOSTACTIONURL':     'action_url',
-        'HOSTNOTESURL':      'notes_url',
-        'HOSTNOTES':         'notes',
-        'HOSTREALM':         'realm_name',
+        'HOSTACKCOMMENT': 'get_ack_comment',
+        'HOSTACTIONURL': 'action_url',
+        'HOSTNOTESURL': 'notes_url',
+        'HOSTNOTES': 'notes',
+        'HOSTREALM': 'realm_name',
         'TOTALHOSTSERVICES': 'get_total_services',
         'TOTALHOSTSERVICESOK': ('get_total_services_ok', ['services']),
         'TOTALHOSTSERVICESWARNING': ('get_total_services_warning', ['services']),
@@ -258,6 +245,11 @@ class Host(SchedulingItem):  # pylint: disable=R0904
     old_properties.update({
         'hostgroup': 'hostgroups',
     })
+
+    def __init__(self, params=None, parsing=True):
+        # Must convert the unreachable properties to manage the new 'x' option value
+        self.convert_conf_for_unreachable(params=params)
+        super(Host, self).__init__(params, parsing=parsing)
 
     def __str__(self):  # pragma: no cover
         return '<Host %s, uuid=%s, %s (%s), realm: %s, use: %s />' \
@@ -290,6 +282,9 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :type params: dict
         :return: None
         """
+        if params is None:
+            return
+
         for prop in ['flap_detection_options', 'notification_options',
                      'snapshot_criteria', 'stalking_options']:
             if prop in params:
@@ -1460,20 +1455,15 @@ class Hosts(SchedulingItems):
         # Internal checks before executing inherited function...
         loop = self.no_loop_in_parents("self", "parents")
         if loop:
-            msg = "Loop detected while checking hosts "
-            self.add_error(msg)
+            self.add_error("Loop detected while checking hosts")
             state = False
             for uuid, item in list(self.items.items()):
                 for elem in loop:
                     if elem == uuid:
-                        msg = "Host %s is parent in dependency defined in %s" % (
-                            item.get_name(), item.imported_from
-                        )
-                        self.add_error(msg)
+                        self.add_error("Host %s is parent in dependency defined in %s"
+                                       % (item.get_name(), item.imported_from))
                     elif elem in item.parents:
-                        msg = "Host %s is child in dependency defined in %s" % (
-                            self[elem].get_name(), self[elem].imported_from
-                        )
-                        self.add_error(msg)
+                        self.add_error("Host %s is child in dependency defined in %s"
+                                       % (self[elem].get_name(), self[elem].imported_from))
 
         return super(Hosts, self).is_correct() and state

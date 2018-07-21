@@ -117,15 +117,15 @@ class TestDispatcher(AlignakTest):
                 for link in my_dispatcher.all_daemons_links:
                     mr.get('http://%s:%s/ping' % (link.address, link.port),
                            json='pong')
-                    mr.get('http://%s:%s/get_running_id' % (link.address, link.port),
+                    mr.get('http://%s:%s/identity' % (link.address, link.port),
                            json={"running_id": 123456.123456})
                     mr.get('http://%s:%s/wait_new_conf' % (link.address, link.port),
                            json=True)
                     mr.get('http://%s:%s/fill_initial_broks' % (link.address, link.port),
                            json=[])
-                    mr.post('http://%s:%s/push_configuration' % (link.address, link.port),
+                    mr.post('http://%s:%s/_push_configuration' % (link.address, link.port),
                             json=True)
-                    mr.get('http://%s:%s/get_managed_configurations' % (link.address, link.port),
+                    mr.get('http://%s:%s/managed_configurations' % (link.address, link.port),
                            json={})
                     mr.get('http://%s:%s/do_not_run' % (link.address, link.port),
                            json=True)
@@ -256,9 +256,9 @@ class TestDispatcher(AlignakTest):
                 # Hack the requests history to check and simulate  the configuration pushed...
                 history = mr.request_history
                 for index, request in enumerate(history):
-                    if 'push_configuration' in request.url:
+                    if '_push_configuration' in request.url:
                         received = request.json()
-                        print((index, request.url, received))
+                        print(index, request.url, received)
                         assert ['conf'] == list(received.keys())
                         conf = received['conf']
 
@@ -301,13 +301,13 @@ class TestDispatcher(AlignakTest):
                                 'push_flavor': scheduler_link['push_flavor'],
                                 'managed_conf_id': scheduler_link['managed_conf_id']
                             }
-                        print(("Managed: %s" % link.cfg_managed))
+                        print("Managed: %s" % link.cfg_managed)
 
                         assert 'modules' in conf
                         assert conf['modules'] == []
 
                         # Spare arbiter specific
-                        if '8770/push_configuration' in request.url:
+                        if '8770/_push_configuration' in request.url:
                             # Spare arbiter receives all the monitored configuration
                             assert 'whole_conf' in conf
                             # String serialized configuration
@@ -333,7 +333,7 @@ class TestDispatcher(AlignakTest):
                                 assert str(objects_list) == objects_map[strclss]['str']
 
                         # Scheduler specific
-                        elif '7768/push_configuration' in request.url:
+                        elif '7768/_push_configuration' in request.url:
                             assert 'conf_part' in conf
                             # String serialized configuration
                             assert isinstance(conf['conf_part'], string_types)
@@ -370,11 +370,13 @@ class TestDispatcher(AlignakTest):
 
                         else:
                             # Satellites
+                            print("I am: ")
+                            print(index, request.url, received)
                             assert 'conf_part' not in conf
                             assert 'see_my_schedulers' == conf['managed_conf_id']
 
                 for link in my_dispatcher.all_daemons_links:
-                    mr.get('http://%s:%s/get_managed_configurations' % (link.address, link.port),
+                    mr.get('http://%s:%s/managed_configurations' % (link.address, link.port),
                            json=link.cfg_managed)
 
                 print("Check dispatching:")

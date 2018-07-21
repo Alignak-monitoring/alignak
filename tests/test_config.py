@@ -163,6 +163,39 @@ class TestConfig(AlignakTest):
         link = self._arbiter.conf.receivers.find_by_name('receiver-master')
         assert link is not None
 
+    def test_host_name_pattern(self):
+        """ Default test configuration has no loading problems ...
+
+        :return: None
+        """
+        self.setup_with_file('cfg/config/host_name_pattern.cfg')
+        assert self.conf_is_correct
+        self.show_logs()
+
+        # No error messages
+        assert len(self.configuration_errors) == 0
+        # No warning messages
+        assert len(self.configuration_warnings) == 0
+
+        # Search hosts by name
+        # From a patterned host:  test_[0-2], we have test_0, test_1 and test_2
+        host = self._arbiter.conf.hosts.find_by_name('test_0')
+        assert host is not None
+        host = self._arbiter.conf.hosts.find_by_name('test_1')
+        assert host is not None
+        host = self._arbiter.conf.hosts.find_by_name('test_2')
+        assert host is not None
+
+        # From a patterned host:  test_[0-2-%02d], we have test_00, test_01 and test_02
+        host = self._arbiter.conf.hosts.find_by_name('test_00')
+        assert host is not None
+        host = self._arbiter.conf.hosts.find_by_name('test_01')
+        assert host is not None
+        host = self._arbiter.conf.hosts.find_by_name('test_02')
+        assert host is not None
+        host = self._arbiter.conf.hosts.find_by_name('test_03')
+        assert host is None
+
     def test_config_conf_inner_properties(self):
         """ Default configuration has no loading problems ...
         and inner default properties are correctly valued

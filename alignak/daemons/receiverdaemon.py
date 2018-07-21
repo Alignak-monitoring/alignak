@@ -206,7 +206,7 @@ class Receiver(Satellite):
                 continue
 
             try:
-                logger.debug("Getting external commands from: %s", link.name)
+                logger.info("Getting external commands from: %s", link.name)
                 external_commands = link.get_external_commands()
                 if external_commands:
                     logger.debug("Got %d commands from: %s", len(external_commands), link.name)
@@ -222,8 +222,7 @@ class Receiver(Satellite):
                 logger.exception("Exception: %s", exp)
 
     def push_external_commands_to_schedulers(self):
-        """Send a HTTP request to the schedulers (POST /run_external_commands)
-        with external command list.
+        """Push received external commands to the schedulers
 
         :return: None
         """

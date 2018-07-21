@@ -31,14 +31,26 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class ArbiterInterface(GenericInterface):
-    """Interface for HA Arbiter. The Slave/Master arbiter can get /push conf
+    """This module provide a specific HTTP interface for an Arbiter daemon."""
 
-    """
+    #####
+    #   _____                                           _
+    #  | ____| __  __  _ __     ___    ___    ___    __| |
+    #  |  _|   \ \/ / | '_ \   / _ \  / __|  / _ \  / _` |
+    #  | |___   >  <  | |_) | | (_) | \__ \ |  __/ | (_| |
+    #  |_____| /_/\_\ | .__/   \___/  |___/  \___|  \__,_|
+    #                 |_|
+    #####
+
     @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
     def reload_configuration(self):
         """Ask to the arbiter to reload the monitored configuration
+
+        **Note** tha the arbiter will not reload its main configuration file (eg. alignak.ini)
+        but it will reload the monitored objects from the Nagios legacy files or from the
+        Alignak backend!
 
         In case of any error, this function returns an object containing some properties:
         '_status': 'ERR' because of the error
@@ -46,19 +58,21 @@ class ArbiterInterface(GenericInterface):
 
         :return: True if configuration reload is accepted
         """
-        # If I'm the master, ignore the command and raise a log
+        # If I'm not the master arbiter, ignore the command and raise a log
         if not self.app.is_master:
             message = u"I received a request to reload the monitored configuration. " \
                       u"I am not the Master arbiter, I ignore and continue to run."
             logger.warning(message)
             return {'_status': u'ERR', '_message': message}
 
-        logger.warning("I received a request to reload the monitored configuration.")
+        message = "I received a request to reload the monitored configuration"
         if self.app.loading_configuration:
-            logger.warning("I am still reloading the monitored configuration ;)")
+            message = message + "and I am still reloading the monitored configuration ;)"
+        else:
+            self.app.need_config_reload = True
+        logger.warning(message)
 
-        self.app.need_config_reload = True
-        return True
+        return {'_status': u'OK', '_message': message}
 
     @cherrypy.expose
     @cherrypy.tools.json_in()
@@ -196,191 +210,11 @@ class ArbiterInterface(GenericInterface):
                 'command': command_line}
 
     @cherrypy.expose
-    @cherrypy.tools.json_in()
-    @cherrypy.tools.json_out()
-    def push_configuration(self, pushed_configuration=None):
-        """Send a new configuration to the daemon
-
-        Used by the master arbiter to send its configuration to a spare arbiter
-
-        This function is not intended for external use. It is quite complex to
-        build a configuration for a daemon and it is the arbter dispatcher job ;)
-
-        :param pushed_configuration: new conf to send
-        :return: None
-        """
-        pushed_configuration = cherrypy.request.json
-        self.app.must_run = False
-        return super(ArbiterInterface, self).push_configuration(
-            pushed_configuration=pushed_configuration['conf'])
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def do_not_run(self):
-        """The master arbiter tells to its spare arbiters to not run.
-
-        A master arbiter will ignore this request
-
-        :return: None
-        """
-        # If I'm the master, ignore the command and raise a log
-        if self.app.is_master:
-            logger.warning("Received message to not run. "
-                           "I am the Master, ignore and continue to run.")
-            return False
-
-        # Else, I'm just a spare, so I listen to my master
-        logger.debug("Received message to not run. I am the spare, stopping.")
-        self.app.last_master_speak = time.time()
-        self.app.must_run = False
-        return True
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def wait_new_conf(self):
-        """Ask the daemon to drop its configuration and wait for a new one
-
-        :return: None
-        """
-        with self.app.conf_lock:
-            logger.warning("My master Arbiter wants me to wait for a new configuration.")
-            self.app.cur_conf = {}
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def alignak_status(self, details=False):
-        """Get the overall alignak status
-
-        Returns a list of the satellites as in:
-        {
-            'scheduler': ['Scheduler1']
-            'poller': ['Poller1', 'Poller2']
-            ...
-        }
-
-        :param details: Details are required (different from 0)
-        :type details bool
-
-        :return: dict with key *daemon_type* and value list of daemon name
-        :rtype: dict
-        """
-        if details is not False:
-            details = bool(details)
-
-        return self.app.get_alignak_status(details=details)
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def satellites_list(self, daemon_type=''):
-        """Get the arbiter satellite names sorted by type
-
-        Returns a list of the satellites as in:
-        {
-            'scheduler': ['Scheduler1']
-            'poller': ['Poller1', 'Poller2']
-            ...
-        }
-
-        If a specific daemon type is requested, the list is reduced to this unique daemon type.
-
-        :param daemon_type: daemon type to filter
-        :type daemon_type: str
-        :return: dict with key *daemon_type* and value list of daemon name
-        :rtype: dict
-        """
-        with self.app.conf_lock:
-            res = {}
-
-            for s_type in ['arbiter', 'scheduler', 'poller', 'reactionner', 'receiver', 'broker']:
-                if daemon_type and daemon_type != s_type:
-                    continue
-                satellite_list = []
-                res[s_type] = satellite_list
-                for daemon_link in getattr(self.app.conf, s_type + 's', []):
-                    satellite_list.append(daemon_link.name)
-            return res
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def satellites_configuration(self):
-        """Return all the configuration data of satellites
-
-        :return: dict containing satellites data
-        Output looks like this ::
-
-        {'arbiter' : [{'property1':'value1' ..}, {'property2', 'value11' ..}, ..],
-        'scheduler': [..],
-        'poller': [..],
-        'reactionner': [..],
-        'receiver': [..],
-         'broker: [..]'
-        }
-
-        :rtype: dict
-        """
-        res = {}
-        for s_type in ['arbiter', 'scheduler', 'poller', 'reactionner', 'receiver',
-                       'broker']:
-            lst = []
-            res[s_type] = lst
-            for daemon in getattr(self.app.conf, s_type + 's'):
-                cls = daemon.__class__
-                env = {}
-                all_props = [cls.properties, cls.running_properties]
-
-                for props in all_props:
-                    for prop in props:
-                        if not hasattr(daemon, prop):
-                            continue
-                        if prop in ["realms", "conf", "con", "tags", "modules", "cfg",
-                                    "broks", "cfg_to_manage"]:
-                            continue
-                        val = getattr(daemon, prop)
-                        # give a try to a json able object
-                        try:
-                            json.dumps(val)
-                            env[prop] = val
-                        except TypeError as exp:
-                            logger.warning('get_all_states, %s: %s', prop, str(exp))
-                lst.append(env)
-        return res
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def get_objects_properties(self, table):  # pylint: disable=no-self-use, unused-argument
-        """'Dump all objects of the required type existing in the configuration:
-            - hosts, services, contacts,
-            - hostgroups, servicegroups, contactgroups
-            - commands, timeperiods
-            - ...
-
-        :param table: table name
-        :type table: str
-        :return: list all properties of all objects
-        :rtype: list
-        """
-        return {'_status': u'ERR',
-                '_message': u"Deprecated in favor of the stats endpoint."}
-
-    @cherrypy.expose
-    @cherrypy.tools.json_in()
-    @cherrypy.tools.json_out()
-    def push_external_command(self, command=None):
-        """Only to maintain ascending compatibility... this function uses the inner
-        *command* endpoint.
-
-        :param command: Alignak external command
-        :type command: string
-        :return: None
-        """
-        return self.command(command=command)
-
-    @cherrypy.expose
     @cherrypy.tools.json_out()
     def monitoring_problems(self):
         """Get Alignak detailed monitoring status
 
-        This will return an object containing the properties of the `get_id`, plus a `problems`
+        This will return an object containing the properties of the `identity`, plus a `problems`
         object which contains 2 properties for each known scheduler:
         - _freshness, which is the timestamp when the provided data were fetched
         - problems, which is an object with the scheduler known problems:
@@ -427,7 +261,7 @@ class ArbiterInterface(GenericInterface):
         :return: schedulers live synthesis list
         :rtype: dict
         """
-        res = self.get_id()
+        res = self.identity()
         res['problems'] = {}
         for scheduler_link in self.app.conf.schedulers:
             sched_res = scheduler_link.con.get('monitoring_problems', wait=True)
@@ -445,7 +279,7 @@ class ArbiterInterface(GenericInterface):
     def livesynthesis(self):
         """Get Alignak live synthesis
 
-        This will return an object containing the properties of the `get_id`, plus a `livesynthesis`
+        This will return an object containing the properties of the `identity`, plus a `livesynthesis`
         object which contains 2 properties for each known scheduler:
         - _freshness, which is the timestamp when the provided data were fetched
         - livesynthesis, which is an object with the scheduler live synthesis.
@@ -528,8 +362,7 @@ class ArbiterInterface(GenericInterface):
         :return: scheduler live synthesis
         :rtype: dict
         """
-        res = self.get_id()
-        res.update(self.get_start_time())
+        res = self.identity()
         res.update(self.app.get_livesynthesis())
         return res
 
@@ -608,3 +441,404 @@ class ArbiterInterface(GenericInterface):
             if isinstance(sched_res, dict) and 'content' in sched_res:
                 return sched_res
         return {'_status': u'ERR', '_message': u'Required %s not found.' % o_type}
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def alignak_status(self, details=False):
+        """Get the overall alignak status
+
+        Returns a list of the satellites as in:
+        {
+            services: [
+                {
+                    livestate: {
+                        perf_data: "",
+                        timestamp: 1532106561,
+                        state: "ok",
+                        long_output: "",
+                        output: "all daemons are up and running."
+                    },
+                    name: "arbiter-master"
+                },
+                {
+                    livestate: {
+                        name: "poller_poller-master",
+                        timestamp: 1532106561,
+                        long_output: "Realm: (True). Listening on: http://127.0.0.1:7771/",
+                        state: "ok",
+                        output: "daemon is alive and reachable.",
+                        perf_data: "last_check=1532106560.17"
+                    },
+                    name: "poller-master"
+                },
+                ...
+                ...
+            ],
+            variables: { },
+            livestate: {
+                timestamp: 1532106561,
+                long_output: "broker-master - daemon is alive and reachable. poller-master - daemon is alive and reachable. reactionner-master - daemon is alive and reachable. receiver-master - daemon is alive and reachable. receiver-nsca - daemon is alive and reachable. scheduler-master - daemon is alive and reachable. scheduler-master-2 - daemon is alive and reachable. scheduler-master-3 - daemon is alive and reachable.",
+                state: "up",
+                output: "All my daemons are up and running.",
+                perf_data: "'servicesextinfo'=0 'businessimpactmodulations'=0 'hostgroups'=2 'resultmodulations'=0 'escalations'=0 'schedulers'=3 'hostsextinfo'=0 'contacts'=2 'servicedependencies'=0 'servicegroups'=1 'pollers'=1 'arbiters'=1 'receivers'=2 'macromodulations'=0 'reactionners'=1 'contactgroups'=2 'brokers'=1 'realms'=3 'services'=32 'commands'=11 'notificationways'=2 'timeperiods'=4 'modules'=0 'checkmodulations'=0 'hosts'=6 'hostdependencies'=0"
+            },
+            name: "My Alignak",
+            template: {
+                notes: "",
+                alias: "My Alignak",
+                _templates: [
+                    "alignak",
+                    "important"
+                ],
+                active_checks_enabled: false,
+                passive_checks_enabled: true
+            }
+        }
+
+        :param details: Details are required (different from 0)
+        :type details bool
+
+        :return: dict with key *daemon_type* and value list of daemon name
+        :rtype: dict
+        """
+        if details is not False:
+            details = bool(details)
+
+        return self.app.get_alignak_status(details=details)
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def satellites_list(self, daemon_type=''):
+        """Get the arbiter satellite names sorted by type
+
+        Returns a list of the satellites as in:
+        {
+            reactionner: [
+                "reactionner-master"
+            ],
+            broker: [
+                "broker-master"
+            ],
+            arbiter: [
+                "arbiter-master"
+            ],
+            scheduler: [
+                "scheduler-master-3",
+                "scheduler-master",
+                "scheduler-master-2"
+            ],
+            receiver: [
+                "receiver-nsca",
+                "receiver-master"
+            ],
+            poller: [
+                "poller-master"
+            ]
+        }
+
+        If a specific daemon type is requested, the list is reduced to this unique daemon type:
+        {
+            scheduler: [
+                "scheduler-master-3",
+                "scheduler-master",
+                "scheduler-master-2"
+            ]
+        }
+
+        :param daemon_type: daemon type to filter
+        :type daemon_type: str
+        :return: dict with key *daemon_type* and value list of daemon name
+        :rtype: dict
+        """
+        with self.app.conf_lock:
+            res = {}
+
+            for s_type in ['arbiter', 'scheduler', 'poller', 'reactionner', 'receiver', 'broker']:
+                if daemon_type and daemon_type != s_type:
+                    continue
+                satellite_list = []
+                res[s_type] = satellite_list
+                for daemon_link in getattr(self.app.conf, s_type + 's', []):
+                    satellite_list.append(daemon_link.name)
+            return res
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def realms(self, details=False):
+        """Return the realms / satellites configuration
+
+        Returns an object containing the hierarchical realms configuration with the main
+        information about each realm:
+        {
+            All: {
+                satellites: {
+                    pollers: [
+                        "poller-master"
+                    ],
+                    reactionners: [
+                        "reactionner-master"
+                    ],
+                    schedulers: [
+                        "scheduler-master", "scheduler-master-3", "scheduler-master-2"
+                    ],
+                    brokers: [
+                    "broker-master"
+                    ],
+                    receivers: [
+                    "receiver-master", "receiver-nsca"
+                    ]
+                },
+                children: { },
+                name: "All",
+                members: [
+                    "host_1", "host_0", "host_3", "host_2", "host_11", "localhost"
+                ],
+                level: 0
+            },
+            North: {
+                ...
+            }
+        }
+
+        Sub realms defined inside a realm are provided in the `children` property of their
+        parent realm and they contain the same information as their parent..
+        The `members` realm contain the list of the hosts members of the realm.
+
+        If ``details`` is required, each realm will contain more information about each satellite
+        involved in the realm management:
+        {
+            All: {
+                satellites: {
+                    pollers: [
+                        {
+                            passive: false,
+                            name: "poller-master",
+                            livestate_output: "poller/poller-master is up and running.",
+                            reachable: true,
+                            uri: "http://127.0.0.1:7771/",
+                            alive: true,
+                            realm_name: "All",
+                            manage_sub_realms: true,
+                            spare: false,
+                            polling_interval: 5,
+                            configuration_sent: true,
+                            active: true,
+                            livestate: 0,
+                            max_check_attempts: 3,
+                            last_check: 1532242300.593074,
+                            type: "poller"
+                        }
+                    ],
+                    reactionners: [
+                        {
+                            passive: false,
+                            name: "reactionner-master",
+                            livestate_output: "reactionner/reactionner-master is up and running.",
+                            reachable: true,
+                            uri: "http://127.0.0.1:7769/",
+                            alive: true,
+                            realm_name: "All",
+                            manage_sub_realms: true,
+                            spare: false,
+                            polling_interval: 5,
+                            configuration_sent: true,
+                            active: true,
+                            livestate: 0,
+                            max_check_attempts: 3,
+                            last_check: 1532242300.587762,
+                            type: "reactionner"
+                        }
+                    ]
+
+        :return: dict containing realms / satellites
+        :rtype: dict
+        """
+        def get_realm_info(realm, realms, satellites, details=False):
+            """Get the realm and its children information
+
+            :return: None
+            """
+            res = {
+                "name": realm.get_name(),
+                "level": realm.level,
+                "hosts": realm.members,
+                "groups": realm.group_members,
+                "children": {},
+                "satellites": {
+                }
+            }
+            for child in realm.realm_members:
+                child = realms.find_by_name(child)
+                if not child:
+                    continue
+                realm_infos = get_realm_info(child, realms, satellites, details=details)
+                res['children'][child.get_name()] = realm_infos
+
+            for sat_type in ['scheduler', 'reactionner', 'broker', 'receiver', 'poller']:
+                res["satellites"][sat_type + 's'] = []
+
+                sats = realm.get_potential_satellites_by_type(satellites, sat_type)
+                for sat in sats:
+                    if details:
+                        res["satellites"][sat_type + 's'][sat.name] = sat.give_satellite_json()
+                    else:
+                        res["satellites"][sat_type + 's'].append(sat.name)
+
+            return res
+
+        if details is not False:
+            details = bool(details)
+
+        # Report our daemons states, but only if a dispatcher and the configuration is loaded
+        if not getattr(self.app, 'dispatcher', None) or not getattr(self.app, 'conf', None):
+            return {'_status': u'ERR', '_message': "Not yet available. Please come back later."}
+
+        res = {}
+        higher_realms = [realm for realm in self.app.conf.realms if realm.level == 0]
+        for realm in higher_realms:
+            res[realm.get_name()] = get_realm_info(realm, self.app.conf.realms,
+                                                   self.app.dispatcher.all_daemons_links)
+
+        return res
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def satellites_configuration(self):
+        """Return all the configuration data of satellites
+
+        :return: dict containing satellites data
+        Output looks like this ::
+
+        {'arbiter' : [{'property1':'value1' ..}, {'property2', 'value11' ..}, ..],
+        'scheduler': [..],
+        'poller': [..],
+        'reactionner': [..],
+        'receiver': [..],
+         'broker: [..]'
+        }
+
+        :rtype: dict
+        """
+        res = {}
+        for s_type in ['arbiter', 'scheduler', 'poller', 'reactionner', 'receiver',
+                       'broker']:
+            lst = []
+            res[s_type] = lst
+            for daemon in getattr(self.app.conf, s_type + 's'):
+                cls = daemon.__class__
+                env = {}
+                all_props = [cls.properties, cls.running_properties]
+
+                for props in all_props:
+                    for prop in props:
+                        if not hasattr(daemon, prop):
+                            continue
+                        if prop in ["realms", "conf", "con", "tags", "modules", "cfg",
+                                    "broks", "cfg_to_manage"]:
+                            continue
+                        val = getattr(daemon, prop)
+                        # give a try to a json able object
+                        try:
+                            json.dumps(val)
+                            env[prop] = val
+                        except TypeError as exp:
+                            logger.warning('get_all_states, %s: %s', prop, str(exp))
+                lst.append(env)
+        return res
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def external_commands(self):
+        """Get the external commands from the daemon
+
+        Use a lock for this function to protect
+
+        :return: serialized external command list
+        :rtype: str
+        """
+        res = []
+        with self.app.external_commands_lock:
+            for cmd in self.app.get_external_commands():
+                res.append(cmd.serialize())
+        return res
+
+    #####
+    #   ___           _                                   _                     _
+    #  |_ _|  _ __   | |_    ___   _ __   _ __     __ _  | |     ___    _ __   | |  _   _
+    #   | |  | '_ \  | __|  / _ \ | '__| | '_ \   / _` | | |    / _ \  | '_ \  | | | | | |
+    #   | |  | | | | | |_  |  __/ | |    | | | | | (_| | | |   | (_) | | | | | | | | |_| |
+    #  |___| |_| |_|  \__|  \___| |_|    |_| |_|  \__,_| |_|    \___/  |_| |_| |_|  \__, |
+    #                                                                               |___/
+    #####
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def _wait_new_conf(self):
+        """Ask the daemon to drop its configuration and wait for a new one
+
+        This overrides the default method from GenericInterface
+
+        :return: None
+        """
+        with self.app.conf_lock:
+            logger.warning("My master Arbiter wants me to wait for a new configuration.")
+            self.app.cur_conf = {}
+
+    @cherrypy.expose
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def _push_configuration(self, pushed_configuration=None):
+        """Send a new configuration to the daemon
+
+        This overrides the default method from GenericInterface
+
+        Used by the master arbiter to send its configuration to a spare arbiter
+
+        This function is not intended for external use. It is quite complex to
+        build a configuration for a daemon and it is the arbter dispatcher job ;)
+
+        :param pushed_configuration: new conf to send
+        :return: None
+        """
+        pushed_configuration = cherrypy.request.json
+        self.app.must_run = False
+        return super(ArbiterInterface, self)._push_configuration(
+            pushed_configuration=pushed_configuration['conf'])
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def _do_not_run(self):
+        """The master arbiter tells to its spare arbiters to not run.
+
+        A master arbiter will ignore this request and it will return an object
+        containing some properties:
+        '_status': 'ERR' because of the error
+        `_message`: some more explanations about the error
+
+        :return: None
+        """
+        # If I'm the master, ignore the command and raise a log
+        if self.app.is_master:
+            message = "Received message to not run. " \
+                      "I am the Master arbiter, ignore and continue to run."
+            logger.warning(message)
+            return {'_status': u'ERR', '_message': message}
+
+        # Else, I'm just a spare, so I listen to my master
+        logger.debug("Received message to not run. I am the spare, stopping.")
+        self.app.last_master_speak = time.time()
+        self.app.must_run = False
+        return {'_status': u'OK', '_message': message}
+
+    @cherrypy.expose
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def _push_external_command(self, command=None):
+        """Only to maintain ascending compatibility... this function uses the inner
+        *command* endpoint.
+
+        :param command: Alignak external command
+        :type command: string
+        :return: None
+        """
+        return self.command(command=command)

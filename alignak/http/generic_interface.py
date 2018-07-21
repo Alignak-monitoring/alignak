@@ -20,8 +20,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 """This module provide a generic HTTP interface for all satellites.
-Any Alignak satellite have at least those functions exposed over network
+
+Any Alignak satellite have at least these functions exposed over network
 See : http://cherrypy.readthedocs.org/en/latest/tutorials.html for Cherrypy basic HTTP apps.
+
+All the _ prefixed functions are for internal use only and they will not be documented
+in the /api endpoint.
 """
 import inspect
 import logging
@@ -47,14 +51,44 @@ class GenericInterface(object):
             self.start_time, random.randint(0, 100000000)
         )
 
+    #####
+    #   _____                                           _
+    #  | ____| __  __  _ __     ___    ___    ___    __| |
+    #  |  _|   \ \/ / | '_ \   / _ \  / __|  / _ \  / _` |
+    #  | |___   >  <  | |_) | | (_) | \__ \ |  __/ | (_| |
+    #  |_____| /_/\_\ | .__/   \___/  |___/  \___|  \__,_|
+    #                 |_|
+    #####
+
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def index(self):
         """Wrapper to call api from /
 
+        This will return the daemon identity and main information
+
         :return: function list
         """
-        return self.get_id()
+        return self.identity()
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def identity(self):
+        """Get the daemon identity
+
+        This will return an object containing some properties:
+        - alignak: the Alignak instance name
+        - version: the Alignak version
+        - type: the daemon type
+        - name: the daemon name
+
+        :return: daemon identity
+        :rtype: dict
+        """
+        res = self.app.get_id()
+        res.update({"start_time": self.start_time})
+        res.update({"running_id": self.running_id})
+        return res
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -71,10 +105,19 @@ class GenericInterface(object):
             'doc': u"When posting data you have to use the JSON format.",
             'api': []
         }
+        my_daemon_type = "%s" % getattr(self.app, 'type', 'unknown')
+        my_address = getattr(self.app, 'host_name', getattr(self.app, 'name', 'unknown'))
+        if getattr(self.app, 'address', '127.0.0.1') not in ('127.0.0.1'):
+            # If an address is explicitely specified, I must use it!
+            my_address = self.app.address
         for fun in functions:
             endpoint = {
+                'daemon': my_daemon_type,
                 'name': fun,
                 'doc': getattr(self, fun).__doc__,
+                'uri': '%s://%s:%s/%s' % (getattr(self.app, 'scheme', 'http'),
+                                          my_address,
+                                          self.app.port, fun),
                 'args': {}
             }
 
@@ -83,7 +126,7 @@ class GenericInterface(object):
             except Exception:  # pylint: disable=broad-except
                 # pylint: disable=deprecated-method
                 spec = inspect.getargspec(getattr(self, fun))
-            args = [a for a in spec.args if a != 'self']
+            args = [a for a in spec.args if a not in ('self', 'cls')]
             if spec.defaults:
                 a_dict = dict(list(zip(args, spec.defaults)))
             else:
@@ -93,18 +136,6 @@ class GenericInterface(object):
             full_api['api'].append(endpoint)
 
         return full_api
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def ping(self):
-        """Test the connection to the daemon.
-
-        This function always returns the string 'pong'
-
-        :return: string 'pong'
-        :rtype: str
-        """
-        return "pong"
 
     @cherrypy.expose
     @cherrypy.tools.json_in()
@@ -127,53 +158,24 @@ class GenericInterface(object):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_id(self):
-        """Get the daemon identity
+    def get_log_level(self):
+        """Get the current daemon log level
 
-        This will return an object containing some properties:
-        - alignak: the Alignak instance name
-        - version: the Alignak version
-        - type: the daemon type
-        - name: the daemon name
+        Returns an object with the daemon identity and a `log_level` property.
 
-        :return: daemon identity
-        :rtype: dict
+        running_id
+        :return: current log level
+        :rtype: str
         """
-        return self.app.get_id()
+        level_names = {
+            logging.DEBUG: 'DEBUG', logging.INFO: 'INFO', logging.WARNING: 'WARNING',
+            logging.ERROR: 'ERROR', logging.CRITICAL: 'CRITICAL'
+        }
+        alignak_logger = logging.getLogger(ALIGNAK_LOGGER_NAME)
 
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def get_start_time(self):
-        """Get the start time of the daemon
-
-        The start timestamp of a daemon is the integer timestamp got from the system
-        when the daemon started.
-
-        Returns an object with the daemon identity and a `start_time` property.
-
-        :return: start timestamp
-        :rtype: dict
-        """
-        res = self.get_id()
-        res.update({"start_time": self.start_time})
-        return res
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def get_running_id(self):
-        """Get the current running identifier of the daemon
-
-        The running identifier of the daemon is a float number made of its start timestamp
-        (integer part) and a random number (decimal part). This make it unique and allows
-        to get sure that the daemon did not changed since the last communication.
-
-        Returns an object with the daemon identity and a `running_id` property.
-
-        :return: running identifier
-        :rtype: dict
-        """
-        res = self.get_id()
-        res.update({"running_id": self.running_id})
+        res = self.identity()
+        res.update({"log_level": alignak_logger.getEffectiveLevel(),
+                    "log_level_name": level_names[alignak_logger.getEffectiveLevel()]})
         return res
 
     @cherrypy.expose
@@ -209,78 +211,12 @@ class GenericInterface(object):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def get_log_level(self):
-        """Get the current daemon log level
-
-        Returns an object with the daemon identity and a `log_level` property.
-
-        running_id
-        :return: current log level
-        :rtype: str
-        """
-        level_names = {
-            logging.DEBUG: 'DEBUG', logging.INFO: 'INFO', logging.WARNING: 'WARNING',
-            logging.ERROR: 'ERROR', logging.CRITICAL: 'CRITICAL'
-        }
-        alignak_logger = logging.getLogger(ALIGNAK_LOGGER_NAME)
-
-        res = self.get_id()
-        res.update({"log_level": alignak_logger.getEffectiveLevel(),
-                    "log_level_name": level_names[alignak_logger.getEffectiveLevel()]})
-        return res
-
-    @cherrypy.expose
-    @cherrypy.tools.json_in()
-    @cherrypy.tools.json_out()
-    def push_configuration(self, pushed_configuration=None):
-        """Send a new configuration to the daemon
-
-        This function is not intended for external use. It is quite complex to
-        build a configuration for a daemon and it is the arbiter dispatcher job ;)
-
-        :param pushed_configuration: new conf to send
-        :return: None
-        """
-        if pushed_configuration is None:
-            confs = cherrypy.request.json
-            pushed_configuration = confs['conf']
-        # It is safer to lock this part
-        with self.app.conf_lock:
-            self.app.new_conf = pushed_configuration
-            return True
-    push_configuration.method = 'post'
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def have_conf(self, magic_hash=None):
-        """Get the daemon current configuration state
-
-        If the daemon has received a configuration from its arbiter, this will
-        return True
-
-        If a `magic_hash` is provided it is compared with the one included in the
-        daemon configuration and this function returns True only if they match!
-
-        :return: boolean indicating if the daemon has a configuration
-        :rtype: bool
-        """
-        self.app.have_conf = getattr(self.app, 'cur_conf', None) not in [None, {}]
-        if magic_hash is not None:
-            # Beware, we got an str in entry, not an int
-            magic_hash = int(magic_hash)
-            # I've got a conf and a good one
-            return self.app.have_conf and self.app.cur_conf.magic_hash == magic_hash
-
-        return self.app.have_conf
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def get_managed_configurations(self):
-        """Get the scheduler configuration managed by the daemon
+    def managed_configurations(self):
+        """Get the arbiter configuration managed by the daemon
 
         For an arbiter daemon, it returns an empty object
 
-        For all other daemons it returns a dcitionary formated list of the scheduler
+        For all other daemons it returns a dictionary formated list of the scheduler
         links managed by the daemon:
         {
             'instance_id': {
@@ -290,102 +226,13 @@ class GenericInterface(object):
             }
         }
 
+        If a daemon returns an empty list, it means that it has not yet received its configuration
+        from the arbiter.
+
         :return: managed configuration
         :rtype: list
         """
         return self.app.get_managed_configurations()
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def wait_new_conf(self):
-        """Ask the daemon to drop its configuration and wait for a new one
-
-        :return: None
-        """
-        with self.app.conf_lock:
-            logger.info("My Arbiter wants me to wait for a new configuration.")
-            # Clear can occur while setting up a new conf and lead to error.
-            self.app.schedulers.clear()
-            self.app.cur_conf = {}
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def get_external_commands(self):
-        """Get the external commands from the daemon
-
-        Use a lock for this function to protect
-
-        :return: serialized external command list
-        :rtype: str
-        """
-        res = []
-        with self.app.external_commands_lock:
-            for cmd in self.app.get_external_commands():
-                res.append(cmd.serialize())
-        return res
-
-    @cherrypy.expose
-    @cherrypy.tools.json_in()
-    @cherrypy.tools.json_out()
-    def push_actions(self):
-        """Push actions to the poller/reactionner
-
-        This function is used by the scheduler to send the actions to get executed to
-        the poller/reactionner
-
-        {'actions': actions, 'instance_id': scheduler_instance_id}
-
-        :return:None
-        """
-        data = cherrypy.request.json
-        with self.app.lock:
-            self.app.add_actions(data['actions'], data['scheduler_instance_id'])
-    push_actions.method = 'post'
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def get_results(self, scheduler_instance_id):
-        """Get the results of the executed actions for the scheduler which instance id is provided
-
-        Calling this method for daemons that are not configured as passive do not make sense.
-        Indeed, this service should only be exposed on poller and reactionner daemons.
-
-        :param scheduler_instance_id: instance id of the scheduler
-        :type scheduler_instance_id: string
-        :return: serialized list
-        :rtype: str
-        """
-        with self.app.lock:
-            res = self.app.get_results_from_passive(scheduler_instance_id)
-        return serialize(res, True)
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def get_broks(self, broker_name):  # pylint: disable=unused-argument
-        """Get the broks from the daemon
-
-        This is used by the brokers to get the broks list of a daemon
-
-        :return: Brok list serialized
-        :rtype: dict
-        """
-        with self.app.broks_lock:
-            res = self.app.get_broks()
-        return serialize(res, True)
-
-    @cherrypy.expose
-    @cherrypy.tools.json_out()
-    def get_events(self):
-        """Get the monitoring events from the daemon
-
-        This is used by the arbiter to get the monitoring events from all its satellites
-
-        :return: Events list serialized
-        :rtype: list
-        """
-        with self.app.events_lock:
-            res = self.app.get_events()
-        return serialize(res, True)
 
     @cherrypy.expose
     @cherrypy.tools.json_in()
@@ -411,7 +258,151 @@ class GenericInterface(object):
         """
         if details is not False:
             details = bool(details)
-        res = self.get_id()
-        res.update(self.get_start_time())
+        res = self.identity()
         res.update(self.app.get_daemon_stats(details=details))
         return res
+
+    #####
+    #   ___           _                                   _                     _
+    #  |_ _|  _ __   | |_    ___   _ __   _ __     __ _  | |     ___    _ __   | |  _   _
+    #   | |  | '_ \  | __|  / _ \ | '__| | '_ \   / _` | | |    / _ \  | '_ \  | | | | | |
+    #   | |  | | | | | |_  |  __/ | |    | | | | | (_| | | |   | (_) | | | | | | | | |_| |
+    #  |___| |_| |_|  \__|  \___| |_|    |_| |_|  \__,_| |_|    \___/  |_| |_| |_|  \__, |
+    #                                                                               |___/
+    #####
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def _wait_new_conf(self):
+        """Ask the daemon to drop its configuration and wait for a new one
+
+        :return: None
+        """
+        with self.app.conf_lock:
+            logger.info("My Arbiter wants me to wait for a new configuration.")
+            # Clear can occur while setting up a new conf and lead to error.
+            self.app.schedulers.clear()
+            self.app.cur_conf = {}
+
+    @cherrypy.expose
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def _push_configuration(self, pushed_configuration=None):
+        """Send a new configuration to the daemon
+
+        This function is not intended for external use. It is quite complex to
+        build a configuration for a daemon and it is the arbiter dispatcher job ;)
+
+        :param pushed_configuration: new conf to send
+        :return: None
+        """
+        if pushed_configuration is None:
+            confs = cherrypy.request.json
+            pushed_configuration = confs['conf']
+        # It is safer to lock this part
+        with self.app.conf_lock:
+            self.app.new_conf = pushed_configuration
+            return True
+    _push_configuration.method = 'post'
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def _have_conf(self, magic_hash=None):
+        """Get the daemon current configuration state
+
+        If the daemon has received a configuration from its arbiter, this will
+        return True
+
+        If a `magic_hash` is provided it is compared with the one included in the
+        daemon configuration and this function returns True only if they match!
+
+        :return: boolean indicating if the daemon has a configuration
+        :rtype: bool
+        """
+        self.app.have_conf = getattr(self.app, 'cur_conf', None) not in [None, {}]
+        if magic_hash is not None:
+            # Beware, we got an str in entry, not an int
+            magic_hash = int(magic_hash)
+            # I've got a conf and a good one
+            return self.app.have_conf and self.app.cur_conf.magic_hash == magic_hash
+
+        return self.app.have_conf
+
+    @cherrypy.expose
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def _push_actions(self):
+        """Push actions to the poller/reactionner
+
+        This function is used by the scheduler to send the actions to get executed to
+        the poller/reactionner
+
+        {'actions': actions, 'instance_id': scheduler_instance_id}
+
+        :return:None
+        """
+        data = cherrypy.request.json
+        with self.app.lock:
+            self.app.add_actions(data['actions'], data['scheduler_instance_id'])
+    _push_actions.method = 'post'
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def _external_commands(self):
+        """Get the external commands from the daemon
+
+        Use a lock for this function to protect
+
+        :return: serialized external command list
+        :rtype: str
+        """
+        res = []
+        with self.app.external_commands_lock:
+            for cmd in self.app.get_external_commands():
+                res.append(cmd.serialize())
+        return res
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def _results(self, scheduler_instance_id):
+        """Get the results of the executed actions for the scheduler which instance id is provided
+
+        Calling this method for daemons that are not configured as passive do not make sense.
+        Indeed, this service should only be exposed on poller and reactionner daemons.
+
+        :param scheduler_instance_id: instance id of the scheduler
+        :type scheduler_instance_id: string
+        :return: serialized list
+        :rtype: str
+        """
+        with self.app.lock:
+            res = self.app.get_results_from_passive(scheduler_instance_id)
+        return serialize(res, True)
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def _broks(self, broker_name):  # pylint: disable=unused-argument
+        """Get the broks from the daemon
+
+        This is used by the brokers to get the broks list of a daemon
+
+        :return: Brok list serialized
+        :rtype: dict
+        """
+        with self.app.broks_lock:
+            res = self.app.get_broks()
+        return serialize(res, True)
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def _events(self):
+        """Get the monitoring events from the daemon
+
+        This is used by the arbiter to get the monitoring events from all its satellites
+
+        :return: Events list serialized
+        :rtype: list
+        """
+        with self.app.events_lock:
+            res = self.app.get_events()
+        return serialize(res, True)

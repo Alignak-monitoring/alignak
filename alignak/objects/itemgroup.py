@@ -69,7 +69,7 @@ class Itemgroup(Item):
     properties = Item.properties.copy()
     properties.update({
         'members':
-            ListProp(fill_brok=['full_status'], default=None, split_on_comma=True)
+            ListProp(default=[], fill_brok=['full_status'], split_on_comma=True)
     })
 
     running_properties = Item.running_properties.copy()
@@ -151,7 +151,7 @@ class Itemgroup(Item):
         if not isinstance(members, list):
             members = [members]
 
-        if not hasattr(self, 'members'):
+        if not getattr(self, 'members', None):
             self.members = members
         else:
             self.members.extend(members)

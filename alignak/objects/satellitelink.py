@@ -642,7 +642,7 @@ class SatelliteLink(Item):
 
     @communicate()
     def get_running_id(self):
-        """Send a HTTP request to the satellite (GET /get_running_id)
+        """Send a HTTP request to the satellite (GET /identity)
         Used to get the daemon running identifier that allows to know if the daemon got restarted
 
         This is called on connection initialization or re-connection
@@ -657,7 +657,7 @@ class SatelliteLink(Item):
 
         logger.info("  get the running identifier for %s %s.", self.type, self.name)
         # An exception is raised in this function if the daemon is not reachable
-        self.running_id = self.con.get('get_running_id')
+        self.running_id = self.con.get('identity')
         if isinstance(self.running_id, dict):
             self.running_id = self.running_id['running_id']
 
@@ -741,25 +741,6 @@ class SatelliteLink(Item):
 
     @valid_connection()
     @communicate()
-    def ping(self):
-        """Send a HTTP request to the satellite (GET /ping)
-
-        :return: None
-        """
-        logger.debug("Pinging for %s, %s %s", self.name, self.alive, self.reachable)
-        res = self.con.get('ping')
-        # Should return us pong string
-        if res == 'pong':
-            return True
-
-        # This sould never happen! Except is the source code got modified!
-        logger.warning("I responded '%s' to ping! WTF is it?", res)
-        self.add_failed_check_attempt('ping / NOT pong')
-        # Return True anyway... someone answered!
-        return True
-
-    @valid_connection()
-    @communicate()
     def get_daemon_stats(self, details=False):
         """Send a HTTP request to the satellite (GET /get_daemon_stats)
 
@@ -772,7 +753,7 @@ class SatelliteLink(Item):
     @valid_connection()
     @communicate()
     def get_initial_broks(self, broker_name):
-        """Send a HTTP request to the satellite (GET /fill_initial_broks)
+        """Send a HTTP request to the satellite (GET /_initial_broks)
 
         Used to build the initial broks for a broker connecting to a scheduler
 
@@ -782,7 +763,7 @@ class SatelliteLink(Item):
         :type: bool
         """
         logger.debug("Getting initial broks for %s, %s %s", self.name, self.alive, self.reachable)
-        return self.con.get('fill_initial_broks', {'broker_name': broker_name}, wait=True)
+        return self.con.get('_initial_broks', {'broker_name': broker_name}, wait=True)
 
     @valid_connection()
     @communicate()
@@ -793,7 +774,7 @@ class SatelliteLink(Item):
         :rtype: bool
         """
         logger.debug("Wait new configuration for %s, %s %s", self.name, self.alive, self.reachable)
-        return self.con.get('wait_new_conf')
+        return self.con.get('_wait_new_conf')
 
     @valid_connection()
     @communicate()
@@ -815,7 +796,7 @@ class SatelliteLink(Item):
             return True
         # ----------
 
-        return self.con.post('push_configuration', {'conf': configuration}, wait=True)
+        return self.con.post('_push_configuration', {'conf': configuration}, wait=True)
 
     @valid_connection()
     @communicate()
@@ -829,13 +810,13 @@ class SatelliteLink(Item):
         :type: bool
         """
         logger.debug("Have a configuration for %s, %s %s", self.name, self.alive, self.reachable)
-        self.have_conf = self.con.get('have_conf', {'magic_hash': magic_hash})
+        self.have_conf = self.con.get('_have_conf', {'magic_hash': magic_hash})
         return self.have_conf
 
     @valid_connection()
     @communicate()
     def get_conf(self, test=False):
-        """Send a HTTP request to the satellite (GET /get_managed_configurations)
+        """Send a HTTP request to the satellite (GET /managed_configurations)
         and update the cfg_managed attribute with the new information
         Set to {} on failure
 
@@ -867,7 +848,7 @@ class SatelliteLink(Item):
             #       % (self.name, self.cfg_managed))
         # ----------
         else:
-            self.cfg_managed = self.con.get('get_managed_configurations')
+            self.cfg_managed = self.con.get('managed_configurations')
             logger.debug("My (%s) fresh managed configuration: %s", self.name, self.cfg_managed)
 
         self.have_conf = (self.cfg_managed != {})
@@ -877,8 +858,7 @@ class SatelliteLink(Item):
     @valid_connection()
     @communicate()
     def push_broks(self, broks):
-        """Send a HTTP request to the satellite (GET /ping)
-        and THEN Send a HTTP request to the satellite (POST /push_broks)
+        """Send a HTTP request to the satellite (POST /push_broks)
         Send broks to the satellite
 
         :param broks: Brok list to send
@@ -887,7 +867,7 @@ class SatelliteLink(Item):
         :rtype: bool
         """
         logger.debug("[%s] Pushing %d broks", self.name, len(broks))
-        return self.con.post('push_broks', {'broks': broks}, wait=True)
+        return self.con.post('_push_broks', {'broks': broks}, wait=True)
 
     @valid_connection()
     @communicate()
@@ -903,15 +883,14 @@ class SatelliteLink(Item):
         :rtype: bool
         """
         logger.debug("Pushing %d actions from %s", len(actions), scheduler_instance_id)
-        return self.con.post('push_actions', {'actions': actions,
-                                              'scheduler_instance_id': scheduler_instance_id},
+        return self.con.post('_push_actions', {'actions': actions,
+                                               'scheduler_instance_id': scheduler_instance_id},
                              wait=True)
 
     @valid_connection()
     @communicate()
     def push_results(self, results, scheduler_name):
-        """Send a HTTP request to the satellite (GET /ping)
-        and THEN Send a HTTP request to the satellite (POST /put_results)
+        """Send a HTTP request to the satellite (POST /put_results)
         Send actions results to the satellite
 
         :param results: Results list to send
@@ -929,7 +908,7 @@ class SatelliteLink(Item):
     @valid_connection()
     @communicate()
     def push_external_commands(self, commands):
-        """Send a HTTP request to the satellite (POST /run_external_commands)
+        """Send a HTTP request to the satellite (POST /r_un_external_commands)
         to send the external commands to the satellite
 
         :param results: Results list to send
@@ -938,25 +917,25 @@ class SatelliteLink(Item):
         :rtype: bool
         """
         logger.debug("Pushing %d external commands", len(commands))
-        return self.con.post('run_external_commands', {'cmds': commands}, wait=True)
+        return self.con.post('_run_external_commands', {'cmds': commands}, wait=True)
 
     @valid_connection()
     @communicate()
     def get_external_commands(self):
-        """Send a HTTP request to the satellite (GET /get_external_commands) to
+        """Send a HTTP request to the satellite (GET /_external_commands) to
         get the external commands from the satellite.
 
         :return: External Command list on success, [] on failure
         :rtype: list
         """
-        res = self.con.get('get_external_commands', wait=False)
+        res = self.con.get('_external_commands', wait=False)
         logger.debug("Got %d external commands from %s: %s", len(res), self.name, res)
         return unserialize(res, True)
 
     @valid_connection()
     @communicate()
     def get_broks(self, broker_name):
-        """Send a HTTP request to the satellite (GET /get_broks)
+        """Send a HTTP request to the satellite (GET /_broks)
         Get broks from the satellite.
         Un-serialize data received.
 
@@ -965,26 +944,26 @@ class SatelliteLink(Item):
         :return: Broks list on success, [] on failure
         :rtype: list
         """
-        res = self.con.get('get_broks', {'broker_name': broker_name}, wait=False)
+        res = self.con.get('_broks', {'broker_name': broker_name}, wait=False)
         logger.debug("Got broks from %s: %s", self.name, res)
         return unserialize(res, True)
 
     @valid_connection()
     @communicate()
     def get_events(self):
-        """Send a HTTP request to the satellite (GET /get_events)
+        """Send a HTTP request to the satellite (GET /_events)
         Get monitoring events from the satellite.
 
         :return: Broks list on success, [] on failure
         :rtype: list
         """
-        res = self.con.get('get_events', wait=False)
+        res = self.con.get('_events', wait=False)
         logger.debug("Got events from %s: %s", self.name, res)
         return unserialize(res, True)
 
     @valid_connection()
     def get_results(self, scheduler_instance_id):
-        """Send a HTTP request to the satellite (GET /get_results)
+        """Send a HTTP request to the satellite (GET /_results)
         Get actions results from satellite (only passive satellites expose this method.
 
         :param scheduler_instance_id: scheduler instance identifier
@@ -992,15 +971,14 @@ class SatelliteLink(Item):
         :return: Results list on success, [] on failure
         :rtype: list
         """
-        res = self.con.get('get_results', {'scheduler_instance_id': scheduler_instance_id},
-                           wait=True)
+        res = self.con.get('_results', {'scheduler_instance_id': scheduler_instance_id}, wait=True)
         logger.debug("Got %d results from %s: %s", len(res), self.name, res)
         return res
 
     @valid_connection()
     def get_actions(self, params):
-        """Send a HTTP request to the satellite (GET /get_checks)
-        Get actions from satellite.
+        """Send a HTTP request to the satellite (GET /_checks)
+        Get actions from the scheduler.
         Un-serialize data received.
 
         :param params: the request parameters
@@ -1008,8 +986,8 @@ class SatelliteLink(Item):
         :return: Actions list on success, [] on failure
         :rtype: list
         """
-        res = self.con.get('get_checks', params, wait=True)
-        logger.debug("Got actions from %s: %s", self.name, res)
+        res = self.con.get('_checks', params, wait=True)
+        logger.debug("Got checks to execute from %s: %s", self.name, res)
         return unserialize(res, True)
 
 

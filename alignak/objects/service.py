@@ -374,29 +374,34 @@ class Service(SchedulingItem):
         """
         state = True
         cls = self.__class__
-        # Set display_name if need
-        if not getattr(self, 'display_name', ''):
-            self.display_name = getattr(self, 'service_description', '')
 
-        if not self.host_name:
-            msg = "[%s::%s] not bound to any host." % (self.my_type, self.get_name())
-            self.add_error(msg)
-            state = False
+        hname = getattr(self, 'host_name', '')
+        hgname = getattr(self, 'hostgroup_name', '')
+        sdesc = getattr(self, 'service_description', '')
+
+        if not sdesc:
+            item.add_error("a %s has been defined without " \
+                           "service_description, from: %s" % (objcls, self.imported_from))
+        elif not hname:
+            self.add_error("[%s::%s] not bound to any host."
+                           % (self.my_type, self.get_name()))
+        elif not hname and not hgname:
+            item.add_error("a %s has been defined without host_name nor "
+                           "hostgroup_name, from: %s" % (self.my_type, self.imported_from))
         elif self.host is None:
-            msg = "[%s::%s] unknown host_name '%s'" \
-                  % (self.my_type, self.get_name(), self.host_name)
-            self.add_error(msg)
-            state = False
+            self.add_error("[%s::%s] unknown host_name '%s'"
+                           % (self.my_type, self.get_name(), self.host_name))
 
-        if hasattr(self, 'service_description'):
-            for char in cls.illegal_object_name_chars:
-                if char not in self.service_description:
-                    continue
+        # Set display_name if needed
+        if not getattr(self, 'display_name', ''):
+            self.display_name = "%s/%s" % (hname, sdesc)
 
-                msg = "[%s::%s] service_description got an illegal character: %s" \
-                      % (self.my_type, self.get_name(), char)
-                self.add_error(msg)
-                state = False
+        for char in cls.illegal_object_name_chars:
+            if char not in self.service_description:
+                continue
+
+            self.add_error("[%s::%s] service_description got an illegal character: %s"
+                           % (self.my_type, self.get_name(), char))
 
         return super(Service, self).is_correct() and state
 
@@ -1268,37 +1273,6 @@ class Services(SchedulingItems):
         self.templates[tpl.uuid] = tpl
         logger.debug('\tAdded service template #%d %s', len(self.templates), tpl)
 
-    def add_item(self, item, index=True):
-        """
-        Adds and index an item into the `items` container.
-
-        This implementation takes into account that a service has two naming
-        attribute: `host_name` and `service_description`.
-
-        :param item: The item to add
-        :type item:
-        :param index: Flag indicating if the item should be indexed
-        :type index: bool
-        :return: None
-        """
-        objcls = self.inner_class.my_type
-        hname = getattr(item, 'host_name', '')
-        hgname = getattr(item, 'hostgroup_name', '')
-        sdesc = getattr(item, 'service_description', '')
-
-        if not hname and not hgname:
-            msg = "a %s has been defined without " \
-                  "host_name nor hostgroup_name, from: %s" % (objcls, item.imported_from)
-            item.add_error(msg)
-        if not sdesc:
-            msg = "a %s has been defined without " \
-                  "service_description, from: %s" % (objcls, item.imported_from)
-            item.add_error(msg)
-
-        if index is True:
-            item = self.index_item(item)
-        self.items[item.uuid] = item
-
     def apply_inheritance(self):
         """ For all items and templates inherit properties and custom
             variables.
@@ -1671,9 +1645,8 @@ class Services(SchedulingItems):
         # we must find our host, and get all key:value we need
         host = hosts.find_by_name(hname.strip())
         if host is None:
-            err = 'Error: The hostname %s is unknown for the service %s!' \
-                  % (hname, service.get_name())
-            service.add_error(err)
+            service.add_error('Error: The hostname %s is unknown for the service %s!'
+                              % (hname, service.get_name()))
             return
 
         # Duplicate services
@@ -1747,15 +1720,15 @@ class Services(SchedulingItems):
         Explodes services, from host, hostgroups, contactgroups, servicegroups and dependencies.
 
         :param hosts: The hosts container
-        :type hosts:
-        :param hostgroups: The hostgoups container
-        :type hostgroups:
-        :param contactgroups: The concactgoups container
-        :type contactgroups:
-        :param servicegroups: The servicegoups container
-        :type servicegroups:
-        :param servicedependencies: The servicedependencies container
-        :type servicedependencies:
+        :type hosts: [alignak.object.host.Host]
+        :param hostgroups: The hosts goups container
+        :type hostgroups: [alignak.object.hostgroup.Hostgroup]
+        :param contactgroups: The contacts goups container
+        :type contactgroups: [alignak.object.contactgroup.Contactgroup]
+        :param servicegroups: The services goups container
+        :type servicegroups: [alignak.object.servicegroup.Servicegroup]
+        :param servicedependencies: The services dependencies container
+        :type servicedependencies: [alignak.object.servicedependency.Servicedependency]
         :return: None
         """
         # Then for every service create a copy of the service with just the host

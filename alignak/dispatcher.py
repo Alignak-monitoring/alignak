@@ -822,7 +822,6 @@ class Dispatcher(object):
             return
 
         logger.info("Trying to send configuration to the satellites...")
-        print("Trying to send configuration to the satellites...")
 
         self.dispatch_ok = True
 

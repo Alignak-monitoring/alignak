@@ -472,10 +472,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if params is None:
             params = {}
 
-        if self.__class__.my_type == 'host':
-            self.convert_conf_for_unreachable(params)
-
-        # At deserialization, thoses are dict
+        # At deserialization, these are dictionaries
         # TODO: Separate parsing instance from recreated ones
         for prop in ['check_command', 'event_handler', 'snapshot_command']:
             if prop in params and isinstance(params[prop], dict):

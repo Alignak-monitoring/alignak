@@ -464,6 +464,9 @@ class TestRealms(AlignakTest):
     def test_sub_realms(self):
         """ Test realm / sub-realm
 
+        All main daemons are in the realm World and manage the sub-realms except for the poller!
+        A second broker exist in the realm World and a receiver exist in the realm Paris
+
         :return: None
         """
         self.setup_with_file('cfg/realms/sub_realms.cfg', 'cfg/realms/sub_realms.ini',
@@ -482,30 +485,117 @@ class TestRealms(AlignakTest):
 
         # Get satellites of the World realm
         assert len(world.get_satellites_by_type('arbiter')) == 0
+        satellites = world.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "arbiter")
+        assert len(satellites) == 0
+        for sat_link in satellites:
+            print("%s / %s" % (sat_link.type, sat_link.name))
+
         assert len(world.get_satellites_by_type('scheduler')) == 1
+        satellites = world.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "scheduler")
+        assert len(satellites) == 1
+        for sat_link in satellites:
+            print("%s / %s" % (sat_link.type, sat_link.name))
+
         assert len(world.get_satellites_by_type('broker')) == 2
+        satellites = world.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "broker")
+        assert len(satellites) == 2
+        for sat_link in satellites:
+            print("%s / %s" % (sat_link.type, sat_link.name))
+
         assert len(world.get_satellites_by_type('poller')) == 1
+        satellites = world.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "poller")
+        assert len(satellites) == 1
+        for sat_link in satellites:
+            print("%s / %s" % (sat_link.type, sat_link.name))
+
         assert len(world.get_satellites_by_type('receiver')) == 1
+        satellites = world.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "receiver")
+        assert len(satellites) == 1
+        for sat_link in satellites:
+            print("%s / %s" % (sat_link.type, sat_link.name))
+
         assert len(world.get_satellites_by_type('reactionner')) == 1
+        satellites = world.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "reactionner")
+        assert len(satellites) == 1
+        for sat_link in satellites:
+            print("%s / %s" % (sat_link.type, sat_link.name))
 
         # Get satellites of the Europe realm
+        assert europe.uuid in world.all_sub_members
         assert len(europe.get_satellites_by_type('arbiter')) == 0
+        satellites = europe.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "arbiter")
+        assert len(satellites) == 0
+        for sat_link in satellites:
+            print("%s / %s" % (sat_link.type, sat_link.name))
+
         assert len(europe.get_satellites_by_type('scheduler')) == 0
+        satellites = europe.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "scheduler")
+        assert len(satellites) == 1
+        for sat_link in satellites:
+            print("%s / %s" % (sat_link.type, sat_link.name))
+
         assert len(europe.get_satellites_by_type('broker')) == 0
+        satellites = europe.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "broker")
+        assert len(satellites) == 1
+        for sat_link in satellites:
+            print("%s / %s" % (sat_link.type, sat_link.name))
+
         assert len(europe.get_satellites_by_type('poller')) == 0
+        satellites = europe.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "poller")
+        assert len(satellites) == 0     # Because the master poller is not managing sub-realms! Else it should be 1
+        for sat_link in satellites:
+            print("%s / %s" % (sat_link.type, sat_link.name))
+
         assert len(europe.get_satellites_by_type('receiver')) == 0
+        satellites = europe.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "receiver")
+        assert len(satellites) == 1
+        for sat_link in satellites:
+            print("%s / %s" % (sat_link.type, sat_link.name))
+
         assert len(europe.get_satellites_by_type('reactionner')) == 0
+        satellites = europe.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "reactionner")
+        assert len(satellites) == 1
+        for sat_link in satellites:
+            print("%s / %s" % (sat_link.type, sat_link.name))
+
 
         # Get satellites of the Paris realm
-        assert len(europe.get_satellites_by_type('arbiter')) == 0
-        assert len(europe.get_satellites_by_type('scheduler')) == 0
-        assert len(europe.get_satellites_by_type('broker')) == 0
-        assert len(europe.get_satellites_by_type('poller')) == 0
-        assert len(europe.get_satellites_by_type('receiver')) == 0
-        assert len(europe.get_satellites_by_type('reactionner')) == 0
-
-        assert europe.uuid in world.all_sub_members
         assert paris.uuid in europe.all_sub_members
+        assert len(paris.get_satellites_by_type('arbiter')) == 0
+        satellites = paris.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "arbiter")
+        assert len(satellites) == 0
+        for sat_link in satellites:
+            print("%s / %s" % (sat_link.type, sat_link.name))
+
+        assert len(paris.get_satellites_by_type('scheduler')) == 0
+        satellites = paris.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "scheduler")
+        assert len(satellites) == 1
+        for sat_link in satellites:
+            print("%s / %s" % (sat_link.type, sat_link.name))
+
+        assert len(paris.get_satellites_by_type('broker')) == 0
+        satellites = paris.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "broker")
+        assert len(satellites) == 1
+        for sat_link in satellites:
+            print("%s / %s" % (sat_link.type, sat_link.name))
+
+        assert len(paris.get_satellites_by_type('poller')) == 0
+        satellites = paris.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "poller")
+        assert len(satellites) == 0     # Because the master poller is not managing sub-realms! Else it should be 1
+        for sat_link in satellites:
+            print("%s / %s" % (sat_link.type, sat_link.name))
+
+        assert len(paris.get_satellites_by_type('receiver')) == 1
+        satellites = paris.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "receiver")
+        assert len(satellites) == 1
+        for sat_link in satellites:
+            print("%s / %s" % (sat_link.type, sat_link.name))
+
+        assert len(paris.get_satellites_by_type('reactionner')) == 0
+        satellites = paris.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "reactionner")
+        assert len(satellites) == 1
+        for sat_link in satellites:
+            print("%s / %s" % (sat_link.type, sat_link.name))
 
     def test_sub_realms_assignations(self):
         """ Test realm / sub-realm assignation

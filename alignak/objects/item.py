@@ -64,9 +64,10 @@ import time
 import itertools
 import logging
 
-from copy import copy
+from copy import copy, deepcopy
 from six import string_types
 
+from alignak.alignakobject import get_a_new_object_id
 from alignak.misc.serialization import serialize
 
 from alignak.property import (StringProp, ListProp, BoolProp, SetProp, DictProp,
@@ -746,9 +747,9 @@ class Items(object):
             for item in list(items.values()):
                 self.add_item(self.inner_class(item, parsing=parsing))
         else:
+            # We are creating new items from the configuration
             self.add_items(items, index_items)
 
-    # Simply moved all the __ functions near the initialization
     def __repr__(self):  # pragma: no cover
         # Build a sorted list of unicode elements name or uuid, this to make it easier to compare ;)
         dump_list = sorted([str(item.get_name()
@@ -822,15 +823,22 @@ class Items(object):
         :type index_items: bool
         :return: None
         """
-        count = 0
-        for i in items:
-            if i.is_tpl():
-                self.add_template(i)
-                count = count + 1
+        count_templates = 0
+        count_items = 0
+        generated_items = []
+        for item in items:
+            if item.is_tpl():
+                self.add_template(item)
+                count_templates = count_templates + 1
             else:
-                self.add_item(i, index_items)
-        if count:
-            logger.info('    indexed %d %s templates', count, self.inner_class.my_type)
+                new_items = self.add_item(item, index_items)
+                count_items = count_items + max(1, len(new_items))
+                if new_items:
+                    generated_items.extend(new_items)
+        if count_templates:
+            logger.info('    indexed %d template(s)', count_templates)
+        if count_items:
+            logger.info('    created %d.', count_items)
 
     def manage_conflict(self, item, name):
         """
@@ -955,12 +963,59 @@ class Items(object):
         :type item: alignak.objects.item.Item
         :param index: Flag indicating if the item should be indexed
         :type index: bool
-        :return: None
+        :return: the new items created
+        :rtype list
         """
         name_property = getattr(self.__class__, "name_property", None)
-        if index is True and name_property:
-            item = self.index_item(item)
-        self.items[item.uuid] = item
+
+        # Check if some hosts are to be self-generated...
+        generated_hosts = []
+        if name_property:
+            name = getattr(item, getattr(self.__class__, "name_property", None), None)
+            if name and '[' in name and ']' in name:
+                # We can create several objects from the same configuration!
+                pattern = name[name.find("[")+1:name.find("]")]
+                if '-' in pattern:
+                    logger.debug("Found an host with a patterned name: %s", pattern)
+                    # pattern is format-min-max
+                    # format is optional
+                    limits = pattern.split('-')
+                    fmt = "%d"
+                    min = 1
+                    max = 1
+                    if len(limits) == 3:
+                        fmt = limits[2]
+                        new_name = name.replace('[%s-%s-%s]' % (limits[0], limits[1], fmt), '***')
+                    else:
+                        new_name = name.replace('[%s-%s]' % (limits[0], limits[1]), '***')
+                    try:
+                        min = int(limits[0])
+                    except ValueError:
+                        pass
+                    try:
+                        max = int(limits[1])
+                    except ValueError:
+                        pass
+
+                    for idx in range(min, max + 1):
+                        logger.debug("- cloning host: %s", new_name.replace('***', fmt % idx))
+                        new_host = deepcopy(item)
+                        new_host.uuid = get_a_new_object_id()
+                        new_host.host_name = new_name.replace('***', fmt % idx)
+                        generated_hosts.append(new_host)
+
+        if generated_hosts:
+            for new_host in generated_hosts:
+                if index is True:
+                    new_host = self.index_item(new_host)
+                self.items[new_host.uuid] = new_host
+            logger.info("    cloned %d hosts from %s", len(generated_hosts), item.get_name())
+        else:
+            if index is True and name_property:
+                item = self.index_item(item)
+            self.items[item.uuid] = item
+
+        return generated_hosts
 
     def remove_item(self, item):
         """

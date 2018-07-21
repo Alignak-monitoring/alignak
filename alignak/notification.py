@@ -123,21 +123,23 @@ class Notification(Action):  # pylint: disable=R0902
 
         # All contacts that were notified
         'recipients':
-            ListProp(default=None)
+            ListProp(default=[])
     })
 
     macros = {
-        'NOTIFICATIONTYPE':         'type',
-        'NOTIFICATIONRECIPIENTS':   'recipients',
-        'NOTIFICATIONISESCALATED':  'escalated',
-        'NOTIFICATIONAUTHOR':       'author',
-        'NOTIFICATIONAUTHORNAME':   'author_name',
-        'NOTIFICATIONAUTHORALIAS':  'author_alias',
-        'NOTIFICATIONCOMMENT':      'author_comment',
-        'HOSTNOTIFICATIONNUMBER':   'notif_nb',
-        'HOSTNOTIFICATIONID':       'uuid',
-        'SERVICENOTIFICATIONNUMBER': 'notif_nb',
-        'SERVICENOTIFICATIONID':    'uuid'
+        'NOTIFICATIONTYPE':             'type',
+        'NOTIFICATIONRECIPIENTS':       'recipients',
+        'NOTIFICATIONISESCALATED':      'escalated',
+        'NOTIFICATIONAUTHOR':           'author',
+        'NOTIFICATIONAUTHORNAME':       'author_name',
+        'NOTIFICATIONAUTHORALIAS':      'author_alias',
+        'NOTIFICATIONCOMMENT':          'author_comment',
+        'NOTIFICATIONNUMBER':           'notif_nb',
+        'NOTIFICATIONID':               'uuid',
+        'HOSTNOTIFICATIONNUMBER':       'notif_nb',
+        'HOSTNOTIFICATIONID':           'uuid',
+        'SERVICENOTIFICATIONNUMBER':    'notif_nb',
+        'SERVICENOTIFICATIONID':        'uuid'
     }
 
     def __init__(self, params=None, parsing=False):

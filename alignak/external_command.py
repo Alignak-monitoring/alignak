@@ -1074,9 +1074,11 @@ class ExternalCommandManager(object):
         :type comment: str
         :return: None
         """
-        notif_period = self.daemon.timeperiods[service.notification_period]
-        service.acknowledge_problem(notif_period, self.hosts, self.services, sticky, notify, author,
-                                    comment)
+        notification_period = None
+        if getattr(item, 'notification_period', None) is not None:
+            notification_period = self.daemon.timeperiods[service.notification_period]
+        service.acknowledge_problem(notification_period, self.hosts, self.services, sticky,
+                                    notify, author, comment)
 
     def acknowledge_host_problem(self, host, sticky, notify, author, comment):
         """Acknowledge a host problem
@@ -1099,9 +1101,11 @@ class ExternalCommandManager(object):
         :return: None
         TODO: add a better ACK management
         """
-        notif_period = self.daemon.timeperiods[host.notification_period]
-        host.acknowledge_problem(notif_period, self.hosts, self.services, sticky, notify, author,
-                                 comment)
+        notification_period = None
+        if getattr(item, 'notification_period', None) is not None:
+            notification_period = self.daemon.timeperiods[host.notification_period]
+        host.acknowledge_problem(notification_period, self.hosts, self.services, sticky,
+                                 notify, author, comment)
 
     def acknowledge_svc_problem_expire(self, service, sticky, notify, end_time, author, comment):
         """Acknowledge a service problem with expire time for this acknowledgement
@@ -1124,9 +1128,11 @@ class ExternalCommandManager(object):
         :type comment: str
         :return: None
         """
-        notif_period = self.daemon.timeperiods[service.notification_period]
-        service.acknowledge_problem(notif_period, self.hosts, self.services, sticky, notify, author,
-                                    comment, end_time=end_time)
+        notification_period = None
+        if getattr(item, 'notification_period', None) is not None:
+            notification_period = self.daemon.timeperiods[service.notification_period]
+        service.acknowledge_problem(notification_period, self.hosts, self.services, sticky,
+                                    notify, author, comment, end_time=end_time)
 
     def acknowledge_host_problem_expire(self, host, sticky, notify, end_time, author, comment):
         """Acknowledge a host problem with expire time for this acknowledgement
@@ -1150,9 +1156,11 @@ class ExternalCommandManager(object):
         :return: None
         TODO: add a better ACK management
         """
-        notif_period = self.daemon.timeperiods[host.notification_period]
-        host.acknowledge_problem(notif_period, self.hosts, self.services, sticky, notify, author,
-                                 comment, end_time=end_time)
+        notification_period = None
+        if getattr(item, 'notification_period', None) is not None:
+            notification_period = self.daemon.timeperiods[host.notification_period]
+        host.acknowledge_problem(notification_period, self.hosts, self.services, sticky,
+                                 notify, author, comment, end_time=end_time)
 
     def change_contact_svc_notification_timeperiod(self, contact, notification_timeperiod):
         """Change contact service notification timeperiod value

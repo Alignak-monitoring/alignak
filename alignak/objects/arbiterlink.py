@@ -97,12 +97,8 @@ class ArbiterLink(SatelliteLink):
         """
         logger.debug("[%s] do_not_run", self.name)
 
-        if not self.reachable or not self.ping():
-            logger.warning("Not reachable for do_not_run: %s", self.name)
-            return []
-
         try:
-            self.con.get('do_not_run')
+            self.con.get('_do_not_run')
             return True
         except HTTPClientConnectionException as exp:  # pragma: no cover, simple protection
             self.add_failed_check_attempt("Connection error when "

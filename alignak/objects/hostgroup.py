@@ -56,7 +56,7 @@ This module provide Hostgroup and Hostgroups class used to manage host groups
 import logging
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
-from alignak.property import StringProp, ListProp
+from alignak.property import StringProp, ListProp, BoolProp
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -88,6 +88,15 @@ class Hostgroup(Itemgroup):
             StringProp(default=u'', fill_brok=['full_status']),
     })
 
+    # properties set only for running purpose
+    running_properties = Itemgroup.running_properties.copy()
+    running_properties.update({
+        'realm_name':
+            StringProp(default=u''),
+        'got_default_realm':
+            BoolProp(default=False),
+    })
+
     macros = {
         'HOSTGROUPNAME': 'hostgroup_name',
         'HOSTGROUPALIAS': 'alias',
@@ -95,7 +104,8 @@ class Hostgroup(Itemgroup):
         'HOSTGROUPGROUPMEMBERS': 'hostgroup_members',
         'HOSTGROUPNOTES':  'notes',
         'HOSTGROUPNOTESURL': 'notes_url',
-        'HOSTGROUPACTIONURL': 'action_url'
+        'HOSTGROUPACTIONURL': 'action_url',
+        'HOSTGROUPREALM': 'realm_name'
     }
 
     def get_name(self):
@@ -195,90 +205,77 @@ class Hostgroups(Itemgroups):
         return []
 
     def linkify(self, hosts=None, realms=None):
-        """
-        Make link of hosts / realms
+        """Link hostgroups with hosts and realms
 
-        :param hosts: object Hosts
-        :type hosts: alignak.objects.hostgroup.Hostgroups
-        :param realms: object Realms
+        :param hosts: all Hosts
+        :type hosts: alignak.objects.host.Hosts
+        :param realms: all Realms
         :type realms: alignak.objects.realm.Realms
         :return: None
         """
         self.linkify_hostgroups_hosts(hosts)
-        self.linkify_hostgroups_realms(realms, hosts)
+        self.linkify_hostgroups_realms_hosts(realms, hosts)
 
     def linkify_hostgroups_hosts(self, hosts):
-        """
-        We just search for each hostgroup the id of the hosts
-        and replace the name by the id
+        """We just search for each hostgroup the id of the hosts
+        and replace the names by the found identifiers
 
         :param hosts: object Hosts
-        :type hosts: object
+        :type hosts: alignak.objects.host.Hosts
         :return: None
         """
         for hostgroup in self:
-            mbrs = hostgroup.get_hosts()
-            # The new member list, in id
-            new_mbrs = []
-            for mbr in mbrs:
-                mbr = mbr.strip()  # protect with strip at the beginning so don't care about spaces
-                if not mbr:  # void entry, skip this
+            members = hostgroup.get_hosts()
+            # The new members identifiers list
+            new_members = []
+            for member in members:
+                # member is an host name
+                member = member.strip()
+                if not member:  # void entry, skip this
                     continue
-                elif mbr == '*':
-                    new_mbrs.extend(list(hosts.items.keys()))
-                else:
-                    host = hosts.find_by_name(mbr)
-                    if host is not None:
-                        new_mbrs.append(host.uuid)
-                        host.hostgroups.append(hostgroup.uuid)
-                        # and be sure we are uniq in it
-                        host.hostgroups = list(set(host.hostgroups))
-                    else:
-                        hostgroup.add_unknown_members(mbr)
 
-            # Make members uniq
-            new_mbrs = list(set(new_mbrs))
+                if member == '*':
+                    # All the hosts identifiers list
+                    new_members.extend(list(hosts.items.keys()))
+                else:
+                    host = hosts.find_by_name(member)
+                    if host is not None:
+                        new_members.append(host.uuid)
+                        if hostgroup.uuid not in host.hostgroups:
+                            host.hostgroups.append(hostgroup.uuid)
+                    else:
+                        hostgroup.add_unknown_members(member)
+
+            # Make members unique
+            new_members = list(set(new_members))
 
             # We find the id, we replace the names
-            hostgroup.replace_members(new_mbrs)
+            hostgroup.replace_members(new_members)
 
-    def linkify_hostgroups_realms(self, realms, hosts):
-        """
-        More than an explode function, but we need to already
-        have members so... Will be really linkify just after
-        And we explode realm in ours members, but do not override
-        a host realm value if it's already set
+    def linkify_hostgroups_realms_hosts(self, realms, hosts):
+        """Link between an hostgroup and a realm is already done in the configuration parsing
+        function that defines and checks the default satellites, realms, hosts and hosts groups
+        consistency.
+
+        This function will only raise some alerts if hosts groups and hosts that are contained
+        do not belong the same realm !
 
         :param realms: object Realms
-        :type realms: object
+        :type realms: alignak.objects.realm.Realms
+        :param hosts: object Realms
+        :type hosts: alignak.objects.host.Hosts
         :return: None
         """
-        # Now we explode the realm value if we've got one
-        # The group realm must not override a host one (warning?)
         for hostgroup in self:
-            if not hasattr(hostgroup, 'realm'):
+            if hostgroup.realm not in realms:
                 continue
+            realm = realms[hostgroup.realm]
 
-            # Maybe the value is void?
-            if not hostgroup.realm.strip():
-                continue
-
-            realm = realms.find_by_name(hostgroup.realm.strip())
-            if realm is not None:
-                hostgroup.realm = realm.uuid
-                logger.debug("[hostgroups] %s is in %s realm",
-                             hostgroup.get_name(), realm.get_name())
-            else:
-                err = "the hostgroup %s got an unknown realm '%s'" % \
-                      (hostgroup.get_name(), hostgroup.realm)
-                hostgroup.add_error(err)
-                hostgroup.realm = None
-                continue
-
-            for host_id in hostgroup:
-                if host_id not in hosts:
+            for host_uuid in hostgroup:
+                if host_uuid not in hosts:
                     continue
-                host = hosts[host_id]
+                host = hosts[host_uuid]
+                logger.info("[host %s], hostgroups: %s", host.get_name(), host.hostgroups)
                 if host.realm == '' or host.got_default_realm:  # default not hasattr(h, 'realm'):
                     logger.debug("[hostgroups] apply a realm %s to host %s from a hostgroup "
                                  "rule (%s)", realms[hostgroup.realm].get_name(),

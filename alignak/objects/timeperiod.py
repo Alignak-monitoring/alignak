@@ -157,13 +157,13 @@ class Timeperiod(Item):
 
         # These are needed if a broker module calls methods on timeperiod objects
         'dateranges':
-            ListProp(fill_brok=['full_status'], default=[]),
+            ListProp(default=[], fill_brok=['full_status']),
         'exclude':
-            ListProp(fill_brok=['full_status'], default=[]),
+            ListProp(default=[], fill_brok=['full_status']),
         'unresolved':
-            ListProp(fill_brok=['full_status'], default=[]),
+            ListProp(default=[], fill_brok=['full_status']),
         'invalid_entries':
-            ListProp(fill_brok=['full_status'], default=[]),
+            ListProp(default=[], fill_brok=['full_status']),
         'is_active':
             BoolProp(default=False),
         'activated_once':

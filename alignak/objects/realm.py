@@ -83,6 +83,8 @@ class Realm(Itemgroup):
             StringProp(default=u'', fill_brok=['full_status']),
         'realm_members':
             ListProp(default=[], split_on_comma=True),
+        'group_members':
+            ListProp(default=[], split_on_comma=True),
         'higher_realms':
             ListProp(default=[], split_on_comma=True),
         'default':
@@ -138,7 +140,10 @@ class Realm(Itemgroup):
 
     macros = {
         'REALMNAME': 'realm_name',
-        'REALMMEMBERS': 'realm_members',
+        'REALMDEFAULT': 'default',
+        'REALMMEMBERS': 'members',
+        'REALMREALM_MEMBERS': 'realm_members',
+        'REALMGROUP_MEMBERS': 'group_members',
         'REALMHOSTS_COUNT': 'hosts_count',
     }
 
@@ -213,6 +218,21 @@ class Realm(Itemgroup):
         :rtype: str
         """
         return getattr(self, 'realm_name', 'unset')
+
+    def add_group_members(self, members):
+        """Add a new group member to the groups list
+
+        :param members: member name
+        :type members: str
+        :return: None
+        """
+        if not isinstance(members, list):
+            members = [members]
+
+        if not getattr(self, 'group_members', None):
+            self.group_members = members
+        else:
+            self.group_members.extend(members)
 
     def prepare_satellites(self, satellites):
         """Update the following attributes of a realm::

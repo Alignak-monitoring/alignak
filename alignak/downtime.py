@@ -194,14 +194,16 @@ class Downtime(AlignakObject):
         item.in_scheduled_downtime = True
         if item.scheduled_downtime_depth == 1:
             item.raise_enter_downtime_log_entry()
-            notif_period = timeperiods[item.notification_period]
+            notification_period = None
+            if getattr(item, 'notification_period', None) is not None:
+                notification_period = timeperiods[item.notification_period]
             # Notification author data
             # todo: note that alias and name are not implemented yet
             author_data = {
                 'author': self.author, 'author_name': u'Not available',
                 'author_alias': u'Not available', 'author_comment': self.comment
             }
-            item.create_notifications('DOWNTIMESTART', notif_period, hosts, services,
+            item.create_notifications('DOWNTIMESTART', notification_period, hosts, services,
                                       author_data=author_data)
             if self.ref in hosts:
                 broks.append(self.get_raise_brok(item.get_name()))
@@ -209,7 +211,7 @@ class Downtime(AlignakObject):
                 # For an host, acknowledge the host problem (and its services problems)
                 # Acknowledge the host with a sticky ack and notifications
                 # The acknowledge will expire at the same time as the downtime end
-                item.acknowledge_problem(notif_period, hosts, services, 2, 1, "Alignak",
+                item.acknowledge_problem(notification_period, hosts, services, 2, 1, "Alignak",
                                          "Acknowledged because of an host downtime")
             else:
                 broks.append(self.get_raise_brok(item.host_name, item.get_name()))

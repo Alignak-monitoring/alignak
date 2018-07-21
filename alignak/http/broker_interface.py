@@ -27,12 +27,21 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class BrokerInterface(GenericInterface):
-    """This class provides specific HTTP functions for Broker."""
+    """This class provides specific HTTP functions for the Broker daemons."""
+
+    #####
+    #   ___           _                                   _                     _
+    #  |_ _|  _ __   | |_    ___   _ __   _ __     __ _  | |     ___    _ __   | |  _   _
+    #   | |  | '_ \  | __|  / _ \ | '__| | '_ \   / _` | | |    / _ \  | '_ \  | | | | | |
+    #   | |  | | | | | |_  |  __/ | |    | | | | | (_| | | |   | (_) | | | | | | | | |_| |
+    #  |___| |_| |_|  \__|  \___| |_|    |_| |_|  \__,_| |_|    \___/  |_| |_| |_|  \__, |
+    #                                                                               |___/
+    #####
 
     @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
-    def push_broks(self):
+    def _push_broks(self):
         """Push the provided broks objects to the broker daemon
 
         Only used on a Broker daemon by the Arbiter

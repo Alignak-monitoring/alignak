@@ -1402,10 +1402,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
         try:
             logger.info("- creating '%s' objects", o_type)
             for obj_cfg in raw_objects[o_type]:
-                my_object = cls(obj_cfg)
                 # We create the object
+                my_object = cls(obj_cfg)
+                # and append it to the list
                 lst.append(my_object)
-            logger.info("  created %d.", len(lst))
+            if not lst:
+                logger.info("  none.")
         except KeyError:
             logger.info("  no %s objects in the configuration", o_type)
 
@@ -1851,20 +1853,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         for satellites_list in [self.pollers, self.brokers, self.reactionners,
                                 self.receivers, self.schedulers]:
             for satellite in satellites_list:
-                # Alert for spare daemons
-                if getattr(satellite, 'spare', False):
-                    self.add_warning("The %s '%s' is declared as a spare daemon. "
-                                     "Spare mode is not yet implemented and it will be ignored."
-                                     % (satellite.type, satellite.name))
-                    continue
-
-                # Alert for non active daemons
-                if not getattr(satellite, 'active', False):
-                    self.add_warning("The %s '%s' is declared as a non active daemon. "
-                                     "It will be ignored."
-                                     % (satellite.type, satellite.name))
-                    continue
-
                 # Here the 'realm' property is not yet a real realm object uuid ...
                 # but still a realm name! Make it a realm uuid
                 if not getattr(satellite, 'realm', None):
@@ -1878,6 +1866,21 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 # satellite.realm_name = sat_realm.get_name()
                 logger.info("Tagging satellite '%s' with realm %s", satellite.name, satellite.realm)
                 satellite.realm = sat_realm.uuid
+                satellite.realm_name = sat_realm.get_name()
+
+                # Alert for spare daemons
+                if getattr(satellite, 'spare', False):
+                    self.add_warning("The %s '%s' is declared as a spare daemon. "
+                                     "Spare mode is not yet implemented and it will be ignored."
+                                     % (satellite.type, satellite.name))
+                    continue
+
+                # Alert for non active daemons
+                if not getattr(satellite, 'active', False):
+                    self.add_warning("The %s '%s' is declared as a non active daemon. "
+                                     "It will be ignored."
+                                     % (satellite.type, satellite.name))
+                    continue
 
                 # And tell the realm that it knows the satellite
                 realm_satellites = getattr(sat_realm, '%ss' % satellite.type)
@@ -1901,6 +1904,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
         logger.debug("Hosts realm configuration:")
         for host in self.hosts:
             if not getattr(host, 'realm', None):
+                # todo: perharps checking hostgroups realm (if any) to set an hostgroup realm
+                # rather than the default realm
+                logger.debug("Host: %s, realm: %s, hostgroups: %s",
+                             host.get_name(), host.realm, host.hostgroups)
                 host.realm = self.realms.default.get_name()
                 host.got_default_realm = True
             host_realm = self.realms.find_by_name(host.realm)
@@ -1909,23 +1916,36 @@ class Config(Item):  # pylint: disable=R0904,R0902
                                % (host.get_name(), host.realm))
                 continue
             host.realm_name = host_realm.get_name()
-            logger.debug("Tagging host '%s' with realm %s", host.get_name(), host.realm_name)
+            host_realm.add_members(host.get_name())
+            logger.debug("- tagging host '%s' with realm %s", host.get_name(), host.realm_name)
             hosts_realms_names.add(host.realm_name)
 
-            logger.info(" - %s: realm %s, active %s, passive %s",
-                        host.get_name(), host_realm.get_name(),
-                        host.active_checks_enabled, host.passive_checks_enabled)
+            logger.debug(" - %s: realm %s, active %s, passive %s",
+                         host.get_name(), host_realm.get_name(),
+                         host.active_checks_enabled, host.passive_checks_enabled)
             host_realm.passively_checked_hosts = \
                 host_realm.passively_checked_hosts or host.passive_checks_enabled
             host_realm.actively_checked_hosts = \
                 host_realm.actively_checked_hosts or host.passive_checks_enabled
             hosts_realms_names.add(host.realm)
 
-        # todo: Check the realm / sub-realms relation and the manage_sub_realms daemons
-        # to avoid creating some daemons for the sub-realms! A manage_sub_realm enabled
-        # daemon may be used instead of a brand new daemon!
-        # As of now, we consider the reactionner and receiver are managing sub-realms
-        # and thus do not create if missing in realms
+        # Parse hostgroups for realms and set hostgroup in the default realm if no realm is set
+        hostgroups_realms_names = set()
+        logger.debug("Hostgroups realm configuration:")
+        for hostgroup in self.hostgroups:
+            if not getattr(hostgroup, 'realm', None):
+                hostgroup.realm = self.realms.default.get_name()
+                hostgroup.got_default_realm = True
+            hostgroup_realm = self.realms.find_by_name(hostgroup.realm)
+            if not hostgroup_realm:
+                self.add_error("The hostgroup '%s' is affected to an unknown realm: '%s'"
+                               % (hostgroup.get_name(), hostgroup.realm))
+                continue
+            hostgroup.realm_name = hostgroup_realm.get_name()
+            hostgroup_realm.add_group_members(hostgroup.get_name())
+            logger.debug("- tagging hostgroup '%s' with realm %s",
+                         hostgroup.get_name(), hostgroup.realm_name)
+            hostgroups_realms_names.add(hostgroup.realm_name)
 
         # Check that all daemons and realms are coherent
         for satellites_list in [self.pollers, self.brokers, self.reactionners,
@@ -1978,6 +1998,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             logger.debug("Realm: %s, actively checked hosts %s, passively checked hosts %s",
                          realm.get_name(), realm.actively_checked_hosts,
                          realm.passively_checked_hosts)
+            logger.info("Realm: %s, hosts: %s, groups: %s",
+                         realm.get_name(), realm.members, realm.group_members)
 
         # Log all satellites list
         logger.debug("Alignak definitive daemons list:")
@@ -2306,6 +2328,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
         if not self.read_config_silent:
             logger.info('Checked')
 
+        if not self.read_config_silent:
+            logger.info('Checking monitoring configuration...')
+
         classes = [strclss for _, _, strclss, _, _ in list(self.types_creations.values())]
         for strclss in sorted(classes):
             if strclss in ['hostescalations', 'serviceescalations']:
@@ -2313,7 +2338,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 continue
 
             if not self.read_config_silent:
-                logger.info('Checking %s...', strclss)
+                logger.info('- checking %s...', strclss)
 
             try:
                 checked_list = getattr(self, strclss)
@@ -2345,13 +2370,16 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 # really necessary to have information about each object ;
                 for cur_obj in dump_list:
                     if strclss == 'services':
-                        logger.debug('    %s', cur_obj.get_full_name())
+                        logger.debug('  %s', cur_obj.get_full_name())
                     else:
-                        logger.debug('    %s', cur_obj.get_name())
+                        logger.debug('  %s', cur_obj.get_name())
                 if checked_list:
-                    logger.info('    Checked %d %s', len(checked_list), strclss)
+                    logger.info('  checked %d', len(checked_list))
                 else:
-                    logger.info('    None')
+                    logger.info('  none')
+
+        if not self.read_config_silent:
+            logger.info('Checked')
 
         # Parse hosts and services for tags and realms
         hosts_tag = set()
@@ -2747,8 +2775,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
             # Set the cloned configuration name
             self.parts[part_index].config_name = "%s (%d)" % (self.config_name, part_index)
-            logger.info("- cloning configuration: %s -> %s",
-                        self.parts[part_index].config_name, self.parts[part_index])
+            logger.debug("- cloning configuration: %s -> %s",
+                         self.parts[part_index].config_name, self.parts[part_index])
 
             # Copy the configuration objects lists. We need a deepcopy because each configuration
             # will have some new groups... but we create a new uuid
