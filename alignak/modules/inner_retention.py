@@ -119,6 +119,8 @@ class InnerRetention(BaseModule):
 
         all_data = {'hosts': {}, 'services': {}}
 
+        filename, file_extension = os.path.splitext(self.retention_file)
+        self.retention_file = "%s-%s%s" % (filename, scheduler.name, file_extension)
         if not os.path.isfile(self.retention_file):
             logger.info("The configured state retention file does not exist. "
                         "Loading objects state is not available.")
@@ -195,6 +197,8 @@ class InnerRetention(BaseModule):
                     data_to_save['services'][(host_name, service_description)]
 
             try:
+                filename, file_extension = os.path.splitext(self.retention_file)
+                self.retention_file = "%s-%s%s" % (filename, scheduler.name, file_extension)
                 logger.info('Saving retention data to: %s', self.retention_file)
                 with open(self.retention_file, "w") as fd:
                     fd.write(json.dumps(data_to_save['hosts'],

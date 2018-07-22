@@ -224,6 +224,12 @@ class TestLaunchDaemonsRealms(AlignakTest):
             u"Added a poller",
             u"Adding a broker",
             u"Added a broker",
+            u"Adding a reactionner",
+            u"Added a reactionner",
+            u"Adding a receiver",
+            u"Added a receiver",
+
+            u"hostgroup allhosts",
 
             # Configuration dispatching
             u"The arbiter pushed a new configuration...",

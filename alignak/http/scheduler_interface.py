@@ -20,6 +20,10 @@
 
 import logging
 import cherrypy
+import traceback
+from io import StringIO
+
+from collections import OrderedDict, Callable
 
 from alignak.http.generic_interface import GenericInterface
 from alignak.misc.serialization import serialize, unserialize
@@ -42,7 +46,7 @@ class SchedulerInterface(GenericInterface):
     @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
-    def object(self, o_type, o_name='None'):
+    def object(self, o_type, o_name=None):
         """Get an object from the scheduler.
 
         The result is a serialized object which is a Json structure containing:
@@ -108,6 +112,200 @@ class SchedulerInterface(GenericInterface):
         if not o_found:
             return {'_status': u'ERR', '_message': u'Required %s not found.' % o_type}
         return o_found
+
+    @cherrypy.expose
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def dump(self, o_name=None, details=False, raw=False):
+        """Dump an host (all hosts) from the scheduler.
+
+        This gets the main host information from the scheduler. If details is set, then some
+        more information are provided. This will not get all the host known attributes but only
+        a reduced set that will inform about the host and its services status
+
+        If raw is set the information are provided in two string lists formated as CSV strings.
+        The first list element contains the hosts information and the second one contains the
+        services information.
+
+        If an host name is provided, this function will get only this host information, else
+        all the scheduler hosts are returned.
+
+        As an example (raw format):
+        [
+            [   # Host information
+                "type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output",
+                "BR_host;host;BR_host;1532451511;0;UP;HARD;False;False;Host assumed to be UP"
+            ],
+            [   # Services information
+                "type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output",
+                "BR_host;service;dummy_critical;1532451490;2;CRITICAL;SOFT;False;False;BR_host-dummy_critical-2",
+                "BR_host;service;BR_Simple_And;0;0;OK;HARD;False;False;",
+                "BR_host;service;dummy_unreachable;1532451501;4;UNREACHABLE;SOFT;False;False;BR_host-dummy_unreachable-4",
+                "BR_host;service;dummy_no_output;1532451495;0;OK;HARD;False;False;Service internal check result: 0",
+                "BR_host;service;dummy_unknown;1532451475;3;UNKNOWN;SOFT;False;False;BR_host-dummy_unknown-3",
+                "BR_host;service;dummy_echo;1532451501;0;OK;HARD;False;False;",
+                "BR_host;service;dummy_warning;1532451492;1;WARNING;SOFT;False;False;BR_host-dummy_warning-1",
+                "BR_host;service;dummy_random;1532451496;2;CRITICAL;SOFT;False;False;Service internal check result: 2",
+                "BR_host;service;dummy_ok;1532451492;0;OK;HARD;False;False;BR_host"
+            ]
+        ]
+
+        As an example (json format):
+        {
+            is_impact: false,
+            name: "BR_host",
+            state: "UP",
+            last_check: 1532451811,
+            state_type: "HARD",
+            host: "BR_host",
+            output: "Host assumed to be UP",
+            services: [
+                {
+                    is_impact: false,
+                    name: "dummy_critical",
+                    state: "CRITICAL",
+                    last_check: 1532451790,
+                    state_type: "HARD",
+                    host: "BR_host",
+                    output: "BR_host-dummy_critical-2",
+                    state_id: 2,
+                    type: "service",
+                    is_problem: true
+                },
+                {
+                    is_impact: true,
+                    name: "BR_Simple_And",
+                    state: "WARNING",
+                    last_check: 1532451775,
+                    state_type: "SOFT",
+                    host: "BR_host",
+                    output: "",
+                    state_id: 1,
+                    type: "service",
+                    is_problem: false
+                },
+                ....
+                ....
+            },
+            state_id: 0,
+            type: "host",
+            is_problem: false
+        }
+
+        :param o_name: searched host name (or uuid)
+        :type o_name: str
+        :param details: less or more details
+        :type details: bool
+        :param raw: json or raw text format
+        :type raw: bool
+        :return: list of host and services information
+        :rtype: list
+        """
+
+        def get_host_info(host, services, details=False, header=False, raw=False):
+            """Get the host information
+
+            :return: None
+            """
+            __props__ = [
+                'last_check', 'state_id', 'state', 'state_type', 'is_problem', 'is_impact', 'output'
+            ]
+            if details:
+                __props__ = __props__ + [
+                    'uuid', 'address', 'alias', 'business_impact', 'tags', 'customs', 'parents',
+                    'long_output', 'perf_data',
+                    'check_period', 'active_checks_enabled', 'passive_checks_enabled',
+                    'check_freshness', 'freshness_threshold', 'freshness_state',
+                    'get_overall_state', 'overall_state_id', 'state_id', 'state', 'state_type',
+                    'passive_check', 'acknowledged', 'downtimed', 'next_check',
+                    'last_time_up', 'last_time_down',
+                    'last_time_ok', 'last_time_warning', 'last_time_critical',
+                    'last_time_unknown', 'last_time_unreachable'
+                ]
+
+            host_data = OrderedDict({'type': 'host',
+                                     'host': host.get_name(),
+                                     'name': host.get_name()})
+            __header__ = ['type', 'host', 'name']
+            for key in __props__:
+                if hasattr(host, key):
+                    __header__.append(key)
+                    if isinstance(getattr(host, key), Callable):
+                        host_data[key] = getattr(host, key)(services)
+                    elif isinstance(getattr(host, key), set):
+                        host_data[key] = list(getattr(host, key))
+                    else:
+                        host_data[key] = getattr(host, key)
+            if raw:
+                host_data['_header_host'] = __header__
+
+            host_data['services'] = []
+            __header__ = ['type', 'host', 'name']
+            for service in host.services:
+                service = services[service]
+                service_data = OrderedDict({'type': 'service',
+                                            'host': host.get_name(),
+                                            'name': service.get_name()})
+                for key in __props__:
+                    if hasattr(service, key):
+                        if key not in __header__:
+                            __header__.append(key)
+                        if isinstance(getattr(service, key), Callable):
+                            service_data[key] = getattr(services, key)()
+                        elif isinstance(getattr(service, key), set):
+                            service_data[key] = list(getattr(service, key))
+                        else:
+                            service_data[key] = getattr(service, key)
+                host_data['services'].append(service_data)
+            if raw:
+                host_data['_header_service'] = __header__
+
+            return host_data
+
+        if details is not False:
+            details = bool(details)
+        if raw is not False:
+            raw = bool(raw)
+
+        ls = []
+        try:
+            hosts = self._get_objects('host')
+            services = self._get_objects('service')
+            if o_name is None:
+                for host in hosts:
+                    ls.append(get_host_info(host, services, details=details, raw=raw))
+            else:
+                # Perhaps we got an host uuid...
+                host = hosts.find_by_name(o_name)
+                if o_name in hosts:
+                    host = hosts[o_name]
+
+                if host:
+                    ls.append(get_host_info(host, services, details=False, raw=raw))
+        except Exception as exp:  # pylint: disable=broad-except
+            return str(exp) + " / " + traceback.print_exc()
+
+        if o_name and not host:
+            return {'_status': u'ERR', '_message': u'Required host (%s) not found.' % o_name}
+
+        if raw and ls:
+            raw_ls_hosts = [';'.join(ls[0]['_header_host'])]
+            raw_ls_services = [';'.join(ls[0]['_header_service'])]
+
+            for item in ls:
+                item.pop('_header_host')
+                item.pop('_header_service')
+                services = []
+                if 'services' in item:
+                    services = item.pop('services')
+                    # Write host line
+                    raw_ls_hosts.append(';'.join("%s" % val for val in list(item.values())))
+                    for service in services:
+                        raw_ls_services.append(';'.join("%s" % val for val in list(service.values())))
+
+            return [raw_ls_hosts, raw_ls_services]
+
+        return ls
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -181,8 +379,8 @@ class SchedulerInterface(GenericInterface):
         :rtype: dict
         """
         logger.debug("Getting broks for %s from the scheduler", broker_name)
-        for broker_link in self.app.brokers.values():
-            if broker_name in [broker_link.name]:
+        for broker_link in list(self.app.brokers.values()):
+            if broker_name == broker_link.name:
                 break
         else:
             logger.warning("Requesting broks for an unknown broker: %s", broker_name)
@@ -320,7 +518,7 @@ class SchedulerInterface(GenericInterface):
 
         return o_list
 
-    def _get_object(self, o_type, o_name='None'):
+    def _get_object(self, o_type, o_name=None):
         """Get an object from the scheduler
 
         Returns None if the required object type (`o_type`) is not known.
@@ -338,7 +536,7 @@ class SchedulerInterface(GenericInterface):
             o_found = None
             o_list = self._get_objects(o_type)
             if o_list:
-                if o_name == 'None':
+                if o_name is None:
                     return serialize(o_list, True) if o_list else None
                 # We expected a name...
                 o_found = o_list.find_by_name(o_name)

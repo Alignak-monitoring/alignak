@@ -655,7 +655,7 @@ class Scheduler(object):  # pylint: disable=R0902
         ExternalCommand:    add_external_command,
     }
 
-    def hook_point(self, hook_name):
+    def hook_point(self, hook_name, **kwargs):
         """Generic function to call modules methods if such method is avalaible
 
         :param hook_name: function name to call

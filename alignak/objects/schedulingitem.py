@@ -237,9 +237,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             StringProp(default=u''),
         'snapshot_interval':
             IntegerProp(default=5),
-
-        'realm':
-            StringProp(default=u'', fill_brok=['full_status']),
     })
 
     running_properties = Item.running_properties.copy()
@@ -486,6 +483,31 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if 'acknowledgement' in params and isinstance(params['acknowledgement'], dict):
             self.acknowledgement = Acknowledge(params['acknowledgement'])
         super(SchedulingItem, self).__init__(params, parsing=parsing)
+
+    @property
+    def monitored(self):
+        """Simple property renaming for better API;)"""
+        return self.active_checks_enabled or self.passive_checks_enabled
+
+    @property
+    def last_check(self):
+        """Simple property renaming for better API;)"""
+        return self.last_chk
+
+    @property
+    def next_check(self):
+        """Simple property renaming for better API;)"""
+        return self.next_chk
+
+    @property
+    def acknowledged(self):
+        """Simple property renaming for better API;)"""
+        return self.problem_has_been_acknowledged
+
+    @property
+    def downtimed(self):
+        """Simple property renaming for better API;)"""
+        return self.in_scheduled_downtime
 
     def serialize(self):
         res = super(SchedulingItem, self).serialize()

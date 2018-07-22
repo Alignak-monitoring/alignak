@@ -67,10 +67,11 @@ class TestLaunchArbiter(AlignakTest):
         for name, port in list(satellite_map.items()):
             if daemon_names and name not in daemon_names:
                 continue
-            print("- pinging %s: http://127.0.0.1:%s/ping" % (name, port))
-            raw_data = self.req.get("http://127.0.0.1:%s/ping" % (port))
+            print("- pinging %s: http://127.0.0.1:%s/identity" % (name, port))
+            raw_data = self.req.get("http://127.0.0.1:%s/identity" % (port))
+            assert raw_data.status_code == 200
             data = raw_data.json()
-            assert data == 'pong', "Daemon %s  did not pong :(" % name
+            print("%s, running id: %s" % (name, data['running_id']))
         # -----
 
     def _stop_daemons(self, daemon_names=None):

@@ -490,19 +490,32 @@ class Realm(Itemgroup):
 
         # Our self.daemons are only identifiers... that we use to fill the satellite links
         try:
-            for poller_id in self.pollers:
-                poller = pollers[poller_id]
+            for poller in self.pollers + self.get_potential_satellites_by_type(pollers, "poller"):
+                if poller in pollers:
+                    poller = pollers[poller]
                 cfg['pollers'][poller.uuid] = poller.give_satellite_cfg()
 
-            for reactionner_id in self.reactionners:
-                reactionner = reactionners[reactionner_id]
+            for reactionner in self.reactionners + self.get_potential_satellites_by_type(reactionners, "reactionner"):
+                if reactionner in reactionners:
+                    reactionner = reactionners[reactionner]
                 cfg['reactionners'][reactionner.uuid] = reactionner.give_satellite_cfg()
 
-            for broker_id in self.brokers:
-                broker = brokers[broker_id]
+            for broker in self.brokers + self.get_potential_satellites_by_type(brokers, "broker"):
+                if broker in brokers:
+                    broker = brokers[broker]
                 cfg['brokers'][broker.uuid] = broker.give_satellite_cfg()
         except Exception as exp:  # pylint: disable=broad-except
             logger.exception("realm.get_links_for_a_scheduler: %s", exp)
+
+            # for poller in self.get_potential_satellites_by_type(pollers, "poller"):
+            #     logger.info("Poller: %s", poller)
+            #     cfg['pollers'][poller.uuid] = poller.give_satellite_cfg()
+            #
+            # for reactionner in self.get_potential_satellites_by_type(reactionners, "reactionner"):
+            #     cfg['reactionners'][reactionner.uuid] = reactionner.give_satellite_cfg()
+            #
+            # for broker in self.get_potential_satellites_by_type(brokers, "broker"):
+            #     cfg['brokers'][broker.uuid] = broker.give_satellite_cfg()
 
         return cfg
 

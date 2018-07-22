@@ -719,7 +719,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
             IntegerProp(default=5),
 
         'daemons_stop_timeout':
-            IntegerProp(default=5)
+            IntegerProp(default=5),
+
+        'events_date_format':
+            StringProp(default='%Y-%m-%d %H:%M:%S'),
+        'events_log_count':
+            IntegerProp(default=100),
     }
 
     macros = {
@@ -2273,7 +2278,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             valid &= False
         return valid
 
-    def is_correct(self):  # pylint: disable=R0912, too-many-statements, too-many-locals
+    def is_correct(self):  # pylint: disable=too-many-branches, too-many-statements, too-many-locals
         """Check if all elements got a good configuration
 
         :return: True if the configuration is correct else False
@@ -2407,30 +2412,57 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 valid = False
 
         # Check that all hosts involved in business_rules are from the same realm
-        for lst in [self.services, self.hosts]:
-            for item in lst:
-                if item.got_business_rule:
-                    e_ro = self.realms[item.realm]
+        for item in self.hosts:
+            if not item.got_business_rule:
+                continue
+
+            realm = self.realms[item.realm]
+            if not realm:
+                # Something was wrong in the conf, will be raised elsewhere
+                continue
+
+            for elt_uuid in item.business_rule.list_all_elements():
+                if elt_uuid not in self.hosts:
+                    # An error or a service element
+                    continue
+
+                host = self.hosts[elt_uuid]
+                if not host.realm in self.realms:
                     # Something was wrong in the conf, will be raised elsewhere
-                    if not e_ro:
-                        continue
-                    e_r = e_ro.realm_name
-                    for elt_uuid in item.business_rule.list_all_elements():
-                        if elt_uuid in self.hosts:
-                            elt = self.hosts[elt_uuid]
-                        else:
-                            elt = self.services[elt_uuid]
-                        r_o = self.realms[elt.realm]
-                        # Something was wrong in the conf, will be raised elsewhere
-                        if not r_o:
-                            continue
-                        elt_r = r_o.realm_name
-                        if elt_r != e_r:
-                            logger.error("Business_rule '%s' got hosts from another realm: %s",
-                                         item.get_full_name(), elt_r)
-                            self.add_error("Error: Business_rule '%s' got hosts from another "
-                                           "realm: %s" % (item.get_full_name(), elt_r))
-                            valid = False
+                    continue
+
+                host_realm = self.realms[host.realm]
+                if host_realm.get_name() != realm.get_name():
+                    logger.error("Business_rule '%s' got some hosts from another realm: %s",
+                                 host.get_full_name(), elt_r)
+                    self.add_error("Error: Business_rule '%s' got hosts from another "
+                                   "realm: %s" % (item.get_full_name(), host_realm.get_name()))
+                    valid = False
+
+        # for lst in [self.services, self.hosts]:
+        #     for item in lst:
+        #         if item.got_business_rule:
+        #             e_ro = self.realms[item.realm]
+        #             # Something was wrong in the conf, will be raised elsewhere
+        #             if not e_ro:
+        #                 continue
+        #             e_r = e_ro.realm_name
+        #             for elt_uuid in item.business_rule.list_all_elements():
+        #                 if elt_uuid in self.hosts:
+        #                     elt = self.hosts[elt_uuid]
+        #                 else:
+        #                     elt = self.services[elt_uuid]
+        #                 r_o = self.realms[elt.realm]
+        #                 # Something was wrong in the conf, will be raised elsewhere
+        #                 if not r_o:
+        #                     continue
+        #                 elt_r = r_o.realm_name
+        #                 if elt_r != e_r:
+        #                     logger.error("Business_rule '%s' got hosts from another realm: %s",
+        #                                  item.get_full_name(), elt_r)
+        #                     self.add_error("Error: Business_rule '%s' got hosts from another "
+        #                                    "realm: %s" % (item.get_full_name(), elt_r))
+        #                     valid = False
 
         if self.configuration_errors:
             valid = False
@@ -2483,7 +2515,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             for msg in self.configuration_errors:
                 logger.warning(msg)
 
-    def create_packs(self):  # pylint: disable=R0915,R0914,R0912,W0613
+    def create_packs(self):
+        # pylint: disable=too-many-statements,too-many-locals,too-many-branches, unused-argument
         """Create packs of hosts and services (all dependencies are resolved)
         It create a graph. All hosts are connected to their
         parents, and hosts without parent are connected to host 'root'.
@@ -2581,26 +2614,38 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 if host.realm:
                     tmp_realms.add(host.realm)
             if len(tmp_realms) > 1:
-                self.add_error("Error: the realm configuration of yours hosts is not good because "
+                self.add_error("Error: the realm configuration of your hosts is not correct because "
                                "there is more than one realm in one pack (host relations):")
                 for host_id in hosts_pack:
                     host = self.hosts[host_id]
-                    if host.realm is None:
+                    if not host.realm:
                         self.add_error(' -> the host %s do not have a realm' % host.get_name())
                     else:
                         # Do not use get_name for the realm because it is not an object but a
                         # string containing the not found realm name if the realm is not existing!
                         # As of it, it may raise an exception
-                        self.add_error(' -> the host %s is in the realm %s' %
-                                       (host.get_name(), host.realm_name))
+                        if host.realm not in self.realms:
+                            self.add_error(' -> the host %s is in the realm %s' %
+                                           (host.get_name(), host.realm))
+                        else:
+                            host_realm = self.realms[host.realm]
+                            self.add_error(' -> the host %s is in the realm %s' %
+                                           (host.get_name(), host_realm.get_name()))
             if len(tmp_realms) == 1:  # Ok, good
-                realm = self.realms[tmp_realms.pop()]
-                # Set the current hosts pack to its realm
-                logger.debug(" - append pack %s to realm %s", hosts_pack, realm.get_name())
-                realm.packs.append(hosts_pack)
-                # Set if the realm only has passively or actively checked hosts...
-                realm.passively_checked_hosts = passively_checked_hosts
-                realm.actively_checked_hosts = actively_checked_hosts
+                tmp_realm = tmp_realms.pop()
+                if tmp_realm in self.realms:
+                    realm = self.realms[tmp_realm]
+                else:
+                    realm = self.realms.find_by_name(tmp_realm)
+                if not realm:
+                    self.add_error(' -> some hosts are in an unknown realm %s!' % tmp_realm)
+                else:
+                    # Set the current hosts pack to its realm
+                    logger.debug(" - append pack %s to realm %s", hosts_pack, realm.get_name())
+                    realm.packs.append(hosts_pack)
+                    # Set if the realm only has passively or actively checked hosts...
+                    realm.passively_checked_hosts = passively_checked_hosts
+                    realm.actively_checked_hosts = actively_checked_hosts
             elif not tmp_realms:  # Hum... no realm value? So default Realm
                 if default_realm is not None:
                     # Set the current hosts pack to the default realm
@@ -2729,7 +2774,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
                            "Some hosts have been "
                            "ignored" % (len(self.hosts), nb_elements_all_realms))
 
-    def cut_into_parts(self):  # pylint: disable=R0912,R0914, too-many-statements
+    def cut_into_parts(self):
+        # pylint: disable=too-many-branches, too-many-locals, too-many-statements
         """Cut conf into part for scheduler dispatch.
 
         Basically it provides a set of host/services for each scheduler that
@@ -2840,7 +2886,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     instance_id = self.parts[idx + offset].instance_id
                     for host_id in realm.packs[idx]:
                         host = self.hosts[host_id]
-                        host.pack_id = idx
                         self.parts[idx + offset].hosts.add_item(host)
                         for service_id in host.services:
                             service = self.services[service_id]

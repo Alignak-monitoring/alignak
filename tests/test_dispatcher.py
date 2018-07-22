@@ -244,8 +244,6 @@ class TestDispatcher(AlignakTest):
                         continue
                     self.assert_any_log_match(re.escape(
                         "Sending configuration to the %s %s" % (link.type, link.name)))
-                    self.assert_any_log_match(re.escape(
-                        "Configuration sent to the %s %s" % (link.type, link.name)))
 
                 # As of now the configuration is prepared and was dispatched to the daemons !
                 # Configuration already dispatched!

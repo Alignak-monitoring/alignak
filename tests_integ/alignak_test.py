@@ -204,7 +204,7 @@ class AlignakTest(unittest2.TestCase):
 define host {
     use                     test-host
     contact_groups          admins
-    hostgroups              allhosts
+    hostgroups              allhosts-%s
     host_name               host-%s-%s
     address                 127.0.0.1
     realm                   %s
@@ -215,7 +215,7 @@ define host {
         hosts_set = 0
         for realm in realms:
             for index in range(hosts_count):
-                hosts = hosts + (host_pattern % (realm.lower(), index, realm)) + "\n"
+                hosts = hosts + (host_pattern % (realm.lower(), realm.lower(), index, realm)) + "\n"
                 hosts_set += 1
 
         filename = os.path.join(cfg_folder, 'many_hosts_%d.cfg' % hosts_count)
@@ -812,13 +812,12 @@ define host {
         # Simulate the daemons HTTP interface (very simple simulation !)
         with requests_mock.mock() as mr:
             for link in self._arbiter.dispatcher.all_daemons_links:
-                mr.get('http://%s:%s/ping' % (link.address, link.port), json='pong')
-                mr.get('http://%s:%s/get_running_id' % (link.address, link.port),
+                mr.get('http://%s:%s/identity' % (link.address, link.port),
                        json={"running_id": 123456.123456})
-                mr.get('http://%s:%s/wait_new_conf' % (link.address, link.port), json=True)
-                mr.post('http://%s:%s/push_configuration' % (link.address, link.port), json=True)
-                mr.get('http://%s:%s/fill_initial_broks' % (link.address, link.port), json=[])
-                mr.get('http://%s:%s/get_managed_configurations' % (link.address, link.port), json={})
+                mr.get('http://%s:%s/_wait_new_conf' % (link.address, link.port), json=True)
+                mr.post('http://%s:%s/_push_configuration' % (link.address, link.port), json=True)
+                mr.get('http://%s:%s/_initial_broks' % (link.address, link.port), json=[])
+                mr.get('http://%s:%s/managed_configurations' % (link.address, link.port), json={})
 
             self._arbiter.dispatcher.check_reachable(test=True)
 

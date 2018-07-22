@@ -145,6 +145,10 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             ListProp(default=[], merging='duplicate', split_on_comma=True),
         'snapshot_criteria':
             ListProp(default=['d', 'x'], fill_brok=['full_status'], merging='join'),
+
+        # Realm stuff
+        'realm':
+            StringProp(default=u'', fill_brok=['full_status']),
     })
 
     # properties set only for running purpose
@@ -161,8 +165,11 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'last_time_unreachable':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
 
+        # Our services
         'services':
             StringProp(default=[]),
+
+        # Realm stuff
         'realm_name':
             StringProp(default=u''),
         'got_default_realm':
@@ -170,10 +177,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         'state_before_hard_unknown_reach_phase':
             StringProp(default=u'UP', retention=True),
-
-        # Keep in mind our pack id after the cutting phase
-        'pack_id':
-            IntegerProp(default=-1),
     })
 
     # Hosts macros and prop that give the information
@@ -889,34 +892,6 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         if need_stalk:
             logger.info("Stalking %s: %s", self.get_name(), self.output)
 
-    # def get_data_for_checks(self):
-    #     """Get data for a check
-    #
-    #     :return: list containing a single host (this one)
-    #     :rtype: list
-    #     """
-    #     return [self]
-    #
-    # def get_data_for_event_handler(self):
-    #     """Get data for an event handler
-    #
-    #     :return: list containing a single host (this one)
-    #     :rtype: list
-    #     """
-    #     return [self]
-    #
-    # def get_data_for_notifications(self, contact, notif):
-    #     """Get data for a notification
-    #
-    #     :param contact: The contact to return
-    #     :type contact:
-    #     :param notif: the notification to return
-    #     :type notif:
-    #     :return: list containing a the host and the given parameters
-    #     :rtype: list
-    #     """
-    #     return [self, contact, notif]
-    #
     def notification_is_blocked_by_contact(self, notifways, timeperiods, notif, contact):
         """Check if the notification is blocked by this contact.
 
@@ -1198,16 +1173,24 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         """
         return self.snapshot_command.get_name()
 
+    def get_downtime(self):
+        """Accessor to scheduled_downtime_depth attribute
+
+        :return: scheduled downtime depth
+        :rtype: str
+        """
+        return str(self.scheduled_downtime_depth)
+
     def get_short_status(self, hosts, services):
         """Get the short status of this host
 
-        :return: "U", "D", "N" or "n/a" based on host state_id or business_rule state
+        :return: "U", "D", "X" or "n/a" based on host state_id or business_rule state
         :rtype: str
         """
         mapping = {
             0: "U",
             1: "D",
-            4: "N",
+            4: "X",
         }
         if self.got_business_rule:
             return mapping.get(self.business_rule.get_state(hosts, services), "n/a")
@@ -1230,14 +1213,69 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         return self.state
 
-    def get_downtime(self):
-        """Accessor to scheduled_downtime_depth attribute
+    def get_overall_state(self, services):
+        """Get the host overall state including the host self status
+        and the status of its services
 
-        :return: scheduled downtime depth
-        :rtype: str
-        TODO: Move to util or SchedulingItem class
+        Compute the host overall state identifier, including:
+        - the acknowledged state
+        - the downtime state
+
+        The host overall state is (prioritized):
+        - an host not monitored (5)
+        - an host down (4)
+        - an host unreachable (3)
+        - an host downtimed (2)
+        - an host acknowledged (1)
+        - an host up (0)
+
+        If the host overall state is <= 2, then the host overall state is the maximum value
+        of the host overall state and all the host services overall states.
+
+        The overall state of an host is:
+        - 0 if the host is UP and all its services are OK
+        - 1 if the host is DOWN or UNREACHABLE and acknowledged or
+            at least one of its services is acknowledged and
+            no other services are WARNING or CRITICAL
+        - 2 if the host is DOWN or UNREACHABLE and in a scheduled downtime or
+            at least one of its services is in a scheduled downtime and no
+            other services are WARNING or CRITICAL
+        - 3 if the host is UNREACHABLE or
+            at least one of its services is WARNING
+        - 4 if the host is DOWN or
+            at least one of its services is CRITICAL
+        - 5 if the host is not monitored
+
+        :param services: a list of known services
+        :type services: alignak.objects.service.Services
+
+        :return: the host overall state
+        :rtype: int
         """
-        return str(self.scheduled_downtime_depth)
+        overall_state = 0
+
+        if not self.monitored:
+            overall_state = 5
+        elif self.acknowledged:
+            overall_state = 1
+        elif self.downtimed:
+            overall_state = 2
+        elif self.state_type == 'HARD':
+            if self.state == 'UNREACHABLE':
+                overall_state = 3
+            elif self.state == 'DOWN':
+                overall_state = 4
+
+        # Only consider the hosts services state if all is ok (or almost...)
+        if overall_state <= 2:
+            for service in self.services:
+                if service in services:
+                    service = services[service]
+                    # Only for monitored services
+                    if service.overall_state_id < 5:
+                        overall_state = max(overall_state, service.overall_state_id)
+
+        return overall_state
 
 
 class Hosts(SchedulingItems):
@@ -1292,6 +1330,7 @@ class Hosts(SchedulingItems):
         self.linkify_one_command_with_commands(commands, 'snapshot_command')
 
         self.linkify_with_contacts(contacts)
+        # No more necessary
         self.linkify_h_by_realms(realms)
         self.linkify_with_resultmodulations(resultmodulations)
         self.linkify_with_business_impact_modulations(businessimpactmodulations)
@@ -1340,22 +1379,13 @@ class Hosts(SchedulingItems):
         """
         default_realm = realms.get_default()
         for host in self:
-            if host.realm != '':
-                realm = realms.find_by_name(host.realm.strip())
-                if realm is None:
-                    host.add_error("the host %s got an invalid realm (%s)!"
-                                   % (host.get_name(), host.realm))
-                    # This to avoid having an host.realm as a string name
-                    host.realm_name = host.realm
-                    host.realm = None
-                else:
-                    host.realm = realm.uuid
-                    host.realm_name = realm.get_name()  # Needed for the specific $HOSTREALM$ macro
+            if host.realm not in realms:
+                realm = realms.find_by_name(host.realm)
+                if not realm:
+                    continue
+                host.realm = realm.uuid
             else:
-                # Applying default realm to an host
-                host.realm = default_realm.uuid if default_realm else ''
-                host.realm_name = default_realm.get_name() if default_realm else ''
-                host.got_default_realm = True
+                realm = realms[host.realm]
 
     def linkify_h_by_hg(self, hostgroups):
         """Link hosts with hostgroups

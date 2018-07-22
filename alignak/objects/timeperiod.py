@@ -577,7 +577,8 @@ class Timeperiod(Item):
         return string
 
     def resolve_daterange(self, dateranges, entry):
-        # pylint: disable=R0911,R0915,R0912,too-many-locals
+        # pylint: disable=too-many-return-statements,too-many-statements,
+        # pylint: disable=)too-many-branches,too-many-locals
         """
         Try to solve dateranges (special cases)
 

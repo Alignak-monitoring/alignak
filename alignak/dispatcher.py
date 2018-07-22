@@ -255,8 +255,8 @@ class Dispatcher(object):
                     # No managed configuration - a new dispatching is necessary but only
                     # if we already dispatched a configuration
                     # Probably a freshly restarted daemon ;)
-                    logger.info("The %s %s do not have a configuration",
-                                daemon_link.type, daemon_link.name)
+                    logger.debug("The %s %s do not have a configuration",
+                                 daemon_link.type, daemon_link.name)
                     # the daemon is not yet configured
                     self.not_configured.append(daemon_link)
                     daemon_link.configuration_sent = False
@@ -683,8 +683,17 @@ class Dispatcher(object):
 
                     # Dump the configuration part size
                     pickled_conf = pickle.dumps(scheduler_link.cfg)
-                    logger.info('   scheduler configuration size: %d bytes',
+                    logger.info("   scheduler configuration size: %d bytes",
                                 sys.getsizeof(pickled_conf))
+                    logger.info("   scheduler satellites:")
+                    satellites = realm.get_links_for_a_scheduler(self.pollers,
+                                                                 self.reactionners,
+                                                                 self.brokers)
+                    for sat_type in satellites:
+                        logger.info("   - %s", sat_type)
+                        for sat_link_uuid in satellites[sat_type]:
+                            satellite = satellites[sat_type][sat_link_uuid]
+                            logger.info("   %s", satellite['name'])
 
                     # The configuration part is assigned to a scheduler
                     cfg_part.is_assigned = True
@@ -855,7 +864,7 @@ class Dispatcher(object):
             link.put_conf(link.cfg, test=test)
             link.configuration_sent = True
 
-            logger.info("Configuration sent to the arbiter %s", link.name)
+            logger.info("- sent")
 
             # Now that the spare arbiter has a configuration, tell him it must not run,
             # because I'm not dead ;)
@@ -881,7 +890,7 @@ class Dispatcher(object):
             link.put_conf(link.cfg, test=test)
             link.configuration_sent = True
 
-            logger.info("Configuration sent to the %s %s", link.type, link.name)
+            logger.info("- sent")
 
         for link in self.satellites:
             if link.configuration_sent:
@@ -903,7 +912,7 @@ class Dispatcher(object):
             link.put_conf(link.cfg, test=test)
             link.configuration_sent = True
 
-            logger.info('Configuration sent to the %s %s', link.type, link.name)
+            logger.info("- sent")
 
         if self.dispatch_ok:
             # Newly prepared configuration got dispatched correctly

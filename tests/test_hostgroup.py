@@ -24,6 +24,7 @@
 This file contains the test for the hostgroups objects
 """
 
+import re
 import time
 
 from alignak.objects import Host
@@ -105,7 +106,7 @@ class TestHostGroup(AlignakTest):
         assert self.conf_is_correct == False
 
         # 5 error messages, bad hostgroup member
-        assert len(self.configuration_errors) == 5
+        assert len(self.configuration_errors) == 4
         # No warning messages
         assert len(self.configuration_warnings) == 0
         # Error is an unknown member in a group (\ escape the [ and ' ...)
@@ -115,12 +116,12 @@ class TestHostGroup(AlignakTest):
         self.assert_any_cfg_log_match(
             "Configuration in hostgroup::allhosts_bad is incorrect; from: "
         )
-        self.assert_any_cfg_log_match(
-            "the hostgroup allhosts_bad_realm got an unknown realm \'Unknown\'"
-        )
-        self.assert_any_cfg_log_match(
-            "Configuration in hostgroup::allhosts_bad_realm is incorrect; from: "
-        )
+        self.assert_any_cfg_log_match(re.escape(
+            "The hostgroup 'allhosts_bad_realm' is affected to an unknown realm: 'Unknown'"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[hostgroup::allhosts_bad] as hostgroup, got unknown member 'BAD_HOST'"
+        ))
         self.assert_any_cfg_log_match(
             "hostgroups configuration is incorrect!"
         )

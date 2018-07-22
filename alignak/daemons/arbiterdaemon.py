@@ -69,8 +69,11 @@ import traceback
 import socket
 import io
 import threading
+from datetime import datetime
+from collections import deque
 
 import psutil
+
 
 from alignak.log import make_monitoring_log, set_log_level
 from alignak.misc.common import SIGNALS_TO_NAMES_DICT
@@ -106,7 +109,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         'port':
             IntegerProp(default=7770),
         'legacy_cfg_files':
-            ListProp(default=[])
+            ListProp(default=[]),
     })
 
     def __init__(self, **kwargs):
@@ -182,6 +185,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # My own monitoring events
         self.events = []
         self.events_lock = threading.RLock()
+        # Queue to keep the recent events
+        self.recent_events = None
 
         self.is_master = False
         self.link_to_myself = None
@@ -318,25 +323,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         logger.debug("Get and clear external commands list: %s", res)
         self.external_commands = []
         return res
-
-    def get_external_commands_from_satellites(self):  # pragma: no cover - not used!
-        """Get external commands from all other satellites (only receivers)
-
-        As of now, only the receiver satellites may raise some external commands that
-        the arbiter will push to all the known schedulers.
-
-        :return: None
-        """
-        for satellite in self.conf.receivers:
-            # Get only if reachable...
-            if not satellite.reachable:
-                continue
-            logger.debug("Getting external commands from: %s", satellite.name)
-            external_commands = satellite.get_external_commands()
-            if external_commands:
-                logger.debug("Got %d commands from: %s", len(external_commands), satellite.name)
-            for external_command in external_commands:
-                self.external_commands.append(external_command)
 
     def get_broks_from_satellites(self):  # pragma: no cover - not used!
         """Get broks from my all internal satellite links
@@ -733,6 +719,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.conf.create_business_rules()
         # And link them
         self.conf.create_business_rules_dependencies()
+
+        # Set my own parameters from the loaded configuration
+        # Last monitoring events
+        self.recent_events = deque(maxlen=int(os.environ.get('ALIGNAK_EVENTS_LOG_COUNT',
+                                                             self.conf.events_log_count)))
 
         # Manage all post-conf modules
         _ts = time.time()
@@ -1195,6 +1186,12 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             make_monitoring_log(event.data['level'], event.data['message'],
                                 timestamp=event.creation_time, to_logger=True)
 
+            # Add to the recent events for the WS endpoint
+            event.data['timestamp'] = datetime.fromtimestamp(event.creation_time).\
+                strftime(self.conf.events_date_format)
+            event.data.pop('instance_id')
+            self.recent_events.append(event.data)
+
         # Set the last check as now
         self.daemons_last_reachable_check = start
 
@@ -1605,11 +1602,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             # self.get_broks_from_satellites()
             # statsmgr.timer('broks.got.time', time.time() - _t0)
             #
-            # # Maybe our satellites raised new external commands. Reap them...
-            # _t0 = time.time()
-            # self.get_external_commands_from_satellites()
-            # statsmgr.timer('external-commands.got', time.time() - _t0)
-            #
             # One broker is responsible for our broks, we give him our broks
             _t0 = time.time()
             self.push_broks_to_broker()
@@ -1955,6 +1947,27 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             },
             "services": []
         }
+        if details:
+            res = {
+                "name": inner_stats['alignak'],
+                "template": {
+                    "_templates": ["alignak", "important"],
+                    "alias": inner_stats['alignak'],
+                    "active_checks_enabled": False,
+                    "passive_checks_enabled": True,
+                    "notes": ''
+                },
+                "variables": {
+                },
+                "livestate": {
+                    "timestamp": now,
+                    "state": "unknown",
+                    "output": "",
+                    "long_output": "",
+                    "perf_data": ""
+                },
+                "services": []
+            }
 
         # Create self arbiter service - I am now considered as a service for my Alignak monitor!
         if 'livestate' in inner_stats:
@@ -2053,13 +2066,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             logger.debug("Monitor reporting result: %s", result)
         else:
             logger.debug("No configured Alignak monitor to receive: %s", res)
-
-        # Send our own events to the Alignak logger
-        for event in self.events:
-            event.prepare()
-            make_monitoring_log(event.data['level'], event.data['message'],
-                                timestamp=event.creation_time, to_logger=True)
-        self.events = []
 
         return res
 

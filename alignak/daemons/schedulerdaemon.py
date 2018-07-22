@@ -398,7 +398,6 @@ class Alignak(BaseSatellite):
                                                                   rs_conf)
                     my_satellites[new_link.uuid] = new_link
                     logger.info("I got a new %s satellite: %s", link_type[:-1], new_link)
-                    # print("My new %s satellite: %s" % (link_type, new_link))
 
                     new_link.running_id = running_id
                     new_link.external_commands = external_commands

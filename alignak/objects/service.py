@@ -244,6 +244,55 @@ class Service(SchedulingItem):
                   getattr(self, 'use', None))
     __repr__ = __str__
 
+    @property
+    def realm(self):
+        """Get the service realm... indeed it is the service's host one!"""
+        if not getattr(self, 'host', None):
+            return None
+        return self.host.realm
+
+    @property
+    def overall_state_id(self):
+        """Get the service overall state.
+
+        The service overall state identifier is the service status including:
+        - the monitored state
+        - the acknowledged state
+        - the downtime state
+
+        The overall state is (prioritized):
+        - a service is not monitored (5)
+        - a service critical or unreachable (4)
+        - a service warning or unknown (3)
+        - a service downtimed (2)
+        - a service acknowledged (1)
+        - a service ok (0)
+
+        *Note* that services in unknown state are considered as warning, and unreachable ones
+        are considered as critical!
+
+        Also note that the service state is considered only for HARD state type!
+
+        """
+        overall_state = 0
+        if not self.monitored:
+            overall_state = 5
+        elif self.acknowledged:
+            overall_state = 1
+        elif self.downtimed:
+            overall_state = 2
+        elif self.state_type == 'HARD':
+            if self.state == 'WARNING':
+                overall_state = 3
+            elif self.state == 'CRITICAL':
+                overall_state = 4
+            elif self.state == 'UNKNOWN':
+                overall_state = 3
+            elif self.state == 'UNREACHABLE':
+                overall_state = 4
+
+        return overall_state
+
 #######
 #                   __ _                       _   _
 #                  / _(_)                     | | (_)
@@ -1434,7 +1483,6 @@ class Services(SchedulingItems):
                 # Let the host know we are his service
                 if hst is not None:
                     serv.host = hst.uuid
-                    serv.realm = hst.realm
                     hst.add_service_link(serv.uuid)
                 else:  # Ok, the host do not exists!
                     err = "Warning: the service '%s' got an invalid host_name '%s'" % \

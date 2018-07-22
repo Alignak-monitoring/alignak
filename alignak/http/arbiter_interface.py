@@ -211,6 +211,11 @@ class ArbiterInterface(GenericInterface):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
+    def problems(self):
+        return self.monitoring_problems
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
     def monitoring_problems(self):
         """Get Alignak detailed monitoring status
 
@@ -369,7 +374,7 @@ class ArbiterInterface(GenericInterface):
     @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
-    def object(self, o_type, o_name='None'):
+    def object(self, o_type, o_name=None):
         """Get a monitored object from the arbiter.
 
         Indeed, the arbiter requires the object from its schedulers. It will iterate in
@@ -443,8 +448,102 @@ class ArbiterInterface(GenericInterface):
         return {'_status': u'ERR', '_message': u'Required %s not found.' % o_type}
 
     @cherrypy.expose
+    @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
-    def alignak_status(self, details=False):
+    def dump(self, o_name=None, details=False, raw=False):
+        """Dump an host (all hosts) from the arbiter.
+
+        The arbiter will get the host (all hosts) information from all its schedulers.
+
+        This gets the main host information from the scheduler. If details is set, then some
+        more information are provided. This will not get all the host known attributes but only
+        a reduced set that will inform about the host and its services status
+
+        If raw is set the information are provided in two string lists formated as CSV strings.
+        The first list element contains the hosts information and the second one contains the
+        services information.
+
+        If an host name is provided, this function will get only this host information, else
+        all the scheduler hosts are returned.
+
+        As an example (in raw format):
+        {
+            scheduler-master-3: [
+                [
+                    "type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output",
+                    "localhost;host;localhost;1532451740;0;UP;HARD;False;False;Host assumed to be UP",
+                    "host_2;host;host_2;1532451988;1;DOWN;HARD;True;False;I am always Down"
+                ],
+                [
+                    "type;host;name",
+                    "host_2;service;dummy_no_output;1532451981;0;OK;HARD;False;True;Service internal check result: 0",
+                    "host_2;service;dummy_warning;1532451960;4;UNREACHABLE;HARD;False;True;host_2-dummy_warning-1",
+                    "host_2;service;dummy_unreachable;1532451987;4;UNREACHABLE;HARD;False;True;host_2-dummy_unreachable-4",
+                    "host_2;service;dummy_random;1532451949;4;UNREACHABLE;HARD;False;True;Service internal check result: 2",
+                    "host_2;service;dummy_ok;1532452002;0;OK;HARD;False;True;host_2",
+                    "host_2;service;dummy_critical;1532451953;4;UNREACHABLE;HARD;False;True;host_2-dummy_critical-2",
+                    "host_2;service;dummy_unknown;1532451945;4;UNREACHABLE;HARD;False;True;host_2-dummy_unknown-3",
+                    "host_2;service;dummy_echo;1532451973;4;UNREACHABLE;HARD;False;True;"
+                ]
+            ],
+            scheduler-master-2: [
+            [
+                "type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output",
+                "host_0;host;host_0;1532451993;0;UP;HARD;False;False;I am always Up",
+                "BR_host;host;BR_host;1532451991;0;UP;HARD;False;False;Host assumed to be UP"
+            ],
+            [
+                "type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output",
+                "host_0;service;dummy_no_output;1532451970;0;OK;HARD;False;False;Service internal check result: 0",
+                "host_0;service;dummy_unknown;1532451964;3;UNKNOWN;HARD;True;False;host_0-dummy_unknown-3",
+                "host_0;service;dummy_random;1532451991;1;WARNING;HARD;True;False;Service internal check result: 1",
+                "host_0;service;dummy_warning;1532451945;1;WARNING;HARD;True;False;host_0-dummy_warning-1",
+                "host_0;service;dummy_unreachable;1532451986;4;UNREACHABLE;HARD;True;False;host_0-dummy_unreachable-4",
+                "host_0;service;dummy_ok;1532452012;0;OK;HARD;False;False;host_0",
+                "host_0;service;dummy_critical;1532451987;2;CRITICAL;HARD;True;False;host_0-dummy_critical-2",
+                "host_0;service;dummy_echo;1532451963;0;OK;HARD;False;False;",
+                "BR_host;service;dummy_critical;1532451970;2;CRITICAL;HARD;True;False;BR_host-dummy_critical-2",
+                "BR_host;service;BR_Simple_And;1532451895;1;WARNING;HARD;True;True;",
+                "BR_host;service;dummy_unreachable;1532451981;4;UNREACHABLE;HARD;True;False;BR_host-dummy_unreachable-4",
+                "BR_host;service;dummy_no_output;1532451975;0;OK;HARD;False;False;Service internal check result: 0",
+                "BR_host;service;dummy_unknown;1532451955;3;UNKNOWN;HARD;True;False;BR_host-dummy_unknown-3",
+                "BR_host;service;dummy_echo;1532451981;0;OK;HARD;False;False;",
+                "BR_host;service;dummy_warning;1532451972;1;WARNING;HARD;True;False;BR_host-dummy_warning-1",
+                "BR_host;service;dummy_random;1532451976;4;UNREACHABLE;HARD;True;False;Service internal check result: 4",
+                "BR_host;service;dummy_ok;1532451972;0;OK;HARD;False;False;BR_host"
+            ]
+        ],
+        ...
+
+        More information are available in the scheduler correponding API endpoint.
+
+        :param o_type: searched object type
+        :type o_type: str
+        :param o_name: searched object name (or uuid)
+        :type o_name: str
+        :return: serialized object information
+        :rtype: str
+        """
+        if details is not False:
+            details = bool(details)
+        if raw is not False:
+            raw = bool(raw)
+
+        res = {}
+        for scheduler_link in self.app.conf.schedulers:
+            sched_res = scheduler_link.con.get('dump', {'o_name': o_name,
+                                                        'details': '1' if details else '',
+                                                        'raw': '1' if raw else ''},
+                                               wait=True)
+            if isinstance(sched_res, dict) and \
+                    '_status' in sched_res and sched_res['_status'] == 'ERR':
+                continue
+            res[scheduler_link.name] = sched_res
+        return res
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def status(self, details=False):
         """Get the overall alignak status
 
         Returns a list of the satellites as in:
@@ -508,6 +607,73 @@ class ArbiterInterface(GenericInterface):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
+    def events_log(self, details=False):
+        """Get the most recent Alignak events
+
+        The arbiter maintains a list of the most recent Alignak events. This endpoint
+        provides this list.
+        
+        The default format is:
+        [
+            "2018-07-23 15:14:43 - E - SERVICE NOTIFICATION: guest;host_0;dummy_random;CRITICAL;1;notify-service-by-log;Service internal check result: 2",
+            "2018-07-23 15:14:43 - E - SERVICE NOTIFICATION: admin;host_0;dummy_random;CRITICAL;1;notify-service-by-log;Service internal check result: 2",
+            "2018-07-23 15:14:42 - E - SERVICE ALERT: host_0;dummy_critical;CRITICAL;SOFT;1;host_0-dummy_critical-2",
+            "2018-07-23 15:14:42 - E - SERVICE ALERT: host_0;dummy_random;CRITICAL;HARD;2;Service internal check result: 2",
+            "2018-07-23 15:14:42 - I - SERVICE ALERT: host_0;dummy_unknown;UNKNOWN;HARD;2;host_0-dummy_unknown-3"
+        ]
+        
+        If you request on this endpoint with the *details* parameter (whatever its value...), you will get a detailed JSON output:
+        [
+            {
+                timestamp: "2018-07-23 15:16:35",
+                message: "SERVICE ALERT: host_11;dummy_echo;UNREACHABLE;HARD;2;",
+                level: "info"
+            },
+            {
+                timestamp: "2018-07-23 15:16:32",
+                message: "SERVICE NOTIFICATION: guest;host_0;dummy_random;OK;0;notify-service-by-log;Service internal check result: 0",
+                level: "info"
+            },
+            {
+                timestamp: "2018-07-23 15:16:32",
+                message: "SERVICE NOTIFICATION: admin;host_0;dummy_random;OK;0;notify-service-by-log;Service internal check result: 0",
+                level: "info"
+            },
+            {
+                timestamp: "2018-07-23 15:16:32",
+                message: "SERVICE ALERT: host_0;dummy_random;OK;HARD;2;Service internal check result: 0",
+                level: "info"
+            },
+            {
+                timestamp: "2018-07-23 15:16:19",
+                message: "SERVICE ALERT: host_11;dummy_random;OK;HARD;2;Service internal check result: 0",
+                level: "info"
+            }
+        ]
+
+        In this example, only the 5 most recent events are provided whereas the default value is
+        to provide the 100 last events. This default counter may be changed thanks to the
+        ``events_log_count`` configuration variable or
+        ``ALIGNAK_EVENTS_LOG_COUNT`` environment variable.
+
+        The date format may also be changed thanks to the ``events_date_format`` configuration
+        variable.
+
+        :return: list of the most recent events
+        :rtype: list
+        """
+        res = []
+        for log in reversed(self.app.recent_events):
+            if details:
+                # Exposes the full object
+                res.append(log)
+            else:
+                res.append("%s - %s - %s" 
+                           % (log['timestamp'], log['level'][0].upper(), log['message']))
+        return res
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
     def satellites_list(self, daemon_type=''):
         """Get the arbiter satellite names sorted by type
 
@@ -565,6 +731,145 @@ class ArbiterInterface(GenericInterface):
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def realms(self, details=False):
+        """Return the realms / satellites configuration
+
+        Returns an object containing the hierarchical realms configuration with the main
+        information about each realm:
+        {
+            All: {
+                satellites: {
+                    pollers: [
+                        "poller-master"
+                    ],
+                    reactionners: [
+                        "reactionner-master"
+                    ],
+                    schedulers: [
+                        "scheduler-master", "scheduler-master-3", "scheduler-master-2"
+                    ],
+                    brokers: [
+                    "broker-master"
+                    ],
+                    receivers: [
+                    "receiver-master", "receiver-nsca"
+                    ]
+                },
+                children: { },
+                name: "All",
+                members: [
+                    "host_1", "host_0", "host_3", "host_2", "host_11", "localhost"
+                ],
+                level: 0
+            },
+            North: {
+                ...
+            }
+        }
+
+        Sub realms defined inside a realm are provided in the `children` property of their
+        parent realm and they contain the same information as their parent..
+        The `members` realm contain the list of the hosts members of the realm.
+
+        If ``details`` is required, each realm will contain more information about each satellite
+        involved in the realm management:
+        {
+            All: {
+                satellites: {
+                    pollers: [
+                        {
+                            passive: false,
+                            name: "poller-master",
+                            livestate_output: "poller/poller-master is up and running.",
+                            reachable: true,
+                            uri: "http://127.0.0.1:7771/",
+                            alive: true,
+                            realm_name: "All",
+                            manage_sub_realms: true,
+                            spare: false,
+                            polling_interval: 5,
+                            configuration_sent: true,
+                            active: true,
+                            livestate: 0,
+                            max_check_attempts: 3,
+                            last_check: 1532242300.593074,
+                            type: "poller"
+                        }
+                    ],
+                    reactionners: [
+                        {
+                            passive: false,
+                            name: "reactionner-master",
+                            livestate_output: "reactionner/reactionner-master is up and running.",
+                            reachable: true,
+                            uri: "http://127.0.0.1:7769/",
+                            alive: true,
+                            realm_name: "All",
+                            manage_sub_realms: true,
+                            spare: false,
+                            polling_interval: 5,
+                            configuration_sent: true,
+                            active: true,
+                            livestate: 0,
+                            max_check_attempts: 3,
+                            last_check: 1532242300.587762,
+                            type: "reactionner"
+                        }
+                    ]
+
+        :return: dict containing realms / satellites
+        :rtype: dict
+        """
+        def get_realm_info(realm, realms, satellites, details=False):
+            """Get the realm and its children information
+
+            :return: None
+            """
+            res = {
+                "name": realm.get_name(),
+                "level": realm.level,
+                "hosts": realm.members,
+                "groups": realm.group_members,
+                "children": {},
+                "satellites": {
+                }
+            }
+            for child in realm.realm_members:
+                child = realms.find_by_name(child)
+                if not child:
+                    continue
+                realm_infos = get_realm_info(child, realms, satellites, details=details)
+                res['children'][child.get_name()] = realm_infos
+
+            for sat_type in ['scheduler', 'reactionner', 'broker', 'receiver', 'poller']:
+                res["satellites"][sat_type + 's'] = []
+
+                sats = realm.get_potential_satellites_by_type(satellites, sat_type)
+                for sat in sats:
+                    if details:
+                        res["satellites"][sat_type + 's'][sat.name] = sat.give_satellite_json()
+                    else:
+                        res["satellites"][sat_type + 's'].append(sat.name)
+
+            return res
+
+        if details is not False:
+            details = bool(details)
+
+        # Report our daemons states, but only if a dispatcher and the configuration is loaded
+        if not getattr(self.app, 'dispatcher', None) or not getattr(self.app, 'conf', None):
+            return {'_status': u'ERR', '_message': "Not yet available. Please come back later."}
+
+        res = {}
+        higher_realms = [realm for realm in self.app.conf.realms if realm.level == 0]
+        for realm in higher_realms:
+            res[realm.get_name()] = get_realm_info(realm, self.app.conf.realms,
+                                                   self.app.dispatcher.all_daemons_links)
+
+        return res
+
+    @cherrypy.expose
+    @cherrypy.tools.json_out()
+    def system(self, details=False):
         """Return the realms / satellites configuration
 
         Returns an object containing the hierarchical realms configuration with the main

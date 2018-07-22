@@ -80,11 +80,11 @@ class Itemgroup(Item):
 
     def __repr__(self):  # pragma: no cover
         if getattr(self, 'members', None) is None or not getattr(self, 'members'):
-            return '<%r %r, no members/>' % (self.__class__.__name__, self.get_name())
+            return "<%s %s, no members/>" % (self.__class__.__name__, self.get_name())
         # Build a sorted list of elements name or uuid, this to make it easier to compare ;)
         dump_list = sorted([str(item.get_name()
                                 if isinstance(item, Item) else item) for item in self])
-        return '<%r %r, %d members: %r/>' \
+        return "<%s %s, %d members: %s/>" \
                % (self.__class__.__name__, self.get_name(), len(self.members), dump_list)
     __str__ = __repr__
 

@@ -870,12 +870,12 @@ class TestConfig(AlignakTest):
         # Configuration errors
         self.assert_any_cfg_log_match(re.escape(
             "The host 'test_host_realm3' is affected to an unknown realm: 'Realm3'"))
-        self.assert_any_cfg_log_match(re.escape(
-            "the host test_host_realm3 got an invalid realm (Realm3)!"))
-        self.assert_any_cfg_log_match(re.escape(
-            "in host::test_host_realm3 is incorrect; from: "))
-        self.assert_any_cfg_log_match(re.escape(
-            "hosts configuration is incorrect!"))
+        # self.assert_any_cfg_log_match(re.escape(
+        #     "the host test_host_realm3 got an invalid realm (Realm3)!"))
+        # self.assert_any_cfg_log_match(re.escape(
+        #     "in host::test_host_realm3 is incorrect; from: "))
+        # self.assert_any_cfg_log_match(re.escape(
+        #     "hosts configuration is incorrect!"))
         self.assert_any_cfg_log_match(re.escape(
             "[realm::Realm4] as realm, got unknown member 'UNKNOWN_REALM'"))
         self.assert_any_cfg_log_match(re.escape(
@@ -883,15 +883,17 @@ class TestConfig(AlignakTest):
         self.assert_any_cfg_log_match(re.escape(
             "realms configuration is incorrect!"))
         self.assert_any_cfg_log_match(re.escape(
-            "Error: the realm configuration of yours hosts is not good because there is more than one realm in one pack (host relations):"))
+            "Error: the realm configuration of your hosts is not correct because "
+            "there is more than one realm in one pack (host relations):"))
         self.assert_any_cfg_log_match(re.escape(
             " -> the host test_host_realm1 is in the realm Realm1"))
         self.assert_any_cfg_log_match(re.escape(
-            " -> the host test_host_realm3 do not have a realm"))
+            " -> the host test_host_realm3 is in the realm Realm3"))
         self.assert_any_cfg_log_match(re.escape(
             " -> the host test_host_realm2 is in the realm Realm2"))
         self.assert_any_cfg_log_match(re.escape(
-            "There are 6 hosts defined, and 3 hosts dispatched in the realms. Some hosts have been ignored"))
+            "There are 6 hosts defined, and 3 hosts dispatched in the realms. "
+            "Some hosts have been ignored"))
 
     def test_business_rules_incorrect(self):
         """ Business rules use services which don't exist.
@@ -1001,18 +1003,58 @@ class TestConfig(AlignakTest):
         assert not self.conf_is_correct
         self.show_configuration_logs()
 
-        self.assert_any_cfg_log_match(
-            "Error: Business_rule \'test_host_realm1/Test bad services BP rules\' "
-            "got hosts from another realm: Realm2"
-        )
-        self.assert_any_cfg_log_match(
-            r"Business_rule \'test_host_realm1/Test bad services BP rules complex\' "
-            "got hosts from another realm: Realm2"
-        )
-        self.assert_any_cfg_log_match(
-            r"Business_rule \'test_host_realm1/Test bad host BP rules\' "
-            "got hosts from another realm: Realm2"
-        )
+        assert len(self.configuration_warnings) == 6
+        self.assert_any_cfg_log_match(re.escape(
+            "Some hosts exist in the realm 'Realm2' but no poller is defined for this realm."
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Some hosts exist in the realm 'Realm2' but no broker is defined for this realm."
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Some hosts exist in the realm 'Realm2' but no reactionner is defined for this realm."
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Some hosts exist in the realm 'Realm2' but no receiver is defined for this realm."
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Some hosts exist in the realm 'Realm2' but no scheduler is defined for this realm."
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Some hosts exist in the realm 'Realm1' but no receiver is defined for this realm."
+        ))
+
+        assert len(self.configuration_errors) == 9
+        self.assert_any_cfg_log_match(re.escape(
+            "hostgroup up got the default realm but it has some hosts that are from different "
+            "realms: "
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Configuration in hostgroup::up is incorrect; from:"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "hostgroup hostgroup_01 got the default realm but it has some hosts that are from "
+            "different realms: "
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Configuration in hostgroup::hostgroup_01 is incorrect; from:"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "hostgroups configuration is incorrect!"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "Error: the realm configuration of your hosts is not correct because "
+            "there is more than one realm in one pack (host relations):"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            " -> the host test_host_realm1 is in the realm Realm1"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            " -> the host test_host_realm2 is in the realm Realm2"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "There are 4 hosts defined, and 2 hosts dispatched in the realms. "
+            "Some hosts have been ignored"
+        ))
 
     def test_bad_satellite_realm_conf(self):
         """ Configuration is not correct because a daemon configuration has an unknown realm

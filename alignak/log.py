@@ -248,8 +248,11 @@ def make_monitoring_log(level, message, timestamp=None, to_logger=False):
     TODO: replace with dedicated brok for each event to log - really useful?
 
     :param level: log level as defined in logging
+    :type level: str
     :param message: message to send to the monitoring log logger
+    :type message: str
     :param to_logger: when set, send to the logger, else raise a brok
+    :type to_logger: bool
     :param timestamp: if set, force the log event timestamp
     :return: a monitoring_log Brok
     :rtype: alignak.brok.Brok
@@ -277,6 +280,9 @@ def make_monitoring_log(level, message, timestamp=None, to_logger=False):
         if timestamp:
             st = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H:%M:%S')
             logging_function(message, extra={'my_date': st})
+        else:
+            logging_function(message)
+
         return True
 
     # ... and returns a brok

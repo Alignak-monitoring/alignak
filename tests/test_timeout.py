@@ -144,7 +144,8 @@ class TestWorkerTimeout(AlignakTest):
 
         # Now look what the scheduler says about this
         self._scheduler.actions[n.uuid] = n
-        self._scheduler.put_results(o)
+        # Fake the scheduler inner results queue ... only for the test!
+        self._scheduler.manage_results(o)
         self.show_logs()
         self.assert_any_log_match("Contact alignak service notification command "
                                   "'libexec/sleep_command.sh 7 ' timed out after")

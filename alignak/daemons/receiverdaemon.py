@@ -193,7 +193,7 @@ class Receiver(Satellite):
         """Get external commands from our arbiters
 
         As of now, only the arbiter are requested to provide their external commands that
-        the receiver will push to all the known schedulers.
+        the receiver will push to all the known schedulers to make them being executed.
 
         :return: None
         """
@@ -206,7 +206,7 @@ class Receiver(Satellite):
                 continue
 
             try:
-                logger.info("Getting external commands from: %s", link.name)
+                logger.debug("Getting external commands from: %s", link.name)
                 external_commands = link.get_external_commands()
                 if external_commands:
                     logger.debug("Got %d commands from: %s", len(external_commands), link.name)

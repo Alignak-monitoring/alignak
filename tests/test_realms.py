@@ -321,54 +321,35 @@ class TestRealms(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/realms/several_realms.cfg', 'cfg/realms/several_realms.ini')
-        self.show_configuration_logs()
-        assert self.conf_is_correct
+        with pytest.raises(SystemExit):
+            self.setup_with_file('cfg/realms/several_realms.cfg', 'cfg/realms/several_realms.ini')
+        self.show_logs()
+        assert not self.conf_is_correct
 
-        for scheduler in self._schedulers:
-            print(("Scheduler: %s" % scheduler))
-            if scheduler == 'Scheduler-1':
-                sched_realm1 = self._schedulers[scheduler]
-            elif scheduler == 'Scheduler-2':
-                sched_realm2 = self._schedulers[scheduler]
+        self.assert_any_cfg_log_match(re.escape(
+            "Configuration in hostgroup::in_realm2 is incorrect; "
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "host test_host3_hg_realm2 (realm: realm1) is not in the same realm than its hostgroup in_realm2 (realm: realm2)"
+        ))
+
+        # self.assert_any_cfg_log_match(re.escape(
+        #     "hostgroup in_realm2 got the default realm but it has some hosts that are from different realms"
+        # ))
+
+        # Some error messages
+        assert len(self.configuration_errors) == 3
+
         realm1 = self._arbiter.conf.realms.find_by_name('realm1')
         assert realm1 is not None
         realm2 = self._arbiter.conf.realms.find_by_name('realm2')
         assert realm2 is not None
 
-        print((sched_realm1.pushed_conf.hosts))
-        print((sched_realm2.pushed_conf.hosts))
-        # find_by_name is not usable in a scheduler !
-        # test_host_realm1 = sched_realm1.pushed_conf.hosts.find_by_name("test_host_realm1")
-        # Host test_host_realm1 is in the realm 1 and not in the realm 2
-        for host in sched_realm1.pushed_conf.hosts:
-            if host.get_name() == 'test_host_realm1':
-                assert realm1.uuid == host.realm
-                break
-        else:
-            assert False
+        host = self._arbiter.conf.hosts.find_by_name('test_host_realm1')
+        assert realm1.uuid == host.realm
 
-        for host in sched_realm2.pushed_conf.hosts:
-            if host.get_name() == 'test_host_realm1':
-                assert False
-                break
-        else:
-            assert True
-
-        # Host test_host_realm2 is in the realm 1 and not in the realm 2
-        for host in sched_realm2.pushed_conf.hosts:
-            if host.get_name() == 'test_host_realm2':
-                assert realm2.uuid == host.realm
-                break
-        else:
-            assert False
-
-        for host in sched_realm1.pushed_conf.hosts:
-            if host.get_name() == 'test_host_realm2':
-                assert False
-                break
-        else:
-            assert True
+        host = self._arbiter.conf.hosts.find_by_name('test_host_realm2')
+        assert realm2.uuid == host.realm
 
     def test_undefined_used_realm(self):
         """ Test undefined realm used in daemons
@@ -393,17 +374,24 @@ class TestRealms(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/realms/several_realms.cfg', 'cfg/realms/several_realms.ini')
-        assert self.conf_is_correct
+        with pytest.raises(SystemExit):
+            self.setup_with_file('cfg/realms/several_realms.cfg', 'cfg/realms/several_realms.ini')
+        self.show_logs()
+        assert not self.conf_is_correct
 
-        # No error messages
-        assert len(self.configuration_errors) == 0
-        # No warning messages
-        # self.assertEqual(len(self.configuration_warnings), 1)
+        self.assert_any_cfg_log_match(re.escape(
+            "Configuration in hostgroup::in_realm2 is incorrect; "
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "host test_host3_hg_realm2 (realm: realm1) is not in the same realm than its hostgroup in_realm2 (realm: realm2)"
+        ))
 
-        # self.assert_any_cfg_log_match(
-        #     "host test_host3_hg_realm2 is not in the same realm than its hostgroup in_realm2"
-        # )
+        # self.assert_any_cfg_log_match(re.escape(
+        #     "hostgroup in_realm2 got the default realm but it has some hosts that are from different realms: None and realm1. The realm cannot be adjusted!"
+        # ))
+
+        # Some error messages
+        assert len(self.configuration_errors) == 3
 
         # Check all daemons exist
         assert len(self._arbiter.conf.arbiters) == 1
@@ -429,37 +417,37 @@ class TestRealms(AlignakTest):
             assert daemon.get_name() in ['receiver-master']
             assert daemon.realm in self._arbiter.conf.realms
 
-        in_realm2 = self._schedulers['Scheduler-1'].hostgroups.find_by_name('in_realm2')
+        # Hostgroup in_realm2
+        in_realm2 = self._arbiter.conf.hostgroups.find_by_name('in_realm2')
+
+        # Realms
         realm1 = self._arbiter.conf.realms.find_by_name('realm1')
         assert realm1 is not None
         realm2 = self._arbiter.conf.realms.find_by_name('realm2')
         assert realm2 is not None
 
-        sched_realm1 = self._schedulers['Scheduler-1']
-        sched_realm2 = self._schedulers['Scheduler-2']
+        host = self._arbiter.conf.hosts.find_by_name('test_host_realm1')
+        assert realm1.uuid == host.realm
 
-        # 1 and 2 are link to realm2 because they are in the hostgroup in_realm2
-        test_host1_hg_realm2 = sched_realm2.pushed_conf.hosts.find_by_name("test_host1_hg_realm2")
+        host = self._arbiter.conf.hosts.find_by_name('test_host_realm2')
+        assert realm2.uuid == host.realm
+
+        # test_host1 and test_host2 are linked to realm2 because they are in the hostgroup in_realm2
+        test_host1_hg_realm2 = self._arbiter.conf.hosts.find_by_name("test_host1_hg_realm2")
         assert test_host1_hg_realm2 is not None
         assert realm2.uuid == test_host1_hg_realm2.realm
-        assert in_realm2.get_name() in [sched_realm2.pushed_conf.hostgroups[hg].get_name() for hg in test_host1_hg_realm2.hostgroups]
+        assert in_realm2.get_name() in [self._arbiter.conf.hostgroups[hg].get_name() for hg in test_host1_hg_realm2.hostgroups]
 
-        test_host2_hg_realm2 = sched_realm2.pushed_conf.hosts.find_by_name("test_host2_hg_realm2")
+        test_host2_hg_realm2 = self._arbiter.conf.hosts.find_by_name("test_host2_hg_realm2")
         assert test_host2_hg_realm2 is not None
         assert realm2.uuid == test_host2_hg_realm2.realm
-        assert in_realm2.get_name() in [sched_realm2.pushed_conf.hostgroups[hg].get_name() for hg in test_host2_hg_realm2.hostgroups]
+        assert in_realm2.get_name() in [self._arbiter.conf.hostgroups[hg].get_name() for hg in test_host2_hg_realm2.hostgroups]
 
-        test_host3_hg_realm2 = sched_realm2.pushed_conf.hosts.find_by_name("test_host3_hg_realm2")
-        assert test_host3_hg_realm2 is None
-        test_host3_hg_realm2 = sched_realm1.pushed_conf.hosts.find_by_name("test_host3_hg_realm2")
+        # test_host3 is linked to realm1 but its hostgroup in realm2!
+        test_host3_hg_realm2 = self._arbiter.conf.hosts.find_by_name("test_host3_hg_realm2")
         assert test_host3_hg_realm2 is not None
         assert realm1.uuid == test_host3_hg_realm2.realm
-        assert in_realm2.get_name() in [sched_realm2.pushed_conf.hostgroups[hg].get_name() for hg in test_host3_hg_realm2.hostgroups]
-
-        hostgroup_realm2 = sched_realm1.pushed_conf.hostgroups.find_by_name("in_realm2")
-        assert hostgroup_realm2 is not None
-        hostgroup_realm2 = sched_realm2.pushed_conf.hostgroups.find_by_name("in_realm2")
-        assert hostgroup_realm2 is not None
+        assert in_realm2.get_name() in [self._arbiter.conf.hostgroups[hg].get_name() for hg in test_host3_hg_realm2.hostgroups]
 
     def test_sub_realms(self):
         """ Test realm / sub-realm

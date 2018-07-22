@@ -91,7 +91,7 @@ class TestMultibroker(AlignakTest):
             print(("- %s" % (brok)))
         assert 6 == len(to_send)
 
-        broks_list = sched_interface.get_broks('broker-master')
+        broks_list = sched_interface._broks('broker-master')
         broks_list = unserialize(broks_list, True)
         assert 6 == len(broks_list)
         assert broker_broks_count['broker-master'] == len(broks_list)
@@ -111,7 +111,7 @@ class TestMultibroker(AlignakTest):
             print(("- %s" % (brok)))
         assert 6 == len(to_send)
 
-        broks_list = sched_interface.get_broks('broker-master2')
+        broks_list = sched_interface._broks('broker-master2')
         broks_list = unserialize(broks_list, True)
         assert 6 == len(broks_list)
         assert broker_broks_count['broker-master2'] == len(broks_list)
@@ -123,19 +123,19 @@ class TestMultibroker(AlignakTest):
         assert 0 == len(to_send), "Still some broks to be sent!"
 
         # Test unknown broker that gets its broks from the scheduler
-        broks_list = sched_interface.get_broks('broker-unknown')
+        broks_list = sched_interface._broks('broker-unknown')
         broks_list = unserialize(broks_list, True)
         assert 0 == len(broks_list)
 
         # Re-get broks
         # Test broker-master that gets its broks from the scheduler
-        broks_list = sched_interface.get_broks('broker-master')
+        broks_list = sched_interface._broks('broker-master')
         broks_list = unserialize(broks_list, True)
         # No broks !
         assert 0 == len(broks_list)
 
         # Test broker-master 2 that gets its broks from the scheduler
-        broks_list = sched_interface.get_broks('broker-master2')
+        broks_list = sched_interface._broks('broker-master2')
         broks_list = unserialize(broks_list, True)
         # No broks !
         assert 0 == len(broks_list)

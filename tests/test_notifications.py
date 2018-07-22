@@ -417,7 +417,8 @@ class TestNotifications(AlignakTest):
             action.exit_status = 0
             action.status = 'launched'
             # and return to the scheduler
-            self._scheduler.put_results(action)
+            self._scheduler.waiting_results.put(action)
+
             # re-loop scheduler to manage this
             self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
             # One less notification ... because sent !

@@ -71,10 +71,13 @@ class TestDaemonsApi(AlignakTest):
 
         print("Test terminated!")
 
-    def _prepare_my_configuration(self, daemons_list=None, remove_daemons=None, cfg_dir=None):
+    def _prepare_my_configuration(self, daemons_list=None, remove_daemons=None,
+                                  cfg_dir=None, realms=None):
         self.cfg_folder = '/tmp/alignak'
         if os.path.exists(self.cfg_folder):
             shutil.rmtree(self.cfg_folder)
+        if realms is None:
+            realms = ['All']
         if cfg_dir is None:
             cfg_dir = 'default_many_hosts'
         hosts_count = 10
@@ -96,7 +99,7 @@ class TestDaemonsApi(AlignakTest):
 
         self._prepare_hosts_configuration(cfg_folder='%s/etc/arbiter/objects/hosts' % self.cfg_folder,
                                           hosts_count=hosts_count, target_file_name='hosts.cfg',
-                                          realms=['All', 'Europe', 'Asia', 'France', 'Japan'])
+                                          realms=realms)
 
         # Some script commands must be copied in the test folder
         if os.path.exists('./libexec/check_command.sh'):
@@ -299,9 +302,9 @@ class TestDaemonsApi(AlignakTest):
         # -----
 
         # -----
-        print("Testing alignak_status")
+        print("Testing alignak status")
         # Arbiter only
-        raw_data = req.get("%s://localhost:%s/alignak_status" %
+        raw_data = req.get("%s://localhost:%s/status" %
                            (scheme, satellite_map['arbiter']), verify=False)
         assert raw_data.status_code == 200
         data = raw_data.json()
@@ -1084,7 +1087,7 @@ class TestDaemonsApi(AlignakTest):
             # ---
             # Get all the services from the host
             for s in group_host.child_dependencies:
-                print("Get service: %s/%s" % (group_host.get_name(), s))
+                print("Get host: %s/%s" % (group_host.get_name(), s))
                 raw_data = req.get("%s/object/service/%s" % (endpoint, s))
                 print("Got: %s / %s" % (raw_data.status_code, raw_data.content))
                 assert raw_data.status_code == 200
@@ -1092,6 +1095,151 @@ class TestDaemonsApi(AlignakTest):
                 host_service = unserialize(member, True)
                 assert host_service.__class__ == Service
                 print("  . service: %s" % host_service.get_full_name())
+
+        # ---
+        # Get some host dump (raw mode will return a list of CSV text strings with a header line)
+        raw_data = req.get("%s/dump?raw=1" % endpoint)
+        print("Got: %s / %s" % (raw_data.status_code, raw_data.content))
+        assert raw_data.status_code == 200
+        res = raw_data.json()
+        print("Got raw hosts dump %s: %s / %s" % (endpoint, type(res), res))
+        if endpoint == 'http://localhost:7770':
+            # Arbiter groups data in a schedulers dict ...
+            for sched in res:
+                print("Scheduler: %s" % sched)
+                sched = res[sched]
+                # First list item is for hosts
+                hosts_list = sched[0]
+                print(hosts_list[0])
+                # hosts_list = hosts_list.split()
+                assert hosts_list[0] == 'type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output'
+                # Second list item is for services
+                services_list = sched[1]
+                print(services_list[0])
+                # services_list = services_list.split()
+                assert services_list[0] == 'type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output'
+        else:
+            assert len(res) == 2
+            # First list item is for hosts
+            hosts_list = res[0]
+            print(hosts_list)
+            # hosts_list = hosts_list.split()
+            assert hosts_list[0] == 'type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output'
+            # Second list item is for services
+            services_list = res[1]
+            # services_list = services_list.split()
+            assert services_list[0] == 'type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output'
+
+
+        # With more details
+        raw_data = req.get("%s/dump?raw=1&details=1" % endpoint)
+        print("Got: %s / %s" % (raw_data.status_code, raw_data.content))
+        assert raw_data.status_code == 200
+        res = raw_data.json()
+        print("Got raw detailed hosts dump (%s): %s / %s" % (endpoint, type(res), res))
+        if endpoint == 'http://localhost:7770':
+            # Arbiter groups data in a schedulers dict ...
+            for sched in res:
+                print("Scheduler: %s" % sched)
+                sched = res[sched]
+                # First list item is for hosts
+                hosts_list = sched[0]
+                assert hosts_list[0].startswith('type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output;uuid;alias;business_impact;')
+                # Second list item is for services
+                services_list = sched[1]
+                assert services_list[0].startswith('type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output;uuid;alias;business_impact;')
+        else:
+            assert len(res) == 2
+            # First list item is for hosts
+            hosts_list = res[0]
+            assert hosts_list[0].startswith('type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output;uuid;alias;business_impact;')
+            # Second list item is for services
+            services_list = res[1]
+            assert services_list[0].startswith('type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output;uuid;alias;business_impact;')
+
+        # Get some host dump, json mode
+        raw_data = req.get("%s/dump" % endpoint)
+        print("Got: %s / %s" % (raw_data.status_code, raw_data.content))
+        assert raw_data.status_code == 200
+        res = raw_data.json()
+        print("Got hosts dump: %s / %s" % (type(res), res))
+        if endpoint == 'http://localhost:7770':
+            # Arbiter groups data in a schedulers dict ...
+            for sched in res:
+                print("Scheduler: %s" % sched)
+                hosts_list = res[sched]
+                assert len(hosts_list) > 1
+                for host in hosts_list:
+                    assert 'name' in host
+                    assert 'last_check' in host
+                    assert 'state_id' in host
+                    assert 'state_type' in host
+                    assert 'state' in host
+                    assert 'output' in host
+                    assert 'is_problem' in host
+                    assert 'is_impact' in host
+                    assert 'services' in host
+        else:
+            hosts_list = res
+            assert len(hosts_list) > 1
+            for host in hosts_list:
+                assert 'name' in host
+                assert 'last_check' in host
+                assert 'state_id' in host
+                assert 'state_type' in host
+                assert 'state' in host
+                assert 'output' in host
+                assert 'is_problem' in host
+                assert 'is_impact' in host
+                assert 'services' in host
+
+        # With more details
+        raw_data = req.get("%s/dump?details=1" % endpoint)
+        print("Got: %s / %s" % (raw_data.status_code, raw_data.content))
+        assert raw_data.status_code == 200
+        res = raw_data.json()
+        print("Got hosts dump: %s / %s" % (type(res), res))
+        if endpoint == 'http://localhost:7770':
+            # Arbiter groups data in a schedulers dict ...
+            for sched in res:
+                print("Scheduler: %s" % sched)
+                hosts_list = res[sched]
+                assert len(hosts_list) > 1
+                for host in hosts_list:
+                    assert 'name' in host
+                    assert 'last_check' in host
+                    assert 'state_id' in host
+                    assert 'state_type' in host
+                    assert 'state' in host
+                    assert 'output' in host
+                    assert 'is_problem' in host
+                    assert 'is_impact' in host
+                    assert 'services' in host
+                    # More information than without details:)
+                    assert 'acknowledged' in host
+                    assert 'downtimed' in host
+                    assert 'next_check' in host
+                    assert 'long_output' in host
+                    assert 'perf_data' in host
+        else:
+            hosts_list = res
+            assert len(hosts_list) > 1
+            for host in hosts_list:
+                assert 'name' in host
+                assert 'last_check' in host
+                assert 'state_id' in host
+                assert 'state_type' in host
+                assert 'state' in host
+                assert 'output' in host
+                assert 'is_problem' in host
+                assert 'is_impact' in host
+                assert 'services' in host
+                # More information than without details:)
+                assert 'acknowledged' in host
+                assert 'downtimed' in host
+                assert 'next_check' in host
+                assert 'long_output' in host
+                assert 'perf_data' in host
 
         self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7770')
 
@@ -1488,7 +1636,15 @@ class TestDaemonsApi(AlignakTest):
         time.sleep(1)
 
         # -----
-        # 4/ get Alignak overall problems
+        # 4/ get Alignak log
+        print("--- get events log")
+        raw_data = req.get("http://localhost:7770/events_log")
+        print("Alignak events log: %s" % (raw_data.text))
+        assert raw_data.status_code == 200
+        data = raw_data.json()
+
+        # -----
+        # 5/ get Alignak overall problems
         print("--- get monitoring problems")
         raw_data = req.get("http://localhost:7770/monitoring_problems")
         print("Alignak problems: %s" % (raw_data.text))
@@ -1510,7 +1666,7 @@ class TestDaemonsApi(AlignakTest):
             problem = data['problems']['scheduler-master']['problems'][problem]
             print("A problem: %s" % (problem))
 
-        # 4/ get Alignak scheduler problems
+        # 5bis/ get Alignak scheduler problems
         print("--- get monitoring problems")
         raw_data = req.get("http://localhost:7768/monitoring_problems")
         print("Alignak problems: %s" % (raw_data.text))
@@ -1558,7 +1714,7 @@ class TestDaemonsApi(AlignakTest):
         # -----
 
         # -----
-        # 5/ get Alignak overall live synthesis
+        # 6/ get Alignak overall live synthesis
         print("--- get livesynthesis")
         raw_data = req.get("http://localhost:7770/livesynthesis")
         print("Alignak livesynthesis: %s" % (raw_data.text))
@@ -1609,6 +1765,16 @@ class TestDaemonsApi(AlignakTest):
                 out.write('\n'.join(doc))
         # -----
 
+        # -----
+        # 7/ get Alignak log
+        print("--- get events log")
+        raw_data = req.get("http://localhost:7770/events_log")
+        print("Alignak events log: %s" % (raw_data.text))
+        assert raw_data.status_code == 200
+        data = raw_data.json()
+        for log in data:
+            print(log)
+
         # This function will request the arbiter daemon to stop
         self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7770')
 
@@ -1624,7 +1790,8 @@ class TestDaemonsApi(AlignakTest):
 
         daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
                         'receiver-master', 'scheduler-master']
-        self._prepare_my_configuration(daemons_list=daemons_list, cfg_dir='default_multi_realms')
+        self._prepare_my_configuration(daemons_list=daemons_list, cfg_dir='default_multi_realms',
+                                       realms=['All', 'Europe', 'Asia', 'France', 'Japan'])
 
         self._run_alignak_daemons(cfg_folder=self.cfg_folder, arbiter_only=True,
                                   daemons_list=daemons_list, runtime=5, update_configuration=False)
@@ -1646,7 +1813,7 @@ class TestDaemonsApi(AlignakTest):
         # -----
 
         # -----
-        # 1/ get Alignak realms
+        # 2/ get Alignak realms
         print("--- get realms")
         raw_data = req.get("http://localhost:7770/realms")
         print("Alignak realms: %s" % (raw_data.text))
@@ -1656,7 +1823,7 @@ class TestDaemonsApi(AlignakTest):
         assert data['All']['name'] == 'All'
         assert data['All']['level'] == 0
         assert len(data['All']["hosts"]) == 11
-        assert len(data['All']["groups"]) == 4
+        assert len(data['All']["groups"]) == 9
         assert 'satellites' in data['All']
         assert 'children' in data['All']
 

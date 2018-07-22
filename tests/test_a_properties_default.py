@@ -270,6 +270,9 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('daemons_failure_kill', True),
 
         ('alignak_env', []),
+
+        ('events_date_format', '%Y-%m-%d %H:%M:%S'),
+        ('events_log_count', 100),
         ])
 
     def setUp(self):
@@ -313,7 +316,7 @@ class TestContactgroup(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('alias', ''),
-        ('members', None),
+        ('members', []),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
@@ -496,7 +499,7 @@ class TestHostgroup(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('alias', ''),
-        ('members', None),
+        ('members', []),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
@@ -651,11 +654,13 @@ class TestNotificationWay(PropertiesTester, AlignakTest):
     without_default = [
         'notificationway_name',
         'host_notification_period', 'service_notification_period',
-        'host_notification_commands', 'service_notification_commands']
+        ]
 
     properties = dict([
         ('service_notification_options', ['']),
         ('host_notification_options', ['']),
+        ('host_notification_commands', []),
+        ('service_notification_commands', []),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
@@ -680,15 +685,15 @@ class TestRealm(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('alias', ''),
-        ('members', None),
+        ('members', []),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('realm_name', ''),
         ('name', ''),
-        # ('unknown_members', []),
         ('realm_members', []),
+        ('group_members', []),
         ('higher_realms', []),
         ('default', False),
         ])
@@ -810,7 +815,7 @@ class TestServicegroup(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('alias', ''),
-        ('members', None),
+        ('members', []),
         ('imported_from', 'unknown'),
         ('use', []),
         ('register', True),
@@ -914,7 +919,7 @@ class TestService(PropertiesTester, AlignakTest):
         ('business_rule_host_notification_options', []),
         ('business_rule_service_notification_options', []),
         ('host_dependency_enabled', True),
-        ('realm', ''),
+        # ('realm', ''),
         # ('state_id_before_impact', 0)
         ])
 

@@ -375,7 +375,7 @@ class Daemon(object):
             BoolProp(default=False),
         # Use Graphite/carbon connection instead of StatsD
         'graphite_enabled':
-            BoolProp(default=False)
+            BoolProp(default=False),
     }
 
     def __init__(self, name, **kwargs):

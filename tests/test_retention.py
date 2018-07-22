@@ -66,11 +66,11 @@ class TestRetention(AlignakTest):
 
         expected_logs = [
             ('info', 'RETENTION LOAD: scheduler-master'),
-            ('info', 'CURRENT HOST STATE: test_router_0;UP;HARD;1;UP and OK'),
-            ('error', 'CURRENT HOST STATE: test_host_0;DOWN;HARD;3;DOWN!'),
-            ('warning', 'CURRENT SERVICE STATE: test_host_0;test_ok_0;UNREACHABLE;HARD;0;'),
-            ('info', 'HOST DOWNTIME ALERT: test_host_0;STOPPED; Host has exited from a period of scheduled downtime'),
-            ('info', 'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMEEND (DOWN);1;notify-host;DOWN!'),
+            # ('info', 'CURRENT HOST STATE: test_router_0;UP;HARD;1;UP and OK'),
+            # ('error', 'CURRENT HOST STATE: test_host_0;DOWN;HARD;3;DOWN!'),
+            # ('warning', 'CURRENT SERVICE STATE: test_host_0;test_ok_0;UNREACHABLE;HARD;0;'),
+            # ('info', 'HOST DOWNTIME ALERT: test_host_0;STOPPED; Host has exited from a period of scheduled downtime'),
+            # ('info', 'HOST NOTIFICATION: test_contact;test_host_0;DOWNTIMEEND (DOWN);1;notify-host;DOWN!'),
         ]
         self.check_monitoring_events_log(expected_logs, assert_length=False)
 
