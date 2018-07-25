@@ -206,12 +206,15 @@ class Module(Item):
         Serializing a module is the same as serializing an Item but we also also include all the
         existing properties that are not defined in the properties or running_properties
         class list.
+
+        We must also exclude the reference to the daemon that loaded the module!
         """
         res = super(Module, self).serialize()
 
         cls = self.__class__
         for prop in self.__dict__:
-            if prop in cls.properties or prop in cls.running_properties or prop in ['properties']:
+            if prop in cls.properties or prop in cls.running_properties or prop in ['properties',
+                                                                                    'my_daemon']:
                 continue
             res[prop] = getattr(self, prop)
 

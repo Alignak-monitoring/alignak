@@ -216,8 +216,9 @@ class TestConfig(AlignakTest):
         # Configuration inner properties are valued
         assert self._arbiter.conf.main_config_file == os.path.abspath('cfg/cfg_default.cfg')
 
-        # Default Alignak name is the arbiter name
+        # Default Alignak name is the arbiter name but it may be set from the configuration
         assert self._arbiter.conf.alignak_name == 'My Alignak'
+        assert self._arbiter.alignak_name == 'My Alignak'
 
         # Default Alignak daemons start/stop configuration
         # assert self._arbiter.conf.daemons_start_timeout == 1
@@ -241,11 +242,12 @@ class TestConfig(AlignakTest):
         # Arbiter configuration is correct
         assert self._arbiter.conf.conf_is_correct
 
-        # Alignak name is defined in the arbiter
-        # assert self._arbiter.conf.alignak_name == 'My Alignak'
-        # assert self._arbiter.alignak_name == 'My Alignak'
-        # The value defined in the Cfg files takes precedence over the one in alignak.ini!
+        # Alignak name is defined in the configuration (from the Nagios legacy)
         assert self._arbiter.conf.alignak_name == 'my_alignak'
+        # Alignak name is defined in the arbiter (from the ini configuration file or
+        # from the command line)
+        # The value defined in the Cfg files takes precedence over the one in alignak.ini!
+        # assert self._arbiter.alignak_name == 'My Alignak'
         assert self._arbiter.alignak_name == 'my_alignak'
 
         # Alignak name is defined in the configuration dispatched to the schedulers

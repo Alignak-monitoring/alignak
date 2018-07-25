@@ -85,9 +85,9 @@ class TestMonitor(AlignakTest):
         # #1 - Get a new dispatcher
         my_dispatcher = Dispatcher(my_arbiter.conf, my_arbiter.link_to_myself)
         my_arbiter.dispatcher = my_dispatcher
-        print(("*** All daemons WS: %s"
+        print("*** All daemons WS: %s"
               % ["%s:%s" % (link.address, link.port)
-                 for link in my_dispatcher.all_daemons_links]))
+                 for link in my_dispatcher.all_daemons_links])
 
         assert my_arbiter.alignak_monitor == "http://super_alignak:7773/ws"
         assert my_arbiter.alignak_monitor_username == 'admin'
@@ -192,9 +192,9 @@ class TestMonitor(AlignakTest):
         # #1 - Get a new dispatcher
         my_dispatcher = Dispatcher(my_arbiter.conf, my_arbiter.link_to_myself)
         my_arbiter.dispatcher = my_dispatcher
-        print(("*** All daemons WS: %s"
+        print("*** All daemons WS: %s"
               % ["%s:%s" % (link.address, link.port)
-                 for link in my_dispatcher.all_daemons_links]))
+                 for link in my_dispatcher.all_daemons_links])
 
         my_arbiter.push_passive_check(details=False)
 

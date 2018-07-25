@@ -328,7 +328,7 @@ class ListProp(Property):
         * strip split values
 
         :param val: value to convert
-        :type val: basestring
+        :type val: str
         :return: list corresponding to value
         :rtype: list
         """
@@ -351,7 +351,7 @@ class SetProp(ListProp):
         * Simply convert to a set the value return by pythonize from ListProp
 
         :param val: value to convert
-        :type val: basestring
+        :type val: str
         :return: set corresponding to the value
         :rtype: set
         """

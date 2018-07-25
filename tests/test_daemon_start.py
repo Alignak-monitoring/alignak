@@ -146,8 +146,8 @@ class template_Daemon_Start():
         # self._files_update(files, replacements)
         # print("Prepared")
 
-        print("Env: %s, daemon: %s, replace: %s, debug: %s"
-              % (alignak_environment, is_daemon, do_replace, debug_file))
+        print("Env: %s, daemon: %s, daemonize: %s, replace: %s, debug: %s"
+              % (alignak_environment, self.daemon_name, is_daemon, do_replace, debug_file))
         args = {
             'env_file': alignak_environment,
             'alignak_name': 'my-alignak', 'daemon_name': self.daemon_name,
@@ -375,7 +375,7 @@ class template_Daemon_Start():
         self.clear_logs()
 
         daemon = self.get_daemon()
-        assert daemon.pid_filename == os.path.abspath('/tmp/var/run/alignak/%s.pid' % daemon.name)
+        assert daemon.pid_filename == os.path.abspath('%s/%s.pid' % (daemon.workdir, daemon.name))
         # assert daemon.log_filename == os.path.abspath('./cfg/daemons/log/%s.log' % daemon.name)
         assert daemon.log_filename == ''    # Because logs are defined in the logger configuration
 

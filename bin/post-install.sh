@@ -18,11 +18,23 @@ if [ $# -eq 0 ]; then
     PREFIX="/usr/local"
 fi
 if [ $# -eq 1 ]; then
+   # Yum installer calls the post-installation script with "1"
+   # for an initial installation oe "2" for an upgrade
+   if [ "$1" -eq "1" ]; then
+       ACCOUNT="alignak"
+       PREFIX="/usr/local"
+   fi
+   if [ "$1" -eq "2" ]; then
+       ACCOUNT="alignak"
+       PREFIX="/usr/local"
+   fi
     PREFIX="/usr/local"
 fi
 
 echo "-----"
 echo "Alignak post-install"
+echo "User account: $ACCOUNT"
+echo "Installation prefix: $PREFIX"
 echo "-----"
 
 echo "Detecting OS platform"

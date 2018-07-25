@@ -89,10 +89,26 @@ class TestLaunchDaemonsRealms(AlignakTest):
         :return: None
         """
         self._run_checks(passive=False, hosts_count=10, duration=120, cfg_dir='default_realms',
-                         more_daemons = ['broker-North', 'broker-South',
-                                         'poller-North', 'poller-South',
-                                         # 'receiver-North',
-                                         'scheduler-North', 'scheduler-South'],
+                         more_daemons = {
+                             'broker-North': {
+                                 'type': 'broker', 'name': 'broker-North', 'port': '10001', 'realm': 'North'
+                             },
+                             'broker-South': {
+                                 'type': 'broker', 'name': 'broker-South', 'port': '10002', 'realm': 'South'
+                             },
+                             'scheduler-North': {
+                                 'type': 'scheduler', 'name': 'scheduler-North', 'port': '20001', 'realm': 'North'
+                             },
+                             'scheduler-South': {
+                                 'type': 'scheduler', 'name': 'scheduler-South', 'port': '20002', 'realm': 'South'
+                             },
+                             'poller-North': {
+                                 'type': 'poller', 'name': 'poller-North', 'port': '30001', 'realm': 'North'
+                             },
+                             'poller-South': {
+                                 'type': 'poller', 'name': 'poller-South', 'port': '30002', 'realm': 'South'
+                             },
+                         },
                          realms = ['All', 'North', 'South'])
 
     def test_checks_passive_satellites(self):
@@ -118,10 +134,26 @@ class TestLaunchDaemonsRealms(AlignakTest):
         :return: None
         """
         self._run_checks(passive=True, hosts_count=10, duration=120, cfg_dir='default_realms',
-                         more_daemons = ['broker-North', 'broker-South',
-                                         'poller-North', 'poller-South',
-                                         # 'receiver-North',
-                                         'scheduler-North', 'scheduler-South'],
+                         more_daemons = {
+                             'broker-North': {
+                                 'type': 'broker', 'name': 'broker-North', 'port': '10001', 'realm': 'North'
+                             },
+                             'broker-South': {
+                                 'type': 'broker', 'name': 'broker-South', 'port': '10002', 'realm': 'South'
+                             },
+                             'scheduler-North': {
+                                 'type': 'scheduler', 'name': 'scheduler-North', 'port': '20001', 'realm': 'North'
+                             },
+                             'scheduler-South': {
+                                 'type': 'scheduler', 'name': 'scheduler-South', 'port': '20002', 'realm': 'South'
+                             },
+                             'poller-North': {
+                                 'type': 'poller', 'name': 'poller-North', 'port': '30001', 'realm': 'North'
+                             },
+                             'poller-South': {
+                                 'type': 'poller', 'name': 'poller-South', 'port': '30002', 'realm': 'South'
+                             },
+                         },
                          realms = ['All', 'North', 'South'])
 
     def _run_checks(self, passive=True, duration=60, hosts_count=10, cfg_dir='default_many_hosts',
@@ -137,7 +169,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         if realms is None:
             realms = ['All']
         if more_daemons is not None:
-            daemons_list += more_daemons
+            daemons_list += more_daemons.keys()
         print("Daemons: %s" % daemons_list)
 
         # Default shipped configuration preparation
@@ -174,6 +206,15 @@ class TestLaunchDaemonsRealms(AlignakTest):
             # A macro for the check script directory
             cfg.set('alignak-configuration', '_EXEC_DIR', self.cfg_folder)
             for daemon in daemons_list:
+                if more_daemons and daemon in more_daemons:
+                    if not cfg.has_section('daemon.%s' % daemon):
+                        cfg.add_section('daemon.%s' % daemon)
+                        cfg.set('daemon.%s' % daemon, 'type', more_daemons[daemon]['type'])
+                        cfg.set('daemon.%s' % daemon, 'name', more_daemons[daemon]['name'])
+                        cfg.set('daemon.%s' % daemon, 'realm', more_daemons[daemon]['realm'])
+                        cfg.set('daemon.%s' % daemon, 'port', more_daemons[daemon]['port'])
+                        cfg.set('daemon.%s' % daemon, 'alignak_launched', '1')
+
                 if cfg.has_section('daemon.%s' % daemon):
                     cfg.set('daemon.%s' % daemon, 'alignak_launched', '1')
                     # cfg.set('daemon.%s' % daemon, 'debug', '1')

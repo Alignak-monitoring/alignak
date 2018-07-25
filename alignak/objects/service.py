@@ -719,15 +719,14 @@ class Service(SchedulingItem):
             log_level = 'warning'
         if self.state in ['CRITICAL', 'UNKNOWN']:
             log_level = 'error'
-        if self.__class__.log_initial_states:
-            brok = make_monitoring_log(
-                log_level, 'CURRENT SERVICE STATE: %s;%s;%s;%s;%d;%s' % (
-                    self.host_name, self.get_name(),
-                    self.state, self.state_type,
-                    self.attempt, self.output
-                )
+        brok = make_monitoring_log(
+            log_level, 'CURRENT SERVICE STATE: %s;%s;%s;%s;%d;%s' % (
+                self.host_name, self.get_name(),
+                self.state, self.state_type,
+                self.attempt, self.output
             )
-            self.broks.append(brok)
+        )
+        self.broks.append(brok)
 
     def raise_notification_log_entry(self, notif, contact, host_ref):
         """Raise SERVICE NOTIFICATION entry (critical level)

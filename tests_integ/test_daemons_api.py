@@ -1110,25 +1110,28 @@ class TestDaemonsApi(AlignakTest):
                 sched = res[sched]
                 # First list item is for hosts
                 hosts_list = sched[0]
+                print(hosts_list)
                 print(hosts_list[0])
-                # hosts_list = hosts_list.split()
+                print(hosts_list[1])
                 assert hosts_list[0] == 'type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output'
                 # Second list item is for services
                 services_list = sched[1]
                 print(services_list[0])
-                # services_list = services_list.split()
-                assert services_list[0] == 'type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output'
+                print(services_list[1])
+                # Only type;host;name
+                assert services_list[0] in ['type;host;name', 'type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output']
         else:
             assert len(res) == 2
             # First list item is for hosts
             hosts_list = res[0]
-            print(hosts_list)
-            # hosts_list = hosts_list.split()
-            assert hosts_list[0] == 'type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output'
+            print(hosts_list[0])
+            print(hosts_list[1])
+            assert 'type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output' == hosts_list[0]
             # Second list item is for services
             services_list = res[1]
-            # services_list = services_list.split()
-            assert services_list[0] == 'type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output'
+            print(services_list[0])
+            print(services_list[1])
+            assert 'type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output' == services_list[0]
 
 
         # With more details
@@ -1144,18 +1147,26 @@ class TestDaemonsApi(AlignakTest):
                 sched = res[sched]
                 # First list item is for hosts
                 hosts_list = sched[0]
-                assert hosts_list[0].startswith('type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output;uuid;alias;business_impact;')
+                print(hosts_list[0])
+                print(hosts_list[1])
+                assert hosts_list[0].startswith('type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output;uuid')
                 # Second list item is for services
                 services_list = sched[1]
-                assert services_list[0].startswith('type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output;uuid;alias;business_impact;')
+                print(services_list[0])
+                print(services_list[1])
+                assert services_list[0].startswith('type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output;uuid')
         else:
             assert len(res) == 2
             # First list item is for hosts
             hosts_list = res[0]
-            assert hosts_list[0].startswith('type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output;uuid;alias;business_impact;')
+            print(hosts_list[0])
+            print(hosts_list[1])
+            assert hosts_list[0].startswith('type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output;uuid')
             # Second list item is for services
             services_list = res[1]
-            assert services_list[0].startswith('type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output;uuid;alias;business_impact;')
+            print(services_list[0])
+            print(services_list[1])
+            assert services_list[0].startswith('type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output;uuid')
 
         # Get some host dump, json mode
         raw_data = req.get("%s/dump" % endpoint)
@@ -1823,7 +1834,7 @@ class TestDaemonsApi(AlignakTest):
         assert data['All']['name'] == 'All'
         assert data['All']['level'] == 0
         assert len(data['All']["hosts"]) == 11
-        assert len(data['All']["groups"]) == 9
+        assert len(data['All']["hostgroups"]) == 4
         assert 'satellites' in data['All']
         assert 'children' in data['All']
 

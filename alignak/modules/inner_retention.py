@@ -48,7 +48,7 @@ def get_instance(mod_conf):
     :param mod_conf: the module properties as defined globally in this file
     :return:
     """
-    logger.info("Give an instance of %s for alias: %s", mod_conf.python_name, mod_conf.module_alias)
+    logger.info("Giving an instance of %s for alias: %s", mod_conf.python_name, mod_conf.module_alias)
 
     return InnerRetention(mod_conf)
 
@@ -74,9 +74,10 @@ class InnerRetention(BaseModule):
         logger = logging.getLogger('alignak.module.%s' % self.alias)
         logger.setLevel(getattr(mod_conf, 'log_level', logging.INFO))
 
-        logger.info("loaded by the %s '%s'", self.my_daemon.type, self.my_daemon.name)
         logger.debug("inner properties: %s", self.__dict__)
         logger.info("received configuration: %s", mod_conf.__dict__)
+
+        logger.info("loaded by the %s '%s'", self.my_daemon.type, self.my_daemon.name)
 
         stats_host = getattr(mod_conf, 'statsd_host', 'localhost')
         stats_port = int(getattr(mod_conf, 'statsd_port', '8125'))
@@ -141,8 +142,8 @@ class InnerRetention(BaseModule):
         all_data = {'hosts': {}, 'services': {}}
 
         if not os.path.isfile(self.retention_file):
-            logger.info("The configured state retention file does not exist. "
-                        "Loading objects state is not available.")
+            logger.info("The configured state retention file (%s) does not exist. "
+                        "Loading objects state is not available.", self.retention_file)
             return None
 
         # Get data from the retention file

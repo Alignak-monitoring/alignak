@@ -106,7 +106,7 @@ class BaseModule(object):
         """
         self.myconf = mod_conf
         self.name = mod_conf.get_name()
-        self.my_daemon = mod_conf.my_daemon
+        self.my_daemon = getattr(mod_conf, 'my_daemon', None)
 
         self.props = mod_conf.properties.copy()
         # TODO: choose between 'props' or 'properties'..

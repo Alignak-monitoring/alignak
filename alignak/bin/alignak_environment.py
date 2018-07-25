@@ -295,9 +295,16 @@ class AlignakConfigParser(object):
 
         :return: a dict containing the Alignak macros
         """
-        return self.get_alignak_configuration(macros=True)
+        macros = self.get_alignak_configuration(macros=True)
 
-    def get_alignak_configuration(self, legacy_cfg=False, macros=False):
+        sections = self._search_sections('pack.')
+        for name, pack in list(sections.items()):
+            section_macros = self.get_alignak_configuration(section=name, macros=True)
+            macros.update(section_macros)
+        return macros
+
+    def get_alignak_configuration(self, section=SECTION_CONFIGURATION,
+                                  legacy_cfg=False, macros=False):
         """
         Get the Alignak configuration parameters. All the variables included in
         the SECTION_CONFIGURATION section except the variables starting with 'cfg'
@@ -309,31 +316,33 @@ class AlignakConfigParser(object):
         If `macros` is True, this function only returns the variables included in
         the SECTION_CONFIGURATION section that are considered as macros
 
+        :param section: name of the sectio nto search for
+        :type section: str
         :param legacy_cfg: only get the legacy cfg declarations
         :type legacy_cfg: bool
         :param macros: only get the macros declarations
         :type macros: bool
         :return: a dict containing the Alignak configuration parameters
         """
-        configuration = self._search_sections(SECTION_CONFIGURATION)
-        if SECTION_CONFIGURATION not in configuration:
+        configuration = self._search_sections(section)
+        if section not in configuration:
             return []
-        for prop, _ in list(configuration[SECTION_CONFIGURATION].items()):
+        for prop, _ in list(configuration[section].items()):
             # Only legacy configuration items
             if legacy_cfg:
                 if not prop.startswith('cfg'):
-                    configuration[SECTION_CONFIGURATION].pop(prop)
+                    configuration[section].pop(prop)
                 continue
             # Only macro definitions
             if macros:
-                if not prop.startswith('_'):
-                    configuration[SECTION_CONFIGURATION].pop(prop)
+                if not prop.startswith('_') and not prop.startswith('$'):
+                    configuration[section].pop(prop)
                 continue
             # All values except legacy configuration and macros
-            if prop.startswith('cfg') or prop.startswith('_'):
-                configuration[SECTION_CONFIGURATION].pop(prop)
+            if prop.startswith('cfg') or prop.startswith('_') or prop.startswith('$'):
+                configuration[section].pop(prop)
 
-        return configuration[SECTION_CONFIGURATION]
+        return configuration[section]
 
     def get_daemons(self, daemon_name=None, daemon_type=None):
         """

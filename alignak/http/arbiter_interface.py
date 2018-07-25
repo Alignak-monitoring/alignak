@@ -828,7 +828,7 @@ class ArbiterInterface(GenericInterface):
                 "name": realm.get_name(),
                 "level": realm.level,
                 "hosts": realm.members,
-                "groups": realm.group_members,
+                "hostgroups": realm.group_members,
                 "children": {},
                 "satellites": {
                 }

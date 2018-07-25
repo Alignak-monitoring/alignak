@@ -636,13 +636,12 @@ class Host(SchedulingItem):  # pylint: disable=R0904
             log_level = 'error'
         if self.state == 'UNREACHABLE':
             log_level = 'warning'
-        if self.__class__.log_initial_states:
-            brok = make_monitoring_log(
-                log_level, 'CURRENT HOST STATE: %s;%s;%s;%d;%s' % (
-                    self.get_name(), self.state, self.state_type, self.attempt, self.output
-                )
+        brok = make_monitoring_log(
+            log_level, 'CURRENT HOST STATE: %s;%s;%s;%d;%s' % (
+                self.get_name(), self.state, self.state_type, self.attempt, self.output
             )
-            self.broks.append(brok)
+        )
+        self.broks.append(brok)
 
     def raise_notification_log_entry(self, notif, contact, host_ref=None):
         """Raise HOST NOTIFICATION entry (critical level)
@@ -1355,10 +1354,9 @@ class Hosts(SchedulingItems):
         :return: None
         """
         for host in self:
-            parents = host.parents
             # The new member list
             new_parents = []
-            for parent in parents:
+            for parent in getattr(host, 'parents', []):
                 parent = parent.strip()
                 o_parent = self.find_by_name(parent)
                 if o_parent is not None:
@@ -1379,6 +1377,12 @@ class Hosts(SchedulingItems):
         """
         default_realm = realms.get_default()
         for host in self:
+            if not getattr(host, 'realm', None):
+                # Applying default realm to an host
+                host.realm = default_realm.uuid if default_realm else ''
+                host.realm_name = default_realm.get_name() if default_realm else ''
+                host.got_default_realm = True
+
             if host.realm not in realms:
                 realm = realms.find_by_name(host.realm)
                 if not realm:
@@ -1446,7 +1450,7 @@ class Hosts(SchedulingItems):
         :return: None
         """
         for host in self:
-            for parent_id in host.parents:
+            for parent_id in getattr(host, 'parents', []):
                 if parent_id is None:
                     continue
                 parent = self[parent_id]

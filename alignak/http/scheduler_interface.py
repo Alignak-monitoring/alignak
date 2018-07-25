@@ -289,12 +289,19 @@ class SchedulerInterface(GenericInterface):
             return {'_status': u'ERR', '_message': u'Required host (%s) not found.' % o_name}
 
         if raw and ls:
-            raw_ls_hosts = [';'.join(ls[0]['_header_host'])]
-            raw_ls_services = [';'.join(ls[0]['_header_service'])]
+            raw_ls_hosts = []
+            _header_host = ['type', 'host', 'name']
+            raw_ls_services = []
+            _header_service = ['type', 'host', 'name']
 
             for item in ls:
+                if len(item['_header_host']) > len(_header_host):
+                    _header_host = item['_header_host']
+                if len(item['_header_service']) > len(_header_service):
+                    _header_service = item['_header_service']
                 item.pop('_header_host')
                 item.pop('_header_service')
+
                 services = []
                 if 'services' in item:
                     services = item.pop('services')
@@ -302,6 +309,8 @@ class SchedulerInterface(GenericInterface):
                     raw_ls_hosts.append(';'.join("%s" % val for val in list(item.values())))
                     for service in services:
                         raw_ls_services.append(';'.join("%s" % val for val in list(service.values())))
+            raw_ls_hosts.insert(0, ';'.join(_header_host))
+            raw_ls_services.insert(0, ';'.join(_header_service))
 
             return [raw_ls_hosts, raw_ls_services]
 

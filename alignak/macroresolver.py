@@ -50,9 +50,11 @@
 
 """
 This class resolve Macro in commands by looking at the macros list
-in Class of elements. It give a property that call be callable or not.
-It not callable, it's a simple property and replace the macro with the value
-If callable, it's a method that is called to get the value. for example, to
+in Class of elements. It gives a property that may be a callable or not.
+
+It not callable, it's a simple property and we replace the macro with the property value.
+
+If callable, it's a method that is called to get the value. For example, to
 get the number of service in a host, you call a method to get the
 len(host.services)
 """
@@ -142,7 +144,7 @@ class MacroResolver(Borg):
     ]
 
     def init(self, conf):
-        """Initialize macroresolver instance with conf.
+        """Initialize MacroResolver instance with conf.
         Must be called at least once.
 
         :param conf: configuration to load
@@ -295,7 +297,7 @@ class MacroResolver(Borg):
             macros = cls.macros
             for macro in macros:
                 if macro.startswith("USER"):
-                    break
+                    continue
 
                 prop = macros[macro]
                 value = self._get_value_from_element(obj, prop)
@@ -345,13 +347,15 @@ class MacroResolver(Borg):
             # Ok, we want the macros in the command line
             macros = self._get_macros(c_line)
 
+            # Put in the macros the type of macro for all macros
+            self._get_type_of_macro(macros, data)
+            print("macros: %s - %s" % (c_line, macros))
+
             # We can get out if we do not have macros this loop
             still_got_macros = False
             if macros:
                 still_got_macros = True
 
-            # Put in the macros the type of macro for all macros
-            self._get_type_of_macro(macros, data)
             # Now we get values from elements
             for macro in macros:
                 # If type ARGN, look at ARGN cutting
@@ -361,16 +365,17 @@ class MacroResolver(Borg):
                 # If object type, get value from a property
                 if macros[macro]['type'] == 'object':
                     obj = macros[macro]['object']
-                    for elt in data:
-                        if elt is None or elt != obj:
-                            continue
-                        prop = obj.macros[macro]
-                        macros[macro]['val'] = self._get_value_from_element(elt, prop)
-                        # Now check if we do not have a 'output' macro. If so, we must
-                        # delete all special characters that can be dangerous
-                        if macro in self.output_macros:
-                            macros[macro]['val'] = \
-                                self._delete_unwanted_caracters(macros[macro]['val'])
+                    if obj not in data:
+                        continue
+                    prop = obj.macros[macro]
+                    if not prop:
+                        continue
+                    macros[macro]['val'] = self._get_value_from_element(obj, prop)
+                    # Now check if we do not have a 'output' macro. If so, we must
+                    # delete all special characters that can be dangerous
+                    if macro in self.output_macros:
+                        logger.debug("-> macro from: %s, %s = %s" % (obj, macro, macros[macro]))
+                        macros[macro]['val'] = self._delete_unwanted_caracters(macros[macro]['val'])
                 # If custom type, get value from an object custom variables
                 if macros[macro]['type'] == 'CUSTOM':
                     cls_type = macros[macro]['class']

@@ -361,7 +361,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 logger.debug("Satellite '%s' initial brok: %s", satellite.name, brok)
                 self.add(brok)
 
-    def load_monitoring_config_file(self):
+    def load_monitoring_config_file(self, clean=True):
         # pylint: disable=too-many-branches,too-many-statements, too-many-locals
         """Load main configuration file (alignak.cfg)::
 
@@ -375,6 +375,13 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         * Create all objects (Service, Host, Realms ...)
         * "Compile" configuration (Linkify, explode, apply inheritance, fill default values ...)
         * Cut conf into parts and prepare it for sending
+
+        The clean parameter is useful to load a configuration without removing the properties
+        only used to parse the configuration and create the objects. Some utilities (like
+        alignak-backend-import script) may need to avoid the cleaning ;)
+
+        :param clean: set True to clean the created items
+        :type clean: bool
 
         :return: None
         """
@@ -400,6 +407,21 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         else:
             logger.info("No legacy file(s) configured for monitored system configuration")
 
+
+        # print("Very first macros %s:" % self.conf.properties)
+        # for key in self.conf.properties:
+        #     if key[0] == '$':
+        #         print("- %s = %s" % (key, self.conf.properties[key]))
+        # print("-----")
+
+
+
+        # Alignak global environment file
+        # -------------------------------
+        # Here we did not yet read the Alignak configuration file (except for the Arbiter daemon
+        # configuration.
+        # We must get the Alignak macros and global configuration parameters
+        # ---------------------
         # Manage Alignak macros; this before loading the legacy configuration files
         # with their own potential macros
         # ---------------------
@@ -414,9 +436,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 # Remove the leading and trailing underscores
                 for key in sorted(alignak_macros.keys()):
                     value = alignak_macros[key]
-                    if key[0] == '_':
+                    if key[0] == '_' or key[0] == '$':
                         key = key[1:]
-                    if key[-1] == '_':
+                    if key[-1] == '_' or key[-1] == '$':
                         key = key[:-1]
                     # Create an old legacy macro format
                     macros.append('$%s$=%s' % (key.upper(), value))
@@ -424,7 +446,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
             # and then the global configuration.
             # The properties defined in the alignak.cfg file are not yet set! So we set the one
-            # got from the environment
+            # got from the appropriate section of the Alignak environment file
             logger.info("Getting Alignak configuration...")
             alignak_configuration = self.alignak_env.get_alignak_configuration()
             if alignak_configuration:
@@ -439,17 +461,36 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     else:
                         setattr(self.conf, key, value)
                     logger.debug("- setting '%s' as %s", key, getattr(self.conf, key))
+                logger.info("Got Alignak global configuration")
 
-        # Read and parse the legacy configuration files
+        self.alignak_name = getattr(self.conf, "alignak_name", self.name)
+        logger.info("Configuration for Alignak: %s", self.alignak_name)
+
+        if macros:
+            self.conf.load_params(macros)
+
+        # print("Initial macros %s:" % self.conf.properties)
+        # for key in self.conf.properties:
+        #     if key[0] == '$':
+        #         print("- %s = %s" % (key, self.conf.properties[key]))
+        # print("-----")
+
+
+
+        # Here we got the macros and alignak configuration variables from the
+        # alignak.ini configuration!
+        # The self Config object is now initialized with the global Alignak variables.
+
+        # We can now read and parse the legacy configuration files (if any...)
         raw_objects = self.conf.read_config_buf(
             self.conf.read_legacy_cfg_files(self.legacy_cfg_files,
                                             self.alignak_env.cfg_files if self.alignak_env
                                             else None)
         )
-        if 'module' not in raw_objects:
-            raw_objects['module'] = []
-        if macros:
-            self.conf.load_params(macros)
+
+        if self.alignak_name != getattr(self.conf, "alignak_name", self.name):
+            self.alignak_name = getattr(self.conf, "alignak_name", self.name)
+            logger.warning("Alignak name changed from the legacy Cfg files: %s", self.alignak_name)
 
         # Maybe conf is already invalid
         if not self.conf.conf_is_correct:
@@ -463,6 +504,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Hacking some global parameters inherited from Nagios to create
         # on the fly some Broker modules like for status.dat parameters
         # or nagios.log one if there are none already available
+        if 'module' not in raw_objects:
+            raw_objects['module'] = []
         extra_modules = self.conf.hack_old_nagios_parameters()
         if extra_modules:
             logger.info("Some inner modules were configured for Nagios legacy parameters")
@@ -571,9 +614,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             if 'module' in raw_objects and not raw_objects['module']:
                 logger.info("- No configured modules.")
 
-        self.alignak_name = getattr(self.conf, "alignak_name", self.name)
-        logger.info("Configuration for Alignak: %s", self.alignak_name)
-
         # Create objects for our arbiters and modules
         self.conf.early_create_objects(raw_objects)
 
@@ -638,10 +678,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             self.loading_configuration = False
             return
 
-        # we request the instances without them being *started*
-        # (for those that are concerned ("external" modules):
-        # we will *start* these instances after we have been daemonized (if requested)
-        # todo: use self.modules, no? And not the modules of my link ...
+        # We load our own modules
         self.do_load_modules(self.link_to_myself.modules)
 
         # Call modules that manage this read configuration pass
@@ -650,12 +687,14 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         statsmgr.timer('hook.read_configuration', time.time() - _ts)
 
         # Call modules get_alignak_configuration() to load Alignak configuration parameters
+        # todo: re-enable this feature if it is really needed. It is a bit tricky to manage
+        # configuration from our own configuration file and from an external source :(
         # (example modules: alignak_backend)
         # _t0 = time.time()
         # self.load_modules_alignak_configuration()
         # statsmgr.timer('core.hook.get_alignak_configuration', time.time() - _t0)
 
-        # Call modules get_objects() to load new objects from arbiter modules
+        # Call modules get_objects() to load new objects our own modules
         # (example modules: alignak_backend)
         _ts = time.time()
         self.load_modules_configuration_objects(raw_objects)
@@ -674,9 +713,12 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Manage all post-conf modules
         _ts = time.time()
-        logger.info("Preparing configuration...")
         self.hook_point('early_configuration')
         statsmgr.timer('hook.early_configuration', time.time() - _ts)
+
+        # Here we got all our Alignak configuration and the monitored system configuration
+        # from the legacy configuration files and extra modules.
+        logger.info("Preparing configuration...")
 
         # Create Template links
         self.conf.linkify_templates()
@@ -690,8 +732,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Implicit inheritance for services
         self.conf.apply_implicit_inheritance()
 
-        # Fill default values
-        self.conf.fill_default()
+        # Fill default values for all the configuration objects
+        self.conf.fill_default_configuration()
 
         # Remove templates from config
         self.conf.remove_templates()
@@ -736,11 +778,15 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.conf.is_correct()
 
         # Clean objects of temporary/unnecessary attributes for live work:
-        self.conf.clean()
+        if clean:
+            logger.info("Cleaning configuration objects...")
+            self.conf.clean()
         statsmgr.timer('configuration.check', time.time() - _ts)
 
         # Dump Alignak macros
         logger.debug("Alignak global macros:")
+        print("Alignak global macros:")
+
         macro_resolver = MacroResolver()
         macro_resolver.init(self.conf)
         for macro_name in sorted(self.conf.macros):
@@ -748,6 +794,18 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                                                                          None, None)
             logger.debug("- $%s$ = %s", macro_name, macro_value)
         statsmgr.timer('configuration.loading', time.time() - _t_configuration)
+
+        print("------")
+        print("Not empty macros: %s:" % getattr(self.conf, '$USER1$', 'XxX'))
+        print("Not empty macros: %s:" % getattr(self.conf, 'USER1', 'XxX'))
+        print("------")
+
+        print("*****")
+        macro_name = "USER1"
+        macro_value = macro_resolver.resolve_simple_macros_in_string("$%s$" % macro_name, [],
+                                                                     None, None)
+        print("- $%s$ = %s" % (macro_name, macro_value))
+        print("*****")
 
         # REF: doc/alignak-conf-dispatching.png (2)
         _ts = time.time()

@@ -422,7 +422,7 @@ class Alignak(BaseSatellite):
             # Scheduler modules
             if not self.have_modules:
                 try:
-                    logger.warning("Modules configuration: %s", self.cur_conf['modules'])
+                    logger.debug("Modules configuration: %s", self.cur_conf['modules'])
                     self.modules = unserialize(self.cur_conf['modules'], no_load=True)
                 except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
                     logger.error('Cannot un-serialize modules configuration '
@@ -439,6 +439,13 @@ class Alignak(BaseSatellite):
 
             if received_conf_part:
                 logger.info("Loading configuration...")
+
+                print("Received macros %s:" % received_conf_part.properties)
+                for key in sorted(received_conf_part.properties):
+                    if key[0] == '$':
+                        print("- %s = %s" % (key, received_conf_part.properties[key]))
+                print("-----")
+
                 # Propagate the global parameters to the configuration items
                 received_conf_part.explode_global_conf()
 

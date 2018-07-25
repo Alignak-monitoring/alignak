@@ -100,7 +100,8 @@ class AlignakTest(unittest2.TestCase):
 
         print("\n" + self.id())
         print("-" * 80)
-        print("Test current working directory: %s" % (os.getcwd()))
+        self._launch_dir = os.getcwd()
+        print("Test current working directory: %s" % self._launch_dir)
 
         # Configure Alignak logger with test configuration
         logger_configuration_file = os.path.join(os.getcwd(), './etc/alignak-logger.json')
@@ -202,9 +203,10 @@ class AlignakTest(unittest2.TestCase):
         else:
             host_pattern = """
 define host {
+    # Variable defined
     use                     test-host
     contact_groups          admins
-    hostgroups              allhosts
+    #hostgroups              allhosts
     host_name               host-%s-%s
     address                 127.0.0.1
     realm                   %s
@@ -459,9 +461,15 @@ define host {
         # Clean the former existing pid and log files
         print("Cleaning pid and log files...")
         for daemon in daemons_list + ['arbiter-master']:
+            if os.path.exists('%s/%s.pid' % (self._launch_dir, daemon)):
+                print("- removing pid %s/%s.pid" % (self._launch_dir, daemon))
+                os.remove('%s/%s.pid' % (self._launch_dir, daemon))
             if os.path.exists('%s/run/%s.pid' % (run_folder, daemon)):
                 print("- removing pid %s/run/%s.pid" % (run_folder, daemon))
                 os.remove('%s/run/%s.pid' % (run_folder, daemon))
+            if os.path.exists('%s/%s.log' % (self._launch_dir, daemon)):
+                print("- removing log %s/%s.log" % (self._launch_dir, daemon))
+                os.remove('%s/%s.log' % (self._launch_dir, daemon))
             if os.path.exists('%s/log/%s.log' % (run_folder, daemon)):
                 print("- removing log %s/log/%s.log" % (run_folder, daemon))
                 os.remove('%s/log/%s.log' % (run_folder, daemon))
@@ -608,11 +616,16 @@ define host {
         nb_errors = 0
         nb_warnings = 0
         for daemon in ['arbiter-master'] + daemons_list:
-            assert os.path.exists("/%s/log/%s.log" % (run_folder, daemon)), '/%s/log/%s.log does not exist!' % (run_folder, daemon)
+            log_file = "/%s/log/%s.log" % (run_folder, daemon)
+            if not os.path.exists(log_file):
+                log_file = "/%s/run/%s.log" % (run_folder, daemon)
+                if not os.path.exists(log_file):
+                    assert os.path.exists("%s/%s.log" % (self._launch_dir, daemon)), '%s/%s.log does not exist!' % (self._launch_dir, daemon)
+                    log_file = "%s/%s.log" % (self._launch_dir, daemon)
             daemon_errors = False
             print("-----\n%s log file: %s\n-----\n" % (daemon,
                                                        '/%s/log/%s.log' % (run_folder, daemon)))
-            with open('/%s/log/%s.log' % (run_folder, daemon)) as f:
+            with open(log_file) as f:
                 for line in f:
                     if 'WARNING: ' in line or daemon_errors:
                         if dump_all and not travis_run:
@@ -807,7 +820,7 @@ define host {
                                                                          self._arbiter,
                                                                          accept_unknown=True)
 
-        print("All daemons WS: %s" % ["%s:%s" % (link.address, link.port) for link in self._arbiter.dispatcher.all_daemons_links])
+        print("All daemons address: %s" % ["%s:%s" % (link.address, link.port) for link in self._arbiter.dispatcher.all_daemons_links])
 
         # Simulate the daemons HTTP interface (very simple simulation !)
         with requests_mock.mock() as mr:

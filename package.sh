@@ -62,8 +62,10 @@ echo "Building ${output_type} package for branch ${git_branch}, python version $
 
 # Python prefix - no more used but kept for compatibility
 python_prefix="python3"
+systemd_service="python3/alignak-backend.service"
 if [ "${python_version}" = "2.7" ]; then
    python_prefix="python"
+   systemd_service="python2/alignak-backend.service"
 fi
 
 # Package information - no more python-prefix but kept for compatibility
@@ -203,15 +205,14 @@ elif [ "${output_type}" = "rpm" ]; then
       --architecture all \
       --license AGPL \
       --version ${version} \
-      --name "${python_prefix}-${pkg_name}" \
+      --name "${pkg_name}" \
       --description "${pkg_description}" \
       --url "${pkg_url}" \
       --vendor "${pkg_team}" \
       --maintainer "${pkg_team}" \
-      --python-fix-name \
       --python-package-name-prefix "${python_prefix}" \
       --python-scripts-executable "python" \
-      --python-install-lib "/usr/lib/${python_prefix}/dist-packages" \
+      --python-install-lib "/usr/lib/${python_version}/site-packages" \
       --python-bin 'python' \
       --python-pip 'pip' \
       --python-install-data '/usr/local' \

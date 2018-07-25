@@ -179,7 +179,7 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('log_service_retries', True),
         ('log_host_retries', True),
         ('log_event_handlers', True),
-        ('log_initial_states', True),
+        ('log_initial_states', False),
         ('log_external_commands', True),
         ('log_passive_checks', False),
         ('log_alignak_checks', False),

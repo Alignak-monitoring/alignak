@@ -100,9 +100,9 @@ class TestDispatcher(AlignakTest):
 
             # #1 - Get a new dispatcher
             my_dispatcher = Dispatcher(my_arbiter.conf, my_arbiter.link_to_myself)
-            print(("*** All daemons WS: %s"
+            print("*** All daemons WS: %s"
                   % ["%s:%s" % (link.address, link.port)
-                     for link in my_dispatcher.all_daemons_links]))
+                     for link in my_dispatcher.all_daemons_links])
 
             assert my_dispatcher.dispatch_ok is False
             assert my_dispatcher.new_to_dispatch is False

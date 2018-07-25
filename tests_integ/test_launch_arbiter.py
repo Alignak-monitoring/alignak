@@ -128,6 +128,9 @@ class TestLaunchArbiter(AlignakTest):
         # Remove the daemons configuration part!
         shutil.rmtree('%s/etc/alignak.d' % cfg_folder)
 
+        if os.path.exists('%s/arbiter-master.log' % self._launch_dir):
+            os.remove('%s/arbiter-master.log' % self._launch_dir)
+
         files = ['%s/etc/alignak.ini' % cfg_folder,
                  '%s/etc/alignak.d/daemons.ini' % cfg_folder,
                  '%s/etc/alignak.d/modules.ini' % cfg_folder]
@@ -175,6 +178,8 @@ class TestLaunchArbiter(AlignakTest):
             assert ret == 4
 
         expected_warnings = [
+            "No defined configuration for the daemon: arbiter-master.",
+
             u"- ignoring repeated file: /tmp/alignak/etc/arbiter/packs/resource.d/readme.cfg",
             u"Configuration warnings:",
             u"the parameter $DIST_BIN$ is ambiguous! No value after =, assuming an empty string",
@@ -224,7 +229,7 @@ class TestLaunchArbiter(AlignakTest):
                 u"Sorry, I bail out, exit code: 4"
             ]
         all_ok = True
-        with open('/tmp/alignak/log/arbiter-master.log') as f:
+        with open('%s/arbiter-master.log' % self._launch_dir) as f:
             for line in f:
                 if 'WARNING:' in line:
                     ok = False

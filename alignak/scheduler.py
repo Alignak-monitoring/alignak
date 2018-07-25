@@ -413,7 +413,7 @@ class Scheduler(object):  # pylint: disable=R0902
         for key in self.recurrent_works:
             (name, fun, _) = self.recurrent_works[key]
             if isinstance(conf, dict):
-                new_tick = conf. get('tick_%s' % name, None)
+                new_tick = conf.get('tick_%s' % name, None)
             else:
                 new_tick = getattr(conf, 'tick_%s' % name, None)
 

@@ -504,28 +504,36 @@ class Daemon(object):
                         self.pre_log.append(("DEBUG", " -> updating %s = %s to %s"
                                              % (prop, current_prop, getattr(self, prop))))
                 if not my_configuration:
-                    self.pre_log.append(("DEBUG",
+                    self.pre_log.append(("WARNING",
                                          "No defined configuration for the daemon: %s. "
-                                         "Using the 'alignak-configuration' section "
-                                         "variables as parameters for the daemon:" % self.name))
-                    # Set the global Alignak configuration parameters
-                    # as the current daemon properties
-                    self.pre_log.append(("INFO",
-                                         "Get alignak configuration to configure the daemon..."))
-                    alignak_configuration = self.alignak_env.get_alignak_configuration()
-                    if alignak_configuration:
-                        for prop, value in list(alignak_configuration.items()):
-                            if prop in ['name'] or prop.startswith('_'):
-                                self.pre_log.append(("DEBUG",
-                                                     "- ignoring '%s' variable." % prop))
-                                continue
-                            if prop in self.properties:
-                                entry = self.properties[prop]
-                                setattr(self, prop, entry.pythonize(value))
-                            else:
-                                setattr(self, prop, value)
-                            self.pre_log.append(("DEBUG",
-                                                 "- setting '%s' as %s" % (prop, getattr(self, prop))))
+                                         % self.name))
+
+                    # todo: why doing this? It is quite tricky to configure daemon if it  does not
+                    # have its own configuration section, perhaps removing this should be fine!
+                    # self.pre_log.append(("DEBUG",
+                    #                      "No defined configuration for the daemon: %s. "
+                    #                      "Using the 'alignak-configuration' section "
+                    #                      "variables as parameters for the daemon:" % self.name))
+                    #
+                    # # Set the global Alignak configuration parameters
+                    # # as the current daemon properties
+                    # self.pre_log.append(("INFO",
+                    #                      "Get alignak configuration to configure the daemon..."))
+                    # alignak_configuration = self.alignak_env.get_alignak_configuration()
+                    # if alignak_configuration:
+                    #     for prop, value in list(alignak_configuration.items()):
+                    #         if prop in ['name'] or prop.startswith('_'):
+                    #             self.pre_log.append(("DEBUG",
+                    #                                  "- ignoring '%s' variable." % prop))
+                    #             continue
+                    #         if prop in self.properties:
+                    #             entry = self.properties[prop]
+                    #             setattr(self, prop, entry.pythonize(value))
+                    #         else:
+                    #             setattr(self, prop, value)
+                    #         print("Daemon %s, prop: %s = %s" % (self.name, prop, value))
+                    #         self.pre_log.append(("DEBUG",
+                    #                              "- setting '%s' as %s" % (prop, getattr(self, prop))))
 
             except configparser.ParsingError as exp:
                 self.exit_on_exception(EnvironmentFile(exp.message))

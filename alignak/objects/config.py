@@ -365,7 +365,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'use_syslog':
             BoolProp(default=False),
 
-        # Monitoring logs configuration
+        # Monitoring logs (Alignak events log) configuration
+        'events_date_format':
+            StringProp(default='%Y-%m-%d %H:%M:%S'),
+
+        'events_log_count':
+            IntegerProp(default=100),
+
         'log_notifications':
             BoolProp(default=True, fill_brok=['full_status'],
                      class_inherit=[(Host, None), (Service, None)]),
@@ -391,8 +397,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                      class_inherit=[(Host, None), (Service, None)]),
 
         'log_initial_states':
-            BoolProp(default=True, fill_brok=['full_status'],
-                     class_inherit=[(Host, None), (Service, None)]),
+            BoolProp(default=False, fill_brok=['full_status']),
 
         'log_external_commands':
             BoolProp(default=True, fill_brok=['full_status']),
@@ -406,7 +411,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'log_alignak_checks':
             BoolProp(default=False, fill_brok=['full_status']),
 
-        # Event handlers
+        # Global event handlers
         'global_host_event_handler':
             StringProp(default='', fill_brok=['full_status'],
                        class_inherit=[(Host, 'global_event_handler')]),
@@ -416,7 +421,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                        class_inherit=[(Service, 'global_event_handler')]),
 
         'sleep_time':
-            UnusedProp(text=u'this deprecated option is useless in the alignak way of doing.'),
+            UnusedProp(text=u'This deprecated option is useless in the alignak way of doing.'),
 
         'service_inter_check_delay_method':
             UnusedProp(text=u'This option is useless in the Alignak scheduling. '
@@ -720,11 +725,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         'daemons_stop_timeout':
             IntegerProp(default=5),
-
-        'events_date_format':
-            StringProp(default='%Y-%m-%d %H:%M:%S'),
-        'events_log_count':
-            IntegerProp(default=100),
     }
 
     macros = {
@@ -849,6 +849,16 @@ class Config(Item):  # pylint: disable=R0904,R0902
             # Create a new configuration identifier
             self.instance_id = u'%s_%d' % (self.__class__.__name__, self.__class__._next_id)
             self.__class__._next_id += 1
+
+            # let's compute the "USER" properties and macros..
+            for i in range(1, 3):
+                if '$USER%d$' % i in self.__class__.properties:
+                    continue
+                self.__class__.macros['USER%d' % i] = '$USER%s$' % i
+                self.__class__.properties['$USER%d$' % i] = StringProp(default='')
+
+            # Fill all the configuration properties with their default values
+            self.fill_default()
         elif 'instance_id' not in params:
             logger.error("When not parsing a configuration, an instance_id "
                          "must exist in the provided parameters for a configuration!")
@@ -881,6 +891,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         self.conf_is_correct = True
         self.configuration_warnings = []
         self.configuration_errors = []
+
         # We tag the conf with a magic_hash, a random value to
         # identify this conf
         random.seed(time.time())
@@ -905,7 +916,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                      'escalations',
                      'host_perfdata_command', 'service_perfdata_command',
                      'global_host_event_handler', 'global_service_event_handler']:
-            if getattr(self, prop) in [None, 'None']:
+            if getattr(self, prop, None) in [None, '', 'None']:
                 res[prop] = None
             else:
                 res[prop] = getattr(self, prop).serialize()
@@ -914,6 +925,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
     def clean_params(self, params):
         """Convert a list of parameters (key=value) into a dict
+
+        This function is used to transform Nagios (or ini) like formated parameters (key=value)
+        to a dictionary.
 
         :param params: parameters list
         :type params: list
@@ -950,14 +964,18 @@ class Config(Item):  # pylint: disable=R0904,R0902
             if key[0] == '$' and key[-1] == '$':
                 key = key[1:-1]
                 # Update the macros list
+                if key not in self.__class__.macros:
+                    print("New macro %s: %s - %s" % (self, key, value))
                 self.__class__.macros[key] = '$%s$' % key
+                key = '$%s$' % key
 
-                logger.debug("- macro %s = %s", key, update_attribute)
+                logger.debug("- macro %s", key)
+                update_attribute = value
                 # Create a new property to store the macro value
                 if isinstance(value, list):
-                    self.__class__.properties['$%s$' % key] = ListProp(default=value)
+                    self.__class__.properties[key] = ListProp(default=value)
                 else:
-                    self.__class__.properties['$%s$' % key] = StringProp(default=value)
+                    self.__class__.properties[key] = StringProp(default=value)
             elif key in self.properties:
                 update_attribute = self.properties[key].pythonize(value)
             elif key in self.running_properties:
@@ -971,12 +989,21 @@ class Config(Item):  # pylint: disable=R0904,R0902
                              "is not in %s object properties", key, self.__class__.__name__)
                 update_attribute = ToGuessProp().pythonize(value)
 
-            if update_attribute:
+            if update_attribute is not None:
                 setattr(self, key, update_attribute)
-                logger.debug("- %s = %s", key, update_attribute)
+                logger.debug("- update %s = %s", key, update_attribute)
+                print("- update %s = %s", key, update_attribute)
 
         # Change Nagios2 names to Nagios3 ones (before using them)
         self.old_properties_names_to_new()
+
+        # Fill default for myself - new properties entry becomes a self attribute
+        self.fill_default()
+
+        print("------")
+        print("Not empty macros: %s:" % getattr(self, '$USER1$', 'XxX'))
+        print("Not empty macros: %s:" % getattr(self, 'USER1', 'XxX'))
+        print("------")
 
     @staticmethod
     def _cut_line(line):
@@ -1692,14 +1719,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
         """
         self.services.apply_implicit_inheritance(self.hosts)
 
-    def fill_default(self):
+    def fill_default_configuration(self):
         """Fill objects properties with default value if necessary
 
         :return: None
         """
         logger.debug("Filling the unset properties with their default value:")
-        # Fill default for config (self)
-        super(Config, self).fill_default()
 
         types_creations = self.__class__.types_creations
         for o_type in types_creations:
@@ -2537,7 +2562,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # Now the relations
         for host in self.hosts:
             # Add parent relations
-            for parent in host.parents:
+            for parent in getattr(host, 'parents', []):
                 if parent:
                     links.add((parent, host.uuid))
             # Add the others dependencies
@@ -2810,13 +2835,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
             self.parts[part_index] = Config()
 
             # Now we copy all properties of conf into the new ones
-            for prop, entry in list(Config.properties.items()):
+            for prop, entry in sorted(list(Config.properties.items())):
                 # Do not copy the configuration instance id nor name!
                 if prop in ['instance_id', 'config_name']:
                     continue
                 # Only the one that are managed and used
                 if entry.managed and not isinstance(entry, UnusedProp):
-                    val = getattr(self, prop)
+                    val = getattr(self, prop, None)
                     setattr(self.parts[part_index], prop, val)
 
             # Set the cloned configuration name
@@ -3008,18 +3033,3 @@ class Config(Item):  # pylint: disable=R0904,R0902
             logger.info('Dumped')
         except (OSError, IndexError) as exp:  # pragma: no cover, should never happen...
             logger.critical("Error when dumping configuration to %s: %s", dump_file_name, str(exp))
-
-
-def lazy():
-    """Generate 256 User macros: $USERn
-
-    :return: None
-    """
-    # let's compute the "USER" properties and macros..
-    for i in range(1, 63):
-        Config.properties['$USER%d$' % i] = StringProp(default='')
-        Config.macros['USER%d' % i] = '$USER%s$' % i
-
-
-lazy()
-del lazy
