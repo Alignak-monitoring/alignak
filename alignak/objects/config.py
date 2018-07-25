@@ -2165,8 +2165,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
         if hasattr(self, 'retain_state_information') and self.retain_state_information:
             msg = "The configuration parameter '%s = %s' is a Nagios legacy " \
                   "parameter. Alignak will use its inner 'retention' module " \
-                  "to match the expected behavior." % \
-                  ('retain_state_information', self.retain_state_information)
+                  "to match the expected behavior." \
+                  % ('retain_state_information', self.retain_state_information)
             logger.warning(msg)
             self.add_warning(msg)
             mod_configuration = {
@@ -2179,7 +2179,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 mod_configuration['retention_file'] = getattr(self, 'state_retention_file')
             if getattr(self, 'retention_update_interval', None):
                 self.tick_update_retention = int(self.retention_update_interval) * 60
-                mod_configuration['retention_file'] = getattr(self, 'state_retention_file')
+                mod_configuration['retention_period'] = int(self.retention_update_interval) * 60
             modules.append((
                 'scheduler', mod_configuration
             ))

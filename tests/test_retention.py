@@ -79,14 +79,16 @@ class TestRetention(AlignakTest):
 
         :return: None
         """
-        # Delete an hypothetic retention file...
-        if os.path.exists('/tmp/alignak-livestate.json'):
-            os.remove('/tmp/alignak-livestate.json')
+        # Delete a potential existing retention file...
+        if os.path.exists('/tmp/alignak-retention-scheduler-master.json'):
+            os.remove('/tmp/alignak-retention-scheduler-master.json')
 
 
         self.setup_with_file('cfg/cfg_default_retention.cfg')
+        self.show_logs()
         # Retention is configured
         assert self._scheduler.pushed_conf.retention_update_interval == 5
+        # assert self._scheduler.pushed_conf.tick_update_retention == 5
 
         router = self._scheduler.hosts.find_by_name("test_router_0")
         router.checks_in_progress = []
@@ -251,8 +253,9 @@ class TestRetention(AlignakTest):
             ("error", "ACTIVE HOST CHECK: test_host_0;DOWN;3;DOWN!"),
         ]
         self.check_monitoring_events_log(expected_logs)
-        assert os.path.exists('/tmp/alignak-livestate.json')
-        with open('/tmp/alignak-livestate.json', "r") as fd:
+        self.show_logs()
+        assert os.path.exists('/tmp/alignak-retention-scheduler-master.json')
+        with open('/tmp/alignak-retention-scheduler-master.json', "r") as fd:
             retention_check = json.load(fd)
         pprint.pprint(retention_check)
         for host_check in retention_check.values():

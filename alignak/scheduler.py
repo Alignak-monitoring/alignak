@@ -1400,7 +1400,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         :return: None
         """
-        if getattr(self.my_daemon, 'log_initial_states', False):
+        if getattr(self.pushed_conf, 'log_initial_states', False):
             # Raise current state log
             for elt in self.all_my_hosts_and_services():
                 elt.raise_initial_state()

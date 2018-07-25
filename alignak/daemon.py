@@ -1835,22 +1835,18 @@ class Daemon(object):
         return elapsed, time_changed
 
     def check_for_system_time_change(self):
-        # pylint: disable=no-member
         """Check if our system time change. If so, change our
 
         :return: 0 if the difference < 900, difference else
         :rtype: int
-        TODO: Duplicate of alignak.worker.Worker.check_for_system_time_change
         """
         now = time.time()
         difference = now - self.t_each_loop
 
         # If we have more than 15 min time change, we need to compensate it
         # todo: confirm that 15 minutes is a good choice...
-        if abs(difference) > 900:  # pragma: no cover, not with unit tests...
-            self.compensate_system_time_change(
-                difference,
-                self.sched.timeperiods if hasattr(self, "sched") else None)
+        if abs(difference) > 900:
+            self.compensate_system_time_change(difference)
         else:
             difference = 0
 
@@ -1858,13 +1854,16 @@ class Daemon(object):
 
         return difference
 
-    def compensate_system_time_change(self, difference, timeperiods):
-        # pylint: disable=no-self-use, no-member, unused-argument
+    def compensate_system_time_change(self, difference):
+        # pylint: disable=no-self-use, no-member
         """Default action for system time change. Actually a log is done
+
+        :param difference: in seconds
+        :type difference: int
 
         :return: None
         """
-        logger.warning('A system time change of %s seconds has been detected. Compensating...',
+        logger.warning('A system time change of %d seconds has been detected. Compensating...',
                        int(difference))
 
     def wait_for_initial_conf(self, timeout=1.0):

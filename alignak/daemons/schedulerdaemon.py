@@ -152,7 +152,7 @@ class Alignak(BaseSatellite):
 
         return res
 
-    def compensate_system_time_change(self, difference, timeperiods):  # pragma: no cover,
+    def compensate_system_time_change(self, difference):  # pragma: no cover,
         # pylint: disable=too-many-branches
         # not with unit tests
         """Compensate a system time change of difference for all hosts/services/checks/notifs
@@ -161,7 +161,7 @@ class Alignak(BaseSatellite):
         :type difference: int
         :return: None
         """
-        super(Alignak, self).compensate_system_time_change(difference, timeperiods)
+        super(Alignak, self).compensate_system_time_change(difference)
 
         # We only need to change some value
         self.program_start = max(0, self.program_start + difference)
@@ -183,7 +183,7 @@ class Alignak(BaseSatellite):
                 t_to_go = chk.t_to_go
                 ref = self.sched.find_item_by_id(chk.ref)
                 new_t = max(0, t_to_go + difference)
-                timeperiod = timeperiods[ref.check_period]
+                timeperiod = self.sched.timeperiods[ref.check_period]
                 if timeperiod is not None:
                     # But it's no so simple, we must match the timeperiod
                     new_t = timeperiod.get_next_valid_time_from_t(new_t)
@@ -422,13 +422,13 @@ class Alignak(BaseSatellite):
             # Scheduler modules
             if not self.have_modules:
                 try:
-                    logger.info("Modules configuration: %s", self.cur_conf['modules'])
+                    logger.warning("Modules configuration: %s", self.cur_conf['modules'])
                     self.modules = unserialize(self.cur_conf['modules'], no_load=True)
                 except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
                     logger.error('Cannot un-serialize modules configuration '
                                  'received from arbiter: %s', exp)
                 if self.modules:
-                    logger.info("I received some modules configuration: %s", self.modules)
+                    logger.debug("I received some modules configuration: %s", self.modules)
                     self.have_modules = True
 
                     self.do_load_modules(self.modules)

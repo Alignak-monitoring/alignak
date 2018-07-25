@@ -148,8 +148,7 @@ class ModulesManager(object):
                                                  "module configuration" % (module.python_name,
                                                                            module.name))
             else:
-                logger.info("Loaded Python module '%s' (%s)",
-                            module.python_name, module.name)
+                logger.info("Loaded Python module '%s' (%s)", module.python_name, module.name)
 
     def try_instance_init(self, instance, late_start=False):
         """Try to "initialize" the given module instance.
@@ -232,6 +231,7 @@ class ModulesManager(object):
 
         for (alignak_module, python_module) in self.modules_assoc:
             alignak_module.properties = python_module.properties.copy()
+            alignak_module.my_daemon = self.daemon
             logger.info("Alignak starting module '%s'", alignak_module.get_name())
             logger.debug("Module '%s', parameters: %s",
                          alignak_module.get_name(), alignak_module.__dict__)

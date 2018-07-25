@@ -99,12 +99,14 @@ class BaseModule(object):
         mod_conf is a dictionary that contains:
         - all the variables declared in the module configuration file
         - a 'properties' value that is the module properties as defined globally in this file
+        - a 'my_daemon' property that is a reference to the Daemon object that loaded the module
 
         :param mod_conf: module configuration file as a dictionary
         :type mod_conf: dict
         """
         self.myconf = mod_conf
         self.name = mod_conf.get_name()
+        self.my_daemon = mod_conf.my_daemon
 
         self.props = mod_conf.properties.copy()
         # TODO: choose between 'props' or 'properties'..

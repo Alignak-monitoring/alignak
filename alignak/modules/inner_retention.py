@@ -74,26 +74,47 @@ class InnerRetention(BaseModule):
         logger = logging.getLogger('alignak.module.%s' % self.alias)
         logger.setLevel(getattr(mod_conf, 'log_level', logging.INFO))
 
+        logger.info("loaded by the %s '%s'", self.my_daemon.type, self.my_daemon.name)
         logger.debug("inner properties: %s", self.__dict__)
-        logger.debug("received configuration: %s", mod_conf.__dict__)
+        logger.info("received configuration: %s", mod_conf.__dict__)
 
-        logger.info("StatsD configuration: %s:%s, prefix: %s, enabled: %s",
-                    getattr(mod_conf, 'statsd_host', 'localhost'),
-                    int(getattr(mod_conf, 'statsd_port', '8125')),
-                    getattr(mod_conf, 'statsd_prefix', 'alignak'),
-                    (getattr(mod_conf, 'statsd_enabled', '0') != '0'))
+        stats_host = getattr(mod_conf, 'statsd_host', 'localhost')
+        stats_port = int(getattr(mod_conf, 'statsd_port', '8125'))
+        stats_prefix = getattr(mod_conf, 'statsd_prefix', 'alignak')
+        statsd_enabled = (getattr(mod_conf, 'statsd_enabled', '0') != '0')
+        if isinstance(getattr(mod_conf, 'statsd_enabled', '0'), bool):
+            statsd_enabled = getattr(mod_conf, 'statsd_enabled')
+        graphite_enabled = (getattr(mod_conf, 'graphite_enabled', '0') != '0')
+        if isinstance(getattr(mod_conf, 'graphite_enabled', '0'), bool):
+            graphite_enabled = getattr(mod_conf, 'graphite_enabled')
+        logger.info("StatsD configuration: %s:%s, prefix: %s, enabled: %s, graphite: %s",
+                    stats_host, stats_port, stats_prefix, statsd_enabled, graphite_enabled)
+
         self.statsmgr = Stats()
-        self.statsmgr.register(self.alias, 'module',
-                               statsd_host=getattr(mod_conf, 'statsd_host', 'localhost'),
-                               statsd_port=int(getattr(mod_conf, 'statsd_port', '8125')),
-                               statsd_prefix=getattr(mod_conf, 'statsd_prefix', 'alignak'),
-                               statsd_enabled=(getattr(mod_conf, 'statsd_enabled', '0') != '0'))
+        # Configure our Stats manager
+        if not graphite_enabled:
+            self.statsmgr.register(self.alias, 'module',
+                                   statsd_host=stats_host, statsd_port=stats_port,
+                                   statsd_prefix=stats_prefix, statsd_enabled=statsd_enabled)
+        else:
+            self.statsmgr.connect(self.alias, 'module',
+                                  host=stats_host, port=stats_port,
+                                  prefix=stats_prefix, enabled=True)
 
         self.enabled = getattr(mod_conf, 'enabled', '0') != '0'
+        if isinstance(getattr(mod_conf, 'enabled', '0'), bool):
+            self.enabled = getattr(mod_conf, 'enabled')
+
         self.retention_file = getattr(mod_conf, 'retention_file', None)
-        if self.enabled and not self.retention_file:
-            self.retention_file = os.path.join(tempfile.gettempdir(),
-                                               'alignak-retention-%s.json' % self.name)
+        if not self.enabled:
+            logger.warning("inner retention module is loaded but is not enabled.")
+            return
+
+        if not self.retention_file:
+            self.retention_file = os.path.join(tempfile.gettempdir(), 'alignak-retention-%s.json')
+        if '%s' in self.retention_file:
+            self.retention_file = self.retention_file % self.my_daemon.name
+
         logger.info("inner retention module, enabled: %s, retention file: %s",
                     self.enabled, self.retention_file)
 
@@ -119,8 +140,6 @@ class InnerRetention(BaseModule):
 
         all_data = {'hosts': {}, 'services': {}}
 
-        filename, file_extension = os.path.splitext(self.retention_file)
-        self.retention_file = "%s-%s%s" % (filename, scheduler.name, file_extension)
         if not os.path.isfile(self.retention_file):
             logger.info("The configured state retention file does not exist. "
                         "Loading objects state is not available.")
@@ -197,8 +216,6 @@ class InnerRetention(BaseModule):
                     data_to_save['services'][(host_name, service_description)]
 
             try:
-                filename, file_extension = os.path.splitext(self.retention_file)
-                self.retention_file = "%s-%s%s" % (filename, scheduler.name, file_extension)
                 logger.info('Saving retention data to: %s', self.retention_file)
                 with open(self.retention_file, "w") as fd:
                     fd.write(json.dumps(data_to_save['hosts'],
