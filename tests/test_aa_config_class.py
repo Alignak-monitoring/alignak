@@ -90,7 +90,7 @@ class TestConfigClassBase(AlignakTest):
             'RETENTION_FILE': 'state_retention_file'
         }
         # The 64 "USER" macros.
-        for i in range(1, 63):
+        for i in range(1, 65):
             expected_macros['USER%d' % i] = '$USER%d$' % i
         assert alignak_cfg.macros == expected_macros
 

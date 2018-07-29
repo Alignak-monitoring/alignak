@@ -91,10 +91,10 @@ class TestLaunchDaemonsRealms(AlignakTest):
         self._run_checks(passive=False, hosts_count=10, duration=120, cfg_dir='default_realms',
                          more_daemons = {
                              'broker-North': {
-                                 'type': 'broker', 'name': 'broker-North', 'port': '10001', 'realm': 'North'
+                                 'type': 'broker', 'name': 'broker-North', 'port': '40001', 'realm': 'North'
                              },
                              'broker-South': {
-                                 'type': 'broker', 'name': 'broker-South', 'port': '10002', 'realm': 'South'
+                                 'type': 'broker', 'name': 'broker-South', 'port': '40002', 'realm': 'South'
                              },
                              'scheduler-North': {
                                  'type': 'scheduler', 'name': 'scheduler-North', 'port': '20001', 'realm': 'North'
@@ -136,10 +136,10 @@ class TestLaunchDaemonsRealms(AlignakTest):
         self._run_checks(passive=True, hosts_count=10, duration=120, cfg_dir='default_realms',
                          more_daemons = {
                              'broker-North': {
-                                 'type': 'broker', 'name': 'broker-North', 'port': '10001', 'realm': 'North'
+                                 'type': 'broker', 'name': 'broker-North', 'port': '40001', 'realm': 'North'
                              },
                              'broker-South': {
-                                 'type': 'broker', 'name': 'broker-South', 'port': '10002', 'realm': 'South'
+                                 'type': 'broker', 'name': 'broker-South', 'port': '40002', 'realm': 'South'
                              },
                              'scheduler-North': {
                                  'type': 'scheduler', 'name': 'scheduler-North', 'port': '20001', 'realm': 'North'
@@ -220,11 +220,10 @@ class TestLaunchDaemonsRealms(AlignakTest):
                     # cfg.set('daemon.%s' % daemon, 'debug', '1')
                     if daemonize:
                         cfg.set('daemon.%s' % daemon, 'is_daemon', '1')
-
-            # Poller and reactionner daemons are in active mode - default mode!
-            if passive:
-                cfg.set('daemon.poller-master', 'passive', '1')
-                cfg.set('daemon.reactionner-master', 'passive', '1')
+                    if passive and 'poller' in daemon:
+                        cfg.set('daemon.%s' % daemon, 'passive', '1')
+                    if passive and 'reactionner' in daemon:
+                        cfg.set('daemon.%s' % daemon, 'passive', '1')
 
             with open('%s/etc/alignak.ini' % self.cfg_folder, "w") as modified:
                 cfg.write(modified)

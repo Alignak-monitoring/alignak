@@ -496,7 +496,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         'use_large_installation_tweaks':
             UnusedProp(text=u'this option is deprecated because in alignak it is just an alias '
-                            'for enable_environment_macros=False'),
+                            u'for enable_environment_macros=False'),
 
         'free_child_process_memory':
             UnusedProp(text=u'this option is automatic in Python processes'),
@@ -851,7 +851,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             self.__class__._next_id += 1
 
             # let's compute the "USER" properties and macros..
-            for i in range(1, 3):
+            for i in range(1, 65):
                 if '$USER%d$' % i in self.__class__.properties:
                     continue
                 self.__class__.macros['USER%d' % i] = '$USER%s$' % i
@@ -965,7 +965,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 key = key[1:-1]
                 # Update the macros list
                 if key not in self.__class__.macros:
-                    print("New macro %s: %s - %s" % (self, key, value))
+                    logger.debug("New macro %s: %s - %s", self, key, value)
                 self.__class__.macros[key] = '$%s$' % key
                 key = '$%s$' % key
 
@@ -992,18 +992,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
             if update_attribute is not None:
                 setattr(self, key, update_attribute)
                 logger.debug("- update %s = %s", key, update_attribute)
-                print("- update %s = %s", key, update_attribute)
 
         # Change Nagios2 names to Nagios3 ones (before using them)
         self.old_properties_names_to_new()
 
         # Fill default for myself - new properties entry becomes a self attribute
         self.fill_default()
-
-        print("------")
-        print("Not empty macros: %s:" % getattr(self, '$USER1$', 'XxX'))
-        print("Not empty macros: %s:" % getattr(self, 'USER1', 'XxX'))
-        print("------")
 
     @staticmethod
     def _cut_line(line):
@@ -1797,7 +1791,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                              ','.join([daemon.get_name() for daemon in daemons_list]))
 
     def fill_default_satellites(self, alignak_launched=False):
-        # pylint: disable=too-many-branches, too-many-locals
+        # pylint: disable=too-many-branches, too-many-locals, too-many-statements
         """If a required satellite is missing in the configuration, we create a new satellite
         on localhost with some default values
 
@@ -1816,7 +1810,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         self.realms.get_default(check=True)
 
         # Get list of known realms
-        realms_names = [realm.get_name() for realm in self.realms]
+        # realms_names = [realm.get_name() for realm in self.realms]
 
         # Create one instance of each satellite type if it does not exist...
         if not self.schedulers:
@@ -2029,7 +2023,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                          realm.get_name(), realm.actively_checked_hosts,
                          realm.passively_checked_hosts)
             logger.info("Realm: %s, hosts: %s, groups: %s",
-                         realm.get_name(), realm.members, realm.group_members)
+                        realm.get_name(), realm.members, realm.group_members)
 
         # Log all satellites list
         logger.debug("Alignak definitive daemons list:")
@@ -2452,14 +2446,14 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     continue
 
                 host = self.hosts[elt_uuid]
-                if not host.realm in self.realms:
+                if host.realm not in self.realms:
                     # Something was wrong in the conf, will be raised elsewhere
                     continue
 
                 host_realm = self.realms[host.realm]
                 if host_realm.get_name() != realm.get_name():
                     logger.error("Business_rule '%s' got some hosts from another realm: %s",
-                                 host.get_full_name(), elt_r)
+                                 item.get_full_name(), host_realm.get_name())
                     self.add_error("Error: Business_rule '%s' got hosts from another "
                                    "realm: %s" % (item.get_full_name(), host_realm.get_name()))
                     valid = False
@@ -2639,8 +2633,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 if host.realm:
                     tmp_realms.add(host.realm)
             if len(tmp_realms) > 1:
-                self.add_error("Error: the realm configuration of your hosts is not correct because "
-                               "there is more than one realm in one pack (host relations):")
+                self.add_error("Error: the realm configuration of your hosts is not correct "
+                               "because there is more than one realm in one pack (host relations):")
                 for host_id in hosts_pack:
                     host = self.hosts[host_id]
                     if not host.realm:

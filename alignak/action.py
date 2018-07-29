@@ -551,9 +551,18 @@ if os.name != 'nt':
             # 2.7 and higher Python version need a list of arguments for the started command
             cmd = self.command
             if not force_shell:
+                # try:
+                #     command = self.command.encode('utf8')
+                # except AttributeError:
+                #     print("Exception !")
+                #     # Python 3 will raise an exception because the line is still unicode
+                #     command = self.command
+                #     pass
+                #
                 try:
                     cmd = shlex.split(self.command)
                 except Exception as exp:  # pylint: disable=broad-except
+                    print("- %s -" % str(exp))
                     self.output = 'Not a valid shell command: ' + str(exp)
                     self.exit_status = 3
                     self.status = ACT_STATUS_DONE

@@ -324,7 +324,7 @@ class Dispatcher(object):
 
         return events
 
-    def check_dispatch(self):
+    def check_dispatch(self):  # pylint: disable=too-many-branches
         """Check that all active satellites have a configuration dispatched
 
         A DispatcherError exception is raised if no configuration is dispatched!
@@ -593,9 +593,10 @@ class Dispatcher(object):
 
             # Now we get all the schedulers of this realm and upper
             schedulers = self.get_scheduler_ordered_list(realm)
-            schedulers = realm.get_potential_satellites_by_type(self.get_satellites_list('schedulers'), 'scheduler')
+            schedulers = realm.get_potential_satellites_by_type(
+                self.get_satellites_list('schedulers'), 'scheduler')
             if not schedulers:
-                logger.error('  no available schedulers in this realm (%s)!' % realm)
+                logger.error('  no available schedulers in this realm (%s)!', realm)
                 continue
             logger.info("  realm schedulers: %s",
                         ','.join([s.get_name() for s in schedulers]))
@@ -741,9 +742,9 @@ class Dispatcher(object):
                         if nb_cfg_prepared > realm.get_nb_of_must_have_satellites(sat_type):
                             logger.warning("Too much configuration parts prepared "
                                            "for the expected satellites count. "
-                                           "Realm: %s, satellite: %s - prepared: %d out of %d"
-                                           % (realm.name, sat_link.name, nb_cfg_prepared,
-                                              realm.get_nb_of_must_have_satellites(sat_type)))
+                                           "Realm: %s, satellite: %s - prepared: %d out of %d",
+                                           realm.name, sat_link.name, nb_cfg_prepared,
+                                           realm.get_nb_of_must_have_satellites(sat_type))
                             # Fred - 2018-07-20 - temporary disable this error raising!
                             # raise DispatcherError("Too much configuration parts prepared "
                             #                       "for the expected satellites count. "

@@ -107,7 +107,7 @@ class GenericInterface(object):
         }
         my_daemon_type = "%s" % getattr(self.app, 'type', 'unknown')
         my_address = getattr(self.app, 'host_name', getattr(self.app, 'name', 'unknown'))
-        if getattr(self.app, 'address', '127.0.0.1') not in ('127.0.0.1'):
+        if getattr(self.app, 'address', '127.0.0.1') not in ['127.0.0.1']:
             # If an address is explicitely specified, I must use it!
             my_address = self.app.address
         for fun in functions:

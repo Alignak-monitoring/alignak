@@ -349,7 +349,6 @@ class MacroResolver(Borg):
 
             # Put in the macros the type of macro for all macros
             self._get_type_of_macro(macros, data)
-            print("macros: %s - %s" % (c_line, macros))
 
             # We can get out if we do not have macros this loop
             still_got_macros = False
@@ -374,7 +373,7 @@ class MacroResolver(Borg):
                     # Now check if we do not have a 'output' macro. If so, we must
                     # delete all special characters that can be dangerous
                     if macro in self.output_macros:
-                        logger.debug("-> macro from: %s, %s = %s" % (obj, macro, macros[macro]))
+                        logger.debug("-> macro from: %s, %s = %s", obj, macro, macros[macro])
                         macros[macro]['val'] = self._delete_unwanted_caracters(macros[macro]['val'])
                 # If custom type, get value from an object custom variables
                 if macros[macro]['type'] == 'CUSTOM':

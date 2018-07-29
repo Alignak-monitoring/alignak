@@ -55,7 +55,6 @@ implements realm for Alignak. Basically used for parsing.
 """
 import copy
 import logging
-from alignak.objects.item import Item
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
 from alignak.property import BoolProp, StringProp, DictProp, ListProp, IntegerProp
 
@@ -313,9 +312,9 @@ class Realm(Itemgroup):
         """
         self.level = level
         if not self.level:
-            logger.info("- %s" % self.get_name())
+            logger.info("- %s", self.get_name())
         else:
-            logger.info(" %s %s" % ('+' * self.level, self.get_name()))
+            logger.info(" %s %s", '+' * self.level, self.get_name())
         self.all_sub_members = []
         self.all_sub_members_names = []
         for child in sorted(self.realm_members):
@@ -374,8 +373,6 @@ class Realm(Itemgroup):
         :type satellites: SatelliteLink list
         :param s_type: satellite type wanted
         :type s_type: str
-        :param reachable: only the reachable satellites
-        :type reachable: bool
         :return: self.potential_*type*s
         :rtype: list
         """
@@ -495,7 +492,8 @@ class Realm(Itemgroup):
                     poller = pollers[poller]
                 cfg['pollers'][poller.uuid] = poller.give_satellite_cfg()
 
-            for reactionner in self.reactionners + self.get_potential_satellites_by_type(reactionners, "reactionner"):
+            for reactionner in self.reactionners + self.get_potential_satellites_by_type(
+                    reactionners, "reactionner"):
                 if reactionner in reactionners:
                     reactionner = reactionners[reactionner]
                 cfg['reactionners'][reactionner.uuid] = reactionner.give_satellite_cfg()
@@ -596,7 +594,7 @@ class Realms(Itemgroups):
         :rtype: alignak.objects.realm.Realm | None
         """
         found = []
-        for realm in sorted(self, key=lambda realm: realm.level):
+        for realm in sorted(self, key=lambda r: r.level):
             if getattr(realm, 'default', False):
                 found.append(realm)
 
@@ -606,7 +604,7 @@ class Realms(Itemgroups):
             if not found_names:
                 self.add_error("No realm is defined in this configuration! "
                                "This should not be possible!")
-                return
+                return None
             default_realm_name = found_names[0]
             default_realm = self.find_by_name(default_realm_name)
             default_realm.default = True

@@ -19,11 +19,10 @@
 """This module provide a specific HTTP interface for a Scheduler."""
 
 import logging
-import cherrypy
 import traceback
-from io import StringIO
-
 from collections import OrderedDict, Callable
+
+import cherrypy
 
 from alignak.http.generic_interface import GenericInterface
 from alignak.misc.serialization import serialize, unserialize
@@ -117,6 +116,7 @@ class SchedulerInterface(GenericInterface):
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
     def dump(self, o_name=None, details=False, raw=False):
+        # pylint: disable=too-many-locals, too-many-branches
         """Dump an host (all hosts) from the scheduler.
 
         This gets the main host information from the scheduler. If details is set, then some
@@ -138,14 +138,20 @@ class SchedulerInterface(GenericInterface):
             ],
             [   # Services information
                 "type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output",
-                "BR_host;service;dummy_critical;1532451490;2;CRITICAL;SOFT;False;False;BR_host-dummy_critical-2",
+                "BR_host;service;dummy_critical;1532451490;2;CRITICAL;SOFT;False;False;
+                BR_host-dummy_critical-2",
                 "BR_host;service;BR_Simple_And;0;0;OK;HARD;False;False;",
-                "BR_host;service;dummy_unreachable;1532451501;4;UNREACHABLE;SOFT;False;False;BR_host-dummy_unreachable-4",
-                "BR_host;service;dummy_no_output;1532451495;0;OK;HARD;False;False;Service internal check result: 0",
-                "BR_host;service;dummy_unknown;1532451475;3;UNKNOWN;SOFT;False;False;BR_host-dummy_unknown-3",
+                "BR_host;service;dummy_unreachable;1532451501;4;UNREACHABLE;SOFT;False;False;
+                BR_host-dummy_unreachable-4",
+                "BR_host;service;dummy_no_output;1532451495;0;OK;HARD;False;False;
+                Service internal check result: 0",
+                "BR_host;service;dummy_unknown;1532451475;3;UNKNOWN;SOFT;False;False;
+                BR_host-dummy_unknown-3",
                 "BR_host;service;dummy_echo;1532451501;0;OK;HARD;False;False;",
-                "BR_host;service;dummy_warning;1532451492;1;WARNING;SOFT;False;False;BR_host-dummy_warning-1",
-                "BR_host;service;dummy_random;1532451496;2;CRITICAL;SOFT;False;False;Service internal check result: 2",
+                "BR_host;service;dummy_warning;1532451492;1;WARNING;SOFT;False;False;
+                BR_host-dummy_warning-1",
+                "BR_host;service;dummy_random;1532451496;2;CRITICAL;SOFT;False;False;
+                Service internal check result: 2",
                 "BR_host;service;dummy_ok;1532451492;0;OK;HARD;False;False;BR_host"
             ]
         ]
@@ -202,7 +208,8 @@ class SchedulerInterface(GenericInterface):
         :rtype: list
         """
 
-        def get_host_info(host, services, details=False, header=False, raw=False):
+        def get_host_info(host, services, details=False, raw=False):
+            # pylint: disable=too-many-branches
             """Get the host information
 
             :return: None
@@ -308,7 +315,8 @@ class SchedulerInterface(GenericInterface):
                     # Write host line
                     raw_ls_hosts.append(';'.join("%s" % val for val in list(item.values())))
                     for service in services:
-                        raw_ls_services.append(';'.join("%s" % val for val in list(service.values())))
+                        raw_ls_services.append(
+                            ';'.join("%s" % val for val in list(service.values())))
             raw_ls_hosts.insert(0, ';'.join(_header_host))
             raw_ls_services.insert(0, ';'.join(_header_service))
 

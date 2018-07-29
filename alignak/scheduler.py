@@ -655,7 +655,7 @@ class Scheduler(object):  # pylint: disable=R0902
         ExternalCommand:    add_external_command,
     }
 
-    def hook_point(self, hook_name, **kwargs):
+    def hook_point(self, hook_name):
         """Generic function to call modules methods if such method is avalaible
 
         :param hook_name: function name to call
@@ -1353,7 +1353,7 @@ class Scheduler(object):  # pylint: disable=R0902
         for i in self.services:
             i.topology_change = False
 
-    def update_retention(self, forced=False):
+    def update_retention(self):
         """Call hook point 'save_retention'.
         Retention modules will write back retention (to file, db etc)
 
@@ -1717,7 +1717,7 @@ class Scheduler(object):  # pylint: disable=R0902
         logger.debug("Program status brok %s data: %s", brok_type, data)
         return Brok({'type': brok_type, 'data': data})
 
-    def consume_results(self):
+    def consume_results(self):  # pylint: disable=too-many-branches
         """Handle results waiting in waiting_results list.
         Check ref will call consume result and update their status
 
@@ -2343,7 +2343,7 @@ class Scheduler(object):  # pylint: disable=R0902
         """After the scheduling process"""
         # We must save the retention at the quit BY OURSELVES
         # because our daemon will not be able to do it for us
-        self.update_retention(True)
+        self.update_retention()
 
     def run(self):  # pylint: disable=too-many-locals, too-many-statements, too-many-branches
         """Main scheduler function::

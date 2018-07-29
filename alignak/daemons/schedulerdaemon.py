@@ -327,7 +327,7 @@ class Alignak(BaseSatellite):
 
             # Ok now we can save the retention data
             if self.sched.pushed_conf is not None:
-                self.sched.update_retention(forced=True)
+                self.sched.update_retention()
 
             # Get the monitored objects configuration
             t00 = time.time()
@@ -439,12 +439,6 @@ class Alignak(BaseSatellite):
 
             if received_conf_part:
                 logger.info("Loading configuration...")
-
-                print("Received macros %s:" % received_conf_part.properties)
-                for key in sorted(received_conf_part.properties):
-                    if key[0] == '$':
-                        print("- %s = %s" % (key, received_conf_part.properties[key]))
-                print("-----")
 
                 # Propagate the global parameters to the configuration items
                 received_conf_part.explode_global_conf()
@@ -568,7 +562,7 @@ class Alignak(BaseSatellite):
         scheduler_stats = self.sched.get_scheduler_stats(details=True)
         if 'livesynthesis' in scheduler_stats:
             res['livesynthesis'] = scheduler_stats['livesynthesis']
-        if 'livesynthesis' in scheduler_stats:
+        if 'problems' in scheduler_stats:
             res['problems'] = scheduler_stats['problems']
 
         return res

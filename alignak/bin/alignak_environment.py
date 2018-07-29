@@ -298,7 +298,7 @@ class AlignakConfigParser(object):
         macros = self.get_alignak_configuration(macros=True)
 
         sections = self._search_sections('pack.')
-        for name, pack in list(sections.items()):
+        for name, _ in list(sections.items()):
             section_macros = self.get_alignak_configuration(section=name, macros=True)
             macros.update(section_macros)
         return macros

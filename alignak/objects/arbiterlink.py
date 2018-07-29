@@ -122,7 +122,7 @@ class ArbiterLinks(SatelliteLinks):
     name_property = "arbiter_name"
     inner_class = ArbiterLink
 
-    def linkify(self, realms=None, modules=None):
+    def linkify(self, modules=None):
         """Link modules to Arbiter
 
         # TODO: why having this specific method?

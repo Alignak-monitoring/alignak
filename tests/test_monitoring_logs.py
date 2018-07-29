@@ -291,18 +291,14 @@ class TestMonitoringLogs(AlignakTest):
     
             # Host goes DOWN / SOFT
             self.check(frozen_datetime, host, 2, 'Host is DOWN',
-                       [('error', 'HOST ALERT: test_host_0;DOWN;SOFT;1;Host is DOWN'),
-                        ('error', 'HOST EVENT HANDLER: test_host_0;DOWN;SOFT;1;eventhandler')])
+                       [('error', 'HOST ALERT: test_host_0;DOWN;SOFT;1;Host is DOWN')])
 
             self.check(frozen_datetime, host, 2, 'Host is DOWN',
-                       [('error', 'HOST ALERT: test_host_0;DOWN;SOFT;2;Host is DOWN'),
-                        ('error', 'HOST EVENT HANDLER: test_host_0;DOWN;SOFT;2;eventhandler')])
+                       [('error', 'HOST ALERT: test_host_0;DOWN;SOFT;2;Host is DOWN')])
     
             # Host goes DOWN / HARD
             self.check(frozen_datetime, host, 2, 'Host is DOWN',
-                       [('error', 'HOST ALERT: test_host_0;DOWN;HARD;3;Host is DOWN'),
-                        ('error', 'HOST EVENT HANDLER: test_host_0;DOWN;HARD;3;eventhandler'),
-                        ('error', 'HOST NOTIFICATION: test_contact;test_host_0;DOWN;1;notify-host;Host is DOWN')])
+                       [('error', 'HOST ALERT: test_host_0;DOWN;HARD;3;Host is DOWN')])
     
             # Host notification raised
             self.check(frozen_datetime, host, 2, 'Host is DOWN', [])
@@ -312,9 +308,7 @@ class TestMonitoringLogs(AlignakTest):
             #  Host goes UP / HARD
             #  Get an host check, an alert and a notification
             self.check(frozen_datetime, host, 0, 'Host is UP',
-                       [('info', 'HOST ALERT: test_host_0;UP;HARD;3;Host is UP'),
-                        ('info', 'HOST EVENT HANDLER: test_host_0;UP;HARD;3;eventhandler'),
-                        ('info', 'HOST NOTIFICATION: test_contact;test_host_0;UP;0;notify-host;Host is UP')])
+                       [('info', 'HOST ALERT: test_host_0;UP;HARD;3;Host is UP')])
     
             self.check(frozen_datetime, host, 0, 'Host is UP', [])
     
@@ -364,9 +358,7 @@ class TestMonitoringLogs(AlignakTest):
             #  Service goes warning / HARD
             # Get a service check, an alert and a notification
             self.check(frozen_datetime, svc, 1, 'Service is WARNING',
-                       [('warning',
-                         'SERVICE ALERT: test_host_0;test_ok_0;WARNING;HARD;2;Service is WARNING'),
-                        ('warning', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;WARNING;1;notify-service;Service is WARNING')])
+                       [('warning', 'SERVICE ALERT: test_host_0;test_ok_0;WARNING;HARD;2;Service is WARNING')])
     
             # Service notification raised
             self.check(frozen_datetime, svc, 1, 'Service is WARNING', [])
@@ -375,8 +367,7 @@ class TestMonitoringLogs(AlignakTest):
     
             # Service goes OK
             self.check(frozen_datetime, svc, 0, 'Service is OK',
-                       [('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Service is OK'),
-                        ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;0;notify-service;Service is OK')])
+                       [('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Service is OK')])
     
             self.check(frozen_datetime, svc, 0, 'Service is OK', [])
     
@@ -387,13 +378,11 @@ class TestMonitoringLogs(AlignakTest):
     
             self.check(frozen_datetime, svc, 2, 'Service is CRITICAL',
                        [('error',
-                         'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Service is CRITICAL'),
-                        ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;CRITICAL;1;notify-service;Service is CRITICAL')])
+                         'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Service is CRITICAL')])
     
             # Service goes OK
             self.check(frozen_datetime, svc, 0, 'Service is OK',
-                       [('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Service is OK'),
-                        ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;0;notify-service;Service is OK')])
+                       [('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Service is OK')])
     
             self.check(frozen_datetime, svc, 0, 'Service OK', [])
 
@@ -689,9 +678,9 @@ class TestMonitoringLogs(AlignakTest):
         # todo: it should not but it does!
         # assert [] == monitoring_logs
         expected_logs = [
-            ('info', 'EXTERNAL COMMAND: [%d] RESTART_PROGRAM' % now),
+            # ('info', 'EXTERNAL COMMAND: [%d] RESTART_PROGRAM' % now),
             ('info', 'RESTART: I start sleeping for 3 seconds...\nI awoke after sleeping 3 seconds | sleep=3'),
-            ('info', 'EXTERNAL COMMAND: [%d] RELOAD_CONFIG' % now),
+            # ('info', 'EXTERNAL COMMAND: [%d] RELOAD_CONFIG' % now),
             ('info', 'RELOAD: I start sleeping for 2 seconds...\nI awoke after sleeping 2 seconds | sleep=2'),
         ]
         self.check_monitoring_events_log(expected_logs)

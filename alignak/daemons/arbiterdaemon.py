@@ -407,15 +407,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         else:
             logger.info("No legacy file(s) configured for monitored system configuration")
 
-
-        # print("Very first macros %s:" % self.conf.properties)
-        # for key in self.conf.properties:
-        #     if key[0] == '$':
-        #         print("- %s = %s" % (key, self.conf.properties[key]))
-        # print("-----")
-
-
-
         # Alignak global environment file
         # -------------------------------
         # Here we did not yet read the Alignak configuration file (except for the Arbiter daemon
@@ -468,14 +459,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         if macros:
             self.conf.load_params(macros)
-
-        # print("Initial macros %s:" % self.conf.properties)
-        # for key in self.conf.properties:
-        #     if key[0] == '$':
-        #         print("- %s = %s" % (key, self.conf.properties[key]))
-        # print("-----")
-
-
 
         # Here we got the macros and alignak configuration variables from the
         # alignak.ini configuration!
@@ -785,7 +768,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Dump Alignak macros
         logger.debug("Alignak global macros:")
-        print("Alignak global macros:")
 
         macro_resolver = MacroResolver()
         macro_resolver.init(self.conf)
@@ -794,18 +776,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                                                                          None, None)
             logger.debug("- $%s$ = %s", macro_name, macro_value)
         statsmgr.timer('configuration.loading', time.time() - _t_configuration)
-
-        print("------")
-        print("Not empty macros: %s:" % getattr(self.conf, '$USER1$', 'XxX'))
-        print("Not empty macros: %s:" % getattr(self.conf, 'USER1', 'XxX'))
-        print("------")
-
-        print("*****")
-        macro_name = "USER1"
-        macro_value = macro_resolver.resolve_simple_macros_in_string("$%s$" % macro_name, [],
-                                                                     None, None)
-        print("- $%s$ = %s" % (macro_name, macro_value))
-        print("*****")
 
         # REF: doc/alignak-conf-dispatching.png (2)
         _ts = time.time()

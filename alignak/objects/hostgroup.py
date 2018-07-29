@@ -256,6 +256,7 @@ class Hostgroups(Itemgroups):
             hostgroup.replace_members(new_members)
 
     def linkify_hostgroups_realms_hosts(self, realms, hosts):
+        # pylint: disable=too-many-locals, too-many-nested-blocks, too-many-branches
         """Link between an hostgroup and a realm is already done in the configuration parsing
         function that defines and checks the default satellites, realms, hosts and hosts groups
         consistency.
@@ -270,7 +271,7 @@ class Hostgroups(Itemgroups):
         :return: None
         """
         for hostgroup in self:
-            logger.debug("Hostgroup: %s in the realm: %s" % (hostgroup, hostgroup.realm))
+            logger.debug("Hostgroup: %s in the realm: %s", hostgroup, hostgroup.realm)
             hostgroup_realm_name = hostgroup.realm
             if hostgroup.realm not in realms:
                 realm = realms.find_by_name(hostgroup.realm)
@@ -325,7 +326,7 @@ class Hostgroups(Itemgroups):
 
                             if not hostgroup_new_realm_name or \
                                     hostgroup_new_realm_name == host_realm_name:
-                                 # Potential new host group realm
+                                # Potential new host group realm
                                 hostgroup_new_realm_name = host_realm_name
                             else:
                                 # It still exists a candidate realm for the hostgroup,
@@ -348,7 +349,7 @@ class Hostgroups(Itemgroups):
                 if not hostgroup_new_realm_failed:
                     # Change the hostgroup realm to suit its hosts
                     hostgroup.add_warning("hostgroup %s gets the realm of its hosts: %s"
-                                        % (hostgroup.get_name(), hostgroup_new_realm_name))
+                                          % (hostgroup.get_name(), hostgroup_new_realm_name))
                     hostgroup_new_realm = realms.find_by_name(hostgroup_new_realm_name)
                     hostgroup.realm = hostgroup_new_realm.uuid
 

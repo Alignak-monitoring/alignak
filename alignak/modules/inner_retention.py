@@ -48,7 +48,8 @@ def get_instance(mod_conf):
     :param mod_conf: the module properties as defined globally in this file
     :return:
     """
-    logger.info("Giving an instance of %s for alias: %s", mod_conf.python_name, mod_conf.module_alias)
+    logger.info("Giving an instance of %s for alias: %s",
+                mod_conf.python_name, mod_conf.module_alias)
 
     return InnerRetention(mod_conf)
 

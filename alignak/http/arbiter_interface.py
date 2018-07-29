@@ -212,6 +212,7 @@ class ArbiterInterface(GenericInterface):
     @cherrypy.expose
     @cherrypy.tools.json_out()
     def problems(self):
+        """Alias for monitoring_problems"""
         return self.monitoring_problems
 
     @cherrypy.expose
@@ -284,7 +285,8 @@ class ArbiterInterface(GenericInterface):
     def livesynthesis(self):
         """Get Alignak live synthesis
 
-        This will return an object containing the properties of the `identity`, plus a `livesynthesis`
+        This will return an object containing the properties of the `identity`, plus a
+        `livesynthesis`
         object which contains 2 properties for each known scheduler:
         - _freshness, which is the timestamp when the provided data were fetched
         - livesynthesis, which is an object with the scheduler live synthesis.
@@ -470,19 +472,27 @@ class ArbiterInterface(GenericInterface):
         {
             scheduler-master-3: [
                 [
-                    "type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output",
-                    "localhost;host;localhost;1532451740;0;UP;HARD;False;False;Host assumed to be UP",
+                    "type;host;name;last_check;state_id;state;state_type;is_problem;
+                    is_impact;output",
+                    "localhost;host;localhost;1532451740;0;UP;HARD;False;False;
+                    Host assumed to be UP",
                     "host_2;host;host_2;1532451988;1;DOWN;HARD;True;False;I am always Down"
                 ],
                 [
                     "type;host;name",
-                    "host_2;service;dummy_no_output;1532451981;0;OK;HARD;False;True;Service internal check result: 0",
-                    "host_2;service;dummy_warning;1532451960;4;UNREACHABLE;HARD;False;True;host_2-dummy_warning-1",
-                    "host_2;service;dummy_unreachable;1532451987;4;UNREACHABLE;HARD;False;True;host_2-dummy_unreachable-4",
-                    "host_2;service;dummy_random;1532451949;4;UNREACHABLE;HARD;False;True;Service internal check result: 2",
+                    "host_2;service;dummy_no_output;1532451981;0;OK;HARD;False;True;
+                    Service internal check result: 0",
+                    "host_2;service;dummy_warning;1532451960;4;UNREACHABLE;HARD;False;True;
+                    host_2-dummy_warning-1",
+                    "host_2;service;dummy_unreachable;1532451987;4;UNREACHABLE;HARD;False;True;
+                    host_2-dummy_unreachable-4",
+                    "host_2;service;dummy_random;1532451949;4;UNREACHABLE;HARD;False;True;
+                    Service internal check result: 2",
                     "host_2;service;dummy_ok;1532452002;0;OK;HARD;False;True;host_2",
-                    "host_2;service;dummy_critical;1532451953;4;UNREACHABLE;HARD;False;True;host_2-dummy_critical-2",
-                    "host_2;service;dummy_unknown;1532451945;4;UNREACHABLE;HARD;False;True;host_2-dummy_unknown-3",
+                    "host_2;service;dummy_critical;1532451953;4;UNREACHABLE;HARD;False;True;
+                    host_2-dummy_critical-2",
+                    "host_2;service;dummy_unknown;1532451945;4;UNREACHABLE;HARD;False;True;
+                    host_2-dummy_unknown-3",
                     "host_2;service;dummy_echo;1532451973;4;UNREACHABLE;HARD;False;True;"
                 ]
             ],
@@ -494,22 +504,34 @@ class ArbiterInterface(GenericInterface):
             ],
             [
                 "type;host;name;last_check;state_id;state;state_type;is_problem;is_impact;output",
-                "host_0;service;dummy_no_output;1532451970;0;OK;HARD;False;False;Service internal check result: 0",
-                "host_0;service;dummy_unknown;1532451964;3;UNKNOWN;HARD;True;False;host_0-dummy_unknown-3",
-                "host_0;service;dummy_random;1532451991;1;WARNING;HARD;True;False;Service internal check result: 1",
-                "host_0;service;dummy_warning;1532451945;1;WARNING;HARD;True;False;host_0-dummy_warning-1",
-                "host_0;service;dummy_unreachable;1532451986;4;UNREACHABLE;HARD;True;False;host_0-dummy_unreachable-4",
+                "host_0;service;dummy_no_output;1532451970;0;OK;HARD;False;False;
+                Service internal check result: 0",
+                "host_0;service;dummy_unknown;1532451964;3;UNKNOWN;HARD;True;False;
+                host_0-dummy_unknown-3",
+                "host_0;service;dummy_random;1532451991;1;WARNING;HARD;True;False;
+                Service internal check result: 1",
+                "host_0;service;dummy_warning;1532451945;1;WARNING;HARD;True;False;
+                host_0-dummy_warning-1",
+                "host_0;service;dummy_unreachable;1532451986;4;UNREACHABLE;HARD;True;False;
+                host_0-dummy_unreachable-4",
                 "host_0;service;dummy_ok;1532452012;0;OK;HARD;False;False;host_0",
-                "host_0;service;dummy_critical;1532451987;2;CRITICAL;HARD;True;False;host_0-dummy_critical-2",
+                "host_0;service;dummy_critical;1532451987;2;CRITICAL;HARD;True;False;
+                host_0-dummy_critical-2",
                 "host_0;service;dummy_echo;1532451963;0;OK;HARD;False;False;",
-                "BR_host;service;dummy_critical;1532451970;2;CRITICAL;HARD;True;False;BR_host-dummy_critical-2",
+                "BR_host;service;dummy_critical;1532451970;2;CRITICAL;HARD;True;False;
+                BR_host-dummy_critical-2",
                 "BR_host;service;BR_Simple_And;1532451895;1;WARNING;HARD;True;True;",
-                "BR_host;service;dummy_unreachable;1532451981;4;UNREACHABLE;HARD;True;False;BR_host-dummy_unreachable-4",
-                "BR_host;service;dummy_no_output;1532451975;0;OK;HARD;False;False;Service internal check result: 0",
-                "BR_host;service;dummy_unknown;1532451955;3;UNKNOWN;HARD;True;False;BR_host-dummy_unknown-3",
+                "BR_host;service;dummy_unreachable;1532451981;4;UNREACHABLE;HARD;True;False;
+                BR_host-dummy_unreachable-4",
+                "BR_host;service;dummy_no_output;1532451975;0;OK;HARD;False;False;
+                Service internal check result: 0",
+                "BR_host;service;dummy_unknown;1532451955;3;UNKNOWN;HARD;True;False;
+                BR_host-dummy_unknown-3",
                 "BR_host;service;dummy_echo;1532451981;0;OK;HARD;False;False;",
-                "BR_host;service;dummy_warning;1532451972;1;WARNING;HARD;True;False;BR_host-dummy_warning-1",
-                "BR_host;service;dummy_random;1532451976;4;UNREACHABLE;HARD;True;False;Service internal check result: 4",
+                "BR_host;service;dummy_warning;1532451972;1;WARNING;HARD;True;False;
+                BR_host-dummy_warning-1",
+                "BR_host;service;dummy_random;1532451976;4;UNREACHABLE;HARD;True;False;
+                Service internal check result: 4",
                 "BR_host;service;dummy_ok;1532451972;0;OK;HARD;False;False;BR_host"
             ]
         ],
@@ -576,10 +598,24 @@ class ArbiterInterface(GenericInterface):
             variables: { },
             livestate: {
                 timestamp: 1532106561,
-                long_output: "broker-master - daemon is alive and reachable. poller-master - daemon is alive and reachable. reactionner-master - daemon is alive and reachable. receiver-master - daemon is alive and reachable. receiver-nsca - daemon is alive and reachable. scheduler-master - daemon is alive and reachable. scheduler-master-2 - daemon is alive and reachable. scheduler-master-3 - daemon is alive and reachable.",
+                long_output: "broker-master - daemon is alive and reachable.
+                poller-master - daemon is alive and reachable.
+                reactionner-master - daemon is alive and reachable.
+                receiver-master - daemon is alive and reachable.
+                receiver-nsca - daemon is alive and reachable.
+                scheduler-master - daemon is alive and reachable.
+                scheduler-master-2 - daemon is alive and reachable.
+                scheduler-master-3 - daemon is alive and reachable.",
                 state: "up",
                 output: "All my daemons are up and running.",
-                perf_data: "'servicesextinfo'=0 'businessimpactmodulations'=0 'hostgroups'=2 'resultmodulations'=0 'escalations'=0 'schedulers'=3 'hostsextinfo'=0 'contacts'=2 'servicedependencies'=0 'servicegroups'=1 'pollers'=1 'arbiters'=1 'receivers'=2 'macromodulations'=0 'reactionners'=1 'contactgroups'=2 'brokers'=1 'realms'=3 'services'=32 'commands'=11 'notificationways'=2 'timeperiods'=4 'modules'=0 'checkmodulations'=0 'hosts'=6 'hostdependencies'=0"
+                perf_data: "
+                    'servicesextinfo'=0 'businessimpactmodulations'=0 'hostgroups'=2
+                    'resultmodulations'=0 'escalations'=0 'schedulers'=3 'hostsextinfo'=0
+                    'contacts'=2 'servicedependencies'=0 'servicegroups'=1 'pollers'=1
+                    'arbiters'=1 'receivers'=2 'macromodulations'=0 'reactionners'=1
+                    'contactgroups'=2 'brokers'=1 'realms'=3 'services'=32 'commands'=11
+                    'notificationways'=2 'timeperiods'=4 'modules'=0 'checkmodulations'=0
+                    'hosts'=6 'hostdependencies'=0"
             },
             name: "My Alignak",
             template: {
@@ -612,17 +648,23 @@ class ArbiterInterface(GenericInterface):
 
         The arbiter maintains a list of the most recent Alignak events. This endpoint
         provides this list.
-        
+
         The default format is:
         [
-            "2018-07-23 15:14:43 - E - SERVICE NOTIFICATION: guest;host_0;dummy_random;CRITICAL;1;notify-service-by-log;Service internal check result: 2",
-            "2018-07-23 15:14:43 - E - SERVICE NOTIFICATION: admin;host_0;dummy_random;CRITICAL;1;notify-service-by-log;Service internal check result: 2",
-            "2018-07-23 15:14:42 - E - SERVICE ALERT: host_0;dummy_critical;CRITICAL;SOFT;1;host_0-dummy_critical-2",
-            "2018-07-23 15:14:42 - E - SERVICE ALERT: host_0;dummy_random;CRITICAL;HARD;2;Service internal check result: 2",
-            "2018-07-23 15:14:42 - I - SERVICE ALERT: host_0;dummy_unknown;UNKNOWN;HARD;2;host_0-dummy_unknown-3"
+            "2018-07-23 15:14:43 - E - SERVICE NOTIFICATION: guest;host_0;dummy_random;CRITICAL;1;
+            notify-service-by-log;Service internal check result: 2",
+            "2018-07-23 15:14:43 - E - SERVICE NOTIFICATION: admin;host_0;dummy_random;CRITICAL;1;
+            notify-service-by-log;Service internal check result: 2",
+            "2018-07-23 15:14:42 - E - SERVICE ALERT: host_0;dummy_critical;CRITICAL;SOFT;1;
+            host_0-dummy_critical-2",
+            "2018-07-23 15:14:42 - E - SERVICE ALERT: host_0;dummy_random;CRITICAL;HARD;2;
+            Service internal check result: 2",
+            "2018-07-23 15:14:42 - I - SERVICE ALERT: host_0;dummy_unknown;UNKNOWN;HARD;2;
+            host_0-dummy_unknown-3"
         ]
-        
-        If you request on this endpoint with the *details* parameter (whatever its value...), you will get a detailed JSON output:
+
+        If you request on this endpoint with the *details* parameter (whatever its value...),
+        you will get a detailed JSON output:
         [
             {
                 timestamp: "2018-07-23 15:16:35",
@@ -631,22 +673,26 @@ class ArbiterInterface(GenericInterface):
             },
             {
                 timestamp: "2018-07-23 15:16:32",
-                message: "SERVICE NOTIFICATION: guest;host_0;dummy_random;OK;0;notify-service-by-log;Service internal check result: 0",
+                message: "SERVICE NOTIFICATION: guest;host_0;dummy_random;OK;0;
+                notify-service-by-log;Service internal check result: 0",
                 level: "info"
             },
             {
                 timestamp: "2018-07-23 15:16:32",
-                message: "SERVICE NOTIFICATION: admin;host_0;dummy_random;OK;0;notify-service-by-log;Service internal check result: 0",
+                message: "SERVICE NOTIFICATION: admin;host_0;dummy_random;OK;0;
+                notify-service-by-log;Service internal check result: 0",
                 level: "info"
             },
             {
                 timestamp: "2018-07-23 15:16:32",
-                message: "SERVICE ALERT: host_0;dummy_random;OK;HARD;2;Service internal check result: 0",
+                message: "SERVICE ALERT: host_0;dummy_random;OK;HARD;2;
+                Service internal check result: 0",
                 level: "info"
             },
             {
                 timestamp: "2018-07-23 15:16:19",
-                message: "SERVICE ALERT: host_11;dummy_random;OK;HARD;2;Service internal check result: 0",
+                message: "SERVICE ALERT: host_11;dummy_random;OK;HARD;2;
+                Service internal check result: 0",
                 level: "info"
             }
         ]
@@ -668,7 +714,7 @@ class ArbiterInterface(GenericInterface):
                 # Exposes the full object
                 res.append(log)
             else:
-                res.append("%s - %s - %s" 
+                res.append("%s - %s - %s"
                            % (log['timestamp'], log['level'][0].upper(), log['message']))
         return res
 

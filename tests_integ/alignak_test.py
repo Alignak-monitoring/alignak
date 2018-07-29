@@ -820,7 +820,7 @@ define host {
                                                                          self._arbiter,
                                                                          accept_unknown=True)
 
-        print("All daemons WS: %s" % ["%s:%s" % (link.address, link.port) for link in self._arbiter.dispatcher.all_daemons_links])
+        print("All daemons address: %s" % ["%s:%s" % (link.address, link.port) for link in self._arbiter.dispatcher.all_daemons_links])
 
         # Simulate the daemons HTTP interface (very simple simulation !)
         with requests_mock.mock() as mr:
@@ -1258,8 +1258,8 @@ define host {
             if isinstance(handler, CollectorHandler):
                 handler.collector = []
                 break
-        else:
-            assert False, "Alignak test Logger is not initialized correctly!"
+        # else:
+        #     assert False, "Alignak test Logger is not initialized correctly!"
 
     def clear_actions(self):
         """

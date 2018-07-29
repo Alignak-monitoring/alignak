@@ -96,9 +96,9 @@ class MacroResolverTester(object):
         result = self.mr.resolve_simple_macros_in_string("$MAINCONFIGDIR$", [], None, None, None)
         assert result == os.path.abspath('./cfg')
 
-        # This is a deprecated macro -> n/a
+        # This is an empty macro -> ''
         result = self.mr.resolve_simple_macros_in_string("$COMMENTDATAFILE$", [], None, None, None)
-        assert result == "n/a"
+        assert result == ""
 
         # This is a macro built from an Alignak variable - because the variable is prefixed with _
         # The macro name is built from the uppercased variable name without the leading

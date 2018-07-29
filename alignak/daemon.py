@@ -533,7 +533,8 @@ class Daemon(object):
                     #             setattr(self, prop, value)
                     #         print("Daemon %s, prop: %s = %s" % (self.name, prop, value))
                     #         self.pre_log.append(("DEBUG",
-                    #                              "- setting '%s' as %s" % (prop, getattr(self, prop))))
+                    #                              "- setting '%s' as %s" % (prop,
+                    # getattr(self, prop))))
 
             except configparser.ParsingError as exp:
                 self.exit_on_exception(EnvironmentFile(exp.message))

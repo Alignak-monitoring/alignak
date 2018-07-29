@@ -429,13 +429,13 @@ class Service(SchedulingItem):
         sdesc = getattr(self, 'service_description', '')
 
         if not sdesc:
-            item.add_error("a %s has been defined without " \
-                           "service_description, from: %s" % (objcls, self.imported_from))
+            self.add_error("a %s has been defined without service_description, from: %s"
+                           % (cls, self.imported_from))
         elif not hname:
             self.add_error("[%s::%s] not bound to any host."
                            % (self.my_type, self.get_name()))
         elif not hname and not hgname:
-            item.add_error("a %s has been defined without host_name nor "
+            self.add_error("a %s has been defined without host_name nor "
                            "hostgroup_name, from: %s" % (self.my_type, self.imported_from))
         elif self.host is None:
             self.add_error("[%s::%s] unknown host_name '%s'"
@@ -612,7 +612,7 @@ class Service(SchedulingItem):
         if state_code in self.flap_detection_options:
             self.add_flapping_change(self.state != self.last_state)
             # Now we add a value, we update the is_flapping prop
-            self.update_flapping (notif_period, hosts, services)
+            self.update_flapping(notif_period, hosts, services)
         if self.state != self.last_state:
             self.last_state_change = self.last_state_update
 

@@ -1075,7 +1075,7 @@ class ExternalCommandManager(object):
         :return: None
         """
         notification_period = None
-        if getattr(item, 'notification_period', None) is not None:
+        if getattr(service, 'notification_period', None) is not None:
             notification_period = self.daemon.timeperiods[service.notification_period]
         service.acknowledge_problem(notification_period, self.hosts, self.services, sticky,
                                     notify, author, comment)
@@ -1102,7 +1102,7 @@ class ExternalCommandManager(object):
         TODO: add a better ACK management
         """
         notification_period = None
-        if getattr(item, 'notification_period', None) is not None:
+        if getattr(host, 'notification_period', None) is not None:
             notification_period = self.daemon.timeperiods[host.notification_period]
         host.acknowledge_problem(notification_period, self.hosts, self.services, sticky,
                                  notify, author, comment)
@@ -1129,7 +1129,7 @@ class ExternalCommandManager(object):
         :return: None
         """
         notification_period = None
-        if getattr(item, 'notification_period', None) is not None:
+        if getattr(service, 'notification_period', None) is not None:
             notification_period = self.daemon.timeperiods[service.notification_period]
         service.acknowledge_problem(notification_period, self.hosts, self.services, sticky,
                                     notify, author, comment, end_time=end_time)
@@ -1157,7 +1157,7 @@ class ExternalCommandManager(object):
         TODO: add a better ACK management
         """
         notification_period = None
-        if getattr(item, 'notification_period', None) is not None:
+        if getattr(host, 'notification_period', None) is not None:
             notification_period = self.daemon.timeperiods[host.notification_period]
         host.acknowledge_problem(notification_period, self.hosts, self.services, sticky,
                                  notify, author, comment, end_time=end_time)

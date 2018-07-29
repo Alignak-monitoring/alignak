@@ -282,7 +282,8 @@ class SatelliteLink(Item):
         self.create_connection()
 
     def __repr__(self):  # pragma: no cover
-        return '<%s - %s/%s, %s//%s:%s, rid: %s, spare: %s, realm: %s, sub-realms: %s, managing: %s (%s) />' \
+        return '<%s - %s/%s, %s//%s:%s, rid: %s, spare: %s, realm: %s, sub-realms: %s, ' \
+               'managing: %s (%s) />' \
                % (self.instance_id, self.type, self.name,
                   self.scheme, self.address, self.port, self.running_id,
                   self.spare, self.realm, self.manage_sub_realms,

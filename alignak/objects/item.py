@@ -956,6 +956,7 @@ class Items(object):
             pass
 
     def add_item(self, item, index=True):
+        # pylint: disable=too-many-branches
         """
         Add an item into our containers, and index it depending on the `index` flag.
 
@@ -981,23 +982,23 @@ class Items(object):
                     # format is optional
                     limits = pattern.split('-')
                     fmt = "%d"
-                    min = 1
-                    max = 1
+                    min_v = 1
+                    max_v = 1
                     if len(limits) == 3:
                         fmt = limits[2]
                         new_name = name.replace('[%s-%s-%s]' % (limits[0], limits[1], fmt), '***')
                     else:
                         new_name = name.replace('[%s-%s]' % (limits[0], limits[1]), '***')
                     try:
-                        min = int(limits[0])
+                        min_v = int(limits[0])
                     except ValueError:
                         pass
                     try:
-                        max = int(limits[1])
+                        max_v = int(limits[1])
                     except ValueError:
                         pass
 
-                    for idx in range(min, max + 1):
+                    for idx in range(min_v, max_v + 1):
                         logger.debug("- cloning host: %s", new_name.replace('***', fmt % idx))
                         new_host = deepcopy(item)
                         new_host.uuid = get_a_new_object_id()
@@ -1287,7 +1288,7 @@ class Items(object):
         Link items with contacts items
 
         :param contacts: all contacts object
-        :type contacts: alignak.objects.contact.Contact
+        :type contacts: alignak.objects.contact.Contacts
         :return: None
         """
         for i in self:

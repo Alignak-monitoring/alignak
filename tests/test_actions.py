@@ -527,7 +527,8 @@ class TestAction(AlignakTest):
         self.wait_finished(a)
         assert 0 == a.exit_status
         assert 'done' == a.status
-        assert "Les naïfs ægithales hâtifs pondant à Noël où il gèle sont sûrs d'être déçus en voyant leurs drôles d'œufs abîmés." == a.output
+        assert u"Les naïfs ægithales hâtifs pondant à Noël où il gèle sont sûrs " \
+               u"d'être déçus en voyant leurs drôles d'œufs abîmés." == a.output
         assert "" == a.long_output
         assert "" == a.perf_data
 
@@ -543,7 +544,7 @@ class TestAction(AlignakTest):
         self.wait_finished(a)
         assert 0 == a.exit_status
         assert 'done' == a.status
-        assert "На берегу пустынных волн" == a.output
+        assert u"На берегу пустынных волн" == a.output
         assert "" == a.long_output
         assert "" == a.perf_data
 
@@ -570,7 +571,7 @@ class TestAction(AlignakTest):
         self.wait_finished(a)
         assert 0 == a.exit_status
         assert 'done' == a.status
-        assert "На берегу пустынных волн" == a.output
+        assert u"На берегу пустынных волн" == a.output
         assert u"Стоял он, дум великих полн,\n" \
                u"И вдаль глядел. Пред ним широко\n" \
                u"Река неслася; бедный чёлн\n" \
