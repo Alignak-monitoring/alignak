@@ -37,6 +37,9 @@ if [ $? -ne 0 ]; then
 fi
 
 echo 'tests ...'
-cd test
-pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py || travis_terminate 1;
+cd tests
+pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py
+cd ..
+cd tests_integ
+pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-report term-missing --cov-config .coveragerc test_*.py
 cd ..
