@@ -1628,6 +1628,7 @@ class TestDaemonsApi(AlignakTest):
 
         # -----
         # 2/ get the daemons statistics - no details
+        time.sleep(1)
         self._get_stats(req, satellite_map, False)
 
         time.sleep(1)

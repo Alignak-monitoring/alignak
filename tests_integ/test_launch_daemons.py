@@ -49,6 +49,27 @@ class TestLaunchDaemons(AlignakTest):
         self.cfg_folder = '/tmp/alignak'
         self._prepare_configuration(copy=True, cfg_folder=self.cfg_folder)
 
+        files = ['%s/etc/alignak.ini' % self.cfg_folder,
+                 '%s/etc/alignak.d/daemons.ini' % self.cfg_folder,
+                 '%s/etc/alignak.d/modules.ini' % self.cfg_folder]
+        try:
+            cfg = configparser.ConfigParser()
+            cfg.read(files)
+
+            cfg.set('alignak-configuration', 'launch_missing_daemons', '1')
+            cfg.set('daemon.arbiter-master', 'alignak_launched', '1')
+            cfg.set('daemon.scheduler-master', 'alignak_launched', '1')
+            cfg.set('daemon.poller-master', 'alignak_launched', '1')
+            cfg.set('daemon.reactionner-master', 'alignak_launched', '1')
+            cfg.set('daemon.receiver-master', 'alignak_launched', '1')
+            cfg.set('daemon.broker-master', 'alignak_launched', '1')
+
+            with open('%s/etc/alignak.ini' % self.cfg_folder, "w") as modified:
+                cfg.write(modified)
+        except Exception as exp:
+            print("* parsing error in config file: %s" % exp)
+            assert False
+
     def tearDown(self):
         # Restore the default test logger configuration
         if 'ALIGNAK_LOGGER_CONFIGURATION' in os.environ:
@@ -228,25 +249,14 @@ class TestLaunchDaemons(AlignakTest):
 
         args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder]
         ret = self._run_command_with_timeout(args, 30)
-        assert ret is not None
 
         errors = 0
         ok = False
         with open('/tmp/alignak/log/arbiter-master.log') as f:
             for line in f:
-                if 'WARNING:' in line and "that we must be related with cannot be connected: Server not available:" in line:
-                    # We got some errors for missing daemons connection
+                if 'total number of hosts in all realms: 0' in line:
                     ok = True
-                if 'ERROR:' in line:
-                    print("*** %s" % line.rstrip())
-                    if "All the daemons connections could not be established despite 3 tries! Sorry, I bail out!" in line:
-                        errors = errors + 1
-                    if "Sorry, I bail out, exit code: 4" in line:
-                        errors = errors + 1
-        # Arbiter process must exit with a return code == 0 and no errors
-        assert errors == 2
-        # Arbiter process must exit with a return code == 1
-        assert ret == 4
+        assert errors == 0
         assert ok
 
     def test_arbiter_unexisting_monitoring_configuration(self):
@@ -585,6 +595,7 @@ class TestLaunchDaemons(AlignakTest):
                 if 'ERROR:' in line or 'CRITICAL:' in line:
                     print("*** %s" % line.rstrip())
                     errors = errors + 1
+
         # arbiter process may exit with no errors!
         # assert errors == 0
         # Arbiter changed the log level to INFO because of the verify mode

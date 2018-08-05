@@ -282,7 +282,6 @@ else
          eval type_instances="\${alignak_${type}_instances:""}"
          for instance in ${type_instances}; do
             info "=> instance: ${type} - ${instance}"
-            echo "=> instance: ${type} - ${instance}"
             /usr/local/etc/rc.d/alignak $1 ${type} ${instance}
             retcode="$?"
             if [ "0${retcode}" -ne 0 ]; then
@@ -353,7 +352,7 @@ extra_commands="reload check"
 if [ ! -z "$alignak_user" ]; then
    export ALIGNAK_USER=${alignak_user}
    export ALIGNAK_GROUP=${alignak_group}
-   info "Setting Alignak user in the environment: $ALIGNAK_USER:$ALIGNAK_GROUP"
+   debug "Setting Alignak user in the environment: $ALIGNAK_USER:$ALIGNAK_GROUP"
 fi
 
 # If you get in trouble because of the stdout/stderr logging, you can set this environment variable
@@ -385,7 +384,7 @@ alignak_start()
 alignak_stop()
 {
    if [ -e "${alignak_pid_file}" ]; then
-      info "Stopping ${name} - ${type} ${instance}i, pid=(`cat ${alignak_pid_file}`)..."
+      info "Stopping ${name} - ${type} ${instance}, pid=(`cat ${alignak_pid_file}`)..."
       kill -s TERM `cat ${alignak_pid_file}`
       info "Stopped"
    else
