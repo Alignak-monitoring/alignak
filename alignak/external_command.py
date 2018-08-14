@@ -254,6 +254,8 @@ class ExternalCommandManager(object):
             {'global': False, 'args': ['host']},
         'disable_host_flap_detection':
             {'global': False, 'args': ['host']},
+        'disable_host_freshness_check':
+            {'global': False, 'args': ['host']},
         'disable_host_freshness_checks':
             {'global': True, 'args': []},
         'disable_host_notifications':
@@ -291,6 +293,8 @@ class ExternalCommandManager(object):
         'disable_svc_event_handler':
             {'global': False, 'args': ['service']},
         'disable_svc_flap_detection':
+            {'global': False, 'args': ['service']},
+        'disable_svc_freshness_check':
             {'global': False, 'args': ['service']},
         'disable_svc_notifications':
             {'global': False, 'args': ['service']},
@@ -330,6 +334,8 @@ class ExternalCommandManager(object):
             {'global': False, 'args': ['host']},
         'enable_host_flap_detection':
             {'global': False, 'args': ['host']},
+        'enable_host_freshness_check':
+            {'global': False, 'args': ['host']},
         'enable_host_freshness_checks':
             {'global': True, 'args': []},
         'enable_host_notifications':
@@ -365,6 +371,8 @@ class ExternalCommandManager(object):
         'enable_svc_event_handler':
             {'global': False, 'args': ['service']},
         'enable_svc_flap_detection':
+            {'global': False, 'args': ['service']},
+        'enable_svc_freshness_check':
             {'global': False, 'args': ['service']},
         'enable_svc_notifications':
             {'global': False, 'args': ['service']},
@@ -2132,6 +2140,21 @@ class ExternalCommandManager(object):
                 host.flapping_changes = []
             self.daemon.get_and_register_status_brok(host)
 
+    def disable_host_freshness_check(self, host):
+        """Disable freshness check for a host
+        Format of the line that triggers function call::
+
+        DISABLE_HOST_FRESHNESS_CHECK;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
+        if host.check_freshness:
+            host.modified_attributes |= DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
+            host.check_freshness = False
+            self.daemon.get_and_register_status_brok(host)
+
     def disable_host_freshness_checks(self):
         """Disable freshness checks (globally)
         Format of the line that triggers function call::
@@ -2354,6 +2377,21 @@ class ExternalCommandManager(object):
             if service.is_flapping:
                 service.is_flapping = False
                 service.flapping_changes = []
+            self.daemon.get_and_register_status_brok(service)
+
+    def disable_svc_freshness_check(self, service):
+        """Disable freshness check for a service
+        Format of the line that triggers function call::
+
+        DISABLE_SERVICE_FRESHNESS_CHECK;<host_name>;<service_description>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :return: None
+        """
+        if service.check_freshness:
+            service.modified_attributes |= DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
+            service.check_freshness = False
             self.daemon.get_and_register_status_brok(service)
 
     def disable_service_freshness_checks(self):
@@ -2694,6 +2732,21 @@ class ExternalCommandManager(object):
             host.flap_detection_enabled = True
             self.daemon.get_and_register_status_brok(host)
 
+    def enable_host_freshness_check(self, host):
+        """Enable freshness check for a host
+        Format of the line that triggers function call::
+
+        ENABLE_HOST_FRESHNESS_CHECK;<host_name>
+
+        :param host: host to edit
+        :type host: alignak.objects.host.Host
+        :return: None
+        """
+        if not host.check_freshness:
+            host.modified_attributes |= DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
+            host.check_freshness = True
+            self.daemon.get_and_register_status_brok(host)
+
     def enable_host_freshness_checks(self):
         """Enable freshness checks (globally)
         Format of the line that triggers function call::
@@ -2947,6 +3000,21 @@ class ExternalCommandManager(object):
             service.modified_attributes |= \
                 DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
             service.event_handler_enabled = True
+            self.daemon.get_and_register_status_brok(service)
+
+    def enable_svc_freshness_check(self, service):
+        """Enable freshness check for a service
+        Format of the line that triggers function call::
+
+        ENABLE_SERVICE_FRESHNESS_CHECK;<host_name>;<service_description>
+
+        :param service: service to edit
+        :type service: alignak.objects.service.Service
+        :return: None
+        """
+        if not service.check_freshness:
+            service.modified_attributes |= DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
+            service.check_freshness = True
             self.daemon.get_and_register_status_brok(service)
 
     def enable_svc_flap_detection(self, service):

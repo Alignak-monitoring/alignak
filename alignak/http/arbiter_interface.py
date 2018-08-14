@@ -1093,7 +1093,7 @@ class ArbiterInterface(GenericInterface):
                             json.dumps(val)
                             env[prop] = val
                         except TypeError as exp:
-                            logger.warning('get_all_states, %s: %s', prop, str(exp))
+                            logger.warning('satellites_configuration, %s: %s', prop, str(exp))
                 lst.append(env)
         return res
 

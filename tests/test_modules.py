@@ -306,6 +306,7 @@ class TestModules(AlignakTest):
             "Killing external module "
         ), idx)
         idx += 1
+        self.show_logs()
 
         # self.assert_log_match(re.escape(
         #     "mod-example is still living "

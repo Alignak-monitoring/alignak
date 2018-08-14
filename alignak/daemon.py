@@ -1455,7 +1455,7 @@ class Daemon(object):
                     os._exit(0)
             except OSError as exc:
                 raise Exception("Fork error: %s [%d], exception: %s"
-                                % (error_message, str(exc), exc.errno))
+                                % (error_message, exc.errno, str(exc)))
 
         fork_then_exit_parent(level=1, error_message="Failed first fork")
         os.setsid()

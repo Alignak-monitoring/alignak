@@ -2208,7 +2208,21 @@ class TestExternalCommands(AlignakTest):
         assert svc.passive_checks_enabled
 
         #  ---
-        # External command: disable / enable checks
+        # External command: disable / enable freshness check
+        assert not host.check_freshness
+
+        excmd = '[%d] ENABLE_HOST_FRESHNESS_CHECK;test_host_0' % time.time()
+        self._scheduler.run_external_commands([excmd])
+        self.external_command_loop()
+        assert host.check_freshness
+
+        excmd = '[%d] DISABLE_HOST_FRESHNESS_CHECK;test_host_0' % time.time()
+        self._scheduler.run_external_commands([excmd])
+        self.external_command_loop()
+        assert not host.check_freshness
+
+        #  ---
+        # External command: disable / enable event handlers
         assert host.event_handler_enabled
 
         excmd = '[%d] DISABLE_HOST_EVENT_HANDLER;test_host_0' % time.time()
@@ -2435,7 +2449,21 @@ class TestExternalCommands(AlignakTest):
         assert svc.passive_checks_enabled
 
         #  ---
-        # External command: disable / enable checks
+        # External command: disable / enable event handlers
+        assert not svc.check_freshness
+
+        excmd = '[%d] ENABLE_SVC_FRESHNESS_CHECK;test_host_0;test_ok_0' % time.time()
+        self._scheduler.run_external_commands([excmd])
+        self.external_command_loop()
+        assert svc.check_freshness
+
+        excmd = '[%d] DISABLE_SVC_FRESHNESS_CHECK;test_host_0;test_ok_0' % time.time()
+        self._scheduler.run_external_commands([excmd])
+        self.external_command_loop()
+        assert not svc.check_freshness
+
+        #  ---
+        # External command: disable / enable event handlers
         assert svc.event_handler_enabled
 
         excmd = '[%d] DISABLE_SVC_EVENT_HANDLER;test_host_0;test_ok_0' % time.time()
