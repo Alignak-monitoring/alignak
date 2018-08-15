@@ -376,13 +376,17 @@ class Config(Item):  # pylint: disable=R0904,R0902
             BoolProp(default=True, fill_brok=['full_status'],
                      class_inherit=[(Host, None), (Service, None)]),
 
-        'log_service_retries':
+        'log_alerts':
             BoolProp(default=True, fill_brok=['full_status'],
-                     class_inherit=[(Service, 'log_retries')]),
+                     class_inherit=[(Host, None), (Service, None)]),
 
-        'log_host_retries':
+        'log_acknowledgements':
             BoolProp(default=True, fill_brok=['full_status'],
-                     class_inherit=[(Host, 'log_retries')]),
+                     class_inherit=[(Host, None), (Service, None)]),
+
+        'log_downtimes':
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Host, None), (Service, None)]),
 
         'log_event_handlers':
             BoolProp(default=True, fill_brok=['full_status'],
@@ -397,16 +401,20 @@ class Config(Item):  # pylint: disable=R0904,R0902
                      class_inherit=[(Host, None), (Service, None)]),
 
         'log_initial_states':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=['full_status'],
+                     class_inherit=[(Host, None), (Service, None)]),
 
         'log_external_commands':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Host, None), (Service, None)]),
 
         'log_passive_checks':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=['full_status'],
+                     class_inherit=[(Host, None), (Service, None)]),
 
         'log_active_checks':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=['full_status'],
+                     class_inherit=[(Host, None), (Service, None)]),
 
         'log_alignak_checks':
             BoolProp(default=False, fill_brok=['full_status']),

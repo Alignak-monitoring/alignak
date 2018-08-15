@@ -664,6 +664,9 @@ class Service(SchedulingItem):
 
         :return: None
         """
+        if not self.__class__.log_active_checks:
+            return
+
         log_level = 'info'
         if self.state in [u'WARNING', u'UNREACHABLE']:
             log_level = 'warning'
@@ -684,19 +687,20 @@ class Service(SchedulingItem):
 
         :return: None
         """
-        log_level = 'info'
-        if self.state == 'WARNING':
-            log_level = 'warning'
-        if self.state == 'CRITICAL':
-            log_level = 'error'
-        brok = make_monitoring_log(
-            log_level, 'SERVICE ALERT: %s;%s;%s;%s;%d;%s' % (
-                self.host_name, self.get_name(),
-                self.state, self.state_type,
-                self.attempt, self.output
+        if self.__class__.log_alerts:
+            log_level = 'info'
+            if self.state == 'WARNING':
+                log_level = 'warning'
+            if self.state == 'CRITICAL':
+                log_level = 'error'
+            brok = make_monitoring_log(
+                log_level, 'SERVICE ALERT: %s;%s;%s;%s;%d;%s' % (
+                    self.host_name, self.get_name(),
+                    self.state, self.state_type,
+                    self.attempt, self.output
+                )
             )
-        )
-        self.broks.append(brok)
+            self.broks.append(brok)
 
         if 'ALIGNAK_LOG_ALERTS' in os.environ:
             if os.environ['ALIGNAK_LOG_ALERTS'] == 'WARNING':
@@ -714,6 +718,9 @@ class Service(SchedulingItem):
 
         :return: None
         """
+        if not self.__class__.log_initial_states:
+            return
+
         log_level = 'info'
         if self.state in ['WARNING', 'UNREACHABLE']:
             log_level = 'warning'
@@ -738,29 +745,27 @@ class Service(SchedulingItem):
         :type notif: alignak.objects.notification.Notification
         :return: None
         """
-        if not self.__class__.log_notifications:
-            return
+        if self.__class__.log_notifications:
+            log_level = 'info'
+            command = notif.command_call
+            if notif.type in [u'DOWNTIMESTART', u'DOWNTIMEEND', u'DOWNTIMECANCELLED',
+                              u'CUSTOM', u'ACKNOWLEDGEMENT',
+                              u'FLAPPINGSTART', u'FLAPPINGSTOP', u'FLAPPINGDISABLED']:
+                state = '%s (%s)' % (notif.type, self.state)
+            else:
+                state = self.state
+                if self.state == 'WARNING':
+                    log_level = 'warning'
+                if self.state == 'CRITICAL':
+                    log_level = 'error'
 
-        log_level = 'info'
-        command = notif.command_call
-        if notif.type in [u'DOWNTIMESTART', u'DOWNTIMEEND', u'DOWNTIMECANCELLED',
-                          u'CUSTOM', u'ACKNOWLEDGEMENT',
-                          u'FLAPPINGSTART', u'FLAPPINGSTOP', u'FLAPPINGDISABLED']:
-            state = '%s (%s)' % (notif.type, self.state)
-        else:
-            state = self.state
-            if self.state == 'WARNING':
-                log_level = 'warning'
-            if self.state == 'CRITICAL':
-                log_level = 'error'
-
-        brok = make_monitoring_log(
-            log_level, "SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s;%s" % (
-                contact.get_name(), host_ref.get_name(), self.get_name(), state,
-                notif.notif_nb, command.get_name(), self.output
+            brok = make_monitoring_log(
+                log_level, "SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s;%s" % (
+                    contact.get_name(), host_ref.get_name(), self.get_name(), state,
+                    notif.notif_nb, command.get_name(), self.output
+                )
             )
-        )
-        self.broks.append(brok)
+            self.broks.append(brok)
 
         if 'ALIGNAK_LOG_NOTIFICATIONS' in os.environ:
             if os.environ['ALIGNAK_LOG_NOTIFICATIONS'] == 'WARNING':
@@ -894,6 +899,9 @@ class Service(SchedulingItem):
 
         :return: None
         """
+        if not self.__class__.log_acknowledgements:
+            return
+
         brok = make_monitoring_log(
             'info',
             "SERVICE ACKNOWLEDGE ALERT: %s;%s;STARTED; Service problem has been acknowledged"
@@ -906,6 +914,9 @@ class Service(SchedulingItem):
 
         :return: None
         """
+        if not self.__class__.log_acknowledgements:
+            return
+
         brok = make_monitoring_log(
             'info',
             "SERVICE ACKNOWLEDGE ALERT: %s;%s;EXPIRED; Service problem acknowledge expired"
@@ -922,6 +933,9 @@ class Service(SchedulingItem):
 
         :return: None
         """
+        if not self.__class__.log_downtimes:
+            return
+
         brok = make_monitoring_log(
             'info',
             "SERVICE DOWNTIME ALERT: %s;%s;STARTED; "
@@ -939,6 +953,9 @@ class Service(SchedulingItem):
 
         :return: None
         """
+        if not self.__class__.log_downtimes:
+            return
+
         brok = make_monitoring_log(
             'info',
             "SERVICE DOWNTIME ALERT: %s;%s;STOPPED; Service "
@@ -956,6 +973,9 @@ class Service(SchedulingItem):
 
         :return: None
         """
+        if not self.__class__.log_downtimes:
+            return
+
         brok = make_monitoring_log(
             'info',
             "SERVICE DOWNTIME ALERT: %s;%s;CANCELLED; "
@@ -988,34 +1008,6 @@ class Service(SchedulingItem):
                 need_stalk = False
         if need_stalk:
             logger.info("Stalking %s: %s", self.get_name(), check.output)
-
-    # def get_data_for_checks(self):
-    #     """Get data for a check
-    #
-    #     :return: list containing the service and the linked host
-    #     :rtype: list
-    #     """
-    #     return [self.host, self]
-    #
-    # def get_data_for_event_handler(self):
-    #     """Get data for an event handler
-    #
-    #     :return: list containing the service and the linked host
-    #     :rtype: list
-    #     """
-    #     return [self.host, self]
-    #
-    # def get_data_for_notifications(self, contact, notif):
-    #     """Get data for a notification
-    #
-    #     :param contact: The contact to return
-    #     :type contact:
-    #     :param notif: the notification to return
-    #     :type notif:
-    #     :return: list containing the service, the host and the given parameters
-    #     :rtype: list
-    #     """
-    #     return [self.host, self, contact, notif]
 
     def notification_is_blocked_by_contact(self, notifways, timeperiods, notif, contact):
         """Check if the notification is blocked by this contact.
@@ -1063,24 +1055,20 @@ class Service(SchedulingItem):
 
         :return: author
         :rtype: str
-        TODO: use getattr(self.acknowledgement, "author", '') instead
-        TODO: Move to util or SchedulingItem class
         """
         if self.acknowledgement is None:
             return ''
-        return self.acknowledgement.author
+        return getattr(self.acknowledgement, "author", '')
 
     def get_ack_comment(self):
         """Get the comment of the acknowledgement
 
         :return: comment
         :rtype: str
-        TODO: use getattr(self.acknowledgement, "comment", '') instead
-        TODO: Move to util or SchedulingItem class
         """
         if self.acknowledgement is None:
             return ''
-        return self.acknowledgement.comment
+        return getattr(self.acknowledgement, "comment", '')
 
     def get_check_command(self):
         """Wrapper to get the name of the check_command attribute

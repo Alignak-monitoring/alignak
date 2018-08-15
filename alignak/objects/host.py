@@ -586,6 +586,9 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         :return: None
         """
+        if not self.__class__.log_active_checks:
+            return
+
         log_level = 'info'
         if self.state == 'DOWN':
             log_level = 'error'
@@ -604,17 +607,18 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         :return: None
         """
-        log_level = 'info'
-        if self.state == 'DOWN':
-            log_level = 'error'
-        if self.state == 'UNREACHABLE':
-            log_level = 'warning'
-        brok = make_monitoring_log(
-            log_level, 'HOST ALERT: %s;%s;%s;%d;%s' % (
-                self.get_name(), self.state, self.state_type, self.attempt, self.output
+        if self.__class__.log_alerts:
+            log_level = 'info'
+            if self.state == 'DOWN':
+                log_level = 'error'
+            if self.state == 'UNREACHABLE':
+                log_level = 'warning'
+            brok = make_monitoring_log(
+                log_level, 'HOST ALERT: %s;%s;%s;%d;%s' % (
+                    self.get_name(), self.state, self.state_type, self.attempt, self.output
+                )
             )
-        )
-        self.broks.append(brok)
+            self.broks.append(brok)
 
         if 'ALIGNAK_LOG_ALERTS' in os.environ:
             if os.environ['ALIGNAK_LOG_ALERTS'] == 'WARNING':
@@ -631,6 +635,9 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         :return: None
         """
+        if not self.__class__.log_initial_states:
+            return
+
         log_level = 'info'
         if self.state == 'DOWN':
             log_level = 'error'
@@ -653,29 +660,27 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :type notif: alignak.objects.notification.Notification
         :return: None
         """
-        if not self.__class__.log_notifications:
-            return
+        if self.__class__.log_notifications:
+            log_level = 'info'
+            command = notif.command_call
+            if notif.type in (u'DOWNTIMESTART', u'DOWNTIMEEND', u'DOWNTIMECANCELLED',
+                              u'CUSTOM', u'ACKNOWLEDGEMENT',
+                              u'FLAPPINGSTART', u'FLAPPINGSTOP', u'FLAPPINGDISABLED'):
+                state = '%s (%s)' % (notif.type, self.state)
+            else:
+                state = self.state
+                if self.state == 'UNREACHABLE':
+                    log_level = 'warning'
+                if self.state == 'DOWN':
+                    log_level = 'error'
 
-        log_level = 'info'
-        command = notif.command_call
-        if notif.type in (u'DOWNTIMESTART', u'DOWNTIMEEND', u'DOWNTIMECANCELLED',
-                          u'CUSTOM', u'ACKNOWLEDGEMENT',
-                          u'FLAPPINGSTART', u'FLAPPINGSTOP', u'FLAPPINGDISABLED'):
-            state = '%s (%s)' % (notif.type, self.state)
-        else:
-            state = self.state
-            if self.state == 'UNREACHABLE':
-                log_level = 'warning'
-            if self.state == 'DOWN':
-                log_level = 'error'
-
-        brok = make_monitoring_log(
-            log_level, "HOST NOTIFICATION: %s;%s;%s;%s;%s;%s" % (
-                contact.get_name(), self.get_name(), state,
-                notif.notif_nb, command.get_name(), self.output
+            brok = make_monitoring_log(
+                log_level, "HOST NOTIFICATION: %s;%s;%s;%s;%s;%s" % (
+                    contact.get_name(), self.get_name(), state,
+                    notif.notif_nb, command.get_name(), self.output
+                )
             )
-        )
-        self.broks.append(brok)
+            self.broks.append(brok)
 
         if 'ALIGNAK_LOG_NOTIFICATIONS' in os.environ:
             if os.environ['ALIGNAK_LOG_NOTIFICATIONS'] == 'WARNING':
@@ -807,6 +812,9 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         :return: None
         """
+        if not self.__class__.log_acknowledgements:
+            return
+
         brok = make_monitoring_log(
             'info', "HOST ACKNOWLEDGE ALERT: %s;STARTED; "
                     "Host problem has been acknowledged" % self.get_name()
@@ -818,6 +826,9 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         :return: None
         """
+        if not self.__class__.log_acknowledgements:
+            return
+
         brok = make_monitoring_log(
             'info', "HOST ACKNOWLEDGE ALERT: %s;EXPIRED; "
                     "Host problem acknowledge expired" % self.get_name()
@@ -833,6 +844,9 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         :return: None
         """
+        if not self.__class__.log_downtimes:
+            return
+
         brok = make_monitoring_log(
             'info', "HOST DOWNTIME ALERT: %s;STARTED; "
                     "Host has entered a period of scheduled downtime" % (self.get_name())
@@ -848,6 +862,9 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         :return: None
         """
+        if not self.__class__.log_downtimes:
+            return
+
         brok = make_monitoring_log(
             'info', "HOST DOWNTIME ALERT: %s;STOPPED; "
                     "Host has exited from a period of scheduled downtime" % (self.get_name())
@@ -863,6 +880,9 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         :return: None
         """
+        if not self.__class__.log_downtimes:
+            return
+
         brok = make_monitoring_log(
             'info', "HOST DOWNTIME ALERT: %s;CANCELLED; "
                     "Scheduled downtime for host has been cancelled." % (self.get_name())
@@ -1138,23 +1158,20 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         :return: author
         :rtype: str
-        TODO: use getattr(self.acknowledgement, "author", '') instead
-        TODO: Move to util or SchedulingItem class
         """
         if self.acknowledgement is None:
             return ''
-        return self.acknowledgement.author
+        return getattr(self.acknowledgement, "author", '')
 
     def get_ack_comment(self):
         """Get the comment of the acknowledgement
 
         :return: comment
         :rtype: str
-        TODO: use getattr(self.acknowledgement, "comment", '') instead
         """
         if self.acknowledgement is None:
             return ''
-        return self.acknowledgement.comment
+        return getattr(self.acknowledgement, "comment", '')
 
     def get_check_command(self):
         """Wrapper to get the name of the check_command attribute
