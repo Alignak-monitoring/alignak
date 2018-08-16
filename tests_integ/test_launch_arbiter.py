@@ -123,6 +123,7 @@ class TestLaunchArbiter(AlignakTest):
         cfg_folder = '/tmp/alignak'
         print("Copy default configuration (../etc) to %s..." % cfg_folder)
         if os.path.exists('%s/etc' % cfg_folder):
+            print("deleting existing configuration in %s/etc..." % cfg_folder)
             shutil.rmtree('%s/etc' % cfg_folder)
         shutil.copytree('../etc', '%s/etc' % cfg_folder)
         # Remove the daemons configuration part!

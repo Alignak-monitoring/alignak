@@ -859,10 +859,10 @@ class Daemon(object):
             self.http_thread.join(timeout=3)
             if self.http_thread.is_alive():  # pragma: no cover, should never happen...
                 logger.warning("HTTP thread did not terminated. Force stopping the thread..")
-                try:
-                    self.http_thread._Thread__stop()  # pylint: disable=E1101
-                except Exception as exp:  # pylint: disable=broad-except
-                    print("Exception: %s" % exp)
+                # try:
+                #     self.http_thread._Thread__stop()  # pylint: disable=E1101
+                # except Exception as exp:  # pylint: disable=broad-except
+                #     print("Exception: %s" % exp)
             else:
                 logger.debug("HTTP thread exited")
             self.http_thread = None

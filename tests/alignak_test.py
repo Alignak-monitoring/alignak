@@ -364,7 +364,7 @@ define host {
             for name, proc in list(self.procs.items()):
                 if arbiter_only and name not in ['arbiter-master']:
                     continue
-                if proc.pid == self.my_pid:
+                if getattr(self, 'my_pid', None) and proc.pid == self.my_pid:
                     print("- do not kill myself!")
                     continue
                 print("Asking %s (pid=%d) to end..." % (name, proc.pid))
@@ -404,11 +404,14 @@ define host {
                     daemon_process = psutil.Process(proc.pid)
                     daemon_process.terminate()
                     daemon_process.wait(10)
+                except psutil.AccessDenied:
+                    print("-> access denied...")
+                    continue
                 except psutil.NoSuchProcess:
-                    print("not existing!")
+                    print("-> not existing!")
                     continue
                 except psutil.TimeoutExpired:
-                    print("***** timeout 10 seconds, force-killing the daemon...")
+                    print("-> timeout 10 seconds, force-killing the daemon...")
                     daemon_process.kill()
 
     def _run_command_with_timeout(self, cmd, timeout_sec):

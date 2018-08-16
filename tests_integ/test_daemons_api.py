@@ -20,15 +20,10 @@
 #
 
 import os
-import sys
 import time
 import signal
 import json
 
-from pprint import pprint
-
-import subprocess
-from time import sleep
 import requests
 import shutil
 import psutil
@@ -97,7 +92,8 @@ class TestDaemonsApi(AlignakTest):
             shutil.rmtree('%s/etc/arbiter' % self.cfg_folder)
         shutil.copytree('./cfg/%s/arbiter' % cfg_dir, '%s/etc/arbiter' % self.cfg_folder)
 
-        self._prepare_hosts_configuration(cfg_folder='%s/etc/arbiter/objects/hosts' % self.cfg_folder,
+        self._prepare_hosts_configuration(cfg_folder='%s/etc/arbiter/objects/hosts' 
+                                                     % self.cfg_folder,
                                           hosts_count=hosts_count, target_file_name='hosts.cfg',
                                           realms=realms)
 
@@ -115,9 +111,9 @@ class TestDaemonsApi(AlignakTest):
 
             cfg.set('alignak-configuration', 'daemons_check_period', '5')
             cfg.set('alignak-configuration', 'daemons_stop_timeout', '3')
-            cfg.set('alignak-configuration', 'daemons_start_timeout', '1')
-            cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '1')
-            cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '1')
+            cfg.set('alignak-configuration', 'daemons_start_timeout', '5')
+            cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '5')
+            cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '5')
             cfg.set('alignak-configuration', 'min_workers', '1')
             cfg.set('alignak-configuration', 'max_workers', '1')
 
@@ -209,12 +205,12 @@ class TestDaemonsApi(AlignakTest):
 
         # -----
         print("Testing api...")
-        name_to_interface = {'arbiter': ArbiterInterface,
-                             'scheduler': SchedulerInterface,
-                             'broker': BrokerInterface,
-                             'poller': GenericInterface,
-                             'reactionner': GenericInterface,
-                             'receiver': GenericInterface}
+        # name_to_interface = {'arbiter': ArbiterInterface,
+        #                      'scheduler': SchedulerInterface,
+        #                      'broker': BrokerInterface,
+        #                      'poller': GenericInterface,
+        #                      'reactionner': GenericInterface,
+        #                      'receiver': GenericInterface}
         doc = []
         doc.append(".. _alignak_features/daemons_api:")
         doc.append("")
@@ -325,7 +321,7 @@ class TestDaemonsApi(AlignakTest):
             assert "long_output" in livestate
             assert "perf_data" in livestate
 
-        doc = []
+        doc = list()
         doc.append(".. _alignak_features/alignak_status:")
         doc.append(".. Built from the test_daemons_api.py unit test last run!")
         doc.append("")
@@ -394,11 +390,7 @@ class TestDaemonsApi(AlignakTest):
                 assert "livestate" in data
                 livestate = data['livestate']
                 print("Livestate: %s" % livestate)
-                l = {
-                    'daemons': {'reactionner-master': 1, 'poller-master': 1, 'broker-master': 1,
-                                'receiver-master': 1, 'scheduler-master': 1},
-                    'state': 1, 'timestamp': 1531487166,
-                    'output': 'warning because some daemons are not reachable.'}
+
                 assert "timestamp" in livestate
                 assert "state" in livestate
                 assert "output" in livestate
@@ -1791,7 +1783,7 @@ class TestDaemonsApi(AlignakTest):
         self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7770')
 
     def test_get_realms(self):
-        """ Running all the Alignak daemons - get realmss organization
+        """ Running all the Alignak daemons - get realms organization
 
         :return:
         """
@@ -1831,6 +1823,107 @@ class TestDaemonsApi(AlignakTest):
         print("Alignak realms: %s" % (raw_data.text))
         assert raw_data.status_code == 200
         data = raw_data.json()
+        r = {
+            "All": dict(name="All", level=0, hosts=[
+                "host-all-7", "host-all-6", "host-all-3", "host-all-2", "host-all-0", "host-all-1",
+                "localhost", "host-all-8", "host-all-9", "host-all-5", "host-all-4"
+            ], hostgroups=["monitoring_servers"], children={
+                "Asia": dict(name="Asia", level=1,
+                             hosts=["host-asia-3", "host-asia-7", "host-asia-9", "host-asia-4",
+                                    "host-asia-8", "host-asia-1", "host-asia-2", "host-asia-0",
+                                    "host-asia-5", "host-asia-6"], hostgroups=[], children={
+                        "Japan": {"name": "Japan", "level": 2,
+                                  "hosts": ["host-japan-8", "host-japan-7", "host-japan-3",
+                                            "host-japan-4", "host-japan-0", "host-japan-5",
+                                            "host-japan-1", "host-japan-2", "host-japan-9",
+                                            "host-japan-6"],
+                                  "hostgroups": [], "children": {
+                                "Osaka": {"name": "Osaka", "level": 3, "hosts": [],
+                                          "hostgroups": [], "children": {},
+                                          "satellites": {"schedulers": ["scheduler-master"],
+                                                         "reactionners": ["reactionner-master"],
+                                                         "brokers": ["broker-master"],
+                                                         "receivers": ["receiver-master"],
+                                                         "pollers": ["poller-master"]}},
+                                "Tokyo": {"name": "Tokyo", "level": 3, "hosts": ["h_Tokyo"],
+                                          "hostgroups": [], "children": {},
+                                          "satellites": {"schedulers": ["scheduler-master"],
+                                                         "reactionners": ["reactionner-master"],
+                                                         "brokers": ["broker-master"],
+                                                         "receivers": ["receiver-master"],
+                                                         "pollers": ["poller-master"]}}
+                            },
+                                  "satellites": dict(schedulers=["scheduler-master"],
+                                                     reactionners=["reactionner-master"],
+                                                     brokers=["broker-master"],
+                                                     receivers=["receiver-master"],
+                                                     pollers=["poller-master"])}
+                    }, satellites={"schedulers": ["scheduler-master"],
+                                   "reactionners": ["reactionner-master"],
+                                   "brokers": ["broker-master"],
+                                   "receivers": ["receiver-master"],
+                                   "pollers": ["poller-master"]}),
+                "Europe": dict(name="Europe", level=1,
+                               hosts=["host-europe-8", "host-europe-0", "host-europe-2",
+                                      "host-europe-3", "host-europe-9", "host-europe-1",
+                                      "host-europe-5", "host-europe-7", "host-europe-6",
+                                      "host-europe-4"], hostgroups=[], children={
+                        "France": {"name": "France", "level": 2,
+                                   "hosts": ["host-france-4", "h_France", "host-france-0",
+                                             "host-france-1", "host-france-8", "host-france-5",
+                                             "host-france-7", "host-france-9", "host-france-6",
+                                             "host-france-3", "host-france-2"],
+                                   "hostgroups": [], "children": {
+                                "Lyon": {"name": "Lyon", "level": 3, "hosts": ["h_Lyon"],
+                                         "hostgroups": [], "children": {},
+                                         "satellites": {"schedulers": ["scheduler-master"],
+                                                        "reactionners": ["reactionner-master"],
+                                                        "brokers": ["broker-master"],
+                                                        "receivers": ["receiver-master"],
+                                                        "pollers": ["poller-master"]}},
+                                "Paris": {"name": "Paris", "level": 3, "hosts": ["h_Paris"],
+                                          "hostgroups": [], "children": {},
+                                          "satellites": {"schedulers": ["scheduler-master"],
+                                                         "reactionners": ["reactionner-master"],
+                                                         "brokers": ["broker-master"],
+                                                         "receivers": ["receiver-master"],
+                                                         "pollers": ["poller-master"]}}},
+                                   "satellites": {"schedulers": ["scheduler-master"],
+                                                  "reactionners": ["reactionner-master"],
+                                                  "brokers": ["broker-master"],
+                                                  "receivers": ["receiver-master"],
+                                                  "pollers": ["poller-master"]}},
+                        "Italy": {"name": "Italy", "level": 2, "hosts": [], "hostgroups": [],
+                                  "children": {
+                                      "Roma": {"name": "Roma", "level": 3, "hosts": ["h_Roma"],
+                                               "hostgroups": [], "children": {}, "satellites": {
+                                              "schedulers": ["scheduler-master"],
+                                              "reactionners": ["reactionner-master"],
+                                              "brokers": ["broker-master"],
+                                              "receivers": ["receiver-master"],
+                                              "pollers": ["poller-master"]}},
+                                      "Torino": {"name": "Torino", "level": 3, "hosts": [],
+                                                 "hostgroups": [], "children": {},
+                                                 "satellites": {
+                                                     "schedulers": ["scheduler-master"],
+                                                     "reactionners": ["reactionner-master"],
+                                                     "brokers": ["broker-master"],
+                                                     "receivers": ["receiver-master"],
+                                                     "pollers": ["poller-master"]}}},
+                                  "satellites": {"schedulers": ["scheduler-master"],
+                                                 "reactionners": ["reactionner-master"],
+                                                 "brokers": ["broker-master"],
+                                                 "receivers": ["receiver-master"],
+                                                 "pollers": ["poller-master"]}}},
+                               satellites={"schedulers": ["scheduler-master"],
+                                           "reactionners": ["reactionner-master"],
+                                           "brokers": ["broker-master"],
+                                           "receivers": ["receiver-master"],
+                                           "pollers": ["poller-master"]})
+            }, satellites={"schedulers": ["scheduler-master"],
+                           "reactionners": ["reactionner-master"], "brokers": ["broker-master"],
+                           "receivers": ["receiver-master"], "pollers": ["poller-master"]})
+             }
         assert 'All' in data
         assert data['All']['name'] == 'All'
         assert data['All']['level'] == 0
