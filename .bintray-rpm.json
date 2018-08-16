@@ -17,7 +17,7 @@
   },
   "files": [
     {
-      "includePattern": "./bin/(.*\\.rpm)",
+      "includePattern": "./dist/(.*\\.rpm)",
       "uploadPattern": "$1",
       "matrixParams": {
         "override": 1

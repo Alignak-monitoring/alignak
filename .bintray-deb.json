@@ -17,7 +17,7 @@
   },
   "files": [
     {
-      "includePattern": "./bin/(.*\\.deb)",
+      "includePattern": "./dist/(.*\\.deb)",
       "uploadPattern": "$1",
       "matrixParams": {
         "override": 1,

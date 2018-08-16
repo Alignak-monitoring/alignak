@@ -17,7 +17,7 @@
   },
   "files": [
     {
-      "includePattern": "./bin/(.*\\.txz)",
+      "includePattern": "./dist/(.*\\.txz)",
       "uploadPattern": "$1",
       "matrixParams": {
         "override": 1
