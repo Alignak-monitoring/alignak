@@ -1,4 +1,4 @@
-"/usr/local/var/log/alignak/*.log" {
+"/var/log/alignak/*.log" {
   copytruncate
   daily
   rotate 5
