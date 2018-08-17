@@ -65,41 +65,23 @@ else
 fi
 
 echo "Detecting Python version"
-pyver=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:1])))') 2> /dev/null
-if [ $? -eq 0 ]
-then
-   pyver=$(python3 -c 'import sys; print(".".join(map(str, sys.version_info[:2])))') 2> /dev/null
-   echo "Python 3 ($pyver) detected"
-   exe_pip=$(pip3 --version) 2> /dev/null
+pyver=$(python -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
+if [ "$pyver" = "2.7" ]; then
+   echo "Python 2.7 ($pyver) detected"
+   exe_pip=$(pip --version) 2> /dev/null
    if [ $? -eq 0 ]
    then
-      echo "Installing python 3 packages dependencies from requirements.txt..."
-      sudo pip3 install -r $PREFIX/share/alignak/requirements.txt
+      echo "Installing python 2 packages dependencies from requirements.txt..."
+      sudo pip install -r $PREFIX/share/alignak/requirements.txt
       echo "Installed."
    else
-      echo "pip3 is not available. You can install it by typing: sudo apt install python3-pip"
-      echo "You can then run: sudo $PREFIX/share/alignak/post-install.sh"
+      echo "pip is not available. You can install it by typing: sudo apt install python-pip"
+      echo "You can then run: $PREFIX/share/alignak/python-post-install.sh"
       exit 1
    fi
 else
-   pyver=$(python -c 'import sys; print(".".join(map(str, sys.version_info[:2])))')
-   if [ "$pyver" = "2.7" ]; then
-      echo "Python 2.7 ($pyver) detected"
-      exe_pip=$(pip --version) 2> /dev/null
-      if [ $? -eq 0 ]
-      then
-         echo "Installing python 2 packages dependencies from requirements.txt..."
-         sudo pip install -r $PREFIX/share/alignak/requirements.txt
-         echo "Installed."
-      else
-         echo "pip is not available. You can install it by typing: sudo apt install python-pip"
-         echo "You can then run: $PREFIX/share/alignak/post-install.sh"
-         exit 1
-      fi
-   else
-      echo "No valid Python version detected"
-      exit 1
-   fi
+   echo "Python 2 is not installed, exiting."
+   exit 1
 fi
 
 echo "Creating some necessary directories"
