@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH ALIGNAK-ARBITER 8 "2018-06-27" "1.1.0" "Alignak commands"
+.TH ALIGNAK-ARBITER 8 "2018-08-20" "2.0.0" "Alignak commands"
 .SH NAME
 alignak-arbiter \- Alignak arbiter daemon
 .
@@ -33,7 +33,8 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .SH SYNOPSIS
 .INDENT 0.0
 .INDENT 3.5
-\fBalignak\-arbiter\fP \-n arbiter\-name \-e alignak\-configuration\-file
+\fBalignak\-arbiter\fP \-e alignak\-configuration\-file
+.sp
 \fBalignak\-arbiter\fP \-V \-e alignak\-configuration\-file
 .UNINDENT
 .UNINDENT
@@ -53,8 +54,9 @@ There can only be one active arbiter in the architecture.
 .SH OPTIONS
 .INDENT 0.0
 .INDENT 3.5
-$ alignak\-arbiter \-h
-usage: alignak\-arbiter [\-h] [\-v] [\-a MONITORING_FILES] [\-V] [\-k ALIGNAK_NAME] [\-n DAEMON_NAME] [\-d] [\-r] [\-o HOST] [\-p PORT] [\-l LOG_FILENAME] [\-i PID_FILENAME] \-e ENV_FILE
+usage: alignak\-arbiter [\-h] [\-a LEGACY_CFG_FILES] [\-V] [\-k ALIGNAK_NAME] [\-n DAEMON_NAME] [\-c CONFIG_FILE] [\-d] [\-r] [\-vv] [\-v] [\-o HOST] [\-p PORT] [\-l LOG_FILENAME] [\-i PID_FILENAME] \-e ENV_FILE
+.sp
+Alignak daemon launching
 .INDENT 0.0
 .TP
 .B optional arguments:
@@ -63,16 +65,13 @@ usage: alignak\-arbiter [\-h] [\-v] [\-a MONITORING_FILES] [\-V] [\-k ALIGNAK_NA
 .B \-h\fP,\fB  \-\-help
 show this help message and exit
 .TP
-.B \-v\fP,\fB  \-\-version
-show program\(aqs version number and exit
-.TP
-.BI \-a \ MONITORING_FILES\fP,\fB \ \-\-arbiter \ MONITORING_FILES
-Monitored configuration file(s). This option is still
-available but is is preferable to declare the
-monitored objects files in the alignak\-configuration
+.BI \-a \ LEGACY_CFG_FILES\fP,\fB \ \-\-arbiter \ LEGACY_CFG_FILES
+Legacy configuration file(s). This option is still
+available but is is preferable to declare the Nagios\-
+like objects files in the alignak\-configuration
 section of the environment file specified with the \-e
-option.Multiple \-a can be used, and they will be
-concatenated to make a global configuration file.
+option.Multiple \-a can be used to include several
+configuration files.
 .TP
 .B \-V\fP,\fB  \-\-verify\-config
 Verify the configuration file(s) and exit
@@ -88,6 +87,10 @@ this parameter must contain its name!
 Daemon unique name. Must be unique for the same daemon
 type.
 .TP
+.BI \-c \ CONFIG_FILE\fP,\fB \ \-\-config \ CONFIG_FILE
+Daemon configuration file. Deprecated parameter, do
+not use it anymore!
+.TP
 .B \-d\fP,\fB  \-\-daemon
 Run as a daemon. Fork the launched process and
 daemonize.
@@ -95,6 +98,12 @@ daemonize.
 .B \-r\fP,\fB  \-\-replace
 Replace previous running daemon if any pid file is
 found.
+.TP
+.BI \-v\fB v\fP,\fB \ \-\-debug
+Set log level to debug mode (DEBUG)
+.TP
+.B \-v\fP,\fB  \-\-verbose
+Set log level to verbose mode (INFO)
 .TP
 .BI \-o \ HOST\fP,\fB \ \-\-host \ HOST
 Host interface used by the daemon. Default is 0.0.0.0

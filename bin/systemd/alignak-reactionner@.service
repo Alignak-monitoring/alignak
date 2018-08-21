@@ -14,6 +14,13 @@ Type=forking
 # PID file as declared in daemon configuration
 PIDFile=/var/run/alignak/reactionner-%i.pid
 
+ExecStartPre=/bin/mkdir -p /var/log/alignak
+ExecStartPre=/bin/chown -R ${ALIGNAK_USER}:${ALIGNAK_GROUP} /var/log/alignak
+ExecStartPre=/bin/chmod 775 /var/log/alignak
+ExecStartPre=/bin/mkdir -p /var/run/alignak
+ExecStartPre=/bin/chown -R ${ALIGNAK_USER}:${ALIGNAK_GROUP} /var/run/alignak
+ExecStartPre=/bin/chmod 775 /var/run/alignak
+
 ExecStartPre=/bin/echo Alignak starting reactionner %i - /usr/local/bin/alignak-reactionner -d -n reactionner-%i -e "${ALIGNAK_CONFIGURATION_FILE}"
 ExecStart=/usr/local/bin/alignak-reactionner -d -n reactionner-%i -e "${ALIGNAK_CONFIGURATION_FILE}" --pid_file /var/run/alignak/reactionner-%i.pid --log_file /var/log/alignak/reactionner-%i.log
 

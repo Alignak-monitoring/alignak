@@ -14,6 +14,13 @@ Type=forking
 # PID file as declared in daemon configuration
 PIDFile=/var/run/alignak/arbiter-%i.pid
 
+ExecStartPre=/bin/mkdir -p /var/log/alignak
+ExecStartPre=/bin/chown -R ${ALIGNAK_USER}:${ALIGNAK_GROUP} /var/log/alignak
+ExecStartPre=/bin/chmod 775 /var/log/alignak
+ExecStartPre=/bin/mkdir -p /var/run/alignak
+ExecStartPre=/bin/chown -R ${ALIGNAK_USER}:${ALIGNAK_GROUP} /var/run/alignak
+ExecStartPre=/bin/chmod 775 /var/run/alignak
+
 ExecStartPre=/bin/echo Alignak starting arbiter %i - /usr/local/bin/alignak-arbiter -d -n arbiter-%i -e "${ALIGNAK_CONFIGURATION_FILE}"
 ExecStart=/usr/local/bin/alignak-arbiter -d -n arbiter-%i -e "${ALIGNAK_CONFIGURATION_FILE}" --pid_file /var/run/alignak/arbiter-%i.pid --log_file /var/log/alignak/arbiter-%i.log
 

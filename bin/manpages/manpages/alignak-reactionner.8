@@ -1,6 +1,6 @@
 .\" Man page generated from reStructuredText.
 .
-.TH ALIGNAK-REACTIONNER 8 "2018-06-27" "1.1.0" "Alignak commands"
+.TH ALIGNAK-REACTIONNER 8 "2018-08-20" "2.0.0" "Alignak commands"
 .SH NAME
 alignak-reactionner \- Alignak reactionner daemon
 .
@@ -45,8 +45,14 @@ such as notifications and event\-handlers from the schedulers rather than checks
 .SH OPTIONS
 .INDENT 0.0
 .INDENT 3.5
-$ alignak\-reactionner \-h
-usage: alignak\-reactionner [\-h] [\-v] \-n DAEMON_NAME [\-d] [\-r] [\-o HOST] [\-p PORT] [\-l LOG_FILENAME] [\-i PID_FILENAME] \-e ENV_FILE
+.INDENT 0.0
+.TP
+.B usage: alignak\-reactionner [\-h] \-n DAEMON_NAME [\-c CONFIG_FILE] [\-d] [\-r]
+[\-vv] [\-v] [\-o HOST] [\-p PORT] [\-l LOG_FILENAME]
+[\-i PID_FILENAME] \-e ENV_FILE
+.UNINDENT
+.sp
+Alignak daemon launching
 .INDENT 0.0
 .TP
 .B optional arguments:
@@ -55,12 +61,13 @@ usage: alignak\-reactionner [\-h] [\-v] \-n DAEMON_NAME [\-d] [\-r] [\-o HOST] [
 .B \-h\fP,\fB  \-\-help
 show this help message and exit
 .TP
-.B \-v\fP,\fB  \-\-version
-show program\(aqs version number and exit
-.TP
 .BI \-n \ DAEMON_NAME\fP,\fB \ \-\-name \ DAEMON_NAME
 Daemon unique name. Must be unique for the same daemon
 type.
+.TP
+.BI \-c \ CONFIG_FILE\fP,\fB \ \-\-config \ CONFIG_FILE
+Daemon configuration file. Deprecated parameter, do
+not use it anymore!
 .TP
 .B \-d\fP,\fB  \-\-daemon
 Run as a daemon. Fork the launched process and
@@ -69,6 +76,12 @@ daemonize.
 .B \-r\fP,\fB  \-\-replace
 Replace previous running daemon if any pid file is
 found.
+.TP
+.BI \-v\fB v\fP,\fB \ \-\-debug
+Set log level to debug mode (DEBUG)
+.TP
+.B \-v\fP,\fB  \-\-verbose
+Set log level to verbose mode (INFO)
 .TP
 .BI \-o \ HOST\fP,\fB \ \-\-host \ HOST
 Host interface used by the daemon. Default is 0.0.0.0
