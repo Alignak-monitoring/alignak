@@ -1,6 +1,7 @@
 [Unit]
 Description=Alignak receiver %I daemon instance
 PartOf=alignak.service
+After=alignak.service
 
 [Service]
 # Environment variables - may be overriden in the /etc/default/alignak
@@ -21,6 +22,7 @@ ExecStartPre=/bin/mkdir -p /var/run/alignak
 ExecStartPre=/bin/chown -R ${ALIGNAK_USER}:${ALIGNAK_GROUP} /var/run/alignak
 ExecStartPre=/bin/chmod 775 /var/run/alignak
 
+After=alignak.service
 ExecStartPre=/bin/echo Alignak starting receiver %i - /usr/local/bin/alignak-receiver -d -n receiver-%i -e "${ALIGNAK_CONFIGURATION_FILE}"
 ExecStart=/usr/local/bin/alignak-receiver -d -n receiver-%i -e "${ALIGNAK_CONFIGURATION_FILE}" --pid_file /var/run/alignak/receiver-%i.pid --log_file /var/log/alignak/receiver-%i.log
 
@@ -28,6 +30,9 @@ ExecStart=/usr/local/bin/alignak-receiver -d -n receiver-%i -e "${ALIGNAK_CONFIG
 KillMode=control-group
 KillSignal=SIGTERM
 TimeoutStopSec=30
+
+# Restart the service on non-zero exit code when terminated by a signal other than SIGHUP, SIGINT, SIGTERM or SIGPIPE
+Restart=on-failure
 
 ExecReload=/bin/kill -HUP $MAINPID
 

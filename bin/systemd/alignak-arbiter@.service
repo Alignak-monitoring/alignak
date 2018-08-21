@@ -1,6 +1,7 @@
 [Unit]
 Description=Alignak arbiter %I daemon instance
 PartOf=alignak.service
+After=alignak.service
 
 [Service]
 # Environment variables - may be overriden in the /etc/default/alignak
@@ -28,6 +29,9 @@ ExecStart=/usr/local/bin/alignak-arbiter -d -n arbiter-%i -e "${ALIGNAK_CONFIGUR
 KillMode=control-group
 KillSignal=SIGTERM
 TimeoutStopSec=30
+
+# Restart the service on non-zero exit code when terminated by a signal other than SIGHUP, SIGINT, SIGTERM or SIGPIPE
+Restart=on-failure
 
 ExecReload=/bin/kill -HUP $MAINPID
 
