@@ -1912,7 +1912,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         self.broks.append(self.get_check_result_brok())
 
         self.get_perfdata_command(hosts, macromodulations, timeperiods)
-        # Also snapshot if need :)
+        # Also snapshot if needed :)
         self.get_snapshot(hosts, macromodulations, timeperiods)
 
         return []

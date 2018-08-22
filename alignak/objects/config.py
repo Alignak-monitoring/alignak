@@ -574,23 +574,22 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Inner perfdata self created module parameters
         'host_perfdata_file':
-            StringProp(default='', class_inherit=[(Host, 'perfdata_file')]),
+            StringProp(default=''),
 
         'service_perfdata_file':
-            StringProp(default='', class_inherit=[(Service, 'perfdata_file')]),
+            StringProp(default=''),
 
         'host_perfdata_file_template':
-            StringProp(default='/tmp/host.perf', class_inherit=[(Host, 'perfdata_file_template')]),
+            StringProp(managed=False, default='/tmp/host.perf'),
 
         'service_perfdata_file_template':
-            StringProp(default='/tmp/host.perf',
-                       class_inherit=[(Service, 'perfdata_file_template')]),
+            StringProp(managed=False, default='/tmp/host.perf'),
 
         'host_perfdata_file_mode':
-            CharProp(default='a', class_inherit=[(Host, 'perfdata_file_mode')]),
+            CharProp(managed=False, default='a'),
 
         'service_perfdata_file_mode':
-            CharProp(default='a', class_inherit=[(Service, 'perfdata_file_mode')]),
+            CharProp(managed=False, default='a'),
 
         'host_perfdata_file_processing_interval':
             IntegerProp(managed=False, default=15),
@@ -599,9 +598,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             IntegerProp(managed=False, default=15),
 
         'host_perfdata_file_processing_command':
-            StringProp(managed=False,
-                       default='',
-                       class_inherit=[(Host, 'perfdata_file_processing_command')]),
+            StringProp(managed=False, default=None),
 
         'service_perfdata_file_processing_command':
             StringProp(managed=False, default=None),
@@ -2149,8 +2146,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         """
         modules = []
         # For status_dat
-        if hasattr(self, 'status_file') and self.status_file != '' and \
-                hasattr(self, 'object_cache_file') and self.object_cache_file != '':
+        if getattr(self, 'status_file', None) and getattr(self, 'object_cache_file', None):
             msg = "The configuration parameters '%s = %s' and '%s = %s' are deprecated " \
                   "and will be ignored. Please configure your external 'retention' module " \
                   "as expected." % \
@@ -2160,7 +2156,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             self.add_warning(msg)
 
         # Now the log_file
-        if hasattr(self, 'log_file') and self.log_file:
+        if getattr(self, 'log_file', None):
             msg = "The configuration parameter '%s = %s' is deprecated " \
                   "and will be ignored. Please configure your external 'logs' module " \
                   "as expected." % \
@@ -2169,7 +2165,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
             self.add_warning(msg)
 
         # Now the syslog facility
-        if hasattr(self, 'use_syslog') and self.use_syslog:
+        if getattr(self, 'use_syslog', None):
             msg = "The configuration parameter '%s = %s' is deprecated " \
                   "and will be ignored. Please configure your external 'logs' module " \
                   "as expected." % \
@@ -2178,15 +2174,31 @@ class Config(Item):  # pylint: disable=R0904,R0902
             self.add_warning(msg)
 
         # Now the host_perfdata or service_perfdata module
-        if hasattr(self, 'service_perfdata_file') and self.service_perfdata_file or \
-                hasattr(self, 'host_perfdata_file') and self.host_perfdata_file:
-            msg = "The configuration parameters '%s = %s' and '%s = %s' are deprecated " \
-                  "and will be ignored. Please configure your external 'retention' module " \
-                  "as expected." % \
-                  ('host_perfdata_file', self.host_perfdata_file,
-                   'service_perfdata_file', self.service_perfdata_file)
+        if getattr(self, 'service_perfdata_file', None) or \
+                getattr(self, 'host_perfdata_file', None):
+            msg = "The configuration parameters '%s = %s' and '%s = %s' are Nagios legacy " \
+                  "parameters. Alignak will use its inner 'metrics' module " \
+                  "to match the expected behavior." \
+                  % ('host_perfdata_file', self.host_perfdata_file,
+                     'service_perfdata_file', self.service_perfdata_file)
             logger.warning(msg)
             self.add_warning(msg)
+            mod_configuration = {
+                'name': 'inner-metrics',
+                'type': 'metrics',
+                'python_name': 'alignak.modules.inner_metrics',
+                'imported_from': 'inner',
+                'enabled': True
+            }
+            if getattr(self, 'host_perfdata_file', None):
+                mod_configuration['host_perfdata_file'] = \
+                    getattr(self, 'host_perfdata_file')
+            if getattr(self, 'service_perfdata_file', None):
+                mod_configuration['service_perfdata_file'] = \
+                    getattr(self, 'service_perfdata_file')
+            modules.append((
+                'broker', mod_configuration
+            ))
 
         # Now the Nagios legacy retention file module
         if hasattr(self, 'retain_state_information') and self.retain_state_information:
@@ -2200,6 +2212,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 'name': 'inner-retention',
                 'type': 'retention',
                 'python_name': 'alignak.modules.inner_retention',
+                'imported_from': 'inner',
                 'enabled': True
             }
             if getattr(self, 'state_retention_file', None):
@@ -2341,19 +2354,6 @@ class Config(Item):  # pylint: disable=R0904,R0902
         if self.global_service_event_handler and not self.global_service_event_handler .is_valid():
             msg = "[%s::%s] global service event_handler '%s' is invalid" \
                   % (self.my_type, self.get_name(), self.global_service_event_handler .command)
-            self.add_error(msg)
-            valid = False
-
-        # If we got global performance data commands, they should be valid
-        if self.host_perfdata_command and not self.host_perfdata_command.is_valid():
-            msg = "[%s::%s] global host performance data command '%s' is invalid" \
-                  % (self.my_type, self.get_name(), self.host_perfdata_command.command)
-            self.add_error(msg)
-            valid = False
-
-        if self.service_perfdata_command and not self.service_perfdata_command.is_valid():
-            msg = "[%s::%s] global service performance data command '%s' is invalid" \
-                  % (self.my_type, self.get_name(), self.service_perfdata_command.command)
             self.add_error(msg)
             valid = False
 

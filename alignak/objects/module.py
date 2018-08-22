@@ -77,6 +77,10 @@ class Module(Item):
             StringProp(default=u'unset'),
         'python_name':
             StringProp(),
+
+        'enabled':
+            BoolProp(default=True),
+
         # Old "deprecated" property - replaced with name
         'module_alias':
             StringProp(),
@@ -127,6 +131,9 @@ class Module(Item):
             # Do not manage modules having modules
             # 'modules':
             #     ListProp(default=[''], split_on_comma=True)
+
+            'enabled':
+                BoolProp(default=True),
 
             # Module log level
             'log_level':

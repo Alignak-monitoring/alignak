@@ -647,11 +647,11 @@ class TestConfig(AlignakTest):
             "The configuration parameter 'use_syslog = True' is deprecated and will be ignored. "
             "Please configure your external 'logs' module as expected."
         ))
-        self.assert_any_cfg_log_match(re.escape(
-            "The configuration parameters 'host_perfdata_file = /tmp/host_perf' "
-            "and 'service_perfdata_file = /tmp/srv_perf' are deprecated and will be ignored. "
-            "Please configure your external 'retention' module as expected."
-        ))
+        # self.assert_any_cfg_log_match(re.escape(
+        #     "The configuration parameters 'host_perfdata_file = /tmp/host_perf' "
+        #     "and 'service_perfdata_file = /tmp/srv_perf' are deprecated and will be ignored. "
+        #     "Please configure your external 'retention' module as expected."
+        # ))
         # Alignak inner module for retention is now implemented!
         # self.assert_any_cfg_log_match(re.escape(
         #     "Your configuration parameters 'state_retention_file = /tmp/retention' "

@@ -324,6 +324,7 @@ class TestStatsD(AlignakTest):
         brok.__dict__.pop('instance_id')
         brok.__dict__.pop('prepared')
         brok.__dict__.pop('uuid')
+        brok.__dict__['data'].pop('ts')
         assert brok.__dict__ == {'type': 'alignak_stat',
                                  'data': {
                                      'type': 'timer',
@@ -345,6 +346,7 @@ class TestStatsD(AlignakTest):
         brok.__dict__.pop('instance_id')
         brok.__dict__.pop('prepared')
         brok.__dict__.pop('uuid')
+        brok.__dict__['data'].pop('ts')
         assert brok.__dict__ == {'type': 'alignak_stat',
                                  'data': {
                                      'type': 'timer',
@@ -366,6 +368,7 @@ class TestStatsD(AlignakTest):
         brok.__dict__.pop('instance_id')
         brok.__dict__.pop('prepared')
         brok.__dict__.pop('uuid')
+        brok.__dict__['data'].pop('ts')
         assert brok.__dict__ == {'type': 'alignak_stat',
                                  'data': {
                                      'type': 'timer',
@@ -420,6 +423,7 @@ class TestStatsD(AlignakTest):
         brok.__dict__.pop('instance_id')
         brok.__dict__.pop('prepared')
         brok.__dict__.pop('uuid')
+        brok.__dict__['data'].pop('ts')
         assert brok.__dict__ == {'type': 'alignak_stat',
                                  'data': {
                                      'type': 'counter',
@@ -441,6 +445,7 @@ class TestStatsD(AlignakTest):
         brok.__dict__.pop('instance_id')
         brok.__dict__.pop('prepared')
         brok.__dict__.pop('uuid')
+        brok.__dict__['data'].pop('ts')
         assert brok.__dict__ == {'type': 'alignak_stat',
                                  'data': {
                                      'type': 'counter',
@@ -462,6 +467,7 @@ class TestStatsD(AlignakTest):
         brok.__dict__.pop('instance_id')
         brok.__dict__.pop('prepared')
         brok.__dict__.pop('uuid')
+        brok.__dict__['data'].pop('ts')
         assert brok.__dict__ == {'type': 'alignak_stat',
                                  'data': {
                                      'type': 'counter',
@@ -516,6 +522,7 @@ class TestStatsD(AlignakTest):
         brok.__dict__.pop('instance_id')
         brok.__dict__.pop('prepared')
         brok.__dict__.pop('uuid')
+        brok.__dict__['data'].pop('ts')
         assert brok.__dict__ == {'type': 'alignak_stat',
                                  'data': {
                                      'type': 'gauge',
@@ -537,6 +544,7 @@ class TestStatsD(AlignakTest):
         brok.__dict__.pop('instance_id')
         brok.__dict__.pop('prepared')
         brok.__dict__.pop('uuid')
+        brok.__dict__['data'].pop('ts')
         assert brok.__dict__ == {'type': 'alignak_stat',
                                  'data': {
                                      'type': 'gauge',
@@ -558,6 +566,7 @@ class TestStatsD(AlignakTest):
         brok.__dict__.pop('instance_id')
         brok.__dict__.pop('prepared')
         brok.__dict__.pop('uuid')
+        brok.__dict__['data'].pop('ts')
         assert brok.__dict__ == {'type': 'alignak_stat',
                                  'data': {
                                      'type': 'gauge',
@@ -569,7 +578,7 @@ class TestStatsD(AlignakTest):
 if os.sys.version_info > (2, 7):
     class TestCarbon(AlignakTest):
         """
-        This class test the StatsD interface
+        This class test the Graphite interface
         """
         def setUp(self):
             super(TestCarbon, self).setUp()
@@ -757,6 +766,7 @@ if os.sys.version_info > (2, 7):
             brok.__dict__.pop('instance_id')
             brok.__dict__.pop('prepared')
             brok.__dict__.pop('uuid')
+            brok.__dict__['data'].pop('ts')
             assert brok.__dict__ == {'type': 'alignak_stat',
                                      'data': {
                                          'type': 'timer',
@@ -781,6 +791,7 @@ if os.sys.version_info > (2, 7):
             brok.__dict__.pop('instance_id')
             brok.__dict__.pop('prepared')
             brok.__dict__.pop('uuid')
+            brok.__dict__['data'].pop('ts')
             assert brok.__dict__ == {'type': 'alignak_stat',
                                      'data': {
                                          'type': 'timer',
@@ -805,6 +816,7 @@ if os.sys.version_info > (2, 7):
             brok.__dict__.pop('instance_id')
             brok.__dict__.pop('prepared')
             brok.__dict__.pop('uuid')
+            brok.__dict__['data'].pop('ts')
             assert brok.__dict__ == {'type': 'alignak_stat',
                                      'data': {
                                          'type': 'timer',
@@ -854,6 +866,7 @@ if os.sys.version_info > (2, 7):
             brok.__dict__.pop('instance_id')
             brok.__dict__.pop('prepared')
             brok.__dict__.pop('uuid')
+            brok.__dict__['data'].pop('ts')
             assert brok.__dict__ == {'type': 'alignak_stat',
                                      'data': {
                                          'type': 'counter',
@@ -878,6 +891,7 @@ if os.sys.version_info > (2, 7):
             brok.__dict__.pop('instance_id')
             brok.__dict__.pop('prepared')
             brok.__dict__.pop('uuid')
+            brok.__dict__['data'].pop('ts')
             assert brok.__dict__ == {'type': 'alignak_stat',
                                      'data': {
                                          'type': 'counter',
@@ -899,6 +913,7 @@ if os.sys.version_info > (2, 7):
             brok.__dict__.pop('instance_id')
             brok.__dict__.pop('prepared')
             brok.__dict__.pop('uuid')
+            brok.__dict__['data'].pop('ts')
             assert brok.__dict__ == {'type': 'alignak_stat',
                                      'data': {
                                          'type': 'counter',
@@ -948,6 +963,7 @@ if os.sys.version_info > (2, 7):
             brok.__dict__.pop('instance_id')
             brok.__dict__.pop('prepared')
             brok.__dict__.pop('uuid')
+            brok.__dict__['data'].pop('ts')
             assert brok.__dict__ == {'type': 'alignak_stat',
                                      'data': {
                                          'type': 'gauge',
@@ -972,6 +988,7 @@ if os.sys.version_info > (2, 7):
             brok.__dict__.pop('instance_id')
             brok.__dict__.pop('prepared')
             brok.__dict__.pop('uuid')
+            brok.__dict__['data'].pop('ts')
             assert brok.__dict__ == {'type': 'alignak_stat',
                                      'data': {
                                          'type': 'gauge',
@@ -996,6 +1013,7 @@ if os.sys.version_info > (2, 7):
             brok.__dict__.pop('instance_id')
             brok.__dict__.pop('prepared')
             brok.__dict__.pop('uuid')
+            brok.__dict__['data'].pop('ts')
             assert brok.__dict__ == {'type': 'alignak_stat',
                                      'data': {
                                          'type': 'gauge',

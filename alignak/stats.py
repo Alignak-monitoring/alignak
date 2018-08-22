@@ -435,30 +435,43 @@ class Stats(object):
             return False
         return True
 
-    def send_to_graphite(self, metric, value):
+    def send_to_graphite(self, metric, value, timestamp=None):
         """
-        Inner store a new metric and flush to Graphite if the flush threshold is reached
-        :param metric:
+        Inner store a new metric and flush to Graphite if the flush threshold is reached.
+
+        If no timestamp is provided, get the current time for the metric timestam.
+
+        :param metric: metric name in dotted format
+        :type metric: str
         :param value:
-        :return:
+        :type value: float
+        :param timestamp: metric timestamp
+        :type timestamp: int
         """
         # Manage Graphite part
-        if self.statsd_enabled and self.carbon:
-            self.my_metrics.append(('.'.join([self.statsd_prefix, self.name, metric]),
-                                    (int(time.time()), value)))
-            if self.metrics_count >= self.metrics_flush_count:
-                self.carbon.add_data_list(self.my_metrics)
-                self.flush()
+        if not self.statsd_enabled or not self.carbon:
+            return
 
-    def timer(self, key, value):
+        if timestamp is None:
+            timestamp = int(time.time())
+
+        self.my_metrics.append(('.'.join([self.statsd_prefix, self.name, metric]),
+                                (timestamp, value)))
+        if self.metrics_count >= self.metrics_flush_count:
+            self.carbon.add_data_list(self.my_metrics)
+            self.flush()
+
+    def timer(self, key, value, timestamp=None):
         """Set a timer value
 
         If the inner key does not exist is is created
 
         :param key: timer to update
         :type key: str
-        :param value: time value (in seconds)
+        :param value: timer value (in seconds)
         :type value: float
+        :param timestamp: metric timestamp
+        :type timestamp: int
         :return: An alignak_stat brok if broks are enabled else None
         """
         _min, _max, count, _sum = self.stats.get(key, (None, None, 0, 0))
@@ -475,9 +488,6 @@ class Stats(object):
             # beware, we are sending ms here, timer is in seconds
             packet = '%s.%s.%s:%d|ms' % (self.statsd_prefix, self.name, key, value * 1000)
             packet = packet.encode('utf-8')
-            # Do not log because it is spamming the log file, but leave this code in place
-            # for it may be restored easily if more tests are necessary... ;)
-            # logger.info("Sending data: %s", packet)
             try:
                 self.statsd_sock.sendto(packet, self.statsd_addr)
             except (socket.error, socket.gaierror):
@@ -487,15 +497,18 @@ class Stats(object):
 
         # Manage Graphite part
         if self.statsd_enabled and self.carbon:
-            self.send_to_graphite(key, value)
+            self.send_to_graphite(key, value, timestamp=timestamp)
 
         # Manage file part
         if self.statsd_enabled and self.file_d:
+            if timestamp is None:
+                timestamp = int(time.time())
+
             packet = self.line_fmt
             if not self.date_fmt:
-                date = "%s" % time.time()
+                date = "%s" % timestamp
             else:
-                date = datetime.datetime.utcnow().strftime(self.date_fmt)
+                date = datetime.datetime.fromtimestamp(timestamp).strftime(self.date_fmt)
             packet = packet.replace("#date#", date)
             packet = packet.replace("#counter#", '%s.%s.%s' % (self.statsd_prefix, self.name, key))
             # beware, we are sending ms here, timer is in seconds
@@ -511,8 +524,12 @@ class Stats(object):
 
         if self.broks_enabled:
             logger.debug("alignak stat brok: %s = %s", key, value)
+            if timestamp is None:
+                timestamp = int(time.time())
+
             return Brok({'type': 'alignak_stat',
                          'data': {
+                             'ts': timestamp,
                              'type': 'timer',
                              'metric': '%s.%s.%s' % (self.statsd_prefix, self.name, key),
                              'value': value * 1000,
@@ -521,7 +538,7 @@ class Stats(object):
 
         return None
 
-    def counter(self, key, value):
+    def counter(self, key, value, timestamp=None):
         """Set a counter value
 
         If the inner key does not exist is is created
@@ -546,9 +563,6 @@ class Stats(object):
             # beware, we are sending ms here, timer is in seconds
             packet = '%s.%s.%s:%d|c' % (self.statsd_prefix, self.name, key, value)
             packet = packet.encode('utf-8')
-            # Do not log because it is spamming the log file, but leave this code in place
-            # for it may be restored easily if more tests are necessary... ;)
-            # logger.info("Sending data: %s", packet)
             try:
                 self.statsd_sock.sendto(packet, self.statsd_addr)
             except (socket.error, socket.gaierror):
@@ -558,22 +572,22 @@ class Stats(object):
 
         # Manage Graphite part
         if self.statsd_enabled and self.carbon:
-            self.send_to_graphite(key, value)
+            self.send_to_graphite(key, value, timestamp=timestamp)
 
         # Manage file part
         if self.statsd_enabled and self.file_d:
+            if timestamp is None:
+                timestamp = int(time.time())
+
             packet = self.line_fmt
             if not self.date_fmt:
-                date = "%s" % time.time()
+                date = "%s" % timestamp
             else:
-                date = datetime.datetime.utcnow().strftime(self.date_fmt)
+                date = datetime.datetime.fromtimestamp(timestamp).strftime(self.date_fmt)
             packet = packet.replace("#date#", date)
             packet = packet.replace("#counter#", '%s.%s.%s' % (self.statsd_prefix, self.name, key))
             packet = packet.replace("#value#", '%d' % value)
             packet = packet.replace("#uom#", 'c')
-            # Do not log because it is spamming the log file, but leave this code in place
-            # for it may be restored easily if more tests are necessary... ;)
-            # logger.debug("Writing data: %s", packet)
             try:
                 self.file_d.write(packet)
             except IOError:
@@ -581,8 +595,12 @@ class Stats(object):
 
         if self.broks_enabled:
             logger.debug("alignak stat brok: %s = %s", key, value)
+            if timestamp is None:
+                timestamp = int(time.time())
+
             return Brok({'type': 'alignak_stat',
                          'data': {
+                             'ts': timestamp,
                              'type': 'counter',
                              'metric': '%s.%s.%s' % (self.statsd_prefix, self.name, key),
                              'value': value,
@@ -591,7 +609,7 @@ class Stats(object):
 
         return None
 
-    def gauge(self, key, value):
+    def gauge(self, key, value, timestamp=None):
         """Set a gauge value
 
         If the inner key does not exist is is created
@@ -616,9 +634,6 @@ class Stats(object):
             # beware, we are sending ms here, timer is in seconds
             packet = '%s.%s.%s:%d|g' % (self.statsd_prefix, self.name, key, value)
             packet = packet.encode('utf-8')
-            # Do not log because it is spamming the log file, but leave this code in place
-            # for it may be restored easily if more tests are necessary... ;)
-            # logger.info("Sending data: %s", packet)
             try:
                 self.statsd_sock.sendto(packet, self.statsd_addr)
             except (socket.error, socket.gaierror):
@@ -628,11 +643,14 @@ class Stats(object):
 
         # Manage file part
         if self.statsd_enabled and self.file_d:
+            if timestamp is None:
+                timestamp = int(time.time())
+
             packet = self.line_fmt
             if not self.date_fmt:
-                date = "%s" % time.time()
+                date = "%s" % timestamp
             else:
-                date = datetime.datetime.utcnow().strftime(self.date_fmt)
+                date = datetime.datetime.fromtimestamp(timestamp).strftime(self.date_fmt)
             packet = packet.replace("#date#", date)
             packet = packet.replace("#counter#", '%s.%s.%s' % (self.statsd_prefix, self.name, key))
             packet = packet.replace("#value#", '%d' % value)
@@ -647,12 +665,16 @@ class Stats(object):
 
         # Manage Graphite part
         if self.statsd_enabled and self.carbon:
-            self.send_to_graphite(key, value)
+            self.send_to_graphite(key, value, timestamp=timestamp)
 
         if self.broks_enabled:
             logger.debug("alignak stat brok: %s = %s", key, value)
+            if timestamp is None:
+                timestamp = int(time.time())
+
             return Brok({'type': 'alignak_stat',
                          'data': {
+                             'ts': timestamp,
                              'type': 'gauge',
                              'metric': '%s.%s.%s' % (self.statsd_prefix, self.name, key),
                              'value': value,

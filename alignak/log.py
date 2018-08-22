@@ -163,7 +163,6 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
             print("The logger configuration file does not exist: %s" % logger_configuration_file)
             return
 
-        print("Logger configuration file is: %s" % logger_configuration_file)
         with open(logger_configuration_file, 'rt') as _file:
             config = json.load(_file)
             truncate = False

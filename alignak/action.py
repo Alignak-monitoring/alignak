@@ -562,7 +562,6 @@ if os.name != 'nt':
                 try:
                     cmd = shlex.split(self.command)
                 except Exception as exp:  # pylint: disable=broad-except
-                    print("- %s -" % str(exp))
                     self.output = 'Not a valid shell command: ' + str(exp)
                     self.exit_status = 3
                     self.status = ACT_STATUS_DONE

@@ -179,7 +179,7 @@ class AlignakTest(unittest2.TestCase):
         logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
         logger_.setLevel(log_level)
         for handler in logger_.handlers:
-            print("- handler: %s" % handler)
+            # print("- handler: %s" % handler)
             handler.setLevel(log_level)
             if getattr(handler, '_name', None) == 'unit_tests':
                 self.former_log_level = handler.level

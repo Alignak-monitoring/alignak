@@ -329,12 +329,23 @@ class BaseModule(object):
         There are a lot of different possible broks to manage. The list is defined
         in the Brok class.
 
+        An internal module may redefine this function or, easier, define only the function
+        for the brok it is interested with. Hence a module interested in the `service_check_result`
+        broks will only need to define a function named as `manage_service_check_result_brok`
+
         :param brok:
         :type brok:
         :return:
         :rtype:
         """
-        pass
+
+        manage = getattr(self, 'manage_' + brok.type + '_brok', None)
+        if not manage:
+            return False
+
+        # Be sure the brok is prepared before calling the function
+        brok.prepare()
+        return manage(brok)
 
     def manage_signal(self, sig, frame):  # pylint: disable=unused-argument
         """Generic function to handle signals

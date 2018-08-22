@@ -75,7 +75,7 @@ CHECK_RESULT = 'check_result'
 NONE_OBJECT = object()
 
 
-class Property(object):  # pylint: disable=useless-object-inheritance
+class Property(object):
     # pylint: disable=too-many-instance-attributes
     """Baseclass of all properties.
 
