@@ -43,7 +43,7 @@ import json
 import time
 import datetime
 import logging
-from logging import Handler, StreamHandler
+from logging import Handler, Formatter, StreamHandler
 from logging.config import dictConfig as logger_dictConfig
 
 from termcolor import cprint
@@ -163,6 +163,7 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
             print("The logger configuration file does not exist: %s" % logger_configuration_file)
             return
 
+        print("Logger configuration file is: %s" % logger_configuration_file)
         with open(logger_configuration_file, 'rt') as _file:
             config = json.load(_file)
             truncate = False
@@ -196,6 +197,25 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
 
         # Configure the logger, any error will raise an exception
         logger_dictConfig(config)
+
+
+def set_log_console(log_level=logging.INFO):
+    """Set the Alignak daemons logger have a console log handler.
+
+    This is only used for the arbiter verify mode to add a console log handler.
+
+    :param log_level: log level
+    :return: n/a
+    """
+    # Change the logger and all its handlers log level
+    logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+    logger_.setLevel(log_level)
+
+    # Adding a console logger...
+    csh = ColorStreamHandler(sys.stdout)
+    csh.setFormatter(Formatter('[%(asctime)s] %(levelname)s: [%(name)s] %(message)s',
+                               "%Y-%m-%d %H:%M:%S"))
+    logger_.addHandler(csh)
 
 
 def set_log_level(log_level=logging.INFO, handlers=None):

@@ -1293,7 +1293,7 @@ def parse_daemon_args(arbiter=False):
                             help='Set the name of the Alignak instance. If not set, the arbiter '
                                  'name will be used in place. Note that if an alignak_name '
                                  'variable is defined in the configuration, it will overwrite '
-                                 'this parameter.'
+                                 'this parameter. '
                                  'For a spare arbiter, this parameter must contain its name!')
         parser.add_argument('-n', '--name', dest='daemon_name',
                             default='arbiter-master',

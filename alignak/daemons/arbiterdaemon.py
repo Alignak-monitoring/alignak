@@ -75,7 +75,7 @@ from collections import deque
 import psutil
 
 
-from alignak.log import make_monitoring_log, set_log_level
+from alignak.log import make_monitoring_log, set_log_level, set_log_console
 from alignak.misc.common import SIGNALS_TO_NAMES_DICT
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.config import Config
@@ -389,6 +389,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         _t_configuration = time.time()
 
         if self.verify_only:
+            # Force adding a console handler to the Alignak logger
+            set_log_console(logging.INFO if not self.debug else logging.DEBUG)
             # Force the global logger at INFO level
             set_log_level(logging.INFO if not self.debug else logging.DEBUG)
             logger.info("-----")

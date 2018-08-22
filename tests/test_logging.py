@@ -17,29 +17,6 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
-#
-#
-# This file incorporates work covered by the following copyright and
-# permission notice:
-#
-#  Copyright (C) 2012:
-#     Hartmut Goebel <h.goebel@crazy-compilers.com>
-#
-
-#  This file is part of Shinken.
-#
-#  Shinken is free software: you can redistribute it and/or modify
-#  it under the terms of the GNU Affero General Public License as published by
-#  the Free Software Foundation, either version 3 of the License, or
-#  (at your option) any later version.
-#
-#  Shinken is distributed in the hope that it will be useful,
-#  but WITHOUT ANY WARRANTY; without even the implied warranty of
-#  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-#  GNU Affero General Public License for more details.
-#
-#  You should have received a copy of the GNU Affero General Public License
-#  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 Test alignak.logging
@@ -53,7 +30,7 @@ import pytest
 from datetime import datetime
 
 from logging import DEBUG, INFO, WARNING, Formatter
-from alignak.log import setup_logger, set_log_level, ALIGNAK_LOGGER_NAME
+from alignak.log import setup_logger, set_log_level, set_log_console, ALIGNAK_LOGGER_NAME
 
 from .alignak_test import AlignakTest, CollectorHandler
 
@@ -163,7 +140,7 @@ class TestLogging(AlignakTest):
         """
         # Use the default unit tests logger
         # Configure the logger with a daemon name
-        logger_configuration_file = os.path.join(os.getcwd(), './cfg/alignak-logger.json')
+        logger_configuration_file = os.path.join(os.getcwd(), './etc/alignak-logger.json')
         setup_logger(logger_configuration_file, log_dir=None,
                      process_name='process_name', log_file='')
         self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
@@ -177,7 +154,7 @@ class TestLogging(AlignakTest):
                                   % (self.logger_.name, msg))
 
         # Configure the logger with a daemon name
-        logger_configuration_file = os.path.join(os.getcwd(), './cfg/alignak-logger.json')
+        logger_configuration_file = os.path.join(os.getcwd(), './etc/alignak-logger.json')
         setup_logger(logger_configuration_file, log_dir=None,
                      process_name='process_name', log_file='')
         self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
@@ -199,3 +176,49 @@ class TestLogging(AlignakTest):
                                   % (self.logger_.name, msg))
         self.assert_any_log_match('[\[0-9\]*] INFO: \[arbiter-master.%s\] %s'
                                   % (self.logger_.name, msg2))
+
+
+class TestLogging2(AlignakTest):
+
+    def setUp(self):
+        print("No setup")
+
+    def tearDown(self):
+        print("No tear down")
+
+    def test_set_console_existing(self):
+        # Use the default unit tests logger
+        logger_configuration_file = os.path.join(os.getcwd(), './etc/alignak-logger.json')
+        print("Logger configuration file: %s" % logger_configuration_file)
+        self._set_console_log(logger_configuration_file)
+
+    def test_set_console(self):
+        # Use the no console unit tests logger
+        logger_configuration_file = os.path.join(os.getcwd(),
+                                                 './etc/no_console_alignak-logger.json')
+        print("Logger configuration file: %s" % logger_configuration_file)
+        self._set_console_log(logger_configuration_file)
+
+    def _set_console_log(self, logger_configuration_file):
+        """Set console logger for Alignak arbiter verify mode"""
+        setup_logger(logger_configuration_file, log_dir=None, process_name='', log_file='')
+        self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        set_log_level(logging.INFO)
+
+        # Log message
+        self.logger_.info("Message")
+        self.show_logs()
+
+        set_log_console(logging.WARNING)
+
+        # Log message
+        self.logger_.info("Message")
+        self.show_logs()
+
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for hdlr in logger_.handlers:
+            if getattr(hdlr, 'filename', None):
+                print("- handler : %s (%s) -> %s" % (hdlr, hdlr.formatter._fmt,
+                                                     hdlr.filename))
+            else:
+                print("- handler : %s (%s)" % (hdlr, hdlr.formatter._fmt))
