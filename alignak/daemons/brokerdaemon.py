@@ -116,6 +116,7 @@ class Broker(BaseSatellite):
 
         # All broks to manage
         self.external_broks = []  # broks to manage
+
         # broks raised internally by the broker
         self.internal_broks = []
         # broks raised by the arbiters, we need a lock so the push can be in parallel
@@ -208,8 +209,8 @@ class Broker(BaseSatellite):
                 self.modules_manager.set_to_restart(module)
 
     def get_internal_broks(self):
-        """Get all broks from self.broks_internal_raised and append them to self.broks
-
+        """Get all broks from self.broks_internal_raised and append them to our broks
+        to manage
 
         :return: None
         """
@@ -219,9 +220,11 @@ class Broker(BaseSatellite):
         self.internal_broks = []
 
     def get_arbiter_broks(self):
-        """We will get in the broks list the broks from the arbiters,
+        """Get the broks from the arbiters,
         but as the arbiter_broks list can be push by arbiter without Global lock,
-        we must protect this with he list lock
+        we must protect this with a lock
+
+        TODO: really? check this arbiter behavior!
 
         :return: None
         """
@@ -405,8 +408,14 @@ class Broker(BaseSatellite):
     def do_loop_turn(self):
         # pylint: disable=too-many-branches
         """Loop used to:
+         * get initial status broks
          * check if modules are alive, if not restart them
-         * add broks to queue of each modules
+         * get broks from ourself, the arbiters and our satellites
+         * add broks to the queue of each external module
+         * manage broks with each internal module
+
+         If the internal broks management is longer than 0.8 seconds, postpone to hte next
+         loop turn to avoid overloading the broker daemon.
 
          :return: None
         """
@@ -483,14 +492,14 @@ class Broker(BaseSatellite):
         start = time.time()
         while self.external_broks:
             now = time.time()
-            # Do not 'manage' more than 1s, we must get new broks
-            # every 1s
-            if now - start > 1:
+            # Do not 'manage' more than 0.8s, we must get new broks almost every second
+            if now - start > 0.8:
                 logger.warning("Did not managed all my broks, remaining %d broks...",
                                len(self.external_broks))
                 break
 
-            brok = self.external_broks.pop()
+            # Get the first brok in the list
+            brok = self.external_broks.pop(0)
             if self.modules_manager.get_internal_instances():
                 self.manage_brok(brok)
                 # Make a very short pause to avoid overloading

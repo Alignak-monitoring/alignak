@@ -176,9 +176,9 @@ class TestModules(AlignakTest):
 
         # No scheduler modules created
         modules = [m.module_alias for m in self._scheduler_daemon.modules]
-        assert modules == ['Example']
+        assert modules == ['Example', 'inner-retention']
         modules = [m.name for m in self._scheduler_daemon.modules]
-        assert modules == ['Example']
+        assert modules == ['Example', 'inner-retention']
 
     def test_modulemanager_1(self):
         """ Module manager manages its modules - old form

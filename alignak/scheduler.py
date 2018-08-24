@@ -1396,12 +1396,19 @@ class Scheduler(object):  # pylint: disable=R0902
         logger.info('Retention data loaded: %.2f seconds', time.time() - _t0)
 
     def log_initial_states(self):
-        """Log hosts and services initial state
+        """Raise hosts and services initial status logs
+
+        First, raise hosts status and then services. This to allow the events log
+        to be a little sorted.
 
         :return: None
         """
-        # Raise current state log
-        for elt in self.all_my_hosts_and_services():
+        # Raise hosts initial status broks
+        for elt in self.hosts:
+            elt.raise_initial_state()
+
+        # And then services initial status broks
+        for elt in self.services:
             elt.raise_initial_state()
 
     def get_retention_data(self):  # pylint: disable=too-many-branches,too-many-statements
@@ -1612,7 +1619,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         initial_broks_count = len(self.my_daemon.brokers[broker_uuid].broks)
 
-        # first the program status
+        # First the program status
         brok = self.get_program_status_brok()
         self.add_brok(brok, broker_uuid)
 
@@ -1635,6 +1642,8 @@ class Scheduler(object):  # pylint: disable=R0902
 
             for tab in initial_status_types:
                 for item in tab:
+                    # Awful! simply to get the group members property name... :(
+                    # todo: replace this!
                     member_items = None
                     if hasattr(item, 'members'):
                         member_items = getattr(self, item.my_type.replace("group", "s"))

@@ -140,7 +140,7 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('is_running', True),
         ('modified_host_attributes', 0),
         ('modified_service_attributes', 0),
-        ('retain_state_information', False),
+        ('retain_state_information', True),
         # ('passive_host_checks_enabled', True),
         # ('passive_service_checks_enabled', True),
         # ('active_host_checks_enabled', True),

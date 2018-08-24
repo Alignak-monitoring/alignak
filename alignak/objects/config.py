@@ -328,7 +328,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # -----
         # Inner state retention module parameters
         'retain_state_information':
-            BoolProp(default=False),
+            BoolProp(default=True),
 
         'state_retention_file':
             StringProp(default=u''),
@@ -580,28 +580,36 @@ class Config(Item):  # pylint: disable=R0904,R0902
             StringProp(default=''),
 
         'host_perfdata_file_template':
-            StringProp(managed=False, default='/tmp/host.perf'),
+            StringProp(managed=False, default='/tmp/host.perf',
+                       _help='Smartly replaced with the Alignak inner metrics feature or backend.'),
 
         'service_perfdata_file_template':
-            StringProp(managed=False, default='/tmp/host.perf'),
+            StringProp(managed=False, default='/tmp/host.perf',
+                       _help='Smartly replaced with the Alignak inner metrics feature or backend.'),
 
         'host_perfdata_file_mode':
-            CharProp(managed=False, default='a'),
+            CharProp(managed=False, default='a',
+                       _help='Smartly replaced with the Alignak inner metrics feature or backend.'),
 
         'service_perfdata_file_mode':
-            CharProp(managed=False, default='a'),
+            CharProp(managed=False, default='a',
+                       _help='Smartly replaced with the Alignak inner metrics feature or backend.'),
 
         'host_perfdata_file_processing_interval':
-            IntegerProp(managed=False, default=15),
+            IntegerProp(managed=False, default=15,
+                       _help='Smartly replaced with the Alignak inner metrics feature or backend.'),
 
         'service_perfdata_file_processing_interval':
-            IntegerProp(managed=False, default=15),
+            IntegerProp(managed=False, default=15,
+                       _help='Smartly replaced with the Alignak inner metrics feature or backend.'),
 
         'host_perfdata_file_processing_command':
-            StringProp(managed=False, default=None),
+            StringProp(managed=False, default=None,
+                       _help='Smartly replaced with the Alignak inner metrics feature or backend.'),
 
         'service_perfdata_file_processing_command':
-            StringProp(managed=False, default=None),
+            StringProp(managed=False, default=None,
+                       _help='Smartly replaced with the Alignak inner metrics feature or backend.'),
 
         # Hosts/services orphanage check
         'check_for_orphaned_services':
@@ -655,8 +663,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
         'use_regexp_matching':
             BoolProp(managed=False,
                      default=False,
-                     _help='If you got some host or service definition like prod*, '
-                           'it will surely failed from now, sorry.'),
+                     _help='If you have some host or service definition like prod*, '
+                           'it will surely fail from now, sorry.'),
         'use_true_regexp_matching':
             BoolProp(managed=False, default=None),
 
@@ -1618,7 +1626,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
                     line = prop
                 unmanaged.append(line)
         if unmanaged:
-            logger.warning("The following parameter(s) are not currently managed:")
+            logger.warning("The following Nagios legacy parameter(s) are not currently "
+                           "managed by Alignak:")
 
             for line in unmanaged:
                 logger.warning('- %s', line)
@@ -2202,12 +2211,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Now the Nagios legacy retention file module
         if hasattr(self, 'retain_state_information') and self.retain_state_information:
+            # Do not raise a warning log for this, only an information
             msg = "The configuration parameter '%s = %s' is a Nagios legacy " \
                   "parameter. Alignak will use its inner 'retention' module " \
                   "to match the expected behavior." \
                   % ('retain_state_information', self.retain_state_information)
-            logger.warning(msg)
-            self.add_warning(msg)
+            logger.info(msg)
+            # self.add_warning(msg)
             mod_configuration = {
                 'name': 'inner-retention',
                 'type': 'retention',

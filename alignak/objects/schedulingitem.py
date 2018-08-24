@@ -2727,6 +2727,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         logger.debug("Internal check: %s - %s", self.get_full_name(), check.command)
         if os.getenv('ALIGNAK_LOG_CHECKS', None):
             logger.info("--ALC-- Internal check: %s - %s", self.get_full_name(), check.command)
+
+        # Default is unknown state
+        state = 3
+
         # Business rule
         if check.command.startswith('bp_'):
             try:
@@ -2805,6 +2809,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                         check.output = check.output % state
 
             check.execution_time = 0
+            if os.getenv('ALIGNAK_INTERNAL_HOST_PERFDATA', None):
+                try:
+                    max_range = int(os.getenv('ALIGNAK_INTERNAL_HOST_PERFDATA'))
+                except ValueError:
+                    max_range = 10
+                check.perf_data = "'rnd_metric'=%d" % random.randint(0, max_range)
+
             if 'ALIGNAK_LOG_ACTIONS' in os.environ:
                 if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                     logger.warning("Host %s internal check: %d - %s",
@@ -2843,6 +2854,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                         check.output = check.output % state
 
             check.execution_time = 0
+            if os.getenv('ALIGNAK_INTERNAL_SERVICE_PERFDATA', None):
+                try:
+                    max_range = int(os.getenv('ALIGNAK_INTERNAL_SERVICE_PERFDATA'))
+                except ValueError:
+                    max_range = 10
+                check.perf_data = "'rnd_metric'=%d" % random.randint(0, max_range)
+
             if 'ALIGNAK_LOG_ACTIONS' in os.environ:
                 if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                     logger.warning("Service %s internal check: %d - %s",

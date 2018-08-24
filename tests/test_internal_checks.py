@@ -46,10 +46,34 @@ class TestInternalChecks(AlignakTest):
         del os.environ['ALIGNAK_LOG_CHECKS']
 
     def test_internal_checks(self):
-        """ Test that default configuration is retention disabled
+        """ Test many internal checks
 
         :return: None
         """
+        self._run_internal_checks(perf_data=False)
+
+    def test_internal_checks_perf_data(self):
+        """ Test many internal checks with some random performance data
+
+        :return: None
+        """
+        self._run_internal_checks(perf_data=True)
+
+    def _run_internal_checks(self, perf_data=False):
+        """ Test many internal checks
+
+        :return: None
+        """
+        # Set environment variables that define a [0 - N] random range for the performance data
+        if perf_data:
+            os.environ['ALIGNAK_INTERNAL_HOST_PERFDATA'] = '5'
+            os.environ['ALIGNAK_INTERNAL_SERVICE_PERFDATA'] = '5'
+        else:
+            if 'ALIGNAK_INTERNAL_HOST_PERFDATA' in os.environ:
+                del os.environ['ALIGNAK_INTERNAL_HOST_PERFDATA']
+            if 'ALIGNAK_INTERNAL_SERVICE_PERFDATA' in os.environ:
+                del os.environ['ALIGNAK_INTERNAL_SERVICE_PERFDATA']
+
         self.setup_with_file('cfg/cfg_internal_checks.cfg')
         assert self.conf_is_correct
 
@@ -106,25 +130,23 @@ class TestInternalChecks(AlignakTest):
                     print("5 minutes later...")
             print("-----")
 
-        # # Host with an empty output
-        # host = self._scheduler.hosts.find_by_name("host_5")
-        # assert host.state_id == 0
-        # assert host.state == 'UP'
-        # assert host.output == "Host internal check result: 0"
-
         print("Checks list:")
         checks = list(self._scheduler.checks.values())
         for check in checks:
             if check.command.startswith("/test"):
                 continue
-            # print(check.__dict__)
-            print("%s: %s" % (datetime.datetime.utcfromtimestamp(check.t_to_go).strftime('%Y-%m-%d %H:%M:%S'), check.command))
-            # assert check.creation_time == now
-            # assert check.t_to_go >= now
+            print("Check: %s" % check)
+            print("%s: %s - %s" % (datetime.datetime.utcfromtimestamp(check.t_to_go).strftime('%Y-%m-%d %H:%M:%S'), check.command, check.perf_data))
+
+            if check.command.startswith('_internal') and check.status not in ['scheduled']:
+                if perf_data:
+                    assert check.perf_data != ''
+                else:
+                    assert check.perf_data == ''
 
         # The Alignak log contain checks log thanks to the ALIGNAK_LOG_CHECKS env variable!
-        self.show_logs()
-        self.show_events()
+        # self.show_logs()
+        # self.show_events()
 
         logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
         for handler in logger_.handlers:
@@ -196,6 +218,3 @@ class TestInternalChecks(AlignakTest):
                         ('--ALC-- check result for host_6, exit: 2, output: Host internal check result: 2' in log) or \
                         ('--ALC-- check result for host_6, exit: 3, output: Host internal check result: 3' in log)
                     continue
-
-                # print("Unexpected log: %s" % log)
-                # assert False

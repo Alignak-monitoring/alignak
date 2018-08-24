@@ -551,7 +551,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                         if module_daemon_type == daemon_type:
                             cfg_daemon['modules'].append(module['name'])
                             logger.info("- added an Alignak inner module '%s' to the %s: %s",
-                                        module['name'], cfg_daemon['type'], cfg_daemon['name'])
+                                        module['name'], daemon_type, cfg_daemon['name'])
                     logger.debug("- %s / %s: ", daemon_type, cfg_daemon['name'])
                     logger.debug("  %s", cfg_daemon)
             if not some_legacy_daemons:
