@@ -373,8 +373,8 @@ class Alignak(BaseSatellite):
                 received_satellites = self.cur_conf['satellites'][link_type]
                 for link_uuid in received_satellites:
                     rs_conf = received_satellites[link_uuid]
-                    logger.info("- received %s - %s: %s", rs_conf['instance_id'],
-                                rs_conf['type'], rs_conf['name'])
+                    logger.debug("- received %s - %s: %s", rs_conf['instance_id'],
+                                 rs_conf['type'], rs_conf['name'])
 
                     # Must look if we already had a configuration and save our broks
                     already_got = rs_conf['instance_id'] in my_satellites

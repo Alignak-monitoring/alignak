@@ -279,7 +279,7 @@ class GenericInterface(object):
         :return: None
         """
         with self.app.conf_lock:
-            logger.info("My Arbiter wants me to wait for a new configuration.")
+            logger.debug("My Arbiter wants me to wait for a new configuration.")
             # Clear can occur while setting up a new conf and lead to error.
             self.app.schedulers.clear()
             self.app.cur_conf = {}

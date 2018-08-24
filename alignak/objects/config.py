@@ -585,23 +585,27 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         'service_perfdata_file_template':
             StringProp(managed=False, default='/tmp/host.perf',
-                       _help='Smartly replaced with the Alignak inner metrics feature or backend.'),
+                       _help='Smartly replaced with the Alignak '
+                             'inner metrics feature or backend.'),
 
         'host_perfdata_file_mode':
             CharProp(managed=False, default='a',
-                       _help='Smartly replaced with the Alignak inner metrics feature or backend.'),
+                     _help='Smartly replaced with the Alignak '
+                           'inner metrics feature or backend.'),
 
         'service_perfdata_file_mode':
             CharProp(managed=False, default='a',
-                       _help='Smartly replaced with the Alignak inner metrics feature or backend.'),
+                     _help='Smartly replaced with the Alignak inner metrics feature or backend.'),
 
         'host_perfdata_file_processing_interval':
             IntegerProp(managed=False, default=15,
-                       _help='Smartly replaced with the Alignak inner metrics feature or backend.'),
+                        _help='Smartly replaced with the Alignak '
+                              'inner metrics feature or backend.'),
 
         'service_perfdata_file_processing_interval':
             IntegerProp(managed=False, default=15,
-                       _help='Smartly replaced with the Alignak inner metrics feature or backend.'),
+                        _help='Smartly replaced with the Alignak '
+                              'inner metrics feature or backend.'),
 
         'host_perfdata_file_processing_command':
             StringProp(managed=False, default=None,

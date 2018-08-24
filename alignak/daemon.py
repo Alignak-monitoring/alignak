@@ -266,7 +266,8 @@ class Daemon(object):
 
         # Interface the daemon will listen to
         'host':
-            StringProp(default=u'0.0.0.0'),
+            StringProp(default=u'127.0.0.1'),
+        # Address the daemon will be reachable on
         'address':
             StringProp(default=u'127.0.0.1'),
         # Server hostname

@@ -255,6 +255,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
             u"[host::localhost2] has no defined check command",
             u"hosts configuration warnings: 1, total: 2",
             u"[host::localhost2] has no defined check command",
+            u"inner retention module is loaded but is not enabled",
 
             # Daemons not existing
             u"Some hosts exist in the realm ",

@@ -43,43 +43,48 @@ The second *ProcessMatch* directive get all the launched Alignak backend uWsgi w
 Alignak daemons monitoring
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The Alignak arbiter Web services expose an endpoint `/get_stats` that contain much information about the currently running daemons and their state that may be monitored thanks to the `collectd curl_json` plugin.
-::
+The Alignak arbiter Web services expose an endpoint `/stats` that contain much information about the currently running daemons and their state. It also exposes the system live synthesis containing global counters about the hosts and services states.
+
+The `collectd curl_json` plugin allows to fetch these information to feed Graphite.
+
+ ::
 
     LoadPlugin curl_json
 
-    ...
-
     <Plugin curl_json>
-        <URL "http://localhost:7770/get_stats">
-            Instance "alignak"
-            <Key "monitoring_objects/*/count">
-                Type "gauge"
-            </Key>
+        # Alignak objects count
+        <URL "http://localhost:7770/stats">
+            Instance "monitored_objects"
             <Key "counters/*">
                 Type "gauge"
             </Key>
-            <Key "daemons_states/*/live_state">
-                Type "counter"
-            </Key>
-            <Key "live_state/daemons/*">
+        </URL>
+        # Alignak daemons livestate
+        <URL "http://localhost:7770/stats">
+            Instance "livestate"
+            <Key "livestate/daemons/*">
                 Type "gauge"
             </Key>
-            <Key "live_state/state">
+            <Key "livestate/state">
+                Type "gauge"
+            </Key>
+        </URL>
+        <URL "http://localhost:7770/livesynthesis">
+            Instance "livesynthesis"
+            <Key "livesynthesis/_overall/livesynthesis/*">
+                Type "counter"
                 Type "gauge"
             </Key>
         </URL>
     </Plugin>
 
-The plugin gets the Alignak overall status on the arbiter endpoint: *http://localhost:7770/get_stats* and it extracts:
+The plugin gets the Alignak overall status on the arbiter endpoint: *http://localhost:7770/stats* and it extracts:
 
-    - the monitoring objects loaded
-    - the objects counters (saem as monitoring objects)
+    - the objects counters (monitored objects)
     - the daemons live state, as provided by the daemons
-    - the daemons live state synthesis
     - the overall live state as computed by the arbiter with the daemons live state synthesis
 
-To help understanding what is available from the collectd plugin, here is a commented example output from an Alignak arbiter */get_stats* endpoint:
+To help understanding what is available from the collectd plugin, here is a commented example output from an Alignak arbiter */stats* endpoint:
 
 .. code-block:: json
 
@@ -98,9 +103,7 @@ To help understanding what is available from the collectd plugin, here is a comm
             "servicesextinfo": {"count": 0}, "businessimpactmodulations": {"count": 0}, "hostgroups": {"count": 2}, "escalations": {"count": 0}, "schedulers": {"count": 3}, "hostsextinfo": {"count": 0}, "contacts": {"count": 4}, "servicedependencies": {"count": 0}, "resultmodulations": {"count": 0}, "servicegroups": {"count": 1}, "pollers": {"count": 1}, "arbiters": {"count": 1}, "receivers": {"count": 1}, "macromodulations": {"count": 0}, "reactionners": {"count": 1}, "contactgroups": {"count": 2}, "brokers": {"count": 2}, "realms": {"count": 2}, "services": {"count": 0}, "commands": {"count": 5}, "notificationways": {"count": 4}, "timeperiods": {"count": 3}, "modules": {"count": 5}, "checkmodulations": {"count": 0}, "hosts": {"count": 0}, "hostdependencies": {"count": 0}
         },
 
-        "metrics": [
-            "arbiter.arbiter-master.external-commands.queue 0 1519303315", "arbiter.arbiter-master.broks.queue 5 1519303315"
-        ],
+        "metrics": [],
 
         // Alignak overall live state
         // 0: ok, 1: warning, 2: critical
@@ -115,13 +118,7 @@ To help understanding what is available from the collectd plugin, here is a comm
         },
 
         // The daemon loaded modules
-        "modules": {
-            "internal": {
-                "backend_arbiter": {
-                    "state": "ok", "name": "backend_arbiter"}
-                },
-            "external": {}
-        },
+        "modules": {},
 
         // The detailed daemon state as provided by the daemons to the arbiter
         "daemons_states": {

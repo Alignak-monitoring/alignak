@@ -664,8 +664,7 @@ class SatelliteLink(Item):
 
         if former_running_id == 0:
             if self.running_id:
-                logger.info("  -> got the running identifier for %s %s: %s.",
-                            self.type, self.name, self.running_id)
+                logger.info("  -> got: %s.", self.running_id)
                 former_running_id = self.running_id
 
         # If the daemon has just started or has been restarted: it has a new running_id.

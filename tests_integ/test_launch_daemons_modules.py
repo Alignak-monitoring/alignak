@@ -135,7 +135,8 @@ class TestLaunchDaemonsModules(AlignakTest):
             # Modules related warnings
             u"The module Example is not a worker one, I remove it from the worker list.",
             # todo: this log does not look appropriate... investigate more on this!
-            u"is still living 10 seconds after a normal kill, I help it to die"
+            u"is still living 10 seconds after a normal kill, I help it to die",
+            u"inner retention module is loaded but is not enabled."
         ]
         (errors_raised, warnings_raised) = \
             self._check_daemons_log_for_errors(daemons_list, ignored_warnings=ignored_warnings)
