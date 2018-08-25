@@ -105,7 +105,7 @@ class CarbonIface(object):
             else:
                 return False
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        payload = pickle.dumps(data)
+        payload = pickle.dumps(data, protocol=2)
         header = struct.pack("!L", len(payload))
         message = header + payload
         s.settimeout(1)

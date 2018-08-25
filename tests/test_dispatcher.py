@@ -145,9 +145,7 @@ class TestDispatcher(AlignakTest):
                     if link == my_dispatcher.arbiter_link:
                         continue
                     assert link.running_id == 123456.123456
-                    self.assert_any_log_match(re.escape(
-                        "got the running identifier for %s %s" % (link.type, link.name)
-                    ))
+                    self.assert_any_log_match(re.escape("got: 123456.123456"))
 
                 # #3 - Check reachable - a configuration is not yet prepared,
                 # so only check reachable state
