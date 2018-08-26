@@ -2,4 +2,4 @@
 This module provide Alignak current version
 """
 
-VERSION = "2.0.0rc3"
+VERSION = "2.0.0rc4"
