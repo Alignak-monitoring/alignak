@@ -83,7 +83,6 @@ from alignak.external_command import ExternalCommand
 from alignak.action import ACT_STATUS_QUEUED
 from alignak.message import Message
 from alignak.worker import Worker
-from alignak.load import Load
 from alignak.daemon import Daemon
 from alignak.stats import statsmgr
 from alignak.check import Check  # pylint: disable=W0611
@@ -448,9 +447,6 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         self.pre_log.append(("INFO",
                              "Using minimum %d workers, maximum %d workers, %d processes/worker"
                              % (self.min_workers, self.max_workers, self.processes_by_worker)))
-
-        # Init stats like Load for workers
-        self.wait_ratio = Load(initial_value=1)
 
         self.slave_q = None
 
@@ -931,24 +927,24 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         # Before return or get new actions, see how we managed
         # the former ones: are they still in queue(s)? If so, we
         # must wait more or at least have more workers
-        wait_ratio = self.wait_ratio.get_load()
-        total_q = 0
-        try:
-            for mod in self.q_by_mod:
-                for queue in list(self.q_by_mod[mod].values()):
-                    total_q += queue.qsize()
-        except (IOError, EOFError):
-            pass
-        if total_q != 0 and wait_ratio < 2 * self.worker_polling_interval:
-            logger.debug("I decide to increase the wait ratio")
-            self.wait_ratio.update_load(wait_ratio * 2)
-            # self.wait_ratio.update_load(self.worker_polling_interval)
-        else:
-            # Go to self.worker_polling_interval on normal run, if wait_ratio
-            # was >2*self.worker_polling_interval,
-            # it make it come near 2 because if < 2, go up :)
-            self.wait_ratio.update_load(self.worker_polling_interval)
-        wait_ratio = self.wait_ratio.get_load()
+        # wait_ratio = self.wait_ratio.get_load()
+        # total_q = 0
+        # try:
+        #     for mod in self.q_by_mod:
+        #         for queue in list(self.q_by_mod[mod].values()):
+        #             total_q += queue.qsize()
+        # except (IOError, EOFError):
+        #     pass
+        # if total_q != 0 and wait_ratio < 2 * self.worker_polling_interval:
+        #     logger.debug("I decide to increase the wait ratio")
+        #     self.wait_ratio.update_load(wait_ratio * 2)
+        #     # self.wait_ratio.update_load(self.worker_polling_interval)
+        # else:
+        #     # Go to self.worker_polling_interval on normal run, if wait_ratio
+        #     # was >2*self.worker_polling_interval,
+        #     # it make it come near 2 because if < 2, go up :)
+        #     self.wait_ratio.update_load(self.worker_polling_interval)
+        # wait_ratio = self.wait_ratio.get_load()
         # statsmgr.timer('core.wait-ratio', wait_ratio)
         # if self.log_loop:
         #     logger.debug("[%s] wait ratio: %f", self.name, wait_ratio)

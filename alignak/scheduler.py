@@ -90,7 +90,6 @@ from alignak.brok import Brok
 from alignak.downtime import Downtime
 from alignak.comment import Comment
 from alignak.util import average_percentile
-from alignak.load import Load
 from alignak.stats import statsmgr
 from alignak.misc.serialization import unserialize
 from alignak.acknowledge import Acknowledge
@@ -2342,8 +2341,6 @@ class Scheduler(object):  # pylint: disable=R0902
         self.nb_event_handlers = 0
         self.nb_external_commands_total = 0
         self.nb_external_commands = 0
-
-        self.load_one_min = Load(initial_value=1)
 
         self.ticks = 0
 

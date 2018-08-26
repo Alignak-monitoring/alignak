@@ -199,7 +199,6 @@ except ImportError as exp:  # pragma: no cover, not for unit tests...
 
 from alignak.log import setup_logger, set_log_level
 from alignak.http.daemon import HTTPDaemon, PortNotFree
-from alignak.load import Load
 from alignak.stats import statsmgr
 from alignak.modulesmanager import ModulesManager
 from alignak.property import StringProp, BoolProp, PathProp
@@ -748,9 +747,6 @@ class Daemon(object):
         except ValueError:  # pragma: no cover, simple protection
             self.activity_log_period = 0
 
-        # Daemon load 1 minute
-        self.load_1_min = Load(initial_value=1)
-
         # We will initialize the Manager() when we load modules
         # and are really forked
         self.sync_manager = None
@@ -1070,13 +1066,6 @@ class Daemon(object):
             else:
                 logger.info("+++ loop %d, I do not have a configuration", self.loop_count)
 
-            # Daemon load
-            # TODO this measurement needs to be made reliable (check and adapt if needed)
-            self.load_1_min.update_load(self.maximum_loop_duration - elapsed_time)
-            statsmgr.gauge('load.1_min', self.load_1_min.get_load())
-            if self.log_loop:
-                logger.debug("+++ %d, load: %s", self.loop_count, self.load_1_min.load)
-
             if self.daemon_monitoring and (self.loop_count % self.daemon_monitoring_period == 1):
                 perfdatas = []
                 my_process = psutil.Process()
@@ -1142,7 +1131,8 @@ class Daemon(object):
                                "The daemon should rest for a while... but one need to change "
                                "its code for this. Please log an issue in the project repository!",
                                work, self.pause_duration)
-                self.pause_duration += 0.1
+                # self.pause_duration += 0.1
+            statsmgr.timer('sleep-time', self.sleep_time)
             self.sleep_time = 0.0
 
             # And now, the whole average time spent
@@ -1152,7 +1142,6 @@ class Daemon(object):
                              loop_duration, elapsed_time, self.loop_count)
             statsmgr.gauge('loop-count', self.loop_count)
             statsmgr.timer('run-duration', elapsed_time)
-            statsmgr.timer('sleep-time', self.sleep_time)
 
             # Maybe someone said we will stop...
             if self.will_stop:
@@ -1974,7 +1963,7 @@ class Daemon(object):
                 logger.exception('Exception %s', exp)
                 self.modules_manager.set_to_restart(module)
             else:
-                statsmgr.timer('hook.%s.%s' % (module.name, hook_name), time.time() - _ts)
+                statsmgr.timer('hook.%s.%s' % (hook_name, module.name), time.time() - _ts)
 
     def get_retention_data(self):  # pylint: disable=no-self-use
         """Basic function to get retention data,
@@ -2043,7 +2032,6 @@ class Daemon(object):
         res.update({
             "program_start": self.program_start,
             "spare": self.spare,
-            "load": self.load_1_min.load,
             'counters': {},
             'metrics': [],
             'modules': {

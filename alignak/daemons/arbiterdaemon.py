@@ -283,7 +283,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             if broker_link.reachable:
                 logger.debug("Sending %d broks to the broker %s", len(self.broks), broker_link.name)
                 if broker_link.push_broks(self.broks):
-                    statsmgr.counter('broks.pushed', len(self.broks))
+                    statsmgr.counter('broks.pushed.count', len(self.broks))
                     sent = True
 
         if not someone_is_concerned or sent:
@@ -307,7 +307,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 logger.debug("Sending %d commands to the scheduler %s",
                              len(ext_cmds), scheduler_link.name)
                 if scheduler_link.push_external_commands(ext_cmds):
-                    statsmgr.counter('external-commands.pushed', len(ext_cmds))
+                    statsmgr.counter('external-commands.pushed.count', len(ext_cmds))
                     sent = True
             if sent:
                 # Clean the pushed commands
@@ -681,14 +681,10 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
         # Call modules get_objects() to load new objects our own modules
         # (example modules: alignak_backend)
-        _ts = time.time()
         self.load_modules_configuration_objects(raw_objects)
-        statsmgr.timer('configuration.get_objects', time.time() - _ts)
 
         # Create objects for all the configuration
-        _ts = time.time()
         self.conf.create_objects(raw_objects)
-        statsmgr.timer('configuration.create_objects', time.time() - _ts)
 
         # Maybe configuration is already invalid
         if not self.conf.conf_is_correct:
@@ -697,9 +693,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                               "the configuration (second check)...", exit_code=1)
 
         # Manage all post-conf modules
-        _ts = time.time()
         self.hook_point('early_configuration')
-        statsmgr.timer('hook.early_configuration', time.time() - _ts)
 
         # Here we got all our Alignak configuration and the monitored system configuration
         # from the legacy configuration files and extra modules.
@@ -753,12 +747,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                                                              self.conf.events_log_count)))
 
         # Manage all post-conf modules
-        _ts = time.time()
         self.hook_point('late_configuration')
-        statsmgr.timer('hook.late_configuration', time.time() - _ts)
 
         # Configuration is correct?
-        _ts = time.time()
         logger.info("Checking configuration...")
         self.conf.is_correct()
 
@@ -766,7 +757,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         if clean:
             logger.info("Cleaning configuration objects...")
             self.conf.clean()
-        statsmgr.timer('configuration.check', time.time() - _ts)
 
         # Dump Alignak macros
         logger.debug("Alignak global macros:")
@@ -780,7 +770,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         statsmgr.timer('configuration.loading', time.time() - _t_configuration)
 
         # REF: doc/alignak-conf-dispatching.png (2)
-        _ts = time.time()
         logger.info("Splitting configuration...")
         self.conf.cut_into_parts()
         # Here, the self.conf.parts exist
@@ -795,7 +784,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Some properties need to be prepared (somehow "flatten"...) before being sent,
         # This to prepare the configuration that will be sent to our spare arbiter (if any)
         self.conf.prepare_for_sending()
-        statsmgr.timer('configuration.split', time.time() - _ts)
         statsmgr.timer('configuration.spliting', time.time() - _t_configuration)
         # Here, the self.conf.spare_arbiter_conf exist
 
@@ -897,7 +885,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             if not hasattr(instance, 'get_alignak_configuration'):
                 return
 
-            _t0 = time.time()
             try:
                 logger.info("Getting Alignak global configuration from module '%s'", instance.name)
                 cfg = instance.get_alignak_configuration()
@@ -910,7 +897,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 logger.error("Back trace of this remove: %s", output.getvalue())
                 output.close()
                 continue
-            statsmgr.timer('hook.get_alignak_configuration', time.time() - _t0)
 
         params = []
         if alignak_cfg:
@@ -1549,7 +1535,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Now we can get all initial broks for our satellites
         _t0 = time.time()
         self.get_initial_broks_from_satellites()
-        statsmgr.timer('broks-initial.got', time.time() - _t0)
+        statsmgr.timer('broks.get-initial', time.time() - _t0)
 
         # Now create the external commands manager
         # We are a dispatcher: our role is to dispatch commands to the schedulers
@@ -1640,7 +1626,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             # # We push our external commands to our schedulers...
             # _t0 = time.time()
             # self.push_external_commands_to_schedulers()
-            # statsmgr.timer('external-commands.pushed', time.time() - _t0)
+            # statsmgr.timer('external-commands.pushed.time', time.time() - _t0)
 
         if self.system_health and (self.loop_count % self.system_health_period == 1):
             perfdatas = []

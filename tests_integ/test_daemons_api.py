@@ -381,7 +381,7 @@ class TestDaemonsApi(AlignakTest):
             assert 'start_time' in data
             # +
             assert "program_start" in data
-            assert "load" in data
+            # assert "load" in data
             assert "metrics" in data    # To be deprecated...
             assert "modules" in data
             assert "counters" in data
@@ -1472,7 +1472,7 @@ class TestDaemonsApi(AlignakTest):
             assert 'start_time' in data
             # +
             assert "program_start" in data
-            assert "load" in data
+            # assert "load" in data
             assert "metrics" in data    # To be deprecated...
             assert "modules" in data
             assert "counters" in data
