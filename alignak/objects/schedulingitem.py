@@ -2709,7 +2709,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     def manage_internal_check(self, hosts, services, check, hostgroups, servicegroups,
                               macromodulations, timeperiods):
-        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-branches, too-many-statements
         """Manage internal commands such as ::
 
         * bp_rule

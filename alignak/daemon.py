@@ -1139,8 +1139,8 @@ class Daemon(object):
                          work, time_changed, self.sleep_time)
             if work > self.pause_duration:
                 logger.warning("Too much work during the pause (%.2f out of %.2f)! "
-                               "The scheduler should rest for a while... but one need to change "
-                               "its code for this. Please log an issue in the project repository;",
+                               "The daemon should rest for a while... but one need to change "
+                               "its code for this. Please log an issue in the project repository!",
                                work, self.pause_duration)
                 self.pause_duration += 0.1
             self.sleep_time = 0.0
@@ -1152,6 +1152,7 @@ class Daemon(object):
                              loop_duration, elapsed_time, self.loop_count)
             statsmgr.gauge('loop-count', self.loop_count)
             statsmgr.timer('run-duration', elapsed_time)
+            statsmgr.timer('sleep-time', self.sleep_time)
 
             # Maybe someone said we will stop...
             if self.will_stop:
