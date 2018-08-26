@@ -2158,6 +2158,8 @@ class Scheduler(object):  # pylint: disable=R0902
                 'hosts_down_soft': m_solver._get_total_hosts_down(u'SOFT'),
                 'hosts_unreachable_hard': m_solver._get_total_hosts_unreachable(u'HARD'),
                 'hosts_unreachable_soft': m_solver._get_total_hosts_unreachable(u'SOFT'),
+
+                'hosts_problems': m_solver._get_total_hosts_problems_unhandled(),
                 'hosts_acknowledged': m_solver._get_total_hosts_problems_handled(),
                 'hosts_in_downtime': m_solver._get_total_hosts_downtimed(),
                 'hosts_flapping': m_solver._get_total_hosts_flapping(),
@@ -2174,6 +2176,8 @@ class Scheduler(object):  # pylint: disable=R0902
                 'services_unknown_soft': m_solver._get_total_services_unknown(u'SOFT'),
                 'services_unreachable_hard': m_solver._get_total_services_unreachable(u'HARD'),
                 'services_unreachable_soft': m_solver._get_total_services_unreachable(u'SOFT'),
+
+                'services_problems': m_solver._get_total_services_problems_unhandled(),
                 'services_acknowledged': m_solver._get_total_services_problems_handled(),
                 'services_in_downtime': m_solver._get_total_services_downtimed(),
                 'services_flapping': m_solver._get_total_services_flapping()

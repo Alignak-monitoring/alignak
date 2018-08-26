@@ -311,6 +311,7 @@ class ArbiterInterface(GenericInterface):
                         "hosts_unreachable_hard": 0,
                         "hosts_unreachable_soft": 0,
                         "hosts_flapping": 0,
+                        "hosts_problems": 0,
                         "hosts_acknowledged": 0,
                         "hosts_in_downtime": 0,
                         "services_total": 100,
@@ -326,6 +327,7 @@ class ArbiterInterface(GenericInterface):
                         "services_unreachable_hard": 0,
                         "services_unreachable_soft": 0,
                         "services_flapping": 0,
+                        "services_problems": 0,
                         "services_acknowledged": 0,
                         "services_in_downtime": 0
                         }
@@ -343,6 +345,7 @@ class ArbiterInterface(GenericInterface):
                         "hosts_unreachable_hard": 0,
                         "hosts_unreachable_soft": 0,
                         "hosts_flapping": 0,
+                        "hosts_problems": 0,
                         "hosts_acknowledged": 0,
                         "hosts_in_downtime": 0,
                         "services_total": 100,
@@ -358,6 +361,7 @@ class ArbiterInterface(GenericInterface):
                         "services_unreachable_hard": 0,
                         "services_unreachable_soft": 0,
                         "services_flapping": 0,
+                        "services_problems": 0,
                         "services_acknowledged": 0,
                         "services_in_downtime": 0
                         }
