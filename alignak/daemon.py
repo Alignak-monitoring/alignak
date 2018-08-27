@@ -743,7 +743,7 @@ class Daemon(object):
 
         # Activity information log period (every activity_log_period loop, raise a log)
         try:
-            self.activity_log_period = int(os.getenv('ALIGNAK_LOG_ACTIVITY', '600'))
+            self.activity_log_period = int(os.getenv('ALIGNAK_LOG_ACTIVITY', '3600'))
         except ValueError:  # pragma: no cover, simple protection
             self.activity_log_period = 0
 

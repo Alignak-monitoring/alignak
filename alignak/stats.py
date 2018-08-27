@@ -251,7 +251,7 @@ class Stats(object):
             logger.info('StatsD server contacted')
         return True
 
-    def connect(self, name, _type, host='localhost', port=2003,
+    def connect(self, name, _type, host='localhost', port=2004,
                 prefix='alignak', enabled=False, broks_enabled=False):
         """Init instance with real values for a graphite/carbon connection
 
@@ -280,7 +280,7 @@ class Stats(object):
         try:
             self.statsd_port = int(port)
         except ValueError:
-            self.statsd_port = 2003
+            self.statsd_port = 2004
         self.statsd_prefix = prefix
         self.statsd_enabled = enabled
 
