@@ -22,6 +22,8 @@
 This file contains the tests for the internal metrics module
 """
 
+import re
+import pickle
 import threading
 from alignak.stats import *
 from alignak.modulesmanager import ModulesManager
@@ -31,7 +33,7 @@ from .alignak_test import AlignakTest
 
 
 class FakeCarbonServer(threading.Thread):
-    def __init__(self, port=0):
+    def __init__(self, host='127.0.0.1', port=0):
         super(FakeCarbonServer, self).__init__()
         self.setDaemon(True)
         self.port = port
@@ -39,7 +41,7 @@ class FakeCarbonServer(threading.Thread):
         sock = self.sock = socket.socket()
         sock.settimeout(1)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        sock.bind(('127.0.0.1', port))
+        sock.bind((host, port))
         if not port:
             self.port = sock.getsockname()[1]
         sock.listen(0)
@@ -67,7 +69,7 @@ class FakeCarbonServer(threading.Thread):
 
     def handle_connection(self, sock):
         data = sock.recv(4096)
-        print("Fake carbon received: %s" % data)
+        print("Fake carbon received: %s" % pickle.dumps(data))
         sock.close()
 
 
@@ -82,8 +84,17 @@ class TestMetricsSetup(AlignakTest):
         self.set_unit_tests_logger_level()
         self.clear_logs()
 
+        # Create a fake server
+        self.fake_carbon = FakeCarbonServer(port=2004)
+
+        if os.path.exists('/tmp/alignak-metrics.log'):
+            os.remove('/tmp/alignak-metrics.log')
+
     def tearDown(self):
         super(TestMetricsSetup, self).tearDown()
+
+        self.fake_carbon.stop()
+        self.fake_carbon.join()
 
     def test_default_is_disabled(self):
         """ Test that default configuration is metrics disabled
@@ -364,8 +375,14 @@ class TestMetricsSetup(AlignakTest):
         }
         b = Brok({'data': hcr, 'type': 'host_check_result'}, False)
         self._broker_daemon.manage_brok(b)
+
+        # 5 log events because the Graphite server do not respond!
         self.show_logs()
+        # self.assert_any_log_match(re.escape('Exception: [Errno 111] Connection refused'))
         self.assert_log_count(0)
+
+        # File output
+        assert os.path.exists('/tmp/alignak-metrics.log')
 
     def test_inner_module_broks(self):
         """ Test that inner metrics module is managing broks with the default configuration
@@ -568,7 +585,7 @@ class TestMetricsRun(AlignakTest):
 
         # Create our own stats manager...
         # do not use the global object to restart with a fresh one on each test
-        self.fake_carbon = FakeCarbonServer(port=2003)
+        self.fake_carbon = FakeCarbonServer(host='localhost', port=2004)
 
     def tearDown(self):
         super(TestMetricsRun, self).tearDown()
@@ -587,6 +604,7 @@ class TestMetricsRun(AlignakTest):
         # Module is an internal one (no external process) in the broker daemon modules manager
         my_module = self._broker_daemon.modules_manager.instances[0]
         assert my_module.is_external is False
+        my_module.metrics_flush_count = 1
 
         # When the broker daemon receives a Brok, it is propagated to the module
 
@@ -638,7 +656,6 @@ class TestMetricsRun(AlignakTest):
         b = Brok({'data': hcr, 'type': 'host_check_result'}, False)
         self._broker_daemon.manage_brok(b)
         self.show_logs()
-        print(my_module.my_metrics)
         self.assert_log_count(0)
 
         # Service check result
@@ -699,3 +716,4 @@ class TestMetricsRun(AlignakTest):
         self._broker_daemon.manage_brok(b)
         self.show_logs()
         self.assert_log_count(0)
+        print(my_module.my_metrics)

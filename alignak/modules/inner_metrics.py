@@ -21,6 +21,7 @@
 This module is used to manage checks results performance data
 """
 
+import os
 import re
 import time
 import logging
@@ -138,9 +139,18 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
         self.illegal_char_hostname = re.compile(r'[^a-zA-Z0-9_\-]')
 
         self.host = getattr(mod_conf, 'graphite_host', 'localhost')
-        self.port = int(getattr(mod_conf, 'graphite_port', '2003'))
+        self.port = int(getattr(mod_conf, 'graphite_port', '2004'))
         self.prefix = getattr(mod_conf, 'graphite_prefix', '')
-        logger.info("graphite host/port: %s:%d, prefix: %s", self.host, self.port, self.prefix)
+        logger.info("graphite host/port: %s:%d, prefix: %s, flush every %d metrics",
+                    self.host, self.port, self.prefix, self.metrics_flush_count)
+        if not self.host:
+            logger.warning("Graphite host name is not set, no metrics will be sent to Graphite!")
+
+        self.output_file = getattr(mod_conf, 'output_file', '')
+        if 'ALIGNAK_HOSTS_STATS_FILE' in os.environ:
+            self.output_file = os.environ['ALIGNAK_HOSTS_STATS_FILE']
+        if self.output_file:
+            logger.info("output file: %s", self.output_file)
 
         # Used to reset check time into the scheduled time.
         # Carbon/graphite does not like latency data and creates blanks in graphs
@@ -178,7 +188,7 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
 
         # Configure our Stats manager
         self.carbon = CarbonIface(self.host, self.port)
-        self.my_metrics.append(('.'.join([self.prefix, self.name, 'connection-test']),
+        self.my_metrics.append(('.'.join([self.prefix, 'connection-test']),
                                 (int(time.time()), int(time.time()))))
         self.carbon.add_data_list(self.my_metrics)
         self.flush(log=True)
@@ -252,20 +262,40 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
             logger.debug("Flushing - no metrics to send")
             return True
 
-        try:
-            logger.debug("Flushing %d metrics to Graphite/carbon", self.metrics_count)
-            if self.carbon.send_data():
-                self.my_metrics = []
-            else:
-                if log:
-                    logger.warning("Failed sending metrics to Graphite/carbon. "
-                                   "Inner stored metric: %d", self.metrics_count)
+        metrics_sent = False
+        metrics_saved = False
+        if self.host:
+            try:
+                logger.debug("Flushing %d metrics to Graphite/carbon", self.metrics_count)
+                if self.carbon.send_data():
+                    metrics_sent = True
+                else:
+                    if log:
+                        logger.warning("Failed sending metrics to Graphite/carbon. "
+                                       "Inner stored metric: %d", self.metrics_count)
+            except Exception as exp:  # pylint: disable=broad-except
+                logger.warning("Failed sending metrics to Graphite/carbon: %s:%d. "
+                               "Inner stored metrics count: %d\n Exception: %s",
+                               self.host, self.port, self.metrics_count, str(exp))
                 return False
-        except Exception as exp:  # pylint: disable=broad-except
-            logger.warning("Failed sending metrics to Graphite/carbon. "
-                           "Inner stored metrics count: %d", self.metrics_count)
-            logger.warning("Exception: %s", str(exp))
-            return False
+
+        if self.output_file:
+            try:
+                logger.debug("Storing %d metrics to %s", self.metrics_count, self.output_file)
+                with open(self.output_file, 'a') as fp:
+                    for metric_name, metric_value in self.my_metrics:
+                        fp.write("%s;%s;%s\n" % (metric_value[0], metric_name, metric_value[1]))
+                metrics_saved = True
+
+            except Exception as exp:  # pylint: disable=broad-except
+                logger.warning("Failed writing to a file: %s. "
+                               "Inner stored metrics count: %d\n Exception: %s",
+                               self.output_file, self.metrics_count, str(exp))
+                return False
+
+        if (self.host and metrics_sent) or (self.output_file and metrics_saved):
+            self.my_metrics = []
+
         return True
 
     def send_to_graphite(self, metric, value, ts=None):
@@ -288,7 +318,7 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
         if ts is None:
             ts = int(time.time())
 
-        self.my_metrics.append(('.'.join([self.prefix, self.name, metric]), (ts, value)))
+        self.my_metrics.append(('.'.join([self.prefix, metric]), (ts, value)))
         if self.metrics_count >= self.metrics_flush_count:
             self.carbon.add_data_list(self.my_metrics)
             self.flush()
@@ -298,7 +328,7 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
         host_name = b.data['host_name']
         service_description = b.data['service_description']
         service_id = host_name+"/"+service_description
-        logger.info("got initial service status: %s", service_id)
+        logger.debug("got initial service status: %s", service_id)
 
         if host_name not in self.hosts_cache:
             logger.error("initial service status, host is unknown: %s.", service_id)
@@ -315,7 +345,7 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
     def manage_initial_host_status_brok(self, b):
         """Prepare the known hosts cache"""
         host_name = b.data['host_name']
-        logger.info("got initial host status: %s", host_name)
+        logger.debug("got initial host status: %s", host_name)
 
         self.hosts_cache[host_name] = {}
         if b.data.get('customs', None):
@@ -343,15 +373,8 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
             logger.warning(" received service check result for an unknown service: %s", service_id)
             return
 
-        # if service_description in self.filtered_metrics:
-        #     if len(self.filtered_metrics[service_description]) == 0:
-        #         logger.debug(" Ignore service '%s' metrics", service_description)
-        #         return
-
         # Decode received metrics
         couples = self.get_metric_and_value(service_description, b.data['perf_data'])
-
-        # If no values, we can exit now
         if not couples:
             logger.debug(" no metrics to send ...")
             return
@@ -385,15 +408,6 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
 
         for metric, value in couples:
             self.send_to_graphite('%s.%s' % (path, metric), value, check_time)
-
-        # lines = []
-        # # Send a bulk of all metrics at once
-        # for (metric, value) in couples:
-        #     lines.append("%s.%s %s %d" % (path, metric, str(value), check_time))
-        # lines.append("\n")
-        # packet = '\n'.join(lines)
-        #
-        # self.send_packet(packet)
 
     def manage_host_check_result_brok(self, b):
         """An host check result brok has just arrived..."""
@@ -432,17 +446,10 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
         # Graphite data source
         if self.graphite_data_source:
             path = '.'.join((hname, self.graphite_data_source))
+            if self.hostcheck:
+                path = '.'.join((hname, self.graphite_data_source, self.hostcheck))
         else:
             path = hname
 
         for metric, value in couples:
             self.send_to_graphite('%s.%s' % (path, metric), value, check_time)
-
-        # lines = []
-        # # Send a bulk of all metrics at once
-        # for (metric, value) in couples:
-        #     lines.append("%s.%s %s %d" % (path, metric, value, check_time))
-        # lines.append("\n")
-        # packet = '\n'.join(lines)
-        #
-        # self.send_packet(packet)

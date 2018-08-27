@@ -2405,6 +2405,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                              "do not launch the check !", self.host_name)
                 return None
 
+            if not self.check_command:
+                logger.debug("Service check is for a service that has no check command (%s/%s), "
+                             "do not launch the check !", self.host_name, self.service_description)
+                return None
+
             # Fred : passive only checked host dependency
             if dependent and self.my_type == 'host' and \
                     self.passive_checks_enabled and not self.active_checks_enabled:
