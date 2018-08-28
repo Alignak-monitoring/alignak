@@ -97,6 +97,10 @@ class HTTPDaemon(object):
                                             'application/zlib': zlib_processor},
                 'tools.gzip.on': True,
                 'tools.gzip.mime_types': ['text/*', 'application/json'],
+
+                'tools.response_headers.on': True,
+                'tools.response_headers.headers': [('Access-Control-Allow-Origin', '*')],
+
                 'tools.staticfile.on': True if icon_file else False,
                 'tools.staticfile.filename': icon_file
             }

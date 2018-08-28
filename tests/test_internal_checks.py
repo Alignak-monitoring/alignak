@@ -159,6 +159,8 @@ class TestInternalChecks(AlignakTest):
                 if 'next check for ' in log:
                     continue
 
+                print("l: %s" % log)
+
                 # Always UP
                 if 'Internal check: host_0 ' in log:
                     assert '--ALC-- Internal check: host_0 - _internal_host_check;0;I am always Up' in log
@@ -180,7 +182,8 @@ class TestInternalChecks(AlignakTest):
                     assert '--ALC-- Internal check: host_2 - _internal_host_check;2;I am always Down' in log
                     continue
                 if 'check result for host_2,' in log:
-                    assert '--ALC-- check result for host_2, exit: 2, output: I am always Down' in log
+                    # state_id is 2 or 1 for an host
+                    assert '--ALC-- check result for host_2, exit: 2, output: I am always Down' in log or '--ALC-- check result for host_2, exit: 1, output: I am always Down'
                     continue
 
                 # Always UNKNOWN
@@ -188,7 +191,8 @@ class TestInternalChecks(AlignakTest):
                     assert '--ALC-- Internal check: host_3 - _internal_host_check;3;I am always Unknown' in log
                     continue
                 if 'check result for host_3,' in log:
-                    assert '--ALC-- check result for host_3, exit: 3, output: I am always Unknown' in log
+                    # state_id is 2 or 1 for an host
+                    assert '--ALC-- check result for host_3, exit: 3, output: I am always Unknown' in log or '--ALC-- check result for host_3, exit: 1, output: I am always Unknown' in log
                     continue
 
                 # Always UNREACHABLE

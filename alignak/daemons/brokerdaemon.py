@@ -494,8 +494,8 @@ class Broker(BaseSatellite):
             now = time.time()
             # Do not 'manage' more than 0.8s, we must get new broks almost every second
             if now - start > 0.8:
-                logger.warning("Did not managed all my broks, remaining %d broks...",
-                               len(self.external_broks))
+                logger.info("I did not managed all my broks, remaining %d broks...",
+                            len(self.external_broks))
                 break
 
             # Get the first brok in the list

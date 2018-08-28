@@ -69,6 +69,7 @@ import time
 from datetime import datetime
 import traceback
 import logging
+import numpy
 
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
@@ -2338,7 +2339,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
     def launch_check(self, timestamp, hosts, services, timeperiods,
                      macromodulations, checkmodulations, checks, ref_check=None, force=False,
                      dependent=False):
-        # pylint: disable=too-many-locals, too-many-arguments, too-many-branches
+        # pylint: disable=too-many-locals, too-many-arguments
+        # pylint: disable=too-many-branches, too-many-return-statements
         """Launch a check (command)
 
         :param timestamp:
@@ -2797,16 +2799,43 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 state = 3
                 check.output = u'Malformed host internal check'
             else:
-                state = check_result[1].strip()
-                # If multiple possible states - choose a random one
-                if ',' in check_result[1]:
-                    states = check_result[1].split(',')
-                    state = states[random.randint(0, len(states) - 1)]
+                # In SOFT state type, do not change current state - let the new state go to HARD
+                if self.state_type == 'SOFT':
+                    state = self.state_id
+                else:
+                    state = check_result[1].strip()
+                    # If multiple possible states - choose a random one
+                    if ',' in check_result[1]:
+                        states = check_result[1].split(',')
+                        if len(states) > 5:
+                            states = states[0:5]
 
-                try:
-                    state = int(state)
-                except ValueError:
-                    pass
+                        probability = {
+                            2: [0.8, 0.2],
+                            3: [0.7, 0.2, 0.1],
+                            4: [0.6, 0.2, 0.1, 0.1],
+                            5: [0.4, 0.2, 0.2, 0.1, 0.1]
+                        }
+                        probability = probability.get(len(states))
+                        # if len(states) > 2:
+                        #     probability = [0.7, 0.2, 0.1]
+                        #     if len(states) > 3:
+                        #         probability = [0.6, 0.2, 0.1, 0.1]
+                        #         if len(states) > 4:
+                        #             probability = [0.4, 0.2, 0.2, 0.1, 0.1]
+                        try:
+                            state = numpy.random.choice(states, p=probability)
+                        except Exception as exp:  # pylint: disable=broad-except
+                            # If random configuration error, do not change the state
+                            logger.warning("Randomly chosen state is not configured correctly "
+                                           "for %s: %s", self.get_full_name(), state)
+                            state = self.state_id
+
+                    try:
+                        state = int(state)
+                    except ValueError:
+                        pass
+
                 check.output = u'Host internal check result: %d' % state
                 if len(check_result) > 2 and check_result[2]:
                     check.output = check_result[2]
@@ -2838,20 +2867,43 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 state = 3
                 check.output = u'Malformed service internal check'
             else:
-                state = check_result[1].strip()
-                # If multiple possible states - choose a random one
-                if ',' in check_result[1]:
-                    states = check_result[1].split(',')
-                    state = states[random.randint(0, len(states) - 1)]
+                # In SOFT state type, do not change current state - let the new state go to HARD
+                if self.state_type == 'SOFT':
+                    state = self.state_id
+                else:
+                    state = check_result[1].strip()
+                    # If multiple possible states - choose a random one
+                    if ',' in check_result[1]:
+                        states = check_result[1].split(',')
+                        if len(states) > 5:
+                            states = states[0:5]
 
-                    # In SOFT state type, do not change current state - let the new state go to HARD
-                    if self.state_type == 'SOFT':
-                        state = self.state_id
+                        probability = {
+                            2: [0.8, 0.2],
+                            3: [0.7, 0.2, 0.1],
+                            4: [0.6, 0.2, 0.1, 0.1],
+                            5: [0.4, 0.2, 0.2, 0.1, 0.1]
+                        }
+                        probability = probability.get(len(states))
+                        # if len(states) > 2:
+                        #     probability = [0.7, 0.2, 0.1]
+                        #     if len(states) > 3:
+                        #         probability = [0.6, 0.2, 0.1, 0.1]
+                        #         if len(states) > 4:
+                        #             probability = [0.4, 0.2, 0.2, 0.1, 0.1]
+                        try:
+                            state = numpy.random.choice(states, p=probability)
+                        except Exception as exp:  # pylint: disable=broad-except
+                            # If random configuration error, do not change the state
+                            logger.warning("Randomly chosen state is not configured correctly "
+                                           "for %s: %s", self.get_full_name(), state)
+                            state = self.state_id
 
-                try:
-                    state = int(state)
-                except ValueError:
-                    pass
+                    try:
+                        state = int(state)
+                    except ValueError:
+                        pass
+
                 check.output = u'Service internal check result: %d' % state
                 if len(check_result) > 2 and check_result[2]:
                     check.output = check_result[2]

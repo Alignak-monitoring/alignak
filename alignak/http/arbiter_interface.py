@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-lines
 #
 # Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
@@ -16,7 +17,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
-"""This module provide a specific HTTP interface for a Arbiter."""
+"""This module provides a specific HTTP interface for a Arbiter."""
 
 import time
 import logging
@@ -28,6 +29,8 @@ from alignak.util import split_semicolon
 from alignak.external_command import ExternalCommand
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+GRAFANA_TARGETS = ['events_log', 'problems_log']
 
 
 class ArbiterInterface(GenericInterface):
@@ -131,7 +134,9 @@ class ArbiterInterface(GenericInterface):
     @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
-    def command(self, command=None):
+    def command(self, command=None,
+                timestamp=None, element=None, host=None, service=None, user=None, parameters=None):
+        # pylint: disable=too-many-branches
         """ Request to execute an external command
 
         Allowed parameters are:
@@ -148,6 +153,12 @@ class ArbiterInterface(GenericInterface):
 
         `parameters`: the parameter that will be appended after all the arguments
 
+        When using this endpoint with the HTTP GET method, the semi colons that are commonly used
+        to separate the parameters must be replace with %3B! This because the ; is an accepted
+        URL query parameters separator...
+
+        Indeed, the recommended way of using this endpoint is to use the HTTP POST method.
+
         In case of any error, this function returns an object containing some properties:
         '_status': 'ERR' because of the error
         `_message`: some more explanations about the error
@@ -158,20 +169,22 @@ class ArbiterInterface(GenericInterface):
 
         :return: dict
         """
-        if cherrypy.request.method != "POST":
-            return {'_status': u'ERR', '_message': u'You must only POST on this endpoint.'}
+        if cherrypy.request.method in ["POST"]:
+            if not cherrypy.request.json:
+                return {'_status': u'ERR',
+                        '_message': u'You must POST parameters on this endpoint.'}
 
-        if cherrypy.request and not cherrypy.request.json:
-            return {'_status': u'ERR', '_message': u'You must POST parameters on this endpoint.'}
-
-        logger.debug("Post /command: %s", cherrypy.request.params)
-        command = cherrypy.request.json.get('command', None)
-        timestamp = cherrypy.request.json.get('timestamp', None)
-        element = cherrypy.request.json.get('element', None)
-        host = cherrypy.request.json.get('host', None)
-        service = cherrypy.request.json.get('service', None)
-        user = cherrypy.request.json.get('user', None)
-        parameters = cherrypy.request.json.get('parameters', None)
+        if command is None:
+            try:
+                command = cherrypy.request.json.get('command', None)
+                timestamp = cherrypy.request.json.get('timestamp', None)
+                element = cherrypy.request.json.get('element', None)
+                host = cherrypy.request.json.get('host', None)
+                service = cherrypy.request.json.get('service', None)
+                user = cherrypy.request.json.get('user', None)
+                parameters = cherrypy.request.json.get('parameters', None)
+            except AttributeError:
+                return {'_status': u'ERR', '_message': u'Missing command parameters'}
 
         if not command:
             return {'_status': u'ERR', '_message': u'Missing command parameter'}
@@ -671,32 +684,37 @@ class ArbiterInterface(GenericInterface):
         you will get a detailed JSON output:
         [
             {
-                timestamp: "2018-07-23 15:16:35",
+                timestamp: 1535517701.1817362,
+                date: "2018-07-23 15:16:35",
                 message: "SERVICE ALERT: host_11;dummy_echo;UNREACHABLE;HARD;2;",
                 level: "info"
             },
             {
-                timestamp: "2018-07-23 15:16:32",
+                timestamp: 1535517701.1817362,
+                date: "2018-07-23 15:16:32",
                 message: "SERVICE NOTIFICATION: guest;host_0;dummy_random;OK;0;
-                notify-service-by-log;Service internal check result: 0",
+                        notify-service-by-log;Service internal check result: 0",
                 level: "info"
             },
             {
-                timestamp: "2018-07-23 15:16:32",
+                timestamp: 1535517701.1817362,
+                date: "2018-07-23 15:16:32",
                 message: "SERVICE NOTIFICATION: admin;host_0;dummy_random;OK;0;
-                notify-service-by-log;Service internal check result: 0",
+                        notify-service-by-log;Service internal check result: 0",
                 level: "info"
             },
             {
-                timestamp: "2018-07-23 15:16:32",
+                timestamp: 1535517701.1817362,
+                date: "2018-07-23 15:16:32",
                 message: "SERVICE ALERT: host_0;dummy_random;OK;HARD;2;
-                Service internal check result: 0",
+                        Service internal check result: 0",
                 level: "info"
             },
             {
-                timestamp: "2018-07-23 15:16:19",
+                timestamp: 1535517701.1817362,
+                date: "2018-07-23 15:16:19",
                 message: "SERVICE ALERT: host_11;dummy_random;OK;HARD;2;
-                Service internal check result: 0",
+                        Service internal check result: 0",
                 level: "info"
             }
         ]
@@ -719,7 +737,7 @@ class ArbiterInterface(GenericInterface):
                 res.append(log)
             else:
                 res.append("%s - %s - %s"
-                           % (log['timestamp'], log['level'][0].upper(), log['message']))
+                           % (log['date'], log['level'][0].upper(), log['message']))
         return res
 
     @cherrypy.expose
@@ -1116,6 +1134,527 @@ class ArbiterInterface(GenericInterface):
             for cmd in self.app.get_external_commands():
                 res.append(cmd.serialize())
         return res
+
+    #####
+    #    ____                   __
+    #   / ___|  _ __    __ _   / _|   __ _   _ __     __ _
+    #  | |  _  | '__|  / _` | | |_   / _` | | '_ \   / _` |
+    #  | |_| | | |    | (_| | |  _| | (_| | | | | | | (_| |
+    #   \____| |_|     \__,_| |_|    \__,_| |_| |_|  \__,_|
+    #
+    #####
+
+    @cherrypy.expose
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def search(self):  # pylint: disable=no-self-use
+        """
+        Request available queries
+
+        Posted data: {u'target': u''}
+
+        Return the list of available target queries
+
+        :return: See upper comment
+        :rtype: list
+        """
+        logger.debug("Grafana search... %s", cherrypy.request.method)
+        if cherrypy.request.method == 'OPTIONS':
+            cherrypy.response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PATCH,PUT,DELETE'
+            cherrypy.response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+            cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
+            cherrypy.request.handler = None
+            return {}
+
+        if getattr(cherrypy.request, 'json', None):
+            logger.debug("Posted data: %s", cherrypy.request.json)
+
+        logger.debug("Grafana search returns: %s", GRAFANA_TARGETS)
+        return GRAFANA_TARGETS
+
+    @cherrypy.expose
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def query(self):
+        """
+        Request object passed to datasource.query function:
+
+        {
+            'timezone': 'browser',
+            'panelId': 38,
+            'range': {
+                'from': '2018-08-29T02:38:09.633Z',
+                'to': '2018-08-29T03:38:09.633Z',
+                'raw': {'from': 'now-1h', 'to': 'now'}
+            },
+            'rangeRaw': {'from': 'now-1h', 'to': 'now'},
+            'interval': '10s',
+            'intervalMs': 10000,
+            'targets': [
+                {
+                    'target': 'problems', 'refId': 'A', 'type': 'table'}
+            ],
+            'format': 'json',
+            'maxDataPoints': 314,
+            'scopedVars': {
+                '__interval': {'text': '10s', 'value': '10s'},
+                '__interval_ms': {'text': 10000, 'value': 10000}
+            }
+        }
+
+        Only the first target is considered. If several targets are required, an error is raised.
+
+        The target is a string that is searched in the target_queries dictionary. If found
+        the corresponding query is executed and the result is returned.
+
+        Table response from datasource.query. An array of:
+
+        [
+          {
+            "type": "table",
+            "columns": [
+              {
+                "text": "Time",
+                "type": "time",
+                "sort": true,
+                "desc": true,
+              },
+              {
+                "text": "mean",
+              },
+              {
+                "text": "sum",
+              }
+            ],
+            "rows": [
+              [
+                1457425380000,
+                null,
+                null
+              ],
+              [
+                1457425370000,
+                1002.76215352,
+                1002.76215352
+              ],
+            ]
+          }
+        ]
+        :return: See upper comment
+        :rtype: list
+        """
+        logger.debug("Grafana query... %s", cherrypy.request.method)
+        if cherrypy.request.method == 'OPTIONS':
+            cherrypy.response.headers['Access-Control-Allow-Methods'] = 'GET,POST,PATCH,PUT,DELETE'
+            cherrypy.response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+            cherrypy.response.headers['Access-Control-Allow-Origin'] = '*'
+            cherrypy.request.handler = None
+            return {}
+
+        if getattr(cherrypy.request, 'json', None):
+            posted_data = cherrypy.request.json
+            logger.debug("Posted data: %s", cherrypy.request.json)
+
+        targets = None
+        target = None
+        try:
+            targets = posted_data.get("targets")
+            assert targets
+            assert len(targets) == 1
+            target = targets[0].get("target")
+        except Exception as exp:  # pylint: disable=broad-except
+            cherrypy.response.status = 409
+            return {'_status': u'ERR', '_message': u'Request error: %s.' % exp}
+
+        resp = []
+        if target in ['events_log']:
+            resp = [{
+                "type": "table",
+                "columns": [
+                    {
+                        "text": "Time",
+                        "type": "time",
+                        "sort": True,
+                        "desc": True
+                    },
+                    {
+                        "text": "Severity",
+                        "type": "integer"
+                    },
+                    {
+                        "text": "Message",
+                        "type": "string"
+                    }
+                ],
+                "rows": []
+            }]
+
+            severity = {
+                "info": 0,
+                'warning': 1,
+                'error': 2,
+                'critical': 3
+            }
+            for log in reversed(self.app.recent_events):
+                # 0 for the first required target
+                # timestamp must be precise on ms for Grafana
+                resp[0]['rows'].append([log['timestamp'] * 1000,
+                                        severity.get(log['level'].lower(), 3), log['message']])
+
+        if target in ['problems_log']:
+            resp = [{
+                "type": "table",
+                "columns": [
+                    {
+                        "text": "Raised",
+                        "type": "time",
+                        "sort": True,
+                        "desc": True
+                    },
+                    {
+                        "text": "Severity",
+                        "type": "integer"
+                    },
+                    {
+                        "text": "Host",
+                        "type": "string"
+                    },
+                    {
+                        "text": "Service",
+                        "type": "string"
+                    },
+                    {
+                        "text": "State",
+                        "type": "integer"
+                    },
+                    {
+                        "text": "Output",
+                        "type": "string"
+                    }
+                ],
+                "rows": []
+            }]
+
+            severity = {
+                "up": 0,
+                'down': 2,
+                'ok': 0,
+                'warning': 1,
+                'critical': 2
+            }
+
+            problems = {}
+            for scheduler_link in self.app.conf.schedulers:
+                sched_res = scheduler_link.con.get('monitoring_problems', wait=True)
+                if 'problems' in sched_res:
+                    problems.update(sched_res['problems'])
+
+            # todo: add a sorting
+            for problem_uuid in problems:
+                log = problems[problem_uuid]
+
+                # 0 for the first required target
+                resp[0]['rows'].append([log['last_hard_state_change'] * 1000,
+                                        severity.get(log['state'].lower(), 3),
+                                        log['host'], log['service'], log['state'], log['output']])
+
+        return resp
+
+    #####
+    #      _      _   _                           _
+    #     / \    | | (_)   __ _   _ __     __ _  | | __
+    #    / _ \   | | | |  / _` | | '_ \   / _` | | |/ /
+    #   / ___ \  | | | | | (_| | | | | | | (_| | |   <
+    #  /_/   \_\ |_| |_|  \__, | |_| |_|  \__,_| |_|\_\
+    #                     |___/
+    #####
+    def _build_host_livestate(self, host_name, livestate):
+        # pylint: disable=too-many-locals
+        """Build and notify the external command for an host livestate
+
+        PROCESS_HOST_CHECK_RESULT;<host_name>;<status_code>;<plugin_output>
+
+        :param host_name: the concerned host name
+        :param livestate: livestate dictionary
+        :return: external command line
+        """
+        state = livestate.get('state', 'UP').upper()
+        output = livestate.get('output', '')
+        long_output = livestate.get('long_output', '')
+        perf_data = livestate.get('perf_data', '')
+        try:
+            timestamp = int(livestate.get('timestamp', 'ABC'))
+        except ValueError:
+            timestamp = None
+
+        host_state_to_id = {
+            "UP": 0,
+            "DOWN": 1,
+            "UNREACHABLE": 2
+        }
+        parameters = '%s;%s' % (host_state_to_id.get(state, 3), output)
+        if long_output and perf_data:
+            parameters = '%s|%s\n%s' % (parameters, perf_data, long_output)
+        elif long_output:
+            parameters = '%s\n%s' % (parameters, long_output)
+        elif perf_data:
+            parameters = '%s|%s' % (parameters, perf_data)
+
+        command_line = 'PROCESS_HOST_CHECK_RESULT;%s;%s' % (host_name, parameters)
+        if timestamp is not None:
+            command_line = '[%d] %s' % (timestamp, command_line)
+        else:
+            command_line = '[%d] %s' % (int(time.time()), command_line)
+
+        return command_line
+
+    def _build_service_livestate(self, host_name, service_name, livestate):
+        # pylint: disable=too-many-locals
+        """Build and notify the external command for a service livestate
+
+        PROCESS_SERVICE_CHECK_RESULT;<host_name>;<service_description>;<return_code>;<plugin_output>
+
+        Create and post a logcheckresult to the backend for the livestate
+
+        :param host_name: the concerned host name
+        :param service_name: the concerned service name
+        :param livestate: livestate dictionary
+        :return: external command line
+        """
+        state = livestate.get('state', 'OK').upper()
+        output = livestate.get('output', '')
+        long_output = livestate.get('long_output', '')
+        perf_data = livestate.get('perf_data', '')
+        try:
+            timestamp = int(livestate.get('timestamp', 'ABC'))
+        except ValueError:
+            timestamp = None
+
+        service_state_to_id = {
+            "OK": 0,
+            "WARNING": 1,
+            "CRITICAL": 2,
+            "UNKNOWN": 3,
+            "UNREACHABLE": 4
+        }
+        parameters = '%s;%s' % (service_state_to_id.get('state', 3), output)
+        if long_output and perf_data:
+            parameters = '%s|%s\n%s' % (parameters, perf_data, long_output)
+        elif long_output:
+            parameters = '%s\n%s' % (parameters, long_output)
+        elif perf_data:
+            parameters = '%s|%s' % (parameters, perf_data)
+
+        command_line = 'PROCESS_SERVICE_CHECK_RESULT;%s;%s;%s' % \
+                       (host_name, service_name, parameters)
+        if timestamp is not None:
+            command_line = '[%d] %s' % (timestamp, command_line)
+        else:
+            command_line = '[%d] %s' % (int(time.time()), command_line)
+
+        return command_line
+
+    @cherrypy.expose
+    @cherrypy.tools.json_in()
+    @cherrypy.tools.json_out()
+    def host(self):
+        """
+        Request object passed to datasource.query function:
+
+        {
+            'timezone': 'browser',
+            'panelId': 38,
+            'range': {
+                'from': '2018-08-29T02:38:09.633Z',
+                'to': '2018-08-29T03:38:09.633Z',
+                'raw': {'from': 'now-1h', 'to': 'now'}
+            },
+            'rangeRaw': {'from': 'now-1h', 'to': 'now'},
+            'interval': '10s',
+            'intervalMs': 10000,
+            'targets': [
+                {
+                    'target': 'problems', 'refId': 'A', 'type': 'table'}
+            ],
+            'format': 'json',
+            'maxDataPoints': 314,
+            'scopedVars': {
+                '__interval': {'text': '10s', 'value': '10s'},
+                '__interval_ms': {'text': 10000, 'value': 10000}
+            }
+        }
+
+        Only the first target is considered. If several targets are required, an error is raised.
+
+        The target is a string that is searched in the target_queries dictionary. If found
+        the corresponding query is executed and the result is returned.
+
+        Table response from datasource.query. An array of:
+
+        [
+          {
+            "type": "table",
+            "columns": [
+              {
+                "text": "Time",
+                "type": "time",
+                "sort": true,
+                "desc": true,
+              },
+              {
+                "text": "mean",
+              },
+              {
+                "text": "sum",
+              }
+            ],
+            "rows": [
+              [
+                1457425380000,
+                null,
+                null
+              ],
+              [
+                1457425370000,
+                1002.76215352,
+                1002.76215352
+              ],
+            ]
+          }
+        ]
+        :return: See upper comment
+        :rtype: list
+        """
+        logger.debug("Host status...")
+        if cherrypy.request.method not in ["PATCH", "POST"]:
+            cherrypy.response.status = 405
+            return {'_status': 'ERR',
+                    '_error': 'You must only PATCH or POST on this endpoint.'}
+
+        # Update an host
+        # ---
+        if not cherrypy.request.json:
+            return {'_status': 'ERR',
+                    '_error': 'You must send parameters on this endpoint.'}
+
+        host_name = None
+        if cherrypy.request.json.get('name', None) is not None:
+            host_name = cherrypy.request.json.get('name', None)
+
+        if not host_name:
+            return {'_status': 'ERR',
+                    '_error': 'Missing targeted host name.'}
+
+        # Get provided data
+        # ---
+        logger.debug("Posted data: %s", cherrypy.request.json)
+        data = {
+            'host_name': host_name
+        }
+
+        # Check if the host exist in Alignak
+        # ---
+        # todo: Not mandatory but it would be clean...
+
+        # Prepare response
+        # ---
+        ws_result = {'_status': 'OK',
+                     '_result': ['%s is alive :)' % host_name],
+                     '_issues': []}
+
+        # Manage the host livestate
+        # ---
+        # Alert on unordered livestate if several information exist
+        now = int(time.time())
+        livestate = cherrypy.request.json.get('livestate', None)
+        if not livestate:
+            # Create an host live state command
+            livestate = {'state': "UP"}
+        if not isinstance(livestate, list):
+            livestate = [livestate]
+
+        last_ts = 0
+        for ls in livestate:
+            if ls.get('state', None) is None:
+                ws_result['_issues'].append("Missing state for the host '%s' livestate, "
+                                            "assuming host is UP!" % host_name)
+                ls['state'] = 'UP'
+
+            # Tag our own timestamp
+            ls['_ws_timestamp'] = now
+            try:
+                timestamp = int(ls.get('timestamp', 'ABC'))
+                if timestamp < last_ts:
+                    logger.info("Got unordered timestamp for the host '%s'. "
+                                "The Alignak scheduler may not handle the check result!",
+                                host_name)
+                last_ts = timestamp
+            except ValueError:
+                pass
+
+        for ls in livestate:
+            state = ls.get('state').upper()
+            if state not in ['UP', 'DOWN', 'UNREACHABLE']:
+                ws_result['_issues'].append("Host state should be UP, DOWN or UNREACHABLE"
+                                            ", and not '%s'." % (state))
+            else:
+                # Create an host live state command
+                command = self._build_host_livestate(host_name, ls)
+                ws_result['_result'].append("Raised: %s" % command)
+                # Notify the external command to our Arbiter daemon
+                self.app.add(ExternalCommand(command))
+
+        services = cherrypy.request.json.get('services', None)
+        if not services:
+            return ws_result
+
+        for service in services:
+            service_name = service.get('name', None)
+            if service_name is None:
+                ws_result['_issues'].append("A service does not have a 'name' property")
+                continue
+
+            livestate = service.get('livestate', None)
+            if not livestate:
+                # Create a service live state command
+                livestate = {'state': "OK"}
+            if not isinstance(livestate, list):
+                livestate = [livestate]
+
+            last_ts = 0
+            for ls in livestate:
+                if ls.get('state', None) is None:
+                    ws_result['_issues'].append("Missing state for the service %s/%s livestate, "
+                                                "assuming service is OK!"
+                                                % (host_name, service_name))
+                    ls['state'] = 'UP'
+
+                # Tag our own timestamp
+                ls['_ws_timestamp'] = now
+                try:
+                    timestamp = int(ls.get('timestamp', 'ABC'))
+                    if timestamp < last_ts:
+                        logger.info("Got unordered timestamp for the service: %s/%s. "
+                                    "The Alignak scheduler may not handle the check result!",
+                                    host_name, service_name)
+                    last_ts = timestamp
+                except ValueError:
+                    pass
+
+            for ls in livestate:
+                state = ls.get('state').upper()
+                if state not in ['OK', 'WARNING', 'CRITICAL', 'UNKNOWN', 'UNREACHABLE']:
+                    ws_result['_issues'].append("Service %s/%s state must be OK, WARNING, "
+                                                "CRITICAL, UNKNOWN or UNREACHABLE, and not %s."
+                                                % (host_name, service_name, state))
+                else:
+                    # Create a service live state command
+                    command = self._build_service_livestate(host_name, service_name, ls)
+                    ws_result['_result'].append("Raised: %s" % command)
+                    # Notify the external command to our Arbiter daemon
+                    self.app.add(ExternalCommand(command))
+
+        return ws_result
 
     #####
     #   ___           _                                   _                     _
