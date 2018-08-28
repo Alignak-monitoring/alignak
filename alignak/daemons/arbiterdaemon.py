@@ -1203,7 +1203,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                                 timestamp=event.creation_time, to_logger=True)
 
             # Add to the recent events for the WS endpoint
-            event.data['timestamp'] = datetime.fromtimestamp(event.creation_time).\
+            event.data['timestamp'] = event.creation_time
+            event.data['date'] = datetime.fromtimestamp(event.creation_time).\
                 strftime(self.conf.events_date_format)
             event.data.pop('instance_id')
             self.recent_events.append(event.data)

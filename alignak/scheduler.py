@@ -1158,6 +1158,10 @@ class Scheduler(object):  # pylint: disable=R0902
                     self.nb_checks_results += 1
                     self.counters[action.is_a]["total"]["executed"] += 1
                     self.counters[action.is_a]["loop"]["executed"] += 1
+                    if action.passive_check:
+                        self.counters[action.is_a]["passive"]["executed"] += 1
+                    else:
+                        self.counters[action.is_a]["active"]["executed"] += 1
 
                 self.checks[action.uuid].get_return_from(action)
                 self.checks[action.uuid].status = ACT_STATUS_WAIT_CONSUME
@@ -1248,6 +1252,10 @@ class Scheduler(object):  # pylint: disable=R0902
 
                 logger.debug("Sending %d actions to the %s '%s'", len(lst), s_type, link.name)
                 link.push_actions(lst, self.instance_id)
+                for action in lst:
+                    self.counters[action.is_a]["total"]["launched"] += 1
+                    self.counters[action.is_a]["loop"]["launched"] += 1
+                    self.counters[action.is_a]["active"]["launched"] += 1
                 if s_type == 'poller':
                     self.nb_checks_launched += len(lst)
                     self.nb_checks_launched_passive += len(lst)
@@ -1287,10 +1295,16 @@ class Scheduler(object):  # pylint: disable=R0902
                     logger.debug("-> result: %s", result)
 
                     # Update scheduler counters
+                    self.counters[result.is_a]["loop"]["results"]["total"] += 1
+                    if result.status not in self.counters[result.is_a]["loop"]["results"]:
+                        self.counters[result.is_a]["loop"]["results"][result.status] = 0
+                    self.counters[result.is_a]["loop"]["results"][result.status] += 1
+
                     self.counters[result.is_a]["total"]["results"]["total"] += 1
                     if result.status not in self.counters[result.is_a]["total"]["results"]:
                         self.counters[result.is_a]["total"]["results"][result.status] = 0
                     self.counters[result.is_a]["total"]["results"][result.status] += 1
+
                     self.counters[result.is_a]["active"]["results"]["total"] += 1
                     if result.status not in self.counters[result.is_a]["active"]["results"]:
                         self.counters[result.is_a]["active"]["results"][result.status] = 0
@@ -1324,6 +1338,10 @@ class Scheduler(object):  # pylint: disable=R0902
                 continue
             logger.debug("Run internal check for %s", item)
 
+            self.counters["check"]["total"]["launched"] += 1
+            self.counters["check"]["loop"]["launched"] += 1
+            self.counters["check"]["internal"]["launched"] += 1
+
             item.manage_internal_check(self.hosts, self.services, chk, self.hostgroups,
                                        self.servicegroups, self.macromodulations,
                                        self.timeperiods)
@@ -1332,6 +1350,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
             # Count and execute only if active checks is enabled
             self.nb_internal_checks += 1
+            self.counters["check"]["internal"]["executed"] += 1
             self.counters["check"]["total"]["results"]["total"] += 1
             if "internal" not in self.counters["check"]["total"]["results"]:
                 self.counters["check"]["total"]["results"]["internal"] = 0
@@ -1981,10 +2000,10 @@ class Scheduler(object):  # pylint: disable=R0902
 
         _t0 = time.time()
 
+        items = []
+
         # May be self.ticks is not set (unit tests context!)
         ticks = getattr(self, 'ticks', self.pushed_conf.host_freshness_check_interval)
-
-        items = []
         if self.pushed_conf.check_host_freshness \
                 and self.pushed_conf.host_freshness_check_interval % ticks == 0:
             # Freshness check is configured for hosts - get the list of concerned hosts:
@@ -2007,6 +2026,9 @@ class Scheduler(object):  # pylint: disable=R0902
             statsmgr.gauge('freshness.services-count', len(services))
             items.extend(services)
         statsmgr.timer('freshness.items-list', time.time() - _t0)
+
+        if not items:
+            return
 
         _t0 = time.time()
         raised_checks = 0
@@ -2478,7 +2500,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         # - checks / actions counters
         for action_type in self.counters:
-            for action_group in ['total', 'active', 'passive', 'loop']:
+            for action_group in ['total', 'loop', 'active', 'passive', 'internal']:
                 # Actions launched
                 statsmgr.gauge('actions.%s.%s.launched'
                                % (action_type, action_group),

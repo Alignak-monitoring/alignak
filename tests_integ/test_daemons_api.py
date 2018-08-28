@@ -1306,6 +1306,35 @@ class TestDaemonsApi(AlignakTest):
 
         # -----
         # 3/ notify an external command to the arbiter (WS interface).
+        # Using the GET HTTP method.
+        # Note the %3B instead of the semi-colons!
+        # For an host
+        # raw_data = req.get("http://localhost:7770/command?command=process_host_check_result%3BHost_name%3B0%3BI am alive!", verify=False)
+        raw_data = req.get("http://localhost:7770/command",
+                           params={'command': 'process_host_check_result;Host_name;0;I am alive!'},
+                           verify=False)
+        print("command, got (raw): %s" % (raw_data.content))
+        assert raw_data.status_code == 200
+        data = raw_data.json()
+        print("Got: %s" % data)
+        assert data['_status'] == 'OK'
+        # Note the uppercase for the command, not for the parameters...
+        assert data['_message'] == 'Got command: PROCESS_HOST_CHECK_RESULT;Host_name;0;I am alive!'
+        assert data['command'] == 'PROCESS_HOST_CHECK_RESULT;Host_name;0;I am alive!'
+
+        raw_data = req.get("http://localhost:7770/_external_commands")
+        assert raw_data.status_code == 200
+        print("%s _external_commands, got (raw): %s" % (name, raw_data))
+        data = raw_data.json()
+        print("---Got: %s" % data)
+        assert len(data) == 1
+        assert 'creation_timestamp' in data[0]
+        assert data[0]['cmd_line'] == 'PROCESS_HOST_CHECK_RESULT;Host_name;0;I am alive!'
+        assert data[0]['my_type'] == 'externalcommand'
+
+        # -----
+        # 3/ notify an external command to the arbiter (WS interface).
+        # Using the POST HTTP method (most recommended way).
         # For an host
         raw_data = req.post("http://localhost:7770/command",
                             data=json.dumps({
@@ -1940,3 +1969,284 @@ class TestDaemonsApi(AlignakTest):
 
         # This function will request the arbiter daemon to stop
         self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7770')
+
+    def test_grafana_datasource(self):
+        """ Arbiter interface- Grafana datasource
+
+        :return:
+        """
+        satellite_map = {
+            'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
+            'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
+        }
+
+        daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
+                        'receiver-master', 'scheduler-master']
+        self._prepare_my_configuration(daemons_list=daemons_list)
+
+        self._run_alignak_daemons(cfg_folder=self.cfg_folder,
+                                  daemons_list=daemons_list, runtime=5)
+
+        req = requests.Session()
+
+        # Here the daemons got started by the arbiter and the arbiter dispatched a configuration
+        # We will ask to wait for a new configuration
+
+        # -----
+        # 1/ get the running identifier (confirm the daemon is running)
+        print("--- get_running_id")
+        for name, port in list(satellite_map.items()):
+            raw_data = req.get("http://localhost:%s/identity" % port, verify=False)
+            assert raw_data.status_code == 200
+            print("Got (raw): %s" % raw_data)
+            data = raw_data.json()
+            assert "running_id" in data
+            print("%s, my running id: %s" % (name, data['running_id']))
+        # -----
+
+        # -----
+        # 2/ get the available tables
+        raw_data = req.options("http://localhost:7770/search")
+        print("command, got (raw): %s" % (raw_data))
+        assert raw_data.status_code == 200
+        # assert raw_data.content == '{}'
+
+        raw_data = req.get("http://localhost:7770/search",
+                           verify=False)
+        print("command, got (raw): %s" % (raw_data.content))
+        assert raw_data.status_code == 200
+        data = raw_data.json()
+        print("Got: %s" % data)
+        assert data == ["events_log", "problems_log"]
+
+        # -----
+        # 2/ get the events log
+        raw_data = req.options("http://localhost:7770/query",)
+        print("command, got (raw): %s" % (raw_data))
+        assert raw_data.status_code == 200
+        # assert raw_data.content == '{}'
+
+        data = {
+            'timezone': 'browser',
+            'panelId': 38,
+            'range': {
+                'from': '2018-08-29T03:54:32.050Z', 'to': '2018-08-29T04:54:32.050Z',
+                'raw': {
+                    'from': 'now-1h', 'to': 'now'
+                }
+            },
+            'rangeRaw': {
+                'from': 'now-1h', 'to': 'now'
+            },
+            'interval': '15s', 'intervalMs': 15000,
+            'targets': [
+                {'target': 'events_log', 'refId': 'A', 'type': 'table'}
+            ],
+            'format': 'json',
+            'maxDataPoints': 242,
+            'scopedVars': {
+                '__interval': {'text': '15s', 'value': '15s'},
+                '__interval_ms': {'text': 15000, 'value': 15000}
+            }
+        }
+        raw_data = req.post("http://localhost:7770/query",
+                            data=json.dumps(data),
+                            headers={'Content-Type': 'application/json'}, verify=False)
+        print("command, got (raw): %s" % (raw_data.content))
+        assert raw_data.status_code == 200
+        data = raw_data.json()
+        print("Got: %s" % data)
+        assert data == [
+            {u'rows': [], u'type': u'table',
+             u'columns': [{u'sort': True, u'text': u'Time', u'type': u'time', u'desc': True},
+                          {u'text': u'Severity', u'type': u'integer'},
+                          {u'text': u'Message', u'type': u'string'}]}
+        ]
+        # -----
+        # 3/ get the problems log
+        raw_data = req.options("http://localhost:7770/query",)
+        print("command, got (raw): %s" % (raw_data))
+        assert raw_data.status_code == 200
+        # assert raw_data.content == '{}'
+
+        data = {
+            'timezone': 'browser',
+            'panelId': 38,
+            'range': {
+                'from': '2018-08-29T03:54:32.050Z', 'to': '2018-08-29T04:54:32.050Z',
+                'raw': {
+                    'from': 'now-1h', 'to': 'now'
+                }
+            },
+            'rangeRaw': {
+                'from': 'now-1h', 'to': 'now'
+            },
+            'interval': '15s', 'intervalMs': 15000,
+            'targets': [
+                {'target': 'problems_log', 'refId': 'A', 'type': 'table'}
+            ],
+            'format': 'json',
+            'maxDataPoints': 242,
+            'scopedVars': {
+                '__interval': {'text': '15s', 'value': '15s'},
+                '__interval_ms': {'text': 15000, 'value': 15000}
+            }
+        }
+        raw_data = req.post("http://localhost:7770/query",
+                            data=json.dumps(data),
+                            headers={'Content-Type': 'application/json'}, verify=False)
+        print("command, got (raw): %s" % (raw_data.content))
+        assert raw_data.status_code == 200
+        data = raw_data.json()
+        print("Got: %s" % data)
+        assert data == [
+            {u'rows': [], u'type': u'table',
+             u'columns': [{u'sort': True, u'text': u'Raised', u'type': u'time', u'desc': True},
+                          {u'text': u'Severity', u'type': u'integer'},
+                          {u'text': u'Host', u'type': u'string'},
+                          {u'text': u'Service', u'type': u'string'},
+                          {u'text': u'State', u'type': u'integer'},
+                          {u'text': u'Output', u'type': u'string'}]}
+        ]
+
+    def test_host_passive_ws(self):
+        """ Arbiter interface- Host passive check
+
+        :return:
+        """
+        satellite_map = {
+            'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
+            'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
+        }
+
+        daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
+                        'receiver-master', 'scheduler-master']
+        self._prepare_my_configuration(daemons_list=daemons_list)
+
+        self._run_alignak_daemons(cfg_folder=self.cfg_folder,
+                                  daemons_list=daemons_list, runtime=5)
+
+        req = requests.Session()
+
+        # Here the daemons got started by the arbiter and the arbiter dispatched a configuration
+        # We will ask to wait for a new configuration
+
+        # -----
+        # 1/ get the running identifier (confirm the daemon is running)
+        print("--- get_running_id")
+        for name, port in list(satellite_map.items()):
+            raw_data = req.get("http://localhost:%s/identity" % port, verify=False)
+            assert raw_data.status_code == 200
+            print("Got (raw): %s" % raw_data)
+            data = raw_data.json()
+            assert "running_id" in data
+            print("%s, my running id: %s" % (name, data['running_id']))
+        # -----
+
+        # -----
+        # 2/ Upload an host information
+        now = int(time.time())
+        data = {
+            "name": "test_host_0",
+            "livestate": {
+                "state": "UP",
+                "output": "Output...",
+                "long_output": "Long output...",
+                "perf_data": "'counter'=1",
+            }
+        }
+
+        data = {
+            'name': 'test_host'
+        }
+        raw_data = req.post("http://localhost:7770/host",
+                            data=json.dumps(data),
+                            headers={'Content-Type': 'application/json'}, verify=False)
+        print("command, got (raw): %s" % (raw_data.content))
+        assert raw_data.status_code == 200
+        data = raw_data.json()
+        print("Got: %s" % data)
+        # Status: OK
+        # Host is alive :)
+        # Created and raised an host passive check command
+        # No issues
+        assert data == {
+            u'_status': u'OK',
+            u'_result': [
+                u'test_host is alive :)',
+                u'Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;' % now
+            ],
+            u'_issues': []
+        }
+
+        # -----
+        # 2/ Upload an host information
+        now = int(time.time())
+        data = {
+            'name': 'test_host',
+            "services": [
+                {
+                    "name": "test_ok_0",
+                    "livestate": {
+                        "state": "ok",
+                        "output": "Output 0",
+                        "long_output": "Long output 0",
+                        "perf_data": "'counter'=0"
+                    }
+                },
+                {
+                    "name": "test_ok_1",
+                    "livestate": {
+                        "state": "warning",
+                        "output": "Output 1",
+                        "long_output": "Long output 1",
+                        "perf_data": "'counter'=1"
+                    }
+                },
+                {
+                    "name": "test_ok_2",
+                    "livestate": {
+                        "state": "critical",
+                        "output": "Output 2",
+                        "long_output": "Long output 2",
+                        "perf_data": "'counter'=2"
+                    }
+                },
+            ]
+        }
+        data = {
+            'name': 'test_host',
+            "services": [
+                {
+                    "name": "test_ok_0"
+                },
+                {
+                    "name": "test_ok_1"
+                },
+                {
+                    "name": "test_ok_2"
+                }
+            ]
+        }
+        raw_data = req.post("http://localhost:7770/host",
+                            data=json.dumps(data),
+                            headers={'Content-Type': 'application/json'}, verify=False)
+        print("command, got (raw): %s" % (raw_data.content))
+        assert raw_data.status_code == 200
+        data = raw_data.json()
+        print("Got: %s" % data)
+        # Status: OK
+        # Host is alive :)
+        # Created and raised an host passive check command
+        # No issues
+        assert data == {
+            u'_status': u'OK',
+            u'_result': [
+                u'test_host is alive :)',
+                u'Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;' % now,
+                u'Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_0;3;' % now,
+                u'Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_1;3;' % now,
+                u'Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_2;3;' % now
+            ],
+            u'_issues': []
+        }
