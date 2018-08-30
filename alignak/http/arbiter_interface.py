@@ -1437,7 +1437,7 @@ class ArbiterInterface(GenericInterface):
             "UNKNOWN": 3,
             "UNREACHABLE": 4
         }
-        parameters = '%s;%s' % (service_state_to_id.get('state', 3), output)
+        parameters = '%s;%s' % (service_state_to_id.get(state, 3), output)
         if long_output and perf_data:
             parameters = '%s|%s\n%s' % (parameters, perf_data, long_output)
         elif long_output:
@@ -1627,7 +1627,7 @@ class ArbiterInterface(GenericInterface):
                     ws_result['_issues'].append("Missing state for the service %s/%s livestate, "
                                                 "assuming service is OK!"
                                                 % (host_name, service_name))
-                    ls['state'] = 'UP'
+                    ls['state'] = 'OK'
 
                 # Tag our own timestamp
                 ls['_ws_timestamp'] = now
