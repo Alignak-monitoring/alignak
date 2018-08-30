@@ -2144,18 +2144,9 @@ class TestDaemonsApi(AlignakTest):
         # -----
 
         # -----
-        # 2/ Upload an host information
+        # 2/ Upload an host (only) information
         now = int(time.time())
-        data = {
-            "name": "test_host_0",
-            "livestate": {
-                "state": "UP",
-                "output": "Output...",
-                "long_output": "Long output...",
-                "perf_data": "'counter'=1",
-            }
-        }
-
+        # Only the host name, no live state data
         data = {
             'name': 'test_host'
         }
@@ -2179,8 +2170,80 @@ class TestDaemonsApi(AlignakTest):
             u'_issues': []
         }
 
+        # Now, with live state data
+        now = int(time.time())
+        data = {
+            "name": "test_host",
+            "livestate": {
+                "state": "UP",
+                "output": "Output...",
+                "long_output": "Long output...",
+                "perf_data": "'counter'=1",
+            }
+        }
+        raw_data = req.post("http://localhost:7770/host",
+                            data=json.dumps(data),
+                            headers={'Content-Type': 'application/json'}, verify=False)
+        print("command, got (raw): %s" % (raw_data.content))
+        assert raw_data.status_code == 200
+        data = raw_data.json()
+        print("Got: %s" % data)
+        # Status: OK
+        # Host is alive :)
+        # Created and raised an host passive check command
+        # No issues
+        assert data == {
+            u'_status': u'OK',
+            u'_result': [
+                u'test_host is alive :)',
+                u"Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;Output...|'counter'=1\nLong output..." % now
+            ],
+            u'_issues': []
+        }
+
         # -----
-        # 2/ Upload an host information
+        # 3/ Upload an host and its services information
+        now = int(time.time())
+        # Only the host and its services names, no live state data
+        data = {
+            'name': 'test_host',
+            "services": [
+                {
+                    "name": "test_ok_0"
+                },
+                {
+                    "name": "test_ok_1"
+                },
+                {
+                    "name": "test_ok_2"
+                }
+            ]
+        }
+        raw_data = req.post("http://localhost:7770/host",
+                            data=json.dumps(data),
+                            headers={'Content-Type': 'application/json'}, verify=False)
+        print("command, got (raw): %s" % (raw_data.content))
+        assert raw_data.status_code == 200
+        data = raw_data.json()
+        print("Got: %s" % data)
+        # Status: OK
+        # Host is alive :)
+        # Services are in OK state
+        # Created and raised some host and services passive check command
+        # No issues
+        assert data == {
+            u'_status': u'OK',
+            u'_result': [
+                u'test_host is alive :)',
+                u'Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;' % now,
+                u'Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_0;0;' % now,
+                u'Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_1;0;' % now,
+                u'Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_2;0;' % now
+            ],
+            u'_issues': []
+        }
+
+        # Now, with live state data
         now = int(time.time())
         data = {
             'name': 'test_host',
@@ -2214,20 +2277,6 @@ class TestDaemonsApi(AlignakTest):
                 },
             ]
         }
-        data = {
-            'name': 'test_host',
-            "services": [
-                {
-                    "name": "test_ok_0"
-                },
-                {
-                    "name": "test_ok_1"
-                },
-                {
-                    "name": "test_ok_2"
-                }
-            ]
-        }
         raw_data = req.post("http://localhost:7770/host",
                             data=json.dumps(data),
                             headers={'Content-Type': 'application/json'}, verify=False)
@@ -2237,16 +2286,16 @@ class TestDaemonsApi(AlignakTest):
         print("Got: %s" % data)
         # Status: OK
         # Host is alive :)
-        # Created and raised an host passive check command
+        # Created and raised some host and services passive check command
         # No issues
         assert data == {
             u'_status': u'OK',
             u'_result': [
                 u'test_host is alive :)',
-                u'Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;' % now,
-                u'Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_0;3;' % now,
-                u'Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_1;3;' % now,
-                u'Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_2;3;' % now
+                u"Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;" % now,
+                u"Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_0;0;Output 0|'counter'=0\nLong output 0" % now,
+                u"Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_1;1;Output 1|'counter'=1\nLong output 1" % now,
+                u"Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_2;2;Output 2|'counter'=2\nLong output 2" % now
             ],
             u'_issues': []
         }
