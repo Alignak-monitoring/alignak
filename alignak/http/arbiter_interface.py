@@ -1369,7 +1369,7 @@ class ArbiterInterface(GenericInterface):
     #                     |___/
     #####
     def _build_host_livestate(self, host_name, livestate):
-        # pylint: disable=too-many-locals
+        # pylint: disable=no-self-use, too-many-locals
         """Build and notify the external command for an host livestate
 
         PROCESS_HOST_CHECK_RESULT;<host_name>;<status_code>;<plugin_output>
@@ -1409,7 +1409,7 @@ class ArbiterInterface(GenericInterface):
         return command_line
 
     def _build_service_livestate(self, host_name, service_name, livestate):
-        # pylint: disable=too-many-locals
+        # pylint: disable=no-self-use, too-many-locals
         """Build and notify the external command for a service livestate
 
         PROCESS_SERVICE_CHECK_RESULT;<host_name>;<service_description>;<return_code>;<plugin_output>
@@ -1458,72 +1458,15 @@ class ArbiterInterface(GenericInterface):
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
     def host(self):
-        """
-        Request object passed to datasource.query function:
+        # pylint: disable=too-many-branches
+        """Get a passive checks for an host and its services
 
-        {
-            'timezone': 'browser',
-            'panelId': 38,
-            'range': {
-                'from': '2018-08-29T02:38:09.633Z',
-                'to': '2018-08-29T03:38:09.633Z',
-                'raw': {'from': 'now-1h', 'to': 'now'}
-            },
-            'rangeRaw': {'from': 'now-1h', 'to': 'now'},
-            'interval': '10s',
-            'intervalMs': 10000,
-            'targets': [
-                {
-                    'target': 'problems', 'refId': 'A', 'type': 'table'}
-            ],
-            'format': 'json',
-            'maxDataPoints': 314,
-            'scopedVars': {
-                '__interval': {'text': '10s', 'value': '10s'},
-                '__interval_ms': {'text': 10000, 'value': 10000}
-            }
-        }
+        This function builds the external commands corresponding to the host and services
+        provided information
 
-        Only the first target is considered. If several targets are required, an error is raised.
-
-        The target is a string that is searched in the target_queries dictionary. If found
-        the corresponding query is executed and the result is returned.
-
-        Table response from datasource.query. An array of:
-
-        [
-          {
-            "type": "table",
-            "columns": [
-              {
-                "text": "Time",
-                "type": "time",
-                "sort": true,
-                "desc": true,
-              },
-              {
-                "text": "mean",
-              },
-              {
-                "text": "sum",
-              }
-            ],
-            "rows": [
-              [
-                1457425380000,
-                null,
-                null
-              ],
-              [
-                1457425370000,
-                1002.76215352,
-                1002.76215352
-              ],
-            ]
-          }
-        ]
-        :return: See upper comment
-        :rtype: list
+        :param host_name: host name
+        :param data: dictionary of the host properties to be modified
+        :return: command line
         """
         logger.debug("Host status...")
         if cherrypy.request.method not in ["PATCH", "POST"]:
@@ -1548,9 +1491,6 @@ class ArbiterInterface(GenericInterface):
         # Get provided data
         # ---
         logger.debug("Posted data: %s", cherrypy.request.json)
-        data = {
-            'host_name': host_name
-        }
 
         # Check if the host exist in Alignak
         # ---
