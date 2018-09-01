@@ -32,3 +32,6 @@
 #ALIGNAK_CONFIGURATION_FILE=/usr/local/etc/my-alignak.ini
 #ALIGNAK_USER=my-alignak
 #ALIGNAK_GROUP=my-alignak
+
+# Uncomment to make the daemons raise some log about its cpu and memory consumption every 10 seconds
+#ALIGNAK_DAEMON_MONITORING=10

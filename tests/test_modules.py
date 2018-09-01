@@ -180,41 +180,6 @@ class TestModules(AlignakTest):
         modules = [m.name for m in self._scheduler_daemon.modules]
         assert modules == ['Example', 'inner-retention']
 
-        s = {
-            'alignak': 'My Alignak', 'type': 'scheduler', 'name': 'scheduler-master',
-            'version': '2.0.0rc3', 'program_start': 1535113067.5402572, 'spare': False,
-            'load': -41.431089073425724,
-            'counters': {'modules': 0, 'external-commands': 0, 'satellites.arbiters': 0,
-                         'satellites.schedulers': 0, 'brokers': 1, 'pollers': 1, 'reactionners': 1,
-                         'receivers': 0, 'actions.count': 0, 'actions.scheduled': 1035,
-                         'actions.in_poller': 0, 'actions.zombie': 0, 'checks.count': 1043,
-                         'checks.scheduled': 1035, 'checks.in_poller': 0, 'checks.zombie': 0},
-            'metrics': [], 'modules': {'internal': {}, 'external': {}},
-            'monitored_objects': {'timeperiods': 4, 'services': 40, 'servicegroups': 1,
-                                  'commands': 11, 'hosts': 1016, 'hostgroups': 2, 'contacts': 2,
-                                  'contactgroups': 2, 'notificationways': 2, 'checkmodulations': 0,
-                                  'macromodulations': 0, 'servicedependencies': 0,
-                                  'hostdependencies': 0, 'arbiters': 0, 'schedulers': 0,
-                                  'reactionners': 0, 'brokers': 0, 'receivers': 0, 'pollers': 0,
-                                  'realms': 0, 'modules': 0, 'resultmodulations': 0,
-                                  'businessimpactmodulations': 0, 'escalations': 0,
-                                  'serviceescalations': 0, 'hostescalations': 0, 'hostsextinfo': 0,
-                                  'servicesextinfo': 0}, '_freshness': 1535113164,
-            'latency': {'avg': 0.74, 'min': 0.74, 'max': 0.74},
-            'livesynthesis': {'hosts_total': 1016, 'hosts_not_monitored': 10, 'hosts_up_hard': 1015,
-                              'hosts_up_soft': 0, 'hosts_down_hard': 0, 'hosts_down_soft': 1,
-                              'hosts_unreachable_hard': 0, 'hosts_unreachable_soft': 0,
-                              'hosts_acknowledged': 0, 'hosts_in_downtime': 0, 'hosts_flapping': 0,
-                              'services_total': 40, 'services_not_monitored': 0,
-                              'services_ok_hard': 40, 'services_ok_soft': 0,
-                              'services_warning_hard': 0, 'services_warning_soft': 0,
-                              'services_critical_hard': 0, 'services_critical_soft': 0,
-                              'services_unknown_hard': 0, 'services_unknown_soft': 0,
-                              'services_unreachable_hard': 0, 'services_unreachable_soft': 0,
-                              'services_acknowledged': 0, 'services_in_downtime': 0,
-                              'services_flapping': 0}
-        }
-
     def test_modulemanager_1(self):
         """ Module manager manages its modules - old form
 

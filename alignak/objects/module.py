@@ -87,9 +87,9 @@ class Module(Item):
         # Old "deprecated" property - replaced with type
         'module_types':
             ListProp(default=[u''], split_on_comma=True),
-        # Do not manage modules having modules
-        # 'modules':
-        #     ListProp(default=[''], split_on_comma=True)
+        # Allow a module to be related some other modules
+        'modules':
+            ListProp(default=[''], split_on_comma=True),
 
         # Module log level
         'log_level':
@@ -128,9 +128,9 @@ class Module(Item):
             # Old "deprecated" property - replaced with type
             'module_types':
                 ListProp(default=[''], split_on_comma=True),
-            # Do not manage modules having modules
-            # 'modules':
-            #     ListProp(default=[''], split_on_comma=True)
+            # Allow a module to be related some other modules
+            'modules':
+                ListProp(default=[''], split_on_comma=True),
 
             'enabled':
                 BoolProp(default=True),
@@ -237,9 +237,29 @@ class Modules(Items):
     inner_class = Module
 
     def linkify(self):
-        """Link modules
+        """Link a module to some other modules
 
         :return: None
         """
-        warnings.warn("Linking modules to modules (%s) is not managed by Alignak.".format(s=self),
-                      DeprecationWarning, stacklevel=2)
+        self.linkify_s_by_plug()
+
+    def linkify_s_by_plug(self):
+        """Link a module to some other modules
+
+        :return: None
+        """
+        for module in self:
+            new_modules = []
+            for related in getattr(module, 'modules', []):
+                related = related.strip()
+                if not related:
+                    continue
+                o_related = self.find_by_name(related)
+                if o_related is not None:
+                    new_modules.append(o_related.uuid)
+                else:
+                    self.add_error("the module '%s' for the module '%s' is unknown!"
+                                   % (related, module.get_name()))
+            module.modules = new_modules
+
+

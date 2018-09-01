@@ -171,7 +171,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         # Realm stuff
         'realm_name':
-            StringProp(default=u''),
+            StringProp(default=u'', fill_brok=['full_status']),
         'got_default_realm':
             BoolProp(default=False),
 

@@ -74,6 +74,7 @@ class ModulesManager(object):
         self.daemon = daemon
         self.daemon_type = daemon.type
         self.daemon_name = daemon.name
+        self.modules = {}
         self.modules_assoc = []
         self.instances = []
         self.to_restart = []
@@ -136,6 +137,7 @@ class ModulesManager(object):
                                                      "function" % module.python_name)
                     raise AttributeError
 
+                self.modules[module.uuid] = module
                 self.modules_assoc.append((module, python_module))
                 logger.info("Imported '%s' for %s", module.python_name, module.name)
             except ImportError as exp:  # pragma: no cover, simple protection
@@ -233,6 +235,13 @@ class ModulesManager(object):
             alignak_module.properties = python_module.properties.copy()
             alignak_module.my_daemon = self.daemon
             logger.info("Alignak starting module '%s'", alignak_module.get_name())
+            logger.info("Alignak starting module '%s'", getattr(alignak_module, 'modules', None))
+            if getattr(alignak_module, 'modules', None):
+                modules = []
+                for module_uuid in alignak_module.modules:
+                    if module_uuid in self.modules:
+                        modules.append(self.modules[module_uuid])
+                alignak_module.modules = modules
             logger.debug("Module '%s', parameters: %s",
                          alignak_module.get_name(), alignak_module.__dict__)
             try:

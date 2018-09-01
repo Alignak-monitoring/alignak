@@ -61,7 +61,10 @@ data_files = [
     ('share/alignak', ['bin/python-post-install.sh',
                        'bin/python3-post-install.sh',
                        'bin/alignak-log-rotate',
-                       'bin/alignak.ico'])
+                       'contrib/images/alignak.ico',
+                       'contrib/images/alignak_128x128.png',
+                       'contrib/images/alignak_blue_logo.png',
+                       'contrib/images/alignak_white_logo.png'])
 ]
 for dir in ['etc', 'bin/manpages/manpages', 'bin/rc.d', 'bin/systemd', 'bin/systemV']:
     for subdir, dirs, files in os.walk(dir):

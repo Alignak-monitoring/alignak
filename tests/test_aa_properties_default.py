@@ -631,6 +631,7 @@ class TestModule(PropertiesTester, AlignakTest):
         ('type', 'unset'),
         ('daemon', 'unset'),
         ('module_types', ['']),
+        ('modules', ['']),
         ('enabled', True),
         ('log_level', 'INFO'),
         ('statsd_host', 'localhost'),
