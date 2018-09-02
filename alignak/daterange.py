@@ -265,20 +265,17 @@ class Timerange(AlignakObject):
             return self.hend * 3600 + self.mend * 60
         return 0
 
-    def is_time_valid(self, timestamp, sec_from_morning=None):
+    def is_time_valid(self, timestamp):
         """Check if time is valid for this Timerange
 
         If sec_from_morning is not provided, get the value.
 
         :param timestamp: time to check
         :type timestamp: int
-        :param sec_from_morning: number of seconds since the beginning of day
-        :type sec_from_morning; int
         :return: True if time is valid (in interval), False otherwise
         :rtype: bool
         """
-        if not sec_from_morning:
-            sec_from_morning = get_sec_from_morning(timestamp)
+        sec_from_morning = get_sec_from_morning(timestamp)
         return (self.is_valid and
                 self.hstart * 3600 + self.mstart * 60 <=
                 sec_from_morning <=
@@ -388,11 +385,8 @@ class AbstractDaterange(AlignakObject):
         :rtype: bool
         """
         if self.is_time_day_valid(timestamp):
-            # Get seconds elapsed since the day morning - get it once to avoid
-            # getting the same value for every time range in the current day
-            sec_from_morning = get_sec_from_morning(timestamp)
             for timerange in self.timeranges:
-                if timerange.is_time_valid(timestamp, sec_from_morning=sec_from_morning):
+                if timerange.is_time_valid(timestamp):
                     return True
         return False
 
