@@ -117,6 +117,12 @@ class ModulesManager(object):
         """
         self.modules_assoc = []
         for module in modules:
+            if not module.enabled:
+                logger.info("Module %s is declared but not enabled", module.name)
+                # Store in our modules list but do not try to load
+                # Probably someone else will load this module later...
+                self.modules[module.uuid] = module
+                continue
             logger.info("Importing Python module '%s' for %s...", module.python_name, module.name)
             try:
                 python_module = importlib.import_module(module.python_name)
@@ -137,7 +143,6 @@ class ModulesManager(object):
                                                      "function" % module.python_name)
                     raise AttributeError
 
-                self.modules[module.uuid] = module
                 self.modules_assoc.append((module, python_module))
                 logger.info("Imported '%s' for %s", module.python_name, module.name)
             except ImportError as exp:  # pragma: no cover, simple protection
@@ -235,7 +240,6 @@ class ModulesManager(object):
             alignak_module.properties = python_module.properties.copy()
             alignak_module.my_daemon = self.daemon
             logger.info("Alignak starting module '%s'", alignak_module.get_name())
-            logger.info("Alignak starting module '%s'", getattr(alignak_module, 'modules', None))
             if getattr(alignak_module, 'modules', None):
                 modules = []
                 for module_uuid in alignak_module.modules:

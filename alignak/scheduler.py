@@ -175,95 +175,27 @@ class Scheduler(object):  # pylint: disable=R0902
                  self.get_latency_average_percentile, 10),
         }
 
-        # stats part
-        # Counters for the actions part: checks, event handlers and notifications
-        # For each action type (check, event_handler or notification, store several counters:
-        #  - the launched actions (launched), the actions that timed out (timeout) and the
-        # actions that executed within the time (executed). For the correctly executed actions,
-        # each action status has its own counter in the results dict: scheduled, done, ...
-        # For each action type, the counters are replicated:
-        #  - loop: for the current scheduling loop. The counters are reset on each loop end
-        #  - total: since the scheduler start
-        #  - active: the part of the total that are handled with active pollers/reactionners
-        #  - passive: the part of the total that are handled with passive pollers/reactionners
-        self.counters = {
-            "check": {
-                "total": {
-                    "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
-                },
-                "loop": {
-                    "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
-                },
-                "internal": {
-                    "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
-                },
-                "active": {
-                    "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
-                },
-                "passive": {
-                    "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
-                },
-            },
-            "eventhandler": {
-                "total": {
-                    "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
-                },
-                "loop": {
-                    "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
-                },
-                "internal": {
-                    "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
-                },
-                "active": {
-                    "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
-                },
-                "passive": {
-                    "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
-                },
-            },
-            "notification": {
-                "total": {
-                    "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
-                },
-                "loop": {
-                    "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
-                },
-                "internal": {
-                    "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
-                },
-                "active": {
-                    "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
-                },
-                "passive": {
-                    "launched": 0, "timeout": 0, "executed": 0, "results": {"total": 0}
-                },
-            }
-        }
-        self.nb_checks_launched = 0
-        self.nb_checks_launched_passive = 0
-        self.nb_actions_launched = 0
-        self.nb_actions_launched_passive = 0
-
+        # Statistics part
+        # ---
+        # Created items
         self.nb_checks = 0
-        self.nb_checks_total = 0
-        self.nb_broks = 0
-        self.nb_broks_total = 0
         self.nb_internal_checks = 0
-        self.nb_internal_checks_total = 0
+        self.nb_broks = 0
         self.nb_notifications = 0
-        self.nb_notifications_total = 0
         self.nb_event_handlers = 0
-        self.nb_event_handlers_total = 0
         self.nb_external_commands = 0
-        self.nb_external_commands_total = 0
+
+        # Launched checks - send to execution to poller/reactionner
+        self.nb_checks_launched = 0
+        self.nb_actions_launched = 0
 
         # Checks results received
         self.nb_checks_results = 0
         self.nb_checks_results_timeout = 0
+        self.nb_checks_results_active = 0
         self.nb_checks_results_passive = 0
         self.nb_actions_results = 0
         self.nb_actions_results_timeout = 0
-        self.nb_actions_results_passive = 0
 
         # Dropped elements
         self.nb_checks_dropped = 0
@@ -955,17 +887,14 @@ class Scheduler(object):  # pylint: disable=R0902
                     check.my_worker = worker_name
                     res.append(check)
 
+                    # Stats
+                    self.nb_checks_launched += 1
+
                     if 'ALIGNAK_LOG_ACTIONS' in os.environ:
                         if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                             logger.warning("Check to run: %s", check)
                         else:
                             logger.info("Check to run: %s", check)
-
-                    # Stats
-                    self.nb_checks_launched += 1
-                    self.counters["check"]["total"]["launched"] += 1
-                    self.counters["check"]["loop"]["launched"] += 1
-                    self.counters["check"]["active"]["launched"] += 1
 
             if res:
                 logger.debug("-> %d checks to start now", len(res))
@@ -1011,17 +940,14 @@ class Scheduler(object):  # pylint: disable=R0902
                     action.my_worker = worker_name
                     res.append(action)
 
+                    # Stats
+                    self.nb_actions_launched += 1
+
                     if 'ALIGNAK_LOG_ACTIONS' in os.environ:
                         if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                             logger.warning("Action to run: %s", action)
                         else:
                             logger.info("Action to run: %s", action)
-
-                    # Stats
-                    self.nb_actions_launched += 1
-                    self.counters[action.is_a]["total"]["launched"] += 1
-                    self.counters[action.is_a]["loop"]["launched"] += 1
-                    self.counters[action.is_a]["active"]["launched"] += 1
 
             if res:
                 logger.debug("-> %d actions to start now", len(res))
@@ -1076,26 +1002,12 @@ class Scheduler(object):  # pylint: disable=R0902
                 # And we ask the item to update its state
                 self.get_and_register_status_brok(item)
 
-                self.counters[action.is_a]["total"]["results"]["total"] += 1
-                if action.status not in \
-                        self.counters[action.is_a]["total"]["results"]:
-                    self.counters[action.is_a]["total"]["results"][action.status] = 0
-                self.counters[action.is_a]["total"]["results"][action.status] += 1
-
-                self.counters[action.is_a]["loop"]["results"]["total"] += 1
-                if action.status not in \
-                        self.counters[action.is_a]["loop"]["results"]:
-                    self.counters[action.is_a]["loop"]["results"][action.status] = 0
-                self.counters[action.is_a]["loop"]["results"][action.status] += 1
-
                 # If we' ve got a problem with the notification, raise a Warning log
                 if timeout:
                     contact = self.find_item_by_id(self.actions[action.uuid].contact)
                     item = self.find_item_by_id(self.actions[action.uuid].ref)
 
                     self.nb_actions_results_timeout += 1
-                    self.counters[action.is_a]["total"]["timeout"] += 1
-                    self.counters[action.is_a]["loop"]["timeout"] += 1
 
                     logger.warning("Contact %s %s notification command '%s ' "
                                    "timed out after %.2f seconds",
@@ -1105,8 +1017,6 @@ class Scheduler(object):  # pylint: disable=R0902
                                    execution_time)
                 else:
                     self.nb_actions_results += 1
-                    self.counters[action.is_a]["total"]["executed"] += 1
-                    self.counters[action.is_a]["loop"]["executed"] += 1
 
                     if action.exit_status != 0:
                         logger.warning("The notification command '%s' raised an error "
@@ -1128,18 +1038,6 @@ class Scheduler(object):  # pylint: disable=R0902
                 return
 
             try:
-                self.counters[action.is_a]["total"]["results"]["total"] += 1
-                if action.status not in \
-                        self.counters[action.is_a]["total"]["results"]:
-                    self.counters[action.is_a]["total"]["results"][action.status] = 0
-                self.counters[action.is_a]["total"]["results"][action.status] += 1
-
-                self.counters[action.is_a]["loop"]["results"]["total"] += 1
-                if action.status not in \
-                        self.counters[action.is_a]["loop"]["results"]:
-                    self.counters[action.is_a]["loop"]["results"][action.status] = 0
-                self.counters[action.is_a]["loop"]["results"][action.status] += 1
-
                 if action.status == ACT_STATUS_TIMEOUT:
                     ref = self.find_item_by_id(self.checks[action.uuid].ref)
                     action.long_output = action.output
@@ -1147,8 +1045,6 @@ class Scheduler(object):  # pylint: disable=R0902
                     action.exit_status = self.pushed_conf.timeout_exit_status
 
                     self.nb_checks_results_timeout += 1
-                    self.counters[action.is_a]["total"]["timeout"] += 1
-                    self.counters[action.is_a]["loop"]["timeout"] += 1
 
                     logger.warning("Timeout raised for '%s' (check command for the %s '%s'), "
                                    "check status code: %d, execution time: %d seconds",
@@ -1156,12 +1052,10 @@ class Scheduler(object):  # pylint: disable=R0902
                                    action.exit_status, int(action.execution_time))
                 else:
                     self.nb_checks_results += 1
-                    self.counters[action.is_a]["total"]["executed"] += 1
-                    self.counters[action.is_a]["loop"]["executed"] += 1
                     if action.passive_check:
-                        self.counters[action.is_a]["passive"]["executed"] += 1
+                        self.nb_checks_results_passive += 1
                     else:
-                        self.counters[action.is_a]["active"]["executed"] += 1
+                        self.nb_checks_results_active += 1
 
                 self.checks[action.uuid].get_return_from(action)
                 self.checks[action.uuid].status = ACT_STATUS_WAIT_CONSUME
@@ -1180,18 +1074,6 @@ class Scheduler(object):  # pylint: disable=R0902
                 return
 
             try:
-                self.counters[action.is_a]["total"]["results"]["total"] += 1
-                if action.status not in \
-                        self.counters[action.is_a]["total"]["results"]:
-                    self.counters[action.is_a]["total"]["results"][action.status] = 0
-                self.counters[action.is_a]["total"]["results"][action.status] += 1
-
-                self.counters[action.is_a]["loop"]["results"]["total"] += 1
-                if action.status not in \
-                        self.counters[action.is_a]["loop"]["results"]:
-                    self.counters[action.is_a]["loop"]["results"][action.status] = 0
-                self.counters[action.is_a]["loop"]["results"][action.status] += 1
-
                 if action.status == ACT_STATUS_TIMEOUT:
                     _type = 'event handler'
                     if action.is_snapshot:
@@ -1202,13 +1084,9 @@ class Scheduler(object):  # pylint: disable=R0902
                                 _type, self.actions[action.uuid].command,
                                 int(action.execution_time))
 
-                    self.nb_checks_results_timeout += 1
-                    self.counters[action.is_a]["total"]["timeout"] += 1
-                    self.counters[action.is_a]["loop"]["timeout"] += 1
+                    self.nb_actions_results_timeout += 1
                 else:
-                    self.nb_checks_results += 1
-                    self.counters[action.is_a]["total"]["executed"] += 1
-                    self.counters[action.is_a]["loop"]["executed"] += 1
+                    self.nb_actions_results += 1
 
                 # If it's a snapshot we should get the output and export it
                 if action.is_snapshot:
@@ -1252,16 +1130,6 @@ class Scheduler(object):  # pylint: disable=R0902
 
                 logger.debug("Sending %d actions to the %s '%s'", len(lst), s_type, link.name)
                 link.push_actions(lst, self.instance_id)
-                for action in lst:
-                    self.counters[action.is_a]["total"]["launched"] += 1
-                    self.counters[action.is_a]["loop"]["launched"] += 1
-                    self.counters[action.is_a]["active"]["launched"] += 1
-                if s_type == 'poller':
-                    self.nb_checks_launched += len(lst)
-                    self.nb_checks_launched_passive += len(lst)
-                if s_type == 'reactionner':
-                    self.nb_actions_launched += len(lst)
-                    self.nb_actions_launched_passive += len(lst)
 
     def get_results_from_passive_satellites(self):
         #  pylint: disable=broad-except
@@ -1287,28 +1155,10 @@ class Scheduler(object):  # pylint: disable=R0902
 
                 results = unserialize(results, no_load=True)
                 if results:
-                    logger.info("Received %d passive results from %s",
-                                len(results), link.name)
-                self.nb_checks_results += len(results)
+                    logger.info("Received %d passive results from %s", len(results), link.name)
 
                 for result in results:
                     logger.debug("-> result: %s", result)
-
-                    # Update scheduler counters
-                    self.counters[result.is_a]["loop"]["results"]["total"] += 1
-                    if result.status not in self.counters[result.is_a]["loop"]["results"]:
-                        self.counters[result.is_a]["loop"]["results"][result.status] = 0
-                    self.counters[result.is_a]["loop"]["results"][result.status] += 1
-
-                    self.counters[result.is_a]["total"]["results"]["total"] += 1
-                    if result.status not in self.counters[result.is_a]["total"]["results"]:
-                        self.counters[result.is_a]["total"]["results"][result.status] = 0
-                    self.counters[result.is_a]["total"]["results"][result.status] += 1
-
-                    self.counters[result.is_a]["active"]["results"]["total"] += 1
-                    if result.status not in self.counters[result.is_a]["active"]["results"]:
-                        self.counters[result.is_a]["active"]["results"][result.status] = 0
-                    self.counters[result.is_a]["active"]["results"][result.status] += 1
 
                     # Append to the scheduler result queue
                     self.waiting_results.put(result)
@@ -1338,28 +1188,14 @@ class Scheduler(object):  # pylint: disable=R0902
                 continue
             logger.debug("Run internal check for %s", item)
 
-            self.counters["check"]["total"]["launched"] += 1
-            self.counters["check"]["loop"]["launched"] += 1
-            self.counters["check"]["internal"]["launched"] += 1
+            self.nb_internal_checks += 1
 
+            # Execute internal check
             item.manage_internal_check(self.hosts, self.services, chk, self.hostgroups,
                                        self.servicegroups, self.macromodulations,
                                        self.timeperiods)
             # Ask to consume the check result
             chk.status = ACT_STATUS_WAIT_CONSUME
-
-            # Count and execute only if active checks is enabled
-            self.nb_internal_checks += 1
-            self.counters["check"]["internal"]["executed"] += 1
-            self.counters["check"]["total"]["results"]["total"] += 1
-            if "internal" not in self.counters["check"]["total"]["results"]:
-                self.counters["check"]["total"]["results"]["internal"] = 0
-            self.counters["check"]["total"]["results"]["internal"] += 1
-
-            self.counters["check"]["loop"]["results"]["total"] += 1
-            if "internal" not in self.counters["check"]["loop"]["results"]:
-                self.counters["check"]["loop"]["results"]["internal"] = 0
-            self.counters["check"]["loop"]["results"]["internal"] += 1
 
     def reset_topology_change_flag(self):
         """Set topology_change attribute to False in all hosts and services
@@ -2339,33 +2175,28 @@ class Scheduler(object):  # pylint: disable=R0902
     def before_run(self):
         """Initialize the scheduling process"""
         # Actions and checks counters
-        self.nb_checks_total = 0
+        self.nb_checks = 0
+        self.nb_internal_checks = 0
         self.nb_checks_launched = 0
-        self.nb_checks_launched_passive = 0
-
-        self.nb_actions_total = 0
         self.nb_actions_launched = 0
-        self.nb_actions_launched_passive = 0
 
-        self.nb_checks_results_total = 0
         self.nb_checks_results = 0
+        self.nb_checks_results_timeout = 0
         self.nb_checks_results_passive = 0
+        self.nb_checks_results_active = 0
 
-        self.nb_actions_results_total = 0
         self.nb_actions_results = 0
+        self.nb_actions_results_timeout = 0
         self.nb_actions_results_passive = 0
+
+        self.nb_broks_dropped = 0
         self.nb_checks_dropped = 0
+        self.nb_actions_dropped = 0
 
         # Broks, notifications, ... counters
-        self.nb_broks_total = 0
         self.nb_broks = 0
-        self.nb_internal_checks = 0
-        self.nb_internal_checks_total = 0
-        self.nb_notifications_total = 0
         self.nb_notifications = 0
-        self.nb_event_handlers_total = 0
         self.nb_event_handlers = 0
-        self.nb_external_commands_total = 0
         self.nb_external_commands = 0
 
         self.ticks = 0
@@ -2399,48 +2230,6 @@ class Scheduler(object):  # pylint: disable=R0902
             logger.warning("#%d - scheduler is not active...",
                            self.my_daemon.loop_count)
             return
-        # Finally start the external modules now we got our data
-        # fred: Not of any interest imho
-        # self.hook_point('pre_scheduler_mod_start')
-        # fred: in the main daemon
-        # self.my_daemon.modules_manager.start_external_instances(late_start=True)
-
-        # fred: moved to the main daemon
-        # # Ok, now all is initialized, we can make the initial broks
-        # logger.info("[%s] First scheduling launched", self.name)
-        # _t1 = time.time()
-        # # Program start brok
-        # self.get_and_register_program_status_brok()
-        # # First scheduling
-        # self.schedule()
-        # statsmgr.timer('first_scheduling', time.time() - _t1)
-        # logger.info("[%s] First scheduling done", self.name)
-        #
-        # # Connect to our passive satellites if needed
-        # for satellite in [s for s in self.my_daemon.pollers.values() if s.passive]:
-        #     if not self.my_daemon.daemon_connection_init(satellite):
-        #         logger.error("Passive satellite connection failed: %s", satellite)
-        #
-        # for satellite in [s for s in self.my_daemon.reactionners.values() if s.passive]:
-        #     if not self.my_daemon.daemon_connection_init(satellite):
-        #         logger.error("Passive satellite connection failed: %s", satellite)
-
-        # Ticks are for recurrent function call like consume, del zombies etc
-        # ticks = 0
-
-        # We must reset it if we received a new conf from the Arbiter.
-        # Otherwise, the stat check average won't be correct
-
-        # Scheduler load
-        # fixme: measuring the scheduler load with this method is a non-sense ...
-        # self.load_one_min.update_load(self.my_daemon.sleep_time)
-        # load = min(100, 100.0 - self.load_one_min.get_load() * 100)
-        # logger.info("Load: (sleep) %.2f (average: %.2f) -> %d%%",
-        #             self.v.sleep_time, self.load_one_min.get_load(), load)
-        # statsmgr.gauge('load.sleep', self.my_daemon.sleep_time)
-        # statsmgr.gauge('load.average', self.load_one_min.get_load())
-        # statsmgr.gauge('load.load', load)
-
         # Increment ticks count
         self.ticks += 1
 
@@ -2467,97 +2256,26 @@ class Scheduler(object):  # pylint: disable=R0902
         # Scheduler statistics
         # - broks / notifications counters
         if self.my_daemon.log_loop:
-            logger.debug("Items (loop): broks: %d, notifications: %d, checks: %d, internal "
-                         "checks: %d, event handlers: %d, external commands: %d",
+            logger.debug("Items (loop): broks: %d, notifications: %d, checks: %d, internal checks: "
+                         "%d, event handlers: %d, external commands: %d",
                          self.nb_broks, self.nb_notifications, self.nb_checks,
-                         self.nb_internal_checks, self.nb_event_handlers,
-                         self.nb_external_commands)
-        statsmgr.gauge('checks', self.nb_checks)
-        statsmgr.gauge('broks', self.nb_broks)
-        statsmgr.gauge('internal_checks', self.nb_internal_checks)
-        statsmgr.gauge('notifications', self.nb_notifications)
-        statsmgr.gauge('event_handlers', self.nb_event_handlers)
-        statsmgr.gauge('external_commands', self.nb_external_commands)
-        self.nb_checks_total += self.nb_checks
-        self.nb_broks_total += self.nb_broks
-        self.nb_internal_checks_total += self.nb_internal_checks
-        self.nb_notifications_total += self.nb_notifications
-        self.nb_event_handlers_total += self.nb_event_handlers
-        self.nb_external_commands_total += self.nb_external_commands
-        if self.my_daemon.log_loop:
-            logger.debug("Items (total): broks: %d, notifications: %d, checks: %d, internal "
-                         "checks: %d, event handlers: %d, external commands: %d",
-                         self.nb_broks_total, self.nb_notifications_total, self.nb_checks_total,
-                         self.nb_internal_checks_total, self.nb_event_handlers_total,
-                         self.nb_external_commands_total)
-        # Reset on each loop
-        # self.nb_checks = 0 not yet for this one!
-        self.nb_broks = 0
-        self.nb_internal_checks = 0
-        self.nb_notifications = 0
-        self.nb_event_handlers = 0
-        self.nb_external_commands = 0
+                         self.nb_internal_checks, self.nb_event_handlers, self.nb_external_commands)
+        statsmgr.gauge('activity.checks', self.nb_checks)
+        statsmgr.gauge('activity.internal_checks', self.nb_internal_checks)
+        statsmgr.gauge('activity.launched_checks', self.nb_checks_launched)
+        statsmgr.gauge('activity.checks_results', self.nb_checks_results)
+        statsmgr.gauge('activity.checks_results_timeout', self.nb_checks_results_timeout)
+        statsmgr.gauge('activity.checks_results_active', self.nb_checks_results_active)
+        statsmgr.gauge('activity.checks_results_passive', self.nb_checks_results_passive)
 
-        # - checks / actions counters
-        for action_type in self.counters:
-            for action_group in ['total', 'loop', 'active', 'passive', 'internal']:
-                # Actions launched
-                statsmgr.gauge('actions.%s.%s.launched'
-                               % (action_type, action_group),
-                               self.counters[action_type][action_group]["launched"])
-                # Actions timed out
-                statsmgr.gauge('actions.%s.%s.timeout'
-                               % (action_type, action_group),
-                               self.counters[action_type][action_group]["timeout"])
-                # Actions executed within time
-                statsmgr.gauge('actions.%s.%s.executed'
-                               % (action_type, action_group),
-                               self.counters[action_type][action_group]["executed"])
+        statsmgr.gauge('activity.launched_actions', self.nb_actions_launched)
+        statsmgr.gauge('activity.actions_results', self.nb_actions_results)
+        statsmgr.gauge('activity.actions_results_timeout', self.nb_actions_results_timeout)
 
-                # Reset loop counters
-                if action_group == 'loop':
-                    # if self.my_daemon.log_loop:
-                    #     logger.debug("Actions '%s/%s': launched: %d, timeout: %d, executed: %d",
-                    #                  action_type, action_group,
-                    #                  self.counters[action_type][action_group]["launched"],
-                    #                  self.counters[action_type][action_group]["timeout"],
-                    #                  self.counters[action_type][action_group]["executed"])
-
-                    self.counters[action_type][action_group]["launched"] = 0
-                    self.counters[action_type][action_group]["timeout"] = 0
-                    self.counters[action_type][action_group]["executed"] = 0
-
-                # # Reset loop counters
-                # if action_group == 'total':
-                #     if self.my_daemon.log_loop:
-                #         logger.debug("Actions '%s/%s': launched: %d, timeout: %d, executed: %d",
-                #                      action_type, action_group,
-                #                      self.counters[action_type][action_group]["launched"],
-                #                      self.counters[action_type][action_group]["timeout"],
-                #                      self.counters[action_type][action_group]["executed"])
-
-                # Actions results
-                dump_result = "Results '%s/%s': " % (action_type, action_group)
-                for result in self.counters[action_type][action_group]["results"]:
-                    my_result = self.counters[action_type][action_group]["results"][result]
-                    statsmgr.gauge('actions.%s.%s.result.%s'
-                                   % (action_type, action_group, result), my_result)
-                    dump_result += "%s: %d, " % (result, my_result)
-                # if action_group in ['loop', 'total'] and self.my_daemon.log_loop:
-                #     logger.debug(dump_result)
-
-        # - current state - this should perhaps be removed because the checks status got
-        # already pushed to the stats with the previous treatment?
-        # checks_status = defaultdict(int)
-        # checks_status["total"] = len(self.checks)
-        # for chk in self.checks.itervalues():
-        #     checks_status[chk.status] += 1
-        # dump_result = "Checks count (loop): "
-        # for status, count in checks_status.iteritems():
-        #     dump_result += "%s: %d, " % (status, count)
-        #     statsmgr.gauge('checks.%s' % status, count)
-        # if self.log_loop:
-        #     logger.debug(dump_result)
+        statsmgr.gauge('activity.broks', self.nb_broks)
+        statsmgr.gauge('activity.external_commands', self.nb_external_commands)
+        statsmgr.gauge('activity.notifications', self.nb_notifications)
+        statsmgr.gauge('activity.event_handlers', self.nb_event_handlers)
 
         if self.my_daemon.need_dump_environment:
             _ts = time.time()
@@ -2581,13 +2299,12 @@ class Scheduler(object):  # pylint: disable=R0902
         if self.my_daemon.log_loop:
             elapsed_time = time.time() - self.my_daemon.start_time
             logger.debug("Check average (total) = %d checks results, %.2f checks/s",
-                         self.nb_checks_total,
-                         self.nb_checks_total / elapsed_time)
-        self.nb_checks = 0
-
+                         self.nb_checks, self.nb_checks / elapsed_time)
         if self.nb_checks_dropped > 0 \
                 or self.nb_broks_dropped > 0 or self.nb_actions_dropped > 0:
             logger.warning("We dropped %d checks, %d broks and %d actions",
-                           self.nb_checks_dropped, self.nb_broks_dropped,
-                           self.nb_actions_dropped)
+                           self.nb_checks_dropped, self.nb_broks_dropped, self.nb_actions_dropped)
+            statsmgr.gauge('activity.broks_dropped', self.nb_broks_dropped)
+            statsmgr.gauge('activity.checks_dropped', self.nb_checks_dropped)
+            statsmgr.gauge('activity.actions_dropped', self.nb_actions_dropped)
             self.nb_checks_dropped = self.nb_broks_dropped = self.nb_actions_dropped = 0

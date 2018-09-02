@@ -53,7 +53,6 @@ This module provide Module and Modules classes used to manage internal and exter
 for each daemon
 """
 import logging
-import warnings
 from alignak.objects.item import Item, Items
 
 from alignak.property import StringProp, ListProp, IntegerProp, BoolProp
@@ -261,5 +260,3 @@ class Modules(Items):
                     self.add_error("the module '%s' for the module '%s' is unknown!"
                                    % (related, module.get_name()))
             module.modules = new_modules
-
-

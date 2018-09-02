@@ -444,11 +444,6 @@ class SchedulerInterface(GenericInterface):
         do_actions = (do_actions == 'True')
         res = self.app.sched.get_to_run_checks(do_checks, do_actions, poller_tags, reactionner_tags,
                                                worker_name, module_types)
-        # Count actions got by the poller/reactionner
-        if do_checks:
-            self.app.nb_pulled_checks += len(res)
-        if do_actions:
-            self.app.nb_pulled_actions += len(res)
 
         return serialize(res, True)
 
@@ -478,22 +473,9 @@ class SchedulerInterface(GenericInterface):
             logger.debug("Got some results: %d results from %s", len(results), who_sent)
         else:
             logger.debug("-> no results")
-        self.app.sched.nb_checks_results += len(results)
 
         for result in results:
             logger.debug("-> result: %s", result)
-
-            # Update scheduler counters
-            self.app.sched.counters[result.is_a]["total"]["results"]["total"] += 1
-            if result.status not in \
-                    self.app.sched.counters[result.is_a]["total"]["results"]:
-                self.app.sched.counters[result.is_a]["total"]["results"][result.status] = 0
-            self.app.sched.counters[result.is_a]["total"]["results"][result.status] += 1
-            self.app.sched.counters[result.is_a]["active"]["results"]["total"] += 1
-            if result.status not in \
-                    self.app.sched.counters[result.is_a]["active"]["results"]:
-                self.app.sched.counters[result.is_a]["active"]["results"][result.status] = 0
-            self.app.sched.counters[result.is_a]["active"]["results"][result.status] += 1
 
             # Append to the scheduler result queue
             self.app.sched.waiting_results.put(result)
