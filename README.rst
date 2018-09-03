@@ -2,7 +2,7 @@
 Presentation of the Alignak project
 ===================================
 
-*Alignak project - modern Nagios compatible monitoring framework*
+*Alignak - modern Nagios compatible monitoring framework*
 
 .. image:: https://api.travis-ci.org/Alignak-monitoring/alignak.svg?branch=develop
     :target: https://travis-ci.org/Alignak-monitoring/alignak

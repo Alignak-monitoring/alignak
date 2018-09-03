@@ -1,6 +1,6 @@
 # Presentation of the Alignak project
 
-*Alignak project - modern Nagios compatible monitoring framework*
+*Alignak - modern Nagios compatible monitoring framework*
 
 
 [![Master branch build status](https://img.shields.io/travis/Alignak-monitoring/alignak/master.svg?label=master)](https://travis-ci.org/Alignak-monitoring/alignak/branches)
@@ -19,7 +19,7 @@
 Alignak Project
 ---------------
 
-[Alignak Web Site](http://www.alignak.net) is an open source monitoring framework written in Python under the terms of the [GNU Affero General Public License](http://www.gnu.org/licenses/agpl.txt).
+[Alignak](http://www.alignak.net) is an open source monitoring framework written in Python under the terms of the [GNU Affero General Public License](http://www.gnu.org/licenses/agpl.txt).
 
 Its main goal is to give users a flexible and complete solution for their monitoring system. Alignak is designed to scale to large and heterogeneous environments.
 
@@ -79,6 +79,6 @@ See the requirements file in the repository's root
 Installing Alignak
 ------------------
 
-Alignak Deb / Rpm packaging is built thanks to the bintray service. Get the package for your Linux distribution here: [ ![Download](https://api.bintray.com/packages/ddurieux/alignak_deb-testing/python-alignak/images/download.svg) ](https://bintray.com/ddurieux/alignak_deb-testing/python-alignak/_latestVersion)
+Alignak Deb / Rpm packaging is built thanks to the bintray service. Get the package for your Linux distribution on our [packages repositories](https://bintray.com/alignak).
 
 See the [installation documentation](https://alignak-doc.readthedocs.org/en/latest/02_installation/index.html) for more information on the different installation possibilities offered by Alignak.
