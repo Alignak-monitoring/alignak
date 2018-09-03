@@ -1,0 +1,443 @@
+#!/bin/sh
+
+# Configuration settings for an alignak-daemon instance in /etc/rc.conf:
+# $FreeBSD$
+#
+# PROVIDE: alignak
+# REQUIRE: LOGIN
+# KEYWORD: shutdown
+#
+# alignak_enable (bool):
+#   Default value: "NO"
+#   Flag that determines whether Alignak is enabled.
+#
+# alignak_prefix (string):
+#   Default value: "/usr/local"
+#   Alignak default installation prefix
+#
+# alignak_user (string):
+#   Default value: "alignak"
+#   Alignak default user - if set an ALIGNAK_USER environment variable will be defined
+#   Set a value to override the user configured in the Alignak configuration file
+#   If you are using the FreeBSD daemon, it will use this value to start the Alignak daemon
+#
+# alignak_group (string):
+#   Default value: "alignak"
+#   Alignak default user group - same as the user variable
+#
+# alignak_configuration (string):
+#   Default value: "/usr/local/share/alignak/etc/alignak.ini"
+#   Alignak configuration file name
+#
+# alignak_log_file (string):
+#   Default value: "/tmp/alignak.log"
+#   Alignak default log file name (used for configuration check reporting)
+#
+# alignak_pid_file (string):
+#   Default value: "/tmp/alignak.pid"
+#   Alignak default pid file name (used for configuration check reporting)
+#
+# alignak_daemonize (bool):
+#   Default value: "NO"
+#   Use the daemon FreeBSD utility to start the Alignak daemons
+#
+# alignak_daemon (bool):
+#   Default value: "YES"
+#   Start in daemon mode - each deamon will fork itself to daemonize
+#
+# alignak_replace (bool):
+#   Default value: "YES"
+#   Start in replace mode - replaces an existing daemon if a stale pid file exists
+#
+# alignak_flags (string):
+#   Default value: ""
+#   Extra parameters to be provided to the started script
+#
+# alignak_alignak_name (string):
+#   Default value: ""
+#   Alignak instance name
+#   Default is empty to get this parameter in the configuration file
+#
+# alignak_host (string):
+#   Default value: ""
+#   Interface listened to by the Alignak arbiter.
+#   Default is empty to get this parameter in the configuration file
+#
+# alignak_port (integer):
+#   Default value:
+#   Port listened to by the Alignak arbiter.
+#   Default is empty to get this parameter in the configuration file
+#
+# -------------------------------------------------------------------------------------------------
+# alignak rc.d script is able to operate on several alignak daemons instances
+# Defining which daemons are to be started is made thanks to these configuration variables:
+#
+# alignak_types (string list):
+#   Defines the daemons types to be started
+#   Default is all the daemon types: arbiter scheduler poller broker receiver reactionner
+#
+# alignak_arbiter_instances (string list):
+#   Defines the daemon instances to be started
+#   Default is all only one master instance: arbiter-master
+#
+# alignak_scheduler_instances (string list):
+#   Defines the daemon instances to be started
+#   Default is all only one master instance: scheduler-master
+#
+# alignak_broker_instances (string list):
+#   Defines the daemon instances to be started
+#
+# alignak_poller_instances (string list):
+#   Defines the daemon instances to be started
+#   Default is all only one master instance: poller-master
+#
+# alignak_reactionner_instances (string list):
+#   Defines the daemon instances to be started
+#   Default is all only one master instance: reactionner-master
+#
+# alignak_receiver_instances (string list):
+#   Defines the daemon instances to be started
+#   Default is all only one master instance: receiver-master
+#
+# -------------------------------------------------------------------------------------------------
+# Defining a specific Alignak daemons configuration is quite easy:
+# 1- define the daemons instances list
+# alignak_types="scheduler broker receiver"
+# 2- define each daemon instance for each daemons type
+# alignak_scheduler_instances="scheduler-realm-1 scheduler-realm-2"
+# alignak_broker_instances="broker-realm-1"
+# alignak_receiver_instances="receiver-realm-1 receiver-realm-2"
+# 3- define each daemon instance specific parameters
+# alignak_scheduler_realm_1_flags="-n scheduler-realm-1 -p 10000"
+# alignak_scheduler_realm_2_flags="-n scheduler-realm-2 -p 10001"
+# alignak_broker_realm_1_flags="-n broker-realm-1 -p 10002"
+# alignak_broker_realm_2_flags="-n broker-realm-2 -p 10003"
+# alignak_receiver_realm_1_flags="-n receiver-realm-1 -p 10004"
+# alignak_receiver_realm_2_flags="-n receiver-realm-2 -p 10005"
+
+# -------------------------------------------------------------------------------------------------
+# The default configuration is to have one instance for each daemon type:
+# alignak_types="broker poller reactionner receiver scheduler arbiter"
+# alignak_arbiter_instances="arbiter-master"
+# alignak_scheduler_instances="scheduler-master"
+# alignak_broker_instances="broker-master"
+# alignak_poller_instances="poller-master"
+# alignak_reactionner_instances="reactionner-master"
+# alignak_receiver_instances="receiver-master"
+
+# Each daemon instance has its own specific port
+# alignak_arbiter_arbiter_master_port="7770"
+# alignak_scheduler_scheduler_master_port="7768"
+# alignak_broker_broker_master_port="7772"
+# alignak_poller_poller_master_port="7771"
+# alignak_reactionner_reactionner_master_port="7769"
+# alignak_receiver_receiver_master_port="7773"
+# -------------------------------------------------------------------------------------------------
+
+#
+# -------------------------------------------------------------------------------------------------
+# When types and instances are specified, the non-type specific parameters defined
+# previously (upper) become the default values for the type/instance specific parameters.
+#
+# Example:
+# If no specific "alignak_arbiter_arbiter_master_host" variable is defined then the default
+# "alignak_host" variable value will be used the the arbiter arbiter-master daemon host
+# variable.
+
+. /etc/rc.subr
+
+name="alignak"
+rcvar="alignak_enable"
+
+load_rc_config "${name}"
+
+# Script daemonize - use FreeBSD daemon utility
+: ${alignak_daemonize="NO"}
+
+# Daemons default parameters
+: ${alignak_enable="NO"}
+: ${alignak_user="alignak"}
+: ${alignak_group="alignak"}
+: ${alignak_prefix="/usr/local"}
+: ${alignak_log_file="/tmp/alignak.log"}
+: ${alignak_pid_file="/tmp/alignak.pid"}
+: ${alignak_configuration="/usr/local/share/alignak/etc/alignak.ini"}
+: ${alignak_daemon="YES"}
+: ${alignak_replace="YES"}
+: ${alignak_alignak_name=""}
+: ${alignak_host=""}
+: ${alignak_port=""}
+: ${alignak_flags=""}
+
+# Daemons types and instances
+# Default is to create one instance of each type
+# Instance names may not contain any specific character:
+# The script will remove space characters and replace non alphanumeric character with an underscore
+: ${alignak_types="broker poller reactionner receiver scheduler arbiter"}
+: ${alignak_arbiter_instances="arbiter-master"}
+: ${alignak_scheduler_instances="scheduler-master"}
+: ${alignak_broker_instances="broker-master"}
+: ${alignak_poller_instances="poller-master"}
+: ${alignak_reactionner_instances="reactionner-master"}
+: ${alignak_receiver_instances="receiver-master"}
+
+# Specific daemons instances configuration
+# Listening port
+: ${alignak_arbiter_arbiter_master_port="7770"}
+: ${alignak_scheduler_scheduler_master_port="7768"}
+: ${alignak_broker_broker_master_port="7772"}
+: ${alignak_poller_poller_master_port="7771"}
+: ${alignak_reactionner_reactionner_master_port="7769"}
+: ${alignak_receiver_receiver_master_port="7773"}
+
+
+# This handles daemons type/instance specific vars.
+if [ -n "$3" ]; then
+   # $1 is the command and $2 is the daemon type and $3 is the daemon name
+   if [ "$1" = "check" ]; then
+      echo "Start checking Alignak configuration..."
+   elif [ "$1" = "reload" ]; then
+      echo "Start reloading Alignak configuration..."
+   else
+      type="$2"
+      # Remove space characters and replace non alphanumeric with an underscore
+      instance=`echo "$3" | tr -d "[:space:]" | tr -c "[:alnum:]" "_"`
+      if [ -n "${alignak_types}" ]; then
+         alignak_name="$3"
+
+         pid_file="${alignak_prefix}/var/run/alignak/${type}-${instance}.pid"
+         eval tmp="alignak_${type}_${instance}_pid_file"
+         eval alignak_pid_file="\${$tmp:-${pid_file}}"
+
+         log_file="${alignak_prefix}/var/log/alignak/${type}-${instance}.log"
+         eval tmp="alignak_${type}_${instance}_log_file"
+         eval alignak_log_file="\${$tmp:-${log_file}}"
+
+         eval tmp="alignak_${type}_${instance}_enable"
+         eval alignak_enable="\${$tmp:-${alignak_enable}}"
+
+         eval tmp="alignak_${type}_${instance}_prefix"
+         eval alignak_prefix="\${$tmp:-${alignak_prefix}}"
+
+         eval tmp="alignak_${type}_${instance}_daemonize"
+         eval alignak_daemonize="\${$tmp:-${alignak_daemonize}}"
+
+         eval tmp="alignak_${type}_${instance}_daemon"
+         eval alignak_daemon="\${$tmp:-${alignak_daemon}}"
+
+         eval tmp="alignak_${type}_${instance}_replace"
+         eval alignak_replace="\${$tmp:-${alignak_replace}}"
+
+         eval tmp="alignak_${type}_${instance}_flags"
+         eval alignak_flags="\${$tmp:-${alignak_flags}}"
+
+         eval tmp="alignak_${type}_${instance}_host"
+         eval alignak_host="\${$tmp:-${alignak_host}}"
+
+         eval tmp="alignak_${type}_${instance}_port"
+         eval alignak_port="\${$tmp:-${alignak_port}}"
+      else
+         echo "$0: extra argument ignored"
+      fi
+   fi
+elif [ -n "$2" ]; then
+   # $1 is the command and $2 is the daemon type
+   if [ "$1" = "check" ]; then
+      echo "Start checking Alignak configuration..."
+   elif [ "$1" = "reload" ]; then
+      echo "Start reloading Alignak configuration..."
+   else
+      echo "Single instance command: $1 - $2"
+      if [ -n "${alignak_types}" -a -n "$1" ]; then
+         for type in ${alignak_types}; do
+            eval type_instances="\${alignak_${type}_instances:""}"
+            for instance in ${type_instances}; do
+               if [ "$instance" = "$2" ]; then
+                  /usr/local/etc/rc.d/alignak $1 ${type} ${instance}
+                  retcode="$?"
+                  if [ "0${retcode}" -ne 0 ]; then
+                     failed="${type} - ${instance} (${retcode}) ${failed:-}"
+                  else
+                     success="${type} - ${instance} ${success:-}"
+                  fi
+               fi
+            done
+         done
+         # It exits so that non-instance rc.d is not started when there are instances.
+         exit 0
+      fi
+   fi
+else
+   # $1 is the command
+   info "All instances command: $1"
+   echo "All instances command: $1"
+   if [ "$1" = "check" ]; then
+      debug "Require Alignak configuration checking..."
+   elif [ "$1" = "reload" ]; then
+      echo "Start reloading Alignak configuration..."
+      type="arbiter"
+      instance="arbiter_master"
+   elif [ -n "${alignak_types}" -a -n "$1" ]; then
+      for type in ${alignak_types}; do
+         eval type_instances="\${alignak_${type}_instances:""}"
+         for instance in ${type_instances}; do
+            info "=> instance: ${type} - ${instance}"
+            /usr/local/etc/rc.d/alignak $1 ${type} ${instance}
+            retcode="$?"
+            if [ "0${retcode}" -ne 0 ]; then
+               failed="${type} - ${instance} (${retcode}) ${failed:-}"
+            else
+               success="${type} - ${instance} ${success:-}"
+            fi
+         done
+      done
+      # It exits so that non-instance rc.d is not started when there are instances.
+      exit 0
+   fi
+fi
+
+command="/usr/local/bin/alignak-${type}"
+alignak_flags="--name ${alignak_name}"
+
+# Create daemon start parameters
+if checkyesno alignak_daemon; then
+   alignak_flags="${alignak_flags} --daemon"
+fi
+
+if checkyesno alignak_replace; then
+   alignak_flags="${alignak_flags} --replace"
+fi
+
+if [ ! -z "$alignak_alignak_name" ]; then
+   if [ "$type" = "arbiter" ]; then
+      alignak_flags="${alignak_flags} --alignak-name \"${alignak_alignak_name}\""
+   fi
+fi
+
+if [ ! -z "$alignak_host" ]; then
+   alignak_flags="${alignak_flags} --host ${alignak_host}"
+fi
+
+if [ ! -z "$alignak_port" ]; then
+   alignak_flags="${alignak_flags} --port ${alignak_port}"
+fi
+
+command_args="--environment ${alignak_configuration} --pid_file ${alignak_pid_file} --log_file ${alignak_log_file} ${alignak_flags}"
+
+debug " - enable: ${alignak_enable}"
+debug " - name: ${alignak_name}"
+debug " - prefix: ${alignak_prefix}"
+debug " - pid file: ${alignak_pid_file}"
+debug " - log file: ${alignak_log_file}"
+debug " - alignak name: ${alignak_alignak_name}"
+debug " - daemonize: ${alignak_daemonize}"
+debug " - user:group: ${alignak_user}:${alignak_group}"
+debug " - daemon: ${alignak_daemon}"
+debug " - replace: ${alignak_replace}"
+debug " - flags: ${alignak_flags}"
+debug " - host: ${alignak_host}"
+debug " - port: ${alignak_port}"
+debug " ---"
+debug " - daemon arguments: $command_args"
+
+stop_cmd="${name}_stop"
+start_cmd="${name}_start"
+status_cmd="${name}_status"
+start_precmd="${name}_precmd"
+reload_cmd="${name}_reload"
+check_cmd="${name}_check"
+extra_commands="reload check"
+
+# Force define the Alignak user:group in the environment to override the one defined in the configuration file!
+if [ ! -z "$alignak_user" ]; then
+   export ALIGNAK_USER=${alignak_user}
+   export ALIGNAK_GROUP=${alignak_group}
+   debug "Setting Alignak user in the environment: $ALIGNAK_USER:$ALIGNAK_GROUP"
+fi
+
+# If you get in trouble because of the stdout/stderr logging, you can set this environment variable
+# export ALIGNAK_DO_NOT_PRESERVE_STDOUT=YES
+
+alignak_precmd()
+{
+   debug "Preparing directories..."
+   /usr/bin/install -d -o ${alignak_user} -g ${alignak_group} -m 755 ${alignak_prefix}/var/log/alignak
+   /usr/bin/install -d -o ${alignak_user} -g ${alignak_group} -m 755 ${alignak_prefix}/var/run/alignak
+}
+
+alignak_start()
+{
+   info "Starting ${name} - ${type} ${instance}..."
+   if checkyesno alignak_daemonize; then
+      # daemon:
+      # -c change to / working dir
+      # -f redirect standard i/o to /dev/null
+      debug "Launch: /usr/sbin/daemon -c -f -P ${alignak_pid_file} -r -u ${alignak_user} ${command} ${command_args}"
+      /usr/sbin/daemon -c -f -P ${alignak_pid_file} -r -u ${alignak_user} ${command} ${command_args}
+   else
+      debug "Launch: ${command} ${command_args}"
+      ${command} ${command_args}
+   fi
+   info "Started"
+}
+
+alignak_stop()
+{
+   if [ -e "${alignak_pid_file}" ]; then
+      info "Stopping ${name} - ${type} ${instance}, pid=(`cat ${alignak_pid_file}`)..."
+      kill -s TERM `cat ${alignak_pid_file}`
+      info "Stopped"
+   else
+      info "${name} - ${type} ${instance} is not running"
+   fi
+}
+
+alignak_status() {
+   if [ -e "${alignak_pid_file}" ]; then
+      info "${name} - ${type} ${instance} is running as pid `cat ${alignak_pid_file}`"
+      echo "${name} - ${type} ${instance} is running as pid `cat ${alignak_pid_file}`"
+   else
+      info "${name} - ${type} ${instance} is not running"
+      echo "${name} - ${type} ${instance} is not running"
+   fi
+}
+
+alignak_check() {
+   info "Checking Alignak configuration..."
+   debug "/usr/local/bin/alignak-arbiter -V --environment ${alignak_configuration} --pid_file ${alignak_pid_file} --log_file ${alignak_log_file} $*"
+   /usr/local/bin/alignak-arbiter -V --environment ${alignak_configuration} --pid_file ${alignak_pid_file} --log_file ${alignak_log_file} $*
+   exit_code=$?
+   info "Configuration checked, result: $exit_code"
+   cat ${alignak_log_file}
+
+   if [ $exit_code -eq 0 ]
+   then
+      info "-----"
+      info "The checked configuration did not raise any error."
+      info "-----"
+   else
+      info "*****"
+      echo "*****"
+      err $exit_code "Some errors were raised during the configuration check!"
+      info "*****"
+      echo "*****"
+   fi
+}
+
+alignak_reload() {
+   info "Reloading Alignak configuration..."
+
+   alignak_pid_file="${alignak_prefix}/var/run/alignak/${type}-${instance}.pid"
+   if [ -e "${alignak_pid_file}" ]; then
+      info "Asking configuration reload to ${name} - ${type} ${instance}i, pid=(`cat ${alignak_pid_file}`)..."
+      kill -s HUP `cat ${alignak_pid_file}`
+      info "Signal sent"
+   else
+      info "${name} - ${type} ${instance} is not running"
+   fi
+}
+
+[ -z "${alignak_enable}" ] && alignak_enable="NO"
+
+run_rc_command "$@"
+

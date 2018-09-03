@@ -1,0 +1,7 @@
+# Store your KPI/Certs in this directory as it is referenced in the daemons
+# configuration files
+
+# To generate new keys:
+openssl dhparam -out server.pem 2048
+openssl genrsa -passout pass:the_password_you_want -out server.key 2048
+openssl req -new -x509 -days 3650 -key certificate_test.key -out server.csr

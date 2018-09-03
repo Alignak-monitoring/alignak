@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -55,16 +55,9 @@ from alignak.downtime import Downtime
 from alignak.contactdowntime import ContactDowntime
 from alignak.comment import Comment
 from alignak.objects.module import Module
-from ._deprecated_VERSION import DeprecatedAlignakBin
 
 
-# Make sure people are using Python 2.6 or higher
+# Make sure people are using Python 2.7 or higher
 # This is the canonical python version check
-if sys.version_info < (2, 6):
-    sys.exit("Alignak requires as a minimum Python 2.6.x, sorry")
-elif sys.version_info >= (3,):
-    sys.exit("Alignak is not yet compatible with Python 3.x, sorry")
-
-# in order to have available any attribute/value assigned in this module namespace,
-# this MUST be the last statement of this module:
-sys.modules[__name__] = DeprecatedAlignakBin(__name__, globals())
+if sys.version_info < (2, 7):
+    sys.exit("Alignak requires as a minimum Python 2.7.x, sorry")

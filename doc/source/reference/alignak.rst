@@ -10,6 +10,7 @@ Subpackages
     alignak.daemons
     alignak.http
     alignak.misc
+    alignak.modules
     alignak.objects
 
 Submodules
@@ -35,14 +36,6 @@ alignak.alignakobject module
 ----------------------------
 
 .. automodule:: alignak.alignakobject
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.arbiterlink module
---------------------------
-
-.. automodule:: alignak.arbiterlink
     :members:
     :undoc-members:
     :show-inheritance:
@@ -75,14 +68,6 @@ alignak.brok module
 -------------------
 
 .. automodule:: alignak.brok
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.brokerlink module
--------------------------
-
-.. automodule:: alignak.brokerlink
     :members:
     :undoc-members:
     :show-inheritance:
@@ -231,26 +216,18 @@ alignak.modulesmanager module
     :undoc-members:
     :show-inheritance:
 
+alignak.monitor module
+----------------------
+
+.. automodule:: alignak.monitor
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 alignak.notification module
 ---------------------------
 
 .. automodule:: alignak.notification
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.old_daemon_link module
-------------------------------
-
-.. automodule:: alignak.old_daemon_link
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.pollerlink module
--------------------------
-
-.. automodule:: alignak.pollerlink
     :members:
     :undoc-members:
     :show-inheritance:
@@ -263,34 +240,10 @@ alignak.property module
     :undoc-members:
     :show-inheritance:
 
-alignak.reactionnerlink module
-------------------------------
-
-.. automodule:: alignak.reactionnerlink
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.receiverlink module
----------------------------
-
-.. automodule:: alignak.receiverlink
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 alignak.satellite module
 ------------------------
 
 .. automodule:: alignak.satellite
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.satellitelink module
-----------------------------
-
-.. automodule:: alignak.satellitelink
     :members:
     :undoc-members:
     :show-inheritance:
@@ -303,34 +256,10 @@ alignak.scheduler module
     :undoc-members:
     :show-inheritance:
 
-alignak.schedulerlink module
-----------------------------
-
-.. automodule:: alignak.schedulerlink
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.shinken_import_hook module
-----------------------------------
-
-.. automodule:: alignak.shinken_import_hook
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 alignak.stats module
 --------------------
 
 .. automodule:: alignak.stats
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-alignak.trigger_functions module
---------------------------------
-
-.. automodule:: alignak.trigger_functions
     :members:
     :undoc-members:
     :show-inheritance:

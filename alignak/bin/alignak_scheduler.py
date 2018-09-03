@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -79,10 +79,14 @@
  the scheduler must schedule, and a list of reactionners and pollers
  to execute them
  When the scheduler is already launched and has its own conf, it keeps on
- listening the arbiter (one a timeout)
+ listening the arbiter
  In case the arbiter has a new conf to send, the scheduler is stopped
  and a new one is created.
 """
+
+import sys
+import traceback
+
 from alignak.daemons.schedulerdaemon import Alignak
 from alignak.util import parse_daemon_args
 
@@ -92,9 +96,14 @@ def main():
 
     :return: None
     """
-    args = parse_daemon_args()
-    daemon = Alignak(debug=args.debug_file is not None, **args.__dict__)
-    daemon.main()
+    try:
+        args = parse_daemon_args()
+        daemon = Alignak(**args.__dict__)
+        daemon.main()
+    except Exception as exp:  # pylint: disable=broad-except
+        sys.stderr.write("*** Daemon exited because: %s" % str(exp))
+        traceback.print_exc()
+        exit(1)
 
 
 if __name__ == '__main__':

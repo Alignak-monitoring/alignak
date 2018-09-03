@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -72,30 +72,33 @@ class Check(Action):  # pylint: disable=R0902
     properties = Action.properties.copy()
     properties.update({
         'is_a':
-            StringProp(default='check'),
+            StringProp(default=u'check'),
         'state':
             IntegerProp(default=0),
-        'long_output':
-            StringProp(default=''),
         'depend_on':
             ListProp(default=[]),
         'depend_on_me':
-            ListProp(default=[], split_on_coma=False),
-        'perf_data':
-            StringProp(default=''),
+            ListProp(default=[], split_on_comma=False),
         'passive_check':
             BoolProp(default=False),
         'freshness_expiry_check':
             BoolProp(default=False),
         'poller_tag':
-            StringProp(default='None'),
-        'internal':
-            BoolProp(default=False),
-        'from_trigger':
-            BoolProp(default=False),
+            StringProp(default=u'None'),
         'dependency_check':
             BoolProp(default=False),
     })
+
+    def __init__(self, params=None, parsing=False):
+        super(Check, self).__init__(params, parsing=parsing)
+
+        if self.command.startswith('_'):
+            self.internal = True
+
+    def __str__(self):  # pragma: no cover
+        return "Check %s %s, item: %s, status: %s, command:'%s'" % \
+               (self.uuid, "active" if not self.passive_check else "passive",
+                self.ref, self.status, self.command)
 
     def get_return_from(self, check):
         """Update check data from action (notification for instance)
@@ -109,20 +112,16 @@ class Check(Action):  # pylint: disable=R0902
             setattr(self, prop, getattr(check, prop))
 
     def is_launchable(self, timestamp):
-        """Check if the check can be launched
+        """Check if this check can be launched based on current time
 
-        :param timestamp: time to compare with t_to_go attribute
+        :param timestamp: time to compare
         :type timestamp: int
-        :return: True if t > self.t_to_go, False otherwise
+        :return: True if timestamp >= self.t_to_go, False otherwise
         :rtype: bool
         """
-        return timestamp > self.t_to_go
-
-    def __str__(self):
-        return "Check %s %s status:%s command:%s ref:%s" % \
-               (self.uuid,
-                "active" if not self.passive_check else "passive",
-                self.status, self.command, self.ref)
+        if self.t_to_go is None:
+            return False
+        return timestamp >= self.t_to_go
 
     def set_type_active(self):
         """Set this check as an active one (indeed, not passive)

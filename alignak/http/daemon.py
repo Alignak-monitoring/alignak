@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -28,59 +28,23 @@ import socket
 import logging
 
 import cherrypy
-from cherrypy.wsgiserver import CherryPyWSGIServer
 # We need this to keep default processors in cherrypy
 from cherrypy._cpreqbody import process_urlencoded, process_multipart, process_multipart_form_data
-
-from OpenSSL import SSL, crypto
-from cherrypy.wsgiserver.ssl_pyopenssl import pyOpenSSLAdapter  # pylint: disable=C0412
-
 # load global helper objects for logs and stats computation
 from alignak.http.cherrypy_extend import zlib_processor
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+
+# Check if PyOpenSSL is installed
+# pylint: disable=unused-import
+PYOPENSSL = True
+try:
+    from OpenSSL import SSL
+    from OpenSSL import crypto
+except ImportError:
+    PYOPENSSL = False
 
 
-class Pyopenssl(pyOpenSSLAdapter):
-    """
-    Use own ssl adapter to modify ciphers. This will disable vulnerabilities ;)
-    """
-
-    def __init__(self, certificate, private_key, certificate_chain=None, dhparam=None):
-        """
-        Add init because need get the dhparam
-
-        :param certificate:
-        :param private_key:
-        :param certificate_chain:
-        :param dhparam:
-        """
-        super(Pyopenssl, self).__init__(certificate, private_key, certificate_chain)
-        self.dhparam = dhparam
-
-    def get_context(self):
-        """Return an SSL.Context from self attributes."""
-        cont = SSL.Context(SSL.SSLv23_METHOD)
-
-        # override:
-        ciphers = (
-            'ECDH+AESGCM:DH+AESGCM:ECDH+AES256:DH+AES256:ECDH+AES128:DH+AES:ECDH+HIGH:'
-            'DH+HIGH:ECDH+3DES:DH+3DES:RSA+AESGCM:RSA+AES:RSA+HIGH:RSA+3DES:!aNULL:'
-            '!eNULL:!MD5:!DSS:!RC4:!SSLv2'
-        )
-        cont.set_options(SSL.OP_NO_COMPRESSION | SSL.OP_SINGLE_DH_USE | SSL.OP_NO_SSLv2 |
-                         SSL.OP_NO_SSLv3)
-        cont.set_cipher_list(ciphers)
-        if self.dhparam is not None:
-            cont.load_tmp_dh(self.dhparam)
-            cont.set_tmp_ecdh(crypto.get_elliptic_curve('prime256v1'))
-        # end override
-
-            cont.use_privatekey_file(self.private_key)
-        if self.certificate_chain:
-            cont.load_verify_locations(self.certificate_chain)
-        cont.use_certificate_file(self.certificate)
-        return cont
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class PortNotFree(Exception):
@@ -92,8 +56,9 @@ class HTTPDaemon(object):
     """HTTP Server class. Mostly based on Cherrypy
     It uses CherryPyWSGIServer and daemon http_interface as Application
     """
+    # pylint: disable=too-many-arguments, unused-argument
     def __init__(self, host, port, http_interface, use_ssl, ca_cert,
-                 ssl_key, ssl_cert, server_dh, daemon_thread_pool_size):
+                 ssl_key, ssl_cert, server_dh, thread_pool_size, log_file=None, icon_file=None):
         """
         Initialize HTTP daemon
 
@@ -104,31 +69,26 @@ class HTTPDaemon(object):
         :param ca_cert:
         :param ssl_key:
         :param ssl_cert:
-        :param daemon_thread_pool_size:
+        :param thread_pool_size:
+        :param log_file: if set, the log file for Cherrypy log
+        :param icon_file: if set, the favicon file to use
         """
-        # Port = 0 means "I don't want HTTP server"
-        if port == 0:
-            return
-
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        result = sock.connect_ex((host, port))
-        if result == 0:
-            msg = "Error: Sorry, the port %s/%d is not free" % (host, port)
-            raise PortNotFree(msg)
-
         self.port = port
         self.host = host
-        self.srv = None
-
         self.use_ssl = use_ssl
 
-        protocol = 'http'
-        if use_ssl:
-            protocol = 'https'
-        self.uri = '%s://%s:%s' % (protocol, self.host, self.port)
-        logger.info("Opening HTTP socket at %s", self.uri)
+        # # Make sure that the host ip/name is propely encoded for CherryPy
+        # try:
+        #     self.host = self.host.encode('utf-8')
+        # except Exception as exp:
+        #     pass
+        # logger.warning("self.host: %s (%s)", self.host, type(self.host))
+        #
+        self.uri = '%s://%s:%s' % ('https' if self.use_ssl else 'http', self.host, self.port)
+        logger.debug("Configured HTTP server on %s, %d threads", self.uri, thread_pool_size)
 
-        # This config override default processors so we put them back in case we need them
+        # This application config overrides the default processors
+        # so we put them back in case we need them
         config = {
             '/': {
                 'request.body.processors': {'application/x-www-form-urlencoded': process_urlencoded,
@@ -136,39 +96,101 @@ class HTTPDaemon(object):
                                             'multipart': process_multipart,
                                             'application/zlib': zlib_processor},
                 'tools.gzip.on': True,
-                'tools.gzip.mime_types': ['text/*', 'application/json']
+                'tools.gzip.mime_types': ['text/*', 'application/json'],
+
+                'tools.response_headers.on': True,
+                'tools.response_headers.headers': [('Access-Control-Allow-Origin', '*')],
+
+                'tools.staticfile.on': True if icon_file else False,
+                'tools.staticfile.filename': icon_file
             }
         }
-        # disable console logging of cherrypy when not in DEBUG
-        cherrypy.log.screen = True
-        if getattr(logger, 'level') != logging.DEBUG:
-            cherrypy.log.screen = False
-            cherrypy.log.access_file = ''
-            cherrypy.log.error_file = ''
+
+        # For embedding into a WSGI server
+        # cherrypy.config.update({'environment': 'embedded'})
+
+        # Configure HTTP server
+        # Available parameters (see https://github.com/cherrypy/cherrypy/
+        # blob/master/cherrypy/_cpserver.py) for more information if needed.
+        # - socket_queue_size
+        cherrypy.config.update({'engine.autoreload.on': False,
+                                'server.thread_pool': thread_pool_size,
+                                'server.socket_host': str(self.host),
+                                'server.socket_port': self.port})
+
+        # Default is to disable CherryPy logging
+        cherrypy.config.update({'log.screen': False,
+                                'log.access_file': '',
+                                'log.error_file': ''})
+        if log_file:
+            # Log into the provided log file
+            cherrypy.config.update({'log.screen': True,
+                                    'log.access_file': str(log_file),
+                                    'log.error_file': str(log_file)})
+            cherrypy.log.access_log.setLevel(logging.DEBUG)
+            cherrypy.log.error_log.setLevel(logging.DEBUG)
+            cherrypy.log("CherryPy logging: %s" % (log_file))
 
         if use_ssl:
-            CherryPyWSGIServer.ssl_adapter = Pyopenssl(ssl_cert, ssl_key, ca_cert, server_dh)
+            # Configure SSL server certificate and private key
+            # Parameters:
+            # ssl_context = None
+            #   When using PyOpenSSL, an instance of SSL.Context.
+            # ssl_certificate = None
+            #   The filename of the SSL certificate to use.
+            # ssl_certificate_chain = None
+            #   When using PyOpenSSL, the certificate chain to pass to
+            # Context.load_verify_locations.
+            # ssl_private_key = None
+            #   The filename of the private key to use with SSL.
+            # ssl_ciphers = None
+            # The ciphers list of SSL.
+            cherrypy.config.update({'server.ssl_certificate': ssl_cert,
+                                    'server.ssl_private_key': ssl_key})
+            cherrypy.log("Using PyOpenSSL: %s" % (PYOPENSSL))
+            if not PYOPENSSL:
+                # Use CherryPy built-in module if PyOpenSSL is not installed
+                cherrypy.config.update({'server.ssl_module': 'builtin'})
+            cherrypy.log("Using SSL certificate: %s" % (ssl_cert))
+            cherrypy.log("Using SSL private key: %s" % (ssl_key))
+            if ca_cert:
+                cherrypy.config.update({'server.ssl_certificate_chain': ca_cert})
+                cherrypy.log("Using SSL CA certificate: %s" % ca_cert)
 
-        self.srv = CherryPyWSGIServer((host, port),
-                                      cherrypy.Application(http_interface, "/", config),
-                                      numthreads=daemon_thread_pool_size, shutdown_timeout=1,
-                                      request_queue_size=30)
+        # Mount the main application (an Alignak daemon interface)
+        cherrypy.tree.mount(http_interface, '/', config)
 
     def run(self):
-        """Wrapper to start http daemon server
+        """Wrapper to start the CherryPy server
+
+        This function throws a PortNotFree exception if any socket error is raised.
 
         :return: None
         """
+        def _started_callback():
+            """Callback function when Cherrypy Engine is started"""
+            cherrypy.log("CherryPy engine started and listening...")
+
+        self.cherrypy_thread = None
         try:
-            self.srv.start()
-        except socket.error, exp:
-            msg = "Error: Sorry, the port %d is not free: %s" % (self.port, str(exp))
-            raise PortNotFree(msg)
+            cherrypy.log("Starting CherryPy engine on %s" % (self.uri))
+            self.cherrypy_thread = cherrypy.engine.start_with_callback(_started_callback)
+            cherrypy.engine.block()
+            cherrypy.log("Exited from the engine block")
+        except socket.error as exp:
+            raise PortNotFree("Error: Sorry, the HTTP server did not started correctly: error: %s"
+                              % (str(exp)))
 
-    def request_stop(self):
-        """Wrapper to stop http daemon server
+    def stop(self):  # pylint: disable=no-self-use
+        """Wrapper to stop the CherryPy server
 
         :return: None
         """
-        if self.srv:
-            self.srv.stop()
+        cherrypy.log("Stopping CherryPy engine (current state: %s)..." % cherrypy.engine.state)
+        try:
+            cherrypy.engine.exit()
+        except RuntimeWarning:
+            pass
+        except SystemExit:
+            cherrypy.log('SystemExit raised: shutting down bus')
+        cherrypy.log("Stopped")

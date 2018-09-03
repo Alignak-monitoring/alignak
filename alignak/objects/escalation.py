@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -71,6 +71,8 @@ class Escalation(Item):
             StringProp(),
         'host_name':
             StringProp(default=''),
+        'hostgroup_name':
+            StringProp(''),
         'service_description':
             StringProp(default=''),
         'first_notification':
@@ -88,11 +90,11 @@ class Escalation(Item):
         'escalation_period':
             StringProp(default=''),
         'escalation_options':
-            ListProp(default=['d', 'u', 'r', 'w', 'c'], split_on_coma=True),
+            ListProp(default=['d', 'x', 'r', 'w', 'c'], split_on_comma=True),
         'contacts':
-            ListProp(default=[], split_on_coma=True),
+            ListProp(default=[], split_on_comma=True),
         'contact_groups':
-            ListProp(default=[], split_on_coma=True),
+            ListProp(default=[], split_on_comma=True),
     })
 
     running_properties = Item.running_properties.copy()
@@ -105,6 +107,15 @@ class Escalation(Item):
     special_properties_time_based = ('contacts', 'contact_groups',
                                      'first_notification', 'last_notification')
 
+    def __init__(self, params=None, parsing=True):
+        if params is None:
+            params = {}
+
+        for prop in ['escalation_options']:
+            if prop in params:
+                params[prop] = [p.replace('u', 'x') for p in params[prop]]
+        super(Escalation, self).__init__(params, parsing=parsing)
+
     def get_name(self):
         """Accessor to escalation_name attribute
 
@@ -114,6 +125,7 @@ class Escalation(Item):
         return self.escalation_name
 
     def is_eligible(self, timestamp, status, notif_number, in_notif_time, interval, escal_period):
+        # pylint: disable=too-many-return-statements
         """Check if the escalation is eligible (notification is escalated or not)
 
         Escalation is NOT eligible in ONE of the following condition is fulfilled::
@@ -138,10 +150,10 @@ class Escalation(Item):
         :return: True if no condition has been fulfilled, otherwise False
         :rtype: bool
         """
-        small_states = {
-            'WARNING': 'w', 'UNKNOWN': 'u', 'CRITICAL': 'c',
-            'RECOVERY': 'r', 'FLAPPING': 'f', 'DOWNTIME': 's',
-            'DOWN': 'd', 'UNREACHABLE': 'u', 'OK': 'o', 'UP': 'o'
+        short_states = {
+            u'WARNING': 'w', u'UNKNOWN': 'u', u'CRITICAL': 'c',
+            u'RECOVERY': 'r', u'FLAPPING': 'f', u'DOWNTIME': 's',
+            u'DOWN': 'd', u'UNREACHABLE': 'x', u'OK': 'o', u'UP': 'o'
         }
 
         # If we are not time based, we check notification numbers:
@@ -151,7 +163,7 @@ class Escalation(Item):
                 return False
 
             # self.last_notification = 0 mean no end
-            if self.last_notification != 0 and notif_number > self.last_notification:
+            if self.last_notification and notif_number > self.last_notification:
                 return False
         # Else we are time based, we must check for the good value
         else:
@@ -159,13 +171,12 @@ class Escalation(Item):
             if in_notif_time < self.first_notification_time * interval:
                 return False
 
-            # self.last_notification = 0 mean no end
-            if self.last_notification_time != 0 and \
+            if self.last_notification_time and \
                     in_notif_time > self.last_notification_time * interval:
                 return False
 
         # If our status is not good, we bail out too
-        if status in small_states and small_states[status] not in self.escalation_options:
+        if status in short_states and short_states[status] not in self.escalation_options:
             return False
 
         # Maybe the time is not in our escalation_period
@@ -190,16 +201,16 @@ class Escalation(Item):
         :return: timestamp for next notification or None
         :rtype: int | None
         """
-        small_states = {'WARNING': 'w', 'UNKNOWN': 'u', 'CRITICAL': 'c',
-                        'RECOVERY': 'r', 'FLAPPING': 'f', 'DOWNTIME': 's',
-                        'DOWN': 'd', 'UNREACHABLE': 'u', 'OK': 'o', 'UP': 'o'}
+        short_states = {u'WARNING': 'w', u'UNKNOWN': 'u', u'CRITICAL': 'c',
+                        u'RECOVERY': 'r', u'FLAPPING': 'f', u'DOWNTIME': 's',
+                        u'DOWN': 'd', u'UNREACHABLE': 'u', u'OK': 'o', u'UP': 'o'}
 
         # If we are not time based, we bail out!
         if not self.time_based:
             return None
 
         # Check if we are valid
-        if status in small_states and small_states[status] not in self.escalation_options:
+        if status in short_states and short_states[status] not in self.escalation_options:
             return None
 
         # Look for the min of our future validity
@@ -235,28 +246,23 @@ class Escalation(Item):
 
         # Ok now we manage special cases...
         if not hasattr(self, 'contacts') and not hasattr(self, 'contact_groups'):
-            msg = '%s: I do not have contacts nor contact_groups' % (self.get_name())
-            self.configuration_errors.append(msg)
+            self.add_error('%s: I do not have contacts nor contact_groups' % (self.get_name()))
             state = False
 
         # If time_based or not, we do not check all properties
         if self.time_based:
             if not hasattr(self, 'first_notification_time'):
-                msg = '%s: I do not have first_notification_time' % (self.get_name())
-                self.configuration_errors.append(msg)
+                self.add_error('%s: I do not have first_notification_time' % (self.get_name()))
                 state = False
             if not hasattr(self, 'last_notification_time'):
-                msg = '%s: I do not have last_notification_time' % (self.get_name())
-                self.configuration_errors.append(msg)
+                self.add_error('%s: I do not have last_notification_time' % (self.get_name()))
                 state = False
         else:  # we check classical properties
             if not hasattr(self, 'first_notification'):
-                msg = '%s: I do not have first_notification' % (self.get_name())
-                self.configuration_errors.append(msg)
+                self.add_error('%s: I do not have first_notification' % (self.get_name()))
                 state = False
             if not hasattr(self, 'last_notification'):
-                msg = '%s: I do not have last_notification' % (self.get_name())
-                self.configuration_errors.append(msg)
+                self.add_error('%s: I do not have last_notification' % (self.get_name()))
                 state = False
 
         # Change the special_properties definition according to time_based ...
@@ -318,25 +324,27 @@ class Escalations(Items):
         :type services: alignak.objects.service.Services
         :return: None
         """
-        for escal in self:
+        for escalation in self:
             # If no host, no hope of having a service
-            if not (hasattr(escal, 'host_name') and hasattr(escal, 'service_description')):
+            if not hasattr(escalation, 'host_name'):
                 continue
-            es_hname, sdesc = escal.host_name, escal.service_description
-            if '' in (es_hname.strip(), sdesc.strip()):
+
+            es_hname, sdesc = escalation.host_name, escalation.service_description
+            if not es_hname.strip() or not sdesc.strip():
                 continue
+
             for hname in strip_and_uniq(es_hname.split(',')):
                 if sdesc.strip() == '*':
                     slist = services.find_srvs_by_hostname(hname)
                     if slist is not None:
                         slist = [services[serv] for serv in slist]
                         for serv in slist:
-                            serv.escalations.append(escal.uuid)
+                            serv.escalations.append(escalation.uuid)
                 else:
                     for sname in strip_and_uniq(sdesc.split(',')):
                         serv = services.find_srv_by_name_and_hostname(hname, sname)
                         if serv is not None:
-                            serv.escalations.append(escal.uuid)
+                            serv.escalations.append(escalation.uuid)
 
     def linkify_es_by_h(self, hosts):
         """Add each escalation object into host.escalation attribute
@@ -348,8 +356,8 @@ class Escalations(Items):
         for escal in self:
             # If no host, no hope of having a service
             if (not hasattr(escal, 'host_name') or escal.host_name.strip() == '' or
-                    (hasattr(escal, 'service_description') and
-                        escal.service_description.strip() != '')):
+                    (hasattr(escal, 'service_description')
+                     and escal.service_description.strip() != '')):
                 continue
             # I must be NOT a escalation on for service
             for hname in strip_and_uniq(escal.host_name.split(',')):

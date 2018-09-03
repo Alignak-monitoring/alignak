@@ -1,0 +1,35 @@
+#!/bin/sh
+#
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
+#
+# This file is part of Alignak.
+#
+# Alignak is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# Alignak is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+# This file is intended to declare some environment variables that may be used by the
+# system startup script.
+
+# Per default, the Alignak startup scripts are using:
+# - ALIGNAK_CONFIGURATION_FILE=/usr/local/share/alignak/etc/alignak.ini
+# - ALIGNAK_USER=alignak
+# - ALIGNAK_GROUP=alignak
+
+# Updating and copying this file to the */etc/default* folder will allow to override
+# the variables default values.
+
+# Uncomment and update for your configuration
+#ALIGNAK_CONFIGURATION_FILE=/usr/local/etc/my-alignak.ini
+#ALIGNAK_USER=my-alignak
+#ALIGNAK_GROUP=my-alignak

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -49,8 +49,9 @@ cut it, and send it to other elements like schedulers, reactionners
 or pollers. It is also responsible for the high availability feature.
 For example, if a scheduler dies, it sends the late scheduler's conf
 to another scheduler available.
-It also reads orders form users (nagios.cmd) and sends them to schedulers.
 """
+import sys
+import traceback
 
 from alignak.daemons.arbiterdaemon import Arbiter
 from alignak.util import parse_daemon_args
@@ -61,15 +62,20 @@ def main():
 
     :return: None
     """
-    args = parse_daemon_args(True)
+    try:
+        args = parse_daemon_args(True)
 
-    # Protect for windows multiprocessing that will RELAUNCH all
-    while True:
-        daemon = Arbiter(debug=args.debug_file is not None, **args.__dict__)
-        daemon.main()
-        if not daemon.need_config_reload:
-            break
-        daemon = None
+        # Protect for windows multiprocessing that will RELAUNCH all
+        while True:
+            daemon = Arbiter(**args.__dict__)
+            daemon.main()
+            if not daemon.need_config_reload:
+                break
+            daemon = None
+    except Exception as exp:  # pylint: disable=broad-except
+        sys.stderr.write("*** Daemon exited because: %s" % str(exp))
+        traceback.print_exc()
+        exit(1)
 
 
 if __name__ == '__main__':

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -60,7 +60,7 @@ from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, DictPr
 from alignak.log import make_monitoring_log
 from alignak.commandcall import CommandCall
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Contact(Item):
@@ -74,7 +74,7 @@ class Contact(Item):
         'contact_name':
             StringProp(fill_brok=['full_status']),
         'alias':
-            StringProp(default='none', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
         'contactgroups':
             ListProp(default=[], fill_brok=['full_status']),
         'host_notifications_enabled':
@@ -86,9 +86,9 @@ class Contact(Item):
         'service_notification_period':
             StringProp(default='', fill_brok=['full_status']),
         'host_notification_options':
-            ListProp(default=[''], fill_brok=['full_status'], split_on_coma=True),
+            ListProp(default=[''], fill_brok=['full_status'], split_on_comma=True),
         'service_notification_options':
-            ListProp(default=[''], fill_brok=['full_status'], split_on_coma=True),
+            ListProp(default=[''], fill_brok=['full_status'], split_on_comma=True),
         # To be consistent with notificationway object attributes
         'host_notification_commands':
             ListProp(default=[], fill_brok=['full_status']),
@@ -97,21 +97,21 @@ class Contact(Item):
         'min_business_impact':
             IntegerProp(default=0, fill_brok=['full_status']),
         'email':
-            StringProp(default='none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=['full_status']),
         'pager':
-            StringProp(default='none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=['full_status']),
         'address1':
-            StringProp(default='none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=['full_status']),
         'address2':
-            StringProp(default='none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=['full_status']),
         'address3':
-            StringProp(default='none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=['full_status']),
         'address4':
-            StringProp(default='none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=['full_status']),
         'address5':
-            StringProp(default='none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=['full_status']),
         'address6':
-            StringProp(default='none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=['full_status']),
         'can_submit_commands':
             BoolProp(default=False, fill_brok=['full_status']),
         'is_admin':
@@ -123,17 +123,17 @@ class Contact(Item):
         'notificationways':
             ListProp(default=[], fill_brok=['full_status']),
         'password':
-            StringProp(default='NOPASSWORDSET', fill_brok=['full_status']),
+            StringProp(default=u'NOPASSWORDSET', fill_brok=['full_status']),
     })
 
     running_properties = Item.running_properties.copy()
     running_properties.update({
         'modified_attributes':
-            IntegerProp(default=0L, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
         'modified_host_attributes':
-            IntegerProp(default=0L, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
         'modified_service_attributes':
-            IntegerProp(default=0L, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
         'in_scheduled_downtime':
             BoolProp(default=False, fill_brok=['full_status', 'check_result'], retention=True),
         'broks':
@@ -194,6 +194,11 @@ class Contact(Item):
                 del params[prop]
         super(Contact, self).__init__(params, parsing=parsing)
 
+    def __str__(self):  # pragma: no cover
+        return '<Contact %s, uuid=%s, use: %s />' \
+               % (self.get_name(), self.uuid, getattr(self, 'use', None))
+    __repr__ = __str__
+
     def serialize(self):
         res = super(Contact, self).serialize()
 
@@ -211,10 +216,9 @@ class Contact(Item):
         :return: contact name
         :rtype: str
         """
-        try:
-            return self.contact_name
-        except AttributeError:
-            return 'UnnamedContact'
+        if self.is_tpl():
+            return "tpl-%s" % (getattr(self, 'name', 'unnamed'))
+        return getattr(self, 'contact_name', 'unnamed')
 
     def get_groupname(self):
         """
@@ -362,20 +366,22 @@ class Contact(Item):
             for prop in self.special_properties:
                 if not hasattr(self, prop):
                     msg = "[contact::%s] %s property is missing" % (self.get_name(), prop)
-                    self.configuration_errors.append(msg)
+                    self.add_error(msg)
                     state = False
 
-        if hasattr(self, 'contact_name'):
-            for char in cls.illegal_object_name_chars:
-                if char in self.contact_name:
-                    msg = "[contact::%s] %s character not allowed in contact_name" % (
-                        self.get_name(), char
-                    )
-                    self.configuration_errors.append(msg)
-                    state = False
-        else:
-            if hasattr(self, 'alias'):  # take the alias if we miss the contact_name
+        if not hasattr(self, 'contact_name'):
+            if hasattr(self, 'alias'):
+                # Use the alias if we miss the contact_name
                 self.contact_name = self.alias
+
+        for char in cls.illegal_object_name_chars:
+            if char not in self.contact_name:
+                continue
+
+            msg = "[contact::%s] %s character not allowed in contact_name" \
+                  % (self.get_name(), char)
+            self.add_error(msg)
+            state = False
 
         return super(Contact, self).is_correct() and state
 
@@ -464,7 +470,7 @@ class Contacts(CommandCallItems):
                 else:
                     err = "The 'notificationways' of the %s '%s' named '%s' is unknown!" %\
                           (i.__class__.my_type, i.get_name(), nw_name)
-                    i.configuration_errors.append(err)
+                    i.add_error(err)
             # Get the list, but first make elements unique
             i.notificationways = list(set(new_notificationways))
 
@@ -512,7 +518,7 @@ class Contacts(CommandCallItems):
 
             if need_notificationway:
                 cname = getattr(contact, 'contact_name', getattr(contact, 'alias', ''))
-                nw_name = cname + '_inner_notificationway'
+                nw_name = cname + '_inner_nw'
                 notificationways.new_inner_member(nw_name, params)
 
                 if not hasattr(contact, 'notificationways'):

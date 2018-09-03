@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -78,7 +78,8 @@ def guess_int_or_float(val):
         return None
 
 
-class Metric:  # pylint: disable=R0903
+class Metric(object):
+    # pylint: disable=too-few-public-methods
     """
     Class providing a small abstraction for one metric of a Perfdatas class
     """
@@ -100,7 +101,7 @@ class Metric:  # pylint: disable=R0903
                 self.min = 0
                 self.max = 100
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         string = "%s=%s%s" % (self.name, self.value, self.uom)
         if self.warning:
             string += ";%s" % (self.warning)
@@ -109,7 +110,8 @@ class Metric:  # pylint: disable=R0903
         return string
 
 
-class PerfDatas:  # pylint: disable=R0903
+class PerfDatas(object):
+    # pylint: disable=too-few-public-methods
     """
     Class providing performance data extracted from a check output
     """
@@ -124,7 +126,7 @@ class PerfDatas:  # pylint: disable=R0903
                 self.metrics[metric.name] = metric
 
     def __iter__(self):
-        return self.metrics.itervalues()
+        return iter(list(self.metrics.values()))
 
     def __len__(self):
         return len(self.metrics)

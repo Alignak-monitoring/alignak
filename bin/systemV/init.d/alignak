@@ -1,0 +1,511 @@
+#!/bin/sh
+
+### BEGIN INIT INFO
+# Provides:          alignak
+# Required-Start:    $network $remote_fs
+# Required-Stop:     $network $remote_fs
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: alignak monitoring daemon
+# Description:       alignak is a monitoring tool composed of many separated modules:
+#     - arbiter     : the main one : control everything else.
+#     - scheduler   : receives checks/actions from arbiter. Schedules & forwards them to pollers.
+#     - poller      : receives the checks from a scheduler. Launch them and returns results
+#     - broker      : manage results by looking at scheduler. Like export to flat file or db.
+#     - reactionner : manage the failed checks by looking at scheduler.
+#     - receiver    : manage all passive data
+### END INIT INFO
+
+### Chkconfig Header
+# Alignak        Starts Alignak daemons
+#
+# chkconfig: 345 99 01
+# description: Start Alignak daemons
+
+# Reference:
+# http://refspecs.linuxfoundation.org/LSB_4.1.0/LSB-Core-generic/LSB-Core-generic/iniscrptact.html
+
+
+NAME="alignak"
+
+AVAIL_MODULES="scheduler poller reactionner broker receiver arbiter"
+
+## ALIGNAK_MODULE_FILE is set by alignak-* if it's one of these that's calling us.
+if [ -z "$ALIGNAK_MODULE_FILE" ]; then
+    SCRIPTNAME=$0
+    _usage_mods_="[ <$AVAIL_MODULES> ]"
+else
+    SCRIPTNAME=$ALIGNAK_MODULE_FILE
+fi
+
+curpath=$(cd $(dirname "$0") && pwd)
+#echo curpath is $curpath filename is $(basename "$0")
+
+
+export LANG=en_US.UTF8
+export LC_ALL=en_US.UTF8
+export PYTHONIOENCODING=utf8
+export PYTHONUNBUFFERED="0"
+export TZ=:/etc/localtime
+
+# default
+DEBUG=false
+CMD=""
+SUBMODULES=""
+
+# Try relative first (if we have /usr/local for example
+[ -z "$ALIGNAK_DEFAULT_FILE" ] && ALIGNAK_DEFAULT_FILE="${curpath}/../default/$NAME"
+[ ! -f "$ALIGNAK_DEFAULT_FILE" ] && ALIGNAK_DEFAULT_FILE="/etc/default/$NAME"
+
+
+
+usage() {
+    cat << END
+Usage: $SCRIPTNAME [ -d ] {start|stop|status|restart|reload|force-reload|check} $_usage_mods_
+
+ -d  start requested module(s) in debug mode, only useful with start|restart
+
+END
+}
+
+if [ "$1" = "-d" ]; then
+    DEBUG="1"
+    shift
+fi
+
+if [ $# -eq 0 ]; then
+    usage >&2
+    exit 2
+fi
+
+CMD=$1
+shift
+SUBMODULES=$*
+
+# Reads configuration variable file if it is present
+[ -r "$ALIGNAK_DEFAULT_FILE" ] && . "$ALIGNAK_DEFAULT_FILE"
+
+if [ -z "$SUBMODULES" ]; then
+    SUBMODULES=$AVAIL_MODULES
+else
+    # check given modules
+    for mod1 in $SUBMODULES; do
+        found=0
+        for mod2 in $AVAIL_MODULES; do
+            [ $mod1 = $mod2 ] && found=1;
+        done
+        [ $found = 0 ] && { usage >&2 ; exit 2 ; }
+    done
+fi
+
+# Now look if some required variables are pre defined:
+if [ -z "$ALIGNAKCFG" ]; then
+    ALIGNAKCFG="$ETC/alignak.cfg"
+fi
+echo "Alignak main configuration file is: $ALIGNAKCFG"
+
+# If log or pi directories dir are missing, create them and chown them
+[ ! -d $VAR ] && mkdir -p $VAR && chown -R $ALIGNAK_USER:$ALIGNAK_GROUP /usr/local/var/log/alignak/monitoring-log
+[ ! -d $RUN ] && mkdir -p $RUN && chown -R $ALIGNAK_USER:$ALIGNAK_GROUP /usr/local/var/run/alignak
+
+# In case not existing, define here
+log_failure_msg() {
+    echo $*
+    return 1
+}
+
+log_warning_msg() {
+    echo $*
+    return 1
+}
+
+log_end_msg() {
+    code=$1
+    shift
+    echo $*
+    return $code
+}
+
+# Load the VERBOSE setting and other rcS variables
+[ -f /etc/default/rcS ] && . /etc/default/rcS
+
+# Source function library.
+[ -f /etc/rc.d/init.d/functions ] && . /etc/rc.d/init.d/functions
+
+[ -f /lib/lsb/init-functions ] && . /lib/lsb/init-functions
+
+echo_success() {
+    log_end_msg 0 $*
+}
+
+echo_failure() {
+    log_end_msg 1 $*
+}
+
+################################################
+
+#
+# returns the pid for a submodule
+#
+
+getpidfile() {
+    mod="$1"
+    modPIDVAR=$(echo $mod | tr 'a-z' 'A-Z')"PID"
+    pidfile=$(echo $(eval echo \${$modPIDVAR}))
+    if test "$pidfile"
+    then
+        echo "$pidfile"
+    else
+        echo "$RUN/${mod}d.pid"
+    fi
+}
+
+getmodpid() {
+    mod=$1
+    pidfile=$(getpidfile "$mod")
+    if [ -s $pidfile ]; then
+        cat $pidfile
+    fi
+}
+
+
+getdebugfile() {
+    mod="$1"
+    modDEBUG=$(echo $mod | tr 'a-z' 'A-Z')"DEBUGFILE"
+    debugfile=$(echo $(eval echo \${$modDEBUG}))
+    if test "$debugfile"
+    then
+        echo "$debugfile"
+    else
+        echo "${VAR}/${mod}-debug.log"
+    fi
+}
+
+#
+# Display status
+#
+do_status() {
+    mod=$1
+    pidfile=$(getpidfile "$mod")
+    [ -e "$pidfile" ] || {
+        echo "$mod NOT RUNNING (pidfile ($pidfile) not exist)"
+        return 3
+    }
+    [ -r "$pidfile" ] || {
+        echo "$mod NOT RUNNING (pidfile ($pidfile) unreadable)"
+        return 3
+    }
+    pid=$(cat "$pidfile")
+    if [ -z "$pid" ]; then
+        echo "$mod NOT RUNNING (pid file empty)"
+        return 4
+    fi
+    ps -p "$pid" >/dev/null 2>&1
+    rc=$?
+    if [ $rc != 0 ]; then
+        log_failure_msg  "$mod NOT RUNNING (process $pid doesn't exist?)"
+        return 1
+    fi
+    echo "$mod RUNNING (pid $pid)"
+    return 0
+}
+
+#
+# starts our modules
+#
+do_start() {
+    mod=$1
+    modfilepath="$BIN/alignak-${mod}"
+    [ -e "$modfilepath" ] || {
+        log_failure_msg "FAILED: did not find $mod file ($modfilepath) ; are you sure alignak-$mod is installed?"
+        return 5
+    }
+    [ "$DEBUG" = 1 ] && DEBUGCMD="--debug "$(getdebugfile "$mod")
+    # Arbiter alignak.cfg, and the other OTHERd.ini
+    modINI=$(echo "$"${mod}CFG | tr '[:lower:]' '[:upper:]')
+    modinifile=$(eval echo ${modINI})
+    if [ "$mod" != "arbiter" ]; then
+        output=$($modfilepath -d -e "${modinifile}" $DEBUGCMD 2>&1)
+        rc=$?
+    else
+        if [ -z "$ALIGNAKSPECIFICCFG" ]; then
+            output=$($modfilepath -d -e "${modinifile}" -a "$ALIGNAKCFG" $DEBUGCMD 2>&1)
+        else
+            output=$($modfilepath -d -e "${modinifile}" -a "$ALIGNAKCFG" $DEBUGCMD 2>&1)
+        fi
+        rc=$?
+    fi
+    # debug:
+    #resfile="/tmp/bad_start_for_$mod"
+    #echo "$output" > "$resfile" || true
+    if [ $rc != 0 ]; then
+        resfile="/tmp/bad_start_for_$mod"
+        echo "$output" > "$resfile" || true
+        output=$(echo "$output" | tail -1)
+        echo "FAILED: $output (full output is in $resfile)"
+        return 1
+    fi
+    echo "OK"
+    return 0
+}
+
+#
+# stops modules
+#
+do_stop() {
+    mod=$1
+    pid=$(getmodpid "$mod")
+    statusoutput=$(do_status "$mod")
+    [ $? -ne 0 ] && {
+        echo "$statusoutput"
+        return 0
+    }
+    if [ ! -z "$pid" ]; then
+        kill "$pid"
+        #sleep 1
+        ## TODO: instead of 'sleep 1': wait up to when pid file is removed (with timeout)?
+        for i in 1 2 3
+        do
+            # TODO: use a better way to get the children pids..
+            allpids="$(ps -aef | grep "$pid" | grep "alignak-$mod" | awk '{print $2}')"
+            if [ -z "$allpids" ]; then
+                echo "OK"
+                return 0
+            fi
+            sleep 1
+        done
+        echo "there are still remaining processes to $mod running.. ; trying to kill them (SIGTERM).."
+        allpids="$(ps -aef | grep "$pid" | grep "alignak-$mod" | awk '{print $2}')"
+        for cpid in $(ps -aef | grep "$pid" | grep "alignak-$mod" | awk '{print $2}'); do
+            kill $cpid > /dev/null 2>&1
+        done
+        for i in 1 2 3
+        do
+            # TODO: eventually use a better way to get the children pids..
+            allpids="$(ps -aef | grep "$pid" | grep "alignak-$mod" | awk '{print $2}')"
+            if [ -z "$allpids" ]; then
+                echo "OK"
+                return 0
+            fi
+            sleep 1
+        done
+        echo "there are still remaining processes to $mod running.. ; trying to kill -9 them.."
+        allpids="$(ps -aef | grep "$pid" | grep "alignak-$mod" | awk '{print $2}')"
+        for cpid in $(ps -aef | grep "$pid" | grep "alignak-$mod" | awk '{print $2}'); do
+            kill -9 $cpid > /dev/null 2>&1
+        done
+        sleep 1
+        allpids="$(ps -aef | grep "$pid" | grep "alignak-$mod" | awk '{print $2}')"
+        if [ ! -z "$allpids" ]; then
+            echo "FAILED: one or more process for $mod are still running after kill -9!"
+            echo "Remaining processes are (pids="$allpids"):"
+            ps -lf $(for p in $allpids ; do echo -n "-p$p " ; done)
+            echo "You should check this."
+            return 1
+        fi
+        echo "OK"
+    else
+        echo "NOT RUNNING"
+    fi
+    return 0
+}
+
+#
+# does the config check
+#
+do_check() {
+    echo  "Checking configuration..."
+    [ "$DEBUG" = 1 ] && DEBUGCMD="--debug $VAR/${mod}-debug.log"
+
+    modINI=$(echo "$"${mod}CFG | tr '[:lower:]' '[:upper:]')
+    modinifile=$(eval echo ${modINI})
+
+    if [ -z "$ALIGNAKSPECIFICCFG" ]; then
+       $BIN/alignak-arbiter -V -c "${modinifile}" -a "$ALIGNAKCFG" $DEBUGCMD 2>&1
+    else
+       $BIN/alignak-arbiter -V -c "${modinifile}" -a "$ALIGNAKCFG" -a "$ALIGNAKSPECIFICCFG" $DEBUGCMD 2>&1
+    fi
+    rc=$?
+    if [ $rc -eq 0 ]; then
+        echo_success
+    else
+        echo "$startoutput"
+        echo_failure
+    fi
+    return $?
+}
+
+
+############################
+
+do_start_() {
+    echo  "Starting $1: "
+    status=$(do_status "$1")
+    rc=$?
+    if [ $rc -eq 0 ]; then
+        log_warning_msg "Already running"
+        return
+    fi
+    startoutput=$(do_start "$1")
+    rc=$?
+    if [ $rc -eq 0 ]; then
+        echo_success
+    else
+        echo "$startoutput"
+        echo_failure
+    fi
+    return $rc
+}
+
+do_stop_() {
+    echo  "Stopping $1"
+    statusoutput=$(do_status "$1")
+    rc=$?
+    if [ $rc -ne 0 ]; then
+        failuremsg="Couldn't get status of $1: $statusoutput"
+    else
+        stopoutput=$(do_stop "$1" 2>&1)
+        rc=$?
+        [ $rc -ne 0 ] && failuremsg="Couldn't stop $1: $stopoutput"
+    fi
+    if [ $rc -ne 0 ]; then
+        log_failure_msg "$failuremsg"
+        echo_failure
+    else
+        echo_success
+    fi
+    return $rc
+}
+
+do_restart_() {
+    mod="$1"
+    if [ "$mod" = "arbiter" ]; then
+        do_check_ "$mod"
+        checkrc=$?
+        if [ $checkrc -ne 0 ]; then
+           return 1
+        fi
+    fi
+    echo "Restarting $mod"
+    stopoutput=$(do_stop "$mod")
+    startoutput=$(do_start "$mod")
+    rc=$?
+    if [ $rc -eq 0 ]; then
+        echo_success
+    else
+        log_failure_msg "$startoutput"
+        echo_failure
+    fi
+    return $rc
+}
+
+do_force_reload_() {
+    do_restart_ $1
+}
+
+do_reload_() {
+    mod="$1"
+    if [ "$mod" = "arbiter" ]; then
+        do_status_ $mod
+        checkrc=$?
+        if [ $checkrc -ne 0 ]; then
+           echo "Cannot request reload if process is not running."
+           return 1
+        fi
+        do_check_ "$mod"
+        checkrc=$?
+        if [ $checkrc -ne 0 ]; then
+           return 1
+        fi
+        pid=$(getmodpid "$mod")
+        if [ "$pid" != "" ]; then
+            # send SIGHUP signal to reload configuration
+            kill -1 $pid
+            rc=$?
+        fi
+    else
+        # if not the arbiter module, reload == restart
+        do_restart_ $mod
+    fi
+    echo "Reloading $mod"
+    if [ $rc -eq 0 ]; then
+        echo_success
+    else
+        echo_failure
+    fi
+    return $rc
+}
+
+do_status_() {
+    mod=$1
+    echo  "Checking status of $mod"
+    do_status "$1"
+    rc=$?
+    if [ $rc -eq 0 ]; then
+        echo_success
+    else
+        echo_failure
+    fi
+
+}
+
+do_check_() {
+    echo "Doing config check"
+    output=$(do_check "$1" 2>&1)
+    rc=$?
+    check_res_file=$(mktemp /tmp/alignak_checkconfig_resultXXXXXXXX)
+    echo "$output" > "$check_res_file"
+    mv $check_res_file /tmp/alignak_checkconfig_result
+    check_res_file="/tmp/alignak_checkconfig_result"
+
+    if [ $rc -eq 0 ]; then
+        echo_success
+    else
+        output=$(echo "$output" | tail -1)
+        log_warning_msg "full result is in ${check_res_file}"
+        log_failure_msg "ConfigCheck failed: $output"
+        echo_failure
+    fi
+    return $rc
+}
+do_checkconfig_() { do_check_ "$1" ; }
+
+
+############################
+
+do_cmd_on() {
+    action=$1
+    mods=$2
+
+    local return_value
+    return_value=0
+
+    for mod in $mods
+    do
+        # If at least one action fails, the return value is 1.
+        do_${action}_ "$mod" || return_value=1
+    done
+
+    return $return_value
+}
+
+
+############################
+## Main:
+
+case "$CMD" in
+    start|stop|restart|status|force-reload)
+        do_cmd_on "$CMD" "$SUBMODULES"
+        ;;
+    force-reload)
+        do_cmd_on "force_reload" "$SUBMODULES"
+        ;;
+    check|checkconfig|reload)
+        do_cmd_on "$CMD" "arbiter"
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+esac
+

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -54,20 +54,20 @@ that alignak modules will subclass
 
 import os
 import signal
-import time
 import traceback
 import re
 from multiprocessing import Queue, Process
-import warnings
 import logging
 
-from alignak.misc.common import setproctitle
+from alignak.misc.common import setproctitle, SIGNALS_TO_NAMES_DICT
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+KILL_TIME = 10
 
 # The `properties` dict defines what the module can do and
 # if it's an external module or not.
-# pylint: disable=C0103
+# pylint: disable=invalid-name
 properties = {
     # module type ; to distinguish between them:
     # retention, logs, configuration, livestate, ...
@@ -82,42 +82,50 @@ properties = {
 
 
 class BaseModule(object):
+    # pylint: disable=too-many-instance-attributes
     """This is the base class for the Alignak modules.
-    Modules can be used by the different Alignak daemons/services
-    for different tasks.
-    Example of task that a Alignak module can do:
-
+    Modules can be used by the different Alignak daemons for different tasks.
+    Example of task that an Alignak module can do:
     - load additional configuration objects.
-    - recurrently save hosts/services status/perfdata
-       information in different format.
+    - recurrently save hosts/services status/perfdata information in different format.
     - ...
     """
 
     def __init__(self, mod_conf):
         """Instantiate a new module.
-        There can be many instance of the same type.
-        'mod_conf' is the module configuration object for this new module instance.
+
+        There can be many instance of the same module.
+
+        mod_conf is a dictionary that contains:
+        - all the variables declared in the module configuration file
+        - a 'properties' value that is the module properties as defined globally in this file
+        - a 'my_daemon' property that is a reference to the Daemon object that loaded the module
+
+        :param mod_conf: module configuration file as a dictionary
+        :type mod_conf: dict
         """
         self.myconf = mod_conf
-        self.alias = mod_conf.get_name()
-        # Todo: disabled feature
-        # We can have sub modules
-        self.modules = getattr(mod_conf, 'modules', [])
+        self.name = mod_conf.get_name()
+        self.my_daemon = getattr(mod_conf, 'my_daemon', None)
+
         self.props = mod_conf.properties.copy()
         # TODO: choose between 'props' or 'properties'..
         self.interrupted = False
         self.properties = self.props
         self.is_external = self.props.get('external', False)
+
         # though a module defined with no phase is quite useless .
         self.phases = self.props.get('phases', [])
-        # self.phases.append(None)
+
         # the queue the module will receive data to manage
         self.to_q = None
         # the queue the module will put its result data
         self.from_q = None
         self.process = None
         self.illegal_char = re.compile(r'[^\w-]')
+        # Initialization try count and time
         self.init_try = 0
+        self.last_init_try = 0
         # We want to know where we are load from? (broker, scheduler, etc)
         self.loaded_into = 'unknown'
 
@@ -125,7 +133,35 @@ class BaseModule(object):
         # 60 seconds before killing a module abruptly
         self.kill_delay = int(getattr(mod_conf, 'kill_delay', '60'))
 
-    def init(self):  # pylint: disable=R0201
+        # Self module monitoring (cpu, memory)
+        self.module_monitoring = False
+        self.module_monitoring_period = 10
+        if 'ALIGNAK_DAEMON_MONITORING' in os.environ:
+            self.module_monitoring = True
+            try:
+                self.system_health_period = int(os.environ.get('ALIGNAK_DAEMON_MONITORING', '10'))
+            except ValueError:  # pragma: no cover, simple protection
+                pass
+        if self.module_monitoring:
+            print("Module self monitoring is enabled, reporting every %d loop count."
+                  % self.module_monitoring_period)
+
+    @property
+    def alias(self):
+        """Module name may be stored in an alias property
+        Stay compatible with older modules interface
+        """
+        return self.name
+
+    def get_name(self):
+        """Wrapper to access name attribute
+
+        :return: module name
+        :rtype: str
+        """
+        return self.name
+
+    def init(self):  # pylint: disable=no-self-use
         """Handle this module "post" init ; just before it'll be started.
 
         This function initializes the module instance. If False is returned, the modules manager
@@ -156,13 +192,14 @@ class BaseModule(object):
         process and this module process.
         But clear queues if they were already set before recreating new one.
 
+        Note:
+        If manager is None, then we are running the unit tests for the modules and
+        we must create some queues for the external modules without a SyncManager
+
         :param manager: Manager() object
         :type manager: None | object
         :return: None
         """
-        # NB: actually this method is only referenced in the alignak tests,
-        # but without the manager parameter set..
-        # TODO: clarify all that (this manager+queues story) and continue clean-clean-clean
         self.clear_queues(manager)
         # If no Manager() object, go with classic Queue()
         if not manager:
@@ -182,10 +219,13 @@ class BaseModule(object):
         for queue in (self.to_q, self.from_q):
             if queue is None:
                 continue
-            # If we got no manager, we direct call the clean
+            # If we got no manager, we directly call the clean
             if not manager:
-                queue.close()
-                queue.join_thread()
+                try:
+                    queue.close()
+                    queue.join_thread()
+                except AttributeError:
+                    pass
             # else:
             #    q._callmethod('close')
             #    q._callmethod('join_thread')
@@ -200,10 +240,10 @@ class BaseModule(object):
         try:
             self._main()
         except Exception as exp:
-            logger.exception('[%s] %s', self.alias, traceback.format_exc())
+            logger.exception('%s', traceback.format_exc())
             raise Exception(exp)
 
-    def start(self, http_daemon=None):  # pylint: disable=W0613
+    def start(self, http_daemon=None):  # pylint: disable=unused-argument
         """Actually restart the process if the module is external
         Try first to stop the process and create a new Process instance
         with target start_module.
@@ -219,12 +259,11 @@ class BaseModule(object):
 
         if self.process:
             self.stop_process()
-        logger.info("Starting external process for module %s...", self.alias)
-        proc = Process(target=self.start_module, args=())
+        logger.info("Starting external process for module %s...", self.name)
+        proc = Process(target=self.start_module, args=(), group=None)
 
-        # Under windows we should not call start() on an object that got
-        # its process as object, so we remove it and we set it in a earlier
-        # start
+        # Under windows we should not call start() on an object that got its process
+        # as an object, so we remove it and we set it in a earlier start
         try:
             del self.properties['process']
         except KeyError:
@@ -233,8 +272,8 @@ class BaseModule(object):
         proc.start()
         # We save the process data AFTER the fork()
         self.process = proc
-        self.properties['process'] = proc  # TODO: temporary
-        logger.info("%s is now started (pid=%d)", self.alias, proc.pid)
+        self.properties['process'] = proc
+        logger.info("%s is now started (pid=%d)", self.name, proc.pid)
 
     def kill(self):
         """Sometime terminate() is not enough, we must "help"
@@ -244,16 +283,21 @@ class BaseModule(object):
         """
 
         logger.info("Killing external module (pid=%d) for module %s...",
-                    self.process.pid, self.alias)
+                    self.process.pid, self.name)
         if os.name == 'nt':
             self.process.terminate()
         else:
-            # Ok, let him 1 second before really KILL IT
-            os.kill(self.process.pid, signal.SIGTERM)
-            time.sleep(1)
+            self.process.terminate()
+            # Wait for 10 seconds before killing the process abruptly
+            self.process.join(timeout=KILL_TIME)
             # You do not let me another choice guy...
             if self.process.is_alive():
+                logger.warning("%s is still living %d seconds after a normal kill, "
+                               "I help it to die", self.name, KILL_TIME)
                 os.kill(self.process.pid, signal.SIGKILL)
+                self.process.join(1)
+                if self.process.is_alive():
+                    logger.error("%s still living after brutal kill, I leave it.", self.name)
             logger.info("External module killed")
 
     def stop_process(self):
@@ -261,47 +305,15 @@ class BaseModule(object):
 
         :return: None
         """
-        if self.process:
-            logger.info("I'm stopping module %r (pid=%d)",
-                        self.get_name(), self.process.pid)
-            self.process.terminate()
-            # Wait for a delay before killing the process abruptly
-            self.process.join(timeout=self.kill_delay)
-            if self.process.is_alive():
-                logger.warning("%r is still alive after normal kill and %s seconds waiting"
-                               ", I help it to die", self.get_name(), self.kill_delay)
-                self.kill()
-                self.process.join(1)
-                if self.process.is_alive():
-                    logger.error("%r still alive after brutal kill, I leave it.",
-                                 self.get_name())
+        if not self.process:
+            return
 
-            self.process = None
+        logger.info("I'm stopping module %r (pid=%d)", self.name, self.process.pid)
+        self.kill()
+        # Clean inner process reference
+        self.process = None
 
-    def get_name(self):
-        """Wrapper to access name attribute
-
-        :return: module name
-        :rtype: str
-        """
-        return self.alias
-
-    def has(self, prop):
-        """The classic has: do we have a prop or not?
-
-        :param prop: property name
-        :type prop: str
-        :return: True if has a property, otherwise False
-        :rtype: bool
-        """
-        warnings.warn(
-            "{s.__class__.__name__} is deprecated, please use "
-            "`hasattr(your_object, attr)` instead. This has() method will "
-            "be removed in a later version.".format(s=self),
-            DeprecationWarning, stacklevel=2)
-        return hasattr(self, prop)
-
-    def want_brok(self, b):  # pylint: disable=W0613,R0201
+    def want_brok(self, b):  # pylint: disable=unused-argument,no-self-use
         """Generic function to check if the module need a specific brok
         In this case it is always True
 
@@ -314,33 +326,28 @@ class BaseModule(object):
 
     def manage_brok(self, brok):
         """Request the module to manage the given brok.
-        There are a lot of different possible broks to manage:
-        - monitoring_log
+        There are a lot of different possible broks to manage. The list is defined
+        in the Brok class.
 
-        - notification_raise
-        - downtime_raise
-        - initial_host_status, initial_service_status, initial_contact_status
-        - initial_broks_done
-
-        - update_host_status, update_service_status, initial_contact_status
-        - host_check_result, service_check_result
-        - host_next_schedule, service_next_scheduler
-        - host_snapshot, service_snapshot
-        - unknown_host_check_result, unknown_service_check_result
-
-        - program_status
-        - clean_all_my_instance_id
-
-        - new_conf
+        An internal module may redefine this function or, easier, define only the function
+        for the brok it is interested with. Hence a module interested in the `service_check_result`
+        broks will only need to define a function named as `manage_service_check_result_brok`
 
         :param brok:
         :type brok:
         :return:
         :rtype:
         """
-        pass
 
-    def manage_signal(self, sig, frame):  # pylint: disable=W0613
+        manage = getattr(self, 'manage_' + brok.type + '_brok', None)
+        if not manage:
+            return False
+
+        # Be sure the brok is prepared before calling the function
+        brok.prepare()
+        return manage(brok)
+
+    def manage_signal(self, sig, frame):  # pylint: disable=unused-argument
         """Generic function to handle signals
 
         Only called when the module process received SIGINT or SIGKILL.
@@ -353,23 +360,41 @@ class BaseModule(object):
         :type frame:
         :return: None
         """
-        logger.info("Process for module %s received a signal: %s", self.alias, str(sig))
+        logger.info("received a signal: %s", SIGNALS_TO_NAMES_DICT[sig])
+
+        if sig == signal.SIGHUP:
+            # if SIGHUP, reload configuration in arbiter
+            logger.info("Modules are not able to reload their configuration. "
+                        "Stopping the module...")
+
+        logger.info("Request to stop the module")
         self.interrupted = True
-        self.process = None
+        # self.process = None
 
     def set_signal_handler(self, sigs=None):
-        """Set the signal handler function (manage_signal)
-        for sigs signals or signal.SIGINT and signal.SIGTERM if sigs is None
+        """Set the signal handler to manage_signal (defined in this class)
 
-        :param sigs: signals to handle
-        :type sigs:
+        Only set handlers for:
+        - signal.SIGTERM, signal.SIGINT
+        - signal.SIGUSR1, signal.SIGUSR2
+        - signal.SIGHUP
+
         :return: None
         """
         if sigs is None:
-            sigs = (signal.SIGINT, signal.SIGTERM)
+            sigs = (signal.SIGTERM, signal.SIGINT, signal.SIGUSR1, signal.SIGUSR2, signal.SIGHUP)
 
-        for sig in sigs:
-            signal.signal(sig, self.manage_signal)
+        func = self.manage_signal
+        if os.name == "nt":  # pragma: no cover, no Windows implementation currently
+            try:
+                import win32api
+                win32api.SetConsoleCtrlHandler(func, True)
+            except ImportError:
+                version = ".".join([str(i) for i in os.sys.version_info[:2]])
+                raise Exception("pywin32 not installed for Python " + version)
+        else:
+            for sig in sigs:
+                signal.signal(sig, func)
 
     set_exit_handler = set_signal_handler
 
@@ -412,23 +437,24 @@ class BaseModule(object):
 
         :return: None
         """
-        self.set_proctitle(self.alias)
+        self.set_proctitle(self.name)
         self.set_signal_handler()
 
-        logger.info("Process for module %s is now running (pid=%d)", self.alias, os.getpid())
+        logger.info("process for module %s is now running (pid=%d)", self.name, os.getpid())
 
         # Will block here!
         try:
             self.main()
         except (IOError, EOFError):
             pass
-            # logger.warning('[%s] EOF exception: %s', self.alias, traceback.format_exc())
+            # logger.warning('[%s] EOF exception: %s', self.name, traceback.format_exc())
         except Exception as exp:  # pylint: disable=broad-except
-            logger.exception('[%s] main function exception: %s', self.alias, exp)
+            logger.exception('main function exception: %s', exp)
 
         self.do_stop()
 
-        logger.info("Process for module %s is now exiting (pid=%d)", self.alias, os.getpid())
+        logger.info("process for module %s is now exiting (pid=%d)", self.name, os.getpid())
+        exit()
 
     # TODO: apparently some modules would uses "work" as the main method??
     work = _main

@@ -1,7 +1,0 @@
-# This configuration is built as is:
-# - a localhost host that is checked with _internal host check and that has no services
-# - 3 hosts that are distributed in 3 realms: All, North and South
-# - each host has 5 services that each run the script ./dummy_command.sh
-# - services are: ok, warning, critical, unknown and timeout, thus to check that poller workers run correctly the checks action
-# - the 4 first services are run normally, the last one raises a timeout alert
-# - one more service that uses the internal _echo command that set the same state as the current one, thus the default initial state

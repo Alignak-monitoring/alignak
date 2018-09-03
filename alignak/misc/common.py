@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -43,18 +43,25 @@
 This module is used for common variables in Alignak.
 Previously some of those variables were linked to a specific class which made no sense.
 """
+import signal
 from collections import namedtuple
+
 try:
     from setproctitle import setproctitle  # pylint: disable=unused-import
 except ImportError as err:  # pragma: no cover, setproctitle is in the requirements.txt
-    def setproctitle(title):  # pylint: disable=unused-argument
+    def setproctitle(title):
         """
-        Return name
+        Return the name of the process
         :param title: name of process
         :type title: str
         :return: None
         """
-        return None
+        # Do nothing...
+        return title
+
+# Friendly names for the system signals
+SIGNALS_TO_NAMES_DICT = dict((k, v) for v, k in reversed(sorted(signal.__dict__.items()))
+                             if v.startswith('SIG') and not v.startswith('SIG_'))
 
 ModAttr = namedtuple('ModAttr', ['modattr', 'attribute', 'value'])
 

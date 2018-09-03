@@ -1,0 +1,22 @@
+[Unit]
+Description=Alignak daemons instance
+After=network.target
+# Example: one realm, one daemon instance per realm
+Wants=alignak-broker@master.service alignak-poller@master.service alignak-reactionner@master.service alignak-receiver@master.service alignak-scheduler@master.service alignak-arbiter@master.service
+
+# Example: one realm, 2 schedulers
+# Wants=alignak-broker@master.service alignak-poller@master.service alignak-reactionner@master.service alignak-receiver@master.service alignak-scheduler@master.service alignak-scheduler@second.service alignak-arbiter@master.service
+
+# Example: two realms (All and Second)
+# Wants=alignak-broker@master.service alignak-broker@second.service alignak-poller@master.service alignak-poller@second.service alignak-reactionner@master.service alignak-receiver@master.service alignak-scheduler@master.service alignak-scheduler@second.service alignak-arbiter@master.service
+
+[Service]
+# Execute a dummy program
+ExecStart=/bin/echo Alignak service...
+# The dummy program will exit
+Type=oneshot
+# This service shall be considered active after start
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

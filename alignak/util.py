@@ -1,6 +1,13 @@
 # -*- coding: utf-8 -*-
+# pylint: disable=too-many-lines
+
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Because some functions are sometimes called without all arguments!
+# These are mainly brok_transformation functions that are called with the concerned
+# object as first parameter (usually self)
+# pylint: disable=unused-argument
+
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -53,24 +60,49 @@ You can find functions for time management, type management (pythonization),
 macros solving, sorting, parsing, file handling, filters.
 
 """
-import time
 import re
-import sys
 import json
 import argparse
 import logging
 
-import numpy as np
-
-from alignak.version import VERSION
-
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
-
+# pylint: disable=unused-import
+NUMPY = True
 try:
-    SAFE_STDOUT = (sys.stdout.encoding == 'UTF-8')
-except AttributeError, exp:  # pragma: no cover, should not happen!
-    logger.error('Encoding detection error for stdout = %s', exp)
-    SAFE_STDOUT = False
+    # use numpy if installed
+    import numpy as np
+    from numpy import percentile
+except ImportError:  # pragma: no cover
+    import math
+    import functools
+    NUMPY = False
+
+    # Replace the numpy percentile function!
+    def percentile(n, percent, key=lambda x: x):
+        # pylint: disable=invalid-name
+        """
+        Find the percentile of a list of values.
+
+        @parameter N - is a list of values. Note N MUST BE already sorted.
+        @parameter percent - a float value from 0.0 to 1.0.
+        @parameter key - optional key function to compute value from each element of N.
+
+        @return - the percentile of the values
+        """
+        if not n:
+            return None
+        if percent > 1:
+            percent = percent / 100
+        k = (len(n)-1) * percent
+        f = math.floor(k)
+        c = math.ceil(k)
+        if f == c:
+            return key(n[int(k)])
+        d0 = key(n[int(f)]) * (c-k)
+        d1 = key(n[int(c)]) * (k-f)
+        return d0+d1
+
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 # ########## Strings #############
@@ -132,7 +164,8 @@ def split_semicolon(line, maxsplit=None):
     return split_line
 
 
-def jsonify_r(obj):
+def jsonify_r(obj):  # pragma: no cover, not for unit tests...
+    # pylint: disable=too-many-branches
     """Convert an object into json (recursively on attribute)
 
     :param obj: obj to jsonify
@@ -142,15 +175,15 @@ def jsonify_r(obj):
     """
     res = {}
     cls = obj.__class__
-    if not hasattr(cls, 'properties'):  # pragma: no cover, should not happen, simple protection.
+    if not hasattr(cls, 'properties'):
         try:
             json.dumps(obj)
             return obj
         except TypeError:
             return None
-    properties = cls.properties.keys()
+    properties = list(cls.properties.keys())
     if hasattr(cls, 'running_properties'):
-        properties += cls.running_properties.keys()
+        properties += list(cls.running_properties.keys())
     for prop in properties:
         if not hasattr(obj, prop):
             continue
@@ -193,102 +226,6 @@ def jsonify_r(obj):
 
 
 # ################################## TIME ##################################
-def get_end_of_day(year, month_id, day):
-    """Get the timestamp of the end (local) of a specific day
-
-    :param year: date year
-    :type year: int
-    :param month_id: date month (int)
-    :type month_id: int
-    :param day: date day
-    :type day: int
-    :return: timestamp
-    :rtype: int
-
-    TODO: Missing timezone
-    """
-    end_time = (year, month_id, day, 23, 59, 59, 0, 0, -1)
-    end_time_epoch = time.mktime(end_time)
-    return end_time_epoch
-
-
-def print_date(timestamp):
-    """Get date (local) in asc format from timestamp
-
-    example : 'Thu Jan  1 01:00:00 1970' (for timestamp=0 in a EUW server)
-
-    :param timestamp: timestamp
-    :type timestamp; int
-    :return: formatted time
-    :rtype: int
-    TODO: Missing timezone
-    """
-    return time.asctime(time.localtime(timestamp))
-
-
-def get_day(timestamp):
-    """Get timestamp of the beginning of the day (local) given by timestamp
-
-    :param timestamp: time to get day from
-    :type timestamp: int
-    :return: timestamp
-    :rtype: int
-    TODO: Missing timezone
-    """
-    return int(timestamp - get_sec_from_morning(timestamp))
-
-
-def get_wday(timestamp):
-    """Get week day from date
-
-    :param timestamp: timestamp date
-    :type timestamp: int
-    :return: weekday (0-6)
-    :rtype: int
-    TODO: Missing timezone
-    """
-    t_lt = time.localtime(timestamp)
-    return t_lt.tm_wday
-
-
-def get_sec_from_morning(timestamp):
-    """Get the numbers of seconds elapsed since the beginning of the day (local) given by timestamp
-
-    :param timestamp: time to get amount of second from
-    :type timestamp: int
-    :return: timestamp
-    :rtype: int
-    TODO: Missing timezone
-    """
-    t_lt = time.localtime(timestamp)
-    return t_lt.tm_hour * 3600 + t_lt.tm_min * 60 + t_lt.tm_sec
-
-
-def get_start_of_day(year, month_id, day):
-    """Get the timestamp of the beginning (local) of a specific day
-
-    :param year: date year
-    :type year: int
-    :param month_id: date month (int)
-    :type month_id: int
-    :param day: date day
-    :type day: int
-    :return: timestamp
-    :rtype: float
-
-    TODO: Missing timezone
-    """
-    # DST is not known
-    start_time = (year, month_id, day, 00, 00, 00, 0, 0, -1)
-    try:
-        start_time_epoch = time.mktime(start_time)
-    except OverflowError:
-        # Windows mktime sometimes crashes on (1970, 1, 1, ...)
-        start_time_epoch = 0.0
-
-    return start_time_epoch
-
-
 def format_t_into_dhms_format(timestamp):
     """ Convert an amount of second into day, hour, min and sec
 
@@ -327,7 +264,8 @@ def merge_periods(data):
         if period[0] != end and period[0] != (end - 1):
             end = period[1]
 
-    dat = np.array(newdata)
+    # dat = np.array(newdata)
+    dat = newdata
     new_intervals = []
     cur_start = None
     cur_end = None
@@ -359,7 +297,10 @@ def to_int(val):
     :return: int(float(val))
     :rtype: int
     """
-    return int(float(val))
+    try:
+        return int(val)
+    except ValueError:
+        return int(float(val))
 
 
 def to_float(val):
@@ -384,7 +325,7 @@ def to_char(val):
     return val[0]
 
 
-def to_split(val, split_on_coma=True):
+def to_split(val, split_on_comma=True):
     """Try to split a string with comma separator.
     If val is already a list return it
     If we don't have to split just return [val]
@@ -392,8 +333,8 @@ def to_split(val, split_on_coma=True):
 
     :param val: value to split
     :type val:
-    :param split_on_coma:
-    :type split_on_coma: bool
+    :param split_on_comma:
+    :type split_on_comma: bool
     :return: split value on comma
     :rtype: list
 
@@ -411,7 +352,7 @@ def to_split(val, split_on_coma=True):
     """
     if isinstance(val, list):
         return val
-    if not split_on_coma:
+    if not split_on_comma:
         return [val]
     val = val.split(',')
     if val == ['']:
@@ -419,15 +360,15 @@ def to_split(val, split_on_coma=True):
     return val
 
 
-def list_split(val, split_on_coma=True):
-    """Try to split a each member of a list with comma separator.
+def list_split(val, split_on_comma=True):
+    """Try to split each member of a list with comma separator.
     If we don't have to split just return val
 
     :param val: value to split
     :type val:
-    :param split_on_coma:
-    :type split_on_coma: bool
-    :return: list with split member on comma
+    :param split_on_comma:
+    :type split_on_comma: bool
+    :return: list with members split on comma
     :rtype: list
 
     >>> list_split(['a,b,c'], False)
@@ -440,12 +381,11 @@ def list_split(val, split_on_coma=True):
     []
 
     """
-    if not split_on_coma:
+    if not split_on_comma:
         return val
     new_val = []
     for subval in val:
-        # This happens when re-serializing
-        # TODO: Do not pythonize on re-serialization
+        # This may happen when re-serializing
         if isinstance(subval, list):
             continue
         new_val.extend(subval.split(','))
@@ -491,7 +431,7 @@ def to_bool(val):
     return val in ['1', 'on', 'true', 'True']
 
 
-def from_bool_to_string(boolean):  # pragma: no cover, to be deprectaed?
+def from_bool_to_string(boolean):  # pragma: no cover, to be deprecated?
     """Convert a bool to a string representation
 
     :param boolean: bool to convert
@@ -505,7 +445,7 @@ def from_bool_to_string(boolean):  # pragma: no cover, to be deprectaed?
     return '0'
 
 
-def from_bool_to_int(boolean):  # pragma: no cover, to be deprectaed?
+def from_bool_to_int(boolean):  # pragma: no cover, to be deprecated?
     """Convert a bool to a int representation
 
     :param boolean: bool to convert
@@ -519,7 +459,7 @@ def from_bool_to_int(boolean):  # pragma: no cover, to be deprectaed?
     return 0
 
 
-def from_list_to_split(val):  # pragma: no cover, to be deprectaed?
+def from_list_to_split(val):  # pragma: no cover, to be deprecated?
     """Convert list into a comma separated string
 
     :param val: value to convert
@@ -531,7 +471,7 @@ def from_list_to_split(val):  # pragma: no cover, to be deprectaed?
     return val
 
 
-def from_float_to_int(val):  # pragma: no cover, to be deprectaed?
+def from_float_to_int(val):  # pragma: no cover, to be deprecated?
     """Convert float to int
 
     :param val: value to convert
@@ -548,8 +488,20 @@ def from_float_to_int(val):  # pragma: no cover, to be deprectaed?
 # ref is the item like a service, and value
 # if the value to preprocess
 
-def to_list_string_of_names(ref, tab):  # pragma: no cover, to be deprectaed?
-    #  pylint: disable=W0613
+def brok_last_time(ref, val):
+    """Convert float to int
+
+    :param ref: Not used
+    :type ref:
+    :param val: value to convert
+    :type val: float
+    :return: int(val)
+    :rtype: int
+    """
+    return int(val)
+
+
+def to_list_string_of_names(ref, tab):  # pragma: no cover, to be deprecated?
     """Convert list into a comma separated list of element name
 
     :param ref: Not used
@@ -562,9 +514,11 @@ def to_list_string_of_names(ref, tab):  # pragma: no cover, to be deprectaed?
     return ",".join([e.get_name() for e in tab])
 
 
-def from_set_to_list(ref, tab):  # pragma: no cover, to be deprectaed?
-    #  pylint: disable=W0613
-    """Convert set into a list of element name
+# Functions for retention storage / restoration
+def from_set_to_list(ref, tab):
+    """Convert set into a list
+
+    Used for the retention store
 
     :param ref: Not used
     :type ref:
@@ -576,8 +530,100 @@ def from_set_to_list(ref, tab):  # pragma: no cover, to be deprectaed?
     return list(tab)
 
 
-def to_name_if_possible(ref, value):  # pragma: no cover, to be deprectaed?
-    #  pylint: disable=W0613
+def from_list_to_set(ref, tab):
+    """Convert list to a set
+
+    Used for the retention restore
+
+    :param ref: Not used
+    :type ref:
+    :param tab: list to parse
+    :type tab: list
+    :return: list of names
+    :rtype: list
+    """
+    return set(tab)
+
+
+def to_serialized(ref, the_data):
+    """Serialize the property
+
+    Used for the retention store
+
+    :param ref: Not used
+    :type ref:
+    :param the_data: dictionary to convert
+    :type the_data: dict
+    :return: serialized data
+    :rtype: dict
+    """
+    if not the_data:
+        return {}
+    if not getattr(the_data, 'serialize', None):
+        return the_data
+    return the_data.serialize()
+
+
+def from_serialized(ref, the_data):
+    """Unserialize the element
+
+    Used for the retention store
+
+    :param ref: Not used
+    :type ref:
+    :param the_data: dictionary to convert
+    :type the_data: dict
+    :return: serialized data
+    :rtype: dict
+    """
+    if not the_data:
+        return {}
+    if not getattr(the_data, 'unserialize', None):
+        return the_data
+    return the_data.unserialize()
+
+
+def dict_to_serialized_dict(ref, the_dict):
+    """Serialize the list of elements to a dictionary
+
+    Used for the retention store
+
+    :param ref: Not used
+    :type ref:
+    :param the_dict: dictionary to convert
+    :type the_dict: dict
+    :return: dict of serialized
+    :rtype: dict
+    """
+    result = {}
+    for elt in list(the_dict.values()):
+        if not getattr(elt, 'serialize', None):
+            continue
+        result[elt.uuid] = elt.serialize()
+    return result
+
+
+def list_to_serialized(ref, the_list):
+    """Serialize the list of elements
+
+    Used for the retention store
+
+    :param ref: Not used
+    :type ref:
+    :param the_list: dictionary to convert
+    :type the_list: dict
+    :return: dict of serialized
+    :rtype: dict
+    """
+    result = []
+    for elt in the_list:
+        if not getattr(elt, 'serialize', None):
+            continue
+        result.append(elt.serialize())
+    return result
+
+
+def to_name_if_possible(ref, value):  # pragma: no cover, to be deprecated?
     """Try to get value name (call get_name method)
 
     :param ref: Not used
@@ -592,8 +638,7 @@ def to_name_if_possible(ref, value):  # pragma: no cover, to be deprectaed?
     return ''
 
 
-def to_hostnames_list(ref, tab):  # pragma: no cover, to be deprectaed?
-    #  pylint: disable=W0613
+def to_hostnames_list(ref, tab):  # pragma: no cover, to be deprecated?
     """Convert Host list into a list of  host_name
 
     :param ref: Not used
@@ -610,8 +655,7 @@ def to_hostnames_list(ref, tab):  # pragma: no cover, to be deprectaed?
     return res
 
 
-def to_svc_hst_distinct_lists(ref, tab):  # pragma: no cover, to be deprectaed?
-    # pylint: disable=W0613
+def to_svc_hst_distinct_lists(ref, tab):  # pragma: no cover, to be deprecated?
     """create a dict with 2 lists::
 
     * services: all services of the tab
@@ -635,22 +679,7 @@ def to_svc_hst_distinct_lists(ref, tab):  # pragma: no cover, to be deprectaed?
     return res
 
 
-def get_obj_name(obj):
-    """Get object name (call get_name) if not a string
-
-    :param obj: obj we want the name
-    :type obj: object
-    :return: object name
-    :rtype: str
-    """
-    # Maybe we do not have a real object but already a string. If so
-    # return the string
-    if isinstance(obj, basestring):
-        return obj
-    return obj.get_name()
-
-
-def get_obj_name_two_args_and_void(obj, value):  # pylint: disable=W0613
+def get_obj_name_two_args_and_void(obj, value):
     """Get value name (call get_name) if not a string
 
     :param obj: Not used
@@ -666,106 +695,46 @@ def get_obj_name_two_args_and_void(obj, value):  # pylint: disable=W0613
         return ''
 
 
-def get_obj_full_name(obj):
-    """Wrapper to call obj.get_full_name or obj.get_name
-
-    :param obj: object name
-    :type obj: object
-    :return: object name
-    :rtype: str
-    """
-    try:
-        return obj.get_full_name()
-    except AttributeError:
-        return obj.get_name()
-
-
-def get_customs_keys(dic):  # pragma: no cover, to be deprectaed?
-    """Get a list of keys of the custom dict
-    without the first char
-
-    Used for macros (_name key)
-
-    :param dic: dict to parse
-    :type dic: dict
-    :return: list of keys
-    :rtype: list
-    """
-    return [k[1:] for k in dic.keys()]
-
-
-def get_customs_values(dic):  # pragma: no cover, to be deprectaed?
-    """Wrapper for values() method
-
-    :param dic: dict
-    :type dic: dict
-    :return: dic.values
-    :rtype:
-    TODO: Remove it?
-    """
-    return dic.values()
-
-
 def unique_value(val):
-    """Get last elem of val if it is a list
-    Else return val
+    """Get last element of a value if it is a list else returns the value
+
     Used in parsing, if we set several time a parameter we only take the last one
 
     :param val: val to edit
     :type val:
     :return: single value
     :rtype: str
-    TODO: Raise error/warning instead of silently removing something
     """
-    if isinstance(val, list):
-        if val:
-            return val[-1]
-
-        return ''
-
-    return val
+    return val if not isinstance(val, list) else val[-1]
 
 
 # ##################### Sorting ################
-def alive_then_spare_then_deads(sat1, sat2):
-    """Compare two satellite link
-    based on alive attribute then spare attribute
+def master_then_spare(data):
+    """Return the provided satellites list sorted as:
+        - alive first,
+        - then spare
+        - then dead
+        satellites.
 
-    :param sat1: first link to compare
-    :type sat1:
-    :param sat2: second link to compare
-    :type sat2:
-    :return: sat1 > sat2 (1) if sat1 alive and not sat2 or both alive but sat1 not spare
-             sat1 == sat2 (0) if both alive and spare
-             sat1 < sat2 (-1) else
-    :rtype: int
+    :param data: the SatelliteLink list
+    :type data: list
+    :return: sorted list
+    :rtype: list
     """
-    if sat1.alive == sat2.alive and sat1.spare == sat2.spare:
-        return 0
-    if not sat2.alive or (sat2.alive and sat2.spare and sat1.alive):
-        return -1
-    return 1
+    master = []
+    spare = []
+    for sdata in data:
+        if sdata.spare:
+            spare.append(sdata)
+        else:
+            master.append(sdata)
+    rdata = []
+    rdata.extend(master)
+    rdata.extend(spare)
+    return rdata
 
 
-def sort_by_ids(x00, y00):
-    """Compare x00, y00 base on their id
-
-    :param x00: first elem to compare
-    :type x00: int
-    :param y00: second elem to compare
-    :type y00: int
-    :return: x00 > y00 (1) if x00.uuid > y00.uuid, x00 == y00 (0) if id equals, x00 < y00 (-1) else
-    :rtype: int
-    """
-    if x00.uuid < y00.uuid:
-        return -1
-    if x00.uuid > y00.uuid:
-        return 1
-    # So is equal
-    return 0
-
-
-def sort_by_number_values(x00, y00):
+def sort_by_number_values(x00, y00):  # pragma: no cover, looks like not used!
     """Compare x00, y00 base on number of values
 
     :param x00: first elem to compare
@@ -783,6 +752,7 @@ def sort_by_number_values(x00, y00):
     return 0
 
 
+# ##################### Statistics ################
 def average_percentile(values):
     """
     Get the average, min percentile (5%) and
@@ -793,33 +763,30 @@ def average_percentile(values):
     :return: tuple containing average, min and max value
     :rtype: tuple
     """
-    length = len(values)
-
-    if length == 0:
+    if not values:
         return None, None, None
 
-    value_avg = round(float(sum(values)) / length, 2)
-    # pylint: disable=E1101
-    value_max = round(np.percentile(values, 95), 2)
-    value_min = round(np.percentile(values, 5), 2)
+    value_avg = round(float(sum(values)) / len(values), 2)
+    value_max = round(percentile(values, 95), 2)
+    value_min = round(percentile(values, 5), 2)
     return value_avg, value_min, value_max
 
 
 # #################### Cleaning ##############
 def strip_and_uniq(tab):
-    """Strip every element of a list and keep unique values
+    """Strip every element of a list and keep a list of ordered unique values
 
     :param tab: list to strip
     :type tab: list
     :return: stripped list with unique values
     :rtype: list
     """
-    new_tab = set()
+    _list = []
     for elt in tab:
         val = elt.strip()
-        if val != '':
-            new_tab.add(val)
-    return list(new_tab)
+        if val and val not in _list:
+            _list.append(val)
+    return _list
 
 
 # ################### Pattern change application (mainly for host) #######
@@ -935,7 +902,7 @@ def generate_key_value_sequences(entry, default_value):
 # Return callback functions which are passed host or service instances, and
 # should return a boolean value that indicates if the instance matched the
 # filter
-def filter_any(name):  # pylint: disable=W0613
+def filter_any(ref):
     """Filter for host
     Filter nothing
 
@@ -945,24 +912,22 @@ def filter_any(name):  # pylint: disable=W0613
     :rtype: bool
     """
 
-    def inner_filter(items):  # pylint: disable=W0613
+    def inner_filter(items):
         """Inner filter for host. Accept all"""
         return True
 
     return inner_filter
 
 
-def filter_none(name):  # pylint: disable=W0613
+def filter_none(ref):
     """Filter for host
     Filter all
 
-    :param name: name to filter
-    :type name: str
     :return: Filter
     :rtype: bool
     """
 
-    def inner_filter(items):  # pylint: disable=W0613
+    def inner_filter(items):
         """Inner filter for host. Accept nothing"""
         return False
 
@@ -1274,55 +1239,110 @@ def is_complex_expr(expr):
 def parse_daemon_args(arbiter=False):
     """Generic parsing function for daemons
 
+    All daemons:
+        '-n', "--name": Set the name of the daemon to pick in the configuration files.
+        This allows an arbiter to find its own configuration in the whole Alignak configuration
+        Using this parameter is mandatory for all the daemons except for the arbiter
+        (defaults to arbiter-master). If several arbiters are existing in the
+        configuration this will allow to determine which one is the master/spare.
+        The spare arbiter must be launched with this parameter!
+
+        '-e', '--environment': Alignak environment file - the most important and mandatory
+        parameter to define the name of the alignak.ini configuration file
+
+        '-c', '--config': Daemon configuration file (ini file) - deprecated!
+        '-d', '--daemon': Run as a daemon
+        '-r', '--replace': Replace previous running daemon
+        '-f', '--debugfile': File to dump debug logs.
+
+        These parameters allow to override the one defined in the Alignak configuration file:
+            '-o', '--host': interface the daemon will listen to
+            '-p', '--port': port the daemon will listen to
+
+            '-l', '--log_file': set the daemon log file name
+            '-i', '--pid_file': set the daemon pid file name
+
     Arbiter only:
             "-a", "--arbiter": Monitored configuration file(s),
             (multiple -a can be used, and they will be concatenated to make a global configuration
-            file)
+            file) - Note that this parameter is not necessary anymore
             "-V", "--verify-config": Verify configuration file(s) and exit
-            "-n", "--config-name": Set the name of the arbiter to pick in the configuration files.
-            This allows an arbiter to find its own configuration in the whole Alignak configuration
-            Using this parameter is mandatory when several arbiters are existing in the
-            configuration to determine which one is the master/spare. The spare arbiter must be
-            launched with this parameter!
 
-    All daemons:
-        '-c', '--config': Daemon configuration file (ini file)
-        '-d', '--daemon': Run as a daemon
-        '-r', '--replace': Replace previous running daemon
-        '-f', '--debugfile': File to dump debug logs
 
 
     :param arbiter: Do we parse args for arbiter?
     :type arbiter: bool
     :return: args
     """
-    parser = argparse.ArgumentParser(version='%(prog)s ' + VERSION)
+    parser = argparse.ArgumentParser(description="Alignak daemon launching",
+                                     epilog="And that's it!")
     if arbiter:
-        parser.add_argument('-a', '--arbiter', action='append', required=True,
-                            dest='monitoring_files',
-                            help='Monitored configuration file(s), '
-                                 '(multiple -a can be used, and they will be concatenated '
-                                 'to make a global configuration file)')
-        parser.add_argument('-V', '--verify-config', dest='verify_only', action='store_true',
-                            help='Verify configuration file(s) and exit')
-        parser.add_argument('-k', '--alignak-name', dest='alignak_name',
-                            default='arbiter-master',
-                            help='Set the name of the arbiter to pick in the configuration files '
-                                 'For a spare arbiter, this parameter must contain its name!')
+        parser.add_argument('-a', '--arbiter', action='append',
+                            dest='legacy_cfg_files',
+                            help='Legacy configuration file(s). '
+                                 'This option is still available but is is preferable to declare '
+                                 'the Nagios-like objects files in the alignak-configuration '
+                                 'section of the environment file specified with the -e option.'
+                                 'Multiple -a can be used to include several configuration files.')
 
-    parser.add_argument('-n', '--name', dest='daemon_name',
-                        help='Daemon unique name. Must be unique for the same daemon type.')
+        parser.add_argument('-V', '--verify-config', dest='verify_only', action='store_true',
+                            help='Verify the configuration file(s) and exit')
+
+        parser.add_argument('-k', '--alignak-name', dest='alignak_name',
+                            default='My Alignak',
+                            help='Set the name of the Alignak instance. If not set, the arbiter '
+                                 'name will be used in place. Note that if an alignak_name '
+                                 'variable is defined in the configuration, it will overwrite '
+                                 'this parameter. '
+                                 'For a spare arbiter, this parameter must contain its name!')
+        parser.add_argument('-n', '--name', dest='daemon_name',
+                            default='arbiter-master',
+                            help='Daemon unique name. Must be unique for the same daemon type.')
+    else:
+        parser.add_argument('-n', '--name', dest='daemon_name', required=True,
+                            help='Daemon unique name. Must be unique for the same daemon type.')
+
     parser.add_argument('-c', '--config', dest='config_file',
-                        help='Daemon configuration file')
-    parser.add_argument('-d', '--daemon', dest='is_daemon', action='store_true',
-                        help='Run as a daemon')
-    parser.add_argument('-r', '--replace', dest='do_replace', action='store_true',
-                        help='Replace previous running daemon')
-    parser.add_argument('-f', '--debugfile', dest='debug_file',
-                        help='File to dump debug logs')
+                        help='Daemon configuration file. '
+                             'Deprecated parameter, do not use it anymore!')
+
+    parser.add_argument('-d', '--daemon', dest='is_daemon', default=False, action='store_true',
+                        help='Run as a daemon. Fork the launched process and daemonize.')
+
+    parser.add_argument('-r', '--replace', dest='do_replace', default=False, action='store_true',
+                        help='Replace previous running daemon if any pid file is found.')
+
+    parser.add_argument('-vv', '--debug', dest='debug', default=False, action='store_true',
+                        help='Set log level to debug mode (DEBUG)')
+
+    parser.add_argument('-v', '--verbose', dest='verbose', default=False, action='store_true',
+                        help='Set log level to verbose mode (INFO)')
+
+    parser.add_argument('-o', '--host', dest='host',
+                        help='Host interface used by the daemon. '
+                             'Default is 0.0.0.0 (all interfaces).')
+
     parser.add_argument('-p', '--port', dest='port',
-                        help='Port used by the daemon')
-    parser.add_argument('-l', '--local_log', dest='local_log',
-                        help='File to use for daemon log')
+                        help='Port used by the daemon. '
+                             'Default is set according to the daemon type.')
+
+    parser.add_argument('-l', '--log_file', dest='log_filename',
+                        help='File used for the daemon log. Set as empty to disable log file.')
+
+    parser.add_argument('-i', '--pid_file', dest='pid_filename',
+                        help='File used to store the daemon pid')
+
+    parser.add_argument('-e', '--environment', dest='env_file', required=True,
+                        default='../../etc/alignak.ini',
+                        help='Alignak global environment file. '
+                             'This file defines all the daemons of this Alignak '
+                             'instance and their configuration. Each daemon configuration '
+                             'is defined in a specifc section of this file.')
+
+    # parser.add_argument('env_file',
+    #                     help='Alignak global environment file. '
+    #                          'This file defines all the daemons of this Alignak '
+    #                          'instance and their configuration. Each daemon configuration '
+    #                          'is defined in a specifc section of this file.')
 
     return parser.parse_args()

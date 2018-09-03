@@ -1,28 +1,41 @@
-# CherryPy >= 5.1.0 and PyOpenssl == 0.14 (16 seems broken) are required for proper HTTPS setup
-# They are not added as hard dependencies here so that packaging works fine
-# CherryPy is not packaged anymore since v3.5XX so we let it as is.
-# Keep a CherryPy lower than 9.0 because WSGIServer is not more shipped with CherryPy
-CherryPy<9.0.0
+# Application deployment requirements
+# Including dependencies version which Alignak was tested with
+# ----------
+# It is important to set a version for the Python packages; this will make sure on a
+# production server that the expected versions are those installed
+# ----------
+# More about this: https://packaging.python.org/discussions/install-requires-vs-requirements/#install-requires-vs-requirements-files
+# ----------
+
+# This is an implicit value, here for clarity
+# --index-url https://pypi.python.org/simple/
+
+# Still needing future for the CarbonIFace lib and some other stuff (queues, ...)
+# Needing six for python 2.7/3 compatibility
+future
+six
+
+# Alignak supports a recent CherryPy
+CherryPy==15.0.0
 
 # Requests to communicate between the daemons
-# Version <=2.14.2 else some tests using requests-mock are broken with the 2.16.0 version
-requests>=2.7.0,<=2.14.2
+requests==2.18.4
 
 # importlib is used to import modules used by the daemons
-importlib
+importlib; python_version == '2.7'
 
-# colored console log
-termcolor
+# Colored console log
+termcolor==1.1.0
 
 # Set process titles
-setproctitle
+setproctitle==1.1.10
 
 # ujson is used for the internal objects serialization
-ujson
+ujson==1.35
 
-# numpy for date and percentile computation
-numpy<1.12.0; python_version < '2.7'
-numpy; python_version >= '2.7'
+# numpy for date and percentile computation - needs a compiler on the installation target system!
+# Comment to use an internal implementation of percentile function
+numpy==1.14.3
 
 # SSL between the daemons
 # This requirement is only a requirement if you intend to use SLL for the inter-daemons
@@ -30,9 +43,12 @@ numpy; python_version >= '2.7'
 # Uncomment or `pip install pyopenssl` if SSL must be used between the Alignak daemons
 # pyopenssl
 
+# configparser is used to parse the main configuration file
+configparser; python_version == '2.7'
 # docopt is used by the alignak_environment script
 docopt
 
 # Use psutil for daemons memory monitoring (env ALIGNAK_DAEMONS_MONITORING)
-# Use psutil for scheduler TEST_LOG_MONITORING
-psutil
+# Use psutil for scheduler ALIGNAK_LOG_MONITORING
+# Use psutil for launching daemons from the Arbiter
+psutil==5.4.5

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -47,7 +47,7 @@
 """
 
 
-class Message:
+class Message(object):
     """This is a simple message class for communications between actionners and workers"""
 
     # Auto generated identifiers
@@ -91,7 +91,7 @@ class Message:
         """
         return self._source
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         """String representation of message
 
         :return: source - id, type: %s, data: %s

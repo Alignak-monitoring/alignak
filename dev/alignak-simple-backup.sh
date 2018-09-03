@@ -1,7 +1,7 @@
 #!/bin/sh
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -67,7 +67,7 @@ fi
 
 ## Backup alignak-libexec directory
 if [ -d "/usr/local/var/libexec/alignak" ]; then
-   echo "Backing-up /usr/local/etc/alignak libexec..."
+   echo "Backing-up /usr/local/var/libexec/alignak libexec..."
    cd /usr/local/var/libexec/alignak
    tar czf $ALIGNAK_BACKUP_DIR/$NOW-alignak-libexec.tar.gz .
 fi
