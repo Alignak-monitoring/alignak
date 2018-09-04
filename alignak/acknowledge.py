@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -52,33 +52,44 @@ implements acknowledgment for notification. Basically used for parsing.
 
 from alignak.brok import Brok
 from alignak.alignakobject import AlignakObject
+from alignak.property import BoolProp, IntegerProp, StringProp
 
 
 class Acknowledge(AlignakObject):  # pylint: disable=R0903
     """
     Allows you to acknowledge the current problem for the specified service.
     By acknowledging the current problem, future notifications (for the same
-    servicestate) are disabled.
+    service state) are disabled.
+
+    If the acknowledge is "sticky", the acknowledgement will remain until
+    the service returns to an OK state. Otherwise the acknowledgement will automatically
+    be removed when the service state changes.
+
+    If the acknowledge is "notify", a notification will be sent out to contacts
+    indicating that the current service problem has been acknowledged and when the
+    acknowledge is cleared.
     """
 
+    my_type = 'acknowledge'
     properties = {
-        'uuid': None,
-        'sticky': None,
-        'notify': None,
-        'end_time': None,
-        'author': None,
-        'comment': None,
-        'comment_id': str
+        'sticky':
+            BoolProp(default=True),
+        'notify':
+            BoolProp(default=False),
+        'end_time':
+            IntegerProp(default=0),
+        'author':
+            StringProp(default=u'Alignak'),
+        'comment':
+            StringProp(default=u''),
+        'comment_id':
+            StringProp(default=u'')
     }
-    # If the "sticky" option is set to one (1), the acknowledgement
-    # will remain until the service returns to an OK state. Otherwise
-    # the acknowledgement will automatically be removed when the
-    # service changes state. In this case Web interfaces set a value
-    # of (2).
-    #
-    # If the "notify" option is set to one (1), a notification will be
-    # sent out to contacts indicating that the current service problem
-    # has been acknowledged.
+
+    def __init__(self, params=None, parsing=False):
+        super(Acknowledge, self).__init__(params, parsing=parsing)
+
+        self.fill_default()
 
     def serialize(self):
         """This function serialize into a simple dict object.
@@ -106,8 +117,7 @@ class Acknowledge(AlignakObject):  # pylint: disable=R0903
         if service_name != '':
             data['service'] = service_name
 
-        brok = Brok({'type': 'acknowledge_raise', 'data': data})
-        return brok
+        return Brok({'type': 'acknowledge_raise', 'data': data})
 
     def get_expire_brok(self, host_name, service_name=''):
         """Get an expire acknowledge brok
@@ -121,5 +131,4 @@ class Acknowledge(AlignakObject):  # pylint: disable=R0903
         if service_name != '':
             data['service'] = service_name
 
-        brok = Brok({'type': 'acknowledge_expire', 'data': data})
-        return brok
+        return Brok({'type': 'acknowledge_expire', 'data': data})

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -49,15 +49,18 @@ Brok are filled depending on their type (check_result, initial_state ...)
 
 """
 import time
-import uuid
-import warnings
+from datetime import datetime
 
-from alignak.misc.serialization import serialize, unserialize, AlignakClassLookupException
+from alignak.alignakobject import get_a_new_object_id
+from alignak.misc.serialization import serialize, unserialize
 
 
 class Brok(object):
     """A Brok is a piece of information exported by Alignak to the Broker.
     Broker can do whatever he wants with it.
+
+    A specific type of Brok exists when the type is monitoring_log. This Brok contains
+    a monitoring event (alert, notification, ...) information
 
     Broks types:
     - log
@@ -86,25 +89,42 @@ class Brok(object):
     my_type = 'brok'
 
     def __init__(self, params, parsing=True):
-        if not parsing:
-            if params is None:
-                return
-            for key, value in params.iteritems():
-                setattr(self, key, value)
-
-            if not hasattr(self, 'uuid'):
-                self.uuid = uuid.uuid4().hex
-            return
-        self.uuid = params.get('uuid', uuid.uuid4().hex)
-        self.type = params['type']
+        # pylint: disable=unused-argument
+        """
+        :param params: initialization parameters
+        :type params: dict
+        :param parsing: not used but necessary for serialization/unserialization
+        :type parsing: bool
+        """
+        self.uuid = params.get('uuid', get_a_new_object_id())
+        self.prepared = params.get('prepared', False)
+        self.creation_time = params.get('creation_time', time.time())
+        self.type = params.get('type', u'unknown')
         self.instance_id = params.get('instance_id', None)
-        # Again need to behave differently when un-serializing
+
+        # Need to behave differently when un-serializing
         if 'uuid' in params:
             self.data = params['data']
         else:
             self.data = serialize(params['data'])
-        self.prepared = params.get('prepared', False)
-        self.creation_time = params.get('creation_time', time.time())
+
+    def __repr__(self):
+        ct = datetime.fromtimestamp(self.creation_time).strftime("%Y-%m-%d %H:%M:%S.%f")
+        return "Brok %s (%s) '%s': %s" % (self.uuid, ct, self.type, self.data)
+    __str__ = __repr__
+
+    def get_event(self):
+        """This function returns an Event from a Brok
+
+        If the type is monitoring_log then the Brok contains a monitoring event
+        (alert, notification, ...) information. This function will return a tuple
+        with the creation time, the level and message information
+
+        :return: tuple with date, level and message
+        :rtype: tuple
+        """
+        self.prepare()
+        return (self.creation_time, self.data['level'], self.data['message'])
 
     def serialize(self):
         """This function serialize into a simple dict object.
@@ -115,45 +135,21 @@ class Brok(object):
         :return: json representation of a Brok
         :rtype: dict
         """
-        return {"type": self.type, "instance_id": self.instance_id, "data": self.data,
-                "prepared": self.prepared, "creation_time": self.creation_time, "uuid": self.uuid}
-
-    def __str__(self):
-        return str(self.__dict__) + '\n'
-
-    @property
-    def id(self):  # pragma: no cover, should never happen...
-        # pylint: disable=C0103
-        """Getter for id, raise deprecation warning
-        :return: self.uuid
-        """
-        warnings.warn("Access to deprecated attribute id %s class" % self.__class__,
-                      DeprecationWarning, stacklevel=2)
-        return self.uuid
-
-    @id.setter
-    def id(self, value):  # pragma: no cover, should never happen...
-        # pylint: disable=C0103
-        """Setter for id, raise deprecation warning
-        :param value: value to set
-        :return: None
-        """
-        warnings.warn("Access to deprecated attribute id of %s class" % self.__class__,
-                      DeprecationWarning, stacklevel=2)
-        self.uuid = value
+        return {
+            "uuid": self.uuid, "type": self.type, "instance_id": self.instance_id,
+            "prepared": self.prepared, "creation_time": self.creation_time,
+            "data": self.data
+        }
 
     def prepare(self):
         """Un-serialize data from data attribute and add instance_id key if necessary
 
         :return: None
         """
-        # Maybe the brok is a old daemon one or was already prepared
+        # Maybe the Brok is a old daemon one or was already prepared
         # if so, the data is already ok
         if hasattr(self, 'prepared') and not self.prepared:
-            try:
-                self.data = unserialize(self.data)
-            except AlignakClassLookupException:  # pragma: no cover, should never happen...
-                raise
+            self.data = unserialize(self.data)
             if self.instance_id:
                 self.data['instance_id'] = self.instance_id
         self.prepared = True

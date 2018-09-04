@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -44,7 +44,7 @@ This module provide BrokerLink and BrokerLinks classes used to manage brokers
 """
 
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
-from alignak.property import IntegerProp, StringProp
+from alignak.property import IntegerProp, StringProp, BoolProp
 
 
 class BrokerLink(SatelliteLink):
@@ -54,17 +54,31 @@ class BrokerLink(SatelliteLink):
     my_type = 'broker'
     properties = SatelliteLink.properties.copy()
     properties.update({
-        'broker_name': StringProp(fill_brok=['full_status'], to_send=True),
-        'port': IntegerProp(default=7772, fill_brok=['full_status']),
+        'type':
+            StringProp(default=u'broker', fill_brok=['full_status'], to_send=True),
+        'broker_name':
+            StringProp(default='', fill_brok=['full_status']),
+        'port':
+            IntegerProp(default=7772, fill_brok=['full_status'], to_send=True),
+        'initialized':
+            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
     })
 
-    def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
-        """
-        Add this broker to the realm
+    def prepare_for_conf(self):
+        """Initialize the pushed configuration dictionary
+        with the inner properties that are to be propagated to the satellite link.
 
         :return: None
         """
-        self.realm.brokers.append(self)
+        super(BrokerLink, self).prepare_for_conf()
+
+        self.cfg.update({
+            'satellites': {
+                'receivers': {},
+                'pollers': {},
+                'reactionners': {}
+            }
+        })
 
 
 class BrokerLinks(SatelliteLinks):

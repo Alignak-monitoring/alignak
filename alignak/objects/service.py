@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -77,14 +77,13 @@ from alignak.objects.schedulingitem import SchedulingItem, SchedulingItems
 from alignak.autoslots import AutoSlots
 from alignak.util import (
     strip_and_uniq,
-    format_t_into_dhms_format,
     generate_key_value_sequences,
     is_complex_expr,
     KeyValueSyntaxError)
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, CharProp
 from alignak.log import make_monitoring_log
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Service(SchedulingItem):
@@ -96,7 +95,7 @@ class Service(SchedulingItem):
     __metaclass__ = AutoSlots
 
     # The host and service do not have the same 0 value, now yes :)
-    ok_up = 'OK'
+    ok_up = u'OK'
     # used by item class for format specific value like for Broks
     my_type = 'service'
 
@@ -110,7 +109,7 @@ class Service(SchedulingItem):
     properties = SchedulingItem.properties.copy()
     properties.update({
         'alias':
-            StringProp(default=''),
+            StringProp(default=u'', fill_brok=['full_status']),
         'host_name':
             StringProp(fill_brok=['full_status', 'check_result', 'next_schedule'], special=True),
         'hostgroup_name':
@@ -125,10 +124,10 @@ class Service(SchedulingItem):
             StringProp(fill_brok=['full_status']),
         'flap_detection_options':
             ListProp(default=['o', 'w', 'c', 'u', 'x'], fill_brok=['full_status'],
-                     split_on_coma=True),
+                     split_on_comma=True),
         'notification_options':
             ListProp(default=['w', 'u', 'c', 'r', 'f', 's', 'x'],
-                     fill_brok=['full_status'], split_on_coma=True),
+                     fill_brok=['full_status'], split_on_comma=True),
         'parallelize_check':
             BoolProp(default=True, fill_brok=['full_status']),
         'merge_host_contacts':
@@ -142,7 +141,7 @@ class Service(SchedulingItem):
 
         # Easy Service dep definition
         'service_dependencies':
-            ListProp(default=[], merging='join', split_on_coma=True, keep_empty=True),
+            ListProp(default=[], merging='join', split_on_comma=True, keep_empty=True),
 
         # service generator
         'duplicate_foreach':
@@ -161,7 +160,7 @@ class Service(SchedulingItem):
     running_properties = SchedulingItem.running_properties.copy()
     running_properties.update({
         'state':
-            StringProp(default='OK',
+            StringProp(default=u'OK',
                        fill_brok=['full_status', 'check_result'], retention=True),
         'last_time_ok':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
@@ -175,10 +174,7 @@ class Service(SchedulingItem):
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'host':
             StringProp(default=None),
-        'state_before_hard_unknown_reach_phase': StringProp(default='OK', retention=True),
-
-
-
+        'state_before_hard_unknown_reach_phase': StringProp(default=u'OK', retention=True),
     })
 
     special_properties = (
@@ -215,6 +211,7 @@ class Service(SchedulingItem):
         'LASTSERVICEOK':          'last_time_ok',
         'LASTSERVICEWARNING':     'last_time_warning',
         'LASTSERVICEUNKNOWN':     'last_time_unknown',
+        'LASTSERVICEUNREACHABLE': 'last_time_unreachable',
         'LASTSERVICECRITICAL':    'last_time_critical',
         'SERVICEOUTPUT':          'output',
         'LONGSERVICEOUTPUT':      'long_output',
@@ -241,6 +238,61 @@ class Service(SchedulingItem):
         'hostgroups':    'hostgroup_name',
     })
 
+    def __str__(self):  # pragma: no cover
+        return '<Service %s, uuid=%s, %s (%s), use: %s />' \
+               % (self.get_full_name(), self.uuid, self.state, self.state_type,
+                  getattr(self, 'use', None))
+    __repr__ = __str__
+
+    @property
+    def realm(self):
+        """Get the service realm... indeed it is the service's host one!"""
+        if not getattr(self, 'host', None):
+            return None
+        return self.host.realm
+
+    @property
+    def overall_state_id(self):
+        """Get the service overall state.
+
+        The service overall state identifier is the service status including:
+        - the monitored state
+        - the acknowledged state
+        - the downtime state
+
+        The overall state is (prioritized):
+        - a service is not monitored (5)
+        - a service critical or unreachable (4)
+        - a service warning or unknown (3)
+        - a service downtimed (2)
+        - a service acknowledged (1)
+        - a service ok (0)
+
+        *Note* that services in unknown state are considered as warning, and unreachable ones
+        are considered as critical!
+
+        Also note that the service state is considered only for HARD state type!
+
+        """
+        overall_state = 0
+        if not self.monitored:
+            overall_state = 5
+        elif self.acknowledged:
+            overall_state = 1
+        elif self.downtimed:
+            overall_state = 2
+        elif self.state_type == 'HARD':
+            if self.state == 'WARNING':
+                overall_state = 3
+            elif self.state == 'CRITICAL':
+                overall_state = 4
+            elif self.state == 'UNKNOWN':
+                overall_state = 3
+            elif self.state == 'UNREACHABLE':
+                overall_state = 4
+
+        return overall_state
+
 #######
 #                   __ _                       _   _
 #                  / _(_)                     | | (_)
@@ -258,22 +310,13 @@ class Service(SchedulingItem):
         :return: None
         """
         if self.initial_state == 'w':
-            self.state = 'WARNING'
+            self.state = u'WARNING'
         elif self.initial_state == 'u':
-            self.state = 'UNKNOWN'
+            self.state = u'UNKNOWN'
         elif self.initial_state == 'c':
-            self.state = 'CRITICAL'
+            self.state = u'CRITICAL'
         elif self.initial_state == 'x':
-            self.state = 'UNREACHABLE'
-
-    def __repr__(self):
-        return '<Service host_name=%r desc=%r name=%r use=%r />' % (
-            getattr(self, 'host_name', None),
-            getattr(self, 'service_description', None),
-            getattr(self, 'name', None),
-            getattr(self, 'use', None)
-        )
-    __str__ = __repr__
+            self.state = u'UNREACHABLE'
 
     @property
     def unique_key(self):  # actually only used for (un)indexitem() via name_property..
@@ -282,7 +325,7 @@ class Service(SchedulingItem):
         :return: Tuple with host_name and service_description
         :rtype: tuple
         """
-        return (self.host_name, self.service_description)
+        return self.host_name, self.service_description
 
     @property
     def display_name(self):
@@ -317,6 +360,18 @@ class Service(SchedulingItem):
             return self.name
         return 'SERVICE-DESCRIPTION-MISSING'
 
+    def get_full_name(self):
+        """Get the full name for debugging (host_name/service_description)
+
+        :return: service full name
+        :rtype: str
+        """
+        if self.is_tpl():
+            return "tpl-%s/%s" % (getattr(self, 'host_name', 'XxX'), self.name)
+        if hasattr(self, 'host_name') and hasattr(self, 'service_description'):
+            return "%s/%s" % (self.host_name, self.service_description)
+        return 'UNKNOWN-SERVICE'
+
     def get_servicegroups(self):
         """Accessor to servicegroups attribute
 
@@ -332,16 +387,6 @@ class Service(SchedulingItem):
         :rtype: str
         """
         return ','.join([sgs[sg].get_name() for sg in self.servicegroups])
-
-    def get_full_name(self):
-        """Get the full name for debugging (host_name/service_description)
-
-        :return: service full name
-        :rtype: str
-        """
-        if self.host_name and hasattr(self, 'service_description'):
-            return "%s/%s" % (self.host_name, self.service_description)
-        return 'UNKNOWN-SERVICE'
 
     def get_hostgroups(self, hosts):
         """Wrapper to access hostgroups attribute of host attribute
@@ -378,33 +423,39 @@ class Service(SchedulingItem):
         """
         state = True
         cls = self.__class__
-        # Set display_name if need
-        if getattr(self, 'display_name', '') == '':
-            self.display_name = getattr(self, 'service_description', '')
 
-        if not self.host_name:
-            msg = "[%s::%s] not bound to any host." % (self.my_type, self.get_name())
-            self.configuration_errors.append(msg)
-            state = False
+        hname = getattr(self, 'host_name', '')
+        hgname = getattr(self, 'hostgroup_name', '')
+        sdesc = getattr(self, 'service_description', '')
+
+        if not sdesc:
+            self.add_error("a %s has been defined without service_description, from: %s"
+                           % (cls, self.imported_from))
+        elif not hname:
+            self.add_error("[%s::%s] not bound to any host."
+                           % (self.my_type, self.get_name()))
+        elif not hname and not hgname:
+            self.add_error("a %s has been defined without host_name nor "
+                           "hostgroup_name, from: %s" % (self.my_type, self.imported_from))
         elif self.host is None:
-            msg = "[%s::%s] unknown host_name '%s'" % (
-                self.my_type, self.get_name(), self.host_name
-            )
-            self.configuration_errors.append(msg)
-            state = False
+            self.add_error("[%s::%s] unknown host_name '%s'"
+                           % (self.my_type, self.get_name(), self.host_name))
 
-        if hasattr(self, 'service_description'):
-            for char in cls.illegal_object_name_chars:
-                if char in self.service_description:
-                    msg = "[%s::%s] service_description got an illegal character: %s" % (
-                        self.my_type, self.get_name(), char
-                    )
-                    self.configuration_errors.append(msg)
-                    state = False
+        # Set display_name if needed
+        if not getattr(self, 'display_name', ''):
+            self.display_name = "%s/%s" % (hname, sdesc)
+
+        for char in cls.illegal_object_name_chars:
+            if char not in self.service_description:
+                continue
+
+            self.add_error("[%s::%s] service_description got an illegal character: %s"
+                           % (self.my_type, self.get_name(), char))
 
         return super(Service, self).is_correct() and state
 
     def duplicate(self, host):
+        # pylint: disable=too-many-locals
         """For a given host, look for all copy we must create for for_each property
 
         :param host: alignak host object
@@ -445,7 +496,7 @@ class Service(SchedulingItem):
                 "host %(host)r is not a valid entry for a service generator: %(exc)s, "
                 "with entry=%(entry)r") % fmt_dict
             logger.warning(err)
-            host.configuration_errors.append(err)
+            host.add_error(err)
             return duplicates
 
         for key_value in key_values:
@@ -498,14 +549,13 @@ class Service(SchedulingItem):
 
     def set_state_from_exit_status(self, status, notif_period, hosts, services):
         """Set the state in UP, WARNING, CRITICAL, UNKNOWN or UNREACHABLE
-        according to the status of a check. Also updates the last_state
+        according to the status of a check result.
 
         :param status: integer between 0 and 4
         :type status: int
         :return: None
         """
         now = time.time()
-        self.last_state_update = now
 
         # we should put in last_state the good last state:
         # if not just change the state by an problem/impact
@@ -521,35 +571,42 @@ class Service(SchedulingItem):
         else:  # standard case
             self.last_state = self.state
 
+        # The last times are kept as integer values rather than float... no need for ms!
         if status == 0:
-            self.state = 'OK'
+            self.state = u'OK'
             self.state_id = 0
             self.last_time_ok = int(self.last_state_update)
+            # self.last_time_ok = self.last_state_update
             state_code = 'o'
         elif status == 1:
-            self.state = 'WARNING'
+            self.state = u'WARNING'
             self.state_id = 1
             self.last_time_warning = int(self.last_state_update)
+            # self.last_time_warning = self.last_state_update
             state_code = 'w'
         elif status == 2:
-            self.state = 'CRITICAL'
+            self.state = u'CRITICAL'
             self.state_id = 2
             self.last_time_critical = int(self.last_state_update)
+            # self.last_time_critical = self.last_state_update
             state_code = 'c'
         elif status == 3:
-            self.state = 'UNKNOWN'
+            self.state = u'UNKNOWN'
             self.state_id = 3
             self.last_time_unknown = int(self.last_state_update)
+            # self.last_time_unknown = self.last_state_update
             state_code = 'u'
         elif status == 4:
-            self.state = 'UNREACHABLE'
+            self.state = u'UNREACHABLE'
             self.state_id = 4
             self.last_time_unreachable = int(self.last_state_update)
+            # self.last_time_unreachable = self.last_state_update
             state_code = 'x'
         else:
-            self.state = 'CRITICAL'  # exit code UNDETERMINED
+            self.state = u'CRITICAL'  # exit code UNDETERMINED
             self.state_id = 2
             self.last_time_critical = int(self.last_state_update)
+            # self.last_time_critical = self.last_state_update
             state_code = 'c'
 
         if state_code in self.flap_detection_options:
@@ -562,7 +619,8 @@ class Service(SchedulingItem):
         self.duration_sec = now - self.last_state_change
 
     def is_state(self, status):
-        """Return if status match the current service status
+        # pylint: disable=too-many-return-statements
+        """Return True if status match the current service status
 
         :param status: status to compare ( "o", "c", "w", "u", "x"). Usually comes from config files
         :type status: str
@@ -572,22 +630,22 @@ class Service(SchedulingItem):
         if status == self.state:
             return True
         # Now low status
-        elif status == 'o' and self.state == 'OK':
+        if status == 'o' and self.state == u'OK':
             return True
-        elif status == 'c' and self.state == 'CRITICAL':
+        if status == 'c' and self.state == u'CRITICAL':
             return True
-        elif status == 'w' and self.state == 'WARNING':
+        if status == 'w' and self.state == u'WARNING':
             return True
-        elif status == 'u' and self.state == 'UNKNOWN':
+        if status == 'u' and self.state == u'UNKNOWN':
             return True
-        elif status == 'x' and self.state == 'UNREACHABLE':
+        if status == 'x' and self.state == u'UNREACHABLE':
             return True
         return False
 
     def last_time_non_ok_or_up(self):
         """Get the last time the service was in a non-OK state
 
-        :return: self.last_time_down if self.last_time_down > self.last_time_up, otherwise 0
+        :return: the nearest last time the service was not ok
         :rtype: int
         """
         non_ok_times = [x for x in [self.last_time_warning,
@@ -595,7 +653,7 @@ class Service(SchedulingItem):
                                     self.last_time_unknown]
                         if x > self.last_time_ok]
         if not non_ok_times:
-            last_time_non_ok = 0  # program_start would be better
+            last_time_non_ok = 0  # todo: program_start would be better?
         else:
             last_time_non_ok = min(non_ok_times)
         return last_time_non_ok
@@ -606,17 +664,18 @@ class Service(SchedulingItem):
 
         :return: None
         """
+        if not self.__class__.log_active_checks:
+            return
+
         log_level = 'info'
-        if self.state in ['WARNING', 'UNREACHABLE']:
+        if self.state in [u'WARNING', u'UNREACHABLE']:
             log_level = 'warning'
-        elif self.state == 'CRITICAL':
+        elif self.state == u'CRITICAL':
             log_level = 'error'
         brok = make_monitoring_log(
-            log_level, 'ACTIVE SERVICE CHECK: %s;%s;%s;%s;%d;%s' % (
-                self.host_name, self.get_name(),
-                self.state, self.state_type,
-                self.attempt, self.output
-            )
+            log_level, 'ACTIVE SERVICE CHECK: %s;%s;%s;%d;%s' % (self.host_name, self.get_name(),
+                                                                 self.state, self.attempt,
+                                                                 self.output)
         )
         self.broks.append(brok)
 
@@ -628,23 +687,23 @@ class Service(SchedulingItem):
 
         :return: None
         """
-        log_level = 'info'
-        if self.state == 'WARNING':
-            log_level = 'warning'
-        if self.state == 'CRITICAL':
-            log_level = 'error'
-        brok = make_monitoring_log(
-            log_level, 'SERVICE ALERT: %s;%s;%s;%s;%d;%s' % (
-                self.host_name, self.get_name(),
-                self.state, self.state_type,
-                self.attempt, self.output
+        if self.__class__.log_alerts:
+            log_level = 'info'
+            if self.state == 'WARNING':
+                log_level = 'warning'
+            if self.state == 'CRITICAL':
+                log_level = 'error'
+            brok = make_monitoring_log(
+                log_level, 'SERVICE ALERT: %s;%s;%s;%s;%d;%s' % (
+                    self.host_name, self.get_name(),
+                    self.state, self.state_type,
+                    self.attempt, self.output
+                )
             )
-        )
-        self.broks.append(brok)
-        self.broks.append(brok)
+            self.broks.append(brok)
 
-        if 'TEST_LOG_ALERTS' in os.environ:
-            if os.environ['TEST_LOG_ALERTS'] == 'WARNING':
+        if 'ALIGNAK_LOG_ALERTS' in os.environ:
+            if os.environ['ALIGNAK_LOG_ALERTS'] == 'WARNING':
                 logger.warning('SERVICE ALERT: %s;%s;%s;%s;%d;%s', self.host_name, self.get_name(),
                                self.state, self.state_type, self.attempt, self.output)
             else:
@@ -659,41 +718,22 @@ class Service(SchedulingItem):
 
         :return: None
         """
+        if not self.__class__.log_initial_states:
+            return
+
         log_level = 'info'
-        if self.state == 'WARNING':
+        if self.state in ['WARNING', 'UNREACHABLE']:
             log_level = 'warning'
-        if self.state == 'CRITICAL':
+        if self.state in ['CRITICAL', 'UNKNOWN']:
             log_level = 'error'
-        if self.__class__.log_initial_states:
-            brok = make_monitoring_log(
-                log_level, 'CURRENT SERVICE STATE: %s;%s;%s;%s;%d;%s' % (
-                    self.host_name, self.get_name(),
-                    self.state, self.state_type,
-                    self.attempt, self.output
-                )
+        brok = make_monitoring_log(
+            log_level, 'CURRENT SERVICE STATE: %s;%s;%s;%s;%d;%s' % (
+                self.host_name, self.get_name(),
+                self.state, self.state_type,
+                self.attempt, self.output
             )
-            self.broks.append(brok)
-
-    def raise_freshness_log_entry(self, t_stale_by, t_threshold):
-        """Raise freshness alert entry (warning level)
-        Format is : "The results of service '*get_name()*' on host '*host.get_name()*'
-                    are stale by *t_stale_by* (threshold=*t_threshold*).
-                    I'm forcing an immediate check of the service."
-        Example : "Warning: The results of service 'Load' on host 'Server' are stale by 0d 0h 0m 58s
-                   (threshold=0d 1h 0m 0s). ..."
-
-        :param t_stale_by: time in seconds the service has been in a stale state
-        :type t_stale_by: int
-        :param t_threshold: threshold (seconds) to trigger this log entry
-        :type t_threshold: int
-        :return: None
-        """
-        logger.warning("The freshness period of service '%s' on host '%s' is expired "
-                       "by %s (threshold=%s). I'm forcing the state to freshness state (%s).",
-                       self.get_name(), self.host_name,
-                       format_t_into_dhms_format(t_stale_by),
-                       format_t_into_dhms_format(t_threshold),
-                       self.freshness_state)
+        )
+        self.broks.append(brok)
 
     def raise_notification_log_entry(self, notif, contact, host_ref):
         """Raise SERVICE NOTIFICATION entry (critical level)
@@ -705,40 +745,37 @@ class Service(SchedulingItem):
         :type notif: alignak.objects.notification.Notification
         :return: None
         """
-        if not self.__class__.log_notifications:
-            return
-
-        log_level = 'info'
-        command = notif.command_call
-        if notif.type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED',
-                          'CUSTOM', 'ACKNOWLEDGEMENT', 'FLAPPINGSTART',
-                          'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
-            state = '%s (%s)' % (notif.type, self.state)
-        else:
-            state = self.state
-            if self.state == 'WARNING':
-                log_level = 'warning'
-            if self.state == 'CRITICAL':
-                log_level = 'error'
-
-        brok = make_monitoring_log(
-            log_level, "SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s" % (
-                contact.get_name(),
-                host_ref.get_name(), self.get_name(), state,
-                command.get_name(), self.output
-            )
-        )
-        self.broks.append(brok)
-
-        if 'TEST_LOG_NOTIFICATIONS' in os.environ:
-            if os.environ['TEST_LOG_NOTIFICATIONS'] == 'WARNING':
-                logger.warning("SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s", contact.get_name(),
-                               host_ref.get_name(), self.get_name(), state,
-                               command.get_name(), self.output)
+        if self.__class__.log_notifications:
+            log_level = 'info'
+            command = notif.command_call
+            if notif.type in [u'DOWNTIMESTART', u'DOWNTIMEEND', u'DOWNTIMECANCELLED',
+                              u'CUSTOM', u'ACKNOWLEDGEMENT',
+                              u'FLAPPINGSTART', u'FLAPPINGSTOP', u'FLAPPINGDISABLED']:
+                state = '%s (%s)' % (notif.type, self.state)
             else:
-                logger.info("SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s", contact.get_name(),
-                            host_ref.get_name(), self.get_name(), state,
-                            command.get_name(), self.output)
+                state = self.state
+                if self.state == 'WARNING':
+                    log_level = 'warning'
+                if self.state == 'CRITICAL':
+                    log_level = 'error'
+
+            brok = make_monitoring_log(
+                log_level, "SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s;%s" % (
+                    contact.get_name(), host_ref.get_name(), self.get_name(), state,
+                    notif.notif_nb, command.get_name(), self.output
+                )
+            )
+            self.broks.append(brok)
+
+        if 'ALIGNAK_LOG_NOTIFICATIONS' in os.environ:
+            if os.environ['ALIGNAK_LOG_NOTIFICATIONS'] == 'WARNING':
+                logger.warning("SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s;%s",
+                               contact.get_name(), host_ref.get_name(), self.get_name(), state,
+                               notif.notif_nb, command.get_name(), self.output)
+            else:
+                logger.info("SERVICE NOTIFICATION: %s;%s;%s;%s;%s;%s;%s",
+                            contact.get_name(), host_ref.get_name(), self.get_name(), state,
+                            notif.notif_nb, command.get_name(), self.output)
 
     def raise_event_handler_log_entry(self, command):
         """Raise SERVICE EVENT HANDLER entry (critical level)
@@ -811,10 +848,10 @@ class Service(SchedulingItem):
             return
 
         brok = make_monitoring_log(
-            'info', "SERVICE FLAPPING ALERT: %s;%s;STARTED; "
-                    "Service appears to have started flapping "
-                    "(%.1f%% change >= %.1f%% threshold)" %
-                    (self.host_name, self.get_name(), change_ratio, threshold)
+            'info',
+            "SERVICE FLAPPING ALERT: %s;%s;STARTED; Service appears to have "
+            "started flapping (%.1f%% change >= %.1f%% threshold)"
+            % (self.host_name, self.get_name(), change_ratio, threshold)
         )
         self.broks.append(brok)
 
@@ -837,10 +874,10 @@ class Service(SchedulingItem):
             return
 
         brok = make_monitoring_log(
-            'info', "SERVICE FLAPPING ALERT: %s;%s;STOPPED; "
-                    "Service appears to have stopped flapping "
-                    "(%.1f%% change < %.1f%% threshold)" %
-                    (self.host_name, self.get_name(), change_ratio, threshold)
+            'info',
+            "SERVICE FLAPPING ALERT: %s;%s;STOPPED; Service appears to have "
+            "stopped flapping (%.1f%% change < %.1f%% threshold)"
+            % (self.host_name, self.get_name(), change_ratio, threshold)
         )
         self.broks.append(brok)
 
@@ -862,10 +899,13 @@ class Service(SchedulingItem):
 
         :return: None
         """
+        if not self.__class__.log_acknowledgements:
+            return
+
         brok = make_monitoring_log(
-            'info', "SERVICE ACKNOWLEDGE ALERT: %s;%s;STARTED; "
-                    "Service problem has been acknowledged" %
-                    (self.host_name, self.get_name())
+            'info',
+            "SERVICE ACKNOWLEDGE ALERT: %s;%s;STARTED; Service problem has been acknowledged"
+            % (self.host_name, self.get_name())
         )
         self.broks.append(brok)
 
@@ -874,10 +914,13 @@ class Service(SchedulingItem):
 
         :return: None
         """
+        if not self.__class__.log_acknowledgements:
+            return
+
         brok = make_monitoring_log(
-            'info', "SERVICE ACKNOWLEDGE ALERT: %s;%s;EXPIRED; "
-                    "Service problem acknowledge expired" %
-                    (self.host_name, self.get_name())
+            'info',
+            "SERVICE ACKNOWLEDGE ALERT: %s;%s;EXPIRED; Service problem acknowledge expired"
+            % (self.host_name, self.get_name())
         )
         self.broks.append(brok)
 
@@ -890,10 +933,14 @@ class Service(SchedulingItem):
 
         :return: None
         """
+        if not self.__class__.log_downtimes:
+            return
+
         brok = make_monitoring_log(
-            'info', "SERVICE DOWNTIME ALERT: %s;%s;STARTED; "
-                    "Service has entered a period of scheduled downtime" %
-                    (self.host_name, self.get_name())
+            'info',
+            "SERVICE DOWNTIME ALERT: %s;%s;STARTED; "
+            "Service has entered a period of scheduled downtime"
+            % (self.host_name, self.get_name())
         )
         self.broks.append(brok)
 
@@ -906,10 +953,14 @@ class Service(SchedulingItem):
 
         :return: None
         """
+        if not self.__class__.log_downtimes:
+            return
+
         brok = make_monitoring_log(
-            'info', "SERVICE DOWNTIME ALERT: %s;%s;STOPPED; Service "
-                    "has exited from a period of scheduled downtime" %
-                    (self.host_name, self.get_name())
+            'info',
+            "SERVICE DOWNTIME ALERT: %s;%s;STOPPED; Service "
+            "has exited from a period of scheduled downtime"
+            % (self.host_name, self.get_name())
         )
         self.broks.append(brok)
 
@@ -922,10 +973,14 @@ class Service(SchedulingItem):
 
         :return: None
         """
+        if not self.__class__.log_downtimes:
+            return
+
         brok = make_monitoring_log(
-            'info', "SERVICE DOWNTIME ALERT: %s;%s;CANCELLED; "
-                    "Scheduled downtime for service has been cancelled." %
-                    (self.host_name, self.get_name())
+            'info',
+            "SERVICE DOWNTIME ALERT: %s;%s;CANCELLED; "
+            "Scheduled downtime for service has been cancelled."
+            % (self.host_name, self.get_name())
         )
         self.broks.append(brok)
 
@@ -939,7 +994,7 @@ class Service(SchedulingItem):
         :return: None
         """
         need_stalk = False
-        if check.status == 'waitconsume':
+        if check.status == u'waitconsume':
             if check.exit_status == 0 and 'o' in self.stalking_options:
                 need_stalk = True
             elif check.exit_status == 1 and 'w' in self.stalking_options:
@@ -954,41 +1009,17 @@ class Service(SchedulingItem):
         if need_stalk:
             logger.info("Stalking %s: %s", self.get_name(), check.output)
 
-    def get_data_for_checks(self):
-        """Get data for a check
-
-        :return: list containing the service and the linked host
-        :rtype: list
-        """
-        return [self.host, self]
-
-    def get_data_for_event_handler(self):
-        """Get data for an event handler
-
-        :return: list containing the service and the linked host
-        :rtype: list
-        """
-        return [self.host, self]
-
-    def get_data_for_notifications(self, contact, notif):
-        """Get data for a notification
-
-        :param contact: The contact to return
-        :type contact:
-        :param notif: the notification to return
-        :type notif:
-        :return: list containing the service, the host and the given parameters
-        :rtype: list
-        """
-        return [self.host, self, contact, notif]
-
     def notification_is_blocked_by_contact(self, notifways, timeperiods, notif, contact):
         """Check if the notification is blocked by this contact.
 
+        :param notifways: concerned notification ways
+        :type notifways: alignak.objects.notificationway.NotificationWays
+        :param timeperiods: concerned timeperiods
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :param notif: notification created earlier
         :type notif: alignak.notification.Notification
         :param contact: contact we want to notify
-        :type notif: alignak.objects.contact.Contact
+        :type contact: alignak.objects.contact.Contact
         :return: True if the notification is blocked, False otherwise
         :rtype: bool
         """
@@ -1024,24 +1055,20 @@ class Service(SchedulingItem):
 
         :return: author
         :rtype: str
-        TODO: use getattr(self.acknowledgement, "author", '') instead
-        TODO: Move to util or SchedulingItem class
         """
         if self.acknowledgement is None:
             return ''
-        return self.acknowledgement.author
+        return getattr(self.acknowledgement, "author", '')
 
     def get_ack_comment(self):
         """Get the comment of the acknowledgement
 
         :return: comment
         :rtype: str
-        TODO: use getattr(self.acknowledgement, "comment", '') instead
-        TODO: Move to util or SchedulingItem class
         """
         if self.acknowledgement is None:
             return ''
-        return self.acknowledgement.comment
+        return getattr(self.acknowledgement, "comment", '')
 
     def get_check_command(self):
         """Wrapper to get the name of the check_command attribute
@@ -1061,8 +1088,7 @@ class Service(SchedulingItem):
         return self.snapshot_command.get_name()
 
     # pylint: disable=R0916
-    def notification_is_blocked_by_item(self, notification_period, hosts, services,
-                                        n_type, t_wished=None):
+    def is_blocking_notifications(self, notification_period, hosts, services, n_type, t_wished):
         # pylint: disable=too-many-return-statements
         """Check if a notification is blocked by the service.
         Conditions are ONE of the following::
@@ -1090,8 +1116,10 @@ class Service(SchedulingItem):
         :type t_wished: float
         :return: True if ONE of the above condition was met, otherwise False
         :rtype: bool
-        TODO: Refactor this, a lot of code duplication with Host.notification_is_blocked_by_item
+        TODO: Refactor this, a lot of code duplication with Host.is_blocking_notifications
         """
+        logger.debug("Checking if a service %s (%s) notification is blocked...",
+                     self.get_full_name(), self.state)
         host = hosts[self.host]
         if t_wished is None:
             t_wished = time.time()
@@ -1103,40 +1131,42 @@ class Service(SchedulingItem):
         # Block if notifications are program-wide disabled
         # Block if notifications are disabled for this service
         # Block if the current status is in the notification_options w,u,c,r,f,s
-        # Does the notification period allow sending out this notification?
         if not self.enable_notifications or \
                 not self.notifications_enabled or \
-                (notification_period is not None and not
-                    notification_period.is_time_valid(t_wished)) or \
                 'n' in self.notification_options:
+            logger.debug("Service: %s, notification %s sending is blocked by configuration",
+                         self.get_name(), n_type)
+            return True
+
+        # Does the notification period allow sending out this notification?
+        if notification_period is not None and not notification_period.is_time_valid(t_wished):
             logger.debug("Service: %s, notification %s sending is blocked by globals",
                          self.get_name(), n_type)
             return True
 
-        if n_type in ('PROBLEM', 'RECOVERY') and (
-            self.state == 'UNKNOWN' and 'u' not in self.notification_options or
-            self.state == 'WARNING' and 'w' not in self.notification_options or
-            self.state == 'CRITICAL' and 'c' not in self.notification_options or
-            self.state == 'OK' and 'r' not in self.notification_options or
-            self.state == 'UNREACHABLE' and 'x' not in self.notification_options
-        ):  # pylint: disable=R0911
-            logger.debug("Service: %s, notification %s sending is blocked by options",
-                         self.get_name(), n_type)
+        if n_type in (u'PROBLEM', u'RECOVERY') and (
+                self.state == u'UNKNOWN' and 'u' not in self.notification_options or
+                self.state == u'WARNING' and 'w' not in self.notification_options or
+                self.state == u'CRITICAL' and 'c' not in self.notification_options or
+                self.state == u'OK' and 'r' not in self.notification_options or
+                self.state == u'UNREACHABLE' and 'x' not in self.notification_options):
+            logger.debug("Service: %s, notification %s sending is blocked by options: %s",
+                         self.get_name(), n_type, self.notification_options)
             return True
 
-        if (n_type in ('FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED') and
+        if (n_type in [u'FLAPPINGSTART', u'FLAPPINGSTOP', u'FLAPPINGDISABLED'] and
                 'f' not in self.notification_options):
-            logger.debug("Service: %s, notification %s sending is blocked by options",
-                         n_type, self.get_name())
+            logger.debug("Service: %s, notification %s sending is blocked by options: %s",
+                         n_type, self.get_full_name(), self.notification_options)
             return True
-        if (n_type in ('DOWNTIMESTART', 'DOWNTIMEEND', 'DOWNTIMECANCELLED') and
+        if (n_type in [u'DOWNTIMESTART', u'DOWNTIMEEND', u'DOWNTIMECANCELLED'] and
                 's' not in self.notification_options):
-            logger.debug("Service: %s, notification %s sending is blocked by options",
-                         n_type, self.get_name())
+            logger.debug("Service: %s, notification %s sending is blocked by options: %s",
+                         n_type, self.get_full_name(), self.notification_options)
             return True
 
         # Acknowledgements make no sense when the status is ok/up
-        if n_type == 'ACKNOWLEDGEMENT' and self.state == self.ok_up:
+        if n_type in [u'ACKNOWLEDGEMENT'] and self.state == self.ok_up:
             logger.debug("Host: %s, notification %s sending is blocked by current state",
                          self.get_name(), n_type)
             return True
@@ -1149,15 +1179,16 @@ class Service(SchedulingItem):
 
         # When in deep downtime, only allow end-of-downtime notifications
         # In depth 1 the downtime just started and can be notified
-        if self.scheduled_downtime_depth > 1 and n_type not in ('DOWNTIMEEND', 'DOWNTIMECANCELLED'):
+        if self.scheduled_downtime_depth > 1 and n_type not in (u'DOWNTIMEEND',
+                                                                u'DOWNTIMECANCELLED'):
             logger.debug("Service: %s, notification %s sending is blocked by deep downtime",
                          self.get_name(), n_type)
             return True
 
         # Block if in a scheduled downtime and a problem arises, or flapping event
         if self.scheduled_downtime_depth > 0 and n_type in \
-                ('PROBLEM', 'RECOVERY', 'ACKNOWLEDGEMENT',
-                 'FLAPPINGSTART', 'FLAPPINGSTOP', 'FLAPPINGDISABLED'):
+                [u'PROBLEM', u'RECOVERY', u'ACKNOWLEDGEMENT',
+                 u'FLAPPINGSTART', u'FLAPPINGSTOP', u'FLAPPINGDISABLED']:
             logger.debug("Service: %s, notification %s sending is blocked by downtime",
                          self.get_name(), n_type)
             return True
@@ -1166,11 +1197,11 @@ class Service(SchedulingItem):
         # Block if the problem has already been acknowledged
         # Block if flapping
         # Block if host is down
-        if self.state_type == 'SOFT' and n_type == 'PROBLEM' or \
-                self.problem_has_been_acknowledged and n_type != 'ACKNOWLEDGEMENT' or \
-                self.is_flapping and n_type not in ('FLAPPINGSTART',
-                                                    'FLAPPINGSTOP',
-                                                    'FLAPPINGDISABLED') or \
+        if self.state_type == u'SOFT' and n_type == u'PROBLEM' or \
+                self.problem_has_been_acknowledged and n_type != u'ACKNOWLEDGEMENT' or \
+                self.is_flapping and n_type not in [u'FLAPPINGSTART',
+                                                    u'FLAPPINGSTOP',
+                                                    u'FLAPPINGDISABLED'] or \
                 host.state != host.ok_up:
             logger.debug("Service: %s, notification %s sending is blocked by soft state, "
                          "acknowledgement, flapping or host DOWN", self.get_name(), n_type)
@@ -1181,7 +1212,7 @@ class Service(SchedulingItem):
         if self.got_business_rule is True \
                 and self.business_rule_smart_notifications is True \
                 and self.business_rule_notification_is_blocked(hosts, services) is True \
-                and n_type == 'PROBLEM':
+                and n_type == u'PROBLEM':
             logger.debug("Service: %s, notification %s sending is blocked by business rules",
                          self.get_name(), n_type)
             return True
@@ -1217,11 +1248,11 @@ class Service(SchedulingItem):
 
         if self.got_business_rule:
             mapping = {
-                0: "OK",
-                1: "WARNING",
-                2: "CRITICAL",
-                3: "UNKNOWN",
-                4: "UNREACHABLE",
+                0: u'OK',
+                1: u'WARNING',
+                2: u'CRITICAL',
+                3: u'UNKNOWN',
+                4: u'UNREACHABLE',
             }
             return mapping.get(self.business_rule.get_state(hosts, services), "n/a")
 
@@ -1264,11 +1295,11 @@ class Services(SchedulingItems):
         if not name and not hname:
             msg = "a %s template has been defined without name nor host_name. from: %s" \
                   % (objcls, tpl.imported_from)
-            tpl.configuration_errors.append(msg)
+            tpl.add_error(msg)
         elif not name and not sdesc:
             msg = "a %s template has been defined without name nor service_description. from: %s" \
                   % (objcls, tpl.imported_from)
-            tpl.configuration_errors.append(msg)
+            tpl.add_error(msg)
         elif not name:
             # If name is not defined, use the host_name_service_description as name (fix #791)
             setattr(tpl, 'name', "%s_%s" % (hname, sdesc))
@@ -1277,37 +1308,6 @@ class Services(SchedulingItems):
             tpl = self.index_template(tpl)
         self.templates[tpl.uuid] = tpl
         logger.debug('\tAdded service template #%d %s', len(self.templates), tpl)
-
-    def add_item(self, item, index=True):
-        """
-        Adds and index an item into the `items` container.
-
-        This implementation takes into account that a service has two naming
-        attribute: `host_name` and `service_description`.
-
-        :param item: The item to add
-        :type item:
-        :param index: Flag indicating if the item should be indexed
-        :type index: bool
-        :return: None
-        """
-        objcls = self.inner_class.my_type
-        hname = getattr(item, 'host_name', '')
-        hgname = getattr(item, 'hostgroup_name', '')
-        sdesc = getattr(item, 'service_description', '')
-
-        if not hname and not hgname:
-            msg = "a %s has been defined without " \
-                  "host_name nor hostgroup_name, from: %s" % (objcls, item.imported_from)
-            item.configuration_errors.append(msg)
-        if not sdesc:
-            msg = "a %s has been defined without " \
-                  "service_description, from: %s" % (objcls, item.imported_from)
-            item.configuration_errors.append(msg)
-
-        if index is True:
-            item = self.index_item(item)
-        self.items[item.uuid] = item
 
     def apply_inheritance(self):
         """ For all items and templates inherit properties and custom
@@ -1318,7 +1318,7 @@ class Services(SchedulingItems):
         super(Services, self).apply_inheritance()
 
         # add_item only ensure we can build a key for services later (after explode)
-        for item in self.items.values():
+        for item in list(self.items.values()):
             self.add_item(item, False)
 
     def find_srvs_by_hostname(self, host_name):
@@ -1351,7 +1351,7 @@ class Services(SchedulingItems):
 
     def linkify(self, hosts, commands, timeperiods, contacts,  # pylint: disable=R0913
                 resultmodulations, businessimpactmodulations, escalations,
-                servicegroups, triggers, checkmodulations, macromodulations):
+                servicegroups, checkmodulations, macromodulations):
         """Create link between objects::
 
          * service -> host
@@ -1376,8 +1376,6 @@ class Services(SchedulingItems):
         :type escalations: alignak.objects.escalation.Escalations
         :param servicegroups: servicegroups to link
         :type servicegroups: alignak.objects.servicegroup.Servicegroups
-        :param triggers: triggers to link
-        :type triggers: alignak.objects.trigger.Triggers
         :param checkmodulations: checkmodulations to link
         :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
         :param macromodulations: macromodulations to link
@@ -1400,7 +1398,6 @@ class Services(SchedulingItems):
         # (just the escalation here, not serviceesca or hostesca).
         # This last one will be link in escalations linkify.
         self.linkify_with_escalations(escalations)
-        self.linkify_with_triggers(triggers)
         self.linkify_with_checkmodulations(checkmodulations)
         self.linkify_with_macromodulations(macromodulations)
 
@@ -1424,27 +1421,21 @@ class Services(SchedulingItems):
                 # Checks service override syntax
                 match = ovr_re.search(ovr)
                 if match is None:
-                    err = "Error: invalid service override syntax: %s" % ovr
-                    host.configuration_errors.append(err)
+                    host.add_error("Error: invalid service override syntax: %s" % ovr)
                     continue
                 sdescr, prop, value = match.groups()
                 # Looks for corresponding service
-                service = self.find_srv_by_name_and_hostname(
-                    getattr(host, "host_name", ""), sdescr
-                )
+                service = self.find_srv_by_name_and_hostname(getattr(host, "host_name", ""), sdescr)
                 if service is None:
-                    err = "Error: trying to override property '%s' on service '%s' " \
-                          "but it's unknown for this host" % (prop, sdescr)
-                    host.configuration_errors.append(err)
+                    host.add_error("Error: trying to override property '%s' on service '%s' "
+                                   "but it's unknown for this host" % (prop, sdescr))
                     continue
                 # Checks if override is allowed
                 excludes = ['host_name', 'service_description', 'use',
                             'servicegroups', 'trigger_name']
                 if prop in excludes:
-                    err = "Error: trying to override '%s', " \
-                          "a forbidden property for service '%s'" % \
-                          (prop, sdescr)
-                    host.configuration_errors.append(err)
+                    host.add_error("Error: trying to override '%s', "
+                                   "a forbidden property for service '%s'" % (prop, sdescr))
                     continue
 
                 # Pythonize the value because here value is str.
@@ -1479,7 +1470,6 @@ class Services(SchedulingItems):
                 # Let the host know we are his service
                 if hst is not None:
                     serv.host = hst.uuid
-                    serv.realm = hst.realm
                     hst.add_service_link(serv.uuid)
                 else:  # Ok, the host do not exists!
                     err = "Warning: the service '%s' got an invalid host_name '%s'" % \
@@ -1507,7 +1497,7 @@ class Services(SchedulingItems):
                     else:
                         err = "Error: the servicegroup '%s' of the service '%s' is unknown" %\
                               (sg_name, serv.get_dbg_name())
-                        serv.configuration_errors.append(err)
+                        serv.add_error(err)
             serv.servicegroups = new_servicegroups
 
     def delete_services_by_id(self, ids):
@@ -1562,14 +1552,16 @@ class Services(SchedulingItems):
     def clean(self):
         """Remove services without host object linked to
 
+        Note that this should not happen!
+
         :return: None
         """
         to_del = []
         for serv in self:
             if not serv.host:
                 to_del.append(serv.uuid)
-        for sid in to_del:
-            del self.items[sid]
+        for service_uuid in to_del:
+            del self.items[service_uuid]
 
     def explode_services_from_hosts(self, hosts, service, hnames):
         """
@@ -1612,7 +1604,7 @@ class Services(SchedulingItems):
             if host is None:
                 err = 'Error: The hostname %s is unknown for the service %s!' \
                       % (hname, service.get_name())
-                service.configuration_errors.append(err)
+                service.add_error(err)
                 continue
             if host.is_excluded_for(service):
                 continue
@@ -1620,6 +1612,7 @@ class Services(SchedulingItems):
             new_s.host_name = hname
             self.add_item(new_s)
 
+    # pylint: disable=inconsistent-return-statements
     def _local_create_service(self, hosts, host_name, service):
         """Create a new service based on a host_name and service instance.
 
@@ -1634,7 +1627,7 @@ class Services(SchedulingItems):
         """
         host = hosts.find_by_name(host_name.strip())
         if host.is_excluded_for(service):
-            return
+            return None
         # Creates concrete instance
         new_s = service.copy()
         new_s.host_name = host_name
@@ -1687,9 +1680,8 @@ class Services(SchedulingItems):
         # we must find our host, and get all key:value we need
         host = hosts.find_by_name(hname.strip())
         if host is None:
-            err = 'Error: The hostname %s is unknown for the service %s!' \
-                  % (hname, service.get_name())
-            service.configuration_errors.append(err)
+            service.add_error('Error: The hostname %s is unknown for the service %s!'
+                              % (hname, service.get_name()))
             return
 
         # Duplicate services
@@ -1757,26 +1749,26 @@ class Services(SchedulingItems):
             i += 1
 
     # We create new service if necessary (host groups and co)
-    def explode(self, hosts, hostgroups, contactgroups,
-                servicegroups, servicedependencies):
+    def explode(self, hosts, hostgroups, contactgroups, servicegroups, servicedependencies):
+        # pylint: disable=too-many-locals
         """
         Explodes services, from host, hostgroups, contactgroups, servicegroups and dependencies.
 
         :param hosts: The hosts container
-        :type hosts:
-        :param hostgroups: The hostgoups container
-        :type hostgroups:
-        :param contactgroups: The concactgoups container
-        :type contactgroups:
-        :param servicegroups: The servicegoups container
-        :type servicegroups:
-        :param servicedependencies: The servicedependencies container
-        :type servicedependencies:
+        :type hosts: [alignak.object.host.Host]
+        :param hostgroups: The hosts goups container
+        :type hostgroups: [alignak.object.hostgroup.Hostgroup]
+        :param contactgroups: The contacts goups container
+        :type contactgroups: [alignak.object.contactgroup.Contactgroup]
+        :param servicegroups: The services goups container
+        :type servicegroups: [alignak.object.servicegroup.Servicegroup]
+        :param servicedependencies: The services dependencies container
+        :type servicedependencies: [alignak.object.servicedependency.Servicedependency]
         :return: None
         """
         # Then for every service create a copy of the service with just the host
         # because we are adding services, we can't just loop in it
-        itemkeys = self.items.keys()
+        itemkeys = list(self.items.keys())
         for s_id in itemkeys:
             serv = self.items[s_id]
             # items::explode_host_groups_into_hosts
@@ -1799,9 +1791,6 @@ class Services(SchedulingItems):
                     self.explode_services_from_hosts(hosts, serv, hnames)
                 # Delete expanded source service, even if some errors exist
                 self.remove_item(serv)
-                # if not serv.configuration_errors:
-                #     print("Remove duplicated service!")
-                #     self.remove_item(serv)
 
         for s_id in self.templates:
             template = self.templates[s_id]

@@ -1,0 +1,13 @@
+include README.rst
+include CONTRIBUTING.rst
+include AUTHORS
+include LICENSE
+include requirements.txt
+recursive-exclude tests *
+recursive-exclude tests_integ *
+recursive-include etc *.*
+recursive-include bin *.*
+recursive-include contrib *.*
+recursive-include alignak *.*
+global-exclude *.pyc
+global-exclude *.log

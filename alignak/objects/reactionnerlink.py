@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -55,21 +55,23 @@ class ReactionnerLink(SatelliteLink):
     my_type = 'reactionner'
     properties = SatelliteLink.properties.copy()
     properties.update({
-        'reactionner_name': StringProp(fill_brok=['full_status'], to_send=True),
-        'port':             IntegerProp(default=7769, fill_brok=['full_status']),
-        'min_workers':      IntegerProp(default=1, fill_brok=['full_status'], to_send=True),
-        'max_workers':      IntegerProp(default=30, fill_brok=['full_status'], to_send=True),
-        'processes_by_worker': IntegerProp(default=256, fill_brok=['full_status'], to_send=True),
-        'reactionner_tags':      ListProp(default=['None'], to_send=True),
+        'type':
+            StringProp(default='reactionner', fill_brok=['full_status'], to_send=True),
+        'reactionner_name':
+            StringProp(default='', fill_brok=['full_status']),
+        'port':
+            IntegerProp(default=7769, fill_brok=['full_status'], to_send=True),
+        # 'min_workers':
+        #     IntegerProp(default=1, fill_brok=['full_status'], to_send=True),
+        # 'max_workers':
+        #     IntegerProp(default=30, fill_brok=['full_status'], to_send=True),
+        # 'processes_by_worker':
+        #     IntegerProp(default=256, fill_brok=['full_status'], to_send=True),
+        # 'worker_polling_interval':
+        #     IntegerProp(default=1, to_send=True),
+        'reactionner_tags':
+            ListProp(default=['None'], to_send=True),
     })
-
-    def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
-        """
-        Add this reactionner to the realm
-
-        :return: None
-        """
-        self.realm.reactionners.append(self)
 
 
 class ReactionnerLinks(SatelliteLinks):  # (Items):

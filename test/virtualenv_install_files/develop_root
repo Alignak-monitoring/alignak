@@ -1,7 +1,0 @@
-755 /usr/local/bin/alignak-arbiter
-755 /usr/local/bin/alignak-broker
-755 /usr/local/bin/alignak-poller
-755 /usr/local/bin/alignak-reactionner
-755 /usr/local/bin/alignak-receiver
-755 /usr/local/bin/alignak-scheduler
-644/usr/local/lib/PYTHONVERSION/dist-packages/alignak.egg-link

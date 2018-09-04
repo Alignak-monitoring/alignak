@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -40,18 +40,17 @@ class CommandCallItems(Items):
         :type commands: alignak.objects.command.Commands
         :param prop: property name
         :type prop: str
+        :param default: default command to use if the property is not defined
+        :type default: str
         :return: None
         """
         for i in self:
-            if hasattr(i, prop):
-                command = getattr(i, prop).strip()
-                if command != '':
-                    cmdcall = self.create_commandcall(i, commands, command)
-
-                    # TODO: catch None?
-                    setattr(i, prop, cmdcall)
-                else:
-                    setattr(i, prop, None)
+            command = getattr(i, prop, '').strip()
+            if command:
+                setattr(i, prop, self.create_commandcall(i, commands, command))
+            else:
+                # No defined command
+                setattr(i, prop, None)
 
     def linkify_command_list_with_commands(self, commands, prop):
         """
@@ -64,22 +63,22 @@ class CommandCallItems(Items):
         :return: None
         """
         for i in self:
-            if hasattr(i, prop):
-                coms = strip_and_uniq(getattr(i, prop))
-                com_list = []
-                for com in coms:
-                    if com != '':
-                        cmdcall = self.create_commandcall(i, commands, com)
-                        # TODO: catch None?
-                        com_list.append(cmdcall)
-                    else:  # TODO: catch?
-                        pass
-                setattr(i, prop, com_list)
+            if not hasattr(i, prop):
+                continue
+
+            commands_list = strip_and_uniq(getattr(i, prop, ''))
+            cmds_list = []
+            for command in commands_list:
+                if not command:
+                    continue
+
+                cmds_list.append(self.create_commandcall(i, commands, command))
+            setattr(i, prop, cmds_list)
 
     @staticmethod
     def create_commandcall(prop, commands, command):
         """
-        Create commandCall object with command
+        Create CommandCall object with command
 
         :param prop: property
         :type prop: str
@@ -88,15 +87,19 @@ class CommandCallItems(Items):
         :param command: a command object
         :type command: str
         :return: a commandCall object
-        :rtype: object
+        :rtype: alignak.objects.commandcallitem.CommandCall
         """
-        comandcall = dict(commands=commands, call=command)
+        cc = {
+            'commands': commands,
+            'call': command
+        }
+
         if hasattr(prop, 'enable_environment_macros'):
-            comandcall['enable_environment_macros'] = prop.enable_environment_macros
+            cc['enable_environment_macros'] = prop.enable_environment_macros
 
         if hasattr(prop, 'poller_tag'):
-            comandcall['poller_tag'] = prop.poller_tag
+            cc['poller_tag'] = prop.poller_tag
         elif hasattr(prop, 'reactionner_tag'):
-            comandcall['reactionner_tag'] = prop.reactionner_tag
+            cc['reactionner_tag'] = prop.reactionner_tag
 
-        return CommandCall(comandcall)
+        return CommandCall(cc)

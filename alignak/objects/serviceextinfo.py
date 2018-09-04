@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -94,13 +94,13 @@ class ServiceExtInfo(GenericExtInfo):
         'service_description':
             StringProp(),
         'notes':
-            StringProp(default=''),
+            StringProp(default=u''),
         'notes_url':
-            StringProp(default=''),
+            StringProp(default=u''),
         'icon_image':
-            StringProp(default=''),
+            StringProp(default=u''),
         'icon_image_alt':
-            StringProp(default=''),
+            StringProp(default=u''),
     })
 
     # Hosts macros and prop that give the information
@@ -118,8 +118,8 @@ class ServicesExtInfo(Items):
     into Services if necessary
 
     """
-    name_property = "host_name"  # use for the search by name
-    inner_class = ServiceExtInfo  # use for know what is in items
+    name_property = "host_name"
+    inner_class = ServiceExtInfo
 
     def merge(self, services):
         """Merge extended host information into services

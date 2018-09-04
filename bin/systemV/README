@@ -1,0 +1,12 @@
+# =================================================================================
+# The scripts located in this directory are not functional !
+# =================================================================================
+#
+# The scripts you will find in this directory are not functional ! They are
+# inherited from the old alignak startup procedures are not anymore adapted to the
+# new Alignak scripts interface and environment!
+#
+# Do not use these scripts as is... please log an issue in the project issue
+# tracker if you need to start Alignak with system V init daemon.
+#
+# =================================================================================

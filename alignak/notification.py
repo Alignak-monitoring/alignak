@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -51,7 +51,7 @@
 Used to define monitoring notifications (email, contacts..)
 
 """
-import time
+from six import string_types
 
 from alignak.action import Action
 from alignak.brok import Brok
@@ -73,60 +73,93 @@ class Notification(Action):  # pylint: disable=R0902
 
     properties = Action.properties.copy()
     properties.update({
-        'is_a':                StringProp(default='notification'),
-        'notification_type':   IntegerProp(default=0, fill_brok=['full_status']),
-        'start_time':          IntegerProp(default=0, fill_brok=['full_status']),
-        'end_time':            IntegerProp(default=0, fill_brok=['full_status']),
-        'contact_name':        StringProp(default='', fill_brok=['full_status']),
-        'host_name':           StringProp(default='', fill_brok=['full_status']),
-        'service_description': StringProp(default='', fill_brok=['full_status']),
-        'reason_type':         IntegerProp(default=1, fill_brok=['full_status']),
-        'state':               IntegerProp(default=0, fill_brok=['full_status']),
-        'ack_author':          StringProp(default='', fill_brok=['full_status']),
-        'ack_data':            StringProp(default='', fill_brok=['full_status']),
-        'escalated':           BoolProp(default=False, fill_brok=['full_status']),
-        'command_call':        StringProp(default=None),
-        'contact':             StringProp(default=None),
-        'notif_nb':            IntegerProp(default=1),
-        'command':             StringProp(default='UNSET'),
-        'sched_id':            IntegerProp(default=0),
-        'enable_environment_macros': BoolProp(default=False),
+        'is_a':
+            StringProp(default=u'notification'),
+        'start_time':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'end_time':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'contact_name':
+            StringProp(default=u'', fill_brok=['full_status']),
+        'host_name':
+            StringProp(default=u'', fill_brok=['full_status']),
+        'service_description':
+            StringProp(default=u'', fill_brok=['full_status']),
+        'reason_type':
+            IntegerProp(default=1, fill_brok=['full_status']),
+        'state':
+            IntegerProp(default=0, fill_brok=['full_status']),
+        'ack_author':
+            StringProp(default=u'', fill_brok=['full_status']),
+        'ack_data':
+            StringProp(default=u'', fill_brok=['full_status']),
+        'escalated':
+            BoolProp(default=False, fill_brok=['full_status']),
+        'command_call':
+            StringProp(default=None),
+        'contact':
+            StringProp(default=None),
+        'notif_nb':
+            IntegerProp(default=1),
+        'command':
+            StringProp(default=u'UNSET'),
+        'enable_environment_macros':
+            BoolProp(default=False),
         # Keep a list of currently active escalations
-        'already_start_escalations':  SetProp(default=set()),
-        'type':               StringProp(default='PROBLEM'),
+        'already_start_escalations':
+            SetProp(default=set()),
+        'type':
+            StringProp(default=u'PROBLEM'),
 
         # For authored notifications (eg. downtime...)
-        'author': StringProp(default='n/a', fill_brok=['full_status']),
-        'author_name': StringProp(default='n/a', fill_brok=['full_status']),
-        'author_alias': StringProp(default='n/a', fill_brok=['full_status']),
-        'author_comment': StringProp(default='n/a', fill_brok=['full_status']),
+        'author':
+            StringProp(default=u'n/a', fill_brok=['full_status']),
+        'author_name':
+            StringProp(default=u'n/a', fill_brok=['full_status']),
+        'author_alias':
+            StringProp(default=u'n/a', fill_brok=['full_status']),
+        'author_comment':
+            StringProp(default=u'n/a', fill_brok=['full_status']),
 
         # All contacts that were notified
-        'recipients': ListProp(default=None)
+        'recipients':
+            ListProp(default=[])
     })
 
     macros = {
-        'NOTIFICATIONTYPE':         'type',
-        'NOTIFICATIONRECIPIENTS':   'recipients',
-        'NOTIFICATIONISESCALATED':  'escalated',
-        'NOTIFICATIONAUTHOR':       'author',
-        'NOTIFICATIONAUTHORNAME':   'author_name',
-        'NOTIFICATIONAUTHORALIAS':  'author_alias',
-        'NOTIFICATIONCOMMENT':      'author_comment',
-        'HOSTNOTIFICATIONNUMBER':   'notif_nb',
-        'HOSTNOTIFICATIONID':       'uuid',
-        'SERVICENOTIFICATIONNUMBER': 'notif_nb',
-        'SERVICENOTIFICATIONID':    'uuid'
+        'NOTIFICATIONTYPE':             'type',
+        'NOTIFICATIONRECIPIENTS':       'recipients',
+        'NOTIFICATIONISESCALATED':      'escalated',
+        'NOTIFICATIONAUTHOR':           'author',
+        'NOTIFICATIONAUTHORNAME':       'author_name',
+        'NOTIFICATIONAUTHORALIAS':      'author_alias',
+        'NOTIFICATIONCOMMENT':          'author_comment',
+        'NOTIFICATIONNUMBER':           'notif_nb',
+        'NOTIFICATIONID':               'uuid',
+        'HOSTNOTIFICATIONNUMBER':       'notif_nb',
+        'HOSTNOTIFICATIONID':           'uuid',
+        'SERVICENOTIFICATIONNUMBER':    'notif_nb',
+        'SERVICENOTIFICATIONID':        'uuid'
     }
 
+    def __init__(self, params=None, parsing=False):
+        super(Notification, self).__init__(params, parsing=parsing)
+        self.fill_default()
+
+    def __str__(self):  # pragma: no cover
+        return "Notification %s, item: %s, type: %s, status: %s, command:'%s'" \
+               % (self.uuid, self.ref, self.type, self.status, self.command)
+
     def is_launchable(self, timestamp):
-        """Check if this notification can be launched base on time
+        """Check if this notification can be launched based on current time
 
         :param timestamp: time to compare
         :type timestamp: int
         :return: True if timestamp >= self.t_to_go, False otherwise
         :rtype: bool
         """
+        if self.t_to_go is None:
+            return False
         return timestamp >= self.t_to_go
 
     def is_administrative(self):
@@ -139,11 +172,6 @@ class Notification(Action):  # pylint: disable=R0902
             return False
 
         return True
-
-    def __str__(self):
-        return "Notification %s type:%s status:%s command:%s ref:%s t_to_go:%s" % \
-               (self.uuid, self.type, self.status, self.command, getattr(self, 'ref', 'unknown'),
-                time.asctime(time.localtime(self.t_to_go)))
 
     def get_return_from(self, notif):
         """Setter of exit_status and execution_time attributes
@@ -168,7 +196,7 @@ class Notification(Action):  # pylint: disable=R0902
         """
         cls = self.__class__
         # Now config properties
-        for prop, entry in cls.properties.items():
+        for prop, entry in list(cls.properties.items()):
             if brok_type in entry.fill_brok:
                 data[prop] = getattr(self, prop)
 
@@ -179,10 +207,8 @@ class Notification(Action):  # pylint: disable=R0902
         :rtype: alignak.brok.Brok
         """
         data = {'uuid': self.uuid}
-
         self.fill_data_brok_from(data, 'full_status')
-        brok = Brok({'type': 'notification_raise', 'data': data})
-        return brok
+        return Brok({'type': 'notification_raise', 'data': data})
 
     def serialize(self):
         """This function serialize into a simple dict object.
@@ -196,7 +222,7 @@ class Notification(Action):  # pylint: disable=R0902
         res = super(Notification, self).serialize()
 
         if res['command_call'] is not None:
-            if not isinstance(res['command_call'], str) and \
+            if not isinstance(res['command_call'], string_types) and \
                     not isinstance(res['command_call'], dict):
                 res['command_call'] = res['command_call'].serialize()
         return res

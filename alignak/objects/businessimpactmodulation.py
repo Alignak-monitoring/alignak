@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -65,10 +65,14 @@ class Businessimpactmodulation(Item):
     my_type = 'businessimpactmodulation'
 
     properties = Item.properties.copy()
-    properties.update({'business_impact_modulation_name': StringProp(),
-                       'business_impact':                 IntegerProp(),
-                       'modulation_period':               StringProp(default=''),
-                       })
+    properties.update({
+        'business_impact_modulation_name':
+            StringProp(),
+        'business_impact':
+            IntegerProp(),
+        'modulation_period':
+            StringProp(default=''),
+    })
 
     def __init__(self, params=None, parsing=True):
         super(Businessimpactmodulation, self).__init__(params, parsing=parsing)

@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -94,10 +94,11 @@ class DependencyNode(object):
             if 'not_value' in params:
                 self.not_value = params['not_value']
 
-    def __str__(self):
-        return "Op:'%s' Val:'%s' Sons:'[%s]' IsNot:'%s'" % (self.operand, self.of_values,
-                                                            ','.join([str(s) for s in self.sons]),
-                                                            self.not_value)
+    def __repr__(self):  # pragma: no cover
+        return '"Op:%s Val:%s Sons:[\'%s\'] IsNot:%s"' % (self.operand, self.of_values,
+                                                          ','.join([str(s) for s in self.sons]),
+                                                          self.not_value)
+    __str__ = __repr__
 
     def serialize(self):
         """This function serialize into a simple dict object.
@@ -151,20 +152,23 @@ class DependencyNode(object):
             return self.get_host_node_state(host.last_hard_state_id,
                                             host.problem_has_been_acknowledged,
                                             host.in_scheduled_downtime)
-        elif self.operand == 'service':
+        if self.operand == 'service':
             service = services[self.sons[0]]
             return self.get_service_node_state(service.last_hard_state_id,
                                                service.problem_has_been_acknowledged,
                                                service.in_scheduled_downtime)
-        elif self.operand == '|':
+        if self.operand == '|':
             return self.get_complex_or_node_state(hosts, services)
-        elif self.operand == '&':
+
+        if self.operand == '&':
             return self.get_complex_and_node_state(hosts, services)
+
         #  It's an Xof rule
-        elif self.operand == 'of:':
+        if self.operand == 'of:':
             return self.get_complex_xof_node_state(hosts, services)
 
-        return 4  # We have an unknown node. Code is not reachable because we validate operands
+        # We have an unknown node. Code is not reachable because we validate operands
+        return 4
 
     def get_host_node_state(self, state, problem_has_been_acknowledged, in_scheduled_downtime):
         """Get host node state, simplest case ::
@@ -253,6 +257,7 @@ class DependencyNode(object):
         return worst_state
 
     def get_complex_xof_node_state(self, hosts, services):
+        # pylint: disable=too-many-locals, too-many-return-statements, too-many-branches
         """Get state , handle X of aggregation ::
 
            * Count the number of OK, WARNING, CRITICAL
@@ -339,14 +344,14 @@ class DependencyNode(object):
             if self.not_value:
                 return self.get_reverse_state(0)
             return 0
+
+        if 2 in states:
+            worst_state = 2
         else:
-            if 2 in states:
-                worst_state = 2
-            else:
-                worst_state = max(states)
-            if self.not_value:
-                return self.get_reverse_state(worst_state)
-            return worst_state
+            worst_state = max(states)
+        if self.not_value:
+            return self.get_reverse_state(worst_state)
+        return worst_state
 
     def list_all_elements(self):
         """Get all host/service uuid in our node and below
@@ -459,7 +464,7 @@ class DependencyNodeFactory(object):
             node.operand = 'of:'
             groups = matches.groups()
             # We can have a Aof: rule, or a multiple A,B,Cof: rule.
-            mul_of = (groups[1] != u'' and groups[2] != u'')
+            mul_of = (groups[1] != '' and groups[2] != '')
             # If multi got (A,B,C)
             if mul_of:
                 node.is_of_mul = True
@@ -471,6 +476,7 @@ class DependencyNodeFactory(object):
 
     def eval_complex_cor_pattern(self, pattern, hosts, services,
                                  hostgroups, servicegroups, running=False):
+        # pylint: disable=too-many-branches
         """Parse and build recursively a tree of DependencyNode from a complex pattern
 
         :param pattern: pattern to parse
@@ -501,7 +507,7 @@ class DependencyNodeFactory(object):
                 # that should not be good in fact !
                 if stacked_parenthesis == 1 and tmp != '':
                     # TODO : real error
-                    print "ERROR : bad expression near", tmp
+                    print("ERROR : bad expression near", tmp)
                     continue
 
                 # If we are already in a par, add this (
@@ -514,7 +520,7 @@ class DependencyNodeFactory(object):
 
                 if stacked_parenthesis < 0:
                     # TODO : real error
-                    print "Error : bad expression near", tmp, "too much ')'"
+                    print("Error : bad expression near", tmp, "too much ')'")
                     continue
 
                 if stacked_parenthesis == 0:
@@ -546,13 +552,13 @@ class DependencyNodeFactory(object):
             elif char == '!':
                 tmp = tmp.strip()
                 if tmp and tmp[0] != '!':
-                    print "Error : bad expression near", tmp, "wrong position for '!'"
+                    print("Error : bad expression near", tmp, "wrong position for '!'")
                     continue
                 # Flags next node not state
                 son_is_not = True
                 # DO NOT keep the c in tmp, we consumed it
 
-            elif char == '&' or char == '|':
+            elif char in ['&', '|']:
                 # Oh we got a real cut in an expression, if so, cut it
                 tmp = tmp.strip()
                 # Look at the rule viability
@@ -685,6 +691,7 @@ class DependencyNodeFactory(object):
         return obj, error
 
     def expand_expression(self, pattern, hosts, services, hostgroups, servicegroups, running=False):
+        # pylint: disable=too-many-locals
         """Expand a host or service expression into a dependency node tree
         using (host|service)group membership, regex, or labels as item selector.
 
@@ -709,10 +716,11 @@ class DependencyNodeFactory(object):
         filters = []
         # Looks for hosts/services using appropriate filters
         try:
-            all_items = {"hosts": hosts,
-                         "hostgroups": hostgroups,
-                         "servicegroups": servicegroups
-                         }
+            all_items = {
+                "hosts": hosts,
+                "hostgroups": hostgroups,
+                "servicegroups": servicegroups
+            }
             if len(elts) > 1:
                 # We got a service expression
                 host_expr, service_expr = elts
@@ -724,7 +732,7 @@ class DependencyNodeFactory(object):
                 host_expr = elts[0]
                 filters.extend(self.get_host_filters(host_expr))
                 items = hosts.find_by_filter(filters, all_items)
-        except re.error, regerr:
+        except re.error as regerr:
             error = "Business rule uses invalid regex %s: %s" % (pattern, regerr)
         else:
             if not items:
@@ -757,6 +765,7 @@ class DependencyNodeFactory(object):
         return node
 
     def get_host_filters(self, expr):
+        # pylint: disable=too-many-return-statements
         """Generates host filter list corresponding to the expression ::
 
         * '*' => any
@@ -774,23 +783,25 @@ class DependencyNodeFactory(object):
         """
         if expr == "*":
             return [filter_any]
-        match = re.search(r"^([%s]+):(.*)" % self.host_flags, expr)
 
+        match = re.search(r"^([%s]+):(.*)" % self.host_flags, expr)
         if match is None:
             return [filter_host_by_name(expr)]
+
         flags, expr = match.groups()
         if "g" in flags:
             return [filter_host_by_group(expr)]
-        elif "r" in flags:
+        if "r" in flags:
             return [filter_host_by_regex(expr)]
-        elif "l" in flags:
+        if "l" in flags:
             return [filter_host_by_bp_rule_label(expr)]
-        elif "t" in flags:
+        if "t" in flags:
             return [filter_host_by_tag(expr)]
 
         return [filter_none]
 
     def get_srv_host_filters(self, expr):
+        # pylint: disable=too-many-return-statements
         """Generates service filter list corresponding to the expression ::
 
         * '*' => any
@@ -808,18 +819,19 @@ class DependencyNodeFactory(object):
         """
         if expr == "*":
             return [filter_any]
+
         match = re.search(r"^([%s]+):(.*)" % self.host_flags, expr)
         if match is None:
             return [filter_service_by_host_name(expr)]
-        flags, expr = match.groups()
 
+        flags, expr = match.groups()
         if "g" in flags:
             return [filter_service_by_hostgroup_name(expr)]
-        elif "r" in flags:
+        if "r" in flags:
             return [filter_service_by_regex_host_name(expr)]
-        elif "l" in flags:
+        if "l" in flags:
             return [filter_service_by_host_bp_rule_label(expr)]
-        elif "t" in flags:
+        if "t" in flags:
             return [filter_service_by_host_tag_name(expr)]
 
         return [filter_none]
@@ -842,16 +854,17 @@ class DependencyNodeFactory(object):
         """
         if expr == "*":
             return [filter_any]
+
         match = re.search(r"^([%s]+):(.*)" % self.service_flags, expr)
         if match is None:
             return [filter_service_by_name(expr)]
-        flags, expr = match.groups()
 
+        flags, expr = match.groups()
         if "g" in flags:
             return [filter_service_by_servicegroup_name(expr)]
-        elif "r" in flags:
+        if "r" in flags:
             return [filter_service_by_regex_name(expr)]
-        elif "l" in flags:
+        if "l" in flags:
             return [filter_service_by_bp_rule_label(expr)]
 
         return [filter_none]

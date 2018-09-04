@@ -1,0 +1,22 @@
+# =================================================================================
+# The configuration located in this directory is a copy of the default shipped
+# configuration used for the unit tests.
+# =================================================================================
+#
+# alignak.ini
+# -------------
+# Defines a global Alignak configuration based on one instance of each Alignak daemons
+# the following items:
+#
+# alignak.d
+# -------------
+# Directory where all the ini files are appended to the alignak.ini file.
+#
+# alignak.cfg
+# -------------
+# Nagios legacy files
+#
+# It only defines the following items:
+# - one host 'localhost' that is always UP because it is checked with the Alignak internal command host UP
+# - two user: 'admin' and 'guest' Store your KPI/Certs in this directory as it is referenced in the daemons
+# configuration files

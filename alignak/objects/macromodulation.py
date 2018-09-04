@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -121,7 +121,7 @@ class MacroModulation(Item):
 
         if not hasattr(self, 'customs') or not self.customs:
             msg = "[macromodulation::%s] contains no macro definition" % (self.get_name())
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             state = False
 
         return super(MacroModulation, self).is_correct() and state
@@ -139,7 +139,7 @@ class MacroModulations(Items):
         Link with timeperiod
 
         :param timeperiods: Timeperiod object
-        :type timeperiods: object
+        :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: None
         """
         self.linkify_with_timeperiods(timeperiods, 'modulation_period')

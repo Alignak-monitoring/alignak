@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -79,16 +79,25 @@ class Serviceescalation(Item):
         'escalation_period':
             StringProp(default=''),
         'escalation_options':
-            ListProp(default=['d', 'u', 'r', 'w', 'c'], split_on_coma=True),
+            ListProp(default=['w', 'x', 'c', 'r'], split_on_comma=True),
         'contacts':
-            StringProp(),
+            ListProp(default=[], merging='join', split_on_comma=True),
         'contact_groups':
-            StringProp(),
+            ListProp(default=[], merging='join', split_on_comma=True),
         'first_notification_time':
             IntegerProp(),
         'last_notification_time':
             IntegerProp(),
     })
+
+    def __init__(self, params=None, parsing=True):
+        if params is None:
+            params = {}
+
+        for prop in ['escalation_options']:
+            if prop in params:
+                params[prop] = [p.replace('u', 'x') for p in params[prop]]
+        super(Serviceescalation, self).__init__(params, parsing=parsing)
 
 
 class Serviceescalations(Items):
@@ -111,7 +120,7 @@ class Serviceescalations(Items):
             host_name = getattr(escalation, 'host_name', '')
             creation_dict = {
                 'escalation_name':
-                    'Generated-ServiceEscalation-%s-%s' % (host_name, escalation.uuid)
+                    'Generated-SE-%s-%s' % (host_name, escalation.uuid)
             }
             for prop in properties:
                 if hasattr(escalation, prop):

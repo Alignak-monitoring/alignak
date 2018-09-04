@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -48,7 +48,7 @@
 """
 
 
-class Graph:
+class Graph(object):
 
     """Graph is a class to make graph things like DFS checks or accessibility
     Why use an atomic bomb when a little hammer is enough?
@@ -106,11 +106,11 @@ class Graph:
         """
         in_loop = []
         # Add the tag for dfs check
-        for node in self.nodes.values():
+        for node in list(self.nodes.values()):
             node['dfs_loop_status'] = 'DFS_UNCHECKED'
 
         # Now do the job
-        for node_id, node in self.nodes.iteritems():
+        for node_id, node in self.nodes.items():
             # Run the dfs only if the node has not been already done */
             if node['dfs_loop_status'] == 'DFS_UNCHECKED':
                 self.dfs_loop_search(node_id)
@@ -119,7 +119,7 @@ class Graph:
                 in_loop.append(node_id)
 
         # Remove the tag
-        for node in self.nodes.values():
+        for node in list(self.nodes.values()):
             del node['dfs_loop_status']
 
         return in_loop
@@ -180,16 +180,16 @@ class Graph:
         """
         packs = []
         # Add the tag for dfs check
-        for node in self.nodes.values():
+        for node in list(self.nodes.values()):
             node['dfs_loop_status'] = 'DFS_UNCHECKED'
 
-        for node_id, node in self.nodes.iteritems():
+        for node_id, node in self.nodes.items():
             # Run the dfs only if the node is not already done */
             if node['dfs_loop_status'] == 'DFS_UNCHECKED':
                 packs.append(self.dfs_get_all_childs(node_id))
 
         # Remove the tag
-        for node in self.nodes.values():
+        for node in list(self.nodes.values()):
             del node['dfs_loop_status']
 
         return packs

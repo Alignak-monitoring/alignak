@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -62,7 +62,7 @@ class ComplexExpressionNode(object):
         self.leaf = False
         self.content = None
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         if not self.leaf:
             return "Op:'%s' Leaf:%s Sons:'[%s] IsNot:%s'" % \
                    (self.operand, self.leaf, ','.join([str(s) for s in self.sons]), self.not_value)
@@ -144,7 +144,7 @@ class ComplexExpressionFactory(object):
         self.grps = grps
         self.all_elements = all_elements
 
-    def eval_cor_pattern(self, pattern):  # pylint:disable=R0912
+    def eval_cor_pattern(self, pattern):  # pylint:disable=too-many-branches
         """Parse and build recursively a tree of ComplexExpressionNode from pattern
 
         :param pattern: pattern to parse
@@ -186,7 +186,7 @@ class ComplexExpressionFactory(object):
         tmp = ''
         stacked_par = 0
         for char in pattern:
-            if char == ',' or char == '|':
+            if char in (',', '|'):
                 # Maybe we are in a par, if so, just stack it
                 if in_par:
                     tmp += char
@@ -199,7 +199,7 @@ class ComplexExpressionFactory(object):
                         node.sons.append(son)
                     tmp = ''
 
-            elif char == '&' or char == '+':
+            elif char in ('&', '+'):
                 # Maybe we are in a par, if so, just stack it
                 if in_par:
                     tmp += char
@@ -221,7 +221,7 @@ class ComplexExpressionFactory(object):
                 # that should not be good in fact !
                 if stacked_par == 1 and tmp != '':
                     # TODO : real error
-                    print "ERROR : bad expression near", tmp
+                    print("ERROR : bad expression near", tmp)
                     continue
 
                 # If we are already in a par, add this (
@@ -234,7 +234,7 @@ class ComplexExpressionFactory(object):
 
                 if stacked_par < 0:
                     # TODO : real error
-                    print "Error : bad expression near", tmp, "too much ')'"
+                    print("Error : bad expression near", tmp, "too much ')'")
                     continue
 
                 if stacked_par == 0:
@@ -273,7 +273,7 @@ class ComplexExpressionFactory(object):
         pattern = pattern.strip()
 
         if pattern == '*':
-            obj = [h.host_name for h in self.all_elements.items.values()
+            obj = [h.host_name for h in list(self.all_elements.items.values())
                    if getattr(h, 'host_name', '') != '' and not h.is_tpl()]
             return obj, error
 
@@ -292,13 +292,12 @@ class ComplexExpressionFactory(object):
 
             # Maybe the hostgroup memebrs is '*', if so expand with all hosts
             if '*' in elts:
-                elts.extend([h.host_name for h in self.all_elements.items.values()
+                elts.extend([h.host_name for h in list(self.all_elements.items.values())
                              if getattr(h, 'host_name', '') != '' and not h.is_tpl()])
                 # And remove this strange hostname too :)
                 elts.remove('*')
             return elts, error
 
-        else:  # templates
-            obj = self.grps.find_hosts_that_use_template(pattern)
+        obj = self.grps.find_hosts_that_use_template(pattern)
 
         return obj, error

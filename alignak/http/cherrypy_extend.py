@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -52,7 +52,7 @@ def zlib_processor(entity):  # pragma: no cover, not used in the testing environ
 
     try:
         params = {}
-        for key, value in raw_params.iteritems():
+        for key, value in list(raw_params.items()):
             params[key] = unserialize(value.encode("utf8"))
     except TypeError:
         raise cherrypy.HTTPError(400, 'Invalid serialized data in JSON document')
@@ -61,7 +61,7 @@ def zlib_processor(entity):  # pragma: no cover, not used in the testing environ
 
     # Now that all values have been successfully parsed and decoded,
     # apply them to the entity.params dict.
-    for key, value in params.items():
+    for key, value in list(params.items()):
         if key in entity.params:
             if not isinstance(entity.params[key], list):
                 entity.params[key] = [entity.params[key]]

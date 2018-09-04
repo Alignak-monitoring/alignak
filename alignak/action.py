@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -62,97 +62,160 @@ import shlex
 import sys
 import subprocess
 import signal
+import psutil
 
-# Try to read in non-blocking mode, from now this only from now on
-# Unix systems
+# For readinf files in non-blocking mode.
+# This only works from now on Unix systems
 try:
-    import fcntl  # pylint: disable=C0103
+    import fcntl
 except ImportError:
-    fcntl = None  # pylint: disable=C0103
+    fcntl = None
 
-from alignak.property import BoolProp, IntegerProp, FloatProp
-from alignak.property import StringProp, DictProp
 from alignak.alignakobject import AlignakObject
+from alignak.property import BoolProp, IntegerProp, FloatProp, StringProp, DictProp
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 __all__ = ('Action', )
 
 VALID_EXIT_STATUS = (0, 1, 2, 3)
 
-ONLY_COPY_PROP = ('uuid', 'status', 'command', 't_to_go', 'timeout',
-                  'env', 'module_type', 'execution_time', 'u_time', 's_time')
+ACT_STATUS_SCHEDULED = u'scheduled'
+ACT_STATUS_LAUNCHED = u'launched'
+ACT_STATUS_POLLED = u'in_poller'
+ACT_STATUS_QUEUED = u'queued'
+ACT_STATUS_WAIT_DEPEND = u'wait_dependent'
+ACT_STATUS_WAITING_ME = u'wait_me'
+ACT_STATUS_TIMEOUT = u'timeout'
+ACT_STATUS_DONE = u'done'
+ACT_STATUS_ZOMBIE = u'zombie'
+ACT_STATUS_WAIT_CONSUME = u'wait_consume'
+ACTION_VALID_STATUS = [ACT_STATUS_SCHEDULED, ACT_STATUS_LAUNCHED,
+                       ACT_STATUS_POLLED, ACT_STATUS_QUEUED, ACT_STATUS_WAIT_DEPEND,
+                       ACT_STATUS_DONE, ACT_STATUS_TIMEOUT,
+                       ACT_STATUS_WAIT_CONSUME, ACT_STATUS_ZOMBIE]
+
+ONLY_COPY_PROP = ('uuid', 'status', 'command', 't_to_go', 'timeout', 'env',
+                  'module_type', 'execution_time', 'u_time', 's_time')
 
 SHELLCHARS = ('!', '$', '^', '&', '*', '(', ')', '~', '[', ']',
-                   '|', '{', '}', ';', '<', '>', '?', '`')
+              '|', '{', '}', ';', '<', '>', '?', '`')
 
 
 def no_block_read(output):
     """Try to read a file descriptor in a non blocking mode
+
+    If the fcntl is available (unix only) we try to read in a
+    asynchronous mode, so we won't block the PIPE at 64K buffer
+    (deadlock...)
 
     :param output: file or socket to read from
     :type output: file
     :return: data read from fd
     :rtype: str
     """
+    _buffer = ""
+    if not fcntl:
+        return _buffer
+
     o_fd = output.fileno()
     o_fl = fcntl.fcntl(o_fd, fcntl.F_GETFL)
     fcntl.fcntl(o_fd, fcntl.F_SETFL, o_fl | os.O_NONBLOCK)
     try:
-        return output.read()
-    except Exception:  # pylint: disable=W0703
-        return ''
+        _buffer = output.read()
+    except Exception:  # pylint: disable=broad-except
+        pass
+
+    return _buffer
+
+
+class ActionError(Exception):
+    """Exception raised for errors when executing actions
+
+    Attributes:
+        msg  -- explanation of the error
+    """
+
+    def __init__(self, msg):
+        super(ActionError, self).__init__()
+        self.message = msg
+
+    def __str__(self):  # pragma: no cover
+        """Exception to String"""
+        return "Action error: %s" % self.message
 
 
 class ActionBase(AlignakObject):
+    # pylint: disable=too-many-instance-attributes
     """
-    This abstract class is used just for having a common id for both
-    actions and checks.
+    This abstract class is used to have a common base for both actions (event handlers and
+    notifications) and checks.
+
+    The Action may be on internal one if it does require to use a Worker process to run the
+    action because the Scheduler is able to resolve the action by itseld.
+
+    This class is specialized according to the running OS. Currently, only Linux/Unix like OSes
+    are tested
     """
     process = None
 
     properties = {
         'is_a':
-            StringProp(default=''),
+            StringProp(default=u''),
         'type':
-            StringProp(default=''),
+            StringProp(default=u''),
+        'internal':
+            BoolProp(default=False),
         'creation_time':
             FloatProp(default=0.0),
         '_in_timeout':
             BoolProp(default=False),
         'status':
-            StringProp(default='scheduled'),
+            StringProp(default=ACT_STATUS_SCHEDULED),
         'exit_status':
             IntegerProp(default=3),
         'output':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=['full_status']),
+        'long_output':
+            StringProp(default=u'', fill_brok=['full_status']),
+        'perf_data':
+            StringProp(default=u'', fill_brok=['full_status']),
         't_to_go':
             FloatProp(default=0.0),
         'check_time':
             IntegerProp(default=0),
+        'last_poll':
+            IntegerProp(default=0),
         'execution_time':
             FloatProp(default=0.0),
+        'wait_time':
+            FloatProp(default=0.001),
         'u_time':
             FloatProp(default=0.0),
         's_time':
             FloatProp(default=0.0),
         'reactionner_tag':
-            StringProp(default='None'),
+            StringProp(default=u'None'),
         'env':
             DictProp(default={}),
         'module_type':
-            StringProp(default='fork', fill_brok=['full_status']),
-        'worker_id':
-            StringProp(default='none'),
+            StringProp(default=u'fork', fill_brok=['full_status']),
+        'my_worker':
+            StringProp(default=u'none'),
         'command':
-            StringProp(),
+            StringProp(default=''),
         'timeout':
             IntegerProp(default=10),
         'ref':
-            StringProp(default=''),
+            StringProp(default=u'unset'),
+        'ref_type':
+            StringProp(default=u'unset'),
+        'my_scheduler':
+            StringProp(default=u'unassigned'),
     }
 
-    def __init__(self, params=None, parsing=True):
+    def __init__(self, params=None, parsing=False):
         super(ActionBase, self).__init__(params, parsing=parsing)
 
         # Set a creation time only if not provided
@@ -160,18 +223,10 @@ class ActionBase(AlignakObject):
             self.creation_time = time.time()
         # Set actions log only if not provided
         if not params or 'log_actions' not in params:
-            self.log_actions = 'TEST_LOG_ACTIONS' in os.environ
+            self.log_actions = 'ALIGNAK_LOG_ACTIONS' in os.environ
 
         # Fill default parameters
         self.fill_default()
-
-    def set_type_active(self):
-        """Dummy function, only useful for checks"""
-        pass
-
-    def set_type_passive(self):
-        """Dummy function, only useful for checks"""
-        pass
 
     def get_local_environnement(self):
         """
@@ -189,45 +244,51 @@ class ActionBase(AlignakObject):
         # instance).
         local_env = os.environ.copy()
         for local_var in self.env:
-            local_env[local_var] = self.env[local_var].encode('utf8')
+            local_env[local_var] = self.env[local_var]
         return local_env
 
     def execute(self):
-        """Start this action command. The command will be executed in a
-        subprocess.
+        """Start this action command in a subprocess.
 
-        :return: None or str 'toomanyopenfiles'
-        :rtype: None | str
+        :raise: ActionError
+            'toomanyopenfiles' if too many opened files on the system
+            'no_process_launched' if arguments parsing failed
+            'process_launch_failed': if the process launch failed
+
+        :return: reference to the started process
+        :rtype: psutil.Process
         """
-        self.status = 'launched'
+        self.status = ACT_STATUS_LAUNCHED
         self.check_time = time.time()
         self.wait_time = 0.0001
         self.last_poll = self.check_time
+
         # Get a local env variables with our additional values
         self.local_env = self.get_local_environnement()
 
-        # Initialize stdout and stderr. we will read them in small parts
-        # if the fcntl is available
+        # Initialize stdout and stderr.
         self.stdoutdata = ''
         self.stderrdata = ''
 
-        logger.debug("Launch command: '%s', ref: %s", self.command, self.ref)
+        logger.debug("Launch command: '%s', ref: %s, timeout: %s",
+                     self.command, self.ref, self.timeout)
         if self.log_actions:
-            if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+            if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                 logger.warning("Launch command: '%s'", self.command)
             else:
                 logger.info("Launch command: '%s'", self.command)
 
-        return self.execute__()  # OS specific part
+        return self._execute()  # OS specific part
 
     def get_outputs(self, out, max_plugins_output_length):
-        """Get outputs from single output (split perfdata etc).
-        Edit output, perf_data and long_output attributes.
+        """Get check outputs from single output (split perfdata etc).
+
+        Updates output, perf_data and long_output attributes.
 
         :param out: output data of a check
         :type out: str
-        :param max_plugins_output_length: max plugin data length
-        :type max_plugins_output_length: int
+        :param max_output: max plugin data length
+        :type max_output: int
         :return: None
         """
         # Squeeze all output after max_plugins_output_length
@@ -244,6 +305,8 @@ class ActionBase(AlignakObject):
         try:
             self.output = self.output.decode('utf8', 'ignore')
         except UnicodeEncodeError:
+            pass
+        except AttributeError:
             pass
 
         # Init perfdata as empty
@@ -273,10 +336,10 @@ class ActionBase(AlignakObject):
         # Get sure the performance data are stripped
         self.perf_data = self.perf_data.strip()
 
-        logger.debug("Command result for '%s': %d, %s",
-                     self.command, self.exit_status, self.output)
+        logger.debug("Command result for '%s': %d, %s", self.command, self.exit_status, self.output)
+
         if self.log_actions:
-            if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+            if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                 logger.warning("Check result for '%s': %d, %s",
                                self.command, self.exit_status, self.output)
                 if self.perf_data:
@@ -288,88 +351,110 @@ class ActionBase(AlignakObject):
                     logger.info("Performance data for '%s': %s", self.command, self.perf_data)
 
     def check_finished(self, max_plugins_output_length):
+        # pylint: disable=too-many-branches
         """Handle action if it is finished (get stdout, stderr, exit code...)
 
         :param max_plugins_output_length: max plugin data length
         :type max_plugins_output_length: int
         :return: None
         """
-        # We must wait, but checks are variable in time
-        # so we do not wait the same for an little check
-        # than a long ping. So we do like TCP: slow start with *2
-        # but do not wait more than 0.1s.
         self.last_poll = time.time()
 
         _, _, child_utime, child_stime, _ = os.times()
 
+        # Not yet finished...
         if self.process.poll() is None:
-            logger.debug("Process pid=%d is still alive", self.process.pid)
-            # polling every 1/2 s ... for a timeout in seconds, this is enough
+            # We must wait, but checks are variable in time so we do not wait the same
+            # for a little check or a long ping. So we do like TCP: slow start with a very
+            # shot time (0.0001 s) increased *2 but do not wait more than 0.5 s.
             self.wait_time = min(self.wait_time * 2, 0.5)
             now = time.time()
+            # This log is really spamming... uncomment if you really need this information :)
+            # logger.debug("%s - Process pid=%d is still alive", now, self.process.pid)
 
-            # If the fcntl is available (unix) we try to read in a
-            # asynchronous mode, so we won't block the PIPE at 64K buffer
-            # (deadlock...)
-            if fcntl:
-                self.stdoutdata += no_block_read(self.process.stdout)
-                self.stderrdata += no_block_read(self.process.stderr)
+            # Get standard outputs in non blocking mode from the process streams
+            stdout = no_block_read(self.process.stdout)
+            stderr = no_block_read(self.process.stderr)
+
+            try:
+                self.stdoutdata += stdout.decode("utf-8")
+                self.stderrdata += stderr.decode("utf-8")
+            except AttributeError:
+                pass
 
             if (now - self.check_time) > self.timeout:
-                logger.warning("Process pid=%d spent too much time: %d s",
+                logger.warning("Process pid=%d spent too much time: %.2f seconds",
                                self.process.pid, now - self.check_time)
-                self.kill__()
-                self.status = 'timeout'
+                self._in_timeout = True
+                self._kill()
+                self.status = ACT_STATUS_TIMEOUT
                 self.execution_time = now - self.check_time
                 self.exit_status = 3
-                # Do not keep a pointer to the process
-                # todo: ???
-                del self.process
-                # Get the user and system time
-                _, _, n_child_utime, n_child_stime, _ = os.times()
-                self.u_time = n_child_utime - child_utime
-                self.s_time = n_child_stime - child_stime
+
                 if self.log_actions:
-                    if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
+                    if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                         logger.warning("Action '%s' exited on timeout (%d s)",
                                        self.command, self.timeout)
                     else:
                         logger.info("Action '%s' exited on timeout (%d s)",
                                     self.command, self.timeout)
+
+                # Do not keep the process objcet
+                del self.process
+
+                # Replace stdout with stderr if stdout is empty
+                self.stdoutdata = self.stdoutdata.strip()
+                if not self.stdoutdata:
+                    self.stdoutdata = self.stderrdata
+
+                # Now grep what we want in the output
+                self.get_outputs(self.stdoutdata, max_plugins_output_length)
+
+                # We can clean the useless properties now
+                del self.stdoutdata
+                del self.stderrdata
+
+                # Get the user and system time
+                _, _, n_child_utime, n_child_stime, _ = os.times()
+                self.u_time = n_child_utime - child_utime
+                self.s_time = n_child_stime - child_stime
+
                 return
             return
 
         logger.debug("Process pid=%d exited with %d", self.process.pid, self.process.returncode)
-        # Get standards outputs from the communicate function if we do
-        # not have the fcntl module (Windows, and maybe some special
-        # unix like AIX)
-        if not fcntl:
-            (self.stdoutdata, self.stderrdata) = self.process.communicate()
+
+        if fcntl:
+            # Get standard outputs in non blocking mode from the process streams
+            stdout = no_block_read(self.process.stdout)
+            stderr = no_block_read(self.process.stderr)
         else:
-            # The command was too quick and finished even before we can
-            # poll it first. So finish the read.
-            self.stdoutdata += no_block_read(self.process.stdout)
-            self.stderrdata += no_block_read(self.process.stderr)
+            # Get standard outputs from the communicate function
+            (stdout, stderr) = self.process.communicate()
+
+        try:
+            self.stdoutdata += stdout.decode("utf-8")
+            self.stderrdata += stderr.decode("utf-8")
+        except AttributeError:
+            pass
 
         self.exit_status = self.process.returncode
         if self.log_actions:
-            if os.environ['TEST_LOG_ACTIONS'] == 'WARNING':
-                logger.warning("Action '%s' exited with return code %d",
-                               self.command, self.exit_status)
+            if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
+                logger.warning("Action '%s' exited with code %d", self.command, self.exit_status)
             else:
-                logger.info("Action '%s' exited with return code %d",
+                logger.info("Action '%s' exited with code %d",
                             self.command, self.exit_status)
 
-        # we should not keep the process now
-        # todo: ???
+        # We do not need the process now
         del self.process
 
-        if (  # check for bad syntax in command line:
-            'sh: -c: line 0: unexpected EOF while looking for matching' in self.stderrdata or
-            ('sh: -c:' in self.stderrdata and ': Syntax' in self.stderrdata) or
-            'Syntax error: Unterminated quoted string' in self.stderrdata
-        ):
-            logger.warning("Return bad syntax in command line!")
+        # check for bad syntax in command line:
+        if (self.stderrdata.find('sh: -c: line 0: unexpected EOF') >= 0 or
+                (self.stderrdata.find('sh: -c: ') >= 0 and
+                 self.stderrdata.find(': Syntax') >= 0 or
+                 self.stderrdata.find('Syntax error: Unterminated quoted string') >= 0)):
+            logger.warning("Bad syntax in command line!")
             # Very, very ugly. But subprocess._handle_exitstatus does
             # not see a difference between a regular "exit 1" and a
             # bailing out shell. Strange, because strace clearly shows
@@ -377,10 +462,13 @@ class ActionBase(AlignakObject):
             self.stdoutdata = self.stdoutdata + self.stderrdata
             self.exit_status = 3
 
+        # Make sure that exit code is a valid exit code
         if self.exit_status not in VALID_EXIT_STATUS:
             self.exit_status = 3
 
-        if not self.stdoutdata.strip():
+        # Replace stdout with stderr if stdout is empty
+        self.stdoutdata = self.stdoutdata.strip()
+        if not self.stdoutdata:
             self.stdoutdata = self.stderrdata
 
         # Now grep what we want in the output
@@ -390,16 +478,16 @@ class ActionBase(AlignakObject):
         del self.stdoutdata
         del self.stderrdata
 
-        self.status = 'done'
+        self.status = ACT_STATUS_DONE
         self.execution_time = time.time() - self.check_time
+
         # Also get the system and user times
         _, _, n_child_utime, n_child_stime, _ = os.times()
         self.u_time = n_child_utime - child_utime
         self.s_time = n_child_stime - child_stime
 
     def copy_shell__(self, new_i):
-        """Copy all attributes listed in 'only_copy_prop' from `self` to
-        `new_i`.
+        """Create all attributes listed in 'ONLY_COPY_PROP' and return `self` with these attributes.
 
         :param new_i: object to
         :type new_i: object
@@ -418,74 +506,67 @@ class ActionBase(AlignakObject):
         :return: True if one shell character is found, False otherwise
         :rtype: bool
         """
-        for character in SHELLCHARS:
-            if character in self.command:
-                return True
-        return False
+        return any(c in SHELLCHARS for c in self.command)
 
-    def execute__(self, force_shell=False):
+    def _execute(self, force_shell=False):
         """Execute action in a subprocess
 
         :return: None
         """
         pass
 
-    def kill__(self):
+    def _kill(self):
         """Kill the action and close fds
         :return: None
         """
         pass
 
-# OS specific "execute__" & "kill__" are defined by "Action" class
+
+# OS specific "_execute" & "_kill" functions are defined inside the "Action" class
 # definition:
 #
-
 if os.name != 'nt':
 
     class Action(ActionBase):
         """Action class for *NIX systems
 
         """
-
         properties = ActionBase.properties.copy()
 
-        def execute__(self, force_shell=sys.version_info < (2, 7)):
-            """Execute action in a subprocess
+        def _execute(self, force_shell=sys.version_info < (2, 7)):
+            """Execute the action command in a subprocess
 
-            :return: None or str:
+            :raise: ActionError
                 'toomanyopenfiles' if too many opened files on the system
                 'no_process_launched' if arguments parsing failed
                 'process_launch_failed': if the process launch failed
 
-            TODO: Clean this
+            :return: reference to the started process
+            :rtype: psutil.Process
             """
-            # We allow direct launch only for 2.7 and higher version
-            # because if a direct launch crash, under this the file handles
-            # are not releases, it's not good.
-
-            # If the command line got shell characters, we should go
-            # in a shell mode. So look at theses parameters
+            # If the command line got shell characters, we should start in a shell mode.
             force_shell |= self.got_shell_characters()
-
             logger.debug("Action execute, force shell: %s", force_shell)
 
-            # 2.7 and higher Python version need a list of args for cmd
-            # and if not force shell (if, it's useless, even dangerous)
-            # 2.4->2.6 accept just the string command
-            if sys.version_info < (2, 7) or force_shell:
-                cmd = self.command.encode('utf8', 'ignore')
-            else:
+            # 2.7 and higher Python version need a list of arguments for the started command
+            cmd = self.command
+            if not force_shell:
+                # try:
+                #     command = self.command.encode('utf8')
+                # except AttributeError:
+                #     print("Exception !")
+                #     # Python 3 will raise an exception because the line is still unicode
+                #     command = self.command
+                #     pass
+                #
                 try:
-                    cmd = shlex.split(self.command.encode('utf8', 'ignore'))
-                except Exception as exp:  # pylint: disable=W0703
-                    self.output = 'Not a valid shell command: ' + exp.__str__()
+                    cmd = shlex.split(self.command)
+                except Exception as exp:  # pylint: disable=broad-except
+                    self.output = 'Not a valid shell command: ' + str(exp)
                     self.exit_status = 3
-                    self.status = 'done'
+                    self.status = ACT_STATUS_DONE
                     self.execution_time = time.time() - self.check_time
-                    return 'no_process_launched'
-
-            # Now: GO for launch!
-            # logger.debug("Launching: %s" % (self.command.encode('utf8', 'ignore')))
+                    raise ActionError('no_process_launched')
             logger.debug("Action execute, cmd: %s", cmd)
 
             # The preexec_fn=os.setsid is set to give sons a same
@@ -493,39 +574,41 @@ if os.name != 'nt':
             # http://www.doughellmann.com/PyMOTW/subprocess/ for
             # detail about this.
             try:
-                self.process = subprocess.Popen(
-                    cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                    close_fds=True, shell=force_shell, env=self.local_env,
-                    preexec_fn=os.setsid)
+                self.process = psutil.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                            close_fds=True, shell=force_shell,
+                                            env=self.local_env, preexec_fn=os.setsid)
 
                 logger.debug("Action execute, process: %s", self.process.pid)
             except OSError as exp:
                 logger.error("Fail launching command: %s, force shell: %s, OSError: %s",
                              self.command, force_shell, exp)
                 # Maybe it's just a shell we try to exec. So we must retry
-                if (not force_shell and exp.errno == 8 and
-                        exp.strerror == 'Exec format error'):
+                if (not force_shell and exp.errno == 8 and exp.strerror == 'Exec format error'):
                     logger.info("Retrying with forced shell...")
-                    return self.execute__(True)
+                    return self._execute(True)
 
-                self.output = exp.__str__()
+                self.output = str(exp)
                 self.exit_status = 2
-                self.status = 'done'
+                self.status = ACT_STATUS_DONE
                 self.execution_time = time.time() - self.check_time
 
                 # Maybe we run out of file descriptor. It's not good at all!
                 if exp.errno == 24 and exp.strerror == 'Too many open files':
-                    return 'toomanyopenfiles'
-                return 'process_launch_failed'
-            except Exception as exp:  # pylint: disable=W0703
+                    raise ActionError('toomanyopenfiles')
+
+                raise ActionError('process_launch_failed')
+            except Exception as exp:  # pylint: disable=broad-except
                 logger.error("Fail launching command: %s, force shell: %s, exception: %s",
                              self.command, force_shell, exp)
-                return 'process_launch_failed'
+                raise ActionError('process_launch_failed')
+
+            # logger.info("- %s launched (pid=%d, gids=%s)",
+            #             self.process.name(), self.process.pid, self.process.gids())
 
             return self.process
 
-        def kill__(self):
-            """Kill the action and close fds
+        def _kill(self):
+            """Kill the action process and close fds
 
             :return: None
             """
@@ -535,13 +618,13 @@ if os.name != 'nt':
             # preexec_fn=os.setsid and so we can launch a whole kill
             # tree instead of just the first one
             os.killpg(self.process.pid, signal.SIGKILL)
+
             # Try to force close the descriptors, because python seems to have problems with them
             for file_d in [self.process.stdout, self.process.stderr]:
                 try:
                     file_d.close()
-                except Exception as exp:  # pylint: disable=W0703
-                    logger.error("Exception stopping command: %s %s",
-                                 self.command, exp)
+                except Exception as exp:  # pylint: disable=broad-except
+                    logger.error("Exception when stopping command: %s %s", self.command, exp)
 
 
 else:  # pragma: no cover, not currently tested with Windows...
@@ -555,35 +638,31 @@ else:  # pragma: no cover, not currently tested with Windows...
 
         properties = ActionBase.properties.copy()
 
-        def execute__(self, force_shell=False):
+        def _execute(self, force_shell=False):
             """Execute action in a subprocess
 
             :return: None
             """
             # 2.7 and higher Python version need a list of args for cmd
-            # 2.4->2.6 accept just the string command
-            if sys.version_info < (2, 7):
-                cmd = self.command
-            else:
-                try:
-                    cmd = shlex.split(self.command.encode('utf8', 'ignore'))
-                except Exception, exp:  # pylint: disable=W0703
-                    self.output = 'Not a valid shell command: ' + exp.__str__()
-                    self.exit_status = 3
-                    self.status = 'done'
-                    self.execution_time = time.time() - self.check_time
-                    return
+            try:
+                cmd = shlex.split(self.command)
+            except Exception as exp:  # pylint: disable=W0703
+                self.output = 'Not a valid shell command: ' + exp.__str__()
+                self.exit_status = 3
+                self.status = ACT_STATUS_DONE
+                self.execution_time = time.time() - self.check_time
+                return
 
             try:
                 self.process = subprocess.Popen(
                     cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
                     env=self.local_env, shell=True)
-            except WindowsError, exp:  # pylint: disable=E0602
+            except WindowsError as exp:  # pylint: disable=E0602
                 logger.info("We kill the process: %s %s", exp, self.command)
-                self.status = 'timeout'
+                self.status = ACT_STATUS_TIMEOUT
                 self.execution_time = time.time() - self.check_time
 
-        def kill__(self):
+        def _kill(self):
             """Wrapped to call TerminateProcess
 
             :return: None

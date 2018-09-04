@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # -*- mode: python ; coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -60,7 +60,7 @@ import logging
 from alignak.util import to_float, to_split, to_char, to_int, unique_value, list_split
 
 __all__ = ('UnusedProp', 'BoolProp', 'IntegerProp', 'FloatProp',
-           'CharProp', 'StringProp', 'ListProp',
+           'CharProp', 'StringProp', 'ListProp', 'DictProp',
            'FULL_STATUS', 'CHECK_RESULT')
 
 # Suggestion
@@ -76,6 +76,7 @@ NONE_OBJECT = object()
 
 
 class Property(object):
+    # pylint: disable=too-many-instance-attributes
     """Baseclass of all properties.
 
     Same semantic for all subclasses (except UnusedProp): The property
@@ -85,40 +86,46 @@ class Property(object):
 
     def __init__(self, default=NONE_OBJECT, class_inherit=None,  # pylint: disable=R0913
                  unmanaged=False, _help='', no_slots=False,
-                 fill_brok=None, conf_send_preparation=None,
-                 brok_transformation=None, retention=False,
-                 retention_preparation=None, to_send=False,
-                 override=False, managed=True, split_on_coma=True,
+                 fill_brok=None, brok_transformation=None, retention=False,
+                 retention_preparation=None, retention_restoration=None, to_send=False,
+                 override=False, managed=True, split_on_comma=True,
                  keep_empty=False, merging='uniq', special=False):
-
+        # pylint: disable=too-many-locals
         """
-        `default`: default value to be used if this property is not set.
-                   If default is None, this property is required.
+        `default`:
+            the default value to be used if this property is not set.
+            If default is None, this property is required.
 
-        `class_inherit`: List of 2-tuples, (Service, 'blabla'): must
-                   set this property to the Service class with name
-                   blabla. if (Service, None): must set this property
-                   to the Service class with same name
+        `class_inherit`:
+            List of 2-tuples, (Service, 'blabla'): must set this property to the
+            Service class with name blabla. if (Service, None): must set this property
+            to the Service class with same name
+
         `unmanaged`: ....
-        `help`: usage text
-        `no_slots`: do not take this property for __slots__
 
-        `fill_brok`: if set, send to broker. There are two categories:
-                     FULL_STATUS for initial and update status,
-                     CHECK_RESULT for check results
-        `retention`: if set, we will save this property in the retention files
-        `retention_preparation`: function, if set, will go this function before
-                     being save to the retention data
-        `split_on_coma`: indicates that list property value should not be
-                     split on coma delimiter (values conain comas that
-                     we want to keep).
+        `help`: usage text
+
+        `no_slots`:
+            do not take this property for __slots__
+
+        `fill_brok`:
+            if set, send to broker. There are two categories:
+                FULL_STATUS for initial and update status,
+                CHECK_RESULT for check results
+
+        `retention`:
+            if set, the property will be saved in the retention files
+        `retention_preparation`:
+            function name, if set, this function will be called with the property before
+            saving the date to the retention
+        `retention_restoration`:
+            function name, if set, this function will be called with the restored retention data
+
+        `split_on_comma`:
+            indicates that list property value should not be split on comma delimiter
+            (values may contain commas that we want to keep).
 
         Only for the initial call:
-
-        conf_send_preparation: if set, will pass the property to this
-                     function. It's used to 'flatten' some dangerous
-                     properties like realms that are too 'linked' to
-                     be send like that.
 
         brok_transformation: if set, will call the function with the
                      value of the property when flattening
@@ -146,20 +153,24 @@ class Property(object):
         self.unmanaged = unmanaged
         self.no_slots = no_slots
         self.fill_brok = fill_brok or []
-        self.conf_send_preparation = conf_send_preparation
         self.brok_transformation = brok_transformation
         self.retention = retention
         self.retention_preparation = retention_preparation
+        self.retention_restoration = retention_restoration
         self.to_send = to_send
         self.override = override
         self.managed = managed
         self.unused = False
         self.merging = merging
-        self.split_on_coma = split_on_coma
+        self.split_on_comma = split_on_comma
         self.keep_empty = keep_empty
         self.special = special
 
-    def pythonize(self, val):  # pylint: disable=R0201
+    def __repr__(self):  # pragma: no cover
+        return '<Property %r, default: %r />' % (self.__class__, self.default)
+    __str__ = __repr__
+
+    def pythonize(self, val):  # pylint: disable=no-self-use
         """Generic pythonize method
 
         :param val: value to python
@@ -208,12 +219,11 @@ class BoolProp(Property):
     Boolean values are currently case insensitively defined as 0,
     false, no, off for False, and 1, true, yes, on for True).
     """
-    @staticmethod
-    def pythonize(val):
+    def pythonize(self, val):
         """Convert value into a boolean
 
         :param val: value to convert
-        :type val:
+        :type val: bool, int, str
         :return: boolean corresponding to value ::
 
         {'1': True, 'yes': True, 'true': True, 'on': True,
@@ -227,10 +237,10 @@ class BoolProp(Property):
         if isinstance(val, bool):
             return val
         val = unique_value(val).lower()
-        if val in __boolean_states__.keys():
+        if val in list(__boolean_states__.keys()):
             return __boolean_states__[val]
-        else:
-            raise PythonizeError("Cannot convert '%s' to a boolean value" % val)
+
+        raise PythonizeError("Cannot convert '%s' to a boolean value" % val)
 
 
 class IntegerProp(Property):
@@ -247,8 +257,7 @@ class IntegerProp(Property):
         :return: integer corresponding to value
         :rtype: int
         """
-        val = unique_value(val)
-        return to_int(val)
+        return to_int(unique_value(val))
 
 
 class FloatProp(Property):
@@ -265,8 +274,7 @@ class FloatProp(Property):
         :return: float corresponding to value
         :rtype: float
         """
-        val = unique_value(val)
-        return to_float(val)
+        return to_float(unique_value(val))
 
 
 class CharProp(Property):
@@ -283,8 +291,7 @@ class CharProp(Property):
         :return: char corresponding to value
         :rtype: str
         """
-        val = unique_value(val)
-        return to_char(val)
+        return to_char(unique_value(val))
 
 
 class StringProp(Property):
@@ -300,8 +307,7 @@ class StringProp(Property):
         :return: str corresponding to value
         :rtype: str
         """
-        val = unique_value(val)
-        return val
+        return unique_value(val).strip()
 
 
 class PathProp(StringProp):
@@ -322,17 +328,17 @@ class ListProp(Property):
         * strip split values
 
         :param val: value to convert
-        :type val: basestring
+        :type val: str
         :return: list corresponding to value
         :rtype: list
         """
         if isinstance(val, list):
             return [s.strip() if hasattr(s, "strip") else s
-                    for s in list_split(val, self.split_on_coma)
+                    for s in list_split(val, self.split_on_comma)
                     if hasattr(s, "strip") and s.strip() != '' or self.keep_empty]
 
         return [s.strip() if hasattr(s, "strip") else s
-                for s in to_split(val, self.split_on_coma)
+                for s in to_split(val, self.split_on_comma)
                 if hasattr(s, "strip") and s.strip() != '' or self.keep_empty]
 
 
@@ -345,7 +351,7 @@ class SetProp(ListProp):
         * Simply convert to a set the value return by pythonize from ListProp
 
         :param val: value to convert
-        :type val: basestring
+        :type val: str
         :return: set corresponding to the value
         :rtype: set
         """
@@ -366,14 +372,14 @@ class LogLevelProp(StringProp):
         :return: log level corresponding to value
         :rtype: str
         """
-        val = unique_value(val)
-        return logging.getLevelName(val)
+        return logging.getLevelName(unique_value(val))
 
 
 class DictProp(Property):
     """Dict property
 
     """
+    # pylint: disable=keyword-arg-before-vararg
     def __init__(self, elts_prop=None, *args, **kwargs):
         """Dictionary of values.
              If elts_prop is not None, must be a Property subclass
@@ -462,8 +468,7 @@ class AddrProp(Property):
 class ToGuessProp(Property):
     """Unknown property encountered while parsing"""
 
-    @staticmethod
-    def pythonize(val):
+    def pythonize(self, val):
         """If value is a single list element just return the element
         does nothing otherwise
 

@@ -6,11 +6,6 @@ Graph Daemon :
 .. inheritance-diagram:: alignak.daemon.Daemon  alignak.daemons.arbiterdaemon.Arbiter  alignak.satellite.BaseSatellite  alignak.daemons.brokerdaemon.Broker  alignak.daemons.schedulerdaemon.Alignak  alignak.satellite.Satellite  alignak.daemons.pollerdaemon.Poller  alignak.daemons.receiverdaemon.Receiver  alignak.daemons.reactionnerdaemon.Reactionner 
    :parts: 3
 
-Graph ModuleType :
-
-.. inheritance-diagram:: types.ModuleType  alignak.misc.custom_module.CustomModule  alignak.bin._deprecated_VERSION.DeprecatedAlignakBin 
-   :parts: 3
-
 Graph Exception :
 
 .. inheritance-diagram:: __builtin__.Exception  alignak.daemon.InvalidPidFile  alignak.http.client.HTTPException  alignak.http.daemon.InvalidWorkDir  alignak.http.daemon.PortNotFree  alignak.property.PythonizeError  alignak.satellite.NotWorkerMod 

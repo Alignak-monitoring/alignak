@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -121,7 +121,6 @@ action or not if we are in right period
 import logging
 import time
 import re
-import warnings
 
 from alignak.objects.item import Item, Items
 
@@ -134,7 +133,7 @@ from alignak.log import make_monitoring_log
 from alignak.misc.serialization import get_alignak_class
 from alignak.util import merge_periods
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Timeperiod(Item):
@@ -147,18 +146,28 @@ class Timeperiod(Item):
 
     properties = Item.properties.copy()
     properties.update({
-        'timeperiod_name':  StringProp(fill_brok=['full_status']),
-        'alias':            StringProp(default='', fill_brok=['full_status']),
-        'use':              ListProp(default=[]),
-        'register':         IntegerProp(default=1),
+        'timeperiod_name':
+            StringProp(fill_brok=['full_status']),
+        'alias':
+            StringProp(default=u'', fill_brok=['full_status']),
+        'use':
+            ListProp(default=[]),
+        'register':
+            IntegerProp(default=1),
 
         # These are needed if a broker module calls methods on timeperiod objects
-        'dateranges':       ListProp(fill_brok=['full_status'], default=[]),
-        'exclude':          ListProp(fill_brok=['full_status'], default=[]),
-        'unresolved':          ListProp(fill_brok=['full_status'], default=[]),
-        'invalid_entries':          ListProp(fill_brok=['full_status'], default=[]),
-        'is_active':        BoolProp(default=False),
-        'activated_once':   BoolProp(default=False),
+        'dateranges':
+            ListProp(default=[], fill_brok=['full_status']),
+        'exclude':
+            ListProp(default=[], fill_brok=['full_status']),
+        'unresolved':
+            ListProp(default=[], fill_brok=['full_status']),
+        'invalid_entries':
+            ListProp(default=[], fill_brok=['full_status']),
+        'is_active':
+            BoolProp(default=False),
+        'activated_once':
+            BoolProp(default=False),
     })
     running_properties = Item.running_properties.copy()
 
@@ -168,10 +177,10 @@ class Timeperiod(Item):
             params = {}
 
         # Get standard params
-        standard_params = dict([(k, v) for k, v in params.items()
-                               if k in self.__class__.properties])
+        standard_params = dict(
+            [(k, v) for k, v in list(params.items()) if k in self.__class__.properties])
         # Get timeperiod params (monday, tuesday, ...)
-        timeperiod_params = dict([(k, v) for k, v in params.items()
+        timeperiod_params = dict([(k, v) for k, v in list(params.items())
                                   if k not in self.__class__.properties])
 
         if 'dateranges' in standard_params and isinstance(standard_params['dateranges'], list) \
@@ -204,7 +213,7 @@ class Timeperiod(Item):
             self.activated_once = False
 
             # Handle timeperiod params
-            for key, value in timeperiod_params.items():
+            for key, value in list(timeperiod_params.items()):
                 if isinstance(value, list):
                     if value:
                         value = value[-1]
@@ -392,6 +401,7 @@ class Timeperiod(Item):
             del self.invalid_cache[timestamp]
 
     def get_next_valid_time_from_t(self, timestamp):
+        # pylint: disable=too-many-branches
         """
         Get next valid time. If it's in cache, get it, otherwise define it.
         The limit to find it is 1 year.
@@ -460,6 +470,7 @@ class Timeperiod(Item):
         return local_min
 
     def get_next_invalid_time_from_t(self, timestamp):
+        # pylint: disable=too-many-branches
         """
         Get the next invalid time
 
@@ -520,25 +531,8 @@ class Timeperiod(Item):
             return periods[0][1]
         return original_t
 
-    def has(self, prop):
-        """
-        Check if self have prop attribute
-
-        :param prop: property name
-        :type prop: string
-        :return: true if self has this attribute
-        :rtype: bool
-        """
-        warnings.warn(
-            "{s.__class__.__name__} is deprecated, please use "
-            "`hasattr(your_object, attr)` instead. This has() method will "
-            "be removed in a later version.".format(s=self),
-            DeprecationWarning, stacklevel=2)
-        return hasattr(self, prop)
-
     def is_correct(self):
-        """
-        Check if this object configuration is correct ::
+        """Check if this object configuration is correct ::
 
         * Check if dateranges of timeperiod are valid
         * Call our parent class is_correct checker
@@ -551,18 +545,17 @@ class Timeperiod(Item):
         for daterange in self.dateranges:
             good = daterange.is_correct()
             if not good:
-                msg = "[timeperiod::%s] invalid daterange '%s'" % (self.get_name(), daterange)
-                self.configuration_errors.append(msg)
+                self.add_error("[timeperiod::%s] invalid daterange '%s'"
+                               % (self.get_name(), daterange))
             state &= good
 
         # Warn about non correct entries
         for entry in self.invalid_entries:
-            msg = "[timeperiod::%s] invalid entry '%s'" % (self.get_name(), entry)
-            self.configuration_errors.append(msg)
+            self.add_error("[timeperiod::%s] invalid entry '%s'" % (self.get_name(), entry))
 
         return super(Timeperiod, self).is_correct() and state
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         """
         Get readable object
 
@@ -583,7 +576,9 @@ class Timeperiod(Item):
 
         return string
 
-    def resolve_daterange(self, dateranges, entry):  # pylint: disable=R0911,R0915,R0912
+    def resolve_daterange(self, dateranges, entry):
+        # pylint: disable=too-many-return-statements,too-many-statements,
+        # pylint: disable=too-many-branches,too-many-locals
         """
         Try to solve dateranges (special cases)
 
@@ -675,7 +670,8 @@ class Timeperiod(Item):
                         'skip_interval': skip_interval, 'other': other}
                 dateranges.append(WeekDayDaterange(data))
                 return
-            elif t00 in Daterange.months and t01 in Daterange.months:
+
+            if t00 in Daterange.months and t01 in Daterange.months:
                 smon = Daterange.get_month_id(t00)
                 emon = Daterange.get_month_id(t01)
                 data = {'syear': 0, 'smon': smon, 'smday': smday, 'swday': 0, 'swday_offset': 0,
@@ -683,7 +679,8 @@ class Timeperiod(Item):
                         'skip_interval': skip_interval, 'other': other}
                 dateranges.append(MonthDateDaterange(data))
                 return
-            elif t00 == 'day' and t01 == 'day':
+
+            if t00 == 'day' and t01 == 'day':
                 data = {'syear': 0, 'smon': 0, 'smday': smday, 'swday': 0, 'swday_offset': 0,
                         'eyear': 0, 'emon': 0, 'emday': emday, 'ewday': 0, 'ewday_offset': 0,
                         'skip_interval': skip_interval, 'other': other}
@@ -704,7 +701,8 @@ class Timeperiod(Item):
                         'skip_interval': skip_interval, 'other': other}
                 dateranges.append(WeekDayDaterange(data))
                 return
-            elif t00 in Daterange.months:
+
+            if t00 in Daterange.months:
                 smon = Daterange.get_month_id(t00)
                 emon = smon
                 data = {'syear': 0, 'smon': smon, 'smday': smday, 'swday': 0, 'swday_offset': 0,
@@ -712,7 +710,8 @@ class Timeperiod(Item):
                         'skip_interval': skip_interval, 'other': other}
                 dateranges.append(MonthDateDaterange(data))
                 return
-            elif t00 == 'day':
+
+            if t00 == 'day':
                 data = {'syear': 0, 'smon': 0, 'smday': smday, 'swday': 0, 'swday_offset': 0,
                         'eyear': 0, 'emon': 0, 'emday': emday, 'ewday': 0, 'ewday_offset': 0,
                         'skip_interval': skip_interval, 'other': other}
@@ -749,7 +748,8 @@ class Timeperiod(Item):
                         'other': other}
                 dateranges.append(WeekDayDaterange(data))
                 return
-            elif t00 in Daterange.months:
+
+            if t00 in Daterange.months:
                 smon = Daterange.get_month_id(t00)
                 emon = smon
                 data = {'syear': 0, 'smon': smon, 'smday': smday, 'swday': 0,
@@ -758,7 +758,8 @@ class Timeperiod(Item):
                         'other': other}
                 dateranges.append(MonthDateDaterange(data))
                 return
-            elif t00 == 'day':
+
+            if t00 == 'day':
                 data = {'syear': 0, 'smon': 0, 'smday': smday, 'swday': 0,
                         'swday_offset': 0, 'eyear': 0, 'emon': 0, 'emday': emday,
                         'ewday': 0, 'ewday_offset': 0, 'skip_interval': 0,
@@ -780,7 +781,8 @@ class Timeperiod(Item):
                         'other': other}
                 dateranges.append(WeekDayDaterange(data))
                 return
-            elif t00 in Daterange.months and t01 in Daterange.months:
+
+            if t00 in Daterange.months and t01 in Daterange.months:
                 smon = Daterange.get_month_id(t00)
                 emon = Daterange.get_month_id(t01)
                 data = {'syear': 0, 'smon': smon, 'smday': smday, 'swday': 0,
@@ -789,7 +791,8 @@ class Timeperiod(Item):
                         'other': other}
                 dateranges.append(MonthDateDaterange(data))
                 return
-            elif t00 == 'day' and t01 == 'day':
+
+            if t00 == 'day' and t01 == 'day':
                 data = {'syear': 0, 'smon': 0, 'smday': smday, 'swday': 0,
                         'swday_offset': 0, 'eyear': 0, 'emon': 0, 'emday': emday,
                         'ewday': 0, 'ewday_offset': 0, 'skip_interval': 0,
@@ -890,10 +893,11 @@ class Timeperiod(Item):
                     new_exclude.append(timepriod.uuid)
                 else:
                     msg = "[timeentry::%s] unknown %s timeperiod" % (self.get_name(), tp_name)
-                    self.configuration_errors.append(msg)
+                    self.add_error(msg)
         self.exclude = new_exclude
 
     def check_exclude_rec(self):
+        # pylint: disable=access-member-before-definition
         """
         Check if this timeperiod is tagged
 
@@ -902,7 +906,7 @@ class Timeperiod(Item):
         """
         if self.rec_tag:
             msg = "[timeentry::%s] is in a loop in exclude parameter" % (self.get_name())
-            self.configuration_errors.append(msg)
+            self.add_error(msg)
             return False
         self.rec_tag = True
         for timeperiod in self.exclude:
@@ -921,7 +925,7 @@ class Timeperiod(Item):
         """
         cls = self.__class__
         # Now config properties
-        for prop, entry in cls.properties.items():
+        for prop, entry in list(cls.properties.items()):
             # Is this property intended for broking?
             # if 'fill_brok' in entry:
             if brok_type in entry.fill_brok:
@@ -998,16 +1002,16 @@ class Timeperiods(Items):
         valid = True
         # We do not want a same hg to be explode again and again
         # so we tag it
-        for timeperiod in self.items.values():
+        for timeperiod in list(self.items.values()):
             timeperiod.rec_tag = False
 
-        for timeperiod in self.items.values():
-            for tmp_tp in self.items.values():
+        for timeperiod in list(self.items.values()):
+            for tmp_tp in list(self.items.values()):
                 tmp_tp.rec_tag = False
             valid = timeperiod.check_exclude_rec() and valid
 
         # We clean the tags and collect the warning/erro messages
-        for timeperiod in self.items.values():
+        for timeperiod in list(self.items.values()):
             del timeperiod.rec_tag
 
             # Now other checks
@@ -1017,7 +1021,7 @@ class Timeperiods(Items):
                 msg = "Configuration in %s::%s is incorrect; from: %s" % (
                     timeperiod.my_type, timeperiod.get_name(), source
                 )
-                self.configuration_errors.append(msg)
+                self.add_error(msg)
 
             self.configuration_errors += timeperiod.configuration_errors
             self.configuration_warnings += timeperiod.configuration_warnings

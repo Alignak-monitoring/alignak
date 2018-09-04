@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -55,10 +55,85 @@ import logging
 import re
 from datetime import datetime, timedelta
 
-from alignak.util import get_sec_from_morning, get_day, get_start_of_day, get_end_of_day
 from alignak.alignakobject import AlignakObject
 
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+
+
+def get_start_of_day(year, month, day):
+    """Get the timestamp associated to the first second of a specific day
+
+    :param year: date year
+    :type year: int
+    :param month: date month
+    :type month: int
+    :param day: date day
+    :type day: int
+    :return: timestamp
+    :rtype: int
+    """
+    # DST is not known in the provided date
+    try:
+        timestamp = time.mktime((year, month, day, 00, 00, 00, 0, 0, -1))
+    except (OverflowError, ValueError):
+        # Windows mktime sometimes crashes on (1970, 1, 1, ...)
+        timestamp = 0.0
+
+    return int(timestamp)
+
+
+def get_end_of_day(year, month, day):
+    """Get the timestamp associated to the last second of a specific day
+
+    :param year: date year
+    :type year: int
+    :param month: date month (int)
+    :type month: int
+    :param day: date day
+    :type day: int
+    :return: timestamp
+    :rtype: int
+    """
+    # DST is not known in the provided date
+    timestamp = time.mktime((year, month, day, 23, 59, 59, 0, 0, -1))
+    return int(timestamp)
+
+
+def get_day(timestamp):
+    """Get timestamp of the beginning of the day (local) given by timestamp
+
+    :param timestamp: time to get day from
+    :type timestamp: int
+    :return: timestamp
+    :rtype: int
+    """
+    return int(timestamp - get_sec_from_morning(timestamp))
+
+
+def get_wday(timestamp):
+    """Get week day from date
+
+    :param timestamp: timestamp date
+    :type timestamp: int
+    :return: weekday (0-6)
+    :rtype: int
+    TODO: Not timezone aware
+    """
+    t_lt = time.localtime(timestamp)
+    return t_lt.tm_wday
+
+
+def get_sec_from_morning(timestamp):
+    """Get the number of seconds elapsed since the beginning of the
+    day deducted from the provided timestamp
+
+    :param timestamp: time to use for computation
+    :type timestamp: int
+    :return: timestamp
+    :rtype: int
+    """
+    t_lt = time.localtime(timestamp)
+    return t_lt.tm_hour * 3600 + t_lt.tm_min * 60 + t_lt.tm_sec
 
 
 def find_day_by_weekday_offset(year, month, weekday, offset):
@@ -89,7 +164,7 @@ def find_day_by_weekday_offset(year, month, weekday, offset):
     # ok go for it
     nb_found = 0
     try:
-        for i in xrange(0, offset + 1):
+        for i in range(0, offset + 1):
             # in cal 0 mean "there are no day here :)"
             if cal[i][weekday] != 0:
                 nb_found += 1
@@ -143,7 +218,11 @@ class Timerange(AlignakObject):
             self.is_valid = matches is not None
             if self.is_valid:
                 self.hstart, self.mstart, self.hend, self.mend = [int(g) for g in matches.groups()]
-
+            else:
+                self.hstart = "00:00"
+                self.mstart = "00:00"
+                self.hend = "00:00"
+                self.mend = "00:00"
         else:
             self.hstart = params["hstart"]
             self.mstart = params["mstart"]
@@ -164,7 +243,7 @@ class Timerange(AlignakObject):
                 "hend": self.hend, "mend": self.mend,
                 "is_valid": self.is_valid}
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         return str(self.__dict__)
 
     def get_sec_from_morning(self):
@@ -188,6 +267,8 @@ class Timerange(AlignakObject):
 
     def is_time_valid(self, timestamp):
         """Check if time is valid for this Timerange
+
+        If sec_from_morning is not provided, get the value.
 
         :param timestamp: time to check
         :type timestamp: int
@@ -215,7 +296,7 @@ class AbstractDaterange(AlignakObject):
     """
     timeranges = []
 
-    def __str__(self):
+    def __str__(self):  # pragma: no cover
         # TODO: What's the point of returning '' always
         return ''  # str(self.__dict__)
 
@@ -286,14 +367,13 @@ class AbstractDaterange(AlignakObject):
         """
         return Daterange.rev_weekdays[weekday_id]
 
-    def get_start_and_end_time(self, ref=None):  # pylint: disable=W0613,R0201
+    def get_start_and_end_time(self, ref=None):  # pylint: disable=unused-argument,no-self-use
         """Generic function to get start time and end time
 
         :param ref: time in seconds
         :type ref: int
         :return: None
         """
-        logger.warning("Calling function get_start_and_end_time which is not implemented")
         raise NotImplementedError()
 
     def is_time_valid(self, timestamp):
@@ -363,13 +443,8 @@ class AbstractDaterange(AlignakObject):
         :type timestamp: int
         :return: False if t in range, True otherwise
         :rtype: bool
-        TODO: Remove this function. Duplication
         """
-        (start_time, end_time) = self.get_start_and_end_time(timestamp)
-        if start_time <= timestamp <= end_time:
-            return False
-
-        return True
+        return not self.is_time_day_valid(timestamp)
 
     def get_next_future_timerange_valid(self, timestamp):
         """Get the next valid timerange (next timerange start in timeranges attribute)
@@ -431,6 +506,7 @@ class AbstractDaterange(AlignakObject):
 
         if self.is_time_day_valid(timestamp):
             return get_day(timestamp)
+
         return None
 
     def get_next_valid_time_from_t(self, timestamp):
@@ -446,6 +522,8 @@ class AbstractDaterange(AlignakObject):
 
         # First we search for the day of t
         t_day = self.get_next_valid_day(timestamp)
+        if t_day is None:
+            return t_day
 
         # We search for the min of all tr.start > sec_from_morning
         # if it's the next day, use a start of the day search for timerange
@@ -568,8 +646,8 @@ class Daterange(AbstractDaterange):
         'june': 6, 'july': 7, 'august': 8, 'september': 9,
         'october': 10, 'november': 11, 'december': 12
     }
-    rev_weekdays = dict((v, k) for k, v in weekdays.items())
-    rev_months = dict((v, k) for k, v in months.items())
+    rev_weekdays = dict((v, k) for k, v in list(weekdays.items()))
+    rev_months = dict((v, k) for k, v in list(months.items()))
 
     def __init__(self, params, parsing=True):
         """
@@ -623,6 +701,9 @@ class Daterange(AbstractDaterange):
             for timeinterval in params['other'].split(','):
                 self.timeranges.append(Timerange(timeinterval.strip()))
 
+    def get_start_and_end_time(self, ref=None):
+        raise NotImplementedError
+
     def serialize(self):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
@@ -650,11 +731,10 @@ class CalendarDaterange(Daterange):
         :param ref: time in seconds
         :type ref: int
         :return: tuple with start and end time
-        :rtype: tuple
+        :rtype: tuple (int, int)
         """
-        start_time = get_start_of_day(self.syear, int(self.smon), self.smday)
-        end_time = get_end_of_day(self.eyear, int(self.emon), self.emday)
-        return (start_time, end_time)
+        return (get_start_of_day(self.syear, int(self.smon), self.smday),
+                get_end_of_day(self.eyear, int(self.emon), self.emday))
 
 
 class StandardDaterange(AbstractDaterange):
@@ -717,7 +797,7 @@ class StandardDaterange(AbstractDaterange):
         :param ref: time in seconds
         :type ref: int
         :return: tuple with start and end time
-        :rtype: tuple
+        :rtype: tuple (int, int)
         """
         now = time.localtime(ref)
         self.syear = now.tm_year
@@ -729,7 +809,7 @@ class StandardDaterange(AbstractDaterange):
         day_diff = (day_id - now.tm_wday) % 7
         morning = datetime.fromtimestamp(today_morning) + timedelta(days=day_diff)
         night = datetime.fromtimestamp(tonight) + timedelta(days=day_diff)
-        return (float(morning.strftime("%s")), float(night.strftime("%s")))
+        return (int(morning.strftime("%s")), int(night.strftime("%s")))
 
 
 class MonthWeekDayDaterange(Daterange):
@@ -744,11 +824,11 @@ class MonthWeekDayDaterange(Daterange):
         :rtype: bool
         """
         valid = True
-        valid &= self.swday in xrange(7)
+        valid &= self.swday in range(7)
         if not valid:
             logger.error("Error: %s is not a valid day", self.swday)
 
-        valid &= self.ewday in xrange(7)
+        valid &= self.ewday in range(7)
         if not valid:
             logger.error("Error: %s is not a valid day", self.ewday)
 
@@ -808,7 +888,7 @@ class MonthDateDaterange(Daterange):
         :param ref: time in seconds
         :type ref: int
         :return: tuple with start and end time
-        :rtype: tuple
+        :rtype: tuple (int, int)
         """
         now = time.localtime(ref)
         if self.syear == 0:
@@ -852,7 +932,7 @@ class WeekDayDaterange(Daterange):
         :param ref: time in seconds
         :type ref: int
         :return: tuple with start and end time
-        :rtype: tuple
+        :rtype: tuple (int, int)
         """
         now = time.localtime(ref)
 
@@ -916,7 +996,7 @@ class MonthDayDaterange(Daterange):
         :param ref: time in seconds
         :type ref: int
         :return: tuple with start and end time
-        :rtype: tuple
+        :rtype: tuple (int, int)
         """
         now = time.localtime(ref)
         if self.syear == 0:

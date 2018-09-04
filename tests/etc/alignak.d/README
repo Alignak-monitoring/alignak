@@ -1,0 +1,6 @@
+# All the *.ini files in this directory are parsed with the main alignak.ini file to build
+# the whole Alignak configuration
+#
+# As such, you can easily declare and configure some daemons, modules, ... without
+# editing the main configuration file.
+#

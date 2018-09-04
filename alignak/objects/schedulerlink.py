@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -45,12 +45,9 @@ This module provide SchedulerLink and SchedulerLinks classes used to manage sche
 """
 import logging
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
-from alignak.property import BoolProp, IntegerProp, StringProp, DictProp
+from alignak.property import BoolProp, IntegerProp, StringProp
 
-from alignak.http.client import HTTPClientException, HTTPClientConnectionException, \
-    HTTPClientTimeoutException
-
-logger = logging.getLogger(__name__)  # pylint: disable=C0103
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class SchedulerLink(SatelliteLink):
@@ -63,85 +60,31 @@ class SchedulerLink(SatelliteLink):
 
     properties = SatelliteLink.properties.copy()
     properties.update({
-        'scheduler_name':     StringProp(fill_brok=['full_status']),
-        'port':               IntegerProp(default=7768, fill_brok=['full_status']),
-        'weight':             IntegerProp(default=1, fill_brok=['full_status']),
-        'skip_initial_broks': BoolProp(default=False, fill_brok=['full_status']),
-        'accept_passive_unknown_check_results': BoolProp(default=False, fill_brok=['full_status']),
+        'type':
+            StringProp(default=u'scheduler', fill_brok=['full_status'], to_send=True),
+        'scheduler_name':
+            StringProp(default='', fill_brok=['full_status']),
+        'port':
+            IntegerProp(default=7768, fill_brok=['full_status'], to_send=True),
+        'weight':
+            IntegerProp(default=1, fill_brok=['full_status']),
+        'skip_initial_broks':
+            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
+        'accept_passive_unknown_check_results':
+            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
     })
 
     running_properties = SatelliteLink.running_properties.copy()
     running_properties.update({
-        'conf': StringProp(default=None),
-        'conf_package': DictProp(default={}),
-        'need_conf': StringProp(default=True),
-        'external_commands': StringProp(default=[]),
-        'push_flavor': IntegerProp(default=0),
+        # 'conf':
+        #     StringProp(default=None),
+        # 'cfg':
+        #     DictProp(default={}),
+        'need_conf':
+            StringProp(default=True),
+        'external_commands':
+            StringProp(default=[]),
     })
-
-    def run_external_commands(self, commands):  # pragma: no cover, seems not to be used anywhere
-        """
-        Run external commands
-
-        :param commands:
-        :type commands:
-        :return: False, None
-        :rtype: bool | None
-
-        TODO: this function seems to be used by the arbiter when it needs to make its schedulers
-        run external commands. Currently, it is not used, but will it be?
-
-        TODO: need to recode this function because return shouod always be boolean
-        """
-        logger.debug("[%s] run_external_commands", self.get_name())
-
-        if self.con is None:
-            self.create_connection()
-        if not self.alive:
-            return None
-        logger.debug("[%s] Sending %d commands", self.get_name(), len(commands))
-
-        try:
-            self.con.post('run_external_commands', {'cmds': commands})
-        except HTTPClientConnectionException as exp:
-            logger.warning("[%s] Connection error when sending run_external_commands",
-                           self.get_name())
-            self.add_failed_check_attempt(reason=str(exp))
-            self.set_dead()
-        except HTTPClientTimeoutException as exp:
-            logger.warning("[%s] Connection timeout when sending run_external_commands: %s",
-                           self.get_name(), str(exp))
-            self.add_failed_check_attempt(reason=str(exp))
-        except HTTPClientException as exp:  # pragma: no cover, simple protection
-            logger.error("[%s] Error when sending run_external_commands: %s",
-                         self.get_name(), str(exp))
-            self.con = None
-        else:
-            return True
-
-        return False
-
-    def register_to_my_realm(self):  # pragma: no cover, seems not to be used anywhere
-        """
-        Add this reactionner to the realm
-
-        :return: None
-        """
-        self.realm.schedulers.append(self)
-
-    def give_satellite_cfg(self):
-        """
-        Get configuration of the scheduler satellite
-
-        :return: dictionary of scheduler information
-        :rtype: dict
-        """
-        return {'port': self.port, 'address': self.address,
-                'name': self.get_name(), 'instance_id': self.uuid,
-                'active': self.conf is not None, 'push_flavor': self.push_flavor,
-                'timeout': self.timeout, 'data_timeout': self.data_timeout,
-                'max_check_attempts': self.max_check_attempts,
-                'use_ssl': self.use_ssl, 'hard_ssl_name_check': self.hard_ssl_name_check}
 
     def get_override_configuration(self):
         """
@@ -153,7 +96,7 @@ class SchedulerLink(SatelliteLink):
         """
         res = {}
         properties = self.__class__.properties
-        for prop, entry in properties.items():
+        for prop, entry in list(properties.items()):
             if entry.override:
                 res[prop] = getattr(self, prop)
         return res

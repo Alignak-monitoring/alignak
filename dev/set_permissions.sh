@@ -1,7 +1,7 @@
 #!/bin/bash
 
 #
-# Copyright (C) 2015-2016: Alignak team, see AUTHORS.txt file for contributors
+# Copyright (C) 2015-2018: Alignak team, see AUTHORS.txt file for contributors
 #
 # This file is part of Alignak.
 #
@@ -19,58 +19,89 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 #
 
+# -----------------------------------------------------------------------------
+#  This script checks if an alignak user account/group exist in the system. If
+# it does not, it will create the appropriate user/group.
+#  You can start this script with a command line parameter to specify another directory
+# than the default one
+# -----------------------------------------------------------------------------
+
 # Default is alignak account
 ACCOUNT=$1
+# Default is /usr/local account
+PREFIX=$2
 # Parse command line arguments
 if [ $# -eq 0 ]; then
     ACCOUNT="alignak"
+    PREFIX="/usr/local"
+
+fi
+if [ $# -eq 1 ]; then
+    PREFIX="/usr/local"
+
 fi
 
-## Same procedure as the one done in the debian installation
 ## Create user and group
 echo "Checking / creating '$ACCOUNT' user and users group"
-# Note: if the user exists, its properties won't be changed (gid, home, shell)
-adduser --quiet --system --home /var/lib/$ACCOUNT --no-create-home --group $ACCOUNT || true
+id -u $ACCOUNT &>/dev/null || useradd $ACCOUNT --system --no-create-home --user-group
 
 ## Create nagios group
 echo "Checking / creating 'nagios' users group"
-addgroup --system nagios || true
+getent group nagios || groupadd nagios
 
 ## Add user to nagios group
 id -Gn $ACCOUNT |grep -E '(^|[[:blank:]])nagios($|[[:blank:]])' >/dev/null ||
    echo "Adding user '$ACCOUNT' to the nagios users group"
-   adduser $ACCOUNT nagios
+   usermod -a -G nagios $ACCOUNT
 
 ## Create directories with proper permissions
-for i in /usr/local/etc/alignak /usr/local/var/run/alignak /usr/local/var/log/alignak /usr/local/var/lib/alignak /usr/local/var/libexec/alignak
+for i in $PREFIX/etc/alignak $PREFIX/var/run/alignak $PREFIX/var/log/alignak $PREFIX/var/lib/alignak $PREFIX/var/libexec/alignak
 do
-   mkdir -p $i
-   echo "Setting '$ACCOUNT' ownership on: $i"
-   chown -R $ACCOUNT:$ACCOUNT $i
+    mkdir -p $i
+    echo "Setting '$ACCOUNT' ownership on: $i"
+    chown -R $ACCOUNT:$ACCOUNT $i
+
+    echo "Setting file permissions on: $i"
+    find $i -type f -exec chmod 664 {} +
+    find $i -type d -exec chmod 775 {} +
 done
 
-echo "Setting file permissions on: /usr/local/etc/alignak"
-find /usr/local/etc/alignak -type f -exec chmod 664 {} +
-find /usr/local/etc/alignak -type d -exec chmod 775 {} +
-
 ### Set permissions on alignak-backend settings
-if [ -d "/usr/local/etc/alignak-backend" ]; then
-   echo "Setting '$ACCOUNT' ownership on /usr/local/etc/alignak-backend"
-   chown -R $ACCOUNT:$ACCOUNT /usr/local/etc/alignak-backend
-   
-   echo "Setting file permissions on: /usr/local/etc/alignak-backend"
-   find /usr/local/etc/alignak-backend -type f -exec chmod 664 {} +
-   find /usr/local/etc/alignak-backend -type d -exec chmod 775 {} +
+if [ -d "$PREFIX/etc/alignak-backend" ]; then
+   echo "Setting '$ACCOUNT' ownership on $PREFIX/etc/alignak-backend"
+   chown -R $ACCOUNT:$ACCOUNT $PREFIX/etc/alignak-backend
+
+   echo "Setting file permissions on: $PREFIX/etc/alignak-backend"
+   find $PREFIX/etc/alignak-backend -type f -exec chmod 664 {} +
+   find $PREFIX/etc/alignak-backend -type d -exec chmod 775 {} +
+fi
+### Set permissions on alignak-backend log directory
+if [ -d "$PREFIX/var/log/alignak-backend" ]; then
+   echo "Setting '$ACCOUNT' ownership on $PREFIX/var/log/alignak-backend"
+   chown -R $ACCOUNT:$ACCOUNT $PREFIX/var/log/alignak-backend
+
+   echo "Setting file permissions on: $PREFIX/var/log/alignak-backend"
+   find $PREFIX/var/log/alignak-backend -type f -exec chmod 664 {} +
+   find $PREFIX/var/log/alignak-backend -type d -exec chmod 775 {} +
 fi
 
 ### Set permissions on alignak-webui settings
-if [ -d "/usr/local/etc/alignak-webui" ]; then
-   echo "Setting '$ACCOUNT' ownership on /usr/local/etc/alignak-webui"
-   chown -R $ACCOUNT:$ACCOUNT /usr/local/etc/alignak-webui
+if [ -d "$PREFIX/etc/alignak-webui" ]; then
+   echo "Setting '$ACCOUNT' ownership on $PREFIX/etc/alignak-webui"
+   chown -R $ACCOUNT:$ACCOUNT $PREFIX/etc/alignak-webui
    
-   echo "Setting file permissions on: /usr/local/etc/alignak-webui"
-   find /usr/local/etc/alignak-webui -type f -exec chmod 664 {} +
-   find /usr/local/etc/alignak-webui -type d -exec chmod 775 {} +
+   echo "Setting file permissions on: $PREFIX/etc/alignak-webui"
+   find $PREFIX/etc/alignak-webui -type f -exec chmod 664 {} +
+   find $PREFIX/etc/alignak-webui -type d -exec chmod 775 {} +
+fi
+### Set permissions on alignak-webui log directory
+if [ -d "$PREFIX/var/log/alignak-webui" ]; then
+   echo "Setting '$ACCOUNT' ownership on $PREFIX/var/log/alignak-webui"
+   chown -R $ACCOUNT:$ACCOUNT $PREFIX/var/log/alignak-webui
+   
+   echo "Setting file permissions on: $PREFIX/var/log/alignak-webui"
+   find $PREFIX/var/log/alignak-webui -type f -exec chmod 664 {} +
+   find $PREFIX/var/log/alignak-webui -type d -exec chmod 775 {} +
 fi
 
 echo "Terminated"
