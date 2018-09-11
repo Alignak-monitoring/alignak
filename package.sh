@@ -151,6 +151,7 @@ if [ "${output_type}" = "deb" ]; then
       --maintainer "${pkg_team}" \
       --python-package-name-prefix "${python_prefix}" \
       --python-scripts-executable "/usr/bin/env python" \
+      --python-install-lib "/usr/local/lib/python${python_version}/dist-packages" \
       --python-install-data '/usr/local' \
       --python-install-bin '/usr/local/bin' \
       --no-python-dependencies \
