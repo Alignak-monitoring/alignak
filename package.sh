@@ -137,6 +137,7 @@ echo "Running fpm..."
 if [ "${output_type}" = "deb" ]; then
    fpm \
       --force \
+      --verbose \
       --input-type ${input_type} \
       --output-type ${output_type} \
       --package "./dist" \
@@ -150,7 +151,7 @@ if [ "${output_type}" = "deb" ]; then
       --maintainer "${pkg_team}" \
       --python-package-name-prefix "${python_prefix}" \
       --python-scripts-executable "/usr/bin/env python" \
-      --python-install-lib "/usr/local/lib/python${python_version}/site-packages" \
+      --python-install-lib "/usr/local/lib/python${python_version}/dist-packages" \
       --python-install-data '/usr/local' \
       --python-install-bin '/usr/local/bin' \
       --no-python-dependencies \
