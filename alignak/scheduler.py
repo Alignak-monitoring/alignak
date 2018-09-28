@@ -1841,7 +1841,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # May be self.ticks is not set (unit tests context!)
         ticks = getattr(self, 'ticks', self.pushed_conf.host_freshness_check_interval)
         if self.pushed_conf.check_host_freshness \
-                and self.pushed_conf.host_freshness_check_interval % ticks == 0:
+                and ticks % self.pushed_conf.host_freshness_check_interval == 0:
             # Freshness check is configured for hosts - get the list of concerned hosts:
             # host check freshness is enabled and the host is only passively checked
             hosts = [h for h in self.hosts if h.check_freshness and not h.freshness_expired and
@@ -1852,7 +1852,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # May be self.ticks is not set (unit tests context!)
         ticks = getattr(self, 'ticks', self.pushed_conf.service_freshness_check_interval)
         if self.pushed_conf.check_service_freshness \
-                and self.pushed_conf.service_freshness_check_interval % ticks == 0:
+                and ticks % self.pushed_conf.service_freshness_check_interval == 0:
             # Freshness check is configured for services - get the list of concerned services:
             # service check freshness is enabled and the service is only passively checked and
             # the depending host is not freshness expired
