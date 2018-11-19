@@ -1411,7 +1411,9 @@ class Items(object):
             # We add contacts into our contacts
             if cnames:
                 if hasattr(item, 'contacts'):
-                    item.contacts.extend(cnames)
+                    # Fix #1054 - bad contact explosion
+                    # item.contacts.extend(cnames)
+                    item.contacts = item.contacts + cnames
                 else:
                     item.contacts = cnames
 
