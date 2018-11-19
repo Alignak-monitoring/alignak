@@ -341,8 +341,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 new_broks = satellite.get_and_clear_broks()
                 if new_broks:
                     logger.debug("Got %d broks from: %s", len(new_broks), satellite.name)
-                for brok in list(new_broks.values()):
-                    logger.debug("Got brok from %s: %s", satellite.name, brok.type)
+                for brok in new_broks:
                     self.add(brok)
 
     def get_initial_broks_from_satellites(self):
@@ -1613,12 +1612,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             self.get_objects_from_from_queues()
             statsmgr.timer('get-objects-from-queues', time.time() - _t0)
 
-            # It is not the arbiter's job to manage broks and external commands!
-            # # Maybe our satellites raised new broks. Reap them...
-            # _t0 = time.time()
-            # self.get_broks_from_satellites()
-            # statsmgr.timer('broks.got.time', time.time() - _t0)
-            #
+            # Maybe our satellites raised new broks. Reap them...
+            _t0 = time.time()
+            self.get_broks_from_satellites()
+            statsmgr.timer('broks.got.time', time.time() - _t0)
+
             # One broker is responsible for our broks, we give him our broks
             _t0 = time.time()
             self.push_broks_to_broker()
