@@ -92,7 +92,7 @@ class TestDaemonsApi(AlignakTest):
             shutil.rmtree('%s/etc/arbiter' % self.cfg_folder)
         shutil.copytree('./cfg/%s/arbiter' % cfg_dir, '%s/etc/arbiter' % self.cfg_folder)
 
-        self._prepare_hosts_configuration(cfg_folder='%s/etc/arbiter/objects/hosts' 
+        self._prepare_hosts_configuration(cfg_folder='%s/etc/arbiter/objects/hosts'
                                                      % self.cfg_folder,
                                           hosts_count=hosts_count, target_file_name='hosts.cfg',
                                           realms=realms)
@@ -245,7 +245,7 @@ class TestDaemonsApi(AlignakTest):
 
             # expected_data = set(name_to_interface[name](None).api())
             # assert set(data) == expected_data, "Daemon %s has a bad API!" % name
-        print('\n'.join(doc))
+        # print('\n'.join(doc))
 
         rst_write = None
         rst_file = "daemons_api.rst"
