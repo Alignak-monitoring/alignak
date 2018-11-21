@@ -1489,10 +1489,11 @@ class Scheduler(object):  # pylint: disable=R0902
         if not self.pushed_conf.skip_initial_broks:
             #  We call initial_status from all this types
             #  The order is important, service need host...
-            initial_status_types = (self.timeperiods, self.commands,
-                                    self.contacts, self.contactgroups,
-                                    self.hosts, self.hostgroups,
-                                    self.services, self.servicegroups)
+            initial_status_types = (self.realms, self.timeperiods, self.commands,
+                                    self.notificationways, self.contacts, self.contactgroups,
+                                    self.hosts, self.hostgroups, self.hostdependencies,
+                                    self.services, self.servicegroups, self.servicedependencies,
+                                    self.escalations)
 
             for tab in initial_status_types:
                 for item in tab:
