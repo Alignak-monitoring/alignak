@@ -23,7 +23,8 @@ codecov
 coveralls
 
 # Static code analysis libraries
-pylint
+# Not yet compatible with most recent 2.2 version
+pylint<2.2
 pycodestyle
 pep257
 
