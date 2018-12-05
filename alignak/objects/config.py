@@ -2209,6 +2209,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             if getattr(self, 'service_perfdata_file', None):
                 mod_configuration['service_perfdata_file'] = \
                     getattr(self, 'service_perfdata_file')
+            logger.debug("inner metrics module, configuration: %s", mod_configuration)
+
             modules.append((
                 'broker', mod_configuration
             ))
@@ -2229,11 +2231,15 @@ class Config(Item):  # pylint: disable=R0904,R0902
                 'imported_from': 'inner',
                 'enabled': True
             }
-            if getattr(self, 'state_retention_file', None):
+            if getattr(self, 'state_retention_file', None) is not None:
                 mod_configuration['retention_file'] = getattr(self, 'state_retention_file')
+            if getattr(self, 'state_retention_dir', None) is not None:
+                mod_configuration['retention_dir'] = getattr(self, 'state_retention_dir')
             if getattr(self, 'retention_update_interval', None):
                 self.tick_update_retention = int(self.retention_update_interval) * 60
                 mod_configuration['retention_period'] = int(self.retention_update_interval) * 60
+            logger.debug("inner retention module, configuration: %s", mod_configuration)
+
             modules.append((
                 'scheduler', mod_configuration
             ))

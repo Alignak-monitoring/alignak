@@ -589,8 +589,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     if cfg_module.get('name', 'unset') == [module_cfg['name']]:
                         logger.info("  updating module Cfg file configuration")
                         cfg_module = module_cfg
-                        logger.debug("Module cfg %s updated params: %s",
-                                     module_cfg['name'], module_cfg)
+                        logger.info("Module %s updated parameters: %s",
+                                    module_cfg['name'], module_cfg)
                         break
                 else:
                     raw_objects['module'].append(module_cfg)
