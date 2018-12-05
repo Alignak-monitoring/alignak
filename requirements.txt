@@ -19,7 +19,7 @@ six
 CherryPy==15.0.0
 
 # Requests to communicate between the daemons
-requests==2.18.4
+requests==2.20.0
 
 # importlib is used to import modules used by the daemons
 importlib; python_version == '2.7'
