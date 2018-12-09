@@ -19,6 +19,7 @@
 # along with Alignak.  If not, see <http://www.gnu.org/licenses/>.
 """This module provides a specific HTTP interface for a Arbiter."""
 
+import os
 import time
 import logging
 import json
@@ -660,8 +661,12 @@ class ArbiterInterface(GenericInterface):
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
-    def events_log(self, details=False):
+    def events_log(self, details=False, count=0, timestamp=0):
         """Get the most recent Alignak events
+
+        If count is specifies it is the maximum number of events to return.
+
+        If timestamp is specified, events older than this timestamp will not be returned
 
         The arbiter maintains a list of the most recent Alignak events. This endpoint
         provides this list.
@@ -730,14 +735,28 @@ class ArbiterInterface(GenericInterface):
         :return: list of the most recent events
         :rtype: list
         """
+        if not count:
+            count = 1 + int(os.environ.get('ALIGNAK_EVENTS_LOG_COUNT',
+                                           self.app.conf.events_log_count))
+        count = int(count)
+        timestamp = float(timestamp)
+        logger.debug('Get max %d events, newer than %s out of %d',
+                     count, timestamp, len(self.app.recent_events))
+
         res = []
         for log in reversed(self.app.recent_events):
+            if timestamp and timestamp > log['timestamp']:
+                break
+            if not count:
+                break
             if details:
                 # Exposes the full object
                 res.append(log)
             else:
                 res.append("%s - %s - %s"
                            % (log['date'], log['level'][0].upper(), log['message']))
+
+        logger.debug('Got %d events', len(res))
         return res
 
     @cherrypy.expose
