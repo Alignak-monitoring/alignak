@@ -59,6 +59,7 @@ from six import string_types
 
 from alignak.action import ACT_STATUS_QUEUED, ACT_STATUS_LAUNCHED, \
     ACT_STATUS_DONE, ACT_STATUS_TIMEOUT
+from alignak.action import ActionError
 from alignak.message import Message
 from alignak.misc.common import setproctitle, SIGNALS_TO_NAMES_DICT
 
@@ -371,6 +372,10 @@ class Worker(object):
             logger.info("[%s] (pid=%d) starting my job...", self.get_id(), os.getpid())
             self.do_work(actions_queue, returns_queue)
             logger.info("[%s] (pid=%d) stopped", self.get_id(), os.getpid())
+        except ActionError:
+            logger.error("[%s] exited with an ActionError exception : %s", self._id, str(exp))
+            logger.exception(exp)
+            raise
         # Catch any exception, log the exception and exit anyway
         except Exception as exp:  # pragma: no cover, this should never happen indeed ;)
             logger.error("[%s] exited with an unmanaged exception : %s", self._id, str(exp))

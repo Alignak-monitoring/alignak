@@ -106,7 +106,6 @@ class Acknowledge(AlignakObject):  # pylint: disable=R0903
     def get_raise_brok(self, host_name, service_name=''):
         """Get a start acknowledge brok
 
-        :param comment_type: 1 = host, 2 = service
         :param host_name:
         :param service_name:
         :return: brok with wanted data

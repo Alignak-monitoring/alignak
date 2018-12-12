@@ -176,18 +176,18 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # Alignak instance name is set as the arbiter name
         # if it is not defined in the configuration file
         'alignak_name':
-            StringProp(default=u''),
+            StringProp(default=u'', fill_brok=['full_status']),
         'alignak_env':
-            ListProp(default=[]),
+            ListProp(default=[], fill_brok=['full_status']),
 
         # Configuration identification - instance id and name
         'instance_id':
-            StringProp(default=u''),
+            StringProp(default=u'', fill_brok=['full_status']),
         'config_name':
-            StringProp(default=u'Main configuration'),
+            StringProp(default=u'Main configuration', fill_brok=['full_status']),
 
         'program_start':
-            IntegerProp(default=0, fill_brok=['program_status']),
+            IntegerProp(default=0, fill_brok=['full_status']),
         'last_alive':
             IntegerProp(default=0),
         'last_log_rotation':
@@ -200,37 +200,37 @@ class Config(Item):  # pylint: disable=R0904,R0902
             BoolProp(default=True),
 
         'modified_host_attributes':
-            IntegerProp(default=0),
+            IntegerProp(default=0, fill_brok=['full_status']),
         'modified_service_attributes':
-            IntegerProp(default=0),
+            IntegerProp(default=0, fill_brok=['full_status']),
 
         'daemon_mode':
             BoolProp(default=True),
         # -----
 
-        # 'passive_host_checks_enabled':
-        #     BoolProp(default=True, fill_brok=['full_status']),
-        # 'passive_service_checks_enabled':
-        #     BoolProp(default=True, fill_brok=['full_status']),
-        # 'active_host_checks_enabled':
-        #     BoolProp(default=True, fill_brok=['full_status']),
-        # 'active_service_checks_enabled':
-        #     BoolProp(default=True, fill_brok=['full_status']),
+        'passive_host_checks_enabled':
+            BoolProp(default=True, fill_brok=['full_status']),
+        'passive_service_checks_enabled':
+            BoolProp(default=True, fill_brok=['full_status']),
+        'active_host_checks_enabled':
+            BoolProp(default=True, fill_brok=['full_status']),
+        'active_service_checks_enabled':
+            BoolProp(default=True, fill_brok=['full_status']),
         'event_handlers_enabled':
             BoolProp(default=True, fill_brok=['full_status']),
-        # 'flap_detection_enabled':
-        #     BoolProp(default=True, fill_brok=['full_status']),
-        # 'notifications_enabled':
-        #     BoolProp(default=True, fill_brok=['full_status']),
+        'flap_detection_enabled':
+            BoolProp(default=True, fill_brok=['full_status']),
+        'notifications_enabled':
+            BoolProp(default=True, fill_brok=['full_status']),
 
         # Used for the MAINCONFIGFILE, CONFIGFILES and CONFIGBASEDIR macros
         # will be set when we will load a file
         'config_files':
-            ListProp(default=[]),
+            ListProp(default=[], fill_brok=['full_status']),
         'main_config_file':
-            StringProp(default=u''),
+            StringProp(default=u'', fill_brok=['full_status']),
         'config_base_dir':
-            StringProp(default=u''),
+            StringProp(default=u'', fill_brok=['full_status']),
 
         # # Triggers directory
         # 'triggers_dir':
@@ -306,7 +306,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Inner external commands self created module parameter
         'check_external_commands':
-            BoolProp(default=True),
+            BoolProp(default=True, fill_brok=['full_status']),
         'command_check_interval':
             UnusedProp(text=u'Alignak will always check for external commands. '
                             u'This configuration value is useless.'),
@@ -328,13 +328,16 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # -----
         # Inner state retention module parameters
         'retain_state_information':
-            BoolProp(default=True),
+            BoolProp(default=True, fill_brok=['full_status']),
+
+        'state_retention_dir':
+            StringProp(default=u'', fill_brok=['full_status']),
 
         'state_retention_file':
-            StringProp(default=u''),
+            StringProp(default=u'', fill_brok=['full_status']),
 
         'retention_update_interval':
-            IntegerProp(default=0),
+            IntegerProp(default=0, fill_brok=['full_status']),
 
         'use_retained_program_state':
             UnusedProp(text=NOT_INTERESTING),
@@ -367,10 +370,10 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Monitoring logs (Alignak events log) configuration
         'events_date_format':
-            StringProp(default='%Y-%m-%d %H:%M:%S'),
+            StringProp(default='%Y-%m-%d %H:%M:%S', fill_brok=['full_status']),
 
         'events_log_count':
-            IntegerProp(default=100),
+            IntegerProp(default=100, fill_brok=['full_status']),
 
         'log_notifications':
             BoolProp(default=True, fill_brok=['full_status'],
@@ -463,7 +466,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
                             'of the initial check is a random one.'),
 
         'max_host_check_spread':
-            IntegerProp(default=5, class_inherit=[(Host, 'max_check_spread')]),
+            IntegerProp(default=5, fill_brok=['full_status'],
+                        class_inherit=[(Host, 'max_check_spread')]),
 
         'interval_length':
             IntegerProp(default=60, fill_brok=['full_status'],
@@ -513,7 +517,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
             UnusedProp(text=u'fork twice is not used.'),
 
         'enable_environment_macros':
-            BoolProp(default=False, class_inherit=[(Host, None), (Service, None)]),
+            BoolProp(default=False, fill_brok=['full_status'],
+                     class_inherit=[(Host, None), (Service, None)]),
 
         # Flapping management
         'enable_flap_detection':
@@ -537,7 +542,8 @@ class Config(Item):  # pylint: disable=R0904,R0902
                         class_inherit=[(Host, 'global_high_flap_threshold')]),
 
         'flap_history':
-            IntegerProp(default=20, class_inherit=[(Host, None), (Service, None)]),
+            IntegerProp(default=20, fill_brok=['full_status'],
+                        class_inherit=[(Host, None), (Service, None)]),
 
         # Todo: not used anywhere in the source code
         'soft_state_dependencies':
@@ -564,20 +570,23 @@ class Config(Item):  # pylint: disable=R0904,R0902
             IntegerProp(default=5, class_inherit=[(Host, None), (Service, None)]),
 
         'process_performance_data':
-            BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Host, None), (Service, None)]),
 
         'host_perfdata_command':
-            StringProp(default='', class_inherit=[(Host, 'perfdata_command')]),
+            StringProp(default='', fill_brok=['full_status'],
+                       class_inherit=[(Host, 'perfdata_command')]),
 
         'service_perfdata_command':
-            StringProp(default='', class_inherit=[(Service, 'perfdata_command')]),
+            StringProp(default='', fill_brok=['full_status'],
+                       class_inherit=[(Service, 'perfdata_command')]),
 
         # Inner perfdata self created module parameters
         'host_perfdata_file':
-            StringProp(default=''),
+            StringProp(default='', fill_brok=['full_status']),
 
         'service_perfdata_file':
-            StringProp(default=''),
+            StringProp(default='', fill_brok=['full_status']),
 
         'host_perfdata_file_template':
             StringProp(managed=False, default='/tmp/host.perf',
@@ -624,19 +633,22 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Freshness checks
         'check_service_freshness':
-            BoolProp(default=True, class_inherit=[(Service, 'global_check_freshness')]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Service, 'global_check_freshness')]),
 
         'service_freshness_check_interval':
-            IntegerProp(default=60),
+            IntegerProp(default=60, fill_brok=['full_status']),
 
         'check_host_freshness':
-            BoolProp(default=True, class_inherit=[(Host, 'global_check_freshness')]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Host, 'global_check_freshness')]),
 
         'host_freshness_check_interval':
-            IntegerProp(default=60),
+            IntegerProp(default=60, fill_brok=['full_status']),
 
         'additional_freshness_latency':
-            IntegerProp(default=15, class_inherit=[(Host, None), (Service, None)]),
+            IntegerProp(default=15, fill_brok=['full_status'],
+                        class_inherit=[(Host, None), (Service, None)]),
 
         'enable_embedded_perl':
             BoolProp(managed=False,
@@ -651,18 +663,19 @@ class Config(Item):  # pylint: disable=R0904,R0902
             StringProp(managed=False, default=None),
 
         'use_timezone':
-            StringProp(default='', class_inherit=[(Host, None), (Service, None), (Contact, None)]),
+            StringProp(default='', fill_brok=['full_status'],
+                       class_inherit=[(Host, None), (Service, None), (Contact, None)]),
 
         'illegal_object_name_chars':
-            StringProp(default="""`~!$%^&*"|'<>?,()=""",
+            StringProp(default="""`~!$%^&*"|'<>?,()=""", fill_brok=['full_status'],
                        class_inherit=[(Host, None), (Service, None),
                                       (Contact, None), (HostExtInfo, None)]),
 
         'illegal_macro_output_chars':
-            StringProp(default='',
+            StringProp(default='', fill_brok=['full_status'],
                        class_inherit=[(Host, None), (Service, None), (Contact, None)]),
         'env_variables_prefix':
-            StringProp(default='ALIGNAK_'),
+            StringProp(default='ALIGNAK_', fill_brok=['full_status']),
 
         'use_regexp_matching':
             BoolProp(managed=False,
@@ -688,60 +701,65 @@ class Config(Item):  # pylint: disable=R0904,R0902
             IntegerProp(default=0),
 
         'daemon_thread_pool_size':
-            IntegerProp(default=8),
+            IntegerProp(default=8, fill_brok=['full_status']),
 
         'max_plugins_output_length':
-            IntegerProp(default=8192, class_inherit=[(Host, None), (Service, None)]),
+            IntegerProp(default=8192, fill_brok=['full_status'],
+                        class_inherit=[(Host, None), (Service, None)]),
 
         'no_event_handlers_during_downtimes':
-            BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Host, None), (Service, None)]),
 
         # Interval between cleaning queues pass
         'cleaning_queues_interval':
-            IntegerProp(default=900),
+            IntegerProp(default=900, fill_brok=['full_status']),
 
         # Now for problem/impact states changes
         'enable_problem_impacts_states_change':
-            BoolProp(default=True, class_inherit=[(Host, None), (Service, None)]),
+            BoolProp(default=True, fill_brok=['full_status'],
+                     class_inherit=[(Host, None), (Service, None)]),
 
         # More a running value indeed - the macros catched in the parsed configuration
         'resource_macros_names':
-            ListProp(default=[]),
+            ListProp(default=[], fill_brok=['full_status']),
 
         'runners_timeout':
             IntegerProp(default=3600),
 
         # Self created daemons configuration
         'launch_missing_daemons':
-            BoolProp(default=False),
+            BoolProp(default=False, fill_brok=['full_status']),
 
         'daemons_arguments':
-            StringProp(default=''),
+            StringProp(default='', fill_brok=['full_status']),
 
         'daemons_log_folder':
-            StringProp(default='/usr/local/var/log/alignak'),
+            StringProp(default='/usr/local/var/log/alignak',
+                       fill_brok=['full_status']),
 
         'daemons_initial_port':
-            IntegerProp(default=10000),
+            IntegerProp(default=10000,
+                        fill_brok=['full_status']),
 
         # Kill launched daemons on communication failure
         'daemons_failure_kill':
-            BoolProp(default=True),
+            BoolProp(default=True, fill_brok=['full_status']),
 
         'daemons_check_period':
-            IntegerProp(default=5),
+            IntegerProp(default=5, fill_brok=['full_status']),
 
         'daemons_start_timeout':
-            IntegerProp(default=1),
+            IntegerProp(default=1, fill_brok=['full_status']),
 
         'daemons_new_conf_timeout':
-            IntegerProp(default=1),
+            IntegerProp(default=1, fill_brok=['full_status']),
 
         'daemons_dispatch_timeout':
-            IntegerProp(default=5),
+            IntegerProp(default=5, fill_brok=['full_status']),
 
         'daemons_stop_timeout':
-            IntegerProp(default=5),
+            IntegerProp(default=5, fill_brok=['full_status']),
     }
 
     macros = {
