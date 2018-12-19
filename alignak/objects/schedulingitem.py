@@ -1408,11 +1408,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         else:
             return
 
-        data = [self]
-        if getattr(self, "host", None):
-            data = [hosts[self.host], self]
-
         macroresolver = MacroResolver()
+        data = self.get_data_for_event_handler(hosts)
         cmd = macroresolver.resolve_command(event_handler, data, macromodulations, timeperiods)
 
         event_h = EventHandler({
@@ -1472,10 +1469,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         cls = self.__class__
         macroresolver = MacroResolver()
-        if getattr(self, "host", None):
-            data = [hosts[self.host], self]
-        else:
-            data = [self]
+        data = self.get_data_for_event_handler(hosts)
         cmd = macroresolver.resolve_command(self.snapshot_command, data, macromodulations,
                                             timeperiods)
         reac_tag = self.snapshot_command.reactionner_tag
@@ -1997,9 +1991,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         cls = self.__class__
         macrosolver = MacroResolver()
-        data = [self, contact, notif]
-        if host_ref:
-            data.append(host_ref)
+        data = self.get_data_for_notifications(contact, notif, host_ref)
         notif.command = macrosolver.resolve_command(notif.command_call, data, macromodulations,
                                                     timeperiods)
         if cls.enable_environment_macros or notif.enable_environment_macros:
@@ -2441,16 +2433,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
                 # Get the command to launch
                 macroresolver = MacroResolver()
-                if hasattr(self, 'host'):
-                    macrodata = [hosts[self.host], self]
-                else:
-                    macrodata = [self]
-                command_line = macroresolver.resolve_command(check_command, macrodata,
+                data = self.get_data_for_checks(hosts)
+                command_line = macroresolver.resolve_command(check_command, data,
                                                              macromodulations, timeperiods)
 
             # And get all environment variables only if needed
             if cls.enable_environment_macros or check_command.enable_environment_macros:
-                env = macroresolver.get_env_macros(macrodata)
+                env = macroresolver.get_env_macros(data)
 
             # remember it, for pure debugging purpose
             self.last_check_command = command_line
@@ -2520,10 +2509,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         if cls.perfdata_command is not None:
             macroresolver = MacroResolver()
-            if getattr(self, "host", None):
-                data = [hosts[self.host], self]
-            else:
-                data = [self]
+            data = self.get_data_for_event_handler(hosts)
             cmd = macroresolver.resolve_command(cls.perfdata_command, data, macromodulations,
                                                 timeperiods)
             reactionner_tag = cls.perfdata_command.reactionner_tag
@@ -2571,11 +2557,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # Only (re-)evaluate the business rule if it has never been
             # evaluated before, or it contains a macro.
             if re.match(r"\$[\w\d_-]+\$", rule) or self.business_rule is None:
-                if hasattr(self, 'host'):
-                    data = [hosts[self.host], self]
-                else:
-                    data = [self]
                 macroresolver = MacroResolver()
+                data = self.get_data_for_checks(hosts)
                 rule = macroresolver.resolve_simple_macros_in_string(rule, data,
                                                                      macromodulations,
                                                                      timeperiods)
@@ -2656,10 +2639,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if item.last_hard_state_id == 0:
                 ok_count += 1
                 continue
-            if hasattr(item, 'host'):
-                data = [hosts[item.host], item]
-            else:
-                data = [item]
+            data = item.get_data_for_checks(hosts)
             children_output += macroresolver.resolve_simple_macros_in_string(child_template_string,
                                                                              data,
                                                                              macromodulations,
@@ -2670,10 +2650,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # Replaces children output string
         template_string = re.sub(r"\$\(.*\)\$", children_output, output_template)
-        if hasattr(self, 'host'):
-            data = [hosts[self.host], self]
-        else:
-            data = [self]
+        data = self.get_data_for_checks(hosts)
         output = macroresolver.resolve_simple_macros_in_string(template_string, data,
                                                                macromodulations, timeperiods)
         return output.strip()
@@ -3180,6 +3157,37 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return: None
         """
         pass
+
+    # pylint: disable=unused-argument
+    def get_data_for_checks(self, hosts):
+        """Get data for a check
+
+        :return: list containing a single host (this one)
+        :rtype: list
+        """
+        return [self]
+
+    # pylint: disable=unused-argument
+    def get_data_for_event_handler(self, hosts):
+        """Get data for an event handler
+
+        :return: list containing a single host (this one)
+        :rtype: list
+        """
+        return [self]
+
+    # pylint: disable=unused-argument
+    def get_data_for_notifications(self, contact, notif, host_ref):
+        """Get data for a notification
+
+        :param contact: The contact to return
+        :type contact:
+        :param notif: the notification to return
+        :type notif:
+        :return: list containing the host and the given parameters
+        :rtype: list
+        """
+        return [self, contact, notif]
 
     def set_impact_state(self):
         """We just go an impact, so we go unreachable
