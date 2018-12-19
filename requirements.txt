@@ -51,4 +51,4 @@ docopt
 # Use psutil for daemons memory monitoring (env ALIGNAK_DAEMONS_MONITORING)
 # Use psutil for scheduler ALIGNAK_LOG_MONITORING
 # Use psutil for launching daemons from the Arbiter
-psutil==5.4.5
+psutil>=5.4.3,<=5.4.5
