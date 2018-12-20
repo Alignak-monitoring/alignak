@@ -222,7 +222,8 @@ class Scheduler(object):  # pylint: disable=R0902
         self.checks = {}
         self.actions = {}
 
-        self.program_start = int(time.time())
+        # self.program_start = int(time.time())
+        self.program_start = self.my_daemon.program_start
         self.pushed_conf = None
 
         # Our external commands manager
@@ -1539,43 +1540,46 @@ class Scheduler(object):  # pylint: disable=R0902
     def get_program_status_brok(self, brok_type='program_status'):
         """Create a program status brok
 
-        Get the properties from the Config class where an entry exist for the brok 'full_status'
+        Initially builds the running properties and then, if initial status brok,
+        get the properties from the Config class where an entry exist for the brok
+        'full_status'
 
         :return: Brok with program status data
         :rtype: alignak.brok.Brok
-        TODO: GET REAL VALUES
         """
-        now = int(time.time())
-
+        # Get the running statistics
         data = {
-            # Those should be fetched from the pushed configuration ?
-            "is_running": 1,
+            "is_running": True,
             "instance_id": self.instance_id,
-            "alignak_name": self.alignak_name,
+            # "alignak_name": self.alignak_name,
             "instance_name": self.name,
-            "last_alive": now,
-            "last_command_check": now,
-            "last_log_rotation": now,
+            "last_alive": time.time(),
             "pid": os.getpid(),
-            "daemon_mode": 1,
-            "modified_host_attributes": 0,
-            "modified_service_attributes": 0,
+            '_running': self.get_scheduler_stats(details=True)
         }
 
-        # Get data from the configuration
-        if self.pushed_conf:
-            # Get data from the pushed configuration
+        # Get data from the configuration only for the initial program status brok
+        if self.pushed_conf and brok_type in ['program_status']:
+            data.update({
+                '_config': {},
+                '_macros': {}
+            })
+            # Get configuration data from the pushed configuration
             cls = self.pushed_conf.__class__
-            # Now config properties
             for prop, entry in list(cls.properties.items()):
                 # Is this property intended for broking?
-                # if 'fill_brok' in entry:
                 if 'full_status' not in entry.fill_brok:
                     continue
-                if hasattr(self.pushed_conf, prop):
-                    data[prop] = getattr(self.pushed_conf, prop)
-                elif entry.has_default:
-                    data[prop] = entry.default
+                data['_config'][prop] = getattr(self.pushed_conf, prop, entry.default)
+
+            # Get the macros from the pushed configuration and try to resolve
+            # the macros to provide the result in the status brok
+            macro_resolver = MacroResolver()
+            macro_resolver.init(self.pushed_conf)
+            for macro_name in sorted(self.pushed_conf.macros):
+                data['_macros'][macro_name] = \
+                    macro_resolver.resolve_simple_macros_in_string("$%s$" % macro_name,
+                                                                   [], None, None)
 
         logger.debug("Program status brok %s data: %s", brok_type, data)
         return Brok({'type': brok_type, 'data': data})

@@ -1031,6 +1031,8 @@ class ExternalCommandManager(object):
                                           service.get_name(), author, comment))
 
         self.send_an_element(brok)
+        self.send_an_element(comm.get_comment_brok(
+            self.hosts[service.host].get_name(), service.get_name()))
 
     def add_host_comment(self, host, author, comment):
         """Add a host comment
@@ -1062,6 +1064,7 @@ class ExternalCommandManager(object):
                                        % (host.get_name(), author, comment))
 
         self.send_an_element(brok)
+        self.send_an_element(comm.get_comment_brok(self.hosts[host].get_name()))
 
     def acknowledge_svc_problem(self, service, sticky, notify, author, comment):
         """Acknowledge a service problem
