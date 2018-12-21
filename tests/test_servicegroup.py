@@ -61,7 +61,7 @@ class TestServiceGroup(AlignakTest):
         sg = self._scheduler.servicegroups.find_by_name("NOALIAS")
         assert isinstance(sg, Servicegroup)
         assert sg.get_name() == "NOALIAS"
-        assert sg.alias == "NOALIAS"
+        assert sg.alias == ""
 
     def test_servicegroup_members(self):
         """ Test if members are linked from group

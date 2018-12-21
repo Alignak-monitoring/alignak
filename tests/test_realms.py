@@ -197,7 +197,7 @@ class TestRealms(AlignakTest):
         realm = self._arbiter.conf.realms.find_by_name("All")
         assert realm is not None
         assert realm.realm_name == 'All'
-        assert realm.alias == 'All'
+        assert realm.alias == ''
         assert realm.default
 
         # 'All' realm is the default realm

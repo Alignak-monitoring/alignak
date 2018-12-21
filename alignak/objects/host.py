@@ -1179,6 +1179,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: check_command name
         :rtype: str
         """
+        if not getattr(self, 'check_command', None):
+            return ''
         return self.check_command.get_name()
 
     def get_snapshot_command(self):
@@ -1187,6 +1189,8 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         :return: snapshot_command name
         :rtype: str
         """
+        if not getattr(self, 'snapshot_command', None):
+            return ''
         return self.snapshot_command.get_name()
 
     def get_downtime(self):

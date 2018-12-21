@@ -156,7 +156,7 @@ class TestMetricsSetup(AlignakTest):
         # Generic stuff
         assert my_module.python_name == 'alignak.modules.inner_metrics'
         assert my_module.type == 'metrics'
-        assert my_module.alias == 'inner-metrics'
+        # assert my_module.alias == 'inner-metrics'
         assert my_module.enabled is True
 
         # Specific stuff - the content of the configuration parameters
@@ -404,7 +404,7 @@ class TestMetricsSetup(AlignakTest):
         # Generic stuff
         assert my_module.python_name == 'alignak.modules.inner_metrics'
         assert my_module.type == 'metrics'
-        assert my_module.alias == 'inner-metrics'
+        # assert my_module.alias == 'inner-metrics'
         assert my_module.enabled is True
 
         # Specific stuff - the content of the configuration parameters

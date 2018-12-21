@@ -3314,10 +3314,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             state = False
 
         if not hasattr(self, 'check_command'):
-            self.add_error("[%s::%s] no check_command" % (self.my_type, self.get_name()))
+            # todo: This should never happen because the default exists as an empty string
+            self.add_error("[%s::%s] no property check_command" % (self.my_type, self.get_name()))
             state = False
         # Ok got a command, but maybe it's invalid
         else:
+            # if not self.check_command:
+            #     self.add_warning("[%s::%s] no check_command, will always be considered as Up"
+            #                      % (self.my_type, self.get_name()))
             if self.check_command and not self.check_command.is_valid():
                 self.add_error("[%s::%s] check_command '%s' invalid"
                                % (self.my_type, self.get_name(), self.check_command.command))
