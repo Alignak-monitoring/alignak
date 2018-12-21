@@ -1009,6 +1009,36 @@ class Service(SchedulingItem):
         if need_stalk:
             logger.info("Stalking %s: %s", self.get_name(), check.output)
 
+    def get_data_for_checks(self, hosts):
+        """Get data for a check
+
+        :return: list containing the service and the linked host
+        :rtype: list
+        """
+        return [hosts[self.host], self]
+
+    def get_data_for_event_handler(self, hosts):
+        """Get data for an event handler
+
+        :return: list containing the service and the linked host
+        :rtype: list
+        """
+        return [hosts[self.host], self]
+
+    def get_data_for_notifications(self, contact, notif, host_ref):
+        """Get data for a notification
+
+        :param contact: The contact to return
+        :type contact:
+        :param notif: the notification to return
+        :type notif:
+        :return: list containing the service, the host and the given parameters
+        :rtype: list
+        """
+        if not host_ref:
+            return [self, contact, notif]
+        return [host_ref, self, contact, notif]
+
     def notification_is_blocked_by_contact(self, notifways, timeperiods, notif, contact):
         """Check if the notification is blocked by this contact.
 
