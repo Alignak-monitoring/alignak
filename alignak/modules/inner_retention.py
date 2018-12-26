@@ -135,6 +135,17 @@ class InnerRetention(BaseModule):
         if '%s' in self.retention_file:
             self.retention_file = self.retention_file % self.my_daemon.name
 
+        if self.retention_dir and not os.path.isdir(self.retention_dir):
+            logger.info("The configured state retention directory (%s) does not exist. "
+                        "Trying to create....", self.retention_dir)
+            try:
+                os.makedirs(self.retention_dir)
+                logger.error("Retention directory created.")
+            except OSError as exp:
+                logger.error("Directory creation failed because: %s", str(exp))
+                self.retention_dir = '/tmp'
+                logger.info("The retention directory is set to: %s", self.retention_dir)
+
         logger.info("inner retention module, enabled: %s, retention dir: %s, retention file: %s",
                     self.enabled, self.retention_dir, self.retention_file)
 
