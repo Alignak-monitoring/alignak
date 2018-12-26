@@ -59,7 +59,7 @@ class TestContactGroup(AlignakTest):
         cg = self._scheduler.contactgroups.find_by_name("NOALIAS")
         assert isinstance(cg, Contactgroup)
         assert cg.get_name() == "NOALIAS"
-        assert cg.alias == "NOALIAS"
+        assert cg.alias == ""
 
     def test_contactgroup_members(self):
         """ Test if members are linked from group

@@ -1107,6 +1107,8 @@ class Service(SchedulingItem):
         :rtype: str
         TODO: Move to util or SchedulingItem class
         """
+        if not getattr(self, 'check_command', None):
+            return ''
         return self.check_command.get_name()
 
     def get_snapshot_command(self):
@@ -1115,6 +1117,8 @@ class Service(SchedulingItem):
         :return: snapshot_command name
         :rtype: str
         """
+        if not getattr(self, 'snapshot_command', None):
+            return ''
         return self.snapshot_command.get_name()
 
     # pylint: disable=R0916

@@ -136,7 +136,7 @@ class TestHostGroup(AlignakTest):
         hg = self._scheduler.hostgroups.find_by_name("NOALIAS")
         assert isinstance(hg, Hostgroup)
         assert hg.get_name() == "NOALIAS"
-        assert hg.alias == "NOALIAS"
+        assert hg.alias == ""
 
     def test_hostgroup_members(self):
         """ Test if members are linked from group
