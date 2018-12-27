@@ -112,7 +112,6 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
         # Do not ignore unknown hosts/services. If set, this parameter will make the module
         # ignore the provided broks until the initial status broks are received
         self.ignore_unknown = getattr(mod_conf, 'ignore_unknown', '1') == '1'
-        logger.info("ignoring unknown: %s", self.ignore_unknown)
         if isinstance(getattr(mod_conf, 'ignore_unknown', '0'), bool):
             self.ignore_unknown = getattr(mod_conf, 'ignore_unknown')
         logger.info("ignoring unknown: %s", self.ignore_unknown)

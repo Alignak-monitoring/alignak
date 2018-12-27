@@ -115,9 +115,16 @@ class Receiver(Satellite):
         :type elt: alignak.AlignakObject
         :return: None
         """
-        # todo: fix this ... external commands are returned as a dictionary!!!
+        # external commands may be received as a dictionary when pushed from the WebUI
         if isinstance(elt, dict) and 'my_type' in elt and elt['my_type'] == "externalcommand":
-            logger.warning("Queuing a dictionary external command: %s", elt)
+            if 'cmd_line' not in elt:
+                logger.debug("Received a bad formated external command: %s. "
+                             "No cmd_line!", elt)
+                return
+
+            logger.debug("Received a dictionary external command: %s", elt)
+            if 'creation_timestamp' not in elt:
+                elt['creation_timestamp'] = None
             elt = ExternalCommand(elt['cmd_line'], elt['creation_timestamp'])
 
         if isinstance(elt, Brok):
