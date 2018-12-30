@@ -161,6 +161,7 @@ class Receiver(Satellite):
         with self.conf_lock:
             # self_conf is our own configuration from the alignak environment
             self_conf = self.cur_conf['self_conf']
+            logger.debug("Got config: %s", self.cur_conf)
 
             # Configure and start our modules
             if not self.have_modules:
@@ -183,7 +184,10 @@ class Receiver(Satellite):
             # We are a receiver: our role is to get and dispatch commands to the schedulers
             self.external_commands_manager = \
                 ExternalCommandManager(None, 'receiver', self,
-                                       self_conf.get('accept_passive_unknown_check_results', False))
+                                       self.cur_conf['global_conf'].get(
+                                           'accept_passive_unknown_check_results', False),
+                                       self.cur_conf['global_conf'].get(
+                                           'log_external_commands', False))
 
             # Initialize connection with all our satellites
             logger.info("Initializing connection with my satellites:")

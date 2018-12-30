@@ -466,8 +466,8 @@ class Alignak(BaseSatellite):
                 # Now create the external commands manager
                 # We are an applyer: our role is not to dispatch commands, but to apply them
                 ecm = ExternalCommandManager(received_conf_part, 'applyer', self.sched,
-                                             self_conf.get('accept_passive_unknown_check_results',
-                                                           False))
+                                             received_conf_part.accept_passive_unknown_check_results,
+                                             received_conf_part.log_external_commands)
 
                 # Scheduler needs to know about this external command manager to use it if necessary
                 self.sched.external_commands_manager = ecm

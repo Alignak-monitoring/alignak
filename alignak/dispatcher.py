@@ -125,6 +125,14 @@ class Dispatcher(object):
         # Direct pointer to important elements for us
         self.arbiter_link = arbiter_link
         self.alignak_conf = conf
+        self.global_conf = {}
+        # Get configuration data from the pushed configuration
+        cls = self.alignak_conf.__class__
+        for prop, entry in list(cls.properties.items()):
+            # Is this property intended for broking?
+            if 'full_status' not in entry.fill_brok:
+                continue
+            self.global_conf[prop] = getattr(self.alignak_conf, prop, entry.default)
         logger.debug("Dispatcher configuration: %s / %s", self.arbiter_link, self.alignak_conf)
 
         logger.info("Dispatcher realms configuration:")
@@ -592,7 +600,7 @@ class Dispatcher(object):
             logger.info(" preparing the dispatch for schedulers:")
 
             # Now we get all the schedulers of this realm and upper
-            schedulers = self.get_scheduler_ordered_list(realm)
+            # schedulers = self.get_scheduler_ordered_list(realm)
             schedulers = realm.get_potential_satellites_by_type(
                 self.get_satellites_list('schedulers'), 'scheduler')
             if not schedulers:
@@ -758,6 +766,7 @@ class Dispatcher(object):
                             'arbiters': arbiters_cfg if sat_link.manage_arbiters else {},
                             'modules': serialize(sat_link.modules, True),
                             'managed_conf_id': 'see_my_schedulers',
+                            'global_conf': self.global_conf
                         })
                         sat_link.cfg['schedulers'].update({
                             cfg_part.uuid: realm.to_satellites[sat_type][cfg_part.instance_id]})

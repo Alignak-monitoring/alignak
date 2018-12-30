@@ -1540,7 +1540,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Now create the external commands manager
         # We are a dispatcher: our role is to dispatch commands to the schedulers
         self.external_commands_manager = ExternalCommandManager(
-            self.conf, 'dispatcher', self, self.conf.accept_passive_unknown_check_results)
+            self.conf, 'dispatcher', self, self.conf.accept_passive_unknown_check_results,
+            self.conf.log_external_commands)
 
     def do_loop_turn(self):
         # pylint: disable=too-many-branches, too-many-statements, too-many-locals
