@@ -1018,6 +1018,7 @@ class Daemon(object):
         logger.info("pause duration: %.2f", self.pause_duration)
 
         # For the maximum expected loop duration
+        self.maximum_loop_duration = 1.1 * self.maximum_loop_duration
         logger.info("maximum expected loop duration: %.2f", self.maximum_loop_duration)
 
         # Treatments before starting the main loop...
@@ -1113,11 +1114,11 @@ class Daemon(object):
 
             pause = self.maximum_loop_duration - loop_duration
             if loop_duration > self.maximum_loop_duration:
-                logger.warning("The %s %s loop exceeded the maximum expected loop duration (%.2f). "
-                               "The last loop needed %.2f seconds to execute. "
-                               "You should try to reduce the load on this %s.",
-                               self.type, self.name, self.maximum_loop_duration,
-                               loop_duration, self.type)
+                logger.info("The %s %s loop exceeded the maximum expected loop duration (%.2f). "
+                            "The last loop needed %.2f seconds to execute. "
+                            "You should try to reduce the load on this %s.",
+                            self.type, self.name, self.maximum_loop_duration,
+                            loop_duration, self.type)
                 # Make a very very short pause ...
                 pause = 0.01
 
