@@ -33,5 +33,27 @@
 #ALIGNAK_USER=my-alignak
 #ALIGNAK_GROUP=my-alignak
 
+# Uncomment and update to set the logger configuration file
+#ALIGNAK_LOGGER_CONFIGURATION=
+
 # Uncomment to make the daemons raise some log about its cpu and memory consumption every 10 seconds
 #ALIGNAK_DAEMON_MONITORING=10
+
+# Uncomment to make Alignak add some log in the arbiter daemon log to inform about the system CPU, memory and disk consumption
+#ALIGNAK_SYSTEM_MONITORING=10
+
+# Set to INFO or WARNING to add log for the executed actions
+#ALIGNAK_LOG_ACTIONS=INFO
+
+# Uncomment to log the checks scheduling
+#ALIGNAK_LOG_CHECKS=
+
+# Uncomment and update to make Alignak daemons periodically log an information log as a keep alive.
+#ALIGNAK_LOG_ACTIVITY=3600
+
+# Uncomment to disable the Alignak internal checks
+#ALIGNAK_MANAGE_INTERNAL=0
+
+# Use Shinken Web UI as the Alignak UI
+ALIGNAK_SHINKEN_UI=yes
+SHINKEN_UI_DEBUG=yes
