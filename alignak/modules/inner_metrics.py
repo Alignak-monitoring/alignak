@@ -24,6 +24,7 @@ This module is used to manage checks results performance data
 import os
 import re
 import time
+import datetime
 import logging
 
 from alignak.misc.carboniface import CarbonIface
