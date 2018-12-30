@@ -1555,31 +1555,27 @@ class Scheduler(object):  # pylint: disable=R0902
             "instance_name": self.name,
             "last_alive": time.time(),
             "pid": os.getpid(),
-            '_running': self.get_scheduler_stats(details=True)
+            '_running': self.get_scheduler_stats(details=True),
+            '_config': {},
+            '_macros': {}
         }
 
-        # Get data from the configuration only for the initial program status brok
-        if self.pushed_conf and brok_type in ['program_status']:
-            data.update({
-                '_config': {},
-                '_macros': {}
-            })
-            # Get configuration data from the pushed configuration
-            cls = self.pushed_conf.__class__
-            for prop, entry in list(cls.properties.items()):
-                # Is this property intended for broking?
-                if 'full_status' not in entry.fill_brok:
-                    continue
-                data['_config'][prop] = getattr(self.pushed_conf, prop, entry.default)
+        # Get configuration data from the pushed configuration
+        cls = self.pushed_conf.__class__
+        for prop, entry in list(cls.properties.items()):
+            # Is this property intended for broking?
+            if 'full_status' not in entry.fill_brok:
+                continue
+            data['_config'][prop] = getattr(self.pushed_conf, prop, entry.default)
 
-            # Get the macros from the pushed configuration and try to resolve
-            # the macros to provide the result in the status brok
-            macro_resolver = MacroResolver()
-            macro_resolver.init(self.pushed_conf)
-            for macro_name in sorted(self.pushed_conf.macros):
-                data['_macros'][macro_name] = \
-                    macro_resolver.resolve_simple_macros_in_string("$%s$" % macro_name,
-                                                                   [], None, None)
+        # Get the macros from the pushed configuration and try to resolve
+        # the macros to provide the result in the status brok
+        macro_resolver = MacroResolver()
+        macro_resolver.init(self.pushed_conf)
+        for macro_name in sorted(self.pushed_conf.macros):
+            data['_macros'][macro_name] = \
+                macro_resolver.resolve_simple_macros_in_string("$%s$" % macro_name,
+                                                               [], None, None)
 
         logger.debug("Program status brok %s data: %s", brok_type, data)
         return Brok({'type': brok_type, 'data': data})
