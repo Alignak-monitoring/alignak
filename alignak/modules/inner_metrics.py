@@ -130,6 +130,9 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
         self.carbon = None
         self.my_metrics = []
         self.metrics_flush_count = int(getattr(mod_conf, 'metrics_flush_count', '64'))
+        self.last_failure = 0
+        self.metrics_flush_pause = int(os.getenv('ALIGNAK_STATS_FLUSH_PAUSE', '10'))
+        self.log_metrics_flush_pause = False
 
         # Specific filter to allow metrics to include '.' for Graphite
         self.illegal_char_metric = re.compile(r'[^a-zA-Z0-9_.\-]')
@@ -250,7 +253,7 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
         """
         return len(self.my_metrics)
 
-    def flush(self, log=False):
+    def flush(self, log=False):  # pylint:disable=too-many-branches
         """Send inner stored metrics to the defined Graphite
 
         Returns False if the sending failed with a warning log if log parameter is set
@@ -259,6 +262,15 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
         """
         if not self.my_metrics:
             logger.debug("Flushing - no metrics to send")
+            return True
+
+        now = int(time.time())
+        if self.last_failure and self.last_failure + self.metrics_flush_pause > now:
+            if not self.log_metrics_flush_pause:
+                logger.warning("Flush paused on connection error (last failed: %d). "
+                               "Inner stored metric: %d. Trying to send...",
+                               self.last_failure, self.metrics_count)
+                self.log_metrics_flush_pause = True
             return True
 
         metrics_sent = False
@@ -272,10 +284,23 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
                     if log:
                         logger.warning("Failed sending metrics to Graphite/carbon. "
                                        "Inner stored metric: %d", self.metrics_count)
+                if self.log_metrics_flush_pause:
+                    logger.warning("Metrics flush restored. "
+                                   "Remaining stored metric: %d", self.metrics_count)
+                self.last_failure = 0
+                self.log_metrics_flush_pause = False
             except Exception as exp:  # pylint: disable=broad-except
-                logger.warning("Failed sending metrics to Graphite/carbon: %s:%d. "
-                               "Inner stored metrics count: %d\n Exception: %s",
-                               self.host, self.port, self.metrics_count, str(exp))
+                if not self.log_metrics_flush_pause:
+                    logger.warning("Failed sending metrics to Graphite/carbon: %s:%d. "
+                                   "Inner stored metrics count: %d.",
+                                   self.host, self.port, self.metrics_count)
+                    logger.warning("Exception: %s", str(exp))
+                else:
+                    logger.warning("Flush paused on connection error (last failed: %d). "
+                                   "Inner stored metric: %d. Trying to send...",
+                                   self.last_failure, self.metrics_count)
+
+                self.last_failure = now
                 return False
 
         if self.output_file:
