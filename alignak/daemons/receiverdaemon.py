@@ -160,7 +160,8 @@ class Receiver(Satellite):
         # ...then our own specific treatment!
         with self.conf_lock:
             # self_conf is our own configuration from the alignak environment
-            self_conf = self.cur_conf['self_conf']
+            # self_conf = self.cur_conf['self_conf']
+            logger.debug("Got config: %s", self.cur_conf)
 
             # Configure and start our modules
             if not self.have_modules:
@@ -181,9 +182,21 @@ class Receiver(Satellite):
 
             # Now create the external commands manager
             # We are a receiver: our role is to get and dispatch commands to the schedulers
+            global_conf = self.cur_conf.get('global_conf', None)
+            if not global_conf:
+                logger.error("Received a configuration without any global_conf! "
+                             "This may hide a configuration problem with the "
+                             "realms and the manage_sub_realms of the satellites!")
+                global_conf = {
+                    'accept_passive_unknown_check_results': False,
+                    'log_external_commands': True
+                }
             self.external_commands_manager = \
                 ExternalCommandManager(None, 'receiver', self,
-                                       self_conf.get('accept_passive_unknown_check_results', False))
+                                       global_conf.get(
+                                           'accept_passive_unknown_check_results', False),
+                                       global_conf.get(
+                                           'log_external_commands', False))
 
             # Initialize connection with all our satellites
             logger.info("Initializing connection with my satellites:")

@@ -50,8 +50,8 @@
 
 import time
 
-from alignak.commandcall import CommandCall
 from alignak.objects import SchedulingItem
+from alignak.commandcall import CommandCall
 
 from .alignak_test import AlignakTest
 

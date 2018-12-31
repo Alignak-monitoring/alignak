@@ -478,7 +478,7 @@ class ExternalCommandManager(object):
             {'global': True, 'internal': True, 'args': [None, None, None, None]},
     }
 
-    def __init__(self, conf, mode, daemon, accept_unknown=False):
+    def __init__(self, conf, mode, daemon, accept_unknown=False, log_external_commands=False):
         """
         The command manager is initialized with a `mode` parameter specifying what is to be done
         with the managed commands. If mode is:
@@ -510,7 +510,6 @@ class ExternalCommandManager(object):
         # If we got a conf...
         if self.mode == 'receiver':
             self.my_conf = {
-                'log_external_commands': False,
                 'schedulers': daemon.schedulers
             }
         else:
@@ -531,6 +530,9 @@ class ExternalCommandManager(object):
             self.cfg_parts = conf.parts
 
         self.accept_passive_unknown_check_results = accept_unknown
+        self.log_external_commands = log_external_commands
+        logger.info("External command manager, log commands: %s, accept unknown check: %s",
+                    self.log_external_commands, self.accept_passive_unknown_check_results)
 
         # Will change for each command read, so if a command need it,
         # it can get it
@@ -579,7 +581,7 @@ class ExternalCommandManager(object):
         if self.mode == 'receiver':
             return cmd
 
-        if self.mode == 'applyer' and self.my_conf.log_external_commands:
+        if self.mode == 'applyer' and self.log_external_commands:
             make_a_log = True
             # #912: only log an external command if it is not a passive check
             if self.my_conf.log_passive_checks and cmd['c_name'] \
@@ -734,7 +736,7 @@ class ExternalCommandManager(object):
                 logger.warning("Malformed command '%s'", command)
                 # logger.exception("Malformed command exception: %s", exp)
 
-                if self.my_conf and getattr(self.my_conf, 'log_external_commands', False):
+                if self.log_external_commands:
                     # The command failed, make a monitoring log to inform
                     self.send_an_element(make_monitoring_log(
                         'error', "Malformed command: '%s'" % command))
@@ -756,7 +758,7 @@ class ExternalCommandManager(object):
             logger.warning("Malformed command '%s'", command)
             # logger.exception("Malformed command exception: %s", exp)
 
-            if self.my_conf and getattr(self.my_conf, 'log_external_commands', False):
+            if self.log_external_commands:
                 # The command failed, make a monitoring log to inform
                 self.send_an_element(make_monitoring_log(
                     'error', "Malformed command: '%s'" % command))
@@ -765,7 +767,7 @@ class ExternalCommandManager(object):
         if c_name not in ExternalCommandManager.commands:
             logger.warning("External command '%s' is not recognized, sorry", c_name)
 
-            if self.my_conf and getattr(self.my_conf, 'log_external_commands', False):
+            if self.log_external_commands:
                 # The command failed, make a monitoring log to inform
                 self.send_an_element(make_monitoring_log(
                     'error', "Command '%s' is not recognized, sorry" % command))
@@ -917,7 +919,7 @@ class ExternalCommandManager(object):
             logger.warning("Sorry, the arguments for the command '%s' are not correct")
             logger.exception("Arguments parsing exception: %s", exp)
 
-            if self.my_conf and self.my_conf.log_external_commands:
+            if self.log_external_commands:
                 # The command failed, make a monitoring log to inform
                 self.send_an_element(make_monitoring_log(
                     'error', "Arguments are not correct for the command: '%s'" % command))
@@ -928,7 +930,7 @@ class ExternalCommandManager(object):
             logger.warning("Sorry, the arguments for the command '%s' are not correct (%s)",
                            command, (args))
 
-            if self.my_conf and self.my_conf.log_external_commands:
+            if self.log_external_commands:
                 # The command failed, make a monitoring log to inform
                 self.send_an_element(make_monitoring_log(
                     'error', "Arguments are not correct for the command: '%s'" % command))

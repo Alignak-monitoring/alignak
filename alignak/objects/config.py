@@ -113,7 +113,7 @@ from alignak.objects.hostextinfo import HostExtInfo, HostsExtInfo
 from alignak.objects.serviceextinfo import ServiceExtInfo, ServicesExtInfo
 # from alignak.objects.trigger import Trigger, Triggers
 # from alignak.objects.pack import Packs
-from alignak.util import split_semicolon
+from alignak.util import split_semicolon, to_name_if_possible
 from alignak.objects.arbiterlink import ArbiterLink, ArbiterLinks
 from alignak.objects.schedulerlink import SchedulerLink, SchedulerLinks
 from alignak.objects.reactionnerlink import ReactionnerLink, ReactionnerLinks
@@ -208,20 +208,21 @@ class Config(Item):  # pylint: disable=R0904,R0902
             BoolProp(default=True),
         # -----
 
-        'passive_host_checks_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'passive_service_checks_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'active_host_checks_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'active_service_checks_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'event_handlers_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'flap_detection_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'notifications_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
+        # Those are not valid parameters ...
+        # 'passive_host_checks_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
+        # 'passive_service_checks_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
+        # 'active_host_checks_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
+        # 'active_service_checks_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
+        # 'event_handlers_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
+        # 'flap_detection_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
+        # 'notifications_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
 
         # Used for the MAINCONFIGFILE, CONFIGFILES and CONFIGBASEDIR macros
         # will be set when we will load a file
@@ -425,10 +426,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # Global event handlers
         'global_host_event_handler':
             StringProp(default='', fill_brok=['full_status'],
+                       brok_transformation=to_name_if_possible,
                        class_inherit=[(Host, 'global_event_handler')]),
 
         'global_service_event_handler':
             StringProp(default='', fill_brok=['full_status'],
+                       brok_transformation=to_name_if_possible,
                        class_inherit=[(Service, 'global_event_handler')]),
 
         'sleep_time':
@@ -473,12 +476,15 @@ class Config(Item):  # pylint: disable=R0904,R0902
             IntegerProp(default=60, fill_brok=['full_status'],
                         class_inherit=[(Host, None), (Service, None)]),
 
+        # Todo: not used anywhere in the source code
         'auto_reschedule_checks':
             BoolProp(managed=False, default=True),
 
+        # Todo: not used anywhere in the source code
         'auto_rescheduling_interval':
             IntegerProp(managed=False, default=1),
 
+        # Todo: not used anywhere in the source code
         'auto_rescheduling_window':
             IntegerProp(managed=False, default=180),
 
@@ -575,10 +581,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         'host_perfdata_command':
             StringProp(default='', fill_brok=['full_status'],
+                       brok_transformation=to_name_if_possible,
                        class_inherit=[(Host, 'perfdata_command')]),
 
         'service_perfdata_command':
             StringProp(default='', fill_brok=['full_status'],
+                       brok_transformation=to_name_if_possible,
                        class_inherit=[(Service, 'perfdata_command')]),
 
         # Inner perfdata self created module parameters
