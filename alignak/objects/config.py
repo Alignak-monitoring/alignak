@@ -476,12 +476,15 @@ class Config(Item):  # pylint: disable=R0904,R0902
             IntegerProp(default=60, fill_brok=['full_status'],
                         class_inherit=[(Host, None), (Service, None)]),
 
+        # Todo: not used anywhere in the source code
         'auto_reschedule_checks':
             BoolProp(managed=False, default=True),
 
+        # Todo: not used anywhere in the source code
         'auto_rescheduling_interval':
             IntegerProp(managed=False, default=1),
 
+        # Todo: not used anywhere in the source code
         'auto_rescheduling_window':
             IntegerProp(managed=False, default=180),
 

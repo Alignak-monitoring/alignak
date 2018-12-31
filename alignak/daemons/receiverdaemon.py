@@ -160,7 +160,7 @@ class Receiver(Satellite):
         # ...then our own specific treatment!
         with self.conf_lock:
             # self_conf is our own configuration from the alignak environment
-            self_conf = self.cur_conf['self_conf']
+            # self_conf = self.cur_conf['self_conf']
             logger.debug("Got config: %s", self.cur_conf)
 
             # Configure and start our modules
