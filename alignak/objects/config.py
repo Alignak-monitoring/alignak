@@ -208,20 +208,21 @@ class Config(Item):  # pylint: disable=R0904,R0902
             BoolProp(default=True),
         # -----
 
-        'passive_host_checks_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'passive_service_checks_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'active_host_checks_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'active_service_checks_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'event_handlers_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'flap_detection_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
-        'notifications_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
+        # Those are not valid parameters ...
+        # 'passive_host_checks_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
+        # 'passive_service_checks_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
+        # 'active_host_checks_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
+        # 'active_service_checks_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
+        # 'event_handlers_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
+        # 'flap_detection_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
+        # 'notifications_enabled':
+        #     BoolProp(default=True, fill_brok=['full_status']),
 
         # Used for the MAINCONFIGFILE, CONFIGFILES and CONFIGBASEDIR macros
         # will be set when we will load a file
@@ -577,10 +578,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         'host_perfdata_command':
             StringProp(default='', fill_brok=['full_status'],
+                       brok_transformation=to_name_if_possible,
                        class_inherit=[(Host, 'perfdata_command')]),
 
         'service_perfdata_command':
             StringProp(default='', fill_brok=['full_status'],
+                       brok_transformation=to_name_if_possible,
                        class_inherit=[(Service, 'perfdata_command')]),
 
         # Inner perfdata self created module parameters
