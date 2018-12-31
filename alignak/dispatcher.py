@@ -132,8 +132,11 @@ class Dispatcher(object):
             # Is this property intended for broking?
             if 'full_status' not in entry.fill_brok:
                 continue
-            self.global_conf[prop] = getattr(self.alignak_conf, prop, entry.default)
+            self.global_conf[prop] = self.alignak_conf.get_property_value_for_brok(
+                prop, cls.properties)
+            # self.global_conf[prop] = getattr(self.alignak_conf, prop, entry.default)
         logger.debug("Dispatcher configuration: %s / %s", self.arbiter_link, self.alignak_conf)
+        logger.debug("Dispatcher global configuration: %s", self.global_conf)
 
         logger.info("Dispatcher realms configuration:")
         for realm in self.alignak_conf.realms:
@@ -365,6 +368,8 @@ class Dispatcher(object):
                 # This should never happen, logically!
                 if not cfg_part.scheduler_link:
                     self.dispatch_ok = False
+                    logger.error("- realm %s:", realm.name)
+                    logger.error("  .configuration %s", cfg_part)
                     logger.error("    not managed by any scheduler!")
                     continue
 
@@ -621,6 +626,7 @@ class Dispatcher(object):
                     except IndexError:  # No more schedulers.. not good, no loop
                         # The configuration part do not need to be dispatched anymore
                         # todo: should be managed inside the Realm class!
+                        logger.error("No more scheduler link: %s", realm)
                         for sat_type in ('reactionner', 'poller', 'broker', 'receiver'):
                             realm.to_satellites[sat_type][cfg_part.instance_id] = None
                             realm.to_satellites_need_dispatch[sat_type][cfg_part.instance_id] = \
@@ -725,11 +731,11 @@ class Dispatcher(object):
                             cfg_part.instance_id, cfg_part.uuid, cfg_part.config_name)
                 for sat_type in ('reactionner', 'poller', 'broker', 'receiver'):
                     if cfg_part.instance_id not in realm.to_satellites_need_dispatch[sat_type]:
-                        logger.debug("   nothing to dispatch for %ss", sat_type)
+                        logger.warning("   nothing to dispatch for %ss", sat_type)
                         return
 
                     if not realm.to_satellites_need_dispatch[sat_type][cfg_part.instance_id]:
-                        logger.debug("   no need to dispatch to %ss", sat_type)
+                        logger.warning("   no need to dispatch to %ss", sat_type)
                         return
 
                     # Get the list of the concerned satellites

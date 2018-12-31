@@ -113,7 +113,7 @@ from alignak.objects.hostextinfo import HostExtInfo, HostsExtInfo
 from alignak.objects.serviceextinfo import ServiceExtInfo, ServicesExtInfo
 # from alignak.objects.trigger import Trigger, Triggers
 # from alignak.objects.pack import Packs
-from alignak.util import split_semicolon
+from alignak.util import split_semicolon, to_name_if_possible
 from alignak.objects.arbiterlink import ArbiterLink, ArbiterLinks
 from alignak.objects.schedulerlink import SchedulerLink, SchedulerLinks
 from alignak.objects.reactionnerlink import ReactionnerLink, ReactionnerLinks
@@ -425,10 +425,12 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # Global event handlers
         'global_host_event_handler':
             StringProp(default='', fill_brok=['full_status'],
+                       brok_transformation=to_name_if_possible,
                        class_inherit=[(Host, 'global_event_handler')]),
 
         'global_service_event_handler':
             StringProp(default='', fill_brok=['full_status'],
+                       brok_transformation=to_name_if_possible,
                        class_inherit=[(Service, 'global_event_handler')]),
 
         'sleep_time':

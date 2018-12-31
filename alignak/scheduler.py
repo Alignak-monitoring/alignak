@@ -1566,7 +1566,9 @@ class Scheduler(object):  # pylint: disable=R0902
             # Is this property intended for broking?
             if 'full_status' not in entry.fill_brok:
                 continue
-            data['_config'][prop] = getattr(self.pushed_conf, prop, entry.default)
+            data['_config'][prop] = self.pushed_conf.get_property_value_for_brok(
+                prop, cls.properties)
+            # data['_config'][prop] = getattr(self.pushed_conf, prop, entry.default)
 
         # Get the macros from the pushed configuration and try to resolve
         # the macros to provide the result in the status brok
