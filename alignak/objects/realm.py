@@ -391,7 +391,8 @@ class Realm(Itemgroup):
         for sat_link in satellites:
             if sat_link.uuid in getattr(self, 'potential_' + s_type + 's'):
                 matching_satellites.append(sat_link)
-                break
+                # Do not limit to one satellite!
+                # break
 
         logger.debug("- potential %ss: %s", s_type, matching_satellites)
         return matching_satellites

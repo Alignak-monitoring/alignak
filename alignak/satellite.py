@@ -599,7 +599,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 logger.info(" - stopping '%s'", worker.get_id())
                 worker.terminate()
                 worker.join(timeout=1)
-                logger.info("stopped")
+                logger.info(" - stopped")
             # A already dead worker or in a worker
             except (AttributeError, AssertionError):
                 pass
@@ -962,11 +962,19 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 msg = self.returns_queue.get_nowait()
                 if msg is None:
                     continue
+                if not isinstance(msg, Message):
+                    logger.warning("Should have received a Message, got a %s!", type(msg))
+                    continue
                 logger.debug("Got a message: %s", msg)
                 if msg.get_type() == 'Done':
-                    logger.debug("Got an action result: %s", msg.get_data())
+                    logger.debug("Got (from %s) an action result: %s",
+                                 msg.get_source(), msg.get_data())
                     self.manage_action_return(msg.get_data())
-                    logger.debug("Managed action result")
+                elif msg.get_type() == 'Stats':
+                    logger.debug("Got (from %s) stats: %s",
+                                 msg.get_source(), msg.get_data())
+                    if msg.get_source() in self.workers:
+                        self.workers[msg.get_source()].stats = msg.get_data()
                 else:
                     logger.warning("Ignoring message of type: %s", msg.get_type())
         except Full:
@@ -1086,7 +1094,14 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         counters = res['counters']
         counters['broks'] = len(self.broks)
         counters['events'] = len(self.events)
-        counters['satellites.workers'] = len(self.workers)
+        counters['workers'] = len(self.workers)
+
+        if self.workers:
+            res['workers'] = {}
+            for worker in list(self.workers.values()):
+                stats = getattr(self.workers[worker.get_id()], 'stats', None)
+                if stats:
+                    res['workers'][worker.get_id()] = stats
 
         return res
 

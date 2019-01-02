@@ -646,7 +646,7 @@ else:  # pragma: no cover, not currently tested with Windows...
             # 2.7 and higher Python version need a list of args for cmd
             try:
                 cmd = shlex.split(self.command)
-            except Exception as exp:  # pylint: disable=W0703
+            except Exception as exp:  # pylint: disable=broad-except
                 self.output = 'Not a valid shell command: ' + exp.__str__()
                 self.exit_status = 3
                 self.status = ACT_STATUS_DONE
