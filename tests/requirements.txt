@@ -2,6 +2,9 @@
 # Get project requirements
 -r ../requirements.txt
 
+# Influx DB client for inner metrics module
+influxdb
+
 # then tests specific requirements:
 unittest2
 mock<2.0.0; python_version >= '2.7'

@@ -63,6 +63,36 @@ METRIC_PATTERN = \
     )
 
 
+def sanitize_name(field_name):
+    """Sanitize a field name for a TSDB (Graphite or Influx)
+    - remove not allowed characters from the field name
+    and replace with authorized characters
+
+    :param field_name: Field name to clean
+    :type field_name: string
+    :return: sanitized field name
+    """
+    if not field_name:
+        return field_name
+
+    # Sanitize field name for TSDB (Graphite or Influx):
+    sanitized = field_name.strip()
+    if sanitized.startswith('/'):
+        sanitized = '_' + sanitized[1:]
+    # + becomes a _
+    sanitized = sanitized.replace("+", "_")
+    # / becomes a -
+    sanitized = sanitized.replace("/", "-")
+    # space becomes a _
+    sanitized = sanitized.replace(" ", "_")
+    # % becomes _pct
+    sanitized = sanitized.replace("%", "_pct")
+    # all character not in [a-zA-Z_-0-9.] is removed
+    sanitized = re.sub(r'[^a-zA-Z_\-0-9\.\$]', '', sanitized)
+
+    return sanitized
+
+
 def guess_int_or_float(val):
     """Wrapper for Util.to_best_int_float
     Basically cast into float or int and compare value

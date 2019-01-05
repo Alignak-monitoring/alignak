@@ -274,6 +274,10 @@ class TestModules(AlignakTest):
         ), idx)
         idx += 1
         self.assert_log_match(re.escape(
+            "Module mod-example is initialized"
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
             "Starting external module mod-example"
         ), idx)
         idx += 1
@@ -285,7 +289,7 @@ class TestModules(AlignakTest):
             "mod-example is now started (pid="
         ), idx)
         idx += 1
-        self.assert_log_count(6)
+        self.assert_log_count(7)
 
         # Check alive
         assert my_module.process is not None
@@ -410,6 +414,10 @@ class TestModules(AlignakTest):
         ), idx)
         idx += 1
         self.assert_log_match(re.escape(
+            "Module mod-example is initialized"
+        ), idx)
+        idx += 1
+        self.assert_log_match(re.escape(
             "Restarting mod-example..."
         ), idx)
         idx += 1
@@ -421,7 +429,7 @@ class TestModules(AlignakTest):
             "mod-example is now started (pid="
         ), idx)
         idx += 1
-        self.assert_log_count(7)
+        self.assert_log_count(8)
 
         # Here the module instance should be alive again
         assert my_module.process.is_alive()
