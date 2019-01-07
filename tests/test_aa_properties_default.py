@@ -132,6 +132,7 @@ class TestConfig(PropertiesTester, AlignakTest):
     without_default = []
 
     properties = dict([
+        ('forced_realms_hostgroups', True),
         ('program_start', 0),
         ('last_alive', 0),
         ('last_log_rotation', 0),
