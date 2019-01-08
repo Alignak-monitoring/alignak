@@ -78,7 +78,7 @@ class TestMonitor(AlignakTest):
         # Clear logs
         self.clear_logs()
 
-        my_arbiter.load_modules_manager()
+        # my_arbiter.load_modules_manager()
         my_arbiter.load_monitoring_config_file()
         assert my_arbiter.conf.conf_is_correct is True
 
@@ -185,7 +185,7 @@ class TestMonitor(AlignakTest):
         my_arbiter.alignak_monitor_username = 'admin'
         my_arbiter.alignak_monitor_password = 'ipm-France2017'
 
-        my_arbiter.load_modules_manager()
+        # my_arbiter.load_modules_manager()
         my_arbiter.load_monitoring_config_file()
         assert my_arbiter.conf.conf_is_correct is True
 

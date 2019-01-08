@@ -148,7 +148,7 @@ class TestLaunchDaemons(AlignakTest):
         self.arbiter.setup_alignak_logger()
 
         # Setup our modules manager
-        self.arbiter.load_modules_manager()
+        # self.arbiter.load_modules_manager()
 
         # Load and initialize the arbiter configuration
         # This to check that the configuration is correct!
@@ -193,7 +193,7 @@ class TestLaunchDaemons(AlignakTest):
         self.arbiter.setup_alignak_logger()
 
         # Setup our modules manager
-        self.arbiter.load_modules_manager()
+        # self.arbiter.load_modules_manager()
 
         # Load and initialize the arbiter configuration
         # This to check that the configuration is correct!
@@ -451,6 +451,7 @@ class TestLaunchDaemons(AlignakTest):
                 "-V", "-vv", "--log_file", "/tmp/arbiter.log"]
         ret = self._run_command_with_timeout(args, 20)
 
+        # Log file created because of the -V option
         assert os.path.exists("/tmp/arbiter.log")
 
         errors = 0
@@ -616,7 +617,7 @@ class TestLaunchDaemons(AlignakTest):
         print("%s launched (pid=%d)" % ('broker', broker.pid))
 
         # Wait for the broker to get started
-        time.sleep(5)
+        time.sleep(2)
 
         # This function will request the arbiter daemon to stop
         self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7772')
@@ -641,7 +642,7 @@ class TestLaunchDaemons(AlignakTest):
         print("%s launched (pid=%d)" % ('poller', poller.pid))
 
         # Wait for the poller to get started
-        time.sleep(5)
+        time.sleep(2)
 
         # This function will request the arbiter daemon to stop
         self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7771')
@@ -666,7 +667,7 @@ class TestLaunchDaemons(AlignakTest):
         print("%s launched (pid=%d)" % ('reactionner', reactionner.pid))
 
         # Wait for the reactionner to get started
-        time.sleep(5)
+        time.sleep(2)
 
         # This function will request the arbiter daemon to stop
         self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7769')
@@ -691,7 +692,7 @@ class TestLaunchDaemons(AlignakTest):
         print("%s launched (pid=%d)" % ('receiver', receiver.pid))
 
         # Wait for the receiver to get started
-        time.sleep(5)
+        time.sleep(2)
 
         # This function will request the arbiter daemon to stop
         self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7773')
@@ -718,7 +719,7 @@ class TestLaunchDaemons(AlignakTest):
         print("%s launched (pid=%d)" % ('scheduler', scheduler.pid))
 
         # Wait for the scheduler to get started
-        time.sleep(5)
+        time.sleep(2)
 
         # This function will request the arbiter daemon to stop
         self._stop_alignak_daemons(request_stop_uri='http://127.0.0.1:7768')

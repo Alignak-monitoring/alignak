@@ -635,6 +635,13 @@ class Dispatcher(object):
                             realm.to_satellites_managed_by[sat_type][cfg_part.instance_id] = []
                         break
 
+                    # if scheduler_link.manage_sub_realms:
+                    #     logger.warning('[%s] The scheduler %s is configured to manage sub realms. '
+                    #                    'This is not yet possible, sorry!',
+                    #                    realm.name, scheduler_link.name)
+                    #     scheduler_link.manage_sub_realms = False
+                    #     continue
+
                     if not scheduler_link.need_conf:
                         logger.info('[%s] The scheduler %s do not need any configuration, sorry',
                                     realm.name, scheduler_link.name)

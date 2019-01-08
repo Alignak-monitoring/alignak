@@ -2099,8 +2099,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """
         try:
             # Start the daemon
-            if not self.do_daemon_init_and_start():
+            if not self.verify_only and not self.do_daemon_init_and_start():
                 self.exit_on_error(message="Daemon initialization error", exit_code=3)
+
+            if self.verify_only:
+                self.setup_alignak_logger()
 
             # Load monitoring configuration files
             self.load_monitoring_config_file()

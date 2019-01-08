@@ -86,7 +86,7 @@ class TestSetupNewConf(AlignakTest):
             'alignak_name': 'my-alignak', 'daemon_name': 'unset',
         }
         scheduler_daemon = schedulerdaemon(**args)
-        scheduler_daemon.load_modules_manager()
+        # scheduler_daemon.load_modules_manager()
 
         scheduler_link = None
         for satellite in self._arbiter.dispatcher.schedulers:
@@ -163,7 +163,7 @@ class TestSetupNewConf(AlignakTest):
             'alignak_name': 'my-alignak', 'daemon_name': 'unset',
         }
         receiv = receiverdaemon(**args)
-        receiv.load_modules_manager()
+        # receiv.load_modules_manager()
         if hasattr(receiv, 'modules'):
             assert 0 == len(receiv.modules)
 
@@ -206,7 +206,7 @@ class TestSetupNewConf(AlignakTest):
             'alignak_name': 'my-alignak', 'daemon_name': 'unset',
         }
         poller = pollerdaemon(**args)
-        poller.load_modules_manager()
+        # poller.load_modules_manager()
         if hasattr(poller, 'modules'):
             assert 0 == len(poller.modules)
 
@@ -246,7 +246,7 @@ class TestSetupNewConf(AlignakTest):
             'alignak_name': 'my-alignak', 'daemon_name': 'broker-master',
         }
         broker = brokerdaemon(**args)
-        broker.load_modules_manager()
+        # broker.load_modules_manager()
         assert 1 == len(broker.modules)
 
         broker_link = None
@@ -263,7 +263,7 @@ class TestSetupNewConf(AlignakTest):
                         json={"running_id": 123456.123456})
             mockreq.get('http://127.0.0.1:7768/fill_initial_broks', json=[])
             mockreq.get('http://127.0.0.1:7768/get_managed_configurations', json={})
-            
+
             broker.setup_new_conf()
 
             # Check modules received configuration
@@ -328,7 +328,7 @@ class TestSetupNewConf(AlignakTest):
             'alignak_name': 'my-alignak', 'daemon_name': 'unset',
         }
         reac = reactionnerdaemon(**args)
-        reac.load_modules_manager()
+        # reac.load_modules_manager()
         if hasattr(reac, 'modules'):
             assert 0 == len(reac.modules)
 
