@@ -636,8 +636,8 @@ class Dispatcher(object):
                         break
 
                     # if scheduler_link.manage_sub_realms:
-                    #     logger.warning('[%s] The scheduler %s is configured to manage sub realms. '
-                    #                    'This is not yet possible, sorry!',
+                    #     logger.warning('[%s] The scheduler %s is configured to manage sub realms.'
+                    #                    ' This is not yet possible, sorry!',
                     #                    realm.name, scheduler_link.name)
                     #     scheduler_link.manage_sub_realms = False
                     #     continue
