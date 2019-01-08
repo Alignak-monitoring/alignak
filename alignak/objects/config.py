@@ -169,6 +169,13 @@ class Config(Item):  # pylint: disable=R0904,R0902
     """Configuration properties:
     """
     properties = {
+        # Some tuning parameters
+        # When set, this parameter makes the configuration checked for consistency between
+        # hostgroups and hosts realmq. If hosts and their hostgroups do not belong to the
+        # same realm the configuration is declared as cirrupted
+        'forced_realms_hostgroups':
+            BoolProp(default=True),
+
         # -----
         # Included in the program status brok raised for the scheduler live state
         # -----
@@ -1563,7 +1570,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Do the simplify AFTER explode groups
         # link hostgroups with hosts
-        self.hostgroups.linkify(self.hosts, self.realms)
+        self.hostgroups.linkify(self.hosts, self.realms, self.forced_realms_hostgroups)
 
         # link services with other objects
         self.services.linkify(self.hosts, self.commands,
