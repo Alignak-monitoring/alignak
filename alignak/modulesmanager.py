@@ -189,6 +189,7 @@ class ModulesManager(object):
             if not instance.init():
                 logger.warning("Module %s initialisation failed.", instance.name)
                 return False
+            logger.info("Module %s is initialized.", instance.name)
         except Exception as exp:  # pylint: disable=broad-except
             # pragma: no cover, simple protection
             msg = "The module instance %s raised an exception " \

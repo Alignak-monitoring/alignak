@@ -434,9 +434,13 @@ class ActionBase(AlignakObject):
 
         try:
             self.stdoutdata += stdout.decode("utf-8")
+        except (UnicodeDecodeError, AttributeError):
+            self.stdoutdata += stdout
+
+        try:
             self.stderrdata += stderr.decode("utf-8")
-        except AttributeError:
-            pass
+        except (UnicodeDecodeError, AttributeError):
+            self.stderrdata += stderr
 
         self.exit_status = self.process.returncode
         if self.log_actions:
