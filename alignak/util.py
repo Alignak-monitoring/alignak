@@ -65,6 +65,8 @@ import json
 import argparse
 import logging
 
+from alignak.version import VERSION
+
 # pylint: disable=unused-import
 NUMPY = True
 try:
@@ -100,7 +102,6 @@ except ImportError:  # pragma: no cover
         d0 = key(n[int(f)]) * (c-k)
         d1 = key(n[int(c)]) * (k-f)
         return d0+d1
-
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -1274,7 +1275,7 @@ def parse_daemon_args(arbiter=False):
     :type arbiter: bool
     :return: args
     """
-    parser = argparse.ArgumentParser(description="Alignak daemon launching",
+    parser = argparse.ArgumentParser(description="Alignak version %s daemon parameters" % VERSION,
                                      epilog="And that's it!")
     if arbiter:
         parser.add_argument('-a', '--arbiter', action='append',

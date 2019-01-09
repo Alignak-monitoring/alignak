@@ -712,6 +712,9 @@ class Daemon(object):
         # Semaphore for the HTTP interface
         self.lock = threading.RLock()
 
+        # Setup our modules manager
+        self.modules_manager = ModulesManager(self)
+
         # Configuration dispatch
         # when self.new_conf is not empty, the arbiter sent a new configuration to manage
         self.new_conf = {}
@@ -1222,15 +1225,6 @@ class Daemon(object):
         except Exception as exp:  # pylint: disable=broad-except
             logger.error("Dumping daemon environment raised an error: %s. ", exp)
 
-    def load_modules_manager(self):
-        """Instantiate the daemon ModulesManager and load the SyncManager (multiprocessing)
-
-        :param daemon_name: daemon name
-        :type elt: str
-        :return: None
-        """
-        self.modules_manager = ModulesManager(self)
-
     def change_to_workdir(self):
         """Change working directory to working attribute
 
@@ -1527,9 +1521,6 @@ class Daemon(object):
 
         # Creating synchonisation manager (inter-daemon queues...)
         self.sync_manager = self._create_manager()
-
-        # Setup our modules manager
-        self.load_modules_manager()
 
         # Start the CherryPy server through a detached thread
         logger.info("Starting http_daemon thread")
