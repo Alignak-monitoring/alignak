@@ -1,15 +1,34 @@
 # =================================================================================
-# The configuration located in this directory is a sample configuration.
+# The configuration located in this directory is the default configuration for
+# Alignak.
 # =================================================================================
 #
 # alignak.ini
 # -------------
-# Defines a global Alignak configuration based on one instance of each Alignak daemons
-# the following items:
+# The default Alignak configuration file
 #
 # alignak.cfg
 # -------------
+# The default Nagios legacy configuration file that includes the files located in the
+# arbiter sub-directory
 # It only defines the following items:
 # - one host 'localhost' that is always UP because it is checked with the Alignak internal command host UP
-# - two user: 'admin' and 'guest' Store your KPI/Certs in this directory as it is referenced in the daemons
-# configuration files
+# - two user: 'admin' and 'guest'
+#
+# alignak.d/daemons.ini
+# -------------
+# The default Alignak daemons configuration
+#
+# alignak.d/modules.ini
+# ------------
+# The default Alignak modules configuration
+#
+# All the *.ini files copied in the alignak.d directory are parsed with the main alignak.ini file
+# to build the whole Alignak configuration
+#
+# As such, you can easily declare and configure some daemons, modules, ... without
+# editing the default configuration files (alignak.ini, alignak.cfg,
+# alignak.d/daemons.ini, alignak.d/modules.ini).
+#
+# You simply need to create a new extra.ini file that contain your own configuration that
+# extends or override the existing one.
