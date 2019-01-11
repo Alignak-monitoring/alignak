@@ -1157,7 +1157,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     def schedule(self, hosts, services, timeperiods, macromodulations, checkmodulations,
                  checks, force=False, force_time=None):
-        # pylint: disable=too-many-branches, too-many-arguments
+        # pylint: disable=too-many-branches, too-many-arguments, too-many-locals
         """Main scheduling function
         If a check is in progress, or active check are disabled, do not schedule a check.
         The check interval change with HARD state::
@@ -1199,6 +1199,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             return None
 
         now = time.time()
+        current_next_check = self.next_chk
 
         # If check_interval is 0, we should not add a check for a service
         # but suppose a 5 min check interval for an host
@@ -1254,6 +1255,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # value of the next_chk is still in the past even after adding an interval
             if self.next_chk < now:
                 interval = min(interval, cls.max_check_spread * cls.interval_length)
+
                 time_add = interval * random.uniform(0.0, 1.0)
 
                 # if we got a check period, use it, if now, use now
@@ -1274,11 +1276,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                      self.get_full_name(),
                      datetime.utcfromtimestamp(self.next_chk).strftime('%Y-%m-%d %H:%M:%S'),
                      interval, time_add)
-        if os.getenv('ALIGNAK_LOG_CHECKS', None):
-            logger.info("--ALC-- -> next check for %s at %s (interval: %d, added: %d)",
+
+        if current_next_check != self.next_chk and os.getenv('ALIGNAK_LOG_CHECKS', None):
+            logger.info("--ALC-- -> scheduled the next check for %s "
+                        "at %s (interval: %d, added: %d)",
                         self.get_full_name(),
                         datetime.utcfromtimestamp(self.next_chk).strftime('%Y-%m-%d %H:%M:%S'),
                         interval, time_add)
+
         # Get the command to launch, and put it in queue
         return self.launch_check(self.next_chk, hosts, services, timeperiods, macromodulations,
                                  checkmodulations, checks, force=force)
@@ -2391,6 +2396,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             chk = Check(data)
 
             self.actions.append(chk)
+
+            if os.getenv('ALIGNAK_LOG_CHECKS', None):
+                logger.info("--ALC-- -> added a check action for %s (%s)",
+                            self.get_full_name(), chk.uuid)
             return chk
 
         if force or (not self.is_no_check_dependent(hosts, services, timeperiods)):
@@ -2475,6 +2484,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # so scheduler can take it
         if chk is not None:
             self.actions.append(chk)
+
+            if os.getenv('ALIGNAK_LOG_CHECKS', None):
+                logger.info("--ALC-- -> added a check action for %s (%s)",
+                            self.get_full_name(), chk.uuid)
             return chk
         # None mean I already take it into account
         return None
@@ -3217,14 +3230,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.state = self.state_before_impact
             self.state_id = self.state_id_before_impact
 
-    # def last_time_non_ok_or_up(self):  # pragma: no cover, base function
-    #     """Get the last time the item was in a non-OK state
-    #
-    #     :return: return 0
-    #     :rtype: int
-    #     """
-    #     pass
-    #
     def set_unreachable(self):
         """Set unreachable: all our parents (dependencies) are not ok
         Unreachable is different from down/critical

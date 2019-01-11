@@ -881,6 +881,12 @@ class Scheduler(object):  # pylint: disable=R0902
                              'worker' if not check.internal else 'internal',
                              check.status,
                              'now' if check.is_launchable(now) else 'not yet')
+                if check._is_orphan and check.status == ACT_STATUS_SCHEDULED \
+                        and os.getenv('ALIGNAK_LOG_CHECKS', None):
+                    logger.info("--ALC-- orphan check: %s -> : %s %s (%s)",
+                                check, 'worker' if not check.internal else 'internal',
+                                check.status, 'now' if check.is_launchable(now) else 'not yet')
+
                 # must be ok to launch, and not an internal one (business rules based)
                 if check.status == ACT_STATUS_SCHEDULED and check.is_launchable(now):
                     logger.debug("Check to run: %s", check)
@@ -935,6 +941,10 @@ class Scheduler(object):  # pylint: disable=R0902
                 # And now look if we can launch or not :)
                 logger.debug(" -> : worker %s (%s)",
                              action.status, 'now' if action.is_launchable(now) else 'not yet')
+                if action._is_orphan and action.status == ACT_STATUS_SCHEDULED and \
+                        os.getenv('ALIGNAK_LOG_CHECKS', None):
+                    logger.info("--ALC-- orphan action: %s", action)
+
                 if action.status == ACT_STATUS_SCHEDULED and action.is_launchable(now):
                     # This is for child notifications and eventhandlers
                     action.status = ACT_STATUS_POLLED
@@ -1030,7 +1040,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         elif action.is_a == 'check':
             try:
-                self.checks[action.uuid]
+                check = self.checks[action.uuid]
             except KeyError as exp:  # pragma: no cover, simple protection
                 # Cannot find check - drop it
                 logger.warning('manage_results:: get unknown check: %s ', action)
@@ -1040,7 +1050,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
             try:
                 if action.status == ACT_STATUS_TIMEOUT:
-                    ref = self.find_item_by_id(self.checks[action.uuid].ref)
+                    ref = self.find_item_by_id(check.ref)
                     action.long_output = action.output
                     action.output = "(%s %s check timed out)" % (ref.my_type, ref.get_full_name())
                     action.exit_status = self.pushed_conf.timeout_exit_status
@@ -1058,8 +1068,11 @@ class Scheduler(object):  # pylint: disable=R0902
                     else:
                         self.nb_checks_results_active += 1
 
-                self.checks[action.uuid].get_return_from(action)
-                self.checks[action.uuid].status = ACT_STATUS_WAIT_CONSUME
+                        check.get_return_from(action)
+                check.status = ACT_STATUS_WAIT_CONSUME
+                if check._is_orphan and os.getenv('ALIGNAK_LOG_CHECKS', None):
+                    logger.info("--ALC-- got a result for an orphan check: %s", check)
+
             except (ValueError, AttributeError) as exp:  # pragma: no cover, simple protection
                 # bad object, drop it
                 logger.warning('manage_results:: got bad check: %s ', str(exp))
@@ -1893,30 +1906,26 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         orphans_count = {}
         now = int(time.time())
-        for chk in list(self.checks.values()):
-            if chk.status == ACT_STATUS_POLLED:
-                time_to_orphanage = self.find_item_by_id(chk.ref).get_time_to_orphanage()
-                if time_to_orphanage:
-                    if chk.t_to_go < now - time_to_orphanage:
-                        logger.info("Orphaned check (%d s / %s / %s) check for: %s (%s)",
-                                    time_to_orphanage, chk.t_to_go, now,
-                                    self.find_item_by_id(chk.ref).get_full_name(), chk)
-                        chk.status = ACT_STATUS_SCHEDULED
-                        if chk.my_worker not in orphans_count:
-                            orphans_count[chk.my_worker] = 0
-                        orphans_count[chk.my_worker] += 1
-        for act in list(self.actions.values()):
-            if act.status == ACT_STATUS_POLLED:
-                time_to_orphanage = self.find_item_by_id(act.ref).get_time_to_orphanage()
-                if time_to_orphanage:
-                    if act.t_to_go < now - time_to_orphanage:
-                        logger.info("Orphaned action (%d s / %s / %s) action for: %s (%s)",
-                                    time_to_orphanage, act.t_to_go, now,
-                                    self.find_item_by_id(act.ref).get_full_name(), act)
-                        act.status = ACT_STATUS_SCHEDULED
-                        if act.my_worker not in orphans_count:
-                            orphans_count[act.my_worker] = 0
-                        orphans_count[act.my_worker] += 1
+        actions = list(self.checks.values()) + list(self.actions.values())
+        for chk in actions:
+            if chk.status not in [ACT_STATUS_POLLED]:
+                continue
+
+            time_to_orphanage = self.find_item_by_id(chk.ref).get_time_to_orphanage()
+            if not time_to_orphanage:
+                continue
+
+            if chk.t_to_go > now - time_to_orphanage:
+                continue
+
+            logger.info("Orphaned %s (%d s / %s / %s) check for: %s (%s)",
+                        chk.is_a, time_to_orphanage, chk.t_to_go, now,
+                        self.find_item_by_id(chk.ref).get_full_name(), chk)
+            chk._is_orphan = True
+            chk.status = ACT_STATUS_SCHEDULED
+            if chk.my_worker not in orphans_count:
+                orphans_count[chk.my_worker] = 0
+            orphans_count[chk.my_worker] += 1
 
         for sta_name in orphans_count:
             logger.warning("%d actions never came back for the satellite '%s'. "
