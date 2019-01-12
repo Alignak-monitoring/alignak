@@ -169,6 +169,8 @@ class ActionBase(AlignakObject):
             BoolProp(default=False),
         'creation_time':
             FloatProp(default=0.0),
+        '_is_orphan':
+            BoolProp(default=False),
         '_in_timeout':
             BoolProp(default=False),
         'status':
@@ -227,6 +229,18 @@ class ActionBase(AlignakObject):
 
         # Fill default parameters
         self.fill_default()
+
+    def is_launchable(self, timestamp):
+        """Check if this action can be launched based on current time
+
+        :param timestamp: time to compare
+        :type timestamp: int
+        :return: True if timestamp >= self.t_to_go, False otherwise
+        :rtype: bool
+        """
+        if self.t_to_go is None:
+            return False
+        return timestamp >= self.t_to_go
 
     def get_local_environnement(self):
         """

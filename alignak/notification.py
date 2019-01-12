@@ -150,18 +150,6 @@ class Notification(Action):  # pylint: disable=R0902
         return "Notification %s, item: %s, type: %s, status: %s, command:'%s'" \
                % (self.uuid, self.ref, self.type, self.status, self.command)
 
-    def is_launchable(self, timestamp):
-        """Check if this notification can be launched based on current time
-
-        :param timestamp: time to compare
-        :type timestamp: int
-        :return: True if timestamp >= self.t_to_go, False otherwise
-        :rtype: bool
-        """
-        if self.t_to_go is None:
-            return False
-        return timestamp >= self.t_to_go
-
     def is_administrative(self):
         """Check if this notification is "administrative"
 

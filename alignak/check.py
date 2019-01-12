@@ -111,18 +111,6 @@ class Check(Action):  # pylint: disable=R0902
                      'perf_data', 'u_time', 's_time']:
             setattr(self, prop, getattr(check, prop))
 
-    def is_launchable(self, timestamp):
-        """Check if this check can be launched based on current time
-
-        :param timestamp: time to compare
-        :type timestamp: int
-        :return: True if timestamp >= self.t_to_go, False otherwise
-        :rtype: bool
-        """
-        if self.t_to_go is None:
-            return False
-        return timestamp >= self.t_to_go
-
     def set_type_active(self):
         """Set this check as an active one (indeed, not passive)
 
