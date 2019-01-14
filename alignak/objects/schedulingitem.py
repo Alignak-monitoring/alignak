@@ -268,7 +268,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'last_state_type':
             StringProp(default='HARD', fill_brok=['full_status', 'check_result'], retention=True),
         'last_state_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=3, fill_brok=['full_status', 'check_result'], retention=True),
         'last_state_change':
             IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
         'last_hard_state_change':
@@ -276,7 +276,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'last_hard_state':
             StringProp(default='PENDING', fill_brok=['full_status'], retention=True),
         'last_hard_state_id':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=3, fill_brok=['full_status'], retention=True),
         'state_type':
             StringProp(default='HARD', fill_brok=['full_status', 'check_result'], retention=True),
         'state_type_id':

@@ -52,6 +52,7 @@ This module provides DependencyNode and DependencyNodeFactory used for parsing
 expression (business rules)
 """
 import re
+import logging
 from alignak.util import filter_any, filter_none
 from alignak.util import filter_host_by_name, filter_host_by_regex, filter_host_by_group,\
     filter_host_by_tag
@@ -66,6 +67,8 @@ from alignak.util import filter_service_by_servicegroup_name
 from alignak.util import filter_host_by_bp_rule_label
 from alignak.util import filter_service_by_host_bp_rule_label
 from alignak.misc.serialization import serialize, unserialize
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class DependencyNode(object):
@@ -149,11 +152,18 @@ class DependencyNode(object):
         # hard state
         if self.operand == 'host':
             host = hosts[self.sons[0]]
+            # logger.info("get_state, host: %s (%s / %s)", host, host.last_hard_state_id, host.last_hard_state_change)
             return self.get_host_node_state(host.last_hard_state_id,
                                             host.problem_has_been_acknowledged,
                                             host.in_scheduled_downtime)
         if self.operand == 'service':
             service = services[self.sons[0]]
+            # logger.info("get_state, service: %s (%s) (%s / %s / %s) (%s / %s / %s) (%s / %s / %s)",
+            #             service,
+            #             service.initial_state,
+            #             service.last_hard_state, service.last_hard_state_id, service.last_hard_state_change,
+            #             service.last_state, service.last_state_id, service.last_state_change,
+            #             service.state, service.state_id, service.state_type)
             return self.get_service_node_state(service.last_hard_state_id,
                                                service.problem_has_been_acknowledged,
                                                service.in_scheduled_downtime)
