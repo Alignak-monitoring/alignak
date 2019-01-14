@@ -972,7 +972,7 @@ class Items(object):
         # Check if some hosts are to be self-generated...
         generated_hosts = []
         if name_property:
-            name = getattr(item, getattr(self.__class__, "name_property", None), None)
+            name = getattr(item, name_property, None)
             if name and '[' in name and ']' in name:
                 # We can create several objects from the same configuration!
                 pattern = name[name.find("[")+1:name.find("]")]
@@ -1003,6 +1003,16 @@ class Items(object):
                         new_host = deepcopy(item)
                         new_host.uuid = get_a_new_object_id()
                         new_host.host_name = new_name.replace('***', fmt % idx)
+
+                        # Update some fields with the newly generated host name
+                        for prop in ['display_name', 'alias', 'notes', 'notes_url', 'action_url']:
+                            if getattr(new_host, prop, None) is None:
+                                continue
+                            value = getattr(new_host, prop)
+                            if '$HOSTNAME$' in value:
+                                setattr(new_host, prop, value.replace('$HOSTNAME$',
+                                                                      new_host.host_name))
+
                         generated_hosts.append(new_host)
 
         if generated_hosts:
