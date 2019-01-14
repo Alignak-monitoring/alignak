@@ -361,7 +361,8 @@ class Hostgroups(Itemgroups):
 
             if not forced_realms_hostgroups:
                 for error in hostgroup_hosts_errors:
-                    hostgroup.add_warning(error)
+                    # hostgroup.add_warning(error)
+                    logger.info(error)
             else:
                 if hostgroup_new_realm_name is None:
                     # Do not change the hostgroup realm, it is not possible,

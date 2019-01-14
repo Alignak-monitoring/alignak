@@ -691,6 +691,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if not self.in_checking and self.freshness_threshold and not self.freshness_expired:
             # logger.debug("Checking freshness for %s, last state update: %s, now: %s.",
             #              self.get_full_name(), self.last_state_update, now)
+            if os.getenv('ALIGNAK_LOG_CHECKS', None):
+                logger.info("--ALC-- -> checking freshness for %s (%s)", self.get_full_name())
             # If we never checked this item, we begin the freshness period
             if not self.last_state_update:
                 self.last_state_update = int(now)
@@ -2594,10 +2596,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         using business_rule_output_template attribute as template.
 
         The template may embed output formatting for itself, and for its child
-        (dependant) itmes. Childs format string is expanded into the $( and )$,
+        (dependent) items. Child format string is expanded into the $( and )$,
         using the string between brackets as format string.
 
-        Any business rule based item or child macros may be used. In addition,
+        Any business rule based item or child macro may be used. In addition,
         the $STATUS$, $SHORTSTATUS$ and $FULLNAME$ macro which name is common
         to hosts and services may be used to ease template writing.
 
@@ -2731,9 +2733,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Business rule
         if check.command.startswith('bp_'):
             try:
-                # Re evaluate the business rule to take into account macro
-                # modulation.
-                # Caution: We consider the that the macro modulation did not
+                # Re evaluate the business rule to take into account macro modulation.
+                # Caution: We consider that the macro modulation did not
                 # change business rule dependency tree. Only Xof: values should
                 # be modified by modulation.
                 self.create_business_rules(hosts, services, hostgroups, servicegroups,
@@ -2741,13 +2742,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 state = self.business_rule.get_state(hosts, services)
                 check.output = self.get_business_rule_output(hosts, services,
                                                              macromodulations, timeperiods)
-                if 'ALIGNAK_LOG_ACTIONS' in os.environ:
-                    if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
-                        logger.warning("Resolved BR for '%s', output: %s",
-                                       self.get_full_name(), check.output)
-                    else:
-                        logger.info("Resolved BR for '%s', output: %s",
-                                    self.get_full_name(), check.output)
+                if os.getenv('ALIGNAK_LOG_ACTIONS', None):
+                    log_function = logger.info
+                    if os.getenv('ALIGNAK_LOG_ACTIONS') == 'WARNING':
+                        log_function = logger.warning
+                    log_function("Resolved BR for '%s', output: %s",
+                                 self.get_full_name(), check.output)
 
             except Exception as exp:  # pylint: disable=broad-except
                 # Notifies the error, and return an UNKNOWN state.
@@ -2761,24 +2761,25 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             state = 0
             check.execution_time = 0
             check.output = u'Host assumed to be UP'
-            if 'ALIGNAK_LOG_ACTIONS' in os.environ:
-                if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
-                    logger.warning("Set host %s as UP (internal check)", self.get_full_name())
-                else:
-                    logger.info("Set host %s as UP (internal check)", self.get_full_name())
+
+            if os.getenv('ALIGNAK_LOG_ACTIONS', None):
+                log_function = logger.info
+                if os.getenv('ALIGNAK_LOG_ACTIONS') == 'WARNING':
+                    log_function = logger.warning
+                log_function("Set host %s as UP (internal check)", self.get_full_name())
 
         # Echo is just putting the same state again
         elif check.command == '_echo':
             state = self.state_id
             check.execution_time = 0
             check.output = self.output
-            if 'ALIGNAK_LOG_ACTIONS' in os.environ:
-                if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
-                    logger.warning("Echo the current state (%s - %d) for %s ",
-                                   self.state, self.state_id, self.get_full_name())
-                else:
-                    logger.info("Echo the current state (%s - %d) for %s ",
-                                self.state, self.state_id, self.get_full_name())
+
+            if os.getenv('ALIGNAK_LOG_ACTIONS', None):
+                log_function = logger.info
+                if os.getenv('ALIGNAK_LOG_ACTIONS') == 'WARNING':
+                    log_function = logger.warning
+                log_function("Echo the current state (%s - %d) for %s ",
+                             self.state, self.state_id, self.get_full_name())
 
         # _internal_host_check is for having an host check result
         # without running a check plugin
@@ -2807,12 +2808,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                             5: [0.4, 0.2, 0.2, 0.1, 0.1]
                         }
                         probability = probability.get(len(states))
-                        # if len(states) > 2:
-                        #     probability = [0.7, 0.2, 0.1]
-                        #     if len(states) > 3:
-                        #         probability = [0.6, 0.2, 0.1, 0.1]
-                        #         if len(states) > 4:
-                        #             probability = [0.4, 0.2, 0.2, 0.1, 0.1]
+
                         try:
                             state = numpy.random.choice(states, p=probability)
                         except Exception as exp:  # pylint: disable=broad-except
@@ -2840,13 +2836,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     max_range = 10
                 check.perf_data = "'rnd_metric'=%d" % random.randint(0, max_range)
 
-            if 'ALIGNAK_LOG_ACTIONS' in os.environ:
-                if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
-                    logger.warning("Host %s internal check: %d - %s",
-                                   self.get_full_name(), state, check.output)
-                else:
-                    logger.info("Host %s internal check: %d - %s",
-                                self.get_full_name(), state, check.output)
+            if os.getenv('ALIGNAK_LOG_ACTIONS', None):
+                log_function = logger.info
+                if os.getenv('ALIGNAK_LOG_ACTIONS') == 'WARNING':
+                    log_function = logger.warning
+                log_function("Host %s internal check: %d - %s",
+                             self.get_full_name(), state, check.output)
 
         # _internal_service_check is for having a service check result
         # without running a check plugin
@@ -2875,12 +2870,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                             5: [0.4, 0.2, 0.2, 0.1, 0.1]
                         }
                         probability = probability.get(len(states))
-                        # if len(states) > 2:
-                        #     probability = [0.7, 0.2, 0.1]
-                        #     if len(states) > 3:
-                        #         probability = [0.6, 0.2, 0.1, 0.1]
-                        #         if len(states) > 4:
-                        #             probability = [0.4, 0.2, 0.2, 0.1, 0.1]
+
                         try:
                             state = numpy.random.choice(states, p=probability)
                         except Exception as exp:  # pylint: disable=broad-except
@@ -2908,13 +2898,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     max_range = 10
                 check.perf_data = "'rnd_metric'=%d" % random.randint(0, max_range)
 
-            if 'ALIGNAK_LOG_ACTIONS' in os.environ:
-                if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
-                    logger.warning("Service %s internal check: %d - %s",
-                                   self.get_full_name(), state, check.output)
-                else:
-                    logger.info("Service %s internal check: %d - %s",
-                                self.get_full_name(), state, check.output)
+            if os.getenv('ALIGNAK_LOG_ACTIONS', None):
+                log_function = logger.info
+                if os.getenv('ALIGNAK_LOG_ACTIONS') == 'WARNING':
+                    log_function = logger.warning
+                log_function("Service %s internal check: %d - %s",
+                             self.get_full_name(), state, check.output)
 
         check.long_output = check.output
         check.check_time = time.time()
