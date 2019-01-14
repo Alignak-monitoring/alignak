@@ -956,7 +956,7 @@ class Items(object):
             pass
 
     def add_item(self, item, index=True):
-        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-branches, too-many-locals, too-many-nested-blocks
         """
         Add an item into our containers, and index it depending on the `index` flag.
 

@@ -692,7 +692,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # logger.debug("Checking freshness for %s, last state update: %s, now: %s.",
             #              self.get_full_name(), self.last_state_update, now)
             if os.getenv('ALIGNAK_LOG_CHECKS', None):
-                logger.info("--ALC-- -> checking freshness for %s (%s)", self.get_full_name())
+                logger.info("--ALC-- -> checking freshness for %s", self.get_full_name())
             # If we never checked this item, we begin the freshness period
             if not self.last_state_update:
                 self.last_state_update = int(now)
@@ -1672,7 +1672,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         if not chk.freshness_expiry_check:
             # Only update the last state date if not in freshness expiry
-            self.last_state_update = int(time.time())
+            self.last_state_update = now
             if chk.exit_status == 1 and self.__class__.my_type == 'host':
                 chk.exit_status = 2
 
@@ -1902,12 +1902,21 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # If the check is a freshness one, set freshness as expired
             if chk.freshness_expiry_check:
                 self.freshness_expired = True
+                self.last_hard_state_change = int(time.time())
 
         # update event/problem-counters
         self.update_event_and_problem_id()
 
         # Raise a log if freshness check expired
         if chk.freshness_expiry_check:
+            if os.getenv('ALIGNAK_LOG_CHECKS', None):
+                logger.info("--ALC-- freshness expired for %s, when: %s, last checked: %s",
+                            self.get_full_name(),
+                            datetime.utcfromtimestamp(
+                                self.last_hard_state_change).strftime('%Y-%m-%d %H:%M:%S'),
+                            datetime.utcfromtimestamp(
+                                self.last_state_update).strftime('%Y-%m-%d %H:%M:%S'))
+
             self.raise_freshness_log_entry(int(now - self.last_state_update -
                                                self.freshness_threshold))
 
@@ -2708,7 +2717,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     def manage_internal_check(self, hosts, services, check, hostgroups, servicegroups,
                               macromodulations, timeperiods):
-        # pylint: disable=too-many-branches, too-many-statements
+        # pylint: disable=too-many-branches, too-many-statements, too-many-locals
         """Manage internal commands such as ::
 
         * bp_rule

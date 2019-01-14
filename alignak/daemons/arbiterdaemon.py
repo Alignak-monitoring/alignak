@@ -2021,6 +2021,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             long_output = []
             for daemon_id in sorted(inner_stats['daemons_states']):
                 daemon = inner_stats['daemons_states'][daemon_id]
+                # Ignore daemons that are not active in the configuration
+                if not daemon['active']:
+                    continue
                 res['services'].append({
                     "name": daemon_id,
                     "livestate": {
@@ -2042,7 +2045,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 long_output.append(
                     "%s - %s" % (daemon_id, [u"daemon is alive and reachable.",
                                              u"daemon is not reachable.",
-                                             u"daemon is not alive."][daemon['livestate']]))
+                                             u"daemon is not alive."
+                                             ][daemon['livestate']]))
 
             res['livestate'].update({
                 "state": "up",  # Always Up ;)
