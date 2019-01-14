@@ -1245,7 +1245,13 @@ class TestConfig(AlignakTest):
 
         host0 = self._arbiter.conf.hosts.find_by_name('host_A')
         host1 = self._arbiter.conf.hosts.find_by_name('host_B')
-        assert ['d', 'x', 'r', 'f', 's'] == host0.notification_options
+        # assert ['d', 'x', 'r', 'f', 's'] == host0.notification_options
+        assert 5 == len(host0.notification_options)
+        assert 'x' in host0.notification_options
+        assert 's' in host0.notification_options
+        assert 'r' in host0.notification_options
+        assert 'd' in host0.notification_options
+        assert 'f' in host0.notification_options
         assert ['o', 'd', 'x'] == host0.flap_detection_options
         assert ['d', 'x'] == host0.snapshot_criteria
         # self.assertEqual('x', host0.initial_state)

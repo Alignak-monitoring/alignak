@@ -203,7 +203,7 @@ class TestContactGroup(AlignakTest):
             print("->", self._scheduler.contacts[c].get_name())
 
     def test_contactgroups_plus_inheritance(self):
-        """ Test that contactgroups correclty manage inheritance
+        """ Test that contacts groups correctly manage inheritance
         :return: None
         """
         self.setup_with_file('cfg/contactgroup/alignak_contactgroups_plus_inheritance.cfg')

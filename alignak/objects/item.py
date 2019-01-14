@@ -209,7 +209,7 @@ class Item(AlignakObject):
                     #              "is not in %s object properties", key, self.__class__.__name__)
                     val = ToGuessProp().pythonize(params[key])
                     logger.debug("Set the property '%s' type as %s", key, type(val))
-            except (PythonizeError, ValueError) as expt:
+            except (PythonizeError, AttributeError, ValueError, TypeError) as expt:
                 self.add_error("Error while pythonizing parameter '%s': %s" % (key, expt))
                 continue
 
@@ -1141,20 +1141,14 @@ class Items(object):
 
         for name in tpl_names:
             template = self.find_tpl_by_name(name)
-            if template is None:
+            if not template:
                 # TODO: Check if this should not be better to report as an error ?
-                self.add_warning(
-                    "%s %s use/inherit from an unknown template: %s ! from: %s" % (
-                        type(item).__name__, item.get_name(), name, item.imported_from
-                    )
-                )
+                self.add_warning("%s %s use/inherit from an unknown template: %s ! from: %s"
+                                 % (type(item).__name__, item.get_name(), name, item.imported_from))
             else:
                 if template is item:
-                    self.add_error(
-                        "%s %s use/inherits from itself ! from: %s" % (
-                            type(item).__name__, item._get_name(), item.imported_from
-                        )
-                    )
+                    self.add_error("%s %s use/inherits from itself ! from: %s"
+                                   % (type(item).__name__, item._get_name(), item.imported_from))
                 else:
                     tpls.append(template.uuid)
         item.templates = tpls
@@ -1407,10 +1401,12 @@ class Items(object):
             return
 
         # TODO : See if we can remove this if
-        if isinstance(item.contact_groups, list):
-            cgnames = item.contact_groups
-        else:
-            cgnames = item.contact_groups.split(',')
+        cgnames = ''
+        if item.contact_groups:
+            if isinstance(item.contact_groups, list):
+                cgnames = item.contact_groups
+            else:
+                cgnames = item.contact_groups.split(',')
         cgnames = strip_and_uniq(cgnames)
         for cgname in cgnames:
             contactgroup = contactgroups.find_by_name(cgname)
@@ -1595,7 +1591,7 @@ class Items(object):
         """
         hnames_list = []
         # Gets item's hostgroup_name
-        hgnames = getattr(item, "hostgroup_name", '')
+        hgnames = getattr(item, "hostgroup_name", '') or ''
 
         # Defines if hostgroup is a complex expression
         # Expands hostgroups
@@ -1697,12 +1693,14 @@ class Items(object):
         return parents.loop_check()
 
     def get_property_by_inheritance(self, obj, prop):
-        # pylint: disable=too-many-branches
+        # pylint: disable=too-many-branches, too-many-nested-blocks
         """
         Get the property asked in parameter to this object or from defined templates of this
         object
 
-        :param obj: the oject to search the property
+        todo: rewrite this function which is really too complex!
+
+        :param obj: the object to search the property
         :type obj: alignak.objects.item.Item
         :param prop: name of property
         :type prop: str
@@ -1710,21 +1708,36 @@ class Items(object):
         :rtype: str or None
         """
         if prop == 'register':
-            return None  # We do not inherit from register
+            # We do not inherit the register property
+            return None
 
-        # If I have the prop, I take mine but I check if I must
-        # add a plus property
+        # If I have the property, I take mine but I check if I must add a plus property
         if hasattr(obj, prop):
             value = getattr(obj, prop)
             # Manage the additive inheritance for the property,
             # if property is in plus, add or replace it
             # Template should keep the '+' at the beginning of the chain
             if obj.has_plus(prop):
+                if not isinstance(value, list):
+                    value = [value]
                 value.insert(0, obj.get_plus_and_delete(prop))
+                value = list(set(value))
                 if obj.is_tpl():
-                    value = list(value)
                     value.insert(0, '+')
+
+            # Clean the returned value
+            if isinstance(value, list):
+                # Get unique ordered list
+                new_list = []
+                for elt in value:
+                    if elt not in new_list:
+                        new_list.append(elt)
+                value = new_list
+                if not obj.is_tpl():
+                    while '+' in value:
+                        value.remove('+')
             return value
+
         # Ok, I do not have prop, Maybe my templates do?
         # Same story for plus
         # We reverse list, so that when looking for properties by inheritance,
@@ -1733,45 +1746,72 @@ class Items(object):
             template = self.templates[t_id]
             value = self.get_property_by_inheritance(template, prop)
 
-            if value is not None and value != []:
-                # If our template give us a '+' value, we should continue to loop
-                still_loop = False
-                if isinstance(value, list) and value[0] == '+':
-                    # Templates should keep their + inherited from their parents
-                    if not obj.is_tpl():
-                        value = list(value)
-                        value = value[1:]
-                    still_loop = True
+            if value is None or (isinstance(value, list) and not value):
+                continue
 
-                # Maybe in the previous loop, we set a value, use it too
-                if hasattr(obj, prop):
-                    # If the current value is strong, it will simplify the problem
-                    if not isinstance(value, list) and value[0] == '+':
-                        # In this case we can remove the + from our current
-                        # tpl because our value will be final
-                        new_val = list(getattr(obj, prop))
-                        new_val.extend(value[1:])
-                        value = new_val
-                    else:  # If not, se should keep the + sign of need
-                        new_val = list(getattr(obj, prop))
-                        new_val.extend(value)
-                        value = new_val
+            # If our template give us a '+' value, we continue the loop
+            still_loop = False
+            if isinstance(value, list) and value[0] == '+':
+                # Templates should keep their + inherited from their parents
+                if not obj.is_tpl():
+                    value = list(value)
+                    value = value[1:]
+                still_loop = True
 
-                # Ok, we can set it
-                setattr(obj, prop, value)
+            # Maybe in the previous loop, we set a value, use it too
+            if hasattr(obj, prop):
+                # If the current value is a string, it will simplify the problem
+                if isinstance(value, (list, string_types)) and value and value[0] == '+':
+                    # In this case we can remove the + from our current
+                    # tpl because our value will be final
+                    new_val = list(getattr(obj, prop))
+                    new_val.extend(value[1:])
+                    value = new_val
+                else:  # If not, we should keep the + sign of need
+                    new_val = list(getattr(obj, prop))
+                    new_val.extend(value)
+                    value = new_val
 
-                # If we only got some '+' values, we must still loop
-                # for an end value without it
-                if not still_loop:
-                    # And set my own value in the end if need
-                    if obj.has_plus(prop):
-                        value = list(getattr(obj, prop))
-                        value.extend(obj.get_plus_and_delete(prop))
-                        # Template should keep their '+'
-                        if obj.is_tpl() and value[0] != '+':
-                            value.insert(0, '+')
-                        setattr(obj, prop, value)
-                    return value
+            # Ok, we can set it and uniquify a list if needed
+            if isinstance(value, list):
+                # Get unique ordered list
+                new_list = []
+                for elt in value:
+                    if elt not in new_list:
+                        new_list.append(elt)
+                value = new_list
+                if not obj.is_tpl():
+                    while '+' in value:
+                        value.remove('+')
+
+            setattr(obj, prop, value)
+
+            # If we only got some '+' values, we must still loop
+            # for an end value without it
+            if not still_loop:
+                # And set my own value in the end if need
+                if obj.has_plus(prop):
+                    # value = list(getattr(obj, prop, []))
+                    value = list(value)
+                    value.extend(obj.get_plus_and_delete(prop))
+                    # Template should keep their '+'
+                    if obj.is_tpl() and value[0] != '+':
+                        value.insert(0, '+')
+
+                    # Clean the returned value
+                    if isinstance(value, list):
+                        # Get unique ordered list
+                        new_list = []
+                        for elt in value:
+                            if elt not in new_list:
+                                new_list.append(elt)
+                        value = new_list
+                        if not obj.is_tpl():
+                            while '+' in value:
+                                value.remove('+')
+
+                    setattr(obj, prop, value)
+                return value
 
         # Maybe templates only give us + values, so we didn't quit, but we already got a
         # self.prop value after all
@@ -1787,10 +1827,21 @@ class Items(object):
             else:
                 value = obj.get_plus_and_delete(prop)
             # Template should keep their '+' chain
-            # We must say it's a '+' value, so our son will now that it must
-            # still loop
+            # We must say it's a '+' value, so our son will know that it must continue looping
             if obj.is_tpl() and value != [] and value[0] != '+':
                 value.insert(0, '+')
+
+            # Clean the returned value
+            if isinstance(value, list):
+                # Get unique ordered list
+                new_list = []
+                for elt in value:
+                    if elt not in new_list:
+                        new_list.append(elt)
+                value = new_list
+                if not obj.is_tpl():
+                    while '+' in value:
+                        value.remove('+')
 
             setattr(obj, prop, value)
             return value

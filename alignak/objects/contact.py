@@ -362,7 +362,7 @@ class Contact(Item):
 
         # There is a case where there is no nw: when there is not special_prop defined
         # at all!!
-        if self.notificationways == []:
+        if not self.notificationways:
             for prop in self.special_properties:
                 if not hasattr(self, prop):
                     msg = "[contact::%s] %s property is missing" % (self.get_name(), prop)
