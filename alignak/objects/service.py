@@ -1636,9 +1636,8 @@ class Services(SchedulingItems):
         for hname in duplicate_for_hosts:
             host = hosts.find_by_name(hname)
             if host is None:
-                err = 'Error: The hostname %s is unknown for the service %s!' \
-                      % (hname, service.get_name())
-                service.add_error(err)
+                service.add_error("Error: The hostname %s is unknown for the service %s!"
+                                  % (hname, service.get_name()))
                 continue
             if host.is_excluded_for(service):
                 continue
@@ -1662,40 +1661,44 @@ class Services(SchedulingItems):
         host = hosts.find_by_name(host_name.strip())
         if host.is_excluded_for(service):
             return None
-        # Creates concrete instance
+
+        # Creates a real service instance from the template
         new_s = service.copy()
         new_s.host_name = host_name
         new_s.register = 1
         self.add_item(new_s)
         return new_s
 
-    def explode_services_from_templates(self, hosts, service):
+    def explode_services_from_templates(self, hosts, service_template):
         """
         Explodes services from templates. All hosts holding the specified
         templates are bound with the service.
 
         :param hosts: The hosts container.
         :type hosts: alignak.objects.host.Hosts
-        :param service: The service to explode.
-        :type service: alignak.objects.service.Service
+        :param service_template: The service to explode.
+        :type service_template: alignak.objects.service.Service
         :return: None
         """
-        hname = getattr(service, "host_name", None)
+        hname = getattr(service_template, "host_name", None)
         if not hname:
+            logger.debug("Service template %s is declared without an host_name",
+                         service_template.get_name())
             return
 
-        logger.debug("Explode services from templates: %s", hname)
+        logger.debug("Explode services %s for the host: %s", service_template.get_name(), hname)
+
         # Now really create the services
         if is_complex_expr(hname):
             hnames = self.evaluate_hostgroup_expression(
                 hname.strip(), hosts, hosts.templates, look_in='templates')
             for name in hnames:
-                self._local_create_service(hosts, name, service)
+                self._local_create_service(hosts, name, service_template)
         else:
             hnames = [n.strip() for n in hname.split(',') if n.strip()]
             for hname in hnames:
                 for name in hosts.find_hosts_that_use_template(hname):
-                    self._local_create_service(hosts, name, service)
+                    self._local_create_service(hosts, name, service_template)
 
     def explode_services_duplicates(self, hosts, service):
         """

@@ -45,7 +45,7 @@
 
 """The AutoSlots Class is a MetaClass: it manages how other classes
  are created (Classes, not instances of theses classes).
- Here it's role is to create the __slots__ list of the class with
+ Here its role is to create the __slots__ list of the class with
  all properties of Class.properties and Class.running_properties
  so we do not have to add manually all properties to the __slots__
  list when we add a new entry"""
@@ -77,11 +77,9 @@ class AutoSlots(type):
         # Now get properties from properties and running_properties
         if 'properties' in dct:
             props = dct['properties']
-            slots.update((p for p in props
-                          if not props[p].no_slots))
+            slots.update((p for p in props if not props[p].no_slots))
         if 'running_properties' in dct:
             props = dct['running_properties']
-            slots.update((p for p in props
-                          if not props[p].no_slots))
+            slots.update((p for p in props if not props[p].no_slots))
         dct['__slots__'] = tuple(slots)
         return type.__new__(mcs, name, bases, dct)

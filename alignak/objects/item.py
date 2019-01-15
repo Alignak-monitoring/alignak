@@ -271,7 +271,7 @@ class Item(AlignakObject):
             if prop in ['uuid']:
                 continue
             val = getattr(self, prop, None)
-            if val:
+            if val is not None:
                 setattr(copied_item, prop, val)
 
         # Also copy some running properties
