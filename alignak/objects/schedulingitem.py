@@ -104,8 +104,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     properties = Item.properties.copy()
     properties.update({
-        # 'uuid':
-        #     StringProp(),
         'display_name':
             StringProp(default=u'', fill_brok=['full_status']),
         'initial_state':
@@ -692,7 +690,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # logger.debug("Checking freshness for %s, last state update: %s, now: %s.",
             #              self.get_full_name(), self.last_state_update, now)
             if os.getenv('ALIGNAK_LOG_CHECKS', None):
-                logger.info("--ALC-- -> checking freshness for %s", self.get_full_name())
+                logger.info("--ALC-- -> checking freshness for: %s", self.get_full_name())
             # If we never checked this item, we begin the freshness period
             if not self.last_state_update:
                 self.last_state_update = int(now)
@@ -703,6 +701,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     # Create a new check for the scheduler
                     chk = self.launch_check(now, hosts, services, timeperiods,
                                             macromodulations, checkmodulations, checks)
+                    if not chk:
+                        logger.warning("No raised freshness check for: %s", self)
+                        return None
                     chk.output = "Freshness period expired: %s" \
                                  % time.strftime("%Y-%m-%d %H:%M:%S %Z")
                     chk.freshness_expiry_check = True
@@ -714,6 +715,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                             chk.exit_status = 2
                         elif self.freshness_state in ['u', 'x']:
                             chk.exit_status = 4
+                        else:
+                            chk.exit_status = 3
                     else:
                         if self.freshness_state == 'o':
                             chk.exit_status = 0
@@ -725,6 +728,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                             chk.exit_status = 3
                         elif self.freshness_state == 'x':
                             chk.exit_status = 4
+                        else:
+                            chk.exit_status = 3
 
                     return chk
                 else:
@@ -2414,20 +2419,22 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             return chk
 
         if force or (not self.is_no_check_dependent(hosts, services, timeperiods)):
-            if self.my_type == 'host' and not self.check_command:
-                logger.debug("Host check is for an host that has no check command (%s), "
-                             "do not launch the check !", self.host_name)
-                return None
-
-            if not self.check_command:
+            if self.my_type == 'service' and not self.check_command:
+                # This should never happen because of configuration check!
                 logger.debug("Service check is for a service that has no check command (%s/%s), "
                              "do not launch the check !", self.host_name, self.service_description)
                 return None
 
+            if self.my_type == 'host' and not self.check_command:
+                if self.active_checks_enabled:
+                    logger.debug("Host check is for an host that has no check command (%s), "
+                                 "do not launch the check !", self.host_name)
+                    return None
+
             # Fred : passive only checked host dependency
             if dependent and self.my_type == 'host' and \
                     self.passive_checks_enabled and not self.active_checks_enabled:
-                logger.debug("Host check is for an host that is only passively "
+                logger.debug("Host check (dependent) is for an host that is only passively "
                              "checked (%s), do not launch the check !", self.host_name)
                 return None
 
@@ -2437,7 +2444,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             module_type = None
 
             # By default we will use our default check_command
+            self.last_check_command = None
             check_command = self.check_command
+            command_line = ''
             if check_command:
                 poller_tag = check_command.poller_tag
                 module_type = check_command.module_type
@@ -2457,12 +2466,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 command_line = macroresolver.resolve_command(check_command, data,
                                                              macromodulations, timeperiods)
 
-            # And get all environment variables only if needed
-            if cls.enable_environment_macros or check_command.enable_environment_macros:
-                env = macroresolver.get_env_macros(data)
+                # remember it, for pure debugging purpose
+                self.last_check_command = command_line
 
-            # remember it, for pure debugging purpose
-            self.last_check_command = command_line
+            # And get all environment variables only if needed
+            if cls.enable_environment_macros or (check_command and
+                                                 check_command.enable_environment_macros):
+                env = macroresolver.get_env_macros(data)
 
             # By default we take the global timeout, but we use the command one if it
             # is defined (default is -1 for no timeout)
@@ -2566,8 +2576,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if cmdcall is None:
             return
 
-        # we get our based command, like
-        # check_tcp!80 -> check_tcp
+        # we get our base command, like
+        # bp_rule!(host,svc & host, svc) -> bp_rule
         cmd = cmdcall.call
         elts = cmd.split('!')
         base_cmd = elts[0]
@@ -2587,9 +2597,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                                                                      macromodulations,
                                                                      timeperiods)
                 prev = getattr(self, "processed_business_rule", "")
-
                 if rule == prev:
-                    # Business rule did not change (no macro was modulated)
+                    # Business rule did not changed (no macro was modulated)
                     return
 
                 fact = DependencyNodeFactory(self)
@@ -2660,6 +2669,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 item = services[item_uuid]
 
             # Do not display children in OK state
+            # todo: last_hard_state ? why not current state if state type is hard ?
             if item.last_hard_state_id == 0:
                 ok_count += 1
                 continue
@@ -2680,6 +2690,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         return output.strip()
 
     def business_rule_notification_is_blocked(self, hosts, services):
+        # pylint: disable=too-many-locals
         """Process business rule notifications behaviour. If all problems have
         been acknowledged, no notifications should be sent if state is not OK.
         By default, downtimes are ignored, unless explicitly told to be treated

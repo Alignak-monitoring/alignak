@@ -1766,8 +1766,7 @@ class Services(SchedulingItems):
         # We explode service_dependencies into Servicedependency
         # We just create serviceDep with goods values (as STRING!),
         # the link pass will be done after
-        sdeps = [d.strip() for d in
-                 getattr(service, "service_dependencies", [])]
+        sdeps = [d.strip() for d in getattr(service, "service_dependencies", [])]
         # %2=0 are for hosts, !=0 are for service_description
         i = 0
         hname = ''
