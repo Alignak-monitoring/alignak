@@ -68,6 +68,7 @@ The major part of monitoring "intelligence" is in this module.
 # pylint: disable=C0302
 # pylint: disable=R0904
 import time
+from datetime import datetime
 import os
 import logging
 import tempfile
@@ -1851,6 +1852,7 @@ class Scheduler(object):  # pylint: disable=R0902
         # (_, _, tick) = self.recurrent_works['check_freshness']
 
         _t0 = time.time()
+        now = int(_t0)
 
         items = []
 
@@ -1865,6 +1867,18 @@ class Scheduler(object):  # pylint: disable=R0902
             statsmgr.gauge('freshness.hosts-count', len(hosts))
             items.extend(hosts)
 
+            hosts = [h for h in self.hosts if h.check_freshness and h.freshness_expired]
+            for h in hosts:
+                h.last_chk = now
+                self.add(h.get_check_result_brok())
+                # Update check output with last freshness check time
+                h.output = "Freshness period expired: %s, last updated: %s" % (
+                    datetime.utcfromtimestamp(h.last_hard_state_change).strftime(
+                        "%Y-%m-%d %H:%M:%S %Z"),
+                    datetime.utcfromtimestamp(h.last_chk).strftime(
+                        "%Y-%m-%d %H:%M:%S %Z"))
+                logger.debug("Freshness still expired: %s / %s", h.get_name(), h.output)
+
         # May be self.ticks is not set (unit tests context!)
         ticks = getattr(self, 'ticks', self.pushed_conf.service_freshness_check_interval)
         if self.pushed_conf.check_service_freshness \
@@ -1877,6 +1891,20 @@ class Scheduler(object):  # pylint: disable=R0902
                         s.passive_checks_enabled and not s.active_checks_enabled]
             statsmgr.gauge('freshness.services-count', len(services))
             items.extend(services)
+
+            services = [s for s in self.services if not self.hosts[s.host].freshness_expired and
+                        s.check_freshness and s.freshness_expired]
+            for s in services:
+                s.last_chk = now
+                self.add(s.get_check_result_brok())
+                # Update check output with last freshness check time
+                s.output = "Freshness period expired: %s, last updated: %s" % (
+                    datetime.utcfromtimestamp(s.last_hard_state_change).strftime(
+                        "%Y-%m-%d %H:%M:%S %Z"),
+                    datetime.utcfromtimestamp(s.last_chk).strftime(
+                        "%Y-%m-%d %H:%M:%S %Z"))
+                logger.debug("Freshness still expired: %s / %s", s.get_full_name(), s.output)
+
         statsmgr.timer('freshness.items-list', time.time() - _t0)
 
         if not items:
