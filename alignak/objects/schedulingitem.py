@@ -80,8 +80,8 @@ from alignak.action import ACT_STATUS_WAIT_CONSUME, ACT_STATUS_ZOMBIE, \
 from alignak.check import Check
 from alignak.property import (BoolProp, IntegerProp, FloatProp, SetProp,
                               CharProp, StringProp, ListProp, DictProp)
-from alignak.util import format_t_into_dhms_format, to_serialized, from_serialized, \
-    dict_to_serialized_dict, from_set_to_list, from_list_to_set
+from alignak.util import to_serialized, from_serialized, dict_to_serialized_dict, \
+    from_set_to_list, from_list_to_set
 from alignak.notification import Notification
 from alignak.macroresolver import MacroResolver
 from alignak.eventhandler import EventHandler
@@ -704,10 +704,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     if not chk:
                         logger.warning("No raised freshness check for: %s", self)
                         return None
-                    chk.output = "Freshness period expired: %s" \
-                                 % time.strftime("%Y-%m-%d %H:%M:%S %Z")
                     chk.freshness_expiry_check = True
                     chk.check_time = time.time()
+                    chk.output = "Freshness period expired: %s" % (
+                        datetime.utcfromtimestamp(int(chk.check_time)).strftime(
+                            "%Y-%m-%d %H:%M:%S %Z"))
                     if self.my_type == 'host':
                         if self.freshness_state == 'o':
                             chk.exit_status = 0
@@ -3116,12 +3117,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type t_stale_by: int
         :return: None
         """
-        logger.warning("The freshness period of %s '%s' is expired by %s "
-                       "(threshold=%s + %ss). Attempt: %s / %s. "
+        logger.warning("The freshness period of %s '%s' is expired by %ss "
+                       "(threshold=%ss + %ss). Attempt: %s / %s. "
                        "I'm forcing the state to freshness state (%s / %s).",
                        self.my_type, self.get_full_name(),
-                       format_t_into_dhms_format(t_stale_by),
-                       format_t_into_dhms_format(self.freshness_threshold),
+                       t_stale_by, self.freshness_threshold,
                        self.additional_freshness_latency,
                        self.attempt, self.max_check_attempts,
                        self.freshness_state, self.state_type)

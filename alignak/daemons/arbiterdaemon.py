@@ -2035,26 +2035,22 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                             u"daemon is not reachable.",
                             u"daemon is not alive."
                         ][daemon['livestate']],
-                        "long_output": "Realm: %s (%s). Listening on: %s"
-                                       % (daemon['realm_name'], daemon['manage_sub_realms'],
-                                          daemon['uri']),
+                        "long_output": "Realm: %s (%s). Listening on: %s" % (
+                            daemon['realm_name'], daemon['manage_sub_realms'], daemon['uri']),
                         "perf_data": "last_check=%.2f" % daemon['last_check']
                     }
                 })
                 state = max(state, daemon['livestate'])
-                long_output.append(
-                    "%s - %s" % (daemon_id, [u"daemon is alive and reachable.",
-                                             u"daemon is not reachable.",
-                                             u"daemon is not alive."
-                                             ][daemon['livestate']]))
+                long_output.append("%s - %s" % (
+                    daemon_id, [u"daemon is alive and reachable.",
+                                u"daemon is not reachable.",
+                                u"daemon is not alive."][daemon['livestate']]))
 
             res['livestate'].update({
                 "state": "up",  # Always Up ;)
-                "output": [
-                    u"All my daemons are up and running.",
-                    u"Some of my daemons are not reachable.",
-                    u"Some of my daemons are not responding!"
-                ][state],
+                "output": [u"All my daemons are up and running.",
+                           u"Some of my daemons are not reachable.",
+                           u"Some of my daemons are not responding!"][state],
                 "long_output": '\n'.join(long_output)
             })
             log_level = 'info'
