@@ -1225,6 +1225,17 @@ class Daemon(object):
         except Exception as exp:  # pylint: disable=broad-except
             logger.error("Dumping daemon environment raised an error: %s. ", exp)
 
+    def load_modules_manager(self):
+        """Instantiate the daemon ModulesManager and load the SyncManager (multiprocessing)
+
+        Note that this function is used by the Alignak modules. No self-use...
+
+        :param daemon_name: daemon name
+        :type elt: str
+        :return: None
+        """
+        self.modules_manager = ModulesManager(self)
+
     def change_to_workdir(self):
         """Change working directory to working attribute
 
