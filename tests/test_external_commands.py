@@ -72,7 +72,7 @@ class TestExternalCommands(AlignakTest):
 
         self.setup_with_file('cfg/cfg_external_commands.cfg')
         assert self.conf_is_correct
-        self.show_logs()
+        # self.show_logs()
 
         # No error messages
         assert len(self.configuration_errors) == 0
@@ -96,17 +96,17 @@ class TestExternalCommands(AlignakTest):
         external_commands.append(excmd)
 
         # Serialize to send to another daemon
-        print(("Commands: %s" % external_commands))
+        print("Commands: %s" % external_commands)
         for cmd in external_commands:
-            print(("- %s" % cmd.__dict__))
+            print("- %s" % cmd.__dict__)
         res = serialize(external_commands, True)
-        print(("Serialized: %s" % res))
+        print("Serialized: %s" % res)
 
         # Unserialize when received by a daemon
         result = unserialize(res, True)
-        print(("Unserialized: %s" % result))
+        print("Unserialized: %s" % result)
         for cmd in result:
-            print(("- %s" % cmd.__dict__))
+            print("- %s" % cmd.__dict__)
             assert isinstance(cmd, ExternalCommand)
             assert cmd.__class__.my_type == "externalcommand"
 
@@ -159,7 +159,7 @@ class TestExternalCommands(AlignakTest):
             )
         else:
             # Resolve command result is not None because the command is recognized
-            print(("Result (mode=%s): %s" % (self.ecm_mode, res)))
+            print("Result (mode=%s): %s" % (self.ecm_mode, res))
             assert res is not None
 
         # ---
@@ -175,7 +175,7 @@ class TestExternalCommands(AlignakTest):
             )
         else:
             # Resolve command result is not None because the command is recognized
-            print(("Result (mode=%s): %s" % (self.ecm_mode, res)))
+            print("Result (mode=%s): %s" % (self.ecm_mode, res))
             assert res is not None
 
         # ---
@@ -247,7 +247,7 @@ class TestExternalCommands(AlignakTest):
             self.assert_any_log_match("External command 'unknown_command' is not recognized, sorry")
         else:
             # Resolve command result is not None because the command is recognized
-            print(("Result unknown command (mode=%s): %s" % (self.ecm_mode, res)))
+            print("Result unknown command (mode=%s): %s" % (self.ecm_mode, res))
             assert res is None
 
         #  ---
@@ -270,7 +270,7 @@ class TestExternalCommands(AlignakTest):
                                           "but the host could not be found!")
         else:
             # Resolve command result is not None because the command is recognized
-            print(("Result host check command (mode=%s): %s" % (self.ecm_mode, res)))
+            print("Result host check command (mode=%s): %s" % (self.ecm_mode, res))
             assert res is None
 
         # Now test different types of commands
@@ -294,7 +294,7 @@ class TestExternalCommands(AlignakTest):
         now = time.time()
         excmd = '[%d] DISABLE_HOST_FRESHNESS_CHECKS' % now
         res = self.manage_external_command(excmd)
-        print(("Result (mode=%s): %s" % (self.ecm_mode, res)))
+        print("Result (mode=%s): %s" % (self.ecm_mode, res))
         if self.ecm_mode == 'applyer':
             # Command is supposed to be managed
             assert res is None
@@ -311,7 +311,7 @@ class TestExternalCommands(AlignakTest):
         self._main_broker.broks = []
         excmd = '[%d] DISABLE_HOST_NOTIFICATIONS;test_host_0' % time.time()
         res = self.manage_external_command(excmd)
-        print(("Result (mode=%s): %s" % (self.ecm_mode, res)))
+        print("Result (mode=%s): %s" % (self.ecm_mode, res))
         self.show_logs()
         # Command is supposed to be managed
         assert res is None
@@ -400,7 +400,7 @@ class TestExternalCommands(AlignakTest):
 
     def test_change_and_reset_service_modattr(self):
         """  Change and reset modified attributes for a service
-        :return: None 
+        :return: None
         """
         # A service...
         svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
@@ -1036,7 +1036,7 @@ class TestExternalCommands(AlignakTest):
         host.event_handler_enabled = False
         host.active_checks_enabled = True
         host.passive_checks_enabled = True
-        print(("Host: %s - state: %s/%s" % (host, host.state_type, host.state)))
+        print("Host: %s - state: %s/%s" % (host, host.state_type, host.state))
         assert host is not None
 
         # Get dependent host
@@ -1045,7 +1045,7 @@ class TestExternalCommands(AlignakTest):
         router.event_handler_enabled = False
         router.active_checks_enabled = True
         router.passive_checks_enabled = True
-        print(("Router: %s - state: %s/%s" % (router, router.state_type, router.state)))
+        print("Router: %s - state: %s/%s" % (router, router.state_type, router.state))
         assert router is not None
 
         now = int(time.time())
@@ -1115,7 +1115,7 @@ class TestExternalCommands(AlignakTest):
         host.event_handler_enabled = False
         host.active_checks_enabled = True
         host.passive_checks_enabled = True
-        print(("Host: %s - state: %s/%s" % (host, host.state_type, host.state)))
+        print("Host: %s - state: %s/%s" % (host, host.state_type, host.state))
         assert host is not None
 
         # Get dependent host
@@ -1124,7 +1124,7 @@ class TestExternalCommands(AlignakTest):
         router.event_handler_enabled = False
         router.active_checks_enabled = True
         router.passive_checks_enabled = True
-        print(("Router: %s - state: %s/%s" % (router, router.state_type, router.state)))
+        print("Router: %s - state: %s/%s" % (router, router.state_type, router.state))
         assert router is not None
 
         # Get service
@@ -1134,7 +1134,7 @@ class TestExternalCommands(AlignakTest):
         svc.active_checks_enabled = True
         svc.passive_checks_enabled = True
         assert svc is not None
-        print(("Service: %s - state: %s/%s" % (svc, svc.state_type, svc.state)))
+        print("Service: %s - state: %s/%s" % (svc, svc.state_type, svc.state))
 
         now = int(time.time())
 
@@ -1720,7 +1720,7 @@ class TestExternalCommands(AlignakTest):
             # for brok in self._main_broker.broks:
             #     if brok.type == 'monitoring_log':
             #         data = unserialize(brok.data)
-            #         monitoring_logs.append((data['level'], data['message']))
+            #         monitoring_logs.append((data['level'], data['message'])
             #
             # print(monitoring_logs)
             # el = [
@@ -1795,7 +1795,7 @@ class TestExternalCommands(AlignakTest):
         assert svc.comments == {}
 
         now = int(time.time())
-        
+
         #  ---
         # External command: add a service downtime
         assert svc.downtimes == {}
@@ -1828,6 +1828,19 @@ class TestExternalCommands(AlignakTest):
                 'My accented é"{|:âàç downtime' % (now, now + 2120, now + 21200)
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
+        expected_logs = [
+            ('info',
+             u'EXTERNAL COMMAND: [%s] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;'
+             u'%s;%s;1;0;1200;test_contact;My downtime' % (now, now + 120, now + 1200)),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;'
+             u'%s;%s;1;0;1200;test_contact;My downtime 2' % (now, now + 1120, now + 11200)),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;'
+             u'%s;%s;1;0;1200;test_contact;My accented é"{|:âàç downtime' % (
+             now, now + 2120, now + 21200)),
+        ]
+        self.check_monitoring_events_log(expected_logs)
         assert len(svc.downtimes) == 3
 
         #  ---
@@ -1852,7 +1865,7 @@ class TestExternalCommands(AlignakTest):
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         assert len(svc.downtimes) == 0
-    
+
         expected_logs = [
             ('info',
              u'EXTERNAL COMMAND: [%s] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;'
@@ -1880,7 +1893,9 @@ class TestExternalCommands(AlignakTest):
         """ Test the downtime for hosts
         :return: None
         """
-        # An host and a contact...
+        self.clear_logs()
+
+        # An host and a contact...
         host = self._scheduler.hosts.find_by_name("test_host_0")
         contact = self._scheduler.contacts[host.contacts[0]]
         assert contact is not None
@@ -1918,6 +1933,19 @@ class TestExternalCommands(AlignakTest):
                 'My accented é"{|:âàç downtime' % (now, now + 2120, now + 21200)
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
+        expected_logs = [
+            ('info',
+             u'EXTERNAL COMMAND: [%s] SCHEDULE_CONTACT_DOWNTIME;test_contact;'
+             u'%s;%s;test_contact;My downtime' % (now, now + 120, now + 1200)),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] SCHEDULE_CONTACT_DOWNTIME;test_contact;'
+             u'%s;%s;test_contact;My downtime 2' % (now, now + 1120, now + 11200)),
+            ('info',
+             u'EXTERNAL COMMAND: [%s] SCHEDULE_CONTACT_DOWNTIME;test_contact;'
+             u'%s;%s;test_contact;My accented é"{|:âàç downtime' % (now, now + 2120, now + 21200)),
+        ]
+        self.show_logs()
+        self.check_monitoring_events_log(expected_logs, dump=True)
         assert len(contact.downtimes) == 3
 
         #  ---
@@ -1985,7 +2013,7 @@ class TestExternalCommands(AlignakTest):
         # A contactgroup ...
         contactgroup = self._scheduler.contactgroups.find_by_name("test_contact")
         assert contactgroup is not None
-        
+
         #  ---
         # External command: disable / enable notifications for a contacts group
         excmd = '[%d] DISABLE_CONTACTGROUP_HOST_NOTIFICATIONS;test_contact' % time.time()
@@ -2029,7 +2057,7 @@ class TestExternalCommands(AlignakTest):
         assert svc is not None
 
         now = int(time.time())
-        
+
         #  ---
         # External command: disable /enable checks for an hostgroup (hosts)
         excmd = '[%d] DISABLE_HOSTGROUP_HOST_CHECKS;allhosts' % now
@@ -2119,7 +2147,7 @@ class TestExternalCommands(AlignakTest):
             if host_id in self._scheduler.hosts:
                 for service_id in self._scheduler.hosts[host_id].services:
                     assert self._scheduler.services[service_id].notifications_enabled
-    
+
         #  ---
         # External command: add an host downtime
         assert host.downtimes == {}

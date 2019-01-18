@@ -113,7 +113,7 @@ class Comment(AlignakObject):
         """
         super(Comment, self).__init__(params, parsing)
 
-        if not hasattr(self, 'entry_time'):
+        if not hasattr(self, 'entry_time') or not self.entry_time:
             self.entry_time = int(time.time())
 
         self.fill_default()

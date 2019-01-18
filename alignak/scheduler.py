@@ -453,7 +453,16 @@ class Scheduler(object):  # pylint: disable=R0902
             statsmgr.timer('external_commands.got.time', time.time() - _t0)
         except Exception as exp:  # pylint: disable=broad-except
             logger.warning("External command parsing error: %s", exp)
-            logger.warning(traceback.print_exc())
+            logger.warning("Exception: %s / %s", str(exp), traceback.print_exc())
+            for command in cmds:
+                try:
+                    command = command.decode('utf8', 'ignore')
+                except UnicodeEncodeError:
+                    pass
+                except AttributeError:
+                    pass
+
+                logger.warning("Command: %s", command)
 
     def add_brok(self, brok, broker_uuid=None):
         """Add a brok into brokers list
