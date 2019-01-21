@@ -373,7 +373,7 @@ class Worker(object):  # pylint: disable=too-many-instance-attributes
             logger.info("[%s] (pid=%d) starting my job...", self._id, os.getpid())
             self.do_work(actions_queue, returns_queue, control_queue)
             logger.info("[%s] (pid=%d) stopped", self._id, os.getpid())
-        except ActionError:
+        except ActionError as exp:
             logger.error("[%s] exited with an ActionError exception : %s", self._id, str(exp))
             logger.exception(exp)
             raise
