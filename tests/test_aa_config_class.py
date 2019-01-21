@@ -172,17 +172,17 @@ class TestConfigClassBase(AlignakTest):
             # 'DIST_LOG': '$DIST_LOG$',
             # 'DIST_RUN': '$DIST_RUN$',
             # 'DIST_VAR': '$DIST_VAR$',
-            'BIN': '$BIN$',
-            'ETC': '$ETC$',
-            'GROUP': '$GROUP$',
-            'LIBEXEC': '$LIBEXEC$',
-            'LOG': '$LOG$',
-            'NAGIOSPLUGINSDIR': '',
-            'PLUGINSDIR': '$',
-            'RUN': '$RUN$',
-            'USER': '$USER$',
-            'USER1': '$NAGIOSPLUGINSDIR$',
-            'VAR': '$VAR$'
+            # 'BIN': '$BIN$',
+            # 'ETC': '$ETC$',
+            # 'GROUP': '$GROUP$',
+            # 'LIBEXEC': '$LIBEXEC$',
+            # 'LOG': '$LOG$',
+            # 'NAGIOSPLUGINSDIR': '',
+            # 'PLUGINSDIR': '$',
+            # 'RUN': '$RUN$',
+            # 'USER': '$USER$',
+            # 'USER1': '$NAGIOSPLUGINSDIR$',
+            # 'VAR': '$VAR$'
         })
         assert sorted(alignak_cfg.macros) == sorted(expected_macros)
         assert alignak_cfg.resource_macros_names == []
