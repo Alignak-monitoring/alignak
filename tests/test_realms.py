@@ -197,7 +197,7 @@ class TestRealms(AlignakTest):
         realm = self._arbiter.conf.realms.find_by_name("All")
         assert realm is not None
         assert realm.realm_name == 'All'
-        assert realm.alias == 'All'
+        assert realm.alias == ''
         assert realm.default
 
         # 'All' realm is the default realm
@@ -516,7 +516,7 @@ class TestRealms(AlignakTest):
         for sat_link in satellites:
             print("%s / %s" % (sat_link.type, sat_link.name))
 
-        assert len(europe.get_satellites_by_type('scheduler')) == 0
+        assert len(europe.get_satellites_by_type('scheduler')) == 1
         satellites = europe.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "scheduler")
         assert len(satellites) == 1
         for sat_link in satellites:
@@ -555,7 +555,7 @@ class TestRealms(AlignakTest):
         for sat_link in satellites:
             print("%s / %s" % (sat_link.type, sat_link.name))
 
-        assert len(paris.get_satellites_by_type('scheduler')) == 0
+        assert len(paris.get_satellites_by_type('scheduler')) == 1
         satellites = paris.get_potential_satellites_by_type(self._arbiter.dispatcher.all_daemons_links, "scheduler")
         assert len(satellites) == 1
         for sat_link in satellites:
@@ -705,6 +705,9 @@ class TestRealms(AlignakTest):
             broker-france, manage_sub_realms=0 -> realm France
             scheduler-france, manage_sub_realms=0 -> realm France
 
+        TODO: this test raises some error logs because of missing schedulers but the
+        configuration is accepted and looks correct! Note that this configuration is
+        a bit complicated and ambiguous!!!
         :return: None
         """
         self.setup_with_file('cfg/realms/sub_realms_multi_levels.cfg',

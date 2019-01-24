@@ -59,6 +59,7 @@ from six import string_types
 
 from alignak.action import ACT_STATUS_QUEUED, ACT_STATUS_LAUNCHED, \
     ACT_STATUS_DONE, ACT_STATUS_TIMEOUT
+from alignak.action import ActionError
 from alignak.message import Message
 from alignak.misc.common import setproctitle, SIGNALS_TO_NAMES_DICT
 
@@ -66,7 +67,7 @@ from alignak.misc.common import setproctitle, SIGNALS_TO_NAMES_DICT
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class Worker(object):
+class Worker(object):  # pylint: disable=too-many-instance-attributes
     """This class is used for poller and reactionner to work.
     The worker is a process launch by theses process and read Message in a Queue
     (self.actions_queue)
@@ -112,26 +113,31 @@ class Worker(object):
         global logger  # pylint: disable=invalid-name, global-statement
         logger = logging.getLogger(__name__ + '.' + self._id)  # pylint: disable=invalid-name
 
+        self.checks = []
+        self.t_each_loop = time.time()
+        self._idletime = 0
         self.actions_got = 0
         self.actions_launched = 0
         self.actions_finished = 0
 
         self.interrupted = False
 
-        self._idletime = 0
         self._timeout = timeout
         self.processes_by_worker = processes_by_worker
-        # By default, take our own code
-        if target is None:
-            target = self.work
-        self._process = Process(target=self._prework,
-                                args=(target, actions_queue, returns_queue))
-        logger.debug("[%s] created a new process", self.get_id())
-        # self.returns_queue = returns_queue
+        # self.control_queue = Queue()  # Private Control queue for the Worker
+        self.control_queue = None
+
         self.max_plugins_output_length = max_plugins_output_length
         self.i_am_dying = False
         # Keep a trace where the worker is launched from (poller or reactionner?)
         self.loaded_into = loaded_into
+
+        # By default, take our own code
+        if target is None:
+            target = self.work
+        self._process = Process(target=self._prework,
+                                args=(target, actions_queue, returns_queue, self.control_queue))
+        logger.debug("[%s] created a new process", self._id)
 
     @staticmethod
     def _prework(real_work, *args):
@@ -140,6 +146,7 @@ class Worker(object):
         :param args: arguments
         :return:
         """
+        logger.debug("calling: %s with %s", real_work, args)
         real_work(*args)
 
     def get_module(self):
@@ -184,7 +191,7 @@ class Worker(object):
         :return: None
         """
         logger.info("worker '%s' (pid=%d) received a signal: %s",
-                    self.get_id(), os.getpid(), SIGNALS_TO_NAMES_DICT[sig])
+                    self._id, os.getpid(), SIGNALS_TO_NAMES_DICT[sig])
         # Do not do anything... our master daemon is managing our termination.
         self.interrupted = True
 
@@ -242,26 +249,27 @@ class Worker(object):
             logger.debug("get_new_checks: %s / %s", len(self.checks), self.processes_by_worker)
             while len(self.checks) < self.processes_by_worker:
                 msg = queue.get_nowait()
-                if msg is not None:
-                    logger.debug("Got a message: %s", msg)
-                    if msg.get_type() == 'Do':
-                        logger.debug("Got an action: %s", msg.get_data())
-                        self.checks.append(msg.get_data())
-                        self.actions_got += 1
-                    elif msg.get_type() == 'ping':
-                        msg = Message(_type='pong', data='pong!', source=self._id)
-                        logger.debug("Queuing message: %s", msg)
-                        return_queue.put_nowait(msg)
-                        logger.debug("Queued")
-                    else:
-                        logger.warning("Ignoring message of type: %s", msg.get_type())
+                if msg is None:
+                    time.sleep(0.01)
+                    continue
+                logger.debug("Got a message: %s", msg)
+                if msg.get_type() == 'Do':
+                    logger.debug("Got an action: %s", msg.get_data())
+                    self.checks.append(msg.get_data())
+                    self.actions_got += 1
+                elif msg.get_type() == 'ping':
+                    msg = Message(_type='pong', data='pong!', source=self._id)
+                    logger.debug("Queuing message: %s", msg)
+                    return_queue.put_nowait(msg)
+                    logger.debug("Queued")
+                else:
+                    logger.warning("Ignoring message of type: %s", msg.get_type())
         except Full:
             logger.warning("Actions queue is full")
         except Empty:
             logger.debug("Actions queue is empty")
             if not self.checks:
                 self._idletime += 1
-                time.sleep(0.5)
         # Maybe the Queue() has been deleted by our master ?
         except (IOError, EOFError) as exp:
             logger.warning("My actions queue is no more available: %s", str(exp))
@@ -316,19 +324,13 @@ class Worker(object):
                 logger.debug("--- check done/timeout: %s", action.uuid)
                 self.actions_finished += 1
                 to_del.append(action)
-                # We answer to the master
+                # We answer to our master
                 try:
                     msg = Message(_type='Done', data=action, source=self._id)
                     logger.debug("Queuing message: %s", msg)
                     queue.put_nowait(msg)
-                    logger.debug("Queued")
-                except (IOError, EOFError) as exp:
-                    logger.warning("My returns queue is no more available: %s", str(exp))
-                    # sys.exit(2)
                 except Exception as exp:  # pylint: disable=broad-except
                     logger.error("Failed putting messages in returns queue: %s", str(exp))
-            else:
-                logger.debug("--- not yet finished")
 
         for chk in to_del:
             logger.debug("--- delete check: %s", chk.uuid)
@@ -357,7 +359,7 @@ class Worker(object):
 
         return 0
 
-    def work(self, actions_queue, returns_queue):  # pragma: no cover, not unit tests
+    def work(self, actions_queue, returns_queue, control_queue=None):  # pragma: no cover
         """Wrapper function for do_work in order to catch the exception
         to see the real work, look at do_work
 
@@ -368,16 +370,20 @@ class Worker(object):
         :return: None
         """
         try:
-            logger.info("[%s] (pid=%d) starting my job...", self.get_id(), os.getpid())
-            self.do_work(actions_queue, returns_queue)
-            logger.info("[%s] (pid=%d) stopped", self.get_id(), os.getpid())
+            logger.info("[%s] (pid=%d) starting my job...", self._id, os.getpid())
+            self.do_work(actions_queue, returns_queue, control_queue)
+            logger.info("[%s] (pid=%d) stopped", self._id, os.getpid())
+        except ActionError as exp:
+            logger.error("[%s] exited with an ActionError exception : %s", self._id, str(exp))
+            logger.exception(exp)
+            raise
         # Catch any exception, log the exception and exit anyway
         except Exception as exp:  # pragma: no cover, this should never happen indeed ;)
             logger.error("[%s] exited with an unmanaged exception : %s", self._id, str(exp))
             logger.exception(exp)
             raise
 
-    def do_work(self, actions_queue, returns_queue):  # pragma: no cover, unit tests
+    def do_work(self, actions_queue, returns_queue, control_queue=None):  # pragma: no cover
         """Main function of the worker.
         * Get checks
         * Launch new checks
@@ -394,14 +400,14 @@ class Worker(object):
         self.interrupted = False
         self.set_exit_handler()
 
-        self.set_proctitle()
+        setproctitle("alignak-%s worker %s" % (self.loaded_into, self._id))
 
         timeout = 1.0
         self.checks = []
         self.t_each_loop = time.time()
         while True:
             begin = time.time()
-            logger.debug("--- loop start: %s", begin)
+            logger.debug("--- loop begin: %s", begin)
 
             # If we are dying (big problem!) we do not
             # take new jobs, we just finished the current one
@@ -414,6 +420,21 @@ class Worker(object):
             self.manage_finished_checks(returns_queue)
 
             logger.debug("loop middle, %d checks", len(self.checks))
+
+            # Now get order from master, if any...
+            if control_queue:
+                try:
+                    control_message = control_queue.get_nowait()
+                    logger.info("[%s] Got a message: %s", self._id, control_message)
+                    if control_message and control_message.get_type() == 'Die':
+                        logger.info("[%s] The master said we must die... :(", self._id)
+                        break
+                except Full:
+                    logger.warning("Worker control queue is full")
+                except Empty:
+                    pass
+                except Exception as exp:  # pylint: disable=broad-except
+                    logger.error("Exception when getting master orders: %s. ", str(exp))
 
             # Maybe someone asked us to die, if so, do it :)
             if self.interrupted:
@@ -436,16 +457,10 @@ class Worker(object):
             timeout -= time.time() - begin
             if timeout < 0:
                 timeout = 1.0
+            else:
+                time.sleep(0.1)
 
-            logger.debug("idle: %ss, checks: %d, actions (got: %d, launched: %d, finished: %d)",
-                         self._idletime, len(self.checks),
+            logger.debug("+++ loop end: timeout = %s, idle: %s, checks: %d, "
+                         "actions (got: %d, launched: %d, finished: %d)",
+                         timeout, self._idletime, len(self.checks),
                          self.actions_got, self.actions_launched, self.actions_finished)
-
-            logger.debug("+++ loop stop: timeout = %s", timeout)
-
-    def set_proctitle(self):  # pragma: no cover, not with unit tests
-        """Set the proctitle of this worker for readability purpose
-
-        :return: None
-        """
-        setproctitle("alignak-%s worker %s" % (self.loaded_into, self._id))

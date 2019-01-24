@@ -92,6 +92,7 @@ class DispatcherError(Exception):
 
 
 class Dispatcher(object):
+    # pylint: disable=too-many-instance-attributes
     """Dispatcher is in charge of sending configuration to other daemon.
     It has to handle spare, realms, poller tags etc.
     """
@@ -125,7 +126,18 @@ class Dispatcher(object):
         # Direct pointer to important elements for us
         self.arbiter_link = arbiter_link
         self.alignak_conf = conf
+        self.global_conf = {}
+        # Get configuration data from the pushed configuration
+        cls = self.alignak_conf.__class__
+        for prop, entry in list(cls.properties.items()):
+            # Is this property intended for broking?
+            if 'full_status' not in entry.fill_brok:
+                continue
+            self.global_conf[prop] = self.alignak_conf.get_property_value_for_brok(
+                prop, cls.properties)
+            # self.global_conf[prop] = getattr(self.alignak_conf, prop, entry.default)
         logger.debug("Dispatcher configuration: %s / %s", self.arbiter_link, self.alignak_conf)
+        logger.debug("Dispatcher global configuration: %s", self.global_conf)
 
         logger.info("Dispatcher realms configuration:")
         for realm in self.alignak_conf.realms:
@@ -357,6 +369,8 @@ class Dispatcher(object):
                 # This should never happen, logically!
                 if not cfg_part.scheduler_link:
                     self.dispatch_ok = False
+                    logger.error("- realm %s:", realm.name)
+                    logger.error("  .configuration %s", cfg_part)
                     logger.error("    not managed by any scheduler!")
                     continue
 
@@ -592,7 +606,7 @@ class Dispatcher(object):
             logger.info(" preparing the dispatch for schedulers:")
 
             # Now we get all the schedulers of this realm and upper
-            schedulers = self.get_scheduler_ordered_list(realm)
+            # schedulers = self.get_scheduler_ordered_list(realm)
             schedulers = realm.get_potential_satellites_by_type(
                 self.get_satellites_list('schedulers'), 'scheduler')
             if not schedulers:
@@ -613,12 +627,20 @@ class Dispatcher(object):
                     except IndexError:  # No more schedulers.. not good, no loop
                         # The configuration part do not need to be dispatched anymore
                         # todo: should be managed inside the Realm class!
+                        logger.error("No more scheduler link: %s", realm)
                         for sat_type in ('reactionner', 'poller', 'broker', 'receiver'):
                             realm.to_satellites[sat_type][cfg_part.instance_id] = None
                             realm.to_satellites_need_dispatch[sat_type][cfg_part.instance_id] = \
                                 False
                             realm.to_satellites_managed_by[sat_type][cfg_part.instance_id] = []
                         break
+
+                    # if scheduler_link.manage_sub_realms:
+                    #     logger.warning('[%s] The scheduler %s is configured to manage sub realms.'
+                    #                    ' This is not yet possible, sorry!',
+                    #                    realm.name, scheduler_link.name)
+                    #     scheduler_link.manage_sub_realms = False
+                    #     continue
 
                     if not scheduler_link.need_conf:
                         logger.info('[%s] The scheduler %s do not need any configuration, sorry',
@@ -717,11 +739,11 @@ class Dispatcher(object):
                             cfg_part.instance_id, cfg_part.uuid, cfg_part.config_name)
                 for sat_type in ('reactionner', 'poller', 'broker', 'receiver'):
                     if cfg_part.instance_id not in realm.to_satellites_need_dispatch[sat_type]:
-                        logger.debug("   nothing to dispatch for %ss", sat_type)
+                        logger.warning("   nothing to dispatch for %ss", sat_type)
                         return
 
                     if not realm.to_satellites_need_dispatch[sat_type][cfg_part.instance_id]:
-                        logger.debug("   no need to dispatch to %ss", sat_type)
+                        logger.warning("   no need to dispatch to %ss", sat_type)
                         return
 
                     # Get the list of the concerned satellites
@@ -758,6 +780,7 @@ class Dispatcher(object):
                             'arbiters': arbiters_cfg if sat_link.manage_arbiters else {},
                             'modules': serialize(sat_link.modules, True),
                             'managed_conf_id': 'see_my_schedulers',
+                            'global_conf': self.global_conf
                         })
                         sat_link.cfg['schedulers'].update({
                             cfg_part.uuid: realm.to_satellites[sat_type][cfg_part.instance_id]})

@@ -115,15 +115,3 @@ class EventHandler(Action):
         :return: None
         """
         self.output = out
-
-    def is_launchable(self, timestamp):
-        """Check if this event handler can be launched based on current time
-
-        :param timestamp: time to compare
-        :type timestamp: int
-        :return: True if timestamp >= self.t_to_go, False otherwise
-        :rtype: bool
-        """
-        if self.t_to_go is None:
-            return False
-        return timestamp >= self.t_to_go

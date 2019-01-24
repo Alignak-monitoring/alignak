@@ -1009,6 +1009,36 @@ class Service(SchedulingItem):
         if need_stalk:
             logger.info("Stalking %s: %s", self.get_name(), check.output)
 
+    def get_data_for_checks(self, hosts):
+        """Get data for a check
+
+        :return: list containing the service and the linked host
+        :rtype: list
+        """
+        return [hosts[self.host], self]
+
+    def get_data_for_event_handler(self, hosts):
+        """Get data for an event handler
+
+        :return: list containing the service and the linked host
+        :rtype: list
+        """
+        return [hosts[self.host], self]
+
+    def get_data_for_notifications(self, contact, notif, host_ref):
+        """Get data for a notification
+
+        :param contact: The contact to return
+        :type contact:
+        :param notif: the notification to return
+        :type notif:
+        :return: list containing the service, the host and the given parameters
+        :rtype: list
+        """
+        if not host_ref:
+            return [self, contact, notif]
+        return [host_ref, self, contact, notif]
+
     def notification_is_blocked_by_contact(self, notifways, timeperiods, notif, contact):
         """Check if the notification is blocked by this contact.
 
@@ -1077,6 +1107,8 @@ class Service(SchedulingItem):
         :rtype: str
         TODO: Move to util or SchedulingItem class
         """
+        if not getattr(self, 'check_command', None):
+            return ''
         return self.check_command.get_name()
 
     def get_snapshot_command(self):
@@ -1085,6 +1117,8 @@ class Service(SchedulingItem):
         :return: snapshot_command name
         :rtype: str
         """
+        if not getattr(self, 'snapshot_command', None):
+            return ''
         return self.snapshot_command.get_name()
 
     # pylint: disable=R0916
@@ -1602,9 +1636,8 @@ class Services(SchedulingItems):
         for hname in duplicate_for_hosts:
             host = hosts.find_by_name(hname)
             if host is None:
-                err = 'Error: The hostname %s is unknown for the service %s!' \
-                      % (hname, service.get_name())
-                service.add_error(err)
+                service.add_error("Error: The hostname %s is unknown for the service %s!"
+                                  % (hname, service.get_name()))
                 continue
             if host.is_excluded_for(service):
                 continue
@@ -1628,40 +1661,44 @@ class Services(SchedulingItems):
         host = hosts.find_by_name(host_name.strip())
         if host.is_excluded_for(service):
             return None
-        # Creates concrete instance
+
+        # Creates a real service instance from the template
         new_s = service.copy()
         new_s.host_name = host_name
         new_s.register = 1
         self.add_item(new_s)
         return new_s
 
-    def explode_services_from_templates(self, hosts, service):
+    def explode_services_from_templates(self, hosts, service_template):
         """
         Explodes services from templates. All hosts holding the specified
         templates are bound with the service.
 
         :param hosts: The hosts container.
         :type hosts: alignak.objects.host.Hosts
-        :param service: The service to explode.
-        :type service: alignak.objects.service.Service
+        :param service_template: The service to explode.
+        :type service_template: alignak.objects.service.Service
         :return: None
         """
-        hname = getattr(service, "host_name", None)
+        hname = getattr(service_template, "host_name", None)
         if not hname:
+            logger.debug("Service template %s is declared without an host_name",
+                         service_template.get_name())
             return
 
-        logger.debug("Explode services from templates: %s", hname)
+        logger.debug("Explode services %s for the host: %s", service_template.get_name(), hname)
+
         # Now really create the services
         if is_complex_expr(hname):
             hnames = self.evaluate_hostgroup_expression(
                 hname.strip(), hosts, hosts.templates, look_in='templates')
             for name in hnames:
-                self._local_create_service(hosts, name, service)
+                self._local_create_service(hosts, name, service_template)
         else:
             hnames = [n.strip() for n in hname.split(',') if n.strip()]
             for hname in hnames:
                 for name in hosts.find_hosts_that_use_template(hname):
-                    self._local_create_service(hosts, name, service)
+                    self._local_create_service(hosts, name, service_template)
 
     def explode_services_duplicates(self, hosts, service):
         """
@@ -1729,8 +1766,7 @@ class Services(SchedulingItems):
         # We explode service_dependencies into Servicedependency
         # We just create serviceDep with goods values (as STRING!),
         # the link pass will be done after
-        sdeps = [d.strip() for d in
-                 getattr(service, "service_dependencies", [])]
+        sdeps = [d.strip() for d in getattr(service, "service_dependencies", [])]
         # %2=0 are for hosts, !=0 are for service_description
         i = 0
         hname = ''

@@ -341,8 +341,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 new_broks = satellite.get_and_clear_broks()
                 if new_broks:
                     logger.debug("Got %d broks from: %s", len(new_broks), satellite.name)
-                for brok in list(new_broks.values()):
-                    logger.debug("Got brok from %s: %s", satellite.name, brok.type)
+                for brok in new_broks:
                     self.add(brok)
 
     def get_initial_broks_from_satellites(self):
@@ -590,8 +589,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     if cfg_module.get('name', 'unset') == [module_cfg['name']]:
                         logger.info("  updating module Cfg file configuration")
                         cfg_module = module_cfg
-                        logger.debug("Module cfg %s updated params: %s",
-                                     module_cfg['name'], module_cfg)
+                        logger.info("Module %s updated parameters: %s",
+                                    module_cfg['name'], module_cfg)
                         break
                 else:
                     raw_objects['module'].append(module_cfg)
@@ -1541,7 +1540,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         # Now create the external commands manager
         # We are a dispatcher: our role is to dispatch commands to the schedulers
         self.external_commands_manager = ExternalCommandManager(
-            self.conf, 'dispatcher', self, self.conf.accept_passive_unknown_check_results)
+            self.conf, 'dispatcher', self, self.conf.accept_passive_unknown_check_results,
+            self.conf.log_external_commands)
 
     def do_loop_turn(self):
         # pylint: disable=too-many-branches, too-many-statements, too-many-locals
@@ -1613,12 +1613,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             self.get_objects_from_from_queues()
             statsmgr.timer('get-objects-from-queues', time.time() - _t0)
 
-            # It is not the arbiter's job to manage broks and external commands!
-            # # Maybe our satellites raised new broks. Reap them...
-            # _t0 = time.time()
-            # self.get_broks_from_satellites()
-            # statsmgr.timer('broks.got.time', time.time() - _t0)
-            #
+            # Maybe our satellites raised new broks. Reap them...
+            _t0 = time.time()
+            self.get_broks_from_satellites()
+            statsmgr.timer('broks.got.time', time.time() - _t0)
+
             # One broker is responsible for our broks, we give him our broks
             _t0 = time.time()
             self.push_broks_to_broker()
@@ -2022,6 +2021,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             long_output = []
             for daemon_id in sorted(inner_stats['daemons_states']):
                 daemon = inner_stats['daemons_states'][daemon_id]
+                # Ignore daemons that are not active in the configuration
+                if not daemon['active']:
+                    continue
                 res['services'].append({
                     "name": daemon_id,
                     "livestate": {
@@ -2033,25 +2035,22 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                             u"daemon is not reachable.",
                             u"daemon is not alive."
                         ][daemon['livestate']],
-                        "long_output": "Realm: %s (%s). Listening on: %s"
-                                       % (daemon['realm_name'], daemon['manage_sub_realms'],
-                                          daemon['uri']),
+                        "long_output": "Realm: %s (%s). Listening on: %s" % (
+                            daemon['realm_name'], daemon['manage_sub_realms'], daemon['uri']),
                         "perf_data": "last_check=%.2f" % daemon['last_check']
                     }
                 })
                 state = max(state, daemon['livestate'])
-                long_output.append(
-                    "%s - %s" % (daemon_id, [u"daemon is alive and reachable.",
-                                             u"daemon is not reachable.",
-                                             u"daemon is not alive."][daemon['livestate']]))
+                long_output.append("%s - %s" % (
+                    daemon_id, [u"daemon is alive and reachable.",
+                                u"daemon is not reachable.",
+                                u"daemon is not alive."][daemon['livestate']]))
 
             res['livestate'].update({
                 "state": "up",  # Always Up ;)
-                "output": [
-                    u"All my daemons are up and running.",
-                    u"Some of my daemons are not reachable.",
-                    u"Some of my daemons are not responding!"
-                ][state],
+                "output": [u"All my daemons are up and running.",
+                           u"Some of my daemons are not reachable.",
+                           u"Some of my daemons are not responding!"][state],
                 "long_output": '\n'.join(long_output)
             })
             log_level = 'info'
@@ -2100,8 +2099,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """
         try:
             # Start the daemon
-            if not self.do_daemon_init_and_start():
+            if not self.verify_only and not self.do_daemon_init_and_start():
                 self.exit_on_error(message="Daemon initialization error", exit_code=3)
+
+            if self.verify_only:
+                self.setup_alignak_logger()
 
             # Load monitoring configuration files
             self.load_monitoring_config_file()

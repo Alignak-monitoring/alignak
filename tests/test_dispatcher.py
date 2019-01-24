@@ -79,7 +79,7 @@ class TestDispatcher(AlignakTest):
         # Clear logs
         self.clear_logs()
 
-        my_arbiter.load_modules_manager()
+        # my_arbiter.load_modules_manager()
         my_arbiter.load_monitoring_config_file()
         assert my_arbiter.conf.conf_is_correct is True
         # logging.getLogger('alignak').setLevel(logging.DEBUG)
@@ -439,7 +439,7 @@ class TestDispatcher(AlignakTest):
             Dispatcher(self.my_arbiter.conf, None)
 
         # Prepare the Alignak configuration
-        self.my_arbiter.load_modules_manager()
+        # self.my_arbiter.load_modules_manager()
         self.my_arbiter.load_monitoring_config_file()
         assert self.my_arbiter.conf.conf_is_correct is True
 

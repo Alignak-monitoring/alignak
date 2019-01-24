@@ -66,6 +66,9 @@ class TestInheritanceAndPlus(AlignakTest):
         print("Services: ")
         pprint(self._sched.services.__dict__)
 
+        print("Contacts: ")
+        pprint(self._sched.contacts.__dict__)
+
         # common objects
         tp_24x7 = self._sched.timeperiods.find_by_name("24x7")
         tp_none = self._sched.timeperiods.find_by_name("none")
@@ -83,13 +86,37 @@ class TestInheritanceAndPlus(AlignakTest):
         assert cmdsvc is not None
         assert cmdtest is not None
 
+        # Contacts
+        c_admin = self._sched.contacts.find_by_name("admin")
+        assert c_admin is not None
+        # admin inherits from a generic-contact
+        print(c_admin.tags)
+        assert c_admin.tags == set(['generic-contact'])
+        assert c_admin.email == 'alignak@localhost'
+        assert c_admin.host_notifications_enabled is True
+        assert c_admin.service_notifications_enabled is True
+
+        c_not_notified = self._sched.contacts.find_by_name("no_notif")
+        assert c_not_notified is not None
+        # no_notif inherits from a not-notified
+        print(c_not_notified.tags)
+        assert c_not_notified.tags == set([u'generic-contact', u'not_notified'])
+        assert c_not_notified.email == 'none'
+        # TODO: uncomment!
+        # Issue #1024 - contact templates inheritance
+        assert c_not_notified.host_notifications_enabled is False
+        assert c_not_notified.service_notifications_enabled is False
+
         # Hosts
         test_host_0 = self._sched.hosts.find_by_name("test_host_0")
         assert test_host_0 is not None
         test_router_0 = self._sched.hosts.find_by_name("test_router_0")
         assert test_router_0 is not None
+
         hst1 = self._sched.hosts.find_by_name("test_host_01")
         assert hst1 is not None
+        assert hst1.tags == set(['generic-host', 'srv'])
+
         hst2 = self._sched.hosts.find_by_name("test_host_02")
         assert hst2 is not None
 
@@ -146,6 +173,8 @@ class TestInheritanceAndPlus(AlignakTest):
         self._sched = self._scheduler
 
         # Get the hostgroups
+        servers = self._sched.hostgroups.find_by_name('servers')
+        assert servers is not None
         linux = self._sched.hostgroups.find_by_name('linux')
         assert linux is not None
         dmz = self._sched.hostgroups.find_by_name('DMZ')
@@ -159,7 +188,8 @@ class TestInheritanceAndPlus(AlignakTest):
 
         # HOST 1 is using templates: linux-servers,dmz, so it should be in
         # the hostsgroups named "linux" AND "DMZ"
-        assert len(host1.hostgroups) == 2
+        assert len(host1.hostgroups) == 3
+        assert servers.uuid in host1.hostgroups
         assert linux.uuid in host1.hostgroups
         assert dmz.uuid in host1.hostgroups
         assert mysql.uuid not in host1.hostgroups

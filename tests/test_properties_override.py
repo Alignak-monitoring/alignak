@@ -59,7 +59,7 @@ class TestPropertyOverride(AlignakTest):
         self.setup_with_file('cfg/cfg_property_override.cfg')
         assert self.conf_is_correct
         self._sched = self._scheduler
-        
+
     def test_service_property_override(self):
         """ Property override """
         svc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "srv-svc")
@@ -102,7 +102,16 @@ class TestPropertyOverride(AlignakTest):
             assert 1 == svc.retry_interval
             assert self._sched.commands[cmdsvc.uuid] is \
                           self._sched.commands[svc.check_command.command.uuid]
-            assert ["w","u","x","c","r","f","s"] == svc.notification_options
+            # The list may not be in this order!
+            # assert ["w", "u", "x", "c", "r", "f", "s"] == svc.notification_options
+            assert 7 == len(svc.notification_options)
+            assert 'x' in svc.notification_options
+            assert 'f' in svc.notification_options
+            assert 'u' in svc.notification_options
+            assert 'r' in svc.notification_options
+            assert 's' in svc.notification_options
+            assert 'w' in svc.notification_options
+            assert 'c' in svc.notification_options
             assert True is svc.notifications_enabled
 
         # Check overriden properies value

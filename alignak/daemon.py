@@ -712,6 +712,9 @@ class Daemon(object):
         # Semaphore for the HTTP interface
         self.lock = threading.RLock()
 
+        # Setup our modules manager
+        self.modules_manager = ModulesManager(self)
+
         # Configuration dispatch
         # when self.new_conf is not empty, the arbiter sent a new configuration to manage
         self.new_conf = {}
@@ -1018,6 +1021,7 @@ class Daemon(object):
         logger.info("pause duration: %.2f", self.pause_duration)
 
         # For the maximum expected loop duration
+        self.maximum_loop_duration = 1.1 * self.maximum_loop_duration
         logger.info("maximum expected loop duration: %.2f", self.maximum_loop_duration)
 
         # Treatments before starting the main loop...
@@ -1113,11 +1117,11 @@ class Daemon(object):
 
             pause = self.maximum_loop_duration - loop_duration
             if loop_duration > self.maximum_loop_duration:
-                logger.warning("The %s %s loop exceeded the maximum expected loop duration (%.2f). "
-                               "The last loop needed %.2f seconds to execute. "
-                               "You should try to reduce the load on this %s.",
-                               self.type, self.name, self.maximum_loop_duration,
-                               loop_duration, self.type)
+                logger.info("The %s %s loop exceeded the maximum expected loop duration (%.2f). "
+                            "The last loop needed %.2f seconds to execute. "
+                            "You should try to reduce the load on this %s.",
+                            self.type, self.name, self.maximum_loop_duration,
+                            loop_duration, self.type)
                 # Make a very very short pause ...
                 pause = 0.01
 
@@ -1223,6 +1227,8 @@ class Daemon(object):
 
     def load_modules_manager(self):
         """Instantiate the daemon ModulesManager and load the SyncManager (multiprocessing)
+
+        Note that this function is used by the Alignak modules. No self-use...
 
         :param daemon_name: daemon name
         :type elt: str
@@ -1526,9 +1532,6 @@ class Daemon(object):
 
         # Creating synchonisation manager (inter-daemon queues...)
         self.sync_manager = self._create_manager()
-
-        # Setup our modules manager
-        self.load_modules_manager()
 
         # Start the CherryPy server through a detached thread
         logger.info("Starting http_daemon thread")

@@ -207,7 +207,7 @@ class Hostgroups(Itemgroups):
             return hostgroup.get_hosts()
         return []
 
-    def linkify(self, hosts=None, realms=None):
+    def linkify(self, hosts=None, realms=None, forced_realms_hostgroups=True):
         """Link hostgroups with hosts and realms
 
         :param hosts: all Hosts
@@ -217,7 +217,7 @@ class Hostgroups(Itemgroups):
         :return: None
         """
         self.linkify_hostgroups_hosts(hosts)
-        self.linkify_hostgroups_realms_hosts(realms, hosts)
+        self.linkify_hostgroups_realms_hosts(realms, hosts, forced_realms_hostgroups)
 
     def linkify_hostgroups_hosts(self, hosts):
         """We just search for each hostgroup the id of the hosts
@@ -255,7 +255,7 @@ class Hostgroups(Itemgroups):
             # We find the id, we replace the names
             hostgroup.replace_members(new_members)
 
-    def linkify_hostgroups_realms_hosts(self, realms, hosts):
+    def linkify_hostgroups_realms_hosts(self, realms, hosts, forced_realms_hostgroups=True):
         # pylint: disable=too-many-locals, too-many-nested-blocks, too-many-branches
         """Link between an hostgroup and a realm is already done in the configuration parsing
         function that defines and checks the default satellites, realms, hosts and hosts groups
@@ -270,8 +270,8 @@ class Hostgroups(Itemgroups):
         :type hosts: alignak.objects.host.Hosts
         :return: None
         """
+        logger.info("Hostgroups / hosts / realms relation")
         for hostgroup in self:
-            logger.debug("Hostgroup: %s in the realm: %s", hostgroup, hostgroup.realm)
             hostgroup_realm_name = hostgroup.realm
             if hostgroup.realm not in realms:
                 realm = realms.find_by_name(hostgroup.realm)
@@ -280,6 +280,9 @@ class Hostgroups(Itemgroups):
                 hostgroup.realm = realm.uuid
             else:
                 hostgroup_realm_name = realms[hostgroup.realm].get_name()
+            logger.info("- hg: %s in the realm: %s ",
+                        hostgroup.get_name(),
+                        hostgroup_realm_name + (" (*)" if hostgroup.got_default_realm else ''))
 
             hostgroup_hosts_errors = []
             hostgroup_new_realm_name = None
@@ -296,6 +299,10 @@ class Hostgroups(Itemgroups):
                         continue
                 else:
                     host_realm_name = realms[host.realm].get_name()
+
+                logger.info("  host %s is in the realm: %s",
+                            host.get_name(),
+                            host_realm_name + (" (*)" if host.got_default_realm else ''))
 
                 if host.got_default_realm:
                     # If the host got a default realm it means that no realm is specifically
@@ -317,41 +324,58 @@ class Hostgroups(Itemgroups):
                                 % (host.get_name(), host_realm_name,
                                    hostgroup.get_name(), hostgroup_realm_name))
                         else:
-                            # Temporary log an error...
-                            hostgroup_hosts_errors.append(
-                                "host %s (realm: %s) is not in the same realm than its "
-                                "hostgroup %s (realm: %s)"
-                                % (host.get_name(), host_realm_name,
-                                   hostgroup.get_name(), hostgroup_realm_name))
+                            # The hosts group had no realm set, it got the default All realm
+                            if forced_realms_hostgroups:
+                                # Temporary log an error...
+                                hostgroup_hosts_errors.append(
+                                    "host %s (realm: %s) is not in the same realm than its "
+                                    "hostgroup %s (realm: %s)"
+                                    % (host.get_name(), host_realm_name,
+                                       hostgroup.get_name(), hostgroup_realm_name))
 
-                            if not hostgroup_new_realm_name or \
-                                    hostgroup_new_realm_name == host_realm_name:
-                                # Potential new host group realm
-                                hostgroup_new_realm_name = host_realm_name
+                                if not hostgroup_new_realm_name or \
+                                        hostgroup_new_realm_name == host_realm_name:
+                                    # Potential new host group realm
+                                    hostgroup_new_realm_name = host_realm_name
+                                else:
+                                    # It still exists a candidate realm for the hostgroup,
+                                    # raise an error !
+                                    hostgroup.add_error("hostgroup %s got the default realm but "
+                                                        "it has some hosts that are from different "
+                                                        "realms: %s and %s. The defined realm "
+                                                        "cannot be adjusted!"
+                                                        % (hostgroup.get_name(),
+                                                           hostgroup_new_realm_name,
+                                                           host_realm_name))
+                                    hostgroup_new_realm_failed = True
+                                    break
                             else:
-                                # It still exists a candidate realm for the hostgroup,
-                                # raise an error !
-                                hostgroup.add_error("hostgroup %s got the default realm but it has "
-                                                    "some hosts that are from different realms: "
-                                                    "%s and %s. The realm cannot be adjusted!"
-                                                    % (hostgroup.get_name(),
-                                                       hostgroup_new_realm_name,
-                                                       host_realm_name))
-                                hostgroup_new_realm_failed = True
-                                break
+                                # I tolerate some hosts from different realms in an hostgroup
+                                # that is in the default realm
+                                # Temporary log an error...
+                                hostgroup_hosts_errors.append(
+                                    "host %s (realm: %s) is not in the same realm as its "
+                                    "hostgroup %s (realm: %s)"
+                                    % (host.get_name(), host_realm_name,
+                                       hostgroup.get_name(), hostgroup_realm_name))
 
-            if hostgroup_new_realm_name is None:
-                # Do not change the hostgroup realm, it is not possible,
-                # so raise the host individual errors!
+            if not forced_realms_hostgroups:
                 for error in hostgroup_hosts_errors:
-                    hostgroup.add_error(error)
-            elif hostgroup_new_realm_name:
-                if not hostgroup_new_realm_failed:
-                    # Change the hostgroup realm to suit its hosts
-                    hostgroup.add_warning("hostgroup %s gets the realm of its hosts: %s"
-                                          % (hostgroup.get_name(), hostgroup_new_realm_name))
-                    hostgroup_new_realm = realms.find_by_name(hostgroup_new_realm_name)
-                    hostgroup.realm = hostgroup_new_realm.uuid
+                    # hostgroup.add_warning(error)
+                    logger.info(error)
+            else:
+                if hostgroup_new_realm_name is None:
+                    # Do not change the hostgroup realm, it is not possible,
+                    # so raise the host individual errors!
+                    for error in hostgroup_hosts_errors:
+                        hostgroup.add_error(error)
+                elif hostgroup_new_realm_name:
+                    if not hostgroup_new_realm_failed:
+                        # Change the hostgroup realm to suit its hosts
+                        hostgroup.add_warning("hostgroup %s gets the realm of its hosts: %s"
+                                              % (hostgroup.get_name(), hostgroup_new_realm_name))
+                        hostgroup_new_realm = realms.find_by_name(hostgroup_new_realm_name)
+                        hostgroup.realm = hostgroup_new_realm.uuid
 
     def explode(self):
         """

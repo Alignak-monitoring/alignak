@@ -478,7 +478,7 @@ class ExternalCommandManager(object):
             {'global': True, 'internal': True, 'args': [None, None, None, None]},
     }
 
-    def __init__(self, conf, mode, daemon, accept_unknown=False):
+    def __init__(self, conf, mode, daemon, accept_unknown=False, log_external_commands=False):
         """
         The command manager is initialized with a `mode` parameter specifying what is to be done
         with the managed commands. If mode is:
@@ -510,7 +510,6 @@ class ExternalCommandManager(object):
         # If we got a conf...
         if self.mode == 'receiver':
             self.my_conf = {
-                'log_external_commands': False,
                 'schedulers': daemon.schedulers
             }
         else:
@@ -531,6 +530,9 @@ class ExternalCommandManager(object):
             self.cfg_parts = conf.parts
 
         self.accept_passive_unknown_check_results = accept_unknown
+        self.log_external_commands = log_external_commands
+        logger.info("External command manager, log commands: %s, accept unknown check: %s",
+                    self.log_external_commands, self.accept_passive_unknown_check_results)
 
         # Will change for each command read, so if a command need it,
         # it can get it
@@ -545,10 +547,15 @@ class ExternalCommandManager(object):
         :type: alignak.Brok, or Comment, or Downtime, ...
         :return:
         """
+        # Comment this log because it raises an encoding exception on Travis CI with python 2.7!
+        # logger.debug("Sending to %s for %s", self.daemon, element)
         if hasattr(self.daemon, "add"):
             func = getattr(self.daemon, "add")
             if isinstance(func, collections.Callable):
-                func(element)
+                try:
+                    func(element)
+                except Exception as exp:  # pylint: disable=broad-except
+                    logger.critical("Daemon report exception: %s", exp)
                 return
 
         logger.critical("External command or Brok could not be sent to any daemon!")
@@ -579,7 +586,7 @@ class ExternalCommandManager(object):
         if self.mode == 'receiver':
             return cmd
 
-        if self.mode == 'applyer' and self.my_conf.log_external_commands:
+        if self.mode == 'applyer' and self.log_external_commands:
             make_a_log = True
             # #912: only log an external command if it is not a passive check
             if self.my_conf.log_passive_checks and cmd['c_name'] \
@@ -734,7 +741,7 @@ class ExternalCommandManager(object):
                 logger.warning("Malformed command '%s'", command)
                 # logger.exception("Malformed command exception: %s", exp)
 
-                if self.my_conf and getattr(self.my_conf, 'log_external_commands', False):
+                if self.log_external_commands:
                     # The command failed, make a monitoring log to inform
                     self.send_an_element(make_monitoring_log(
                         'error', "Malformed command: '%s'" % command))
@@ -756,7 +763,7 @@ class ExternalCommandManager(object):
             logger.warning("Malformed command '%s'", command)
             # logger.exception("Malformed command exception: %s", exp)
 
-            if self.my_conf and getattr(self.my_conf, 'log_external_commands', False):
+            if self.log_external_commands:
                 # The command failed, make a monitoring log to inform
                 self.send_an_element(make_monitoring_log(
                     'error', "Malformed command: '%s'" % command))
@@ -765,7 +772,7 @@ class ExternalCommandManager(object):
         if c_name not in ExternalCommandManager.commands:
             logger.warning("External command '%s' is not recognized, sorry", c_name)
 
-            if self.my_conf and getattr(self.my_conf, 'log_external_commands', False):
+            if self.log_external_commands:
                 # The command failed, make a monitoring log to inform
                 self.send_an_element(make_monitoring_log(
                     'error', "Command '%s' is not recognized, sorry" % command))
@@ -815,6 +822,7 @@ class ExternalCommandManager(object):
 
                 if not in_service:
                     type_searched = entry['args'][i - 1]
+                    logger.debug("Type searched: %s", type_searched)
 
                     if type_searched == 'host':
                         if self.mode == 'dispatcher' or self.mode == 'receiver':
@@ -912,12 +920,13 @@ class ExternalCommandManager(object):
                         return None
 
                     args.append(serv)
+            logger.debug("Got args: %s", args)
 
         except IndexError as exp:
             logger.warning("Sorry, the arguments for the command '%s' are not correct")
             logger.exception("Arguments parsing exception: %s", exp)
 
-            if self.my_conf and self.my_conf.log_external_commands:
+            if self.log_external_commands:
                 # The command failed, make a monitoring log to inform
                 self.send_an_element(make_monitoring_log(
                     'error', "Arguments are not correct for the command: '%s'" % command))
@@ -928,7 +937,7 @@ class ExternalCommandManager(object):
             logger.warning("Sorry, the arguments for the command '%s' are not correct (%s)",
                            command, (args))
 
-            if self.my_conf and self.my_conf.log_external_commands:
+            if self.log_external_commands:
                 # The command failed, make a monitoring log to inform
                 self.send_an_element(make_monitoring_log(
                     'error', "Arguments are not correct for the command: '%s'" % command))
@@ -997,7 +1006,7 @@ class ExternalCommandManager(object):
         # todo: deprecate this
         contact.modified_host_attributes |= DICT_MODATTR["MODATTR_NOTIFICATION_TIMEPERIOD"].value
         contact.host_notification_period = notification_timeperiod
-        self.daemon.get_and_register_status_brok(contact)
+        self.send_an_element(contact.get_update_status_brok())
 
     def add_svc_comment(self, service, author, comment):
         """Add a service comment
@@ -1019,7 +1028,8 @@ class ExternalCommandManager(object):
         }
         comm = Comment(data)
         service.add_comment(comm)
-        # todo: create and send a brok for service comment
+        self.send_an_element(service.get_update_status_brok())
+
         try:
             brok = make_monitoring_log('info', "SERVICE COMMENT: %s;%s;%s;%s"
                                        % (self.hosts[service.host].get_name(),
@@ -1031,6 +1041,8 @@ class ExternalCommandManager(object):
                                           service.get_name(), author, comment))
 
         self.send_an_element(brok)
+        self.send_an_element(comm.get_comment_brok(
+            self.hosts[service.host].get_name(), service.get_name()))
 
     def add_host_comment(self, host, author, comment):
         """Add a host comment
@@ -1052,7 +1064,8 @@ class ExternalCommandManager(object):
         }
         comm = Comment(data)
         host.add_comment(comm)
-        # todo: create and send a brok for host comment
+        self.send_an_element(host.get_update_status_brok())
+
         try:
             brok = make_monitoring_log('info', "HOST COMMENT: %s;%s;%s"
                                        % (host.get_name(),
@@ -1062,6 +1075,7 @@ class ExternalCommandManager(object):
                                        % (host.get_name(), author, comment))
 
         self.send_an_element(brok)
+        self.send_an_element(comm.get_comment_brok(self.hosts[host].get_name()))
 
     def acknowledge_svc_problem(self, service, sticky, notify, author, comment):
         """Acknowledge a service problem
@@ -1185,7 +1199,7 @@ class ExternalCommandManager(object):
         contact.modified_service_attributes |= \
             DICT_MODATTR["MODATTR_NOTIFICATION_TIMEPERIOD"].value
         contact.service_notification_period = notification_timeperiod
-        self.daemon.get_and_register_status_brok(contact)
+        self.send_an_element(contact.get_update_status_brok())
 
     def change_custom_contact_var(self, contact, varname, varvalue):
         """Change custom contact variable
@@ -1204,7 +1218,7 @@ class ExternalCommandManager(object):
         if varname.upper() in contact.customs:
             contact.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
             contact.customs[varname.upper()] = varvalue
-            self.daemon.get_and_register_status_brok(contact)
+            self.send_an_element(contact.get_update_status_brok())
 
     def change_custom_host_var(self, host, varname, varvalue):
         """Change custom host variable
@@ -1223,7 +1237,8 @@ class ExternalCommandManager(object):
         if varname.upper() in host.customs:
             host.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
             host.customs[varname.upper()] = varvalue
-            self.daemon.get_and_register_status_brok(host)
+
+            self.send_an_element(host.get_update_status_brok())
 
     def change_custom_svc_var(self, service, varname, varvalue):
         """Change custom service variable
@@ -1242,7 +1257,7 @@ class ExternalCommandManager(object):
         if varname.upper() in service.customs:
             service.modified_attributes |= DICT_MODATTR["MODATTR_CUSTOM_VARIABLE"].value
             service.customs[varname.upper()] = varvalue
-            self.daemon.get_and_register_status_brok(service)
+            self.send_an_element(service.get_update_status_brok())
 
     def change_global_host_event_handler(self, event_handler_command):
         """DOES NOTHING (should change global host event handler)
@@ -1295,7 +1310,7 @@ class ExternalCommandManager(object):
         host.modified_attributes |= DICT_MODATTR["MODATTR_CHECK_COMMAND"].value
         data = {"commands": self.commands, "call": check_command, "poller_tag": host.poller_tag}
         host.change_check_command(data)
-        self.daemon.get_and_register_status_brok(host)
+        self.send_an_element(host.get_update_status_brok())
 
     def change_host_check_timeperiod(self, host, timeperiod):
         """Modify host check timeperiod
@@ -1311,7 +1326,7 @@ class ExternalCommandManager(object):
         """
         host.modified_attributes |= DICT_MODATTR["MODATTR_CHECK_TIMEPERIOD"].value
         host.check_period = timeperiod
-        self.daemon.get_and_register_status_brok(host)
+        self.send_an_element(host.get_update_status_brok())
 
     def change_host_event_handler(self, host, event_handler_command):
         """Modify host event handler
@@ -1328,7 +1343,7 @@ class ExternalCommandManager(object):
         host.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
         data = {"commands": self.commands, "call": event_handler_command}
         host.change_event_handler(data)
-        self.daemon.get_and_register_status_brok(host)
+        self.send_an_element(host.get_update_status_brok())
 
     def change_host_snapshot_command(self, host, snapshot_command):
         """Modify host snapshot command
@@ -1345,7 +1360,7 @@ class ExternalCommandManager(object):
         host.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
         data = {"commands": self.commands, "call": snapshot_command}
         host.change_snapshot_command(data)
-        self.daemon.get_and_register_status_brok(host)
+        self.send_an_element(host.get_update_status_brok())
 
     def change_host_modattr(self, host, value):
         """Change host modified attributes
@@ -1404,7 +1419,7 @@ class ExternalCommandManager(object):
         host.modified_attributes = previous_value ^ changes
 
         # And we need to push the information to the scheduler.
-        self.daemon.get_and_register_status_brok(host)
+        self.send_an_element(host.get_update_status_brok())
 
     def change_max_host_check_attempts(self, host, check_attempts):
         """Modify max host check attempt
@@ -1422,7 +1437,7 @@ class ExternalCommandManager(object):
         host.max_check_attempts = check_attempts
         if host.state_type == u'HARD' and host.state == u'UP' and host.attempt > 1:
             host.attempt = host.max_check_attempts
-        self.daemon.get_and_register_status_brok(host)
+        self.send_an_element(host.get_update_status_brok())
 
     def change_max_svc_check_attempts(self, service, check_attempts):
         """Modify max service check attempt
@@ -1440,7 +1455,7 @@ class ExternalCommandManager(object):
         service.max_check_attempts = check_attempts
         if service.state_type == u'HARD' and service.state == u'OK' and service.attempt > 1:
             service.attempt = service.max_check_attempts
-        self.daemon.get_and_register_status_brok(service)
+        self.send_an_element(service.get_update_status_brok())
 
     def change_normal_host_check_interval(self, host, check_interval):
         """Modify host check interval
@@ -1464,7 +1479,7 @@ class ExternalCommandManager(object):
                           self.daemon.timeperiods, self.daemon.macromodulations,
                           self.daemon.checkmodulations, self.daemon.checks,
                           force=False, force_time=int(time.time()))
-        self.daemon.get_and_register_status_brok(host)
+        self.send_an_element(host.get_update_status_brok())
 
     def change_normal_svc_check_interval(self, service, check_interval):
         """Modify service check interval
@@ -1488,7 +1503,7 @@ class ExternalCommandManager(object):
                              self.daemon.timeperiods, self.daemon.macromodulations,
                              self.daemon.checkmodulations, self.daemon.checks,
                              force=False, force_time=int(time.time()))
-        self.daemon.get_and_register_status_brok(service)
+        self.send_an_element(service.get_update_status_brok())
 
     def change_retry_host_check_interval(self, host, check_interval):
         """Modify host retry interval
@@ -1504,7 +1519,7 @@ class ExternalCommandManager(object):
         """
         host.modified_attributes |= DICT_MODATTR["MODATTR_RETRY_CHECK_INTERVAL"].value
         host.retry_interval = check_interval
-        self.daemon.get_and_register_status_brok(host)
+        self.send_an_element(host.get_update_status_brok())
 
     def change_retry_svc_check_interval(self, service, check_interval):
         """Modify service retry interval
@@ -1520,7 +1535,7 @@ class ExternalCommandManager(object):
         """
         service.modified_attributes |= DICT_MODATTR["MODATTR_RETRY_CHECK_INTERVAL"].value
         service.retry_interval = check_interval
-        self.daemon.get_and_register_status_brok(service)
+        self.send_an_element(service.get_update_status_brok())
 
     def change_svc_check_command(self, service, check_command):
         """Modify service check command
@@ -1537,7 +1552,7 @@ class ExternalCommandManager(object):
         service.modified_attributes |= DICT_MODATTR["MODATTR_CHECK_COMMAND"].value
         data = {"commands": self.commands, "call": check_command, "poller_tag": service.poller_tag}
         service.change_check_command(data)
-        self.daemon.get_and_register_status_brok(service)
+        self.send_an_element(service.get_update_status_brok())
 
     def change_svc_check_timeperiod(self, service, check_timeperiod):
         """Modify service check timeperiod
@@ -1553,7 +1568,7 @@ class ExternalCommandManager(object):
         """
         service.modified_attributes |= DICT_MODATTR["MODATTR_CHECK_TIMEPERIOD"].value
         service.check_period = check_timeperiod
-        self.daemon.get_and_register_status_brok(service)
+        self.send_an_element(service.get_update_status_brok())
 
     def change_svc_event_handler(self, service, event_handler_command):
         """Modify service event handler
@@ -1570,7 +1585,7 @@ class ExternalCommandManager(object):
         service.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
         data = {"commands": self.commands, "call": event_handler_command}
         service.change_event_handler(data)
-        self.daemon.get_and_register_status_brok(service)
+        self.send_an_element(service.get_update_status_brok())
 
     def change_svc_snapshot_command(self, service, snapshot_command):
         """Modify host snapshot command
@@ -1587,7 +1602,7 @@ class ExternalCommandManager(object):
         service.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
         data = {"commands": self.commands, "call": snapshot_command}
         service.change_snapshot_command(data)
-        self.daemon.get_and_register_status_brok(service)
+        self.send_an_element(service.get_update_status_brok())
 
     def change_svc_modattr(self, service, value):
         """Change service modified attributes
@@ -1646,7 +1661,7 @@ class ExternalCommandManager(object):
         service.modified_attributes = previous_value ^ changes
 
         # And we need to push the information to the scheduler.
-        self.daemon.get_and_register_status_brok(service)
+        self.send_an_element(service.get_update_status_brok())
 
     def change_svc_notification_timeperiod(self, service, notification_timeperiod):
         """Change service notification timeperiod
@@ -1663,7 +1678,7 @@ class ExternalCommandManager(object):
         """
         service.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATION_TIMEPERIOD"].value
         service.notification_period = notification_timeperiod
-        self.daemon.get_and_register_status_brok(service)
+        self.send_an_element(service.get_update_status_brok())
 
     def delay_host_notification(self, host, notification_time):
         """Modify host first notification delay
@@ -1678,7 +1693,7 @@ class ExternalCommandManager(object):
         :return: None
         """
         host.first_notification_delay = notification_time
-        self.daemon.get_and_register_status_brok(host)
+        self.send_an_element(host.get_update_status_brok())
 
     def delay_svc_notification(self, service, notification_time):
         """Modify service first notification delay
@@ -1693,7 +1708,7 @@ class ExternalCommandManager(object):
         :return: None
         """
         service.first_notification_delay = notification_time
-        self.daemon.get_and_register_status_brok(service)
+        self.send_an_element(service.get_update_status_brok())
 
     def del_all_contact_downtimes(self, contact):
         """Delete all contact downtimes
@@ -1708,8 +1723,7 @@ class ExternalCommandManager(object):
         for downtime in contact.downtimes:
             self.del_contact_downtime(downtime)
 
-    @staticmethod
-    def del_all_host_comments(host):
+    def del_all_host_comments(self, host):
         """Delete all host comments
         Format of the line that triggers function call::
 
@@ -1722,6 +1736,7 @@ class ExternalCommandManager(object):
         comments = list(host.comments.keys())
         for uuid in comments:
             host.del_comment(uuid)
+        self.send_an_element(host.get_update_status_brok())
 
     def del_all_host_downtimes(self, host):
         """Delete all host downtimes
@@ -1735,9 +1750,9 @@ class ExternalCommandManager(object):
         """
         for downtime in host.downtimes:
             self.del_host_downtime(downtime)
+        self.send_an_element(host.get_update_status_brok())
 
-    @staticmethod
-    def del_all_svc_comments(service):
+    def del_all_svc_comments(self, service):
         """Delete all service comments
         Format of the line that triggers function call::
 
@@ -1750,6 +1765,7 @@ class ExternalCommandManager(object):
         comments = list(service.comments.keys())
         for uuid in comments:
             service.del_comment(uuid)
+        self.send_an_element(service.get_update_status_brok())
 
     def del_all_svc_downtimes(self, service):
         """Delete all service downtime
@@ -1763,6 +1779,7 @@ class ExternalCommandManager(object):
         """
         for downtime in service.downtimes:
             self.del_svc_downtime(downtime)
+        self.send_an_element(service.get_update_status_brok())
 
     def del_contact_downtime(self, downtime_id):
         """Delete a contact downtime
@@ -1796,6 +1813,7 @@ class ExternalCommandManager(object):
         for item in self.daemon.hosts:
             if comment_id in item.comments:
                 item.del_comment(comment_id)
+                self.send_an_element(item.get_update_status_brok())
                 break
         else:
             self.send_an_element(make_monitoring_log(
@@ -1839,6 +1857,7 @@ class ExternalCommandManager(object):
         for svc in self.daemon.services:
             if comment_id in svc.comments:
                 svc.del_comment(comment_id)
+                self.send_an_element(svc.get_update_status_brok())
                 break
         else:
             self.send_an_element(make_monitoring_log(
@@ -1926,7 +1945,7 @@ class ExternalCommandManager(object):
         if contact.host_notifications_enabled:
             contact.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             contact.host_notifications_enabled = False
-            self.daemon.get_and_register_status_brok(contact)
+            self.send_an_element(contact.get_update_status_brok())
 
     def disable_contact_svc_notifications(self, contact):
         """Disable service notifications for a contact
@@ -1941,7 +1960,7 @@ class ExternalCommandManager(object):
         if contact.service_notifications_enabled:
             contact.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             contact.service_notifications_enabled = False
-            self.daemon.get_and_register_status_brok(contact)
+            self.send_an_element(contact.get_update_status_brok())
 
     def disable_event_handlers(self):
         """Disable event handlers (globally)
@@ -1977,12 +1996,12 @@ class ExternalCommandManager(object):
                 if service.is_flapping:
                     service.is_flapping = False
                     service.flapping_changes = []
-                    self.daemon.get_and_register_status_brok(service)
+                    self.send_an_element(service.get_update_status_brok())
             for host in self.my_conf.hosts:
                 if host.is_flapping:
                     host.is_flapping = False
                     host.flapping_changes = []
-                    self.daemon.get_and_register_status_brok(host)
+                    self.send_an_element(host.get_update_status_brok())
 
     def disable_hostgroup_host_checks(self, hostgroup):
         """Disable host checks for a hostgroup
@@ -2104,7 +2123,7 @@ class ExternalCommandManager(object):
         if host.active_checks_enabled:
             host.modified_attributes |= DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             host.disable_active_checks(self.daemon.checks)
-            self.daemon.get_and_register_status_brok(host)
+            self.send_an_element(host.get_update_status_brok())
 
     def disable_host_event_handler(self, host):
         """Disable event handlers for a host
@@ -2119,7 +2138,7 @@ class ExternalCommandManager(object):
         if host.event_handler_enabled:
             host.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
             host.event_handler_enabled = False
-            self.daemon.get_and_register_status_brok(host)
+            self.send_an_element(host.get_update_status_brok())
 
     def disable_host_flap_detection(self, host):
         """Disable flap detection for a host
@@ -2138,7 +2157,7 @@ class ExternalCommandManager(object):
             if host.is_flapping:
                 host.is_flapping = False
                 host.flapping_changes = []
-            self.daemon.get_and_register_status_brok(host)
+            self.send_an_element(host.get_update_status_brok())
 
     def disable_host_freshness_check(self, host):
         """Disable freshness check for a host
@@ -2153,7 +2172,7 @@ class ExternalCommandManager(object):
         if host.check_freshness:
             host.modified_attributes |= DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
             host.check_freshness = False
-            self.daemon.get_and_register_status_brok(host)
+            self.send_an_element(host.get_update_status_brok())
 
     def disable_host_freshness_checks(self):
         """Disable freshness checks (globally)
@@ -2183,7 +2202,7 @@ class ExternalCommandManager(object):
         if host.notifications_enabled:
             host.modified_attributes |= DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             host.notifications_enabled = False
-            self.daemon.get_and_register_status_brok(host)
+            self.send_an_element(host.get_update_status_brok())
 
     def disable_host_svc_checks(self, host):
         """Disable service checks for a host
@@ -2197,8 +2216,9 @@ class ExternalCommandManager(object):
         """
         for service_id in host.services:
             if service_id in self.daemon.services:
-                self.disable_svc_check(self.daemon.services[service_id])
-                self.daemon.get_and_register_status_brok(self.daemon.services[service_id])
+                service = self.daemon.services[service_id]
+                self.disable_svc_check(service)
+                self.send_an_element(service.get_update_status_brok())
 
     def disable_host_svc_notifications(self, host):
         """Disable services notifications for a host
@@ -2212,8 +2232,9 @@ class ExternalCommandManager(object):
         """
         for service_id in host.services:
             if service_id in self.daemon.services:
-                self.disable_svc_notifications(self.daemon.services[service_id])
-                self.daemon.get_and_register_status_brok(self.daemon.services[service_id])
+                service = self.daemon.services[service_id]
+                self.disable_svc_notifications(service)
+                self.send_an_element(service.get_update_status_brok())
 
     def disable_notifications(self):
         """Disable notifications (globally)
@@ -2243,7 +2264,7 @@ class ExternalCommandManager(object):
         if host.passive_checks_enabled:
             host.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
             host.passive_checks_enabled = False
-            self.daemon.get_and_register_status_brok(host)
+            self.send_an_element(host.get_update_status_brok())
 
     def disable_passive_svc_checks(self, service):
         """Disable passive checks for a service
@@ -2258,7 +2279,7 @@ class ExternalCommandManager(object):
         if service.passive_checks_enabled:
             service.modified_attributes |= DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
             service.passive_checks_enabled = False
-            self.daemon.get_and_register_status_brok(service)
+            self.send_an_element(service.get_update_status_brok())
 
     def disable_performance_data(self):
         """Disable performance data processing (globally)
@@ -2377,7 +2398,7 @@ class ExternalCommandManager(object):
             if service.is_flapping:
                 service.is_flapping = False
                 service.flapping_changes = []
-            self.daemon.get_and_register_status_brok(service)
+            self.send_an_element(service.get_update_status_brok())
 
     def disable_svc_freshness_check(self, service):
         """Disable freshness check for a service
@@ -2392,7 +2413,7 @@ class ExternalCommandManager(object):
         if service.check_freshness:
             service.modified_attributes |= DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
             service.check_freshness = False
-            self.daemon.get_and_register_status_brok(service)
+            self.send_an_element(service.get_update_status_brok())
 
     def disable_service_freshness_checks(self):
         """Disable service freshness checks (globally)
@@ -2423,7 +2444,7 @@ class ExternalCommandManager(object):
             service.disable_active_checks(self.daemon.checks)
             service.modified_attributes |= \
                 DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
-            self.daemon.get_and_register_status_brok(service)
+            self.send_an_element(service.get_update_status_brok())
 
     def disable_svc_event_handler(self, service):
         """Disable event handlers for a service
@@ -2439,7 +2460,7 @@ class ExternalCommandManager(object):
             service.modified_attributes |= \
                 DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
             service.event_handler_enabled = False
-            self.daemon.get_and_register_status_brok(service)
+            self.send_an_element(service.get_update_status_brok())
 
     def disable_svc_flap_detection(self, service):
         """Disable flap detection for a service
@@ -2467,7 +2488,7 @@ class ExternalCommandManager(object):
             service.modified_attributes |= \
                 DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             service.notifications_enabled = False
-            self.daemon.get_and_register_status_brok(service)
+            self.send_an_element(service.get_update_status_brok())
 
     def enable_all_notifications_beyond_host(self, host):
         """DOES NOTHING (should enable notification beyond a host)
@@ -2527,7 +2548,7 @@ class ExternalCommandManager(object):
             contact.modified_attributes |= \
                 DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             contact.host_notifications_enabled = True
-            self.daemon.get_and_register_status_brok(contact)
+            self.send_an_element(contact.get_update_status_brok())
 
     def enable_contact_svc_notifications(self, contact):
         """Enable service notifications for a contact
@@ -2543,7 +2564,7 @@ class ExternalCommandManager(object):
             contact.modified_attributes |= \
                 DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             contact.service_notifications_enabled = True
-            self.daemon.get_and_register_status_brok(contact)
+            self.send_an_element(contact.get_update_status_brok())
 
     def enable_event_handlers(self):
         """Enable event handlers (globally)
@@ -2698,7 +2719,7 @@ class ExternalCommandManager(object):
             host.active_checks_enabled = True
             host.modified_attributes |= \
                 DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
-            self.daemon.get_and_register_status_brok(host)
+            self.send_an_element(host.get_update_status_brok())
 
     def enable_host_event_handler(self, host):
         """Enable event handlers for a host
@@ -2714,7 +2735,7 @@ class ExternalCommandManager(object):
             host.modified_attributes |= \
                 DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
             host.event_handler_enabled = True
-            self.daemon.get_and_register_status_brok(host)
+            self.send_an_element(host.get_update_status_brok())
 
     def enable_host_flap_detection(self, host):
         """Enable flap detection for a host
@@ -2730,7 +2751,7 @@ class ExternalCommandManager(object):
             host.modified_attributes |= \
                 DICT_MODATTR["MODATTR_FLAP_DETECTION_ENABLED"].value
             host.flap_detection_enabled = True
-            self.daemon.get_and_register_status_brok(host)
+            self.send_an_element(host.get_update_status_brok())
 
     def enable_host_freshness_check(self, host):
         """Enable freshness check for a host
@@ -2745,7 +2766,7 @@ class ExternalCommandManager(object):
         if not host.check_freshness:
             host.modified_attributes |= DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
             host.check_freshness = True
-            self.daemon.get_and_register_status_brok(host)
+            self.send_an_element(host.get_update_status_brok())
 
     def enable_host_freshness_checks(self):
         """Enable freshness checks (globally)
@@ -2776,7 +2797,7 @@ class ExternalCommandManager(object):
             host.modified_attributes |= \
                 DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             host.notifications_enabled = True
-            self.daemon.get_and_register_status_brok(host)
+            self.send_an_element(host.get_update_status_brok())
 
     def enable_host_svc_checks(self, host):
         """Enable service checks for a host
@@ -2790,8 +2811,9 @@ class ExternalCommandManager(object):
         """
         for service_id in host.services:
             if service_id in self.daemon.services:
-                self.enable_svc_check(self.daemon.services[service_id])
-                self.daemon.get_and_register_status_brok(self.daemon.services[service_id])
+                service = self.daemon.services[service_id]
+                self.enable_svc_check(service)
+                self.send_an_element(service.get_update_status_brok())
 
     def enable_host_svc_notifications(self, host):
         """Enable services notifications for a host
@@ -2805,8 +2827,9 @@ class ExternalCommandManager(object):
         """
         for service_id in host.services:
             if service_id in self.daemon.services:
-                self.enable_svc_notifications(self.daemon.services[service_id])
-                self.daemon.get_and_register_status_brok(self.daemon.services[service_id])
+                service = self.daemon.services[service_id]
+                self.enable_svc_notifications(service)
+                self.send_an_element(service.get_update_status_brok())
 
     def enable_notifications(self):
         """Enable notifications (globally)
@@ -2838,7 +2861,7 @@ class ExternalCommandManager(object):
             host.modified_attributes |= \
                 DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
             host.passive_checks_enabled = True
-            self.daemon.get_and_register_status_brok(host)
+            self.send_an_element(host.get_update_status_brok())
 
     def enable_passive_svc_checks(self, service):
         """Enable passive checks for a service
@@ -2854,7 +2877,7 @@ class ExternalCommandManager(object):
             service.modified_attributes |= \
                 DICT_MODATTR["MODATTR_PASSIVE_CHECKS_ENABLED"].value
             service.passive_checks_enabled = True
-            self.daemon.get_and_register_status_brok(service)
+            self.send_an_element(service.get_update_status_brok())
 
     def enable_performance_data(self):
         """Enable performance data processing (globally)
@@ -2984,7 +3007,7 @@ class ExternalCommandManager(object):
             service.modified_attributes |= \
                 DICT_MODATTR["MODATTR_ACTIVE_CHECKS_ENABLED"].value
             service.active_checks_enabled = True
-            self.daemon.get_and_register_status_brok(service)
+            self.send_an_element(service.get_update_status_brok())
 
     def enable_svc_event_handler(self, service):
         """Enable event handlers for a service
@@ -3000,7 +3023,7 @@ class ExternalCommandManager(object):
             service.modified_attributes |= \
                 DICT_MODATTR["MODATTR_EVENT_HANDLER_ENABLED"].value
             service.event_handler_enabled = True
-            self.daemon.get_and_register_status_brok(service)
+            self.send_an_element(service.get_update_status_brok())
 
     def enable_svc_freshness_check(self, service):
         """Enable freshness check for a service
@@ -3015,7 +3038,7 @@ class ExternalCommandManager(object):
         if not service.check_freshness:
             service.modified_attributes |= DICT_MODATTR["MODATTR_FRESHNESS_CHECKS_ENABLED"].value
             service.check_freshness = True
-            self.daemon.get_and_register_status_brok(service)
+            self.send_an_element(service.get_update_status_brok())
 
     def enable_svc_flap_detection(self, service):
         """Enable flap detection for a service
@@ -3031,7 +3054,7 @@ class ExternalCommandManager(object):
             service.modified_attributes |= \
                 DICT_MODATTR["MODATTR_FLAP_DETECTION_ENABLED"].value
             service.flap_detection_enabled = True
-            self.daemon.get_and_register_status_brok(service)
+            self.send_an_element(service.get_update_status_brok())
 
     def enable_svc_notifications(self, service):
         """Enable notifications for a service
@@ -3047,7 +3070,7 @@ class ExternalCommandManager(object):
             service.modified_attributes |= \
                 DICT_MODATTR["MODATTR_NOTIFICATIONS_ENABLED"].value
             service.notifications_enabled = True
-            self.daemon.get_and_register_status_brok(service)
+            self.send_an_element(service.get_update_status_brok())
 
     def process_file(self, file_name, delete):
         """DOES NOTHING (should process a file)
@@ -3422,7 +3445,7 @@ class ExternalCommandManager(object):
                 'end_time': end_time, 'author': author, 'comment': comment}
         cdt = ContactDowntime(data)
         contact.add_downtime(cdt)
-        self.daemon.get_and_register_status_brok(contact)
+        self.send_an_element(contact.get_update_status_brok())
 
     def schedule_forced_host_check(self, host, check_time):
         """Schedule a forced check on a host
@@ -3440,7 +3463,7 @@ class ExternalCommandManager(object):
                       self.daemon.timeperiods, self.daemon.macromodulations,
                       self.daemon.checkmodulations, self.daemon.checks,
                       force=True, force_time=check_time)
-        self.daemon.get_and_register_status_brok(host)
+        self.send_an_element(host.get_update_status_brok())
 
     def schedule_forced_host_svc_checks(self, host, check_time):
         """Schedule a forced check on all services of a host
@@ -3457,7 +3480,7 @@ class ExternalCommandManager(object):
         for service_id in host.services:
             service = self.daemon.services[service_id]
             self.schedule_forced_svc_check(service, check_time)
-            self.daemon.get_and_register_status_brok(service)
+            self.send_an_element(service.get_update_status_brok())
 
     def schedule_forced_svc_check(self, service, check_time):
         """Schedule a forced check on a service
@@ -3475,7 +3498,7 @@ class ExternalCommandManager(object):
                          self.daemon.timeperiods, self.daemon.macromodulations,
                          self.daemon.checkmodulations, self.daemon.checks,
                          force=True, force_time=check_time)
-        self.daemon.get_and_register_status_brok(service)
+        self.send_an_element(service.get_update_status_brok())
 
     def schedule_hostgroup_host_downtime(self, hostgroup, start_time, end_time, fixed,
                                          trigger_id, duration, author, comment):
@@ -3559,7 +3582,7 @@ class ExternalCommandManager(object):
                       self.daemon.timeperiods, self.daemon.macromodulations,
                       self.daemon.checkmodulations, self.daemon.checks,
                       force=False, force_time=check_time)
-        self.daemon.get_and_register_status_brok(host)
+        self.send_an_element(host.get_update_status_brok())
 
     def schedule_host_downtime(self, host, start_time, end_time, fixed,
                                trigger_id, duration, author, comment):
@@ -3594,7 +3617,7 @@ class ExternalCommandManager(object):
         downtime.add_automatic_comment(host)
         host.add_downtime(downtime)
 
-        self.daemon.get_and_register_status_brok(host)
+        self.send_an_element(host.get_update_status_brok())
         if trigger_id not in ('', 0):
             for item in self.daemon.hosts:
                 if trigger_id in item.downtimes:
@@ -3615,7 +3638,7 @@ class ExternalCommandManager(object):
         for service_id in host.services:
             service = self.daemon.services[service_id]
             self.schedule_svc_check(service, check_time)
-            self.daemon.get_and_register_status_brok(service)
+            self.send_an_element(service.get_update_status_brok())
 
     def schedule_host_svc_downtime(self, host, start_time, end_time, fixed,
                                    trigger_id, duration, author, comment):
@@ -3723,7 +3746,7 @@ class ExternalCommandManager(object):
                          self.daemon.timeperiods, self.daemon.macromodulations,
                          self.daemon.checkmodulations, self.daemon.checks,
                          force=False, force_time=check_time)
-        self.daemon.get_and_register_status_brok(service)
+        self.send_an_element(service.get_update_status_brok())
 
     def schedule_svc_downtime(self, service, start_time, end_time, fixed,
                               trigger_id, duration, author, comment):
@@ -3757,7 +3780,7 @@ class ExternalCommandManager(object):
         downtime = Downtime(data)
         downtime.add_automatic_comment(service)
         service.add_downtime(downtime)
-        self.daemon.get_and_register_status_brok(service)
+        self.send_an_element(service.get_update_status_brok())
         if trigger_id not in ('', 0):
             for item in self.daemon.services:
                 if trigger_id in item.downtimes:

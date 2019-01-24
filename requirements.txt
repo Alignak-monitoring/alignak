@@ -19,7 +19,7 @@ six
 CherryPy==15.0.0
 
 # Requests to communicate between the daemons
-requests==2.18.4
+requests==2.20.0
 
 # importlib is used to import modules used by the daemons
 importlib; python_version == '2.7'
@@ -51,4 +51,4 @@ docopt
 # Use psutil for daemons memory monitoring (env ALIGNAK_DAEMONS_MONITORING)
 # Use psutil for scheduler ALIGNAK_LOG_MONITORING
 # Use psutil for launching daemons from the Arbiter
-psutil==5.4.5
+psutil>=5.4.3,<=5.4.5

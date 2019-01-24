@@ -46,6 +46,7 @@
 #  along with Shinken.  If not, see <http://www.gnu.org/licenses/>.
 """This module provide Comment class, used to attach comments to hosts / services"""
 import time
+from alignak.brok import Brok
 from alignak.alignakobject import AlignakObject
 from alignak.property import StringProp, BoolProp, IntegerProp
 
@@ -112,10 +113,25 @@ class Comment(AlignakObject):
         """
         super(Comment, self).__init__(params, parsing)
 
-        if not hasattr(self, 'entry_time'):
+        if not hasattr(self, 'entry_time') or not self.entry_time:
             self.entry_time = int(time.time())
 
         self.fill_default()
 
     def __str__(self):  # pragma: no cover
         return "Comment id=%s %s" % (self.uuid, self.comment)
+
+    def get_comment_brok(self, host_name, service_name=''):
+        """Get a comment brok
+
+        :param host_name:
+        :param service_name:
+        :return: brok with wanted data
+        :rtype: alignak.brok.Brok
+        """
+        data = self.serialize()
+        data['host'] = host_name
+        if service_name:
+            data['service'] = service_name
+
+        return Brok({'type': 'comment', 'data': data})

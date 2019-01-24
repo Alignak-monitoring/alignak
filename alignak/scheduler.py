@@ -68,6 +68,7 @@ The major part of monitoring "intelligence" is in this module.
 # pylint: disable=C0302
 # pylint: disable=R0904
 import time
+from datetime import datetime
 import os
 import logging
 import tempfile
@@ -222,7 +223,8 @@ class Scheduler(object):  # pylint: disable=R0902
         self.checks = {}
         self.actions = {}
 
-        self.program_start = int(time.time())
+        # self.program_start = int(time.time())
+        self.program_start = self.my_daemon.program_start
         self.pushed_conf = None
 
         # Our external commands manager
@@ -451,7 +453,16 @@ class Scheduler(object):  # pylint: disable=R0902
             statsmgr.timer('external_commands.got.time', time.time() - _t0)
         except Exception as exp:  # pylint: disable=broad-except
             logger.warning("External command parsing error: %s", exp)
-            logger.warning(traceback.print_exc())
+            logger.warning("Exception: %s / %s", str(exp), traceback.print_exc())
+            for command in cmds:
+                try:
+                    command = command.decode('utf8', 'ignore')
+                except UnicodeEncodeError:
+                    pass
+                except AttributeError:
+                    pass
+
+                logger.warning("Command: %s", command)
 
     def add_brok(self, brok, broker_uuid=None):
         """Add a brok into brokers list
@@ -880,6 +891,12 @@ class Scheduler(object):  # pylint: disable=R0902
                              'worker' if not check.internal else 'internal',
                              check.status,
                              'now' if check.is_launchable(now) else 'not yet')
+                if check._is_orphan and check.status == ACT_STATUS_SCHEDULED \
+                        and os.getenv('ALIGNAK_LOG_CHECKS', None):
+                    logger.info("--ALC-- orphan check: %s -> : %s %s (%s)",
+                                check, 'worker' if not check.internal else 'internal',
+                                check.status, 'now' if check.is_launchable(now) else 'not yet')
+
                 # must be ok to launch, and not an internal one (business rules based)
                 if check.status == ACT_STATUS_SCHEDULED and check.is_launchable(now):
                     logger.debug("Check to run: %s", check)
@@ -934,6 +951,10 @@ class Scheduler(object):  # pylint: disable=R0902
                 # And now look if we can launch or not :)
                 logger.debug(" -> : worker %s (%s)",
                              action.status, 'now' if action.is_launchable(now) else 'not yet')
+                if action._is_orphan and action.status == ACT_STATUS_SCHEDULED and \
+                        os.getenv('ALIGNAK_LOG_CHECKS', None):
+                    logger.info("--ALC-- orphan action: %s", action)
+
                 if action.status == ACT_STATUS_SCHEDULED and action.is_launchable(now):
                     # This is for child notifications and eventhandlers
                     action.status = ACT_STATUS_POLLED
@@ -1029,7 +1050,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
         elif action.is_a == 'check':
             try:
-                self.checks[action.uuid]
+                check = self.checks[action.uuid]
             except KeyError as exp:  # pragma: no cover, simple protection
                 # Cannot find check - drop it
                 logger.warning('manage_results:: get unknown check: %s ', action)
@@ -1039,7 +1060,7 @@ class Scheduler(object):  # pylint: disable=R0902
 
             try:
                 if action.status == ACT_STATUS_TIMEOUT:
-                    ref = self.find_item_by_id(self.checks[action.uuid].ref)
+                    ref = self.find_item_by_id(check.ref)
                     action.long_output = action.output
                     action.output = "(%s %s check timed out)" % (ref.my_type, ref.get_full_name())
                     action.exit_status = self.pushed_conf.timeout_exit_status
@@ -1057,8 +1078,11 @@ class Scheduler(object):  # pylint: disable=R0902
                     else:
                         self.nb_checks_results_active += 1
 
-                self.checks[action.uuid].get_return_from(action)
-                self.checks[action.uuid].status = ACT_STATUS_WAIT_CONSUME
+                        check.get_return_from(action)
+                check.status = ACT_STATUS_WAIT_CONSUME
+                if check._is_orphan and os.getenv('ALIGNAK_LOG_CHECKS', None):
+                    logger.info("--ALC-- got a result for an orphan check: %s", check)
+
             except (ValueError, AttributeError) as exp:  # pragma: no cover, simple protection
                 # bad object, drop it
                 logger.warning('manage_results:: got bad check: %s ', str(exp))
@@ -1489,10 +1513,11 @@ class Scheduler(object):  # pylint: disable=R0902
         if not self.pushed_conf.skip_initial_broks:
             #  We call initial_status from all this types
             #  The order is important, service need host...
-            initial_status_types = (self.timeperiods, self.commands,
-                                    self.contacts, self.contactgroups,
-                                    self.hosts, self.hostgroups,
-                                    self.services, self.servicegroups)
+            initial_status_types = (self.realms, self.timeperiods, self.commands,
+                                    self.notificationways, self.contacts, self.contactgroups,
+                                    self.hosts, self.hostgroups, self.hostdependencies,
+                                    self.services, self.servicegroups, self.servicedependencies,
+                                    self.escalations)
 
             for tab in initial_status_types:
                 for item in tab:
@@ -1538,43 +1563,44 @@ class Scheduler(object):  # pylint: disable=R0902
     def get_program_status_brok(self, brok_type='program_status'):
         """Create a program status brok
 
-        Get the properties from the Config class where an entry exist for the brok 'full_status'
+        Initially builds the running properties and then, if initial status brok,
+        get the properties from the Config class where an entry exist for the brok
+        'full_status'
 
         :return: Brok with program status data
         :rtype: alignak.brok.Brok
-        TODO: GET REAL VALUES
         """
-        now = int(time.time())
-
+        # Get the running statistics
         data = {
-            # Those should be fetched from the pushed configuration ?
-            "is_running": 1,
+            "is_running": True,
             "instance_id": self.instance_id,
-            "alignak_name": self.alignak_name,
+            # "alignak_name": self.alignak_name,
             "instance_name": self.name,
-            "last_alive": now,
-            "last_command_check": now,
-            "last_log_rotation": now,
+            "last_alive": time.time(),
             "pid": os.getpid(),
-            "daemon_mode": 1,
-            "modified_host_attributes": 0,
-            "modified_service_attributes": 0,
+            '_running': self.get_scheduler_stats(details=True),
+            '_config': {},
+            '_macros': {}
         }
 
-        # Get data from the configuration
-        if self.pushed_conf:
-            # Get data from the pushed configuration
-            cls = self.pushed_conf.__class__
-            # Now config properties
-            for prop, entry in list(cls.properties.items()):
-                # Is this property intended for broking?
-                # if 'fill_brok' in entry:
-                if 'full_status' not in entry.fill_brok:
-                    continue
-                if hasattr(self.pushed_conf, prop):
-                    data[prop] = getattr(self.pushed_conf, prop)
-                elif entry.has_default:
-                    data[prop] = entry.default
+        # Get configuration data from the pushed configuration
+        cls = self.pushed_conf.__class__
+        for prop, entry in list(cls.properties.items()):
+            # Is this property intended for broking?
+            if 'full_status' not in entry.fill_brok:
+                continue
+            data['_config'][prop] = self.pushed_conf.get_property_value_for_brok(
+                prop, cls.properties)
+            # data['_config'][prop] = getattr(self.pushed_conf, prop, entry.default)
+
+        # Get the macros from the pushed configuration and try to resolve
+        # the macros to provide the result in the status brok
+        macro_resolver = MacroResolver()
+        macro_resolver.init(self.pushed_conf)
+        for macro_name in sorted(self.pushed_conf.macros):
+            data['_macros'][macro_name] = \
+                macro_resolver.resolve_simple_macros_in_string("$%s$" % macro_name,
+                                                               [], None, None)
 
         logger.debug("Program status brok %s data: %s", brok_type, data)
         return Brok({'type': brok_type, 'data': data})
@@ -1835,13 +1861,14 @@ class Scheduler(object):  # pylint: disable=R0902
         # (_, _, tick) = self.recurrent_works['check_freshness']
 
         _t0 = time.time()
+        now = int(_t0)
 
         items = []
 
         # May be self.ticks is not set (unit tests context!)
         ticks = getattr(self, 'ticks', self.pushed_conf.host_freshness_check_interval)
         if self.pushed_conf.check_host_freshness \
-                and self.pushed_conf.host_freshness_check_interval % ticks == 0:
+                and ticks % self.pushed_conf.host_freshness_check_interval == 0:
             # Freshness check is configured for hosts - get the list of concerned hosts:
             # host check freshness is enabled and the host is only passively checked
             hosts = [h for h in self.hosts if h.check_freshness and not h.freshness_expired and
@@ -1849,10 +1876,22 @@ class Scheduler(object):  # pylint: disable=R0902
             statsmgr.gauge('freshness.hosts-count', len(hosts))
             items.extend(hosts)
 
+            hosts = [h for h in self.hosts if h.check_freshness and h.freshness_expired]
+            for h in hosts:
+                h.last_chk = now
+                self.add(h.get_check_result_brok())
+                # Update check output with last freshness check time
+                h.output = "Freshness period expired: %s, last updated: %s" % (
+                    datetime.utcfromtimestamp(h.last_hard_state_change).strftime(
+                        "%Y-%m-%d %H:%M:%S %Z"),
+                    datetime.utcfromtimestamp(h.last_chk).strftime(
+                        "%Y-%m-%d %H:%M:%S %Z"))
+                logger.debug("Freshness still expired: %s / %s", h.get_name(), h.output)
+
         # May be self.ticks is not set (unit tests context!)
         ticks = getattr(self, 'ticks', self.pushed_conf.service_freshness_check_interval)
         if self.pushed_conf.check_service_freshness \
-                and self.pushed_conf.service_freshness_check_interval % ticks == 0:
+                and ticks % self.pushed_conf.service_freshness_check_interval == 0:
             # Freshness check is configured for services - get the list of concerned services:
             # service check freshness is enabled and the service is only passively checked and
             # the depending host is not freshness expired
@@ -1861,6 +1900,20 @@ class Scheduler(object):  # pylint: disable=R0902
                         s.passive_checks_enabled and not s.active_checks_enabled]
             statsmgr.gauge('freshness.services-count', len(services))
             items.extend(services)
+
+            services = [s for s in self.services if not self.hosts[s.host].freshness_expired and
+                        s.check_freshness and s.freshness_expired]
+            for s in services:
+                s.last_chk = now
+                self.add(s.get_check_result_brok())
+                # Update check output with last freshness check time
+                s.output = "Freshness period expired: %s, last updated: %s" % (
+                    datetime.utcfromtimestamp(s.last_hard_state_change).strftime(
+                        "%Y-%m-%d %H:%M:%S %Z"),
+                    datetime.utcfromtimestamp(s.last_chk).strftime(
+                        "%Y-%m-%d %H:%M:%S %Z"))
+                logger.debug("Freshness still expired: %s / %s", s.get_full_name(), s.output)
+
         statsmgr.timer('freshness.items-list', time.time() - _t0)
 
         if not items:
@@ -1890,30 +1943,26 @@ class Scheduler(object):  # pylint: disable=R0902
         """
         orphans_count = {}
         now = int(time.time())
-        for chk in list(self.checks.values()):
-            if chk.status == ACT_STATUS_POLLED:
-                time_to_orphanage = self.find_item_by_id(chk.ref).get_time_to_orphanage()
-                if time_to_orphanage:
-                    if chk.t_to_go < now - time_to_orphanage:
-                        logger.info("Orphaned check (%d s / %s / %s) check for: %s (%s)",
-                                    time_to_orphanage, chk.t_to_go, now,
-                                    self.find_item_by_id(chk.ref).get_full_name(), chk)
-                        chk.status = ACT_STATUS_SCHEDULED
-                        if chk.my_worker not in orphans_count:
-                            orphans_count[chk.my_worker] = 0
-                        orphans_count[chk.my_worker] += 1
-        for act in list(self.actions.values()):
-            if act.status == ACT_STATUS_POLLED:
-                time_to_orphanage = self.find_item_by_id(act.ref).get_time_to_orphanage()
-                if time_to_orphanage:
-                    if act.t_to_go < now - time_to_orphanage:
-                        logger.info("Orphaned action (%d s / %s / %s) action for: %s (%s)",
-                                    time_to_orphanage, act.t_to_go, now,
-                                    self.find_item_by_id(act.ref).get_full_name(), act)
-                        act.status = ACT_STATUS_SCHEDULED
-                        if act.my_worker not in orphans_count:
-                            orphans_count[act.my_worker] = 0
-                        orphans_count[act.my_worker] += 1
+        actions = list(self.checks.values()) + list(self.actions.values())
+        for chk in actions:
+            if chk.status not in [ACT_STATUS_POLLED]:
+                continue
+
+            time_to_orphanage = self.find_item_by_id(chk.ref).get_time_to_orphanage()
+            if not time_to_orphanage:
+                continue
+
+            if chk.t_to_go > now - time_to_orphanage:
+                continue
+
+            logger.info("Orphaned %s (%d s / %s / %s) check for: %s (%s)",
+                        chk.is_a, time_to_orphanage, chk.t_to_go, now,
+                        self.find_item_by_id(chk.ref).get_full_name(), chk)
+            chk._is_orphan = True
+            chk.status = ACT_STATUS_SCHEDULED
+            if chk.my_worker not in orphans_count:
+                orphans_count[chk.my_worker] = 0
+            orphans_count[chk.my_worker] += 1
 
         for sta_name in orphans_count:
             logger.warning("%d actions never came back for the satellite '%s'. "

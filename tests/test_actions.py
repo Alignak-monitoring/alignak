@@ -164,6 +164,7 @@ class TestAction(AlignakTest):
             'u_time': 0.0,
             's_time': 0.0,
             '_in_timeout': False,
+            '_is_orphan': False,
             'type': '',
             'output': '',
             'long_output': '',
@@ -207,6 +208,7 @@ class TestAction(AlignakTest):
         # Those parameters are missing in the provided parameters but they will exist in the object
         parameters.update({
             '_in_timeout': False,
+            '_is_orphan': False,
             'exit_status': 3,
             'internal': False,
             'output': '',
@@ -333,8 +335,8 @@ class TestAction(AlignakTest):
         """
         class ActionWithoutPerfData(Action):
             def get_outputs(self, out, max_len):
-                """ For testing only... 
-                Do not cut the outputs into perf_data to avoid problems with enviroment 
+                """ For testing only...
+                Do not cut the outputs into perf_data to avoid problems with enviroment
                 containing a dash like in `LESSOPEN=|/usr/bin/lesspipe.sh %s`
                 """
                 self.output = out
@@ -354,7 +356,7 @@ class TestAction(AlignakTest):
 
         # Wait action execution end and set the max output we want for the command
         self.wait_finished(a, size=20*1024)
-        
+
         searched_env_found = False
         for line in a.output.splitlines():
             if line == 'ALIGNAK_TEST_VARIABLE=is now existing and defined':

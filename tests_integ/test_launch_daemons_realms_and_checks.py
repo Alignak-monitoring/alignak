@@ -275,6 +275,9 @@ class TestLaunchDaemonsRealms(AlignakTest):
             # Configuration dispatching
             u"The arbiter pushed a new configuration...",
 
+            # If some actions are not reported as executed by a reactionner or poller, ignore the warning message !
+            u"actions never came back for the satellite",
+
             # Action execution log
             u'Timeout raised for ',
             u'spent too much time:',

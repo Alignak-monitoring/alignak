@@ -134,6 +134,9 @@ class Stats(object):
         self.carbon = None
         self.my_metrics = []
         self.metrics_flush_count = int(os.getenv('ALIGNAK_STATS_FLUSH_COUNT', '256'))
+        self.last_failure = 0
+        self.metrics_flush_pause = int(os.getenv('ALIGNAK_STATS_FLUSH_PAUSE', '10'))
+        self.log_metrics_flush_pause = False
 
         # File part
         self.stats_file = None
@@ -313,19 +316,48 @@ class Stats(object):
             logger.debug("Flushing - no metrics to send")
             return True
 
+        now = int(time.time())
+        if self.last_failure and self.last_failure + self.metrics_flush_pause > now:
+            if not self.log_metrics_flush_pause:
+                date = datetime.datetime.fromtimestamp(
+                    self.last_failure).strftime(self.date_fmt)
+                logger.warning("Metrics flush paused on connection error "
+                               "(last failed: %s). "
+                               "Inner stored metric: %d. Trying to send...",
+                               date, self.metrics_count)
+                self.log_metrics_flush_pause = True
+            return True
+
         try:
             logger.debug("Flushing %d metrics to Graphite/carbon", self.metrics_count)
             if self.carbon.send_data():
                 self.my_metrics = []
             else:
+                logger.warning("Failed sending metrics to Graphite/carbon. "
+                               "Inner stored metric: %d", self.metrics_count)
                 if log:
                     logger.warning("Failed sending metrics to Graphite/carbon. "
                                    "Inner stored metric: %d", self.metrics_count)
                 return False
+            if self.log_metrics_flush_pause:
+                logger.warning("Metrics flush restored. "
+                               "Remaining stored metric: %d", self.metrics_count)
+            self.last_failure = 0
+            self.log_metrics_flush_pause = False
         except Exception as exp:  # pylint: disable=broad-except
-            logger.warning("Failed sending metrics to Graphite/carbon. Inner stored metric: %d",
-                           self.metrics_count)
+            if not self.log_metrics_flush_pause:
+                logger.warning("Failed sending metrics to Graphite/carbon. "
+                               "Inner stored metric: %d", self.metrics_count)
+            else:
+                date = datetime.datetime.fromtimestamp(
+                    self.last_failure).strftime(self.date_fmt)
+                logger.warning("Metrics flush paused on connection error "
+                               "(last failed: %s). "
+                               "Inner stored metric: %d. Trying to send...",
+                               date, self.metrics_count)
+
             logger.warning("Exception: %s", str(exp))
+            self.last_failure = now
             return False
         return True
 

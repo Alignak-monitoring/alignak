@@ -110,7 +110,7 @@ class Contactgroup(Itemgroup):
     def get_contacts_by_explosion(self, contactgroups):
         # pylint: disable=access-member-before-definition
         """
-        Get hosts of this group
+        Get contacts of this group
 
         :param contactgroups: Contactgroups object, use to look for a specific one
         :type contactgroups: alignak.objects.contactgroup.Contactgroups

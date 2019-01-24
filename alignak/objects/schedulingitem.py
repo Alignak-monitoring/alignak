@@ -80,8 +80,8 @@ from alignak.action import ACT_STATUS_WAIT_CONSUME, ACT_STATUS_ZOMBIE, \
 from alignak.check import Check
 from alignak.property import (BoolProp, IntegerProp, FloatProp, SetProp,
                               CharProp, StringProp, ListProp, DictProp)
-from alignak.util import format_t_into_dhms_format, to_serialized, from_serialized, \
-    dict_to_serialized_dict, from_set_to_list, from_list_to_set
+from alignak.util import to_serialized, from_serialized, dict_to_serialized_dict, \
+    from_set_to_list, from_list_to_set
 from alignak.notification import Notification
 from alignak.macroresolver import MacroResolver
 from alignak.eventhandler import EventHandler
@@ -104,8 +104,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     properties = Item.properties.copy()
     properties.update({
-        # 'uuid':
-        #     StringProp(),
         'display_name':
             StringProp(default=u'', fill_brok=['full_status']),
         'initial_state':
@@ -691,6 +689,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if not self.in_checking and self.freshness_threshold and not self.freshness_expired:
             # logger.debug("Checking freshness for %s, last state update: %s, now: %s.",
             #              self.get_full_name(), self.last_state_update, now)
+            if os.getenv('ALIGNAK_LOG_CHECKS', None):
+                logger.info("--ALC-- -> checking freshness for: %s", self.get_full_name())
             # If we never checked this item, we begin the freshness period
             if not self.last_state_update:
                 self.last_state_update = int(now)
@@ -701,10 +701,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     # Create a new check for the scheduler
                     chk = self.launch_check(now, hosts, services, timeperiods,
                                             macromodulations, checkmodulations, checks)
-                    chk.output = "Freshness period expired: %s" \
-                                 % time.strftime("%Y-%m-%d %H:%M:%S %Z")
+                    if not chk:
+                        logger.warning("No raised freshness check for: %s", self)
+                        return None
                     chk.freshness_expiry_check = True
                     chk.check_time = time.time()
+                    chk.output = "Freshness period expired: %s" % (
+                        datetime.utcfromtimestamp(int(chk.check_time)).strftime(
+                            "%Y-%m-%d %H:%M:%S %Z"))
                     if self.my_type == 'host':
                         if self.freshness_state == 'o':
                             chk.exit_status = 0
@@ -712,6 +716,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                             chk.exit_status = 2
                         elif self.freshness_state in ['u', 'x']:
                             chk.exit_status = 4
+                        else:
+                            chk.exit_status = 3
                     else:
                         if self.freshness_state == 'o':
                             chk.exit_status = 0
@@ -723,6 +729,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                             chk.exit_status = 3
                         elif self.freshness_state == 'x':
                             chk.exit_status = 4
+                        else:
+                            chk.exit_status = 3
 
                     return chk
                 else:
@@ -1157,7 +1165,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     def schedule(self, hosts, services, timeperiods, macromodulations, checkmodulations,
                  checks, force=False, force_time=None):
-        # pylint: disable=too-many-branches, too-many-arguments
+        # pylint: disable=too-many-branches, too-many-arguments, too-many-locals
         """Main scheduling function
         If a check is in progress, or active check are disabled, do not schedule a check.
         The check interval change with HARD state::
@@ -1199,6 +1207,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             return None
 
         now = time.time()
+        current_next_check = self.next_chk
 
         # If check_interval is 0, we should not add a check for a service
         # but suppose a 5 min check interval for an host
@@ -1254,6 +1263,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # value of the next_chk is still in the past even after adding an interval
             if self.next_chk < now:
                 interval = min(interval, cls.max_check_spread * cls.interval_length)
+
                 time_add = interval * random.uniform(0.0, 1.0)
 
                 # if we got a check period, use it, if now, use now
@@ -1274,11 +1284,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                      self.get_full_name(),
                      datetime.utcfromtimestamp(self.next_chk).strftime('%Y-%m-%d %H:%M:%S'),
                      interval, time_add)
-        if os.getenv('ALIGNAK_LOG_CHECKS', None):
-            logger.info("--ALC-- -> next check for %s at %s (interval: %d, added: %d)",
+
+        if current_next_check != self.next_chk and os.getenv('ALIGNAK_LOG_CHECKS', None):
+            logger.info("--ALC-- -> scheduled the next check for %s "
+                        "at %s (interval: %d, added: %d)",
                         self.get_full_name(),
                         datetime.utcfromtimestamp(self.next_chk).strftime('%Y-%m-%d %H:%M:%S'),
                         interval, time_add)
+
         # Get the command to launch, and put it in queue
         return self.launch_check(self.next_chk, hosts, services, timeperiods, macromodulations,
                                  checkmodulations, checks, force=force)
@@ -1408,11 +1421,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         else:
             return
 
-        data = [self]
-        if getattr(self, "host", None):
-            data = [hosts[self.host], self]
-
         macroresolver = MacroResolver()
+        data = self.get_data_for_event_handler(hosts)
         cmd = macroresolver.resolve_command(event_handler, data, macromodulations, timeperiods)
 
         event_h = EventHandler({
@@ -1472,10 +1482,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         cls = self.__class__
         macroresolver = MacroResolver()
-        if getattr(self, "host", None):
-            data = [hosts[self.host], self]
-        else:
-            data = [self]
+        data = self.get_data_for_event_handler(hosts)
         cmd = macroresolver.resolve_command(self.snapshot_command, data, macromodulations,
                                             timeperiods)
         reac_tag = self.snapshot_command.reactionner_tag
@@ -1671,7 +1678,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         if not chk.freshness_expiry_check:
             # Only update the last state date if not in freshness expiry
-            self.last_state_update = int(time.time())
+            self.last_state_update = now
             if chk.exit_status == 1 and self.__class__.my_type == 'host':
                 chk.exit_status = 2
 
@@ -1901,12 +1908,21 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # If the check is a freshness one, set freshness as expired
             if chk.freshness_expiry_check:
                 self.freshness_expired = True
+                self.last_hard_state_change = int(time.time())
 
         # update event/problem-counters
         self.update_event_and_problem_id()
 
         # Raise a log if freshness check expired
         if chk.freshness_expiry_check:
+            if os.getenv('ALIGNAK_LOG_CHECKS', None):
+                logger.info("--ALC-- freshness expired for %s, when: %s, last checked: %s",
+                            self.get_full_name(),
+                            datetime.utcfromtimestamp(
+                                self.last_hard_state_change).strftime('%Y-%m-%d %H:%M:%S'),
+                            datetime.utcfromtimestamp(
+                                self.last_state_update).strftime('%Y-%m-%d %H:%M:%S'))
+
             self.raise_freshness_log_entry(int(now - self.last_state_update -
                                                self.freshness_threshold))
 
@@ -1997,9 +2013,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         cls = self.__class__
         macrosolver = MacroResolver()
-        data = [self, contact, notif]
-        if host_ref:
-            data.append(host_ref)
+        data = self.get_data_for_notifications(contact, notif, host_ref)
         notif.command = macrosolver.resolve_command(notif.command_call, data, macromodulations,
                                                     timeperiods)
         if cls.enable_environment_macros or notif.enable_environment_macros:
@@ -2399,23 +2413,29 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             chk = Check(data)
 
             self.actions.append(chk)
+
+            if os.getenv('ALIGNAK_LOG_CHECKS', None):
+                logger.info("--ALC-- -> added a check action for %s (%s)",
+                            self.get_full_name(), chk.uuid)
             return chk
 
         if force or (not self.is_no_check_dependent(hosts, services, timeperiods)):
-            if self.my_type == 'host' and not self.check_command:
-                logger.debug("Host check is for an host that has no check command (%s), "
-                             "do not launch the check !", self.host_name)
-                return None
-
-            if not self.check_command:
+            if self.my_type == 'service' and not self.check_command:
+                # This should never happen because of configuration check!
                 logger.debug("Service check is for a service that has no check command (%s/%s), "
                              "do not launch the check !", self.host_name, self.service_description)
                 return None
 
+            if self.my_type == 'host' and not self.check_command:
+                if self.active_checks_enabled:
+                    logger.debug("Host check is for an host that has no check command (%s), "
+                                 "do not launch the check !", self.host_name)
+                    return None
+
             # Fred : passive only checked host dependency
             if dependent and self.my_type == 'host' and \
                     self.passive_checks_enabled and not self.active_checks_enabled:
-                logger.debug("Host check is for an host that is only passively "
+                logger.debug("Host check (dependent) is for an host that is only passively "
                              "checked (%s), do not launch the check !", self.host_name)
                 return None
 
@@ -2425,7 +2445,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             module_type = None
 
             # By default we will use our default check_command
+            self.last_check_command = None
             check_command = self.check_command
+            command_line = ''
             if check_command:
                 poller_tag = check_command.poller_tag
                 module_type = check_command.module_type
@@ -2441,19 +2463,17 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
                 # Get the command to launch
                 macroresolver = MacroResolver()
-                if hasattr(self, 'host'):
-                    macrodata = [hosts[self.host], self]
-                else:
-                    macrodata = [self]
-                command_line = macroresolver.resolve_command(check_command, macrodata,
+                data = self.get_data_for_checks(hosts)
+                command_line = macroresolver.resolve_command(check_command, data,
                                                              macromodulations, timeperiods)
 
-            # And get all environment variables only if needed
-            if cls.enable_environment_macros or check_command.enable_environment_macros:
-                env = macroresolver.get_env_macros(macrodata)
+                # remember it, for pure debugging purpose
+                self.last_check_command = command_line
 
-            # remember it, for pure debugging purpose
-            self.last_check_command = command_line
+            # And get all environment variables only if needed
+            if cls.enable_environment_macros or (check_command and
+                                                 check_command.enable_environment_macros):
+                env = macroresolver.get_env_macros(data)
 
             # By default we take the global timeout, but we use the command one if it
             # is defined (default is -1 for no timeout)
@@ -2486,6 +2506,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # so scheduler can take it
         if chk is not None:
             self.actions.append(chk)
+
+            if os.getenv('ALIGNAK_LOG_CHECKS', None):
+                logger.info("--ALC-- -> added a check action for %s (%s)",
+                            self.get_full_name(), chk.uuid)
             return chk
         # None mean I already take it into account
         return None
@@ -2520,10 +2544,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         if cls.perfdata_command is not None:
             macroresolver = MacroResolver()
-            if getattr(self, "host", None):
-                data = [hosts[self.host], self]
-            else:
-                data = [self]
+            data = self.get_data_for_event_handler(hosts)
             cmd = macroresolver.resolve_command(cls.perfdata_command, data, macromodulations,
                                                 timeperiods)
             reactionner_tag = cls.perfdata_command.reactionner_tag
@@ -2556,8 +2577,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if cmdcall is None:
             return
 
-        # we get our based command, like
-        # check_tcp!80 -> check_tcp
+        # we get our base command, like
+        # bp_rule!(host,svc & host, svc) -> bp_rule
         cmd = cmdcall.call
         elts = cmd.split('!')
         base_cmd = elts[0]
@@ -2571,18 +2592,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # Only (re-)evaluate the business rule if it has never been
             # evaluated before, or it contains a macro.
             if re.match(r"\$[\w\d_-]+\$", rule) or self.business_rule is None:
-                if hasattr(self, 'host'):
-                    data = [hosts[self.host], self]
-                else:
-                    data = [self]
                 macroresolver = MacroResolver()
+                data = self.get_data_for_checks(hosts)
                 rule = macroresolver.resolve_simple_macros_in_string(rule, data,
                                                                      macromodulations,
                                                                      timeperiods)
                 prev = getattr(self, "processed_business_rule", "")
-
                 if rule == prev:
-                    # Business rule did not change (no macro was modulated)
+                    # Business rule did not changed (no macro was modulated)
                     return
 
                 fact = DependencyNodeFactory(self)
@@ -2598,10 +2615,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         using business_rule_output_template attribute as template.
 
         The template may embed output formatting for itself, and for its child
-        (dependant) itmes. Childs format string is expanded into the $( and )$,
+        (dependent) items. Child format string is expanded into the $( and )$,
         using the string between brackets as format string.
 
-        Any business rule based item or child macros may be used. In addition,
+        Any business rule based item or child macro may be used. In addition,
         the $STATUS$, $SHORTSTATUS$ and $FULLNAME$ macro which name is common
         to hosts and services may be used to ease template writing.
 
@@ -2653,13 +2670,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 item = services[item_uuid]
 
             # Do not display children in OK state
+            # todo: last_hard_state ? why not current state if state type is hard ?
             if item.last_hard_state_id == 0:
                 ok_count += 1
                 continue
-            if hasattr(item, 'host'):
-                data = [hosts[item.host], item]
-            else:
-                data = [item]
+            data = item.get_data_for_checks(hosts)
             children_output += macroresolver.resolve_simple_macros_in_string(child_template_string,
                                                                              data,
                                                                              macromodulations,
@@ -2670,15 +2685,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # Replaces children output string
         template_string = re.sub(r"\$\(.*\)\$", children_output, output_template)
-        if hasattr(self, 'host'):
-            data = [hosts[self.host], self]
-        else:
-            data = [self]
+        data = self.get_data_for_checks(hosts)
         output = macroresolver.resolve_simple_macros_in_string(template_string, data,
                                                                macromodulations, timeperiods)
         return output.strip()
 
     def business_rule_notification_is_blocked(self, hosts, services):
+        # pylint: disable=too-many-locals
         """Process business rule notifications behaviour. If all problems have
         been acknowledged, no notifications should be sent if state is not OK.
         By default, downtimes are ignored, unless explicitly told to be treated
@@ -2716,7 +2729,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     def manage_internal_check(self, hosts, services, check, hostgroups, servicegroups,
                               macromodulations, timeperiods):
-        # pylint: disable=too-many-branches, too-many-statements
+        # pylint: disable=too-many-branches, too-many-statements, too-many-locals
         """Manage internal commands such as ::
 
         * bp_rule
@@ -2741,9 +2754,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Business rule
         if check.command.startswith('bp_'):
             try:
-                # Re evaluate the business rule to take into account macro
-                # modulation.
-                # Caution: We consider the that the macro modulation did not
+                # Re evaluate the business rule to take into account macro modulation.
+                # Caution: We consider that the macro modulation did not
                 # change business rule dependency tree. Only Xof: values should
                 # be modified by modulation.
                 self.create_business_rules(hosts, services, hostgroups, servicegroups,
@@ -2751,13 +2763,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 state = self.business_rule.get_state(hosts, services)
                 check.output = self.get_business_rule_output(hosts, services,
                                                              macromodulations, timeperiods)
-                if 'ALIGNAK_LOG_ACTIONS' in os.environ:
-                    if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
-                        logger.warning("Resolved BR for '%s', output: %s",
-                                       self.get_full_name(), check.output)
-                    else:
-                        logger.info("Resolved BR for '%s', output: %s",
-                                    self.get_full_name(), check.output)
+                if os.getenv('ALIGNAK_LOG_ACTIONS', None):
+                    log_function = logger.info
+                    if os.getenv('ALIGNAK_LOG_ACTIONS') == 'WARNING':
+                        log_function = logger.warning
+                    log_function("Resolved BR for '%s', output: %s",
+                                 self.get_full_name(), check.output)
 
             except Exception as exp:  # pylint: disable=broad-except
                 # Notifies the error, and return an UNKNOWN state.
@@ -2771,24 +2782,25 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             state = 0
             check.execution_time = 0
             check.output = u'Host assumed to be UP'
-            if 'ALIGNAK_LOG_ACTIONS' in os.environ:
-                if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
-                    logger.warning("Set host %s as UP (internal check)", self.get_full_name())
-                else:
-                    logger.info("Set host %s as UP (internal check)", self.get_full_name())
+
+            if os.getenv('ALIGNAK_LOG_ACTIONS', None):
+                log_function = logger.info
+                if os.getenv('ALIGNAK_LOG_ACTIONS') == 'WARNING':
+                    log_function = logger.warning
+                log_function("Set host %s as UP (internal check)", self.get_full_name())
 
         # Echo is just putting the same state again
         elif check.command == '_echo':
             state = self.state_id
             check.execution_time = 0
             check.output = self.output
-            if 'ALIGNAK_LOG_ACTIONS' in os.environ:
-                if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
-                    logger.warning("Echo the current state (%s - %d) for %s ",
-                                   self.state, self.state_id, self.get_full_name())
-                else:
-                    logger.info("Echo the current state (%s - %d) for %s ",
-                                self.state, self.state_id, self.get_full_name())
+
+            if os.getenv('ALIGNAK_LOG_ACTIONS', None):
+                log_function = logger.info
+                if os.getenv('ALIGNAK_LOG_ACTIONS') == 'WARNING':
+                    log_function = logger.warning
+                log_function("Echo the current state (%s - %d) for %s ",
+                             self.state, self.state_id, self.get_full_name())
 
         # _internal_host_check is for having an host check result
         # without running a check plugin
@@ -2817,12 +2829,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                             5: [0.4, 0.2, 0.2, 0.1, 0.1]
                         }
                         probability = probability.get(len(states))
-                        # if len(states) > 2:
-                        #     probability = [0.7, 0.2, 0.1]
-                        #     if len(states) > 3:
-                        #         probability = [0.6, 0.2, 0.1, 0.1]
-                        #         if len(states) > 4:
-                        #             probability = [0.4, 0.2, 0.2, 0.1, 0.1]
+
                         try:
                             state = numpy.random.choice(states, p=probability)
                         except Exception as exp:  # pylint: disable=broad-except
@@ -2850,13 +2857,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     max_range = 10
                 check.perf_data = "'rnd_metric'=%d" % random.randint(0, max_range)
 
-            if 'ALIGNAK_LOG_ACTIONS' in os.environ:
-                if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
-                    logger.warning("Host %s internal check: %d - %s",
-                                   self.get_full_name(), state, check.output)
-                else:
-                    logger.info("Host %s internal check: %d - %s",
-                                self.get_full_name(), state, check.output)
+            if os.getenv('ALIGNAK_LOG_ACTIONS', None):
+                log_function = logger.info
+                if os.getenv('ALIGNAK_LOG_ACTIONS') == 'WARNING':
+                    log_function = logger.warning
+                log_function("Host %s internal check: %d - %s",
+                             self.get_full_name(), state, check.output)
 
         # _internal_service_check is for having a service check result
         # without running a check plugin
@@ -2885,12 +2891,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                             5: [0.4, 0.2, 0.2, 0.1, 0.1]
                         }
                         probability = probability.get(len(states))
-                        # if len(states) > 2:
-                        #     probability = [0.7, 0.2, 0.1]
-                        #     if len(states) > 3:
-                        #         probability = [0.6, 0.2, 0.1, 0.1]
-                        #         if len(states) > 4:
-                        #             probability = [0.4, 0.2, 0.2, 0.1, 0.1]
+
                         try:
                             state = numpy.random.choice(states, p=probability)
                         except Exception as exp:  # pylint: disable=broad-except
@@ -2918,13 +2919,12 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                     max_range = 10
                 check.perf_data = "'rnd_metric'=%d" % random.randint(0, max_range)
 
-            if 'ALIGNAK_LOG_ACTIONS' in os.environ:
-                if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
-                    logger.warning("Service %s internal check: %d - %s",
-                                   self.get_full_name(), state, check.output)
-                else:
-                    logger.info("Service %s internal check: %d - %s",
-                                self.get_full_name(), state, check.output)
+            if os.getenv('ALIGNAK_LOG_ACTIONS', None):
+                log_function = logger.info
+                if os.getenv('ALIGNAK_LOG_ACTIONS') == 'WARNING':
+                    log_function = logger.warning
+                log_function("Service %s internal check: %d - %s",
+                             self.get_full_name(), state, check.output)
 
         check.long_output = check.output
         check.check_time = time.time()
@@ -3117,12 +3117,11 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type t_stale_by: int
         :return: None
         """
-        logger.warning("The freshness period of %s '%s' is expired by %s "
-                       "(threshold=%s + %ss). Attempt: %s / %s. "
+        logger.warning("The freshness period of %s '%s' is expired by %ss "
+                       "(threshold=%ss + %ss). Attempt: %s / %s. "
                        "I'm forcing the state to freshness state (%s / %s).",
                        self.my_type, self.get_full_name(),
-                       format_t_into_dhms_format(t_stale_by),
-                       format_t_into_dhms_format(self.freshness_threshold),
+                       t_stale_by, self.freshness_threshold,
                        self.additional_freshness_latency,
                        self.attempt, self.max_check_attempts,
                        self.freshness_state, self.state_type)
@@ -3181,6 +3180,37 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         """
         pass
 
+    # pylint: disable=unused-argument
+    def get_data_for_checks(self, hosts):
+        """Get data for a check
+
+        :return: list containing a single host (this one)
+        :rtype: list
+        """
+        return [self]
+
+    # pylint: disable=unused-argument
+    def get_data_for_event_handler(self, hosts):
+        """Get data for an event handler
+
+        :return: list containing a single host (this one)
+        :rtype: list
+        """
+        return [self]
+
+    # pylint: disable=unused-argument
+    def get_data_for_notifications(self, contact, notif, host_ref):
+        """Get data for a notification
+
+        :param contact: The contact to return
+        :type contact:
+        :param notif: the notification to return
+        :type notif:
+        :return: list containing the host and the given parameters
+        :rtype: list
+        """
+        return [self, contact, notif]
+
     def set_impact_state(self):
         """We just go an impact, so we go unreachable
         But only if we enable this state change in the conf
@@ -3209,14 +3239,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             self.state = self.state_before_impact
             self.state_id = self.state_id_before_impact
 
-    # def last_time_non_ok_or_up(self):  # pragma: no cover, base function
-    #     """Get the last time the item was in a non-OK state
-    #
-    #     :return: return 0
-    #     :rtype: int
-    #     """
-    #     pass
-    #
     def set_unreachable(self):
         """Set unreachable: all our parents (dependencies) are not ok
         Unreachable is different from down/critical
@@ -3314,10 +3336,14 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             state = False
 
         if not hasattr(self, 'check_command'):
-            self.add_error("[%s::%s] no check_command" % (self.my_type, self.get_name()))
+            # todo: This should never happen because the default exists as an empty string
+            self.add_error("[%s::%s] no property check_command" % (self.my_type, self.get_name()))
             state = False
         # Ok got a command, but maybe it's invalid
         else:
+            # if not self.check_command:
+            #     self.add_warning("[%s::%s] no check_command, will always be considered as Up"
+            #                      % (self.my_type, self.get_name()))
             if self.check_command and not self.check_command.is_valid():
                 self.add_error("[%s::%s] check_command '%s' invalid"
                                % (self.my_type, self.get_name(), self.check_command.command))

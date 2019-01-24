@@ -169,6 +169,8 @@ class ActionBase(AlignakObject):
             BoolProp(default=False),
         'creation_time':
             FloatProp(default=0.0),
+        '_is_orphan':
+            BoolProp(default=False),
         '_in_timeout':
             BoolProp(default=False),
         'status':
@@ -227,6 +229,18 @@ class ActionBase(AlignakObject):
 
         # Fill default parameters
         self.fill_default()
+
+    def is_launchable(self, timestamp):
+        """Check if this action can be launched based on current time
+
+        :param timestamp: time to compare
+        :type timestamp: int
+        :return: True if timestamp >= self.t_to_go, False otherwise
+        :rtype: bool
+        """
+        if self.t_to_go is None:
+            return False
+        return timestamp >= self.t_to_go
 
     def get_local_environnement(self):
         """
@@ -434,9 +448,13 @@ class ActionBase(AlignakObject):
 
         try:
             self.stdoutdata += stdout.decode("utf-8")
+        except (UnicodeDecodeError, AttributeError):
+            self.stdoutdata += stdout
+
+        try:
             self.stderrdata += stderr.decode("utf-8")
-        except AttributeError:
-            pass
+        except (UnicodeDecodeError, AttributeError):
+            self.stderrdata += stderr
 
         self.exit_status = self.process.returncode
         if self.log_actions:
@@ -646,7 +664,7 @@ else:  # pragma: no cover, not currently tested with Windows...
             # 2.7 and higher Python version need a list of args for cmd
             try:
                 cmd = shlex.split(self.command)
-            except Exception as exp:  # pylint: disable=W0703
+            except Exception as exp:  # pylint: disable=broad-except
                 self.output = 'Not a valid shell command: ' + exp.__str__()
                 self.exit_status = 3
                 self.status = ACT_STATUS_DONE

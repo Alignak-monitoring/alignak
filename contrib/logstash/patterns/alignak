@@ -17,7 +17,8 @@
 ### -----
 ### Set alignak timestamp from the log line - used in the date filter plugin
 ##################################################################################
-### For timestamp: ALIGNAK_TIME \[%{NUMBER:[alignak][timestamp]}\]
+### For timestamp as integer: ALIGNAK_TIME \[%{NUMBER:[alignak][timestamp]}\]
+# Defaut date is [2018-12-01 00:00:15]
 ALIGNAK_TIME \[%{DATA:[alignak][timestamp]}\]
 
 ##################################################################################
@@ -25,46 +26,48 @@ ALIGNAK_TIME \[%{DATA:[alignak][timestamp]}\]
 ### -----
 ### This section defines patterns for each log event type
 ##################################################################################
+# Used ?
 ALIGNAK_CHECK ALIGNAK CHECK
+# Used ?
 ALIGNAK_ALERT ALIGNAK ALERT
 
-ALIGNAK_TYPE_CURRENT_SERVICE_STATE CURRENT SERVICE STATE
-ALIGNAK_TYPE_CURRENT_HOST_STATE CURRENT HOST STATE
+AT_CURRENT_SERVICE_STATE CURRENT SERVICE STATE
+AT_CURRENT_HOST_STATE CURRENT HOST STATE
 
-ALIGNAK_TYPE_SERVICE_NOTIFICATION SERVICE NOTIFICATION
-ALIGNAK_TYPE_HOST_NOTIFICATION HOST NOTIFICATION
+AT_SERVICE_NOTIFICATION SERVICE NOTIFICATION
+AT_HOST_NOTIFICATION HOST NOTIFICATION
 
-ALIGNAK_TYPE_SERVICE_ALERT SERVICE ALERT
-ALIGNAK_TYPE_HOST_ALERT HOST ALERT
+AT_SERVICE_ALERT SERVICE ALERT
+AT_HOST_ALERT HOST ALERT
 
-ALIGNAK_TYPE_SERVICE_FLAPPING_ALERT SERVICE FLAPPING ALERT
-ALIGNAK_TYPE_HOST_FLAPPING_ALERT HOST FLAPPING ALERT
+AT_SERVICE_FLAPPING_ALERT SERVICE FLAPPING ALERT
+AT_HOST_FLAPPING_ALERT HOST FLAPPING ALERT
 
-ALIGNAK_TYPE_SERVICE_ACKNOWLEDGE_ALERT SERVICE ACKNOWLEDGE ALERT
-ALIGNAK_TYPE_HOST_ACKNOWLEDGE_ALERT HOST ACKNOWLEDGE ALERT
+AT_SERVICE_ACKNOWLEDGE_ALERT SERVICE ACKNOWLEDGE ALERT
+AT_HOST_ACKNOWLEDGE_ALERT HOST ACKNOWLEDGE ALERT
 
-ALIGNAK_TYPE_SERVICE_DOWNTIME_ALERT SERVICE DOWNTIME ALERT
-ALIGNAK_TYPE_HOST_DOWNTIME_ALERT HOST DOWNTIME ALERT
-ALIGNAK_TYPE_CONTACT_DOWNTIME_ALERT CONTACT DOWNTIME ALERT
+AT_SERVICE_DOWNTIME_ALERT SERVICE DOWNTIME ALERT
+AT_HOST_DOWNTIME_ALERT HOST DOWNTIME ALERT
+AT_CONTACT_DOWNTIME_ALERT CONTACT DOWNTIME ALERT
 
-ALIGNAK_TYPE_PASSIVE_SERVICE_CHECK PASSIVE SERVICE CHECK
-ALIGNAK_TYPE_PASSIVE_HOST_CHECK PASSIVE HOST CHECK
+AT_PASSIVE_SERVICE_CHECK PASSIVE SERVICE CHECK
+AT_PASSIVE_HOST_CHECK PASSIVE HOST CHECK
 
-ALIGNAK_TYPE_ACTIVE_SERVICE_CHECK ACTIVE SERVICE CHECK
-ALIGNAK_TYPE_ACTIVE_HOST_CHECK ACTIVE HOST CHECK
+AT_ACTIVE_SERVICE_CHECK ACTIVE SERVICE CHECK
+AT_ACTIVE_HOST_CHECK ACTIVE HOST CHECK
 
-ALIGNAK_TYPE_SERVICE_EVENT_HANDLER SERVICE EVENT HANDLER
-ALIGNAK_TYPE_HOST_EVENT_HANDLER HOST EVENT HANDLER
+AT_SERVICE_EVENT_HANDLER SERVICE EVENT HANDLER
+AT_HOST_EVENT_HANDLER HOST EVENT HANDLER
 
-ALIGNAK_TYPE_SERVICE_COMMENT SERVICE COMMENT
-ALIGNAK_TYPE_HOST_COMMENT HOST COMMENT
+AT_SERVICE_COMMENT SERVICE COMMENT
+AT_HOST_COMMENT HOST COMMENT
 
-ALIGNAK_TYPE_TIMEPERIOD_TRANSITION TIMEPERIOD TRANSITION
+AT_TIMEPERIOD_TRANSITION TIMEPERIOD TRANSITION
 
-ALIGNAK_TYPE_RETENTION_SAVE RETENTION SAVE
-ALIGNAK_TYPE_RETENTION_LOAD RETENTION LOAD
+AT_RETENTION_SAVE RETENTION SAVE
+AT_RETENTION_LOAD RETENTION LOAD
 
-ALIGNAK_TYPE_EXTERNAL_COMMAND EXTERNAL COMMAND
+AT_EXTERNAL_COMMAND EXTERNAL COMMAND
 ##################################################################################
 
 ##################################################################################
@@ -89,75 +92,74 @@ ALIGNAK_CHECK %{ALIGNAK_CHECK:[alignak][event]}: %{DATA:[alignak][alignak_name]}
 ALIGNAK_ALERT %{ALIGNAK_ALERT:[alignak][event]}: %{DATA:[alignak][alignak_name]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][check_result]}
 
 # [1510657614] INFO: CURRENT SERVICE STATE: simulated_host_49;dev_Reader;UNREACHABLE;HARD;0;
-ALIGNAK_CURRENT_SERVICE_STATE %{ALIGNAK_TYPE_CURRENT_SERVICE_STATE:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{DATA:[alignak][state_type]};%{DATA:[alignak][attempt]};%{GREEDYDATA:[alignak][message]}
+ALIGNAK_CURRENT_SERVICE_STATE %{AT_CURRENT_SERVICE_STATE:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{DATA:[alignak][state_type]};%{DATA:[alignak][attempt]};%{GREEDYDATA:[alignak][message]}
 
 # [1510657614] INFO: CURRENT HOST STATE: simulated_host_34;UP;HARD;1;
-ALIGNAK_CURRENT_HOST_STATE %{ALIGNAK_TYPE_CURRENT_HOST_STATE:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{DATA:[alignak][state_type]};%{DATA:[alignak][attempt]};%{GREEDYDATA:[alignak][message]}
+ALIGNAK_CURRENT_HOST_STATE %{AT_CURRENT_HOST_STATE:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{DATA:[alignak][state_type]};%{DATA:[alignak][attempt]};%{GREEDYDATA:[alignak][message]}
 
 # host;service;state;state type;current attempt;output
-ALIGNAK_SERVICE_ALERT %{ALIGNAK_TYPE_SERVICE_ALERT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{DATA:[alignak][state_type]};%{NUMBER:[alignak][attempt]};%{GREEDYDATA:[alignak][message]}
+ALIGNAK_SERVICE_ALERT %{AT_SERVICE_ALERT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{DATA:[alignak][state_type]};%{NUMBER:[alignak][attempt]};%{GREEDYDATA:[alignak][message]}
 
 # host;state;state type;current attempt;output
-ALIGNAK_HOST_ALERT %{ALIGNAK_TYPE_HOST_ALERT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{DATA:[alignak][state_type]};%{NUMBER:[alignak][attempt]};%{GREEDYDATA:[alignak][message]}
-
+ALIGNAK_HOST_ALERT %{AT_HOST_ALERT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{DATA:[alignak][state_type]};%{NUMBER:[alignak][attempt]};%{GREEDYDATA:[alignak][message]}
 
 # contact;host;service;state;count;command;output
-ALIGNAK_SERVICE_NOTIFICATION %{ALIGNAK_TYPE_SERVICE_NOTIFICATION:[alignak][event]}: %{DATA:[alignak][contact]};%{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{NUMBER:[alignak][notification_count]};%{DATA:[alignak][command]};%{GREEDYDATA:[alignak][message]}
+ALIGNAK_SERVICE_NOTIFICATION %{AT_SERVICE_NOTIFICATION:[alignak][event]}: %{DATA:[alignak][contact]};%{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{NUMBER:[alignak][notification_count]};%{DATA:[alignak][command]};%{GREEDYDATA:[alignak][message]}
 
 # contact;host;state;count;command;output
-ALIGNAK_HOST_NOTIFICATION %{ALIGNAK_TYPE_HOST_NOTIFICATION:[alignak][event]}: %{DATA:[alignak][contact]};%{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{NUMBER:[alignak][notification_count]};%{DATA:[alignak][command]};%{GREEDYDATA:[alignak][message]}
+ALIGNAK_HOST_NOTIFICATION %{AT_HOST_NOTIFICATION:[alignak][event]}: %{DATA:[alignak][contact]};%{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{NUMBER:[alignak][notification_count]};%{DATA:[alignak][command]};%{GREEDYDATA:[alignak][message]}
 
 # host;service;state
-ALIGNAK_SERVICE_FLAPPING_ALERT %{ALIGNAK_TYPE_SERVICE_FLAPPING_ALERT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][message]}
+ALIGNAK_SERVICE_FLAPPING_ALERT %{AT_SERVICE_FLAPPING_ALERT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][message]}
 
 # host;state
-ALIGNAK_HOST_FLAPPING_ALERT %{ALIGNAK_TYPE_HOST_FLAPPING_ALERT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][message]}
+ALIGNAK_HOST_FLAPPING_ALERT %{AT_HOST_FLAPPING_ALERT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][message]}
 
 # host;service;state
-ALIGNAK_SERVICE_ACKNOWLEDGE_ALERT %{ALIGNAK_TYPE_SERVICE_ACKNOWLEDGE_ALERT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][message]}
+ALIGNAK_SERVICE_ACKNOWLEDGE_ALERT %{AT_SERVICE_ACKNOWLEDGE_ALERT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][message]}
 
 # host;state
-ALIGNAK_HOST_ACKNOWLEDGE_ALERT %{ALIGNAK_TYPE_HOST_ACKNOWLEDGE_ALERT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][message]}
+ALIGNAK_HOST_ACKNOWLEDGE_ALERT %{AT_HOST_ACKNOWLEDGE_ALERT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][message]}
 
 # host;service;state
-ALIGNAK_SERVICE_DOWNTIME_ALERT %{ALIGNAK_TYPE_SERVICE_DOWNTIME_ALERT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][message]}
+ALIGNAK_SERVICE_DOWNTIME_ALERT %{AT_SERVICE_DOWNTIME_ALERT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][message]}
 
 # host;state
-ALIGNAK_HOST_DOWNTIME_ALERT %{ALIGNAK_TYPE_HOST_DOWNTIME_ALERT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][message]}
+ALIGNAK_HOST_DOWNTIME_ALERT %{AT_HOST_DOWNTIME_ALERT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][message]}
 
 # contact;state
-ALIGNAK_CONTACT_DOWNTIME_ALERT %{ALIGNAK_TYPE_CONTACT_DOWNTIME_ALERT:[alignak][event]}: %{DATA:[alignak][contact]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][message]}
+ALIGNAK_CONTACT_DOWNTIME_ALERT %{AT_CONTACT_DOWNTIME_ALERT:[alignak][event]}: %{DATA:[alignak][contact]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][message]}
 
 # [1510562862] INFO: PASSIVE SERVICE CHECK: simulated_host_0;soft_KioskShell;0;Simulated Service;;'PrivateMem'=20 'WorkingSetMem'=29
-ALIGNAK_PASSIVE_SERVICE_CHECK %{ALIGNAK_TYPE_PASSIVE_SERVICE_CHECK:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][check_result]}
+ALIGNAK_PASSIVE_SERVICE_CHECK %{AT_PASSIVE_SERVICE_CHECK:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][check_result]}
 
 # [1510562862] INFO: PASSIVE HOST CHECK: simulated_host_0;0;;;
-ALIGNAK_PASSIVE_HOST_CHECK %{ALIGNAK_TYPE_PASSIVE_HOST_CHECK:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][check_result]}
+ALIGNAK_PASSIVE_HOST_CHECK %{AT_PASSIVE_HOST_CHECK:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{GREEDYDATA:[alignak][check_result]}
 
 # [1510614124] INFO: ACTIVE SERVICE CHECK: simulated_host_35;soft_KioskShell;OK;1;Output ...
-ALIGNAK_ACTIVE_SERVICE_CHECK %{ALIGNAK_TYPE_ACTIVE_SERVICE_CHECK:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{NUMBER:[alignak][attempt]};%{GREEDYDATA:[alignak][check_result]}
+ALIGNAK_ACTIVE_SERVICE_CHECK %{AT_ACTIVE_SERVICE_CHECK:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{NUMBER:[alignak][attempt]};%{GREEDYDATA:[alignak][check_result]}
 
 # [1510614020] INFO: ACTIVE HOST CHECK: simulated_host_149;UP;HARD;1;Host assumed to be UP
-ALIGNAK_ACTIVE_HOST_CHECK %{ALIGNAK_TYPE_ACTIVE_HOST_CHECK:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{NUMBER:[alignak][attempt]};%{GREEDYDATA:[alignak][check_result]}
+ALIGNAK_ACTIVE_HOST_CHECK %{AT_ACTIVE_HOST_CHECK:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{NUMBER:[alignak][attempt]};%{GREEDYDATA:[alignak][check_result]}
 
 # host;service;state;state type;current attempt;command;output
-ALIGNAK_SERVICE_EVENT_HANDLER %{ALIGNAK_TYPE_SERVICE_EVENT_HANDLER:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{DATA:[alignak][state_type]};%{NUMBER:[alignak][attempt]};%{DATA:[alignak][command]}
+ALIGNAK_SERVICE_EVENT_HANDLER %{AT_SERVICE_EVENT_HANDLER:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][state]};%{DATA:[alignak][state_type]};%{NUMBER:[alignak][attempt]};%{DATA:[alignak][command]}
 
 # host;state;state type;current attempt;command;output
-ALIGNAK_HOST_EVENT_HANDLER %{ALIGNAK_TYPE_HOST_EVENT_HANDLER:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{DATA:[alignak][state_type]};%{NUMBER:[alignak][attempt]};%{DATA:[alignak][command]}
+ALIGNAK_HOST_EVENT_HANDLER %{AT_HOST_EVENT_HANDLER:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][state]};%{DATA:[alignak][state_type]};%{NUMBER:[alignak][attempt]};%{DATA:[alignak][command]}
 
 # host;service;author;comment
-ALIGNAK_SERVICE_COMMENT %{ALIGNAK_TYPE_SERVICE_COMMENT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][contact]};%{GREEDYDATA:[alignak][message]}
+ALIGNAK_SERVICE_COMMENT %{AT_SERVICE_COMMENT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][service]};%{DATA:[alignak][contact]};%{GREEDYDATA:[alignak][message]}
 
 # host;author;comment
-ALIGNAK_HOST_COMMENT %{ALIGNAK_TYPE_HOST_COMMENT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][contact]};%{GREEDYDATA:[alignak][message]}
+ALIGNAK_HOST_COMMENT %{AT_HOST_COMMENT:[alignak][event]}: %{DATA:[alignak][host_name]};%{DATA:[alignak][contact]};%{GREEDYDATA:[alignak][message]}
 
 # Monitoring information retention
-ALIGNAK_RETENTION_SAVE %{ALIGNAK_TYPE_RETENTION_SAVE:[alignak][event]}: %{GREEDYDATA:[alignak][message]}
-ALIGNAK_RETENTION_LOAD %{ALIGNAK_TYPE_RETENTION_LOAD:[alignak][event]}: %{GREEDYDATA:[alignak][message]}
+ALIGNAK_RETENTION_SAVE %{AT_RETENTION_SAVE:[alignak][event]}: %{GREEDYDATA:[alignak][message]}
+ALIGNAK_RETENTION_LOAD %{AT_RETENTION_LOAD:[alignak][event]}: %{GREEDYDATA:[alignak][message]}
 
 # timeperiod name;from;to
-ALIGNAK_TIMEPERIOD_TRANSITION %{ALIGNAK_TYPE_TIMEPERIOD_TRANSITION:[alignak][event]}: %{DATA:[alignak][timeperiod]};%{GREEDYDATA:[alignak][message]}
+ALIGNAK_TIMEPERIOD_TRANSITION %{AT_TIMEPERIOD_TRANSITION:[alignak][event]}: %{DATA:[alignak][timeperiod]};%{GREEDYDATA:[alignak][message]}
 
 ##################################################################################
 
@@ -165,7 +167,7 @@ ALIGNAK_TIMEPERIOD_TRANSITION %{ALIGNAK_TYPE_TIMEPERIOD_TRANSITION:[alignak][eve
 ##################################################################################
 ### Alignak external commands
 ### -----
-### This section defines the patterns to get information for some external 
+### This section defines the patterns to get information for some external
 ### commands
 ### -----
 ### /!\ Some more work needs to be done to cover all External Commands:
@@ -221,7 +223,7 @@ EC_DISABLE_HOST_SVC_NOTIFICATIONS DISABLE_HOST_SVC_NOTIFICATIONS
 # [1510065973] ENABLE_FLAP_DETECTION
 # [1510320726] DISABLE_SVC_CHECK;simulated_host_2;dev_Printer
 # [2018-04-04 06:01:44] INFO: EXTERNAL COMMAND: [1522814451] PROCESS_HOST_CHECK_RESULT;hostname;0;host is alive (0d 00h 01m 22s)|'DiskTotal'=29926 'DiskUsed'=13992 'MemTotal'=4096 'MemUsed'=1132 'Cpu5mn'=0
-ALIGNAK_EXTERNAL_COMMAND %{ALIGNAK_TYPE_EXTERNAL_COMMAND:[alignak][event]}: \[%{NUMBER:[alignak][extcmd_epoch]}\] (?:%{EC_PASSIVE_HOST_CHECK:[alignak][ext_cmd]}|%{EC_PASSIVE_SERVICE_CHECK:[alignak][ext_cmd]}|%{EC_ACKNOWLEDGE_HOST_PROBLEM:[alignak][ext_cmd]}|%{EC_ACKNOWLEDGE_HOST_PROBLEM_EXPIRE:[alignak][ext_cmd]}|%{EC_ACKNOWLEDGE_SVC_PROBLEM:[alignak][ext_cmd]}|%{EC_ACKNOWLEDGE_SVC_PROBLEM_EXPIRE:[alignak][ext_cmd]}|%{EC_ADD_HOST_COMMENT:[alignak][ext_cmd]}|%{EC_ADD_SVC_COMMENT:[alignak][ext_cmd]}|%{EC_DEL_ALL_HOST_COMMENTS:[alignak][ext_cmd]}|%{EC_DEL_ALL_SVC_COMMENTS:[alignak][ext_cmd]}|%{EC_DEL_HOST_COMMENT:[alignak][ext_cmd]}|%{EC_DEL_SVC_COMMENT:[alignak][ext_cmd]}|%{EC_DEL_HOST_DOWNTIME:[alignak][ext_cmd]}|%{EC_DEL_SVC_DOWNTIME:[alignak][ext_cmd]}|%{EC_DISABLE_CONTACT_HOST_NOTIFICATIONS:[alignak][ext_cmd]}|%{EC_DISABLE_CONTACT_SVC_NOTIFICATIONS:[alignak][ext_cmd]}|%{EC_DISABLE_EVENT_HANDLERS:[alignak][ext_cmd]}|%{EC_DISABLE_FLAP_DETECTION:[alignak][ext_cmd]}|%{EC_DISABLE_NOTIFICATIONS:[alignak][ext_cmd]}|%{EC_DISABLE_PASSIVE_HOST_CHECKS:[alignak][ext_cmd]}|%{EC_DISABLE_PASSIVE_SVC_CHECKS:[alignak][ext_cmd]}|%{EC_DISABLE_PERFORMANCE_DATA:[alignak][ext_cmd]}|%{EC_DISABLE_SERVICE_FRESHNESS_CHECKS:[alignak][ext_cmd]}|%{EC_ENABLE_EVENT_HANDLERS:[alignak][ext_cmd]}|%{EC_ENABLE_FLAP_DETECTION:[alignak][ext_cmd]}|%{EC_ENABLE_NOTIFICATIONS:[alignak][ext_cmd]}|%{EC_ENABLE_PASSIVE_HOST_CHECKS:[alignak][ext_cmd]}|%{EC_ENABLE_PASSIVE_SVC_CHECKS:[alignak][ext_cmd]}|%{EC_ENABLE_PERFORMANCE_DATA:[alignak][ext_cmd]}|%{EC_ENABLE_SERVICE_FRESHNESS_CHECKS:[alignak][ext_cmd]}|%{EC_DISABLE_HOST_CHECK:[alignak][ext_cmd]}|%{EC_DISABLE_HOST_EVENT_HANDLER:[alignak][ext_cmd]}|%{EC_DISABLE_HOST_FLAP_DETECTION:[alignak][ext_cmd]}|%{EC_DISABLE_HOST_FRESHNESS_CHECKS:[alignak][ext_cmd]}|%{EC_DISABLE_HOST_NOTIFICATIONS:[alignak][ext_cmd]}|%{EC_DISABLE_HOST_SVC_CHECKS:[alignak][ext_cmd]}|%{EC_DISABLE_HOST_SVC_NOTIFICATIONS:[alignak][ext_cmd]})%{GREEDYDATA:[alignak][ext_cmd_parameters]}
+ALIGNAK_EXTERNAL_COMMAND %{AT_EXTERNAL_COMMAND:[alignak][event]}: \[%{NUMBER:[alignak][extcmd_epoch]}\] (?:%{EC_PASSIVE_HOST_CHECK:[alignak][ext_cmd]}|%{EC_PASSIVE_SERVICE_CHECK:[alignak][ext_cmd]}|%{EC_ACKNOWLEDGE_HOST_PROBLEM:[alignak][ext_cmd]}|%{EC_ACKNOWLEDGE_HOST_PROBLEM_EXPIRE:[alignak][ext_cmd]}|%{EC_ACKNOWLEDGE_SVC_PROBLEM:[alignak][ext_cmd]}|%{EC_ACKNOWLEDGE_SVC_PROBLEM_EXPIRE:[alignak][ext_cmd]}|%{EC_ADD_HOST_COMMENT:[alignak][ext_cmd]}|%{EC_ADD_SVC_COMMENT:[alignak][ext_cmd]}|%{EC_DEL_ALL_HOST_COMMENTS:[alignak][ext_cmd]}|%{EC_DEL_ALL_SVC_COMMENTS:[alignak][ext_cmd]}|%{EC_DEL_HOST_COMMENT:[alignak][ext_cmd]}|%{EC_DEL_SVC_COMMENT:[alignak][ext_cmd]}|%{EC_DEL_HOST_DOWNTIME:[alignak][ext_cmd]}|%{EC_DEL_SVC_DOWNTIME:[alignak][ext_cmd]}|%{EC_DISABLE_CONTACT_HOST_NOTIFICATIONS:[alignak][ext_cmd]}|%{EC_DISABLE_CONTACT_SVC_NOTIFICATIONS:[alignak][ext_cmd]}|%{EC_DISABLE_EVENT_HANDLERS:[alignak][ext_cmd]}|%{EC_DISABLE_FLAP_DETECTION:[alignak][ext_cmd]}|%{EC_DISABLE_NOTIFICATIONS:[alignak][ext_cmd]}|%{EC_DISABLE_PASSIVE_HOST_CHECKS:[alignak][ext_cmd]}|%{EC_DISABLE_PASSIVE_SVC_CHECKS:[alignak][ext_cmd]}|%{EC_DISABLE_PERFORMANCE_DATA:[alignak][ext_cmd]}|%{EC_DISABLE_SERVICE_FRESHNESS_CHECKS:[alignak][ext_cmd]}|%{EC_ENABLE_EVENT_HANDLERS:[alignak][ext_cmd]}|%{EC_ENABLE_FLAP_DETECTION:[alignak][ext_cmd]}|%{EC_ENABLE_NOTIFICATIONS:[alignak][ext_cmd]}|%{EC_ENABLE_PASSIVE_HOST_CHECKS:[alignak][ext_cmd]}|%{EC_ENABLE_PASSIVE_SVC_CHECKS:[alignak][ext_cmd]}|%{EC_ENABLE_PERFORMANCE_DATA:[alignak][ext_cmd]}|%{EC_ENABLE_SERVICE_FRESHNESS_CHECKS:[alignak][ext_cmd]}|%{EC_DISABLE_HOST_CHECK:[alignak][ext_cmd]}|%{EC_DISABLE_HOST_EVENT_HANDLER:[alignak][ext_cmd]}|%{EC_DISABLE_HOST_FLAP_DETECTION:[alignak][ext_cmd]}|%{EC_DISABLE_HOST_FRESHNESS_CHECKS:[alignak][ext_cmd]}|%{EC_DISABLE_HOST_NOTIFICATIONS:[alignak][ext_cmd]}|%{EC_DISABLE_HOST_SVC_CHECKS:[alignak][ext_cmd]}|%{EC_DISABLE_HOST_SVC_NOTIFICATIONS:[alignak][ext_cmd]})%{GREEDYDATA:[alignak][ext_cmd_parameters]}
 ##################################################################################
 
 # Log format is:

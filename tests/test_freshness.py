@@ -181,22 +181,25 @@ class TestPassiveChecks(AlignakTest):
         with freeze_time(initial_datetime) as frozen_datetime:
             assert frozen_datetime() == initial_datetime
 
-            # Set last state update in the past...
-            host_a.last_state_update = int(time.time()) - 10000
-            host_b.last_state_update = int(time.time()) - 10000
-            host_c.last_state_update = int(time.time()) - 10000
-            host_d.last_state_update = int(time.time()) - 10000
-            host_e.last_state_update = int(time.time()) - 10000
+            now = int(time.time())
 
             # Set last state update in the past...
-            svc0.last_state_update = int(time.time()) - 10000
-            svc1.last_state_update = int(time.time()) - 10000
-            svc2.last_state_update = int(time.time()) - 10000
-            svc3.last_state_update = int(time.time()) - 10000
-            svc4.last_state_update = int(time.time()) - 10000
-            svc5.last_state_update = int(time.time()) - 10000
+            host_a.last_state_update = now - 10000
+            host_b.last_state_update = now - 10000
+            host_c.last_state_update = now - 10000
+            host_d.last_state_update = now - 10000
+            host_e.last_state_update = now - 10000
 
-            expiry_date = time.strftime("%Y-%m-%d %H:%M:%S %Z")
+            # Set last state update in the past...
+            svc0.last_state_update = now - 10000
+            svc1.last_state_update = now - 10000
+            svc2.last_state_update = now - 10000
+            svc3.last_state_update = now - 10000
+            svc4.last_state_update = now - 10000
+            svc5.last_state_update = now - 10000
+
+            # expiry_date = time.strftime("%Y-%m-%d %H:%M:%S %Z")
+            expiry_date = datetime.datetime.utcfromtimestamp(now).strftime("%Y-%m-%d %H:%M:%S %Z")
             self.scheduler_loop(1, [[host, 0, 'UP']])
 
             # Time warp 5 seconds
@@ -217,7 +220,15 @@ class TestPassiveChecks(AlignakTest):
 
             items = [svc0, svc1, svc2, svc3, svc4, host_a, host_b, host_c, host_d]
             for item in items:
-                assert "Freshness period expired: %s" % expiry_date == item.output
+                print("%s / %s" % (item.get_name(), item.output))
+            for item in items:
+                # Some have already been checked twice ...
+                if item.get_name() in ['test_host_C', 'test_svc_0']:
+                    assert "Freshness period expired: %s, last updated: %s" \
+                           % (expiry_date, expiry_date) == item.output
+                else:
+                    assert "Freshness period expired: %s" \
+                           % (expiry_date) == item.output
 
             self.assert_actions_count(0)    # No raised notifications
             self.assert_checks_count(2)  # test_host_0 and test_router_0

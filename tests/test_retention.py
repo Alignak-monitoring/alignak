@@ -80,9 +80,10 @@ class TestRetention(AlignakTest):
         :return: None
         """
         # Delete a potential existing retention file...
-        if os.path.exists('/tmp/alignak-retention-scheduler-master.json'):
-            os.remove('/tmp/alignak-retention-scheduler-master.json')
-
+        if os.path.exists('/tmp/test_host_0.json'):
+            os.remove('/tmp/test_host_0.json')
+        if os.path.exists('/tmp/test_router_0.json'):
+            os.remove('/tmp/test_router_0.json')
 
         self.setup_with_file('cfg/cfg_default_retention.cfg')
         self.show_logs()
@@ -254,12 +255,13 @@ class TestRetention(AlignakTest):
         ]
         self.check_monitoring_events_log(expected_logs)
         self.show_logs()
-        assert os.path.exists('/tmp/alignak-retention-scheduler-master.json')
-        with open('/tmp/alignak-retention-scheduler-master.json', "r") as fd:
+        assert os.path.exists('/tmp/test_host_0.json')
+        with open('/tmp/test_host_0.json', "r") as fd:
             retention_check = json.load(fd)
         pprint.pprint(retention_check)
-        for host_check in retention_check.values():
-            assert 'name' in host_check
+        assert 'name' in retention_check
+        assert retention_check['name'] == 'test_host_0'
+        assert os.path.exists('/tmp/test_router_0.json')
 
         # ************** test the restoration of retention ************** #
         # new conf

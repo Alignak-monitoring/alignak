@@ -132,6 +132,7 @@ class TestConfig(PropertiesTester, AlignakTest):
     without_default = []
 
     properties = dict([
+        ('forced_realms_hostgroups', True),
         ('program_start', 0),
         ('last_alive', 0),
         ('last_log_rotation', 0),
@@ -145,9 +146,9 @@ class TestConfig(PropertiesTester, AlignakTest):
         # ('passive_service_checks_enabled', True),
         # ('active_host_checks_enabled', True),
         # ('active_service_checks_enabled', True),
-        ('event_handlers_enabled', True),
+        # ('event_handlers_enabled', True),
         # ('flap_detection_enabled', True),
-        # ('notifications_enabled', False),
+        # ('notifications_enabled', True),
         ('daemon_mode', True),
         # ('instance_name', ''),
         ('instance_id', ''),
@@ -170,6 +171,7 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('config_files', []),
         ('command_file', ''),
         ('state_retention_file', ''),
+        ('state_retention_dir', ''),
         ('retention_update_interval', 0),
         ('use_syslog', False),
         ('log_notifications', True),

@@ -164,7 +164,7 @@ class Broker(BaseSatellite):
                 # so give me all dumb-ass!
                 if 'full_instance_id' in data:
                     c_id = data['full_instance_id']
-                    source = elt.source
+                    source = getattr(elt, 'source', getattr(elt, '_source', None))
                     logger.info('The module %s is asking me to get all initial data '
                                 'from the scheduler %d',
                                 source, c_id)
@@ -494,7 +494,7 @@ class Broker(BaseSatellite):
             now = time.time()
             # Do not 'manage' more than 0.8s, we must get new broks almost every second
             if now - start > 0.8:
-                logger.info("I did not managed all my broks, remaining %d broks...",
+                logger.info("I did not yet managed all my broks, still %d broks",
                             len(self.external_broks))
                 break
 
