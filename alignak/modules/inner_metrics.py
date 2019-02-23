@@ -673,6 +673,10 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
         else:
             path = '.'.join((hname, desc))
 
+        # Realm as a prefix
+        if self.realms_prefix and self.hosts_cache[host_name].get('realm_name', None):
+            path = '.'.join((self.hosts_cache[host_name].get('realm_name'), path))
+
         realm_name = None
         if host_name in self.hosts_cache:
             realm_name = self.hosts_cache[host_name].get('realm_name', None)
@@ -724,10 +728,6 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
         # Realm as a prefix
         if self.realms_prefix and self.hosts_cache[host_name].get('realm_name', None):
             path = '.'.join((self.hosts_cache[host_name].get('realm_name'), path))
-
-        # Graphite prefix
-        if self.graphite_prefix:
-            path = '.'.join((self.graphite_prefix, path))
 
         realm_name = None
         if host_name in self.hosts_cache:
