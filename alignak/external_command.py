@@ -583,7 +583,7 @@ class ExternalCommandManager(object):
             return cmd
 
         # If we are a receiver, bail out here... do not try to execute the command
-        if self.mode == 'receiver':
+        if self.mode == 'receiver' and not cmd.get('internal', False):
             return cmd
 
         if self.mode == 'applyer' and self.log_external_commands:
@@ -932,7 +932,10 @@ class ExternalCommandManager(object):
                     'error', "Arguments are not correct for the command: '%s'" % command))
         else:
             if len(args) == (len(entry['args']) - obsolete_arg):
-                return {'global': False, 'c_name': c_name, 'args': args}
+                return {
+                    'global': False, 'internal': internal,
+                    'c_name': c_name, 'args': args
+                }
 
             logger.warning("Sorry, the arguments for the command '%s' are not correct (%s)",
                            command, (args))
@@ -3353,6 +3356,7 @@ class ExternalCommandManager(object):
             logger.error("Cannot restart Alignak : missing command"
                          " named 'reload-alignak'. Please add one")
             return
+        logger.warning("RELOAD command : %s", reload_cmd)
         reload_cmd_line = reload_cmd.command_line
         logger.warning("RELOAD command : %s", reload_cmd_line)
 
