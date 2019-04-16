@@ -1875,10 +1875,10 @@ class Scheduler(object):  # pylint: disable=R0902
                      h.passive_checks_enabled and not h.active_checks_enabled]
             statsmgr.gauge('freshness.hosts-count', len(hosts))
             items.extend(hosts)
-            logger.info("Freshness check is enabled for %d hosts", len(hosts))
+            logger.debug("Freshness check is enabled for %d hosts", len(hosts))
 
             hosts = [h for h in self.hosts if h.check_freshness and h.freshness_expired]
-            logger.info("Freshness still expired for %d hosts", len(hosts))
+            logger.debug("Freshness still expired for %d hosts", len(hosts))
             for h in hosts:
                 h.last_chk = now
                 self.add(h.get_check_result_brok())
@@ -1902,11 +1902,11 @@ class Scheduler(object):  # pylint: disable=R0902
                         s.passive_checks_enabled and not s.active_checks_enabled]
             statsmgr.gauge('freshness.services-count', len(services))
             items.extend(services)
-            logger.info("Freshness check is enabled for %d services", len(services))
+            logger.debug("Freshness check is enabled for %d services", len(services))
 
             services = [s for s in self.services if not self.hosts[s.host].freshness_expired and
                         s.check_freshness and s.freshness_expired]
-            logger.info("Freshness still expired for %d services", len(services))
+            logger.debug("Freshness still expired for %d services", len(services))
             for s in services:
                 s.last_chk = now
                 self.add(s.get_check_result_brok())
