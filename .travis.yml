@@ -20,6 +20,9 @@ install:
 
 script:
   - echo "Starting tests '$TEST_SUITE' ..."
+  if [ "$TRAVIS_PULL_REQUEST" != "false" ] ; then
+  # hey that's a pull request
+  fi
   - |
     # Run tests suite with code coverage analysis
     cd $TEST_SUITE

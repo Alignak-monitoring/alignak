@@ -1756,6 +1756,8 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                   u"-----",
                   u"Python: %s.%s" % (sys.version_info.major, sys.version_info.minor),
                   u"-----",
+                  u"Python: %s" % sys.version,
+                  u"-----",
                   u"My pid: %s" % self.pid]
 
         if configuration:

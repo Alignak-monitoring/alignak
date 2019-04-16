@@ -1,0 +1,155 @@
+version: '3.4'
+
+services:
+  # Alignak daemons
+  # - arbiter
+  arbiter:
+    image: alignak
+    build:
+      context: .
+      args:
+        ALIGNAK_SHARE_DIR: /alignak
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "7770:7770"
+    volumes:
+      - ${ALIGNAK_DATADIR}:/alignak
+    command: "alignak-arbiter -e ${ALIGNAK_CONFIGURATION_FILE}"
+
+  # - scheduler
+  scheduler-master:
+    image: alignak
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "7768:7768"
+    volumes:
+      - ${ALIGNAK_DATADIR}:/alignak
+    command: "alignak-scheduler -e ${ALIGNAK_CONFIGURATION_FILE} -n scheduler-master"
+
+  scheduler-master2:
+    image: alignak
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "17768:7768"
+    volumes:
+      - ${ALIGNAK_DATADIR}:/alignak
+    command: "alignak-scheduler -e ${ALIGNAK_CONFIGURATION_FILE} -n scheduler-master2"
+
+  # - reactionner
+  reactionner-master:
+    image: alignak
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "7769:7769"
+    volumes:
+      - ${ALIGNAK_DATADIR}:/alignak
+    command: "alignak-reactionner -e ${ALIGNAK_CONFIGURATION_FILE} -n reactionner-master"
+
+  # - poller
+  poller-master:
+    image: alignak
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "7771:7771"
+    volumes:
+      - ${ALIGNAK_DATADIR}:/alignak
+    command: "alignak-poller -e ${ALIGNAK_CONFIGURATION_FILE} -n poller-master"
+
+  # - broker
+  broker-master:
+    image: alignak
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "7772:7772"
+      - "7767:7767"
+    volumes:
+      - ${ALIGNAK_DATADIR}:/alignak:rw
+    command: "alignak-broker -vv -e ${ALIGNAK_CONFIGURATION_FILE} -n broker-master"
+
+  # - receiver
+  receiver-master:
+    image: alignak
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "7773:7773"
+    volumes:
+      - ${ALIGNAK_DATADIR}:/alignak
+    command: "alignak-receiver -e ${ALIGNAK_CONFIGURATION_FILE} -n receiver-master"
+
+  graphite:
+    # See: https://hub.docker.com/r/graphiteapp/docker-graphite-statsd
+    image: graphiteapp/graphite-statsd:latest
+    restart:
+      always
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "8000:80"
+      - "2003-2004:2003-2004"
+      - "2023-2024:2023-2024"
+      - "8125:8125/udp"
+      - "8126:8126"
+    volumes:
+      - ${GRAPHITE_DATADIR}/graphite-conf:/opt/graphite/conf
+      - ${GRAPHITE_DATADIR}/statsd-conf:/opt/statsd/config
+      - ${GRAPHITE_DATADIR}/log:/var/log
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "3"
+
+  mongodb:
+    image: mongo:4.0
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - alignak
+    volumes:
+      - ${MONGO_DATADIR}/db:/data/db
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "3"
+
+  # Mongo Express, UI for MongoDB
+  mongoexpress:
+    image: mongo-express
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "8081:8081"
+
+networks:
+  alignak:
+  default:
+    external:
+      name: ${PROXY_NETWORK}

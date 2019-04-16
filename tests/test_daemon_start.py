@@ -52,7 +52,6 @@
 
 
 import os
-import sys
 import time
 import socket
 import tempfile
@@ -410,7 +409,7 @@ class template_Daemon_Start():
             u"-----",
             u"My pid: %s" % daemon.pid
         ]
-        assert daemon.get_header()[:15] == expected_result
+        assert daemon.get_header()[:7] == expected_result
 
     def test_daemon_environment(self):
         """ Test daemon environment variables
