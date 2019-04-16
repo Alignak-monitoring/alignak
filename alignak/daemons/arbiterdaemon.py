@@ -1013,7 +1013,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     # Ignore myself ;)
                     continue
 
-                if satellite.address not in ['127.0.0.1', 'localhost']:
+                if satellite.alignak_launched and satellite.address not in ['127.0.0.1', 'localhost']:
                     logger.error("Alignak is required to launch a daemon for %s %s "
                                  "but the satelitte is defined on an external address: %s",
                                  satellite.type, satellite.name, satellite.address)
