@@ -238,7 +238,10 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
             logger.info(" the module is disabled.")
             return True
 
-        connections = self.test_connection()
+        try:
+            connections = self.test_connection()
+        except Exception as exp:  # pylint: disable=broad-except
+            logger.error("initialization, test connection failed. Error: %s", str(exp))
 
         if self.influxdb_enabled:
             try:
@@ -286,7 +289,7 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
 
                 connections = connections or True
             except Exception as exp:  # pylint: disable=broad-except
-                logger.error("DB / replication creation failed. Error: %s", str(exp))
+                logger.error("InfluxDB, DB initialization failed. Error: %s", str(exp))
 
         return connections
 
