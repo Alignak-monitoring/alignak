@@ -1875,7 +1875,7 @@ class Scheduler(object):  # pylint: disable=R0902
                      h.passive_checks_enabled and not h.active_checks_enabled]
             statsmgr.gauge('freshness.hosts-count', len(hosts))
             items.extend(hosts)
-            logger.debuginfo("Freshness check is enabled for %d hosts", len(hosts))
+            logger.debug("Freshness check is enabled for %d hosts", len(hosts))
 
             hosts = [h for h in self.hosts if h.check_freshness and h.freshness_expired]
             logger.debug("Freshness still expired for %d hosts", len(hosts))

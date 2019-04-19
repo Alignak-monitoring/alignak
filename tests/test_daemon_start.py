@@ -52,6 +52,7 @@
 
 
 import os
+import sys
 import time
 import socket
 import tempfile
@@ -397,14 +398,23 @@ class template_Daemon_Start():
         """
         daemon = self.get_daemon()
         expected_result = [
-            "-----",
-            "Alignak %s - %s daemon" % (VERSION, daemon.name),
-            "Copyright (c) 2015-2018: Alignak Team",
-            "License: AGPL",
-            "-----",
-            "My pid: %s" % daemon.pid
+            u"-----",
+            u"   █████╗ ██╗     ██╗ ██████╗ ███╗   ██╗ █████╗ ██╗  ██╗",
+            u"  ██╔══██╗██║     ██║██╔════╝ ████╗  ██║██╔══██╗██║ ██╔╝",
+            u"  ███████║██║     ██║██║  ███╗██╔██╗ ██║███████║█████╔╝ ",
+            u"  ██╔══██║██║     ██║██║   ██║██║╚██╗██║██╔══██║██╔═██╗ ",
+            u"  ██║  ██║███████╗██║╚██████╔╝██║ ╚████║██║  ██║██║  ██╗",
+            u"  ╚═╝  ╚═╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═╝",
+            u"-----",
+            u"Alignak %s - %s daemon" % (VERSION, daemon.name),
+            u"Copyright (c) 2015-2019: Alignak Team",
+            u"License: AGPL",
+            u"-----",
+            u"Python: %s" % sys.version,
+            u"-----",
+            u"My pid: %s" % daemon.pid
         ]
-        assert daemon.get_header()[:7] == expected_result
+        assert daemon.get_header()[:14] == expected_result
 
     def test_daemon_environment(self):
         """ Test daemon environment variables
