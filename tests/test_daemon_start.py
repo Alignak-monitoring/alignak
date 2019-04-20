@@ -414,7 +414,7 @@ class template_Daemon_Start():
             u"-----",
             u"My pid: %s" % daemon.pid
         ]
-        assert daemon.get_header()[:14] == expected_result
+        assert daemon.get_header()[:10] == expected_result
 
     def test_daemon_environment(self):
         """ Test daemon environment variables
