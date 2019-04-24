@@ -72,7 +72,7 @@ class TestInheritanceAndPlus(AlignakTest):
         # common objects
         tp_24x7 = self._sched.timeperiods.find_by_name("24x7")
         tp_none = self._sched.timeperiods.find_by_name("none")
-        tptest = self._sched.timeperiods.find_by_name("testperiod")
+        tp_work = self._sched.timeperiods.find_by_name("work")
         cgtest = self._sched.contactgroups.find_by_name("test_contact")
         cgadm = self._sched.contactgroups.find_by_name("admins")
         cmdsvc = self._sched.commands.find_by_name("check_service")
@@ -80,7 +80,7 @@ class TestInheritanceAndPlus(AlignakTest):
 
         # Checks we got the objects we need
         assert tp_24x7 is not None
-        assert tptest is not None
+        assert tp_work is not None
         assert cgtest is not None
         assert cgadm is not None
         assert cmdsvc is not None
@@ -116,9 +116,11 @@ class TestInheritanceAndPlus(AlignakTest):
         hst1 = self._sched.hosts.find_by_name("test_host_01")
         assert hst1 is not None
         assert hst1.tags == set(['generic-host', 'srv'])
+        assert hst1.check_period == tp_none.uuid
 
         hst2 = self._sched.hosts.find_by_name("test_host_02")
         assert hst2 is not None
+        assert hst2.check_period == tp_work.uuid
 
         # Services
         # svc1 = self._sched.services.find_by_name("test_host_01/srv-svc")

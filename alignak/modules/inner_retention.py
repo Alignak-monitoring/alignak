@@ -84,7 +84,7 @@ class InnerRetention(BaseModule):
         logger.setLevel(getattr(mod_conf, 'log_level', logging.INFO))
 
         logger.debug("inner properties: %s", self.__dict__)
-        logger.info("received configuration: %s", mod_conf.__dict__)
+        logger.debug("received configuration: %s", mod_conf.__dict__)
 
         logger.info("loaded by the %s '%s'", self.my_daemon.type, self.my_daemon.name)
 

@@ -1330,6 +1330,10 @@ def parse_daemon_args(arbiter=False):
     parser.add_argument('-l', '--log_file', dest='log_filename',
                         help='File used for the daemon log. Set as empty to disable log file.')
 
+    parser.add_argument('-Lm', '--log_level', dest='log_level',
+                        help='Log level: DEBUG, INFO, WARNING, ERROR or CRITICAL. '
+                             'Overrides the -v and -vv options.')
+
     parser.add_argument('-i', '--pid_file', dest='pid_filename',
                         help='File used to store the daemon pid')
 

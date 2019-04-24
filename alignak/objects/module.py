@@ -165,11 +165,11 @@ class Module(Item):
 
         self.fill_default()
 
-        # Remove extra Item base class properties...
-        for prop in ['customs', 'plus', 'downtimes', 'old_properties',
-                     'configuration_errors', 'configuration_warnings']:
-            if getattr(self, prop, None):
-                delattr(self, prop)
+        # # Remove extra Item base class properties...
+        # for prop in ['customs', 'plus', 'downtimes', 'old_properties',
+        #              'configuration_errors', 'configuration_warnings']:
+        #     if getattr(self, prop, None):
+        #         delattr(self, prop)
 
     def __repr__(self):  # pragma: no cover
         return '<%r %r, module: %r, type(s): %r />' % \

@@ -449,8 +449,8 @@ class Scheduler(object):  # pylint: disable=R0902
             logger.debug("Scheduler '%s' got %d commands", self.name, len(cmds))
             for command in cmds:
                 self.external_commands_manager.resolve_command(ExternalCommand(command))
-            statsmgr.counter('external_commands.got.count', len(cmds))
-            statsmgr.timer('external_commands.got.time', time.time() - _t0)
+            statsmgr.counter('external-commands.got.count', len(cmds))
+            statsmgr.timer('external-commands.got.time', time.time() - _t0)
         except Exception as exp:  # pylint: disable=broad-except
             logger.warning("External command parsing error: %s", exp)
             logger.warning("Exception: %s / %s", str(exp), traceback.print_exc())
@@ -1875,8 +1875,10 @@ class Scheduler(object):  # pylint: disable=R0902
                      h.passive_checks_enabled and not h.active_checks_enabled]
             statsmgr.gauge('freshness.hosts-count', len(hosts))
             items.extend(hosts)
+            logger.debug("Freshness check is enabled for %d hosts", len(hosts))
 
             hosts = [h for h in self.hosts if h.check_freshness and h.freshness_expired]
+            logger.debug("Freshness still expired for %d hosts", len(hosts))
             for h in hosts:
                 h.last_chk = now
                 self.add(h.get_check_result_brok())
@@ -1900,9 +1902,11 @@ class Scheduler(object):  # pylint: disable=R0902
                         s.passive_checks_enabled and not s.active_checks_enabled]
             statsmgr.gauge('freshness.services-count', len(services))
             items.extend(services)
+            logger.debug("Freshness check is enabled for %d services", len(services))
 
             services = [s for s in self.services if not self.hosts[s.host].freshness_expired and
                         s.check_freshness and s.freshness_expired]
+            logger.debug("Freshness still expired for %d services", len(services))
             for s in services:
                 s.last_chk = now
                 self.add(s.get_check_result_brok())
@@ -1917,6 +1921,7 @@ class Scheduler(object):  # pylint: disable=R0902
         statsmgr.timer('freshness.items-list', time.time() - _t0)
 
         if not items:
+            logger.debug("No freshness enabled item.")
             return
 
         _t0 = time.time()
@@ -1929,6 +1934,7 @@ class Scheduler(object):  # pylint: disable=R0902
                 self.add(chk)
                 self.waiting_results.put(chk)
                 raised_checks += 1
+        logger.info("Raised %d checks for freshness", raised_checks)
         statsmgr.gauge('freshness.raised-checks', raised_checks)
         statsmgr.timer('freshness.do-check', time.time() - _t0)
 

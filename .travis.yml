@@ -38,6 +38,7 @@ notifications:
 jobs:
   include:
     - stage: Coding standard
+      python: 3.5
       script:
         # Static code analysis
         # -- pycodestyle (former pep8)
