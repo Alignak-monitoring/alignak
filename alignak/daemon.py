@@ -659,6 +659,10 @@ class Daemon(object):
                 self.log_cherrypy = None
             self.log_filename = ''
 
+        # Log level...
+        if 'log_level' in kwargs and kwargs['log_level']:
+            self.log_level = PathProp().pythonize(kwargs['log_level'].strip())
+
         # pid file is stored in the working directory
         self.pid = os.getpid()
         self.pid_filename = PathProp().pythonize("%s.pid" % self.name)
@@ -1751,12 +1755,21 @@ class Daemon(object):
         :return: A string list containing project name, daemon name, version, licence etc.
         :rtype: list
         """
-        header = ["-----",
-                  "Alignak %s - %s daemon" % (VERSION, self.name),
-                  "Copyright (c) 2015-2018: Alignak Team",
-                  "License: AGPL",
-                  "-----",
-                  "My pid: %s" % self.pid]
+        header = [u"-----",
+                  u"   █████╗ ██╗     ██╗ ██████╗ ███╗   ██╗ █████╗ ██╗  ██╗",
+                  u"  ██╔══██╗██║     ██║██╔════╝ ████╗  ██║██╔══██╗██║ ██╔╝",
+                  u"  ███████║██║     ██║██║  ███╗██╔██╗ ██║███████║█████╔╝ ",
+                  u"  ██╔══██║██║     ██║██║   ██║██║╚██╗██║██╔══██║██╔═██╗ ",
+                  u"  ██║  ██║███████╗██║╚██████╔╝██║ ╚████║██║  ██║██║  ██╗",
+                  u"  ╚═╝  ╚═╝╚══════╝╚═╝ ╚═════╝ ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝  ╚═╝",
+                  u"-----",
+                  u"Alignak %s - %s daemon" % (VERSION, self.name),
+                  u"Copyright (c) 2015-2019: Alignak Team",
+                  u"License: AGPL",
+                  u"-----",
+                  u"Python: %s.%s" % (sys.version_info.major, sys.version_info.minor),
+                  u"-----",
+                  u"My pid: %s" % self.pid]
 
         if configuration:
             header = ["My configuration: "]
@@ -2184,6 +2197,12 @@ class Daemon(object):
                 set_log_level('INFO')
                 logger.info("-----")
                 logger.info("Daemon log level set to a minimum of INFO")
+                logger.info("-----")
+            elif self.log_level:
+                # Force the global logger at provided level
+                set_log_level(self.log_level)
+                logger.info("-----")
+                logger.info("Daemon log level set to %s", self.log_level)
                 logger.info("-----")
         except Exception as exp:  # pylint: disable=broad-except
             print("***** %s - exception when setting-up the logger: %s" % (self.name, exp))
