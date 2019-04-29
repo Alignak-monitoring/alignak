@@ -150,31 +150,36 @@ class TestModules(AlignakTest):
         assert self.conf_is_correct
         self.show_configuration_logs()
 
-        # arbiter modules
-        modules = [m.module_alias for m in self._arbiter.link_to_myself.modules]
-        assert modules == ['Example']
-        modules = [m.name for m in self._arbiter.link_to_myself.modules]
+        # All modules
+        modules = [m.module_alias for m in self._arbiter.conf.modules]
+        print("All modules: %s", modules)
+        # Confirm that the extra modules are present in the configuration
+        assert 'composite' in modules
+        assert 'part-A' in modules
+        assert 'part-B' in modules
+
+        test_module = [m for m in self._arbiter.conf.modules if m.module_alias == 'composite'][0]
+        part_a_module = [m for m in self._arbiter.conf.modules if m.module_alias == 'part-A'][0]
+        part_b_module = [m for m in self._arbiter.conf.modules if m.module_alias == 'part-B'][0]
+        print("Composite module: %s" % test_module.__dict__)
+        assert test_module.modules == [part_a_module.uuid, part_b_module.uuid]
+
+        # Find the new broker
+        broker_master = [b for b in self._arbiter.conf.brokers if b.get_name() == 'broker-master'][0]
+        print("Broker master modules: %s" % broker_master.modules)
+        modules = [m.module_alias for m in broker_master.modules]
         assert modules == ['Example']
 
-        # broker modules
-        modules = [m.module_alias for m in self._broker_daemon.modules]
-        assert modules == ['Example']
-        modules = [m.name for m in self._broker_daemon.modules]
-        assert modules == ['Example']
+        new_broker = [b for b in self._arbiter.conf.brokers if b.get_name() == 'broker-master-second'][0]
+        print("Broker second modules: %s" % new_broker.modules)
+        modules = [m.module_alias for m in new_broker.modules]
+        assert modules == ['composite']
 
-        # # The only existing poller module is Example declared in the configuration
-        # modules = [m.module_alias for m in self.pollers['poller-master'].modules]
-        # assert modules == ['Example']
-        #
-        # # The only existing receiver module is Example declared in the configuration
-        # modules = [m.module_alias for m in self.receivers['receiver-master'].modules]
-        # assert modules == ['Example']
-        #
-        # # The only existing reactionner module is Example declared in the configuration
-        # modules = [m.module_alias for m in self.reactionners['reactionner-master'].modules]
-        # assert modules == ['Example']
+        composite_module = new_broker.modules[0]
+        print("Sub modules: %s" % composite_module.modules)
+        assert len(composite_module.modules) == 2
 
-        # No scheduler modules created
+        # Scheduler modules created
         modules = [m.module_alias for m in self._scheduler_daemon.modules]
         assert modules == ['Example', 'inner-retention']
         modules = [m.name for m in self._scheduler_daemon.modules]
