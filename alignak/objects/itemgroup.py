@@ -55,7 +55,7 @@
 This module provide Itemgroup and Itemgroups class used to define group of items
 """
 from alignak.objects.item import Item, Items
-from alignak.property import ListProp
+from alignak.property import ListProp, FULL_STATUS
 
 
 class Itemgroup(Item):
@@ -69,7 +69,7 @@ class Itemgroup(Item):
     properties = Item.properties.copy()
     properties.update({
         'members':
-            ListProp(default=[], fill_brok=['full_status'], split_on_comma=True)
+            ListProp(default=[], fill_brok=[FULL_STATUS], split_on_comma=True)
     })
 
     running_properties = Item.running_properties.copy()

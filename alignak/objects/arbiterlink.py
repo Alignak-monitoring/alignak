@@ -49,9 +49,9 @@ import logging
 import socket
 
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
-from alignak.property import IntegerProp, StringProp, FloatProp
-from alignak.http.client import HTTPClientException, HTTPClientConnectionException, \
-    HTTPClientTimeoutException
+from alignak.property import IntegerProp, StringProp, FloatProp, FULL_STATUS
+from alignak.http.client import (HTTPClientException, HTTPClientConnectionException,
+                                 HTTPClientTimeoutException)
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -65,9 +65,9 @@ class ArbiterLink(SatelliteLink):
     properties = SatelliteLink.properties.copy()
     properties.update({
         'type':
-            StringProp(default=u'arbiter', fill_brok=['full_status'], to_send=True),
+            StringProp(default=u'arbiter', fill_brok=[FULL_STATUS], to_send=True),
         'arbiter_name':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default='', fill_brok=[FULL_STATUS]),
         'host_name':
             StringProp(default=socket.gethostname(), to_send=True),
         'port':

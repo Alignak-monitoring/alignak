@@ -65,8 +65,8 @@ handle downtime, problems / acknowledgment etc.
 The major part of monitoring "intelligence" is in this module.
 
 """
-# pylint: disable=C0302
-# pylint: disable=R0904
+# pylint: disable=too-many-lines
+# pylint: disable=too-many-public-methods
 import time
 from datetime import datetime
 import os
@@ -80,9 +80,10 @@ from six import string_types
 from alignak.objects.item import Item
 from alignak.macroresolver import MacroResolver
 
-from alignak.action import ACT_STATUS_SCHEDULED, ACT_STATUS_POLLED, \
-    ACT_STATUS_TIMEOUT, ACT_STATUS_ZOMBIE, ACT_STATUS_WAIT_CONSUME, \
-    ACT_STATUS_WAIT_DEPEND, ACT_STATUS_WAITING_ME
+from alignak.action import (ACT_STATUS_SCHEDULED, ACT_STATUS_POLLED,
+                            ACT_STATUS_TIMEOUT, ACT_STATUS_ZOMBIE,
+                            ACT_STATUS_WAIT_CONSUME, ACT_STATUS_WAIT_DEPEND,
+                            ACT_STATUS_WAITING_ME)
 from alignak.external_command import ExternalCommand
 from alignak.check import Check
 from alignak.notification import Notification
@@ -95,6 +96,7 @@ from alignak.stats import statsmgr
 from alignak.misc.serialization import unserialize
 from alignak.acknowledge import Acknowledge
 from alignak.log import make_monitoring_log
+from alignak.property import FULL_STATUS
 
 # Multiplier for the maximum count of broks, checks and actions
 MULTIPLIER_MAX_CHECKS = 5
@@ -104,7 +106,7 @@ MULTIPLIER_MAX_ACTIONS = 5
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class Scheduler(object):  # pylint: disable=R0902
+class Scheduler(object):  # pylint: disable=too-many-instance-attributes
     """Scheduler class. Mostly handle scheduling items (host service) to schedule checks
     raise alerts, manage downtimes, etc."""
 
@@ -1587,7 +1589,7 @@ class Scheduler(object):  # pylint: disable=R0902
         cls = self.pushed_conf.__class__
         for prop, entry in list(cls.properties.items()):
             # Is this property intended for broking?
-            if 'full_status' not in entry.fill_brok:
+            if FULL_STATUS not in entry.fill_brok:
                 continue
             data['_config'][prop] = self.pushed_conf.get_property_value_for_brok(
                 prop, cls.properties)
@@ -1721,7 +1723,7 @@ class Scheduler(object):  # pylint: disable=R0902
             if not elt.maintenance_period:
                 continue
 
-            if elt.in_maintenance == -1:
+            if not elt.in_maintenance:
                 timeperiod = self.timeperiods[elt.maintenance_period]
                 if timeperiod.is_time_valid(now):
                     start_dt = timeperiod.get_next_valid_time_from_t(now)
@@ -1742,7 +1744,7 @@ class Scheduler(object):  # pylint: disable=R0902
             else:
                 if elt.in_maintenance not in elt.downtimes:
                     # the main downtimes has expired or was manually deleted
-                    elt.in_maintenance = -1
+                    elt.in_maintenance = ''
 
         #  Check the validity of contact downtimes
         for elt in self.contacts:

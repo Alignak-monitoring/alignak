@@ -128,7 +128,7 @@ from alignak.daterange import Daterange, CalendarDaterange
 from alignak.daterange import StandardDaterange, MonthWeekDayDaterange
 from alignak.daterange import MonthDateDaterange, WeekDayDaterange
 from alignak.daterange import MonthDayDaterange
-from alignak.property import IntegerProp, StringProp, ListProp, BoolProp
+from alignak.property import IntegerProp, StringProp, ListProp, BoolProp, FULL_STATUS
 from alignak.log import make_monitoring_log
 from alignak.misc.serialization import get_alignak_class
 from alignak.util import merge_periods
@@ -147,9 +147,9 @@ class Timeperiod(Item):
     properties = Item.properties.copy()
     properties.update({
         'timeperiod_name':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'alias':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'use':
             ListProp(default=[]),
         'register':
@@ -157,13 +157,13 @@ class Timeperiod(Item):
 
         # These are needed if a broker module calls methods on timeperiod objects
         'dateranges':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         'exclude':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         'unresolved':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         'invalid_entries':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         'is_active':
             BoolProp(default=False),
         'activated_once':

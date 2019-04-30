@@ -54,7 +54,8 @@ class TestHostExtended(AlignakTest):
     def setUp(self):
         super(TestHostExtended, self).setUp()
 
-        self.setup_with_file('cfg/extended/extended_info.cfg')
+        self.setup_with_file('cfg/extended/extended_info.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
         self._sched = self._scheduler
 

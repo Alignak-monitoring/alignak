@@ -328,7 +328,7 @@ class Broker(BaseSatellite):
                     new_link = SatelliteLink.get_a_satellite_link(link_type[:-1],
                                                                   rs_conf)
                     my_satellites[new_link.uuid] = new_link
-                    logger.info("I got a new %s satellite: %s", link_type[:-1], new_link)
+                    logger.info("I got a new %s satellite: %s", link_type[:-1], new_link.name)
 
                     new_link.running_id = running_id
                     new_link.external_commands = external_commands
@@ -350,7 +350,7 @@ class Broker(BaseSatellite):
                     logger.error('Cannot un-serialize modules configuration '
                                  'received from arbiter: %s', exp)
                 if self.modules:
-                    logger.info("I received some modules configuration: %s", self.modules)
+                    logger.info("I received some modules configuration")
                     self.have_modules = True
 
                     # Ok now start, or restart them!

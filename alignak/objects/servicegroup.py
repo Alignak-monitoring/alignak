@@ -52,7 +52,7 @@ This module provide Servicegroup and Servicegroups classes used to group service
 """
 import logging
 
-from alignak.property import StringProp, ListProp
+from alignak.property import StringProp, ListProp, FULL_STATUS
 from .itemgroup import Itemgroup, Itemgroups
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -70,17 +70,17 @@ class Servicegroup(Itemgroup):
     properties = Itemgroup.properties.copy()
     properties.update({
         'servicegroup_name':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'alias':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'servicegroup_members':
-            ListProp(default=[], fill_brok=['full_status'], merging='join', split_on_comma=True),
+            ListProp(default=[], fill_brok=[FULL_STATUS], merging='join', split_on_comma=True),
         'notes':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'notes_url':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'action_url':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
     })
 
     macros = {

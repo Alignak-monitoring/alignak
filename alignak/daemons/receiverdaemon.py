@@ -171,7 +171,7 @@ class Receiver(Satellite):
                     logger.error('Cannot un-serialize modules configuration '
                                  'received from arbiter: %s', exp)
                 if self.modules:
-                    logger.info("I received some modules configuration: %s", self.modules)
+                    logger.info("I received some modules configuration")
                     self.have_modules = True
 
                     self.do_load_modules(self.modules)

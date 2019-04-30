@@ -62,21 +62,21 @@ class TestPropertyOverride(AlignakTest):
 
     def test_service_property_override(self):
         """ Property override """
-        svc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "srv-svc")
-        svc2 = self._sched.services.find_srv_by_name_and_hostname("test_host_02", "srv-svc")
-        svc1proc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "proc proc1")
-        svc1proc2 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "proc proc2")
-        svc2proc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_02", "proc proc1")
-        svc2proc2 = self._sched.services.find_srv_by_name_and_hostname("test_host_02", "proc proc2")
-        tp24x7 = self._sched.timeperiods.find_by_name("24x7")
-        tp_none = self._sched.timeperiods.find_by_name("none")
-        tptest = self._sched.timeperiods.find_by_name("testperiod")
-        cgtest = self._sched.contactgroups.find_by_name("test_contact")
-        cgadm = self._sched.contactgroups.find_by_name("admins")
-        cmdsvc = self._sched.commands.find_by_name("check_service")
-        cmdtest = self._sched.commands.find_by_name("dummy_command")
-        svc12 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "srv-svc2")
-        svc22 = self._sched.services.find_srv_by_name_and_hostname("test_host_02", "srv-svc2")
+        svc1 = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_01", "srv-svc")
+        svc2 = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_02", "srv-svc")
+        svc1proc1 = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_01", "proc proc1")
+        svc1proc2 = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_01", "proc proc2")
+        svc2proc1 = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_02", "proc proc1")
+        svc2proc2 = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_02", "proc proc2")
+        tp24x7 = self._arbiter.conf.timeperiods.find_by_name("24x7")
+        tp_none = self._arbiter.conf.timeperiods.find_by_name("none")
+        tptest = self._arbiter.conf.timeperiods.find_by_name("testperiod")
+        cgtest = self._arbiter.conf.contactgroups.find_by_name("test_contact")
+        cgadm = self._arbiter.conf.contactgroups.find_by_name("admins")
+        cmdsvc = self._arbiter.conf.commands.find_by_name("check_service")
+        cmdtest = self._arbiter.conf.commands.find_by_name("dummy_command")
+        svc12 = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_01", "srv-svc2")
+        svc22 = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_02", "srv-svc2")
 
         # Checks we got the objects we need
         assert svc1 is not None
@@ -97,11 +97,11 @@ class TestPropertyOverride(AlignakTest):
         # Check non overriden properies value
         for svc in (svc1, svc1proc1, svc1proc2, svc2proc1, svc12):
             assert ["test_contact"] == svc.contact_groups
-            assert self._sched.timeperiods[tp24x7.uuid].get_name() == \
-                             self._sched.timeperiods[svc.maintenance_period].get_name()
+            assert self._arbiter.conf.timeperiods[tp24x7.uuid].get_name() == \
+                   self._arbiter.conf.timeperiods[svc.maintenance_period].get_name()
             assert 1 == svc.retry_interval
-            assert self._sched.commands[cmdsvc.uuid] is \
-                          self._sched.commands[svc.check_command.command.uuid]
+            assert self._arbiter.conf.commands[cmdsvc.uuid] is \
+                   self._arbiter.conf.commands[svc.check_command.command.uuid]
             # The list may not be in this order!
             # assert ["w", "u", "x", "c", "r", "f", "s"] == svc.notification_options
             assert 7 == len(svc.notification_options)
@@ -117,11 +117,11 @@ class TestPropertyOverride(AlignakTest):
         # Check overriden properies value
         for svc in (svc2, svc2proc2, svc22):
             assert ["admins"] == svc.contact_groups
-            assert self._sched.timeperiods[tptest.uuid].get_name() == \
-                             self._sched.timeperiods[svc.maintenance_period].get_name()
+            assert self._arbiter.conf.timeperiods[tptest.uuid].get_name() == \
+                   self._arbiter.conf.timeperiods[svc.maintenance_period].get_name()
             assert 3 == svc.retry_interval
-            assert self._sched.commands[cmdtest.uuid] is \
-                          self._sched.commands[svc.check_command.command.uuid]
+            assert self._arbiter.conf.commands[cmdtest.uuid] is \
+                   self._arbiter.conf.commands[svc.check_command.command.uuid]
             assert ["c","r"] == svc.notification_options
             assert False is svc.notifications_enabled
 

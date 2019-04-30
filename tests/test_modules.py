@@ -75,7 +75,8 @@ class TestModules(AlignakTest):
         :return:
         """
         self.setup_with_file('cfg/cfg_default_with_modules.cfg',
-                             'cfg/default_with_modules/alignak.ini')
+                             'cfg/default_with_modules/alignak.ini',
+                             dispatching=True)
         assert self.conf_is_correct
         self.show_configuration_logs()
         self.show_logs()
@@ -146,7 +147,8 @@ class TestModules(AlignakTest):
         Check that the feature is detected as disabled
         :return:
         """
-        self.setup_with_file('cfg/modules/alignak_module_with_submodules.cfg')
+        self.setup_with_file('cfg/modules/alignak_module_with_submodules.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
         self.show_configuration_logs()
 
@@ -187,7 +189,8 @@ class TestModules(AlignakTest):
         :return:
         """
         self.setup_with_file('cfg/cfg_default_with_modules.cfg',
-                             'cfg/default_with_modules/alignak.ini')
+                             'cfg/default_with_modules/alignak.ini',
+                             dispatching=True)
         assert self.conf_is_correct
 
         # Create an Alignak module
@@ -205,7 +208,8 @@ class TestModules(AlignakTest):
         :return:
         """
         self.setup_with_file('cfg/cfg_default_with_modules.cfg',
-                             'cfg/default_with_modules/alignak.ini')
+                             'cfg/default_with_modules/alignak.ini',
+                             dispatching=True)
         assert self.conf_is_correct
 
         # Create an Alignak module
@@ -495,7 +499,8 @@ class TestModules(AlignakTest):
         :return:
         """
         self.setup_with_file('cfg/cfg_default_with_modules.cfg',
-                             'cfg/default_with_modules/alignak.ini')
+                             'cfg/default_with_modules/alignak.ini',
+                             dispatching=True)
         assert self.conf_is_correct
 
         # for mod in self._arbiter.conf.modules:

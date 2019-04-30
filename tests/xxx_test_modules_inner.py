@@ -121,7 +121,8 @@ class TestInnerModules(AlignakTest):
             with open('%s/etc/alignak.cfg' % self.cfg_folder, "a") as modified:
                 modified.write("retain_state_information=1\n\nstate_retention_file=/tmp/retention.json")
 
-        self.setup_with_file(env_file='%s/etc/alignak.ini' % self.cfg_folder)
+        self.setup_with_file(env_file='%s/etc/alignak.ini' % self.cfg_folder,
+                             dispatching=True)
         assert self.conf_is_correct
         self.show_configuration_logs()
 

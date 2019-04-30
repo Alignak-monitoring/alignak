@@ -48,11 +48,9 @@ class TestMaintenancePeriod(AlignakTest):
     """
     def setUp(self):
         super(TestMaintenancePeriod, self).setUp()
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
-
-        # Our scheduler
-        self._sched = self._scheduler
 
         # No error messages
         assert len(self.configuration_errors) == 0
@@ -61,11 +59,11 @@ class TestMaintenancePeriod(AlignakTest):
 
     def test_maintenance_period_host(self):
         """Test a host enter in maintenance_period
-        
+
         :return: None
         """
         # Get the host
-        host = self._sched.hosts.find_by_name("test_host_0")
+        host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []
         # Not any downtime yet !
@@ -74,7 +72,7 @@ class TestMaintenancePeriod(AlignakTest):
         # Make the host be UP
         self.scheduler_loop(1, [[host, 0, 'UP']])
 
-        # we created a new timeperiod from now -5 minutes to now + 55 minutes
+        # we create a new timeperiod from now -5 minutes to now + 55 minutes
         begin = datetime.now() - timedelta(minutes=5)
         end = datetime.now() + timedelta(minutes=55)
 

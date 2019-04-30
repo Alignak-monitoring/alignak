@@ -60,7 +60,8 @@ class TestContactDowntime(AlignakTest):
 
     def setUp(self):
         super(TestContactDowntime, self).setUp()
-        self.setup_with_file("cfg/cfg_default.cfg")
+        self.setup_with_file("cfg/cfg_default.cfg",
+                             dispatching=True)
         self._sched = self._scheduler
 
     def test_contact_downtime(self):

@@ -45,7 +45,7 @@ This module provide ReactionnerLink and ReactionnerLinks classes used to manage 
 """
 
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
-from alignak.property import IntegerProp, StringProp, ListProp
+from alignak.property import IntegerProp, StringProp, ListProp, FULL_STATUS
 
 
 class ReactionnerLink(SatelliteLink):
@@ -56,19 +56,11 @@ class ReactionnerLink(SatelliteLink):
     properties = SatelliteLink.properties.copy()
     properties.update({
         'type':
-            StringProp(default='reactionner', fill_brok=['full_status'], to_send=True),
+            StringProp(default='reactionner', fill_brok=[FULL_STATUS], to_send=True),
         'reactionner_name':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default='', fill_brok=[FULL_STATUS]),
         'port':
-            IntegerProp(default=7769, fill_brok=['full_status'], to_send=True),
-        # 'min_workers':
-        #     IntegerProp(default=1, fill_brok=['full_status'], to_send=True),
-        # 'max_workers':
-        #     IntegerProp(default=30, fill_brok=['full_status'], to_send=True),
-        # 'processes_by_worker':
-        #     IntegerProp(default=256, fill_brok=['full_status'], to_send=True),
-        # 'worker_polling_interval':
-        #     IntegerProp(default=1, to_send=True),
+            IntegerProp(default=7769, fill_brok=[FULL_STATUS], to_send=True),
         'reactionner_tags':
             ListProp(default=['None'], to_send=True),
     })

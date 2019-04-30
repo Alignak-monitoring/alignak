@@ -54,7 +54,7 @@ check if something is ok or not
 """
 
 from alignak.objects.item import Item, Items
-from alignak.property import StringProp, IntegerProp, BoolProp
+from alignak.property import StringProp, IntegerProp, BoolProp, FULL_STATUS
 from alignak.autoslots import AutoSlots
 
 
@@ -71,9 +71,9 @@ class Command(Item):
     properties = Item.properties.copy()
     properties.update({
         'command_name':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'command_line':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'poller_tag':
             StringProp(default=u'None'),
         'reactionner_tag':

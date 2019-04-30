@@ -54,7 +54,8 @@ class TestCheckModulations(AlignakTest):
 
     def setUp(self):
         super(TestCheckModulations, self).setUp()
-        self.setup_with_file('./cfg/cfg_checks_modulations.cfg')
+        self.setup_with_file('./cfg/cfg_checks_modulations.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
     def test_checks_modulated_host_and_service(self):

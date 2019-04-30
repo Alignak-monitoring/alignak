@@ -61,7 +61,8 @@ class TestMonitoringLogs(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_monitoring_logs.cfg')
+        self.setup_with_file('cfg/cfg_monitoring_logs.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
         self._scheduler.pushed_conf.log_initial_states = True
@@ -81,7 +82,7 @@ class TestMonitoringLogs(AlignakTest):
         with freeze_time(initial_datetime) as frozen_datetime:
             assert frozen_datetime() == initial_datetime
 
-            # Host active checks
+            # Host active checks
             self.check(frozen_datetime, host, 0, 'Host is UP',
                        [('info', u'ACTIVE HOST CHECK: test_host_0;UP;0;Host is UP')])
 
@@ -115,8 +116,8 @@ class TestMonitoringLogs(AlignakTest):
             self.check(frozen_datetime, host, 2, 'Host is DOWN',
                        [('error', 'ACTIVE HOST CHECK: test_host_0;DOWN;3;Host is DOWN')])
 
-            # Host goes UP / HARD
-            # Get an host check, an alert and a notification
+            # Host goes UP / HARD
+            # Get an host check, an alert and a notification
             self.check(frozen_datetime, host, 0, 'Host is UP',
                        [('info', 'ACTIVE HOST CHECK: test_host_0;UP;3;Host is UP'),
                         ('info', 'HOST ALERT: test_host_0;UP;HARD;3;Host is UP'),
@@ -135,7 +136,8 @@ class TestMonitoringLogs(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_monitoring_logs.cfg')
+        self.setup_with_file('cfg/cfg_monitoring_logs.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
         self._scheduler.pushed_conf.log_initial_states = True
@@ -266,7 +268,8 @@ class TestMonitoringLogs(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_monitoring_logs.cfg',
-                             'cfg/cfg_monitoring_logs_disabled.ini')
+                             'cfg/cfg_monitoring_logs_disabled.ini',
+                             dispatching=True)
         assert self.conf_is_correct
 
         self._sched = self._scheduler
@@ -320,7 +323,8 @@ class TestMonitoringLogs(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_monitoring_logs.cfg',
-                             'cfg/cfg_monitoring_logs_disabled.ini')
+                             'cfg/cfg_monitoring_logs_disabled.ini',
+                             dispatching=True)
         assert self.conf_is_correct
 
         self._sched = self._scheduler
@@ -391,7 +395,8 @@ class TestMonitoringLogs(AlignakTest):
 
         :return:
         """
-        self.setup_with_file('cfg/cfg_monitoring_logs.cfg')
+        self.setup_with_file('cfg/cfg_monitoring_logs.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
         now = int(time.time())
@@ -426,7 +431,8 @@ class TestMonitoringLogs(AlignakTest):
 
         :return:
         """
-        self.setup_with_file('cfg/cfg_monitoring_logs.cfg')
+        self.setup_with_file('cfg/cfg_monitoring_logs.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
         self.clear_events()
 
@@ -517,7 +523,8 @@ class TestMonitoringLogs(AlignakTest):
 
         :return:
         """
-        self.setup_with_file('cfg/cfg_monitoring_logs.cfg')
+        self.setup_with_file('cfg/cfg_monitoring_logs.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
         self.clear_events()
 
@@ -611,7 +618,8 @@ class TestMonitoringLogs(AlignakTest):
         """ Test logs for special external commands
         :return:
         """
-        self.setup_with_file('cfg/cfg_monitoring_logs.cfg')
+        self.setup_with_file('cfg/cfg_monitoring_logs.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
         now = int(time.time())
@@ -653,7 +661,8 @@ class TestMonitoringLogs(AlignakTest):
         :return:
         """
         self.setup_with_file('cfg/cfg_monitoring_logs.cfg',
-                             'cfg/cfg_monitoring_logs_disabled.ini')
+                             'cfg/cfg_monitoring_logs_disabled.ini',
+                             dispatching=True)
         assert self.conf_is_correct
 
         now = int(time.time())
@@ -686,7 +695,8 @@ class TestMonitoringLogs(AlignakTest):
         self.check_monitoring_events_log(expected_logs)
 
     def test_timeperiod_transition_log(self):
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
 
         tp = self._scheduler.timeperiods.find_by_name('24x7')
 

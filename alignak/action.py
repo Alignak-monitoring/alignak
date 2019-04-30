@@ -72,7 +72,8 @@ except ImportError:
     fcntl = None
 
 from alignak.alignakobject import AlignakObject
-from alignak.property import BoolProp, IntegerProp, FloatProp, StringProp, DictProp
+from alignak.property import (BoolProp, IntegerProp, FloatProp, StringProp,
+                              DictProp, FULL_STATUS)
 
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -178,11 +179,11 @@ class ActionBase(AlignakObject):
         'exit_status':
             IntegerProp(default=3),
         'output':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'long_output':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'perf_data':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         't_to_go':
             FloatProp(default=0.0),
         'check_time':
@@ -202,7 +203,7 @@ class ActionBase(AlignakObject):
         'env':
             DictProp(default={}),
         'module_type':
-            StringProp(default=u'fork', fill_brok=['full_status']),
+            StringProp(default=u'fork', fill_brok=[FULL_STATUS]),
         'my_worker':
             StringProp(default=u'none'),
         'command':

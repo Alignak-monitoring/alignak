@@ -1,9 +1,10 @@
+dist: xenial   # required for Python >= 3.7
 language: python
 sudo: required
 python:
+  - '3.7'
   - '3.6'
   - '3.5'
-  - '3.4'
   - '2.7'
 
 env:
@@ -23,7 +24,7 @@ script:
     # Run tests suite with code coverage analysis
     cd $TEST_SUITE
     echo "Starting tests '$TEST_SUITE' ..."
-    pytest --verbose --durations=10 --no-print-logs --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
+    pytest --verbose --durations=0 --no-print-logs --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
     # Upload coverage results to codecov
     bash <(curl -s https://codecov.io/bash) -e $TEST_SUITE -c -F $TEST_SUITE
     cd ..

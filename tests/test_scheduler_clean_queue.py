@@ -38,7 +38,8 @@ class TestSchedulerCleanQueue(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -107,7 +108,8 @@ class TestSchedulerCleanQueue(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -156,7 +158,8 @@ class TestSchedulerCleanQueue(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []

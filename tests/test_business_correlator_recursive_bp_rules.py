@@ -52,7 +52,8 @@ class TestBusinessCorrelatorRecursive(AlignakTest):
 
     def setUp(self):
         super(TestBusinessCorrelatorRecursive, self).setUp()
-        self.setup_with_file('cfg/cfg_business_correlator_recursive.cfg')
+        self.setup_with_file('cfg/cfg_business_correlator_recursive.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
         self._sched = self._scheduler
 

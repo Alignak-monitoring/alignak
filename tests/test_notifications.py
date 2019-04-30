@@ -42,7 +42,8 @@ class TestNotifications(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_nonotif.cfg')
+        self.setup_with_file('cfg/cfg_nonotif.cfg',
+                             dispatching=True)
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -82,7 +83,8 @@ class TestNotifications(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_nonotif.cfg')
+        self.setup_with_file('cfg/cfg_nonotif.cfg',
+                             dispatching=True)
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -181,13 +183,13 @@ class TestNotifications(AlignakTest):
             self.assert_actions_match(0, 'serviceoutput CRITICAL', 'command')
             self.assert_actions_match(1, 'serviceoutput OK', 'command')
 
-    # @pytest.mark.skip("To be restored!!!")
     def test_1_notifications_service_with_no_contacts(self):
         """ Test notifications are sent to host contacts for a service with no defined contacts
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_nonotif.cfg')
+        self.setup_with_file('cfg/cfg_nonotif.cfg',
+                             dispatching=True)
 
         host = self._scheduler.hosts.find_by_name("test_host_contact")
         host.checks_in_progress = []
@@ -317,7 +319,8 @@ class TestNotifications(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -514,7 +517,8 @@ class TestNotifications(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -612,7 +616,8 @@ class TestNotifications(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -697,7 +702,8 @@ class TestNotifications(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
 
         # Check freshness on each scheduler tick
         self._scheduler.update_recurrent_works_tick({'tick_check_freshness': 1})
@@ -806,7 +812,8 @@ class TestNotifications(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -884,20 +891,13 @@ class TestNotifications(AlignakTest):
         assert 0 == svc.current_notification_number
         self.assert_actions_count(5)
 
-    def test_notifications_delay_recover_before_notif(self):
-        """
-        TODO: @ddurieux ?
-
-        :return:
-        """
-        pass
-
     def test_notifications_outside_period(self):
         """ Test when we are not in notification_period, so do not send notifications
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -948,7 +948,8 @@ class TestNotifications(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -1080,7 +1081,8 @@ class TestNotifications(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
@@ -1137,7 +1139,8 @@ class TestNotifications(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
 
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []

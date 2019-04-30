@@ -54,7 +54,8 @@ class TestBusinessImpactModulation(AlignakTest):
 
     def setUp(self):
         super(TestBusinessImpactModulation, self).setUp()
-        self.setup_with_file('cfg/cfg_businesssimpact_modulation.cfg')
+        self.setup_with_file('cfg/cfg_businesssimpact_modulation.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
     def test_business_impact_modulation(self):

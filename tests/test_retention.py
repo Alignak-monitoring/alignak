@@ -44,9 +44,10 @@ class TestRetention(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
         # Default configuration has no retention configured
-        assert self._scheduler.pushed_conf.retention_update_interval == 0
+        assert self._arbiter.conf.retention_update_interval == 0
 
         expected_logs = [
         ]
@@ -57,9 +58,10 @@ class TestRetention(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default_retention.cfg')
+        self.setup_with_file('cfg/cfg_default_retention.cfg',
+                             dispatching=True)
         # Default configuration has no retention configured
-        assert self._scheduler.pushed_conf.retention_update_interval == 5
+        assert self._arbiter.conf.retention_update_interval == 5
 
         self.scheduler_loop(5, [])
         time.sleep(1)
@@ -80,12 +82,13 @@ class TestRetention(AlignakTest):
         :return: None
         """
         # Delete a potential existing retention file...
-        if os.path.exists('/tmp/test_host_0.json'):
-            os.remove('/tmp/test_host_0.json')
-        if os.path.exists('/tmp/test_router_0.json'):
-            os.remove('/tmp/test_router_0.json')
+        if os.path.exists('/tmp/alignak/retention/test_host_0.json'):
+            os.remove('/tmp/alignak/retention/test_host_0.json')
+        if os.path.exists('/tmp/alignak/retention/test_router_0.json'):
+            os.remove('/tmp/alignak/retention/test_router_0.json')
 
-        self.setup_with_file('cfg/cfg_default_retention.cfg')
+        self.setup_with_file('cfg/cfg_default_retention.cfg',
+                             dispatching=True)
         self.show_logs()
         # Retention is configured
         assert self._scheduler.pushed_conf.retention_update_interval == 5
@@ -255,17 +258,18 @@ class TestRetention(AlignakTest):
         ]
         self.check_monitoring_events_log(expected_logs)
         self.show_logs()
-        assert os.path.exists('/tmp/test_host_0.json')
-        with open('/tmp/test_host_0.json', "r") as fd:
+        assert os.path.exists('/tmp/alignak/retention/test_host_0.json')
+        with open('/tmp/alignak/retention/test_host_0.json', "r") as fd:
             retention_check = json.load(fd)
         pprint.pprint(retention_check)
         assert 'name' in retention_check
         assert retention_check['name'] == 'test_host_0'
-        assert os.path.exists('/tmp/test_router_0.json')
+        assert os.path.exists('/tmp/alignak/retention/test_router_0.json')
 
         # ************** test the restoration of retention ************** #
         # new conf
-        self.setup_with_file('cfg/cfg_default_retention.cfg')
+        self.setup_with_file('cfg/cfg_default_retention.cfg',
+                             dispatching=True)
 
         expected_logs = [
             ('info', 'RETENTION LOAD: scheduler-master'),

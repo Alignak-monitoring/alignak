@@ -70,7 +70,8 @@ class TestExternalCommands(AlignakTest):
     def setUp(self):
         super(TestExternalCommands, self).setUp()
 
-        self.setup_with_file('cfg/cfg_external_commands.cfg')
+        self.setup_with_file('cfg/cfg_external_commands.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
         # self.show_logs()
 

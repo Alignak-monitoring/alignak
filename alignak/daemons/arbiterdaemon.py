@@ -95,7 +95,7 @@ from alignak.monitor import MonitorConnection
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class Arbiter(Daemon):  # pylint: disable=R0902
+class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
     """
     Arbiter class. Referenced as "app" in most Interface
 
@@ -856,7 +856,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                             'pollers', 'reactionners', 'receivers', 'modules']:
                     continue
                 if prop not in got_objects:
-                    logger.warning("Did not get any '%s' objects from %s", prop, instance.name)
+                    logger.info("Did not get any '%s' objects from %s", prop, instance.name)
                     continue
                 for obj in got_objects[prop]:
                     # test if raw_objects[k] are already set - if not, add empty array

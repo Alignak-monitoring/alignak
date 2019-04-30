@@ -588,7 +588,7 @@ class TestTimeperiods(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_timeperiods.cfg')
-        tp = self._scheduler.timeperiods.find_by_name("us-holidays")
+        tp = self._arbiter.conf.timeperiods.find_by_name("us-holidays")
         self.assertEqual(7, len(tp.dateranges))
         mydateranges = []
         for daterange in tp.dateranges:

@@ -56,7 +56,7 @@ This module provide Hostgroup and Hostgroups class used to manage host groups
 import logging
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
-from alignak.property import StringProp, ListProp, BoolProp
+from alignak.property import StringProp, ListProp, BoolProp, FULL_STATUS
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -73,21 +73,21 @@ class Hostgroup(Itemgroup):
     properties = Itemgroup.properties.copy()
     properties.update({
         'hostgroup_name':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'alias':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'hostgroup_members':
-            ListProp(default=[], fill_brok=['full_status'], merging='join', split_on_comma=True),
+            ListProp(default=[], fill_brok=[FULL_STATUS], merging='join', split_on_comma=True),
         'notes':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'notes_url':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'action_url':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
 
         # Realm stuff
         'realm':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
     })
 
     # properties set only for running purpose
@@ -270,7 +270,7 @@ class Hostgroups(Itemgroups):
         :type hosts: alignak.objects.host.Hosts
         :return: None
         """
-        logger.info("Hostgroups / hosts / realms relation")
+        logger.debug("Hostgroups / hosts / realms relation")
         for hostgroup in self:
             hostgroup_realm_name = hostgroup.realm
             if hostgroup.realm not in realms:
@@ -280,9 +280,9 @@ class Hostgroups(Itemgroups):
                 hostgroup.realm = realm.uuid
             else:
                 hostgroup_realm_name = realms[hostgroup.realm].get_name()
-            logger.info("- hg: %s in the realm: %s ",
-                        hostgroup.get_name(),
-                        hostgroup_realm_name + (" (*)" if hostgroup.got_default_realm else ''))
+            logger.debug("- hg: %s in the realm: %s ",
+                         hostgroup.get_name(),
+                         hostgroup_realm_name + (" (*)" if hostgroup.got_default_realm else ''))
 
             hostgroup_hosts_errors = []
             hostgroup_new_realm_name = None
@@ -300,9 +300,9 @@ class Hostgroups(Itemgroups):
                 else:
                     host_realm_name = realms[host.realm].get_name()
 
-                logger.info("  host %s is in the realm: %s",
-                            host.get_name(),
-                            host_realm_name + (" (*)" if host.got_default_realm else ''))
+                logger.debug("  host %s is in the realm: %s",
+                             host.get_name(),
+                             host_realm_name + (" (*)" if host.got_default_realm else ''))
 
                 if host.got_default_realm:
                     # If the host got a default realm it means that no realm is specifically

@@ -74,7 +74,8 @@ class TestInternalChecks(AlignakTest):
             if 'ALIGNAK_INTERNAL_SERVICE_PERFDATA' in os.environ:
                 del os.environ['ALIGNAK_INTERNAL_SERVICE_PERFDATA']
 
-        self.setup_with_file('cfg/cfg_internal_checks.cfg')
+        self.setup_with_file('cfg/cfg_internal_checks.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
         assert self._scheduler.pushed_conf.log_active_checks is True

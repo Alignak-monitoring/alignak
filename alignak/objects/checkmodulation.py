@@ -52,7 +52,7 @@ import uuid
 from alignak.commandcall import CommandCall
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
-from alignak.property import StringProp
+from alignak.property import StringProp, FULL_STATUS
 from alignak.util import to_name_if_possible
 
 
@@ -66,11 +66,11 @@ class CheckModulation(Item):
     properties = Item.properties.copy()
     properties.update({
         'checkmodulation_name':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'check_command':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'check_period':
-            StringProp(brok_transformation=to_name_if_possible, fill_brok=['full_status']),
+            StringProp(brok_transformation=to_name_if_possible, fill_brok=[FULL_STATUS]),
     })
 
     running_properties = Item.running_properties.copy()

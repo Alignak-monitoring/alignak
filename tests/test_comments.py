@@ -32,14 +32,14 @@ class TestComments(AlignakTest):
     """
     def setUp(self):
         super(TestComments, self).setUp()
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
 
     def test_host_acknowledge(self):
         """Test add / delete comment for acknowledge on host
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
@@ -88,8 +88,6 @@ class TestComments(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
@@ -125,9 +123,6 @@ class TestComments(AlignakTest):
 
         :return: None
         """
-
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
@@ -171,8 +166,6 @@ class TestComments(AlignakTest):
         pass
 
     def test_host_comment(self):
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router

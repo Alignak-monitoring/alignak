@@ -151,7 +151,8 @@ class TestMetricsSetup(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
 
         # Default configuration do not enable the module
         assert self._scheduler.pushed_conf.process_performance_data is True
@@ -172,7 +173,8 @@ class TestMetricsSetup(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_metrics.cfg')
+        self.setup_with_file('cfg/cfg_metrics.cfg',
+                             dispatching=True)
 
         # Specific configuration enables the module
         assert self._scheduler.pushed_conf.process_performance_data is True
@@ -214,7 +216,9 @@ class TestMetricsSetup(AlignakTest):
             mr.post("http://localhost:8086/write?db=alignak", status_code=204,
                     json={"results":[{ "statement_id":0 }]})
 
-            self.setup_with_file('cfg/cfg_metrics.cfg', 'cfg/inner_metrics/alignak.ini')
+            self.setup_with_file('cfg/cfg_metrics.cfg',
+                                 'cfg/inner_metrics/alignak.ini',
+                                 dispatching=True)
 
             # Specific configuration enables the module
             assert self._scheduler.pushed_conf.process_performance_data is True
@@ -617,8 +621,8 @@ class TestMetricsRun(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_metrics.cfg')
-        # self.clear_logs()
+        self.setup_with_file('cfg/cfg_metrics.cfg',
+                             dispatching=True)
 
         # Module is an internal one (no external process) in the broker daemon modules manager
         my_module = self._broker_daemon.modules_manager.instances[0]

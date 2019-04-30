@@ -33,16 +33,15 @@ class TestBrokCheckResult(AlignakTest):
     """
     def setUp(self):
         super(TestBrokCheckResult, self).setUp()
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
+        self._main_broker.broks = []
 
     def test_brok_checks_results(self):
         """Test broks checks results
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
-        self._main_broker.broks = []
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router

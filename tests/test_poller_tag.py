@@ -28,17 +28,13 @@ class TestPollerTag(AlignakTest):
     """
     def setUp(self):
         super(TestPollerTag, self).setUp()
-        self.setup_with_file('cfg/cfg_poller_tag.cfg', 'cfg/poller_tag/alignak.ini')
+        self.setup_with_file('cfg/cfg_poller_tag.cfg',
+                             'cfg/poller_tag/alignak.ini',
+                             dispatching=True)
         self.assertTrue(self.conf_is_correct)
 
         # Our scheduler
         self._sched = self._scheduler
-
-        # Our pollers
-        #print self._sched.pollers
-        #self._pollerm = self._sched.pollers['poller-master']
-        #self._pollern = self._sched.pollers['poller-north']
-        #self._pollers = self._sched.pollers['poller-south']
 
         # No error messages
         self.assertEqual(len(self.configuration_errors), 0)

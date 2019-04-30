@@ -68,6 +68,7 @@ import random
 from alignak.misc.serialization import serialize
 from alignak.util import master_then_spare
 from alignak.objects.satellitelink import LinkError
+from alignak.property import FULL_STATUS
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -131,7 +132,7 @@ class Dispatcher(object):
         cls = self.alignak_conf.__class__
         for prop, entry in list(cls.properties.items()):
             # Is this property intended for broking?
-            if 'full_status' not in entry.fill_brok:
+            if FULL_STATUS not in entry.fill_brok:
                 continue
             self.global_conf[prop] = self.alignak_conf.get_property_value_for_brok(
                 prop, cls.properties)

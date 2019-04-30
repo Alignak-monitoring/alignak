@@ -210,11 +210,16 @@ def set_log_console(log_level=logging.INFO):
     logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
     logger_.setLevel(log_level)
 
-    # Adding a console logger...
-    csh = ColorStreamHandler(sys.stdout)
-    csh.setFormatter(Formatter('[%(asctime)s] %(levelname)s: [%(name)s] %(message)s',
-                               "%Y-%m-%d %H:%M:%S"))
-    logger_.addHandler(csh)
+    for handler in logger_.handlers:
+        if isinstance(handler, (StreamHandler, ColorStreamHandler)):
+            # We still have a console logger
+            break
+    else:
+        # Adding a console logger...
+        csh = ColorStreamHandler(sys.stdout)
+        csh.setFormatter(Formatter('[%(asctime)s] %(levelname)s: [%(name)s] %(message)s',
+                                   "%Y-%m-%d %H:%M:%S"))
+        logger_.addHandler(csh)
 
 
 def set_log_level(log_level=logging.INFO, handlers=None):

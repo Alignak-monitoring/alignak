@@ -56,7 +56,8 @@ from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
 
 from alignak.util import strip_and_uniq
-from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, DictProp
+from alignak.property import (BoolProp, IntegerProp, StringProp, ListProp,
+                              DictProp, FULL_STATUS, CHECK_RESULT)
 from alignak.log import make_monitoring_log
 from alignak.commandcall import CommandCall
 
@@ -72,74 +73,74 @@ class Contact(Item):
     properties = Item.properties.copy()
     properties.update({
         'contact_name':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'alias':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'contactgroups':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         'host_notifications_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=[FULL_STATUS]),
         'service_notifications_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=[FULL_STATUS]),
         'host_notification_period':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default='', fill_brok=[FULL_STATUS]),
         'service_notification_period':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default='', fill_brok=[FULL_STATUS]),
         'host_notification_options':
-            ListProp(default=[''], fill_brok=['full_status'], split_on_comma=True),
+            ListProp(default=[''], fill_brok=[FULL_STATUS], split_on_comma=True),
         'service_notification_options':
-            ListProp(default=[''], fill_brok=['full_status'], split_on_comma=True),
+            ListProp(default=[''], fill_brok=[FULL_STATUS], split_on_comma=True),
         # To be consistent with notificationway object attributes
         'host_notification_commands':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         'service_notification_commands':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         'min_business_impact':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
         'email':
-            StringProp(default=u'none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=[FULL_STATUS]),
         'pager':
-            StringProp(default=u'none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=[FULL_STATUS]),
         'address1':
-            StringProp(default=u'none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=[FULL_STATUS]),
         'address2':
-            StringProp(default=u'none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=[FULL_STATUS]),
         'address3':
-            StringProp(default=u'none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=[FULL_STATUS]),
         'address4':
-            StringProp(default=u'none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=[FULL_STATUS]),
         'address5':
-            StringProp(default=u'none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=[FULL_STATUS]),
         'address6':
-            StringProp(default=u'none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=[FULL_STATUS]),
         'can_submit_commands':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
         'is_admin':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
         'expert':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
         'retain_status_information':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=[FULL_STATUS]),
         'notificationways':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         'password':
-            StringProp(default=u'NOPASSWORDSET', fill_brok=['full_status']),
+            StringProp(default=u'NOPASSWORDSET', fill_brok=[FULL_STATUS]),
     })
 
     running_properties = Item.running_properties.copy()
     running_properties.update({
         'modified_attributes':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS], retention=True),
         'modified_host_attributes':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS], retention=True),
         'modified_service_attributes':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS], retention=True),
         'in_scheduled_downtime':
-            BoolProp(default=False, fill_brok=['full_status', 'check_result'], retention=True),
+            BoolProp(default=False, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'broks':
             ListProp(default=[]),  # and here broks raised
         'customs':
-            DictProp(default={}, fill_brok=['full_status']),
+            DictProp(default={}, fill_brok=[FULL_STATUS]),
     })
 
     # This tab is used to transform old parameters name into new ones
