@@ -1767,7 +1767,7 @@ class Daemon(object):
                   u"Copyright (c) 2015-2019: Alignak Team",
                   u"License: AGPL",
                   u"-----",
-                  u"Python: %s" % sys.version,
+                  u"Python: %s.%s" % (sys.version_info.major, sys.version_info.minor),
                   u"-----",
                   u"My pid: %s" % self.pid]
 

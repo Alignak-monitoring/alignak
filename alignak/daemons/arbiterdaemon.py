@@ -544,8 +544,15 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     if 'name' not in cfg_daemon:
                         cfg_daemon['name'] = cfg_daemon['%s_name' % daemon_type]
 
-                    cfg_daemon['modules'] = \
-                        self.alignak_env.get_modules(daemon_name=cfg_daemon['name'])
+                    # Manage daemon modules definition (may be not existing or empty or string)
+                    if 'modules' not in cfg_daemon:
+                        cfg_daemon['modules'] = []
+                    if not isinstance(cfg_daemon['modules'], list):
+                        cfg_daemon['modules'] = [cfg_daemon['modules']]
+                    cfg_daemon['modules'].extend(
+                        self.alignak_env.get_modules(daemon_name=cfg_daemon['name']))
+                    cfg_daemon['modules'] = list(set(cfg_daemon['modules']))
+
                     for module_daemon_type, module in extra_modules:
                         if module_daemon_type == daemon_type:
                             cfg_daemon['modules'].append(module['name'])
