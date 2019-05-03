@@ -48,6 +48,7 @@ Used by the Arbiter
 """
 
 import os
+import traceback
 import logging
 import time
 
