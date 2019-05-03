@@ -95,7 +95,7 @@ class TestMaintenancePeriod(AlignakTest):
         }
         timeperiod = Timeperiod(data)
         timeperiod.explode()
-        self._arbiter.conf.timeperiods[timeperiod.uuid] = timeperiod
+        self._scheduler.timeperiods[timeperiod.uuid] = timeperiod
         host.maintenance_period = timeperiod.uuid
 
         # Make the host be UP again

@@ -605,12 +605,6 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
             if 'module' in raw_objects and not raw_objects['module']:
                 logger.info("- No configured modules.")
 
-        for daemon in raw_objects['broker']:
-            logger.info("Broker: %s", daemon)
-
-        for module in raw_objects['module']:
-            logger.info("Module: %s", module)
-
         # Create objects for our arbiters and modules
         self.conf.early_create_objects(raw_objects)
 
