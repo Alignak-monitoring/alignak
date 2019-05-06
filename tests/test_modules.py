@@ -151,6 +151,7 @@ class TestModules(AlignakTest):
                              dispatching=True)
         assert self.conf_is_correct
         self.show_configuration_logs()
+        self.show_logs()
 
         # All modules
         modules = [m.module_alias for m in self._arbiter.conf.modules]
@@ -164,7 +165,7 @@ class TestModules(AlignakTest):
         part_a_module = [m for m in self._arbiter.conf.modules if m.module_alias == 'part-A'][0]
         part_b_module = [m for m in self._arbiter.conf.modules if m.module_alias == 'part-B'][0]
         print("Composite module: %s" % test_module.__dict__)
-        assert test_module.modules == [part_a_module.uuid, part_b_module.uuid]
+        assert test_module.modules == [part_a_module, part_b_module]
 
         # Find the new broker
         broker_master = [b for b in self._arbiter.conf.brokers if b.get_name() == 'broker-master'][0]
@@ -186,6 +187,9 @@ class TestModules(AlignakTest):
         assert modules == ['Example', 'inner-retention']
         modules = [m.name for m in self._scheduler_daemon.modules]
         assert modules == ['Example', 'inner-retention']
+
+        self._broker_daemon.modules_manager.stop_all()
+        self.show_logs()
 
     def test_modulemanager_1(self):
         """ Module manager manages its modules - old form

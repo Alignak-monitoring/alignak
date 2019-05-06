@@ -346,12 +346,15 @@ class Broker(BaseSatellite):
             if not self.have_modules:
                 try:
                     self.modules = unserialize(self.cur_conf['modules'], no_load=True)
-                except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
+                except Exception as exp:  # pragma: no cover, simple protection
                     logger.error('Cannot un-serialize modules configuration '
                                  'received from arbiter: %s', exp)
                 if self.modules:
                     logger.info("I received some modules configuration")
                     self.have_modules = True
+
+                    for module in self.modules:
+                        logger.info("Module: %s", module.__dict__)
 
                     # Ok now start, or restart them!
                     # Set modules, init them and start external ones
