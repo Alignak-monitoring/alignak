@@ -1311,7 +1311,7 @@ class Hosts(SchedulingItems):
     def linkify(self, timeperiods=None, commands=None, contacts=None,
                 realms=None, resultmodulations=None, businessimpactmodulations=None,
                 escalations=None, hostgroups=None,
-                checkmodulations=None, macromodulations=None): # pylint: disable=too-many-arguments
+                checkmodulations=None, macromodulations=None):
         """Create link between objects::
 
          * hosts -> timeperiods
