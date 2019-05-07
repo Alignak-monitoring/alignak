@@ -85,7 +85,7 @@ class Module(Item):
             StringProp(),
         # Old "deprecated" property - replaced with type
         'module_types':
-            ListProp(default=[u''], split_on_comma=True),
+            ListProp(default=[''], split_on_comma=True),
         # Allow a module to be related some other modules
         'modules':
             ListProp(default=[''], split_on_comma=True),
@@ -216,6 +216,7 @@ class Module(Item):
         We must also exclude the reference to the daemon that loaded the module!
         """
         res = super(Module, self).serialize()
+        logger.info("Module serialize %s: %s", self.get_name(), res)
 
         cls = self.__class__
         for prop in self.__dict__:
@@ -224,6 +225,7 @@ class Module(Item):
                 continue
             res[prop] = getattr(self, prop)
 
+        logger.info("Module serialize %s: %s", self.get_name(), res)
         return res
 
 
@@ -255,8 +257,10 @@ class Modules(Items):
                     continue
                 o_related = self.find_by_name(related)
                 if o_related is not None:
-                    new_modules.append(o_related.uuid)
+                    new_modules.append(o_related)
                 else:
                     self.add_error("the module '%s' for the module '%s' is unknown!"
                                    % (related, module.get_name()))
             module.modules = new_modules
+            if module.modules:
+                logger.info("Module %s is linked to %s", module.get_name(), module.modules)

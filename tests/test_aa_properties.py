@@ -196,25 +196,6 @@ class TestListProp(PropertyTests, AlignakTest):
         assert p.pythonize(["1,2,3", "4,5,6"]) == ["1,2,3", "4,5,6"]
 
 
-class TestLogLevelProp(PropertyTests, AlignakTest):
-    """Test the LogLevelProp class"""
-
-    prop_class = alignak.property.LogLevelProp
-
-    def test_pythonize(self):
-        p = self.prop_class()
-        assert p.pythonize("NOTSET") == 0
-        assert p.pythonize("DEBUG") == 10
-        assert p.pythonize("INFO") == 20
-        assert p.pythonize("WARN") == 30
-        assert p.pythonize("WARNING") == 30
-        assert p.pythonize("ERROR") == 40
-        ## 'FATAL' is not defined in std-module `logging._levelNames`
-        #self.assertEqual(p.pythonize("FATAL"), 50)
-        assert p.pythonize("CRITICAL") == 50
-        assert p.pythonize(["NOTSET", "CRITICAL"]) == 50
-
-
 class TestAddrProp(PropertyTests, AlignakTest):
     """Test the AddrProp class"""
 

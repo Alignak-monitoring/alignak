@@ -34,6 +34,10 @@ class TestPassiveChecks(AlignakTest):
     """
     def setUp(self):
         super(TestPassiveChecks, self).setUp()
+        self.setup_with_file('cfg/cfg_passive_checks.cfg',
+                             dispatching=True)
+        self.clear_logs()
+        assert self.conf_is_correct
 
     def test_start_freshness_on_alignak_start(self):
         """ When alignak starts, freshness period also starts
@@ -41,9 +45,6 @@ class TestPassiveChecks(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_passive_checks.cfg')
-        assert self.conf_is_correct
-
         # Check freshness on each scheduler tick
         self._scheduler.update_recurrent_works_tick({'tick_check_freshness': 1})
 
@@ -67,9 +68,6 @@ class TestPassiveChecks(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_passive_checks.cfg')
-        assert self.conf_is_correct
-
         assert self._arbiter.conf.host_freshness_check_interval == 60
 
         for h in self._scheduler.hosts:
@@ -139,9 +137,6 @@ class TestPassiveChecks(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_passive_checks.cfg')
-        assert self.conf_is_correct
-
         # Check freshness on each scheduler tick
         self._scheduler.update_recurrent_works_tick({'tick_check_freshness': 1})
 
@@ -241,9 +236,6 @@ class TestPassiveChecks(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_passive_checks.cfg')
-        assert self.conf_is_correct
-
         self._scheduler.pushed_conf.check_host_freshness = False
         self._scheduler.pushed_conf.check_service_freshness = False
 
@@ -319,10 +311,6 @@ class TestPassiveChecks(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_passive_checks.cfg')
-        self.show_configuration_logs()
-        assert self.conf_is_correct
-
         # Check freshness on each scheduler tick
         self._scheduler.update_recurrent_works_tick({'tick_check_freshness': 1})
 
@@ -344,10 +332,6 @@ class TestPassiveChecks(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_passive_checks.cfg')
-        self.clear_logs()
-        assert self.conf_is_correct
-
         assert self._arbiter.conf.host_freshness_check_interval == 60
 
         # Check freshness on each scheduler tick
@@ -476,10 +460,6 @@ class TestPassiveChecks(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_passive_checks.cfg')
-        self.clear_logs()
-        assert self.conf_is_correct
-
         assert self._arbiter.conf.host_freshness_check_interval == 60
 
         # Check freshness on each scheduler tick
@@ -607,10 +587,6 @@ class TestPassiveChecks(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_passive_checks.cfg')
-        self.clear_logs()
-        assert self.conf_is_correct
-
         assert self._arbiter.conf.service_freshness_check_interval == 60
         assert self._arbiter.conf.host_freshness_check_interval == 60
 

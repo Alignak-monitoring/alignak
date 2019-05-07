@@ -50,7 +50,7 @@ warning level in some periods (like the night)
 import time
 
 from alignak.objects.item import Item, Items
-from alignak.property import StringProp, DictProp
+from alignak.property import StringProp, DictProp, FULL_STATUS
 from alignak.util import to_name_if_possible
 
 
@@ -65,15 +65,15 @@ class MacroModulation(Item):
     properties = Item.properties.copy()
     properties.update({
         'macromodulation_name':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'modulation_period':
-            StringProp(brok_transformation=to_name_if_possible, fill_brok=['full_status']),
+            StringProp(brok_transformation=to_name_if_possible, fill_brok=[FULL_STATUS]),
     })
 
     running_properties = Item.running_properties.copy()
     running_properties.update({
         'customs':
-            DictProp(default={}, fill_brok=['full_status']),
+            DictProp(default={}, fill_brok=[FULL_STATUS]),
     })
 
     special_properties = ('modulation_period',)

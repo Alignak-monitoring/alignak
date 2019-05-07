@@ -26,6 +26,7 @@ import os
 import sys
 import signal
 import time
+import datetime
 import string
 import re
 import locale
@@ -320,7 +321,7 @@ define host {
     def _stop_alignak_daemons(self, arbiter_only=True, request_stop_uri=''):
         """ Stop the Alignak daemons started formerly
 
-        If request_stop is not set, the this function will try so stop the daemons with the
+        If request_stop is set, this function will try to stop the daemons with the
         /stop_request API, else it will directly send a kill signal.
 
         If some alignak- daemons are still running after the kill, force kill them.
@@ -455,7 +456,8 @@ define host {
         cfg_folder = os.path.join(os.path.dirname(os.path.abspath(__file__)), cfg_folder)
         if not run_folder:
             run_folder = cfg_folder
-        print("Running Alignak daemons, cfg_folder: %s, run_folder: %s" % (cfg_folder, run_folder))
+        print("%s - Running Alignak daemons, cfg_folder: %s, run_folder: %s"
+              % (datetime.datetime.now(), cfg_folder, run_folder))
 
         for f in ['alignak.log', 'alignak-events.log']:
             if os.path.exists('%s/log/%s' % (cfg_folder, f)):
@@ -524,7 +526,7 @@ define host {
         # if os.path.exists(cfg_folder + '/dummy_command.sh'):
         #     shutil.copy(cfg_folder + '/dummy_command.sh', '/tmp/dummy_command.sh')
         #
-        print("Launching the daemons...")
+        print("%s - Launching the daemons..." % datetime.datetime.now())
         self.procs = {}
         for name in daemons_list + ['arbiter-master']:
             if arbiter_only and name not in ['arbiter-master']:
@@ -550,16 +552,16 @@ define host {
         for name, proc in list(self.procs.items()):
             ret = proc.poll()
             if ret is not None:
-                print("*** %s exited on start!" % (name))
+                print("*** %s exited on start!" % name)
                 if os.path.exists("/tmp/alignak.log"):
                     with open("/tmp/alignak.log") as f:
                         for line in f:
-                            print("xxx %s" % line)
+                            print("xxx %s" % line[:-1])
 
                 if os.path.exists("%s/log/arbiter-master.log" % cfg_folder):
                     with open("%s/log/arbiter-master.log" % cfg_folder) as f:
                         for line in f:
-                            print("... %s" % line)
+                            print("... %s" % line[:-1])
 
                 if proc.stdout:
                     for line in iter(proc.stdout.readline, b''):
@@ -574,10 +576,10 @@ define host {
             assert ret is None, "Daemon %s not started!" % name
             print("%s running (pid=%d)" % (name, self.procs[name].pid))
 
-        # Let the daemons start ...
+        # Let the daemons start...
         time.sleep(3)
 
-        print("Testing pid files and log files...")
+        print("%s - Testing pid files and log files..." % datetime.datetime.now())
         for name in daemons_list + ['arbiter-master']:
             if arbiter_only and name not in ['arbiter-master']:
                 continue
@@ -594,6 +596,7 @@ define host {
         # Let the arbiter build and dispatch its configuration
         # Let the schedulers get their configuration and run the first checks
         time.sleep(runtime)
+        print("%s - after sleeping..." % datetime.datetime.now())
 
     def _check_daemons_log_for_errors(self, daemons_list, run_folder='/tmp/alignak',
                                       ignored_warnings=None, ignored_errors=None, dump_all=True):
@@ -654,11 +657,11 @@ define host {
         return (nb_errors, nb_warnings)
 
     def setup_with_file(self, configuration_file=None, env_file=None,
-                        verbose=False, unit_test=True):
+                        verbose=False, unit_test=True, dispatching=False):
         """
         Load alignak with the provided configuration and environment files
 
-        If verbose is True the envirnment loading is printed out on the console.
+        If verbose is True the environment loading is printed out on the console.
 
         If the configuration loading fails, a SystemExit exception is raised to the caller.
 
@@ -671,6 +674,8 @@ define host {
         to the declared satellites in the configuration. Set to False if you intend to run
         real daemons that will receive their configuration!
 
+        :param unit_test: set to False for integration tests
+        :type unit_test: bool
         :param configuration_file: path + file name of the main configuration file
         :type configuration_file: str
         :param env_file: path + file name of the alignak environment file
@@ -701,33 +706,9 @@ define host {
         self.configuration_warnings = []
         self.configuration_errors = []
 
-        # # This to allow using a reference configuration if needed,
-        # # and to make some tests easier to set-up
-        # print("Preparing default configuration...")
-        # if os.path.exists('/tmp/etc/alignak'):
-        #     shutil.rmtree('/tmp/etc/alignak')
-        #
-        # if os.path.exists('../etc'):
-        #     shutil.copytree('../etc', '/tmp/etc/alignak')
-        #     cfg_folder = '/tmp/etc/alignak'
-        #     files = ['%s/alignak.ini' % cfg_folder,
-        #              '%s/alignak.d/daemons.ini' % cfg_folder,
-        #              '%s/alignak.d/modules.ini' % cfg_folder,
-        #              '%s/alignak-logger.json' % cfg_folder]
-        #     replacements = {
-        #         '_dist=/usr/local/': '_dist=/tmp',
-        #         'user=alignak': ';user=alignak',
-        #         'group=alignak': ';group=alignak'
-        #
-        #     }
-        #     self._files_update(files, replacements)
-        # print("Prepared")
-
-        # Initialize the Arbiter with no daemon configuration file
         assert configuration_file or env_file
 
         current_dir = os.getcwd()
-        configuration_dir = current_dir
         print("Current directory: %s" % current_dir)
         if configuration_file:
             configuration_dir = os.path.dirname(configuration_file)
@@ -738,10 +719,8 @@ define host {
             print("Test configuration directory: %s, file: %s"
                   % (os.path.abspath(configuration_dir), env_file))
 
-        self.env_filename = None
-        if env_file is not None:
-            self.env_filename = env_file
-        else:
+        self.env_filename = env_file
+        if env_file is None:
             self.env_filename = os.path.join(configuration_dir, 'alignak.ini')
             if os.path.exists(os.path.join(configuration_dir, 'alignak.ini')):
                 # alignak.ini in the same directory as the legacy configuration file
@@ -757,8 +736,8 @@ define host {
         print("Found Alignak environment file: %s" % self.env_filename)
 
         # Get Alignak environment
-        args = {'<cfg_file>': self.env_filename, '--verbose': verbose}
-        self.alignak_env = AlignakConfigParser(args)
+        self.alignak_env = AlignakConfigParser({
+            '<cfg_file>': self.env_filename, '--verbose': verbose})
         self.alignak_env.parse()
 
         arbiter_cfg = None
@@ -811,6 +790,11 @@ define host {
             assert arbiter_link is not None, "There is no arbiter link in the configuration!"
 
         if not unit_test:
+            print("No unit testing, return...")
+            return
+
+        if not dispatching:
+            print("No dispatching, return...")
             return
 
         # Prepare the configuration dispatching
@@ -830,7 +814,7 @@ define host {
             for link in self._arbiter.dispatcher.all_daemons_links:
                 # mr.get('http://%s:%s/ping' % (link.address, link.port), json='pong')
                 mr.get('http://%s:%s/identity' % (link.address, link.port),
-                       json={"running_id": 123456.123456})
+                       json={"start_time": 0, "running_id": 123456.123456})
                 mr.get('http://%s:%s/_wait_new_conf' % (link.address, link.port), json=True)
                 mr.post('http://%s:%s/_push_configuration' % (link.address, link.port), json=True)
                 mr.get('http://%s:%s/_initial_broks' % (link.address, link.port), json=[])
@@ -847,10 +831,10 @@ define host {
             for sat_type in ('arbiters', 'schedulers', 'reactionners',
                              'brokers', 'receivers', 'pollers'):
                 if verbose:
-                    print("- for %s:" % (sat_type))
+                    print("- for %s:" % sat_type)
                 for sat_link in getattr(self._arbiter.dispatcher, sat_type):
                     if verbose:
-                        print(" - %s" % (sat_link))
+                        print(" - %s" % sat_link)
                     pushed_configuration = getattr(sat_link, 'unit_test_pushed_configuration', None)
                     if pushed_configuration:
                         if verbose:
@@ -1003,11 +987,12 @@ define host {
         :param items: list of list [[object, exist_status, output]]
         :type items: list
         :param scheduler: The scheduler
-        :type scheduler: None | object
+        :type scheduler: None | alignak.daemons.SchedulerDaemon
         :return: None
         """
         if scheduler is None:
             scheduler = self._scheduler
+        assert scheduler is not None
 
         if items is None:
             items = []
@@ -1167,7 +1152,7 @@ define host {
             if isinstance(handler, CollectorHandler):
                 print("--- logs <<<----------------------------------")
                 for log in handler.collector:
-                    self.safe_print(log)
+                    print(log)
                 print("--- logs >>>----------------------------------")
                 break
         else:
@@ -1802,48 +1787,3 @@ define host {
         :return:
         """
         self._any_cfg_log_match(pattern, assert_not=True)
-
-    def guess_sys_stdout_encoding(self):
-        ''' Return the best guessed encoding to be used for printing on sys.stdout. '''
-        return (
-               getattr(sys.stdout, 'encoding', None)
-            or getattr(sys.__stdout__, 'encoding', None)
-            or locale.getpreferredencoding()
-            or sys.getdefaultencoding()
-            or 'ascii'
-        )
-
-    def safe_print(self, *args, **kw):
-        """" "print" args to sys.stdout,
-        If some of the args aren't unicode then convert them first to unicode,
-            using keyword argument 'in_encoding' if provided (else default to UTF8)
-            and replacing bad encoded bytes.
-        Write to stdout using 'out_encoding' if provided else best guessed encoding,
-            doing xmlcharrefreplace on errors.
-        """
-        in_bytes_encoding = kw.pop('in_encoding', 'UTF-8')
-        out_encoding = kw.pop('out_encoding', self.guess_sys_stdout_encoding())
-        if kw:
-            raise ValueError('unhandled named/keyword argument(s): %r' % kw)
-        #
-        make_in_data_gen = lambda: ( a if isinstance(a, string_types) else str(a) for a in args )
-
-        possible_codings = ( out_encoding, )
-        if out_encoding != 'ascii':
-            possible_codings += ( 'ascii', )
-
-        for coding in possible_codings:
-            data = ' '.join(make_in_data_gen()).encode(coding, 'xmlcharrefreplace')
-            try:
-                sys.stdout.write(str(data))
-                break
-            except UnicodeError as err:
-                # there might still have some problem with the underlying sys.stdout.
-                # it might be a StringIO whose content could be decoded/encoded in this same process
-                # and have encode/decode errors because we could have guessed a bad encoding with it.
-                # in such case fallback on 'ascii'
-                if coding == 'ascii':
-                    raise
-                sys.stderr.write('Error on write to sys.stdout with %s encoding: err=%s\nTrying with ascii' % (
-                    coding, err))
-        sys.stdout.write('\n')

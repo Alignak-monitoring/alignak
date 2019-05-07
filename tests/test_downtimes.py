@@ -69,7 +69,8 @@ class TestDowntime(AlignakTest):
         """
         super(TestDowntime, self).setUp()
 
-        self.setup_with_file('cfg/cfg_default.cfg')
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
         # No error messages
@@ -409,11 +410,11 @@ class TestDowntime(AlignakTest):
         # Make the service be OK
         self.scheduler_loop(1, [[svc, 0, 'OK']])
 
-        #----------------------------------------------------------------
+        # ----------------------------------------------------------------
         # schedule a flexible downtime of 5 seconds for the service
         # The downtime will start between now and now + 1 hour and it
         # will be active for 5 seconds
-        #----------------------------------------------------------------
+        # ----------------------------------------------------------------
         duration = 5
         now = int(time.time())
         cmd = "[%lu] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;%d;%d;0;0;%d;" \
@@ -446,10 +447,10 @@ class TestDowntime(AlignakTest):
         # A comment exist in our service
         assert 1 == len(svc.comments)
 
-        #----------------------------------------------------------------
+        # ----------------------------------------------------------------
         # run the service and return an OK status
         # check if the downtime is still inactive
-        #----------------------------------------------------------------
+        # ----------------------------------------------------------------
         self.scheduler_loop(2, [[svc, 0, 'OK']])
         assert "HARD" == svc.state_type
         assert "OK" == svc.state
@@ -465,10 +466,10 @@ class TestDowntime(AlignakTest):
         self.assert_actions_count(0)
 
         time.sleep(1)
-        #----------------------------------------------------------------
+        # ----------------------------------------------------------------
         # run the service to get a soft critical status
         # check if the downtime is still inactive
-        #----------------------------------------------------------------
+        # ----------------------------------------------------------------
         self.scheduler_loop(1, [[svc, 2, 'BAD']])
         assert "SOFT" == svc.state_type
         assert "CRITICAL" == svc.state
@@ -484,10 +485,10 @@ class TestDowntime(AlignakTest):
         self.assert_actions_count(0)
 
         time.sleep(1)
-        #----------------------------------------------------------------
+        # ----------------------------------------------------------------
         # run the service again to get a hard critical status
         # check if the downtime is active now
-        #----------------------------------------------------------------
+        # ----------------------------------------------------------------
         time.sleep(1.0)
         self.scheduler_loop(1, [[svc, 2, 'BAD']])
         assert "HARD" == svc.state_type
@@ -566,23 +567,23 @@ class TestDowntime(AlignakTest):
 
         expected_logs = [
             ('info', 'EXTERNAL COMMAND: [%s] SCHEDULE_SVC_DOWNTIME;test_host_0;test_ok_0;'
-                      '%s;%s;0;0;%s;downtime author;downtime comment' % (
+                     '%s;%s;0;0;%s;downtime author;downtime comment' % (
                 now, now, now + 3600, duration)),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;BAD'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;BAD'),
             ('info', 'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STARTED; '
-                      'Service has entered a period of scheduled downtime'),
+                     'Service has entered a period of scheduled downtime'),
             ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      'DOWNTIMESTART (CRITICAL);0;notify-service;BAD'),
+                     'DOWNTIMESTART (CRITICAL);0;notify-service;BAD'),
             ('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;OK'),
             ('info', 'SERVICE DOWNTIME ALERT: test_host_0;test_ok_0;STOPPED; '
-                      'Service has exited from a period of scheduled downtime'),
+                     'Service has exited from a period of scheduled downtime'),
             ('info', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                      'DOWNTIMEEND (OK);0;notify-service;OK'),
+                     'DOWNTIMEEND (OK);0;notify-service;OK'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;BAD'),
             ('error', 'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;BAD'),
             ('error', 'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
-                       'CRITICAL;1;notify-service;BAD')
+                      'CRITICAL;1;notify-service;BAD')
         ]
         for log_level, log_message in expected_logs:
             assert (log_level, log_message) in monitoring_events

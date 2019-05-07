@@ -70,7 +70,7 @@
  The main user of this Config class is the Arbiter daemon when it loads the configuration and
  dispatches to the other daemons.
 """
-# pylint: disable=C0302
+# pylint: disable=too-many-lines
 import re
 import string
 import os
@@ -122,7 +122,7 @@ from alignak.objects.receiverlink import ReceiverLink, ReceiverLinks
 from alignak.objects.pollerlink import PollerLink, PollerLinks
 from alignak.graph import Graph
 from alignak.property import (UnusedProp, BoolProp, IntegerProp, CharProp,
-                              StringProp, ListProp, ToGuessProp)
+                              StringProp, ListProp, ToGuessProp, FULL_STATUS)
 from alignak.util import jsonify_r
 
 
@@ -135,7 +135,7 @@ NOT_INTERESTING = u'We do not think such an option is interesting to manage.'
 NOT_MANAGED = (u'This Nagios legacy parameter is not managed by Alignak. Ignoring...')
 
 
-class Config(Item):  # pylint: disable=R0904,R0902
+class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance-attributes
     """Config is the class that reads, loads and manipulates the main Alignak monitored objects
  configuration. It reads the Nagios legacy configuration files (cfg files ) and gets all
  informations from these files.
@@ -163,7 +163,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
     #  in Alignak
     # *usage_text: if present, will print it to explain why it's no more useful
     # ---
-    # All the properties with 'full_status' in the fill_brok will be include in the
+    # All the properties with FULL_STATUS in the fill_brok will be include in the
     # 'program_status' and 'update_program_status' broks.
     # ---
     """Configuration properties:
@@ -183,18 +183,18 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # Alignak instance name is set as the arbiter name
         # if it is not defined in the configuration file
         'alignak_name':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'alignak_env':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
 
         # Configuration identification - instance id and name
         'instance_id':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'config_name':
-            StringProp(default=u'Main configuration', fill_brok=['full_status']),
+            StringProp(default=u'Main configuration', fill_brok=[FULL_STATUS]),
 
         'program_start':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
         'last_alive':
             IntegerProp(default=0),
         'last_log_rotation':
@@ -207,9 +207,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
             BoolProp(default=True),
 
         'modified_host_attributes':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
         'modified_service_attributes':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
 
         'daemon_mode':
             BoolProp(default=True),
@@ -217,28 +217,28 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Those are not valid parameters ...
         # 'passive_host_checks_enabled':
-        #     BoolProp(default=True, fill_brok=['full_status']),
+        #     BoolProp(default=True, fill_brok=[FULL_STATUS]),
         # 'passive_service_checks_enabled':
-        #     BoolProp(default=True, fill_brok=['full_status']),
+        #     BoolProp(default=True, fill_brok=[FULL_STATUS]),
         # 'active_host_checks_enabled':
-        #     BoolProp(default=True, fill_brok=['full_status']),
+        #     BoolProp(default=True, fill_brok=[FULL_STATUS]),
         # 'active_service_checks_enabled':
-        #     BoolProp(default=True, fill_brok=['full_status']),
+        #     BoolProp(default=True, fill_brok=[FULL_STATUS]),
         # 'event_handlers_enabled':
-        #     BoolProp(default=True, fill_brok=['full_status']),
+        #     BoolProp(default=True, fill_brok=[FULL_STATUS]),
         # 'flap_detection_enabled':
-        #     BoolProp(default=True, fill_brok=['full_status']),
+        #     BoolProp(default=True, fill_brok=[FULL_STATUS]),
         # 'notifications_enabled':
-        #     BoolProp(default=True, fill_brok=['full_status']),
+        #     BoolProp(default=True, fill_brok=[FULL_STATUS]),
 
         # Used for the MAINCONFIGFILE, CONFIGFILES and CONFIGBASEDIR macros
         # will be set when we will load a file
         'config_files':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         'main_config_file':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'config_base_dir':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
 
         # # Triggers directory
         # 'triggers_dir':
@@ -274,34 +274,34 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Enable the notifications
         'enable_notifications':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None), (Contact, None)]),
 
         # Service checks
         'execute_service_checks':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Service, 'execute_checks')]),
 
         'accept_passive_service_checks':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Service, 'accept_passive_checks')]),
 
         # Host checks
         'execute_host_checks':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, 'execute_checks')]),
 
         'accept_passive_host_checks':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, 'accept_passive_checks')]),
 
         # Accept passive checks for unknown host/service
         'accept_passive_unknown_check_results':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=[FULL_STATUS]),
 
         # Enable event handlers
         'enable_event_handlers':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None)]),
 
         # Inner log self created module parameter
@@ -314,7 +314,7 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Inner external commands self created module parameter
         'check_external_commands':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=[FULL_STATUS]),
         'command_check_interval':
             UnusedProp(text=u'Alignak will always check for external commands. '
                             u'This configuration value is useless.'),
@@ -336,16 +336,16 @@ class Config(Item):  # pylint: disable=R0904,R0902
         # -----
         # Inner state retention module parameters
         'retain_state_information':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=[FULL_STATUS]),
 
         'state_retention_dir':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
 
         'state_retention_file':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
 
         'retention_update_interval':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
 
         'use_retained_program_state':
             UnusedProp(text=NOT_INTERESTING),
@@ -378,66 +378,66 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Monitoring logs (Alignak events log) configuration
         'events_date_format':
-            StringProp(default='%Y-%m-%d %H:%M:%S', fill_brok=['full_status']),
+            StringProp(default='%Y-%m-%d %H:%M:%S', fill_brok=[FULL_STATUS]),
 
         'events_log_count':
-            IntegerProp(default=100, fill_brok=['full_status']),
+            IntegerProp(default=100, fill_brok=[FULL_STATUS]),
 
         'log_notifications':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None)]),
 
         'log_alerts':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None)]),
 
         'log_acknowledgements':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None)]),
 
         'log_downtimes':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None)]),
 
         'log_event_handlers':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None)]),
 
         'log_snapshots':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None)]),
 
         'log_flappings':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None)]),
 
         'log_initial_states':
-            BoolProp(default=False, fill_brok=['full_status'],
+            BoolProp(default=False, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None)]),
 
         'log_external_commands':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None)]),
 
         'log_passive_checks':
-            BoolProp(default=False, fill_brok=['full_status'],
+            BoolProp(default=False, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None)]),
 
         'log_active_checks':
-            BoolProp(default=False, fill_brok=['full_status'],
+            BoolProp(default=False, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None)]),
 
         'log_alignak_checks':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
 
         # Global event handlers
         'global_host_event_handler':
-            StringProp(default='', fill_brok=['full_status'],
+            StringProp(default='', fill_brok=[FULL_STATUS],
                        brok_transformation=to_name_if_possible,
                        class_inherit=[(Host, 'global_event_handler')]),
 
         'global_service_event_handler':
-            StringProp(default='', fill_brok=['full_status'],
+            StringProp(default='', fill_brok=[FULL_STATUS],
                        brok_transformation=to_name_if_possible,
                        class_inherit=[(Service, 'global_event_handler')]),
 
@@ -476,11 +476,11 @@ class Config(Item):  # pylint: disable=R0904,R0902
                             'of the initial check is a random one.'),
 
         'max_host_check_spread':
-            IntegerProp(default=5, fill_brok=['full_status'],
+            IntegerProp(default=5, fill_brok=[FULL_STATUS],
                         class_inherit=[(Host, 'max_check_spread')]),
 
         'interval_length':
-            IntegerProp(default=60, fill_brok=['full_status'],
+            IntegerProp(default=60, fill_brok=[FULL_STATUS],
                         class_inherit=[(Host, None), (Service, None)]),
 
         # Todo: not used anywhere in the source code
@@ -530,32 +530,32 @@ class Config(Item):  # pylint: disable=R0904,R0902
             UnusedProp(text=u'fork twice is not used.'),
 
         'enable_environment_macros':
-            BoolProp(default=False, fill_brok=['full_status'],
+            BoolProp(default=False, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None)]),
 
         # Flapping management
         'enable_flap_detection':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None)]),
 
         'low_service_flap_threshold':
-            IntegerProp(default=20, fill_brok=['full_status'],
+            IntegerProp(default=20, fill_brok=[FULL_STATUS],
                         class_inherit=[(Service, 'global_low_flap_threshold')]),
 
         'high_service_flap_threshold':
-            IntegerProp(default=30, fill_brok=['full_status'],
+            IntegerProp(default=30, fill_brok=[FULL_STATUS],
                         class_inherit=[(Service, 'global_high_flap_threshold')]),
 
         'low_host_flap_threshold':
-            IntegerProp(default=20, fill_brok=['full_status'],
+            IntegerProp(default=20, fill_brok=[FULL_STATUS],
                         class_inherit=[(Host, 'global_low_flap_threshold')]),
 
         'high_host_flap_threshold':
-            IntegerProp(default=30, fill_brok=['full_status'],
+            IntegerProp(default=30, fill_brok=[FULL_STATUS],
                         class_inherit=[(Host, 'global_high_flap_threshold')]),
 
         'flap_history':
-            IntegerProp(default=20, fill_brok=['full_status'],
+            IntegerProp(default=20, fill_brok=[FULL_STATUS],
                         class_inherit=[(Host, None), (Service, None)]),
 
         # Todo: not used anywhere in the source code
@@ -583,25 +583,25 @@ class Config(Item):  # pylint: disable=R0904,R0902
             IntegerProp(default=5, class_inherit=[(Host, None), (Service, None)]),
 
         'process_performance_data':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None)]),
 
         'host_perfdata_command':
-            StringProp(default='', fill_brok=['full_status'],
+            StringProp(default='', fill_brok=[FULL_STATUS],
                        brok_transformation=to_name_if_possible,
                        class_inherit=[(Host, 'perfdata_command')]),
 
         'service_perfdata_command':
-            StringProp(default='', fill_brok=['full_status'],
+            StringProp(default='', fill_brok=[FULL_STATUS],
                        brok_transformation=to_name_if_possible,
                        class_inherit=[(Service, 'perfdata_command')]),
 
         # Inner perfdata self created module parameters
         'host_perfdata_file':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default='', fill_brok=[FULL_STATUS]),
 
         'service_perfdata_file':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default='', fill_brok=[FULL_STATUS]),
 
         'host_perfdata_file_template':
             StringProp(managed=False, default='/tmp/host.perf',
@@ -648,21 +648,21 @@ class Config(Item):  # pylint: disable=R0904,R0902
 
         # Freshness checks
         'check_service_freshness':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Service, 'global_check_freshness')]),
 
         'service_freshness_check_interval':
-            IntegerProp(default=60, fill_brok=['full_status']),
+            IntegerProp(default=60, fill_brok=[FULL_STATUS]),
 
         'check_host_freshness':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, 'global_check_freshness')]),
 
         'host_freshness_check_interval':
-            IntegerProp(default=60, fill_brok=['full_status']),
+            IntegerProp(default=60, fill_brok=[FULL_STATUS]),
 
         'additional_freshness_latency':
-            IntegerProp(default=15, fill_brok=['full_status'],
+            IntegerProp(default=15, fill_brok=[FULL_STATUS],
                         class_inherit=[(Host, None), (Service, None)]),
 
         'enable_embedded_perl':
@@ -678,19 +678,19 @@ class Config(Item):  # pylint: disable=R0904,R0902
             StringProp(managed=False, default=None),
 
         'use_timezone':
-            StringProp(default='', fill_brok=['full_status'],
+            StringProp(default='', fill_brok=[FULL_STATUS],
                        class_inherit=[(Host, None), (Service, None), (Contact, None)]),
 
         'illegal_object_name_chars':
-            StringProp(default="""`~!$%^&*"|'<>?,()=""", fill_brok=['full_status'],
+            StringProp(default="""`~!$%^&*"|'<>?,()=""", fill_brok=[FULL_STATUS],
                        class_inherit=[(Host, None), (Service, None),
                                       (Contact, None), (HostExtInfo, None)]),
 
         'illegal_macro_output_chars':
-            StringProp(default='', fill_brok=['full_status'],
+            StringProp(default='', fill_brok=[FULL_STATUS],
                        class_inherit=[(Host, None), (Service, None), (Contact, None)]),
         'env_variables_prefix':
-            StringProp(default='ALIGNAK_', fill_brok=['full_status']),
+            StringProp(default='ALIGNAK_', fill_brok=[FULL_STATUS]),
 
         'use_regexp_matching':
             BoolProp(managed=False,
@@ -716,65 +716,65 @@ class Config(Item):  # pylint: disable=R0904,R0902
             IntegerProp(default=0),
 
         'daemon_thread_pool_size':
-            IntegerProp(default=8, fill_brok=['full_status']),
+            IntegerProp(default=8, fill_brok=[FULL_STATUS]),
 
         'max_plugins_output_length':
-            IntegerProp(default=8192, fill_brok=['full_status'],
+            IntegerProp(default=8192, fill_brok=[FULL_STATUS],
                         class_inherit=[(Host, None), (Service, None)]),
 
         'no_event_handlers_during_downtimes':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None)]),
 
         # Interval between cleaning queues pass
         'cleaning_queues_interval':
-            IntegerProp(default=900, fill_brok=['full_status']),
+            IntegerProp(default=900, fill_brok=[FULL_STATUS]),
 
         # Now for problem/impact states changes
         'enable_problem_impacts_states_change':
-            BoolProp(default=True, fill_brok=['full_status'],
+            BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None)]),
 
         # More a running value indeed - the macros catched in the parsed configuration
         'resource_macros_names':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
 
         'runners_timeout':
             IntegerProp(default=3600),
 
         # Self created daemons configuration
         'launch_missing_daemons':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
 
         'daemons_arguments':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default='', fill_brok=[FULL_STATUS]),
 
         'daemons_log_folder':
             StringProp(default='/usr/local/var/log/alignak',
-                       fill_brok=['full_status']),
+                       fill_brok=[FULL_STATUS]),
 
         'daemons_initial_port':
             IntegerProp(default=10000,
-                        fill_brok=['full_status']),
+                        fill_brok=[FULL_STATUS]),
 
         # Kill launched daemons on communication failure
         'daemons_failure_kill':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=[FULL_STATUS]),
 
         'daemons_check_period':
-            IntegerProp(default=5, fill_brok=['full_status']),
+            IntegerProp(default=5, fill_brok=[FULL_STATUS]),
 
         'daemons_start_timeout':
-            IntegerProp(default=1, fill_brok=['full_status']),
+            IntegerProp(default=1, fill_brok=[FULL_STATUS]),
 
         'daemons_new_conf_timeout':
-            IntegerProp(default=1, fill_brok=['full_status']),
+            IntegerProp(default=1, fill_brok=[FULL_STATUS]),
 
         'daemons_dispatch_timeout':
-            IntegerProp(default=5, fill_brok=['full_status']),
+            IntegerProp(default=5, fill_brok=[FULL_STATUS]),
 
         'daemons_stop_timeout':
-            IntegerProp(default=5, fill_brok=['full_status']),
+            IntegerProp(default=5, fill_brok=[FULL_STATUS]),
     }
 
     macros = {
@@ -990,9 +990,9 @@ class Config(Item):  # pylint: disable=R0904,R0902
             if len(elts) == 1:  # error, there is no = !
                 self.add_error("the parameter %s is malformed! (no = sign)" % elts[0])
             else:
-                if elts[1] == '':
-                    self.add_warning("the parameter %s is ambiguous! "
-                                     "No value after =, assuming an empty string" % elts[0])
+                # if elts[1] == '':
+                #     self.add_warning("the parameter %s is ambiguous! "
+                #                      "No value after =, assuming an empty string" % elts[0])
                 clean_p[elts[0]] = elts[1]
 
         return clean_p

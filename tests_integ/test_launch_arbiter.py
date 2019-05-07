@@ -183,7 +183,7 @@ class TestLaunchArbiter(AlignakTest):
 
             u"- ignoring repeated file: /tmp/alignak/etc/arbiter/packs/resource.d/readme.cfg",
             u"Configuration warnings:",
-            u"the parameter $DIST_BIN$ is ambiguous! No value after =, assuming an empty string",
+            # u"the parameter $DIST_BIN$ is ambiguous! No value after =, assuming an empty string",
             u"No Nagios-like legacy configuration files configured.",
             u"If you need some, edit the 'alignak.ini' configuration file to declare one or more 'cfg=' variables.",
 

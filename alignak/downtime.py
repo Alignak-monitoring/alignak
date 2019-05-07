@@ -52,7 +52,7 @@ See detailed concepts below
 """
 import time
 from alignak.comment import Comment
-from alignak.property import BoolProp, IntegerProp, StringProp
+from alignak.property import BoolProp, IntegerProp, StringProp, FULL_STATUS
 from alignak.brok import Brok
 from alignak.alignakobject import AlignakObject
 
@@ -83,21 +83,21 @@ class Downtime(AlignakObject):
         'activate_me':
             StringProp(default=u''),
         'entry_time':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
         'fixed':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=[FULL_STATUS]),
         'start_time':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
         'duration':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
         'trigger_id':
             StringProp(default=u''),
         'end_time':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
         'real_end_time':
             IntegerProp(default=0),
         'author':
-            StringProp(default=u'Alignak', fill_brok=['full_status']),
+            StringProp(default=u'Alignak', fill_brok=[FULL_STATUS]),
         'comment':
             StringProp(default=u''),
         'is_in_effect':

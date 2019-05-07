@@ -56,7 +56,7 @@ implements realm for Alignak. Basically used for parsing.
 import copy
 import logging
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
-from alignak.property import BoolProp, StringProp, DictProp, ListProp, IntegerProp
+from alignak.property import BoolProp, StringProp, DictProp, ListProp, IntegerProp, FULL_STATUS
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -77,9 +77,9 @@ class Realm(Itemgroup):
     properties = Itemgroup.properties.copy()
     properties.update({
         'realm_name':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'alias':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'realm_members':
             ListProp(default=[], split_on_comma=True),
         'group_members':

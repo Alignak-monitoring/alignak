@@ -202,7 +202,7 @@ from alignak.http.daemon import HTTPDaemon, PortNotFree
 from alignak.stats import statsmgr
 from alignak.modulesmanager import ModulesManager
 from alignak.property import StringProp, BoolProp, PathProp
-from alignak.property import IntegerProp, FloatProp, LogLevelProp, ListProp
+from alignak.property import IntegerProp, FloatProp, ListProp
 from alignak.misc.common import setproctitle, SIGNALS_TO_NAMES_DICT
 from alignak.version import VERSION
 
@@ -229,8 +229,7 @@ class EnvironmentFile(Exception):
         Exception.__init__(self, msg)
 
 
-# pylint: disable=R0902
-class Daemon(object):
+class Daemon(object):  # pylint: disable=too-many-instance-attributes
     """Class providing daemon level call for Alignak
     """
 
@@ -294,19 +293,7 @@ class Daemon(object):
         'server_dh':
             StringProp(default=u''),
 
-        # Deprecated in favor of logger_configuration
-        # 'human_timestamp_log':
-        #     BoolProp(default=True),
-        # 'human_date_format':
-        #     StringProp(default='%Y-%m-%d %H:%M:%S %Z'),
-        # 'log_level':
-        #     LogLevelProp(default='INFO'),
-        # 'log_rotation_when':
-        #     StringProp(default='midnight'),
-        # 'log_rotation_interval':
-        #     IntegerProp(default=1),
-        # 'log_rotation_count':
-        #     IntegerProp(default=7),
+        # File for logger configuration
         'logger_configuration':
             StringProp(default=u'./alignak-logger.json'),
         # Override log file name - default is to not override
@@ -880,7 +867,7 @@ class Daemon(object):
         # Force output to stderr
         if exit_code:
             if message:
-                logger.error(message)
+                logger.error("stderr: %s", message)
                 try:
                     sys.stderr.write(message)
                 except Exception:  # pylint: disable=broad-except

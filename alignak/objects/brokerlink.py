@@ -44,7 +44,7 @@ This module provide BrokerLink and BrokerLinks classes used to manage brokers
 """
 
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
-from alignak.property import IntegerProp, StringProp, BoolProp
+from alignak.property import IntegerProp, StringProp, BoolProp, FULL_STATUS
 
 
 class BrokerLink(SatelliteLink):
@@ -55,13 +55,13 @@ class BrokerLink(SatelliteLink):
     properties = SatelliteLink.properties.copy()
     properties.update({
         'type':
-            StringProp(default=u'broker', fill_brok=['full_status'], to_send=True),
+            StringProp(default=u'broker', fill_brok=[FULL_STATUS], to_send=True),
         'broker_name':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default='', fill_brok=[FULL_STATUS]),
         'port':
-            IntegerProp(default=7772, fill_brok=['full_status'], to_send=True),
+            IntegerProp(default=7772, fill_brok=[FULL_STATUS], to_send=True),
         'initialized':
-            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
+            BoolProp(default=False, fill_brok=[FULL_STATUS], to_send=True),
     })
 
     def prepare_for_conf(self):

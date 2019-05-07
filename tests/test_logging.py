@@ -201,9 +201,27 @@ class TestLogging2(AlignakTest):
 
     def _set_console_log(self, logger_configuration_file):
         """Set console logger for Alignak arbiter verify mode"""
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for hdlr in logger_.handlers:
+            if getattr(hdlr, 'filename', None):
+                print("- handler : %s - %s (%s) -> %s" % (hdlr.level, hdlr, hdlr.formatter._fmt,
+                                                          hdlr.filename))
+            else:
+                print("- handler : %s - %s (%s)" % (hdlr.level, hdlr, hdlr.formatter._fmt))
+
+        print("--///--")
+
         setup_logger(logger_configuration_file, log_dir=None, process_name='', log_file='')
         self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
         set_log_level(logging.INFO)
+
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for hdlr in logger_.handlers:
+            if getattr(hdlr, 'filename', None):
+                print("- handler : %s - %s (%s) -> %s" % (hdlr.level, hdlr, hdlr.formatter._fmt,
+                                                          hdlr.filename))
+            else:
+                print("- handler : %s - %s (%s)" % (hdlr.level, hdlr, hdlr.formatter._fmt))
 
         # Log message
         self.logger_.info("Message")
@@ -218,7 +236,7 @@ class TestLogging2(AlignakTest):
         logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
         for hdlr in logger_.handlers:
             if getattr(hdlr, 'filename', None):
-                print("- handler : %s (%s) -> %s" % (hdlr, hdlr.formatter._fmt,
-                                                     hdlr.filename))
+                print("- handler : %s - %s (%s) -> %s" % (hdlr.level, hdlr, hdlr.formatter._fmt,
+                                                          hdlr.filename))
             else:
-                print("- handler : %s (%s)" % (hdlr, hdlr.formatter._fmt))
+                print("- handler : %s - %s (%s)" % (hdlr.level, hdlr, hdlr.formatter._fmt))

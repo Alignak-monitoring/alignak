@@ -55,7 +55,7 @@ from alignak.property import BoolProp, IntegerProp, ListProp
 from alignak.property import StringProp
 
 
-class Check(Action):  # pylint: disable=R0902
+class Check(Action):  # pylint: disable=too-many-instance-attributes
     """Check class implements monitoring concepts of checks :(status, state, output)
     Check instance are used to store monitoring plugins data (exit status, output)
     and used by schedule to raise alert, reschedule check etc.

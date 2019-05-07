@@ -76,7 +76,7 @@ import psutil
 from alignak.http.generic_interface import GenericInterface
 
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
-from alignak.property import BoolProp, IntegerProp, ListProp
+from alignak.property import BoolProp, IntegerProp, ListProp, FULL_STATUS
 from alignak.brok import Brok
 from alignak.external_command import ExternalCommand
 
@@ -323,7 +323,7 @@ class BaseSatellite(Daemon):
                     new_link = SatelliteLink.get_a_satellite_link(link_type[:-1],
                                                                   rs_conf)
                     my_satellites[new_link.uuid] = new_link
-                    logger.info("I got a new %s satellite: %s", link_type[:-1], new_link)
+                    logger.info("I got a new %s satellite: %s", link_type[:-1], new_link.name)
 
                     new_link.running_id = running_id
                     new_link.external_commands = external_commands
@@ -376,7 +376,7 @@ class BaseSatellite(Daemon):
         return res
 
 
-class Satellite(BaseSatellite):  # pylint: disable=R0902
+class Satellite(BaseSatellite):  # pylint: disable=too-many-instance-attributes
     """Satellite class.
     Sub-classed by Receiver, Reactionner and Poller
 
@@ -392,11 +392,11 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
         'max_plugins_output_length':
             IntegerProp(default=8192),
         'min_workers':
-            IntegerProp(default=0, fill_brok=['full_status'], to_send=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS], to_send=True),
         'max_workers':
-            IntegerProp(default=0, fill_brok=['full_status'], to_send=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS], to_send=True),
         'processes_by_worker':
-            IntegerProp(default=256, fill_brok=['full_status'], to_send=True),
+            IntegerProp(default=256, fill_brok=[FULL_STATUS], to_send=True),
         'worker_polling_interval':
             IntegerProp(default=1, to_send=True),
         'poller_tags':
@@ -719,9 +719,9 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
             for _ in range(todo):
                 try:
                     self.create_and_launch_worker(module_name=mod)
-                # Maybe this modules is not a true worker one.
-                # if so, just delete if from q_by_mod
                 except NotWorkerMod:
+                    # Maybe this module is not a true worker module.
+                    # if so, just delete if from q_by_mod
                     to_del.append(mod)
                     break
 
@@ -773,7 +773,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                 scheduler_link = self.schedulers[scheduler_id]
                 break
         else:
-            logger.error("Trying to add actions from an unknwown scheduler: %s",
+            logger.error("Trying to add actions from an unknown scheduler: %s",
                          scheduler_instance_id)
             return
         if not scheduler_link:
@@ -1058,7 +1058,7 @@ class Satellite(BaseSatellite):  # pylint: disable=R0902
                     logger.error('Cannot un-serialize modules configuration '
                                  'received from arbiter: %s', exp)
                 if self.modules:
-                    logger.info("I received some modules configuration: %s", self.modules)
+                    logger.info("I received some modules configuration")
                     self.have_modules = True
 
                     for module in self.modules:

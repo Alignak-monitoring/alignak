@@ -56,12 +56,11 @@ Each class implements a pythonize method that cast data into the wanted type.
 
 """
 import re
-import logging
 from alignak.util import to_float, to_split, to_char, to_int, unique_value, list_split
 
 __all__ = ('UnusedProp', 'BoolProp', 'IntegerProp', 'FloatProp',
-           'CharProp', 'StringProp', 'ListProp', 'DictProp',
-           'FULL_STATUS', 'CHECK_RESULT')
+           'CharProp', 'StringProp', 'SetProp', 'ListProp', 'DictProp',
+           'AddrProp', 'FULL_STATUS', 'CHECK_RESULT')
 
 # Suggestion
 # Is this useful? see above
@@ -356,23 +355,6 @@ class SetProp(ListProp):
         :rtype: set
         """
         return set(super(SetProp, self).pythonize(val))
-
-
-class LogLevelProp(StringProp):
-    """ A string property representing a logging level """
-
-    def pythonize(self, val):
-        """Convert value into a log level property::
-
-        * If value is a list, try to take the last element
-        * get logging level base on the value
-
-        :param val: value to convert
-        :type val:
-        :return: log level corresponding to value
-        :rtype: str
-        """
-        return logging.getLevelName(unique_value(val))
 
 
 class DictProp(Property):

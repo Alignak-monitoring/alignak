@@ -33,6 +33,8 @@ class TestAcknowledges(AlignakTest):
     """
     def setUp(self):
         super(TestAcknowledges, self).setUp()
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
 
     def test_ack_host_sticky_ds_dh(self):
         """
@@ -40,8 +42,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
@@ -92,8 +92,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.event_handler_enabled = False
@@ -207,8 +205,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
@@ -259,8 +255,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.event_handler_enabled = False
@@ -374,8 +368,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
@@ -433,8 +425,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
@@ -486,8 +476,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
@@ -541,8 +529,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
@@ -596,8 +582,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
@@ -637,8 +621,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
@@ -679,8 +661,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
@@ -746,15 +726,13 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
-                                                                              "test_ok_0")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
+            "test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
@@ -804,15 +782,13 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
-                                                                              "test_ok_0")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname(
+            "test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
@@ -856,8 +832,6 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router

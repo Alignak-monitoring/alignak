@@ -57,7 +57,7 @@ This module provide Contactgroup and Contactgroups class used to manage contact 
 import logging
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
-from alignak.property import StringProp, ListProp
+from alignak.property import StringProp, ListProp, FULL_STATUS
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -73,11 +73,11 @@ class Contactgroup(Itemgroup):
     properties = Itemgroup.properties.copy()
     properties.update({
         'contactgroup_name':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'alias':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'contactgroup_members':
-            ListProp(default=[], fill_brok=['full_status'], merging='join', split_on_comma=True)
+            ListProp(default=[], fill_brok=[FULL_STATUS], merging='join', split_on_comma=True)
     })
 
     macros = {

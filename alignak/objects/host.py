@@ -64,7 +64,8 @@ about the configuration part. for the running one, it's better
 to look at the schedulingitem class that manage all
 scheduling/consume check smart things :)
 """
-# pylint: disable=too-many-lines
+
+# pylint:disable=too-many-lines
 
 import os
 import time
@@ -72,15 +73,15 @@ import logging
 
 from alignak.objects.schedulingitem import SchedulingItem, SchedulingItems
 
-# from alignak.util import brok_last_time
 from alignak.autoslots import AutoSlots
-from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, CharProp
+from alignak.property import (BoolProp, IntegerProp, StringProp,
+                              ListProp, CharProp, FULL_STATUS, CHECK_RESULT)
 from alignak.log import make_monitoring_log
 
-logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
+logger = logging.getLogger(__name__)  # pylint:disable=invalid-name
 
 
-class Host(SchedulingItem):  # pylint: disable=R0904
+class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
     """Host class implements monitoring concepts for host.
     For example it defines parents, check_interval, check_command  etc.
     """
@@ -100,40 +101,40 @@ class Host(SchedulingItem):  # pylint: disable=R0904
     properties = SchedulingItem.properties.copy()
     properties.update({
         'host_name':
-            StringProp(fill_brok=['full_status', 'check_result', 'next_schedule']),
+            StringProp(fill_brok=[FULL_STATUS, CHECK_RESULT, 'next_schedule']),
         'alias':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'address':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'address6':
-            StringProp(fill_brok=['full_status'], default=''),
+            StringProp(fill_brok=[FULL_STATUS], default=''),
         'parents':
             ListProp(default=[],
-                     fill_brok=['full_status'], merging='join', split_on_comma=True),
+                     fill_brok=[FULL_STATUS], merging='join', split_on_comma=True),
         'hostgroups':
             ListProp(default=[],
-                     fill_brok=['full_status'], merging='join', split_on_comma=True),
+                     fill_brok=[FULL_STATUS], merging='join', split_on_comma=True),
         'check_command':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default='', fill_brok=[FULL_STATUS]),
         'flap_detection_options':
-            ListProp(default=['o', 'd', 'x'], fill_brok=['full_status'],
+            ListProp(default=['o', 'd', 'x'], fill_brok=[FULL_STATUS],
                      merging='join', split_on_comma=True),
         'notification_options':
-            ListProp(default=['d', 'x', 'r', 'f'], fill_brok=['full_status'],
+            ListProp(default=['d', 'x', 'r', 'f'], fill_brok=[FULL_STATUS],
                      merging='join', split_on_comma=True),
         'vrml_image':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'statusmap_image':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'freshness_state':
-            CharProp(default='x', fill_brok=['full_status']),
+            CharProp(default='x', fill_brok=[FULL_STATUS]),
 
         # No slots for this 2 because begin property by a number seems bad
         # it's stupid!
         '2d_coords':
-            StringProp(default=u'', fill_brok=['full_status'], no_slots=True),
+            StringProp(default=u'', fill_brok=[FULL_STATUS], no_slots=True),
         '3d_coords':
-            StringProp(default=u'', fill_brok=['full_status'], no_slots=True),
+            StringProp(default=u'', fill_brok=[FULL_STATUS], no_slots=True),
         # New to alignak
         # 'fill_brok' is ok because in scheduler it's already
         # a string from conf_send_preparation
@@ -144,11 +145,11 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         'service_includes':
             ListProp(default=[], merging='duplicate', split_on_comma=True),
         'snapshot_criteria':
-            ListProp(default=['d', 'x'], fill_brok=['full_status'], merging='join'),
+            ListProp(default=['d', 'x'], fill_brok=[FULL_STATUS], merging='join'),
 
         # Realm stuff
         'realm':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
     })
 
     # properties set only for running purpose
@@ -156,14 +157,14 @@ class Host(SchedulingItem):  # pylint: disable=R0904
     running_properties = SchedulingItem.running_properties.copy()
     running_properties.update({
         'state':
-            StringProp(default=u'UP', fill_brok=['full_status', 'check_result'],
+            StringProp(default=u'UP', fill_brok=[FULL_STATUS, CHECK_RESULT],
                        retention=True),
         'last_time_up':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'last_time_down':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'last_time_unreachable':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
 
         # Our services
         'services':
@@ -171,7 +172,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
 
         # Realm stuff
         'realm_name':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'got_default_realm':
             BoolProp(default=False),
 
@@ -1274,6 +1275,7 @@ class Host(SchedulingItem):  # pylint: disable=R0904
         """
         overall_state = 0
 
+        # pylint: disable=too-many-nested-blocks
         if not self.monitored:
             overall_state = 5
         elif self.acknowledged:
@@ -1305,7 +1307,8 @@ class Hosts(SchedulingItems):
     name_property = "host_name"
     inner_class = Host
 
-    def linkify(self, timeperiods=None, commands=None, contacts=None,  # pylint: disable=R0913
+    # pylint: disable=too-many-arguments
+    def linkify(self, timeperiods=None, commands=None, contacts=None,
                 realms=None, resultmodulations=None, businessimpactmodulations=None,
                 escalations=None, hostgroups=None,
                 checkmodulations=None, macromodulations=None):

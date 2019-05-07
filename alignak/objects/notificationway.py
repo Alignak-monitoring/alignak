@@ -56,7 +56,7 @@ import logging
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
 
-from alignak.property import BoolProp, IntegerProp, StringProp, ListProp
+from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, FULL_STATUS
 from alignak.commandcall import CommandCall
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -71,25 +71,25 @@ class NotificationWay(Item):
     properties = Item.properties.copy()
     properties.update({
         'notificationway_name':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'host_notifications_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=[FULL_STATUS]),
         'service_notifications_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=[FULL_STATUS]),
         'host_notification_period':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'service_notification_period':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'host_notification_options':
-            ListProp(default=[''], fill_brok=['full_status'], split_on_comma=True),
+            ListProp(default=[''], fill_brok=[FULL_STATUS], split_on_comma=True),
         'service_notification_options':
-            ListProp(default=[''], fill_brok=['full_status'], split_on_comma=True),
+            ListProp(default=[''], fill_brok=[FULL_STATUS], split_on_comma=True),
         'host_notification_commands':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         'service_notification_commands':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         'min_business_impact':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
     })
 
     running_properties = Item.running_properties.copy()

@@ -250,7 +250,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
 
             # Configuration check
             u"Configuration warnings",
-            u"the parameter $DIST_BIN$ is ambiguous! No value after =, assuming an empty string",
+            # u"the parameter $DIST_BIN$ is ambiguous! No value after =, assuming an empty string",
             u"No realms defined, I am adding one as All",
             u"[host::localhost2] has no defined check command",
             u"hosts configuration warnings: 1, total: 2",
@@ -294,6 +294,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
         ignored_errors = [
             # 'Error on backend login: ',
             # 'Configured user account is not allowed for this module'
+            'Trying to add actions from an unknown scheduler'
         ]
         (errors_raised, warnings_raised) = \
             self._check_daemons_log_for_errors(daemons_list, run_folder='/tmp/alignak',

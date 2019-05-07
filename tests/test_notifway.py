@@ -42,7 +42,8 @@ from .alignak_test import AlignakTest
 class TestNotificationWay(AlignakTest):
     def setUp(self):
         super(TestNotificationWay, self).setUp()
-        self.setup_with_file('cfg/cfg_notification_ways.cfg')
+        self.setup_with_file('cfg/cfg_notification_ways.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
     def test_create_nw(self):
@@ -213,36 +214,36 @@ class TestNotificationWay(AlignakTest):
 
         # Now all want* functions
         # First is ok with warning alerts
-        assert True == email_in_day.want_service_notification(self._scheduler.timeperiods,
-                                                              now, 'WARNING', 'PROBLEM',
-                                                              huge_criticity)
+        assert email_in_day.want_service_notification(self._scheduler.timeperiods,
+                                                      now, 'WARNING', 'PROBLEM',
+                                                      huge_criticity) is True
 
         # But a SMS is now WAY for warning. When we sleep, we wake up for critical only guy!
-        assert False == sms_the_night.want_service_notification(self._scheduler.timeperiods,
-                                                                now, 'WARNING', 'PROBLEM',
-                                                                huge_criticity)
+        assert sms_the_night.want_service_notification(self._scheduler.timeperiods,
+                                                       now, 'WARNING', 'PROBLEM',
+                                                       huge_criticity) is False
 
         # Same with contacts now
         # First is ok for warning in the email_in_day nw
-        assert True == contact.want_service_notification(self._scheduler.notificationways,
-                                                         self._scheduler.timeperiods,
-                                                         now, 'WARNING', 'PROBLEM', huge_criticity)
+        assert contact.want_service_notification(self._scheduler.notificationways,
+                                                 self._scheduler.timeperiods,
+                                                 now, 'WARNING', 'PROBLEM', huge_criticity) is True
         # Simple is not ok for it
-        assert False == contact_simple.want_service_notification(self._scheduler.notificationways,
-                                                                 self._scheduler.timeperiods,
-                                                                 now, 'WARNING', 'PROBLEM',
-                                                                 huge_criticity)
+        assert contact_simple.want_service_notification(self._scheduler.notificationways,
+                                                        self._scheduler.timeperiods,
+                                                        now, 'WARNING', 'PROBLEM',
+                                                        huge_criticity) is False
 
         # Then for host notification
         # First is ok for warning in the email_in_day nw
-        assert True == contact.want_host_notification(self._scheduler.notificationways,
-                                                      self._scheduler.timeperiods,
-                                                      now, 'FLAPPING', 'PROBLEM', huge_criticity)
+        assert contact.want_host_notification(self._scheduler.notificationways,
+                                              self._scheduler.timeperiods,
+                                              now, 'FLAPPING', 'PROBLEM', huge_criticity) is True
         # Simple is not ok for it
-        assert False == contact_simple.want_host_notification(self._scheduler.notificationways,
-                                                              self._scheduler.timeperiods,
-                                                              now, 'FLAPPING', 'PROBLEM',
-                                                              huge_criticity)
+        assert contact_simple.want_host_notification(self._scheduler.notificationways,
+                                                     self._scheduler.timeperiods,
+                                                     now, 'FLAPPING', 'PROBLEM',
+                                                     huge_criticity) is False
 
         # And now we check that we refuse SMS for a low level criticity
         # I do not want to be awaken by a dev server! When I sleep, I sleep!
@@ -250,8 +251,8 @@ class TestNotificationWay(AlignakTest):
 
         # We take the EMAIL test because SMS got the night ony, so we
         # take a very low value for criticity here
-        assert False == email_in_day.want_service_notification(self._scheduler.timeperiods,
-                                                               now, 'WARNING', 'PROBLEM', -1)
+        assert email_in_day.want_service_notification(self._scheduler.timeperiods,
+                                                      now, 'WARNING', 'PROBLEM', -1) is False
 
         # Test the heritage for notification ways
         host_template = self._scheduler.hosts.find_by_name("test_host_contact_template")

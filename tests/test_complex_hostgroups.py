@@ -59,16 +59,16 @@ class TestComplexHostgroups(AlignakTest):
         assert self.conf_is_correct
 
     def get_svc(self):
-        return self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        return self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
 
     def find_service(self, name, desc):
-        return self._scheduler.services.find_srv_by_name_and_hostname(name, desc)
+        return self._arbiter.conf.services.find_srv_by_name_and_hostname(name, desc)
 
     def find_host(self, name):
-        return self._scheduler.hosts.find_by_name(name)
+        return self._arbiter.conf.hosts.find_by_name(name)
 
     def find_hostgroup(self, name):
-        return self._scheduler.hostgroups.find_by_name(name)
+        return self._arbiter.conf.hostgroups.find_by_name(name)
 
     def dump_hosts(self, svc):
         for h in svc.host_name:
@@ -94,7 +94,7 @@ class TestComplexHostgroups(AlignakTest):
                 result = False
 
         # Do not exist on the other hosts
-        for host in self._scheduler.hosts:
+        for host in self._arbiter.conf.hosts:
             if host not in hosts:
                 svc = self.find_service(host.host_name, service_description)
                 if svc is not None:
@@ -137,9 +137,9 @@ class TestComplexHostgroups(AlignakTest):
         assert test_linux_web_qual_0.uuid in hg_linux.members
         assert test_linux_file_prod_0.uuid in hg_linux.members
         for host in hg_linux:
-            assert self._scheduler.hosts[host].get_name() in ['test_linux_web_prod_0',
-                                                              'test_linux_web_qual_0',
-                                                              'test_linux_file_prod_0']
+            assert self._arbiter.conf.hosts[host].get_name() in ['test_linux_web_prod_0',
+                                                                 'test_linux_web_qual_0',
+                                                                 'test_linux_file_prod_0']
 
         # First the service defined for the hostgroup: linux
         assert self.service_defined_only_on('linux_0', [test_linux_web_prod_0,

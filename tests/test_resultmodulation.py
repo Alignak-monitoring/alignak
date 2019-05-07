@@ -54,7 +54,8 @@ from .alignak_test import AlignakTest
 class TestResultModulation(AlignakTest):
     def setUp(self):
         super(TestResultModulation, self).setUp()
-        self.setup_with_file('cfg/cfg_result_modulation.cfg')
+        self.setup_with_file('cfg/cfg_result_modulation.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
         # Our scheduler

@@ -65,8 +65,8 @@
 
 """ This Class is the service one, s it manage all service specific thing.
 If you look at the scheduling part, look at the scheduling item class"""
-# pylint: disable=C0302
-# pylint: disable=R0904
+# pylint: disable=too-many-lines
+# pylint: disable=too-many-public-methods
 import os
 import logging
 import time
@@ -75,12 +75,10 @@ import re
 from alignak.objects.schedulingitem import SchedulingItem, SchedulingItems
 
 from alignak.autoslots import AutoSlots
-from alignak.util import (
-    strip_and_uniq,
-    generate_key_value_sequences,
-    is_complex_expr,
-    KeyValueSyntaxError)
-from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, CharProp
+from alignak.util import (strip_and_uniq, generate_key_value_sequences,
+                          is_complex_expr, KeyValueSyntaxError)
+from alignak.property import (BoolProp, IntegerProp, StringProp, ListProp,
+                              CharProp, FULL_STATUS, CHECK_RESULT)
 from alignak.log import make_monitoring_log
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -109,35 +107,35 @@ class Service(SchedulingItem):
     properties = SchedulingItem.properties.copy()
     properties.update({
         'alias':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'host_name':
-            StringProp(fill_brok=['full_status', 'check_result', 'next_schedule'], special=True),
+            StringProp(fill_brok=[FULL_STATUS, CHECK_RESULT, 'next_schedule'], special=True),
         'hostgroup_name':
-            StringProp(default='', fill_brok=['full_status'], merging='join', special=True),
+            StringProp(default='', fill_brok=[FULL_STATUS], merging='join', special=True),
         'service_description':
-            StringProp(fill_brok=['full_status', 'check_result', 'next_schedule']),
+            StringProp(fill_brok=[FULL_STATUS, CHECK_RESULT, 'next_schedule']),
         'servicegroups':
-            ListProp(default=[], fill_brok=['full_status'], merging='join'),
+            ListProp(default=[], fill_brok=[FULL_STATUS], merging='join'),
         'is_volatile':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
         'check_command':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'flap_detection_options':
-            ListProp(default=['o', 'w', 'c', 'u', 'x'], fill_brok=['full_status'],
+            ListProp(default=['o', 'w', 'c', 'u', 'x'], fill_brok=[FULL_STATUS],
                      split_on_comma=True),
         'notification_options':
             ListProp(default=['w', 'u', 'c', 'r', 'f', 's', 'x'],
-                     fill_brok=['full_status'], split_on_comma=True),
+                     fill_brok=[FULL_STATUS], split_on_comma=True),
         'parallelize_check':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=[FULL_STATUS]),
         'merge_host_contacts':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
 
         'host_dependency_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=[FULL_STATUS]),
 
         'freshness_state':
-            CharProp(default='x', fill_brok=['full_status']),
+            CharProp(default='x', fill_brok=[FULL_STATUS]),
 
         # Easy Service dep definition
         'service_dependencies':
@@ -151,9 +149,9 @@ class Service(SchedulingItem):
 
         # UI aggregation
         'aggregation':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default='', fill_brok=[FULL_STATUS]),
         'snapshot_criteria':
-            ListProp(default=['w', 'c', 'u', 'x'], fill_brok=['full_status'], merging='join'),
+            ListProp(default=['w', 'c', 'u', 'x'], fill_brok=[FULL_STATUS], merging='join'),
     })
 
     # properties used in the running state
@@ -161,17 +159,17 @@ class Service(SchedulingItem):
     running_properties.update({
         'state':
             StringProp(default=u'OK',
-                       fill_brok=['full_status', 'check_result'], retention=True),
+                       fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'last_time_ok':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'last_time_warning':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'last_time_critical':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'last_time_unknown':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'last_time_unreachable':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'host':
             StringProp(default=None),
         'state_before_hard_unknown_reach_phase': StringProp(default=u'OK', retention=True),

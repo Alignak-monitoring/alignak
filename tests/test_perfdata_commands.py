@@ -62,7 +62,8 @@ class TestPerfdataCommands(AlignakTest):
     """
     def setUp(self):
         super(TestPerfdataCommands, self).setUp()
-        self.setup_with_file('cfg/cfg_perfdata_commands.cfg')
+        self.setup_with_file('cfg/cfg_perfdata_commands.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
     def test_service_perfdata_command(self):
@@ -82,9 +83,9 @@ class TestPerfdataCommands(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
-        #--------------------------------------------------------------
+        # --------------------------------------------------------------
         # initialize host/service state
-        #--------------------------------------------------------------
+        # --------------------------------------------------------------
         # Check we have a real command, not only a string
         assert isinstance(svc.__class__.perfdata_command, CommandCall)
 
@@ -123,9 +124,9 @@ class TestPerfdataCommands(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
-        #--------------------------------------------------------------
+        # --------------------------------------------------------------
         # initialize host/service state
-        #--------------------------------------------------------------
+        # --------------------------------------------------------------
         # Check we have a real command, not only a string
         assert isinstance(host.perfdata_command, CommandCall)
 
@@ -164,9 +165,9 @@ class TestPerfdataCommands(AlignakTest):
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
-        #--------------------------------------------------------------
+        # --------------------------------------------------------------
         # initialize host/service state
-        #--------------------------------------------------------------
+        # --------------------------------------------------------------
         # Check we have a real command, not only a string
         assert isinstance(svc.perfdata_command, CommandCall)
 

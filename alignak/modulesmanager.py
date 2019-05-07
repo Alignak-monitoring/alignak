@@ -241,12 +241,12 @@ class ModulesManager(object):
             alignak_module.properties = python_module.properties.copy()
             alignak_module.my_daemon = self.daemon
             logger.info("Alignak starting module '%s'", alignak_module.get_name())
-            if getattr(alignak_module, 'modules', None):
-                modules = []
-                for module_uuid in alignak_module.modules:
-                    if module_uuid in self.modules:
-                        modules.append(self.modules[module_uuid])
-                alignak_module.modules = modules
+            # if alignak_module.modules:
+            #     modules = []
+            #     for module_uuid in alignak_module.modules:
+            #         if module_uuid in self.modules:
+            #             modules.append(self.modules[module_uuid])
+            #     alignak_module.modules = modules
             logger.debug("Module '%s', parameters: %s",
                          alignak_module.get_name(), alignak_module.__dict__)
             try:

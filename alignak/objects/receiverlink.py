@@ -45,7 +45,7 @@ This module provide ReceiverLink and ReceiverLinks classes used to manage receiv
 """
 import logging
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
-from alignak.property import IntegerProp, StringProp
+from alignak.property import IntegerProp, StringProp, FULL_STATUS
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -58,11 +58,11 @@ class ReceiverLink(SatelliteLink):
     properties = SatelliteLink.properties.copy()
     properties.update({
         'type':
-            StringProp(default='receiver', fill_brok=['full_status'], to_send=True),
+            StringProp(default='receiver', fill_brok=[FULL_STATUS], to_send=True),
         'receiver_name':
-            StringProp(default='', fill_brok=['full_status'], to_send=True),
+            StringProp(default='', fill_brok=[FULL_STATUS], to_send=True),
         'port':
-            IntegerProp(default=7772, fill_brok=['full_status'], to_send=True),
+            IntegerProp(default=7772, fill_brok=[FULL_STATUS], to_send=True),
     })
 
 

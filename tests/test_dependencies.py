@@ -55,7 +55,8 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        self.setup_with_file('cfg/cfg_dependencies.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
         assert len(self.configuration_warnings) == 0
@@ -156,7 +157,8 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        self.setup_with_file('cfg/cfg_dependencies.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
         assert len(self.configuration_warnings) == 0
@@ -218,7 +220,8 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        self.setup_with_file('cfg/cfg_dependencies.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
         assert len(self.configuration_warnings) == 0
@@ -290,7 +293,8 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
+        self.setup_with_file('cfg/cfg_dependencies_conf.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
         assert len(self.configuration_warnings) == 0
@@ -305,7 +309,8 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
+        self.setup_with_file('cfg/cfg_dependencies_conf.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
         assert len(self.configuration_warnings) == 0
@@ -320,7 +325,8 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
+        self.setup_with_file('cfg/cfg_dependencies_conf.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
         assert len(self.configuration_warnings) == 0
@@ -336,7 +342,8 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
+        self.setup_with_file('cfg/cfg_dependencies_conf.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
         assert len(self.configuration_warnings) == 0
@@ -350,7 +357,8 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
+        self.setup_with_file('cfg/cfg_dependencies_conf.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
         assert len(self.configuration_warnings) == 0
@@ -365,7 +373,8 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
+        self.setup_with_file('cfg/cfg_dependencies_conf.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
         assert len(self.configuration_warnings) == 0
@@ -379,7 +388,8 @@ class TestDependencies(AlignakTest):
 
         :return:
         """
-        self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
+        self.setup_with_file('cfg/cfg_dependencies_conf.cfg',
+                             dispatching=True)
 
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
@@ -561,7 +571,8 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        self.setup_with_file('cfg/cfg_dependencies.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
         host = self._scheduler.hosts.find_by_name("test_host_00")
@@ -652,7 +663,8 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        self.setup_with_file('cfg/cfg_dependencies.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
         host = self._scheduler.hosts.find_by_name("test_host_00")
@@ -743,7 +755,8 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        self.setup_with_file('cfg/cfg_dependencies.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
         host_00 = self._scheduler.hosts.find_by_name("test_host_00")
@@ -814,7 +827,8 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        self.setup_with_file('cfg/cfg_dependencies.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
         router_00 = self._scheduler.hosts.find_by_name("test_router_00")
@@ -924,7 +938,7 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        self.setup_with_file('cfg/cfg_dependencies.cfg', dispatching=True)
         # 4 hosts:
         # test_router_0
         # test_host_0
@@ -1041,7 +1055,7 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        self.setup_with_file('cfg/cfg_dependencies.cfg', dispatching=True)
         assert self.conf_is_correct
 
         host = self._scheduler.hosts.find_by_name("test_host_00")
@@ -1154,7 +1168,7 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies.cfg')
+        self.setup_with_file('cfg/cfg_dependencies.cfg', dispatching=True)
         assert self.conf_is_correct
 
         self._scheduler.update_recurrent_works_tick({'tick_check_freshness': 1})
@@ -1257,7 +1271,7 @@ class TestDependencies(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies_conf.cfg')
+        self.setup_with_file('cfg/cfg_dependencies_conf.cfg', dispatching=True)
         assert self.conf_is_correct
 
         self._scheduler.update_recurrent_works_tick({'tick_check_freshness': 1})
@@ -1328,7 +1342,7 @@ class TestDependencies(AlignakTest):
         2nd solution: define an hostgroup_name and do not define a dependent_hostgroup_name
         :return:
         """
-        self.setup_with_file('cfg/dependencies/hostdep_through_hostgroup.cfg')
+        self.setup_with_file('cfg/dependencies/hostdep_through_hostgroup.cfg', dispatching=True)
         assert self.conf_is_correct
 
         host0 = self._scheduler.hosts.find_by_name("test_host_0")
@@ -1348,10 +1362,9 @@ class TestDependencies(AlignakTest):
         2nd solution: define an hostgroup_name and do not define a dependent_hostgroup_name
         :return:
         """
-        self.setup_with_file('cfg/dependencies/servicedependency_explode_hostgroup.cfg')
+        self.setup_with_file('cfg/dependencies/servicedependency_explode_hostgroup.cfg', dispatching=True)
         self.show_logs()
         assert self.conf_is_correct
-
 
         # First version: explode_hostgroup property defined
         svc = self._scheduler.services.find_srv_by_name_and_hostname(
@@ -1398,7 +1411,8 @@ class TestDependencies(AlignakTest):
 
         :return:
         """
-        self.setup_with_file('cfg/dependencies/servicedependency_implicit_hostgroup.cfg')
+        self.setup_with_file('cfg/dependencies/servicedependency_implicit_hostgroup.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
         # Services on host_0
@@ -1452,7 +1466,8 @@ class TestDependencies(AlignakTest):
 
         :return:
         """
-        self.setup_with_file('cfg/dependencies/servicedependency_complex.cfg')
+        self.setup_with_file('cfg/dependencies/servicedependency_complex.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
         for s in self._scheduler.services:

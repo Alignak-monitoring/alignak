@@ -56,11 +56,6 @@ import sys
 import time
 import socket
 import tempfile
-import shutil
-
-import logging
-
-import psutil
 
 from .alignak_test import AlignakTest
 
@@ -99,6 +94,7 @@ alignak_config = os.path.abspath("cfg/daemons/alignak.cfg")
 alignak_environment = os.path.abspath("cfg/daemons/alignak.ini")
 
 #############################################################################
+
 
 def get_free_port(on_ip='127.0.0.1'):
     """Get a free port for an IP address"""
@@ -218,7 +214,7 @@ class template_Daemon_Start():
         if debug_file:
             assert daemon.debug is True
         else:
-            assert daemon.debug_file == None
+            assert daemon.debug_file is None
         assert daemon.pid_filename == os.path.abspath('/tmp/var/run/alignak/%s.pid' % daemon.name)
         save_pid_fname = daemon.pid_filename
         # assert daemon.log_filename == os.path.abspath('./cfg/daemons/log/%s.log' % daemon.name)
@@ -232,7 +228,7 @@ class template_Daemon_Start():
 
         time.sleep(5)
 
-        # Stop the daemon and unlink the pid file
+        # Stop the daemon and unlink the pid file
         self.stop_daemon(daemon)
         assert not os.path.exists(daemon.pid_filename)
 
@@ -300,7 +296,7 @@ class template_Daemon_Start():
 
         time.sleep(2)
 
-        # Stop the daemon, but do not unlink the pid file
+        # Stop the daemon, but do not unlink the pid file
         # self.stop_daemon(d)
         daemon.do_stop()
         assert os.path.exists(daemon.pid_filename)
@@ -349,9 +345,9 @@ class template_Daemon_Start():
         daemon.pid_filename = os.path.abspath(os.path.join('/DONOTEXISTS', "daemon.pid"))
 
         with pytest.raises(SystemExit):
-            rc = self.start_daemon(daemon)
-            assert rc == 1
-        # Stop the daemon
+            self.start_daemon(daemon)
+
+        # Stop the daemon
         self.stop_daemon(daemon)
 
     def test_bad_workdir(self):
@@ -363,9 +359,9 @@ class template_Daemon_Start():
         daemon.workdir = '/DONOTEXISTS'
 
         with pytest.raises(SystemExit):
-            rc = self.start_daemon(daemon)
-            assert rc == 1
-        # Stop the daemon
+            self.start_daemon(daemon)
+
+        # Stop the daemon
         self.stop_daemon(daemon)
 
     def test_logger(self):
@@ -388,7 +384,7 @@ class template_Daemon_Start():
 
         # The daemon log file is set by the logger configuration ... if it did not exist
         # an exception should have been raised!
-        # Stop the daemon
+        # Stop the daemon
         self.stop_daemon(daemon)
 
     def test_daemon_header(self):
@@ -421,11 +417,18 @@ class template_Daemon_Start():
 
         :return:
         """
-        os.environ['ALIGNAK_USER'] = 'alignak'
-        os.environ['ALIGNAK_GROUP'] = 'alignak'
-        daemon = self.get_daemon()
-        assert daemon.user == 'alignak'
-        assert daemon.group == 'alignak'
+        os.environ['ALIGNAK_USER'] = 'fake_improbable_user'
+        os.environ['ALIGNAK_GROUP'] = get_cur_group()
+        # Exit because the user / group does not exist!
+        with pytest.raises(SystemExit):
+            daemon = self.get_daemon()
+
+        os.environ['ALIGNAK_USER'] = get_cur_user()
+        os.environ['ALIGNAK_GROUP'] = 'fake_improbable_group'
+        # Exit because the user / group does not exist!
+        with pytest.raises(SystemExit):
+            daemon = self.get_daemon()
+
         del os.environ['ALIGNAK_USER']
         del os.environ['ALIGNAK_GROUP']
 

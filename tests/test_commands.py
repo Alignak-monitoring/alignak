@@ -61,13 +61,10 @@ class TestCommand(AlignakTest):
 
     def setUp(self):
         super(TestCommand, self).setUp()
-
-        # print("--- Config: %d - %s" % (len(self._arbiter.conf.__class__.macros), self._arbiter.conf.__class__.macros))
-
-        self.setup_with_file('cfg/cfg_commands.cfg', verbose=False)
+        self.setup_with_file('cfg/cfg_commands.cfg',
+                             verbose=False,
+                             dispatching=True)
         assert self.conf_is_correct
-
-        print("+++ Config: %d - %s" % (len(self._arbiter.conf.__class__.macros), self._arbiter.conf.__class__.macros))
 
     def test_css_in_commands(self):
         """ Test CSS and HTML in command """
@@ -78,12 +75,12 @@ class TestCommand(AlignakTest):
     def test_semi_colon_in_commands(self):
         """Test semi-colon in commands """
         # Get the hosts and services"
-        host = self._scheduler.hosts.find_by_name("test_host_0")
+        host = self._arbiter.conf.hosts.find_by_name("test_host_0")
         assert host is not None
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
 
-        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "svc_semi_colon")
+        svc = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_0", "svc_semi_colon")
         assert svc is not None
 
         # Event handler command is:
@@ -160,13 +157,13 @@ class TestCommand(AlignakTest):
         :return: None
         """
         # Get a command
-        c = self._scheduler.commands.find_by_name("command_poller_tag")
+        c = self._arbiter.conf.commands.find_by_name("command_poller_tag")
         assert c is not None
         assert c.poller_tag == 'tag1'
         assert c.reactionner_tag == 'None'
 
         # Get a command
-        c = self._scheduler.commands.find_by_name("command_reactionner_tag")
+        c = self._arbiter.conf.commands.find_by_name("command_reactionner_tag")
         assert c is not None
         assert c.poller_tag == 'None'
         assert c.reactionner_tag == 'tag2'
@@ -176,11 +173,10 @@ class TestCommand(AlignakTest):
 
         :return: None
         """
-        t = {
+        c = Command({
             'command_name': '_internal_host_up',
             'command_line': '_internal_host_up'
-        }
-        c = Command(t)
+        })
 
         assert c.command_name == '_internal_host_up'
         assert c.get_name() == '_internal_host_up'
@@ -203,11 +199,10 @@ class TestCommand(AlignakTest):
 
         :return: None
         """
-        t = {
+        c = Command({
             'command_name': '_echo',
             'command_line': '_echo'
-        }
-        c = Command(t)
+        })
 
         assert c.command_name == '_echo'
         assert c.get_name() == '_echo'
@@ -230,14 +225,13 @@ class TestCommand(AlignakTest):
 
         :return: None
         """
-        t = {
+        c = Command({
             'command_name': 'check_command_test',
             'command_line': '/tmp/dummy_command.sh $ARG1$ $ARG2$',
             'module_type': 'nrpe-booster',
             'poller_tag': 'DMZ',
             'reactionner_tag': 'REAC'
-        }
-        c = Command(t)
+        })
 
         assert c.command_name == 'check_command_test'
         assert c.get_name() == 'check_command_test'
@@ -259,14 +253,13 @@ class TestCommand(AlignakTest):
 
         :return: None
         """
-        t = {
+        c = Command({
             'command_name': 'check_command_test',
             'command_line': '/tmp/dummy_command.sh $ARG1$ $ARG2$',
             'module_type': 'nrpe-booster',
             'poller_tag': 'DMZ',
             'reactionner_tag': 'REAC'
-        }
-        c = Command(t)
+        })
 
         # now create a commands packs
         cs = Commands([c])

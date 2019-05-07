@@ -125,12 +125,15 @@ class TestDaemonsApi(AlignakTest):
             for daemon in daemons_list:
                 if cfg.has_section('daemon.%s' % daemon):
                     cfg.set('daemon.%s' % daemon, 'alignak_launched', '1')
+                    cfg.set('daemon.%s' % daemon, 'min_workers', '1')
+                    cfg.set('daemon.%s' % daemon, 'max_workers', '1')
             for daemon in remove_daemons:
                 if cfg.has_section('daemon.%s' % daemon):
                     print("Remove daemon: %s" % daemon)
                     cfg.remove_section('daemon.%s' % daemon)
 
             if os.path.exists('%s/etc/alignak.d' % self.cfg_folder):
+                # Remove default or former modules/daemons configuration!
                 print("- removing %s/etc/alignak.d" % self.cfg_folder)
                 shutil.rmtree('%s/etc/alignak.d' % self.cfg_folder)
 
@@ -725,6 +728,7 @@ class TestDaemonsApi(AlignakTest):
         # -----
 
         # # This function will only send a SIGTERM to the arbiter daemon
+        # # and this will make all the daemons stop
         # self._stop_alignak_daemons(arbiter_only=True)
         #
         # The arbiter daemon will then request its satellites to stop...
@@ -734,7 +738,7 @@ class TestDaemonsApi(AlignakTest):
             if name in ['arbiter']:
                 continue
             raw_data = req.get("%s://localhost:%s/stop_request?stop_now=0" % (scheme, port),
-                               params={'stop_now': False}, verify=False)
+                               verify=False)
             data = raw_data.json()
             assert data is True
 
@@ -744,9 +748,13 @@ class TestDaemonsApi(AlignakTest):
             if name in ['arbiter']:
                 continue
             raw_data = req.get("%s://localhost:%s/stop_request?stop_now=1" % (scheme, port),
-                               params={'stop_now': True}, verify=False)
+                               verify=False)
             data = raw_data.json()
             assert data is True
+
+        # This function will only send a SIGTERM to the arbiter daemon
+        # and this will make all the daemons stop
+        self._stop_alignak_daemons(arbiter_only=True)
 
     def test_daemons_configuration(self):
         """ Running all the Alignak daemons to check their correct configuration
@@ -792,8 +800,8 @@ class TestDaemonsApi(AlignakTest):
                 satellite_map[sat] = full_satellite_map[sat]
 
         print("Satellites map: %s" % satellite_map)
-        self._run_alignak_daemons(cfg_folder=self.cfg_folder, daemons_list=daemons_list, runtime=5,
-                                  update_configuration=False)
+        self._run_alignak_daemons(cfg_folder=self.cfg_folder, daemons_list=daemons_list,
+                                  runtime=5, update_configuration=False)
 
         scheme = 'http'
         if ssl:

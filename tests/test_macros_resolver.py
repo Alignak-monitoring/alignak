@@ -929,14 +929,14 @@ class TestMacroResolverWithEnv(MacroResolverTester, AlignakTest):
 
         # Do not provide environment file to use the default one
         self.setup_file = 'cfg/cfg_macroresolver.cfg'
-        self.setup_with_file(self.setup_file)
+        self.setup_with_file(self.setup_file, dispatching=True)
         assert self.conf_is_correct
 
         # Get an initialized macro resolver object
         self.mr = MacroResolver()
         self.mr.init(self._scheduler.pushed_conf)
 
-        # Default prefix
+        # Default prefix
         assert self.mr.env_prefix == 'ALIGNAK_'
 
 
@@ -948,7 +948,7 @@ class TestMacroResolverWithoutEnv(MacroResolverTester, AlignakTest):
 
         # Do not provide environment file to use the default one
         self.setup_file = 'cfg/cfg_macroresolver_environment.cfg'
-        self.setup_with_file(self.setup_file)
+        self.setup_with_file(self.setup_file, dispatching=True)
         assert self.conf_is_correct
 
         # Get an initialized macro resolver object

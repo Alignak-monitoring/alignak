@@ -29,14 +29,14 @@ from .alignak_test import AlignakTest
 class TestHostsvcLastStateChange(AlignakTest):
     def setUp(self):
         super(TestHostsvcLastStateChange, self).setUp()
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
 
     def test_host(self):
         """ Test the last_state_change of host
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
@@ -79,8 +79,6 @@ class TestHostsvcLastStateChange(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.event_handler_enabled = False
@@ -193,8 +191,6 @@ class TestHostsvcLastStateChange(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router

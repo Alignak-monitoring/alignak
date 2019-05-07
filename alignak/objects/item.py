@@ -58,8 +58,8 @@
 This class is a base class for nearly all configuration
 elements like service, hosts or contacts.
 """
-# pylint: disable=C0302
-# pylint: disable=R0904
+# pylint: disable=too-many-lines
+# pylint: disable=too-many-public-methods
 import time
 import itertools
 import logging
@@ -71,7 +71,8 @@ from alignak.alignakobject import get_a_new_object_id
 from alignak.misc.serialization import serialize
 
 from alignak.property import (StringProp, ListProp, BoolProp, SetProp, DictProp,
-                              IntegerProp, ToGuessProp, PythonizeError)
+                              IntegerProp, ToGuessProp, PythonizeError,
+                              FULL_STATUS, CHECK_RESULT)
 
 from alignak.alignakobject import AlignakObject
 from alignak.brok import Brok
@@ -128,12 +129,12 @@ class Item(AlignakObject):
 
         # We save all templates we asked us to load from
         'tags':
-            SetProp(default=set(), fill_brok=['full_status']),
+            SetProp(default=set(), fill_brok=[FULL_STATUS]),
 
         # used by host, service and contact
         # todo: conceptually this should be moved to the SchedulingItem and Contact objects...
         'downtimes':
-            DictProp(default={}, fill_brok=['full_status'],
+            DictProp(default={}, fill_brok=[FULL_STATUS],
                      retention=True, retention_preparation=dict_to_serialized_dict),
     }
 
@@ -620,7 +621,7 @@ class Item(AlignakObject):
         :rtype: alignak.Brok
         """
         data = {'uuid': self.uuid}
-        self.fill_data_brok_from(data, 'full_status')
+        self.fill_data_brok_from(data, FULL_STATUS)
         if extra:
             data.update(extra)
         return Brok({'type': 'initial_' + self.my_type + '_status', 'data': data})
@@ -644,7 +645,7 @@ class Item(AlignakObject):
         :rtype: alignak.Brok
         """
         data = {'uuid': self.uuid}
-        self.fill_data_brok_from(data, 'full_status')
+        self.fill_data_brok_from(data, FULL_STATUS)
         return Brok({'type': 'update_' + self.my_type + '_status', 'data': data})
 
     def get_check_result_brok(self):
@@ -655,7 +656,7 @@ class Item(AlignakObject):
         :rtype: alignak.Brok
         """
         data = {'uuid': self.uuid}
-        self.fill_data_brok_from(data, 'check_result')
+        self.fill_data_brok_from(data, CHECK_RESULT)
         return Brok({'type': self.my_type + '_check_result', 'data': data})
 
     def get_next_schedule_brok(self):
@@ -686,7 +687,7 @@ class Item(AlignakObject):
             'snapshot_time': int(time.time()),
             'snapshot_exit_status': exit_status,
         }
-        self.fill_data_brok_from(data, 'check_result')
+        self.fill_data_brok_from(data, CHECK_RESULT)
         return Brok({'type': self.my_type + '_snapshot', 'data': data})
 
     def dump(self, dump_file_name=None):  # pragma: no cover, never called
