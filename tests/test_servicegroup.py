@@ -134,13 +134,12 @@ class TestServiceGroup(AlignakTest):
         assert isinstance(sg, Servicegroup)
         assert sg.get_name() == "void"
 
-        assert len(self._arbiter.conf.servicegroups.get_members_of_group("void")) == \
-            0
+        assert len(self._arbiter.conf.servicegroups.get_members_of_group("void")) == 0
 
-        print(("Services: %s" % sg.get_servicegroup_members()))
+        print("Services: %s" % sg.get_servicegroup_members())
         assert len(sg.get_servicegroup_members()) == 0
 
-        print(("Services: %s" % sg.get_services()))
+        print("Services: %s" % sg.get_services())
         assert len(sg.get_services()) == 0
 
     def test_servicegroup_with_space(self):

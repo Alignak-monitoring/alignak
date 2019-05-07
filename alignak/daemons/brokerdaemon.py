@@ -345,8 +345,8 @@ class Broker(BaseSatellite):
 
             if not self.have_modules:
                 try:
-                    self.modules = unserialize(self.cur_conf['modules'], no_load=True, printing=True)
-                except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
+                    self.modules = unserialize(self.cur_conf['modules'], no_load=True)
+                except Exception as exp:  # pragma: no cover, simple protection
                     logger.error('Cannot un-serialize modules configuration '
                                  'received from arbiter: %s', exp)
                 if self.modules:

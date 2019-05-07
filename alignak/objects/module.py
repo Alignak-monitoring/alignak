@@ -167,7 +167,7 @@ class Module(Item):
         self.fill_default()
 
         try:
-            self.modules = unserialize(self.modules, no_load=True, printing=True)
+            self.modules = unserialize(self.modules, no_load=True)
         except Exception as exp:  # pragma: no cover, simple protection
             logger.error('Cannot un-serialize modules configuration '
                          'received from arbiter: %s', exp)
