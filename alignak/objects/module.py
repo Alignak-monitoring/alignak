@@ -53,7 +53,7 @@ This module provide Module and Modules classes used to manage internal and exter
 for each daemon
 """
 import logging
-from alignak.misc.serialization import unserialize
+from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.item import Item, Items
 
 from alignak.property import StringProp, ListProp, IntegerProp, BoolProp
@@ -168,7 +168,7 @@ class Module(Item):
 
         try:
             self.modules = unserialize(self.modules, no_load=True)
-        except Exception as exp:  # pragma: no cover, simple protection
+        except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
             logger.error('Cannot un-serialize modules configuration '
                          'received from arbiter: %s', exp)
 
