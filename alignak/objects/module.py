@@ -53,6 +53,7 @@ This module provide Module and Modules classes used to manage internal and exter
 for each daemon
 """
 import logging
+from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.item import Item, Items
 
 from alignak.property import StringProp, ListProp, IntegerProp, BoolProp
@@ -165,6 +166,12 @@ class Module(Item):
 
         self.fill_default()
 
+        try:
+            self.modules = unserialize(self.modules, no_load=True)
+        except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
+            logger.error('Cannot un-serialize modules configuration '
+                         'received from arbiter: %s', exp)
+
         # # Remove extra Item base class properties...
         # for prop in ['customs', 'plus', 'downtimes', 'old_properties',
         #              'configuration_errors', 'configuration_warnings']:
@@ -209,7 +216,7 @@ class Module(Item):
 
     def serialize(self):
         """A module may have some properties that are not defined in the class properties list.
-        Serializing a module is the same as serializing an Item but we also also include all the
+        Serializing a module is the same as serializing an Item but we also include all the
         existing properties that are not defined in the properties or running_properties
         class list.
 
@@ -219,11 +226,18 @@ class Module(Item):
         logger.info("Module serialize %s: %s", self.get_name(), res)
 
         cls = self.__class__
+        logger.info("Serialize module %s", self.get_name())
         for prop in self.__dict__:
-            if prop in cls.properties or prop in cls.running_properties or prop in ['properties',
-                                                                                    'my_daemon']:
+            logger.info(" - %s = %s", prop, getattr(self, prop))
+            if prop in cls.properties or \
+                    prop in cls.running_properties or \
+                    prop in ['properties', 'old_properties', 'my_daemon']:
                 continue
-            res[prop] = getattr(self, prop)
+            if prop in ['modules'] and getattr(self, prop):
+                res[prop] = [m.serialize() for m in self.modules]
+            else:
+                res[prop] = getattr(self, prop)
+        logger.info("Result: %s", res)
 
         logger.info("Module serialize %s: %s", self.get_name(), res)
         return res

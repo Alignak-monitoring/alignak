@@ -91,17 +91,15 @@ def unserialize(j_obj, no_load=False):
     """
     if not j_obj:
         return j_obj
-    # print("Unserialize (%s): %s" % (no_load, j_obj))
 
-    if no_load:
-        data = j_obj
-    else:
+    data = j_obj
+    if not no_load:
         data = json.loads(j_obj)
 
     if isinstance(data, dict):
         if '__sys_python_module__' in data:
             cls = get_alignak_class(data['__sys_python_module__'])
-            # Awful hack for external commands ... need to be refactored!
+            # todo: Awful hack for external commands ... need to be refactored!
             if data['__sys_python_module__'] in ['alignak.external_command.ExternalCommand']:
                 return cls(data['content']['cmd_line'], data['content']['creation_timestamp'])
 
@@ -109,7 +107,7 @@ def unserialize(j_obj, no_load=False):
 
         data_dict = {}
         for key, value in list(data.items()):
-            data_dict[key] = unserialize(value, True)
+            data_dict[key] = unserialize(value, no_load=True)
         return data_dict
 
     if isinstance(data, list):

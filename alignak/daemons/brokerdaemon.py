@@ -353,6 +353,9 @@ class Broker(BaseSatellite):
                     logger.info("I received some modules configuration")
                     self.have_modules = True
 
+                    for module in self.modules:
+                        logger.info("Module: %s", module.__dict__)
+
                     # Ok now start, or restart them!
                     # Set modules, init them and start external ones
                     self.do_load_modules(self.modules)
