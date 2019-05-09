@@ -64,6 +64,10 @@ import subprocess
 import signal
 import psutil
 
+from alignak.alignakobject import AlignakObject
+from alignak.property import (BoolProp, IntegerProp, FloatProp, StringProp,
+                              DictProp, FULL_STATUS)
+
 # For readinf files in non-blocking mode.
 # This only works from now on Unix systems
 try:
@@ -71,11 +75,13 @@ try:
 except ImportError:
     fcntl = None
 
-from alignak.alignakobject import AlignakObject
-from alignak.property import (BoolProp, IntegerProp, FloatProp, StringProp,
-                              DictProp, FULL_STATUS)
+# pylint: disable=redefined-builtin
+try:
+    FileNotFoundError
+except NameError:
+    FileNotFoundError = IOError
 
-
+# pylint: disable=invalid-name
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 __all__ = ('Action', )
@@ -598,11 +604,20 @@ if os.name != 'nt':
                                             env=self.local_env, preexec_fn=os.setsid)
 
                 logger.debug("Action execute, process: %s", self.process.pid)
-            except OSError as exp:
+            except FileNotFoundError:
+                logger.error("Fail launching command: %s, missing executable!", self.command)
+
+                self.output = "Missing executable command: %s" % cmd
+                self.exit_status = 2
+                self.status = ACT_STATUS_DONE
+                self.execution_time = time.time() - self.check_time
+
+                raise ActionError('process_launch_failed')
+            except OSError as exp:  # pylint: disable=duplicate-except
                 logger.error("Fail launching command: %s, force shell: %s, OSError: %s",
                              self.command, force_shell, exp)
                 # Maybe it's just a shell we try to exec. So we must retry
-                if (not force_shell and exp.errno == 8 and exp.strerror == 'Exec format error'):
+                if not force_shell and exp.errno == 8 and exp.strerror == 'Exec format error':
                     logger.info("Retrying with forced shell...")
                     return self._execute(True)
 
