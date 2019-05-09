@@ -2496,10 +2496,13 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
             if not item.got_business_rule:
                 continue
 
-            realm = self.realms[item.realm]
+            realm = self.realms.find_by_name(item.realm)
             if not realm:
-                # Something was wrong in the conf, will be raised elsewhere
-                continue
+                if realm in self.realms:
+                    realm = self.realms[item.realm]
+                else:
+                    # Something was wrong in the conf, will be raised elsewhere
+                    continue
 
             for elt_uuid in item.business_rule.list_all_elements():
                 if elt_uuid not in self.hosts:
@@ -2518,31 +2521,6 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                     self.add_error("Error: Business_rule '%s' got hosts from another "
                                    "realm: %s" % (item.get_full_name(), host_realm.get_name()))
                     valid = False
-
-        # for lst in [self.services, self.hosts]:
-        #     for item in lst:
-        #         if item.got_business_rule:
-        #             e_ro = self.realms[item.realm]
-        #             # Something was wrong in the conf, will be raised elsewhere
-        #             if not e_ro:
-        #                 continue
-        #             e_r = e_ro.realm_name
-        #             for elt_uuid in item.business_rule.list_all_elements():
-        #                 if elt_uuid in self.hosts:
-        #                     elt = self.hosts[elt_uuid]
-        #                 else:
-        #                     elt = self.services[elt_uuid]
-        #                 r_o = self.realms[elt.realm]
-        #                 # Something was wrong in the conf, will be raised elsewhere
-        #                 if not r_o:
-        #                     continue
-        #                 elt_r = r_o.realm_name
-        #                 if elt_r != e_r:
-        #                     logger.error("Business_rule '%s' got hosts from another realm: %s",
-        #                                  item.get_full_name(), elt_r)
-        #                     self.add_error("Error: Business_rule '%s' got hosts from another "
-        #                                    "realm: %s" % (item.get_full_name(), elt_r))
-        #                     valid = False
 
         if self.configuration_errors:
             valid = False
