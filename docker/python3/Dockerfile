@@ -25,6 +25,7 @@ RUN mkdir -p /repos
 
 # Get the Alignak repository on develop branch
 RUN cd /repos && \
+    cd /repos && \
     git clone https://github.com/alignak-monitoring/alignak && \
     cd alignak && \
     git checkout develop && \
@@ -43,8 +44,8 @@ RUN cd /repos && \
 RUN mkdir /usr/local/lib/python3.7/site-packages/alignak_webui
 RUN cd /repos && \
     git clone https://github.com/mohierf/mod-ui-graphite && \
-    cd mod-webui && \
-    git checkout python3 && \
+    cd mod-ui-graphite && \
+    git checkout alignak-python3 && \
     pip3 install -r requirements.txt && \
     pip3 install .
 

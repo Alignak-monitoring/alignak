@@ -3,7 +3,7 @@ version: '3.4'
 services:
   # Alignak daemons
   # - arbiter
-  arbiter:
+  arbiter-master:
     image: alignak3
     build:
       context: .
@@ -19,7 +19,7 @@ services:
       - ${ALIGNAK_DATADIR}:/alignak
     command: "alignak-arbiter -e ${ALIGNAK_CONFIGURATION_FILE}"
 
-  # - scheduler
+  # - scheduler(s)
   scheduler-master:
     image: alignak3
     env_file:
@@ -51,7 +51,7 @@ services:
     networks:
       - alignak
     ports:
-      - "17768:7768"
+      - "27768:7768"
     volumes:
       - ${ALIGNAK_DATADIR}:/alignak
     command: "alignak-scheduler -e ${ALIGNAK_CONFIGURATION_FILE} -n scheduler-south"
