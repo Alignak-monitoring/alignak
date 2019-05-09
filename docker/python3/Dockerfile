@@ -13,6 +13,8 @@ RUN apt-get update
 
 RUN apt-get install -y --no-install-recommends \
     nagios-plugins \
+    nagios-nrpe-plugin \
+    nagios-snmp-plugins \
     nginx \
     python3-pip
 

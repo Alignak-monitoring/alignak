@@ -81,8 +81,8 @@ services:
       - "7772:7772"
       - "7767:7767"
     volumes:
-      - ${ALIGNAK_DATADIR}:/alignak:rw
-    command: "alignak-broker -vv -e ${ALIGNAK_CONFIGURATION_FILE} -n broker-master"
+      - ${ALIGNAK_DATADIR}:/alignak
+    command: "alignak-broker -e ${ALIGNAK_CONFIGURATION_FILE} -n broker-master"
 
   # - receiver
   receiver-master:
@@ -113,9 +113,7 @@ services:
       - "8125:8125/udp"
       - "8126:8126"
     volumes:
-      - ${GRAPHITE_DATADIR}/graphite-conf:/opt/graphite/conf
-      - ${GRAPHITE_DATADIR}/statsd-conf:/opt/statsd/config
-      - ${GRAPHITE_DATADIR}/log:/var/log
+      - ${ALIGNAK_DATADIR}:/alignak
     logging:
       driver: "json-file"
       options:
