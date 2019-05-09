@@ -2503,6 +2503,7 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                 else:
                     # Something was wrong in the conf, will be raised elsewhere
                     continue
+            logger.warning("Business_rule realm: %s, %s, within: %s", item, item.realm, self.realms)
 
             for elt_uuid in item.business_rule.list_all_elements():
                 if elt_uuid not in self.hosts:
@@ -2528,7 +2529,6 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
             for msg in self.configuration_errors:
                 logger.error(msg)
 
-        # If configuration error messages exist, then the configuration is not valid
         self.conf_is_correct = valid
 
     def explode_global_conf(self):

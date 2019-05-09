@@ -32,7 +32,7 @@ services:
       - ${ALIGNAK_DATADIR}:/alignak
     command: "alignak-scheduler -e ${ALIGNAK_CONFIGURATION_FILE} -n scheduler-master"
 
-  scheduler-master2:
+  scheduler-north:
     image: alignak3
     env_file:
       - .env
@@ -42,7 +42,19 @@ services:
       - "17768:7768"
     volumes:
       - ${ALIGNAK_DATADIR}:/alignak
-    command: "alignak-scheduler -e ${ALIGNAK_CONFIGURATION_FILE} -n scheduler-master2"
+    command: "alignak-scheduler -e ${ALIGNAK_CONFIGURATION_FILE} -n scheduler-north"
+
+  scheduler-south:
+    image: alignak3
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "17768:7768"
+    volumes:
+      - ${ALIGNAK_DATADIR}:/alignak
+    command: "alignak-scheduler -e ${ALIGNAK_CONFIGURATION_FILE} -n scheduler-south"
 
   # - reactionner
   reactionner-master:
@@ -120,6 +132,7 @@ services:
         max-size: "1m"
         max-file: "3"
 
+  # Mongo DB, for Alignak WebUI
   mongodb:
     image: mongo:4.0
     restart: unless-stopped
