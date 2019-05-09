@@ -13,15 +13,9 @@ RUN apt-get update
 
 RUN apt-get install -y --no-install-recommends \
     nagios-plugins \
-    nagios-nrpe-plugins \
-    nagios-snmp-plugins \
     nginx \
     python3-pip
 
-#RUN apt-get install -y --no-install-recommends \
-#    nagios-plugins \
-#    nagios-nrpe-plugins
-#
 RUN apt-get autoremove && apt-get clean
 
 # Location for the git repositories
@@ -36,9 +30,17 @@ RUN cd /repos && \
     pip3 install .
 
 # Get the Shinken / Alignak Web UI
-RUN mkdir /usr/local/lib/python3.7/site-packages/alignak_webui
 RUN cd /repos && \
     git clone https://github.com/mohierf/mod-webui && \
+    cd mod-webui && \
+    git checkout python3 && \
+    pip3 install -r requirements.txt && \
+    pip3 install .
+
+# Get the Shinken / Alignak Web UI
+RUN mkdir /usr/local/lib/python3.7/site-packages/alignak_webui
+RUN cd /repos && \
+    git clone https://github.com/mohierf/mod-ui-graphite && \
     cd mod-webui && \
     git checkout python3 && \
     pip3 install -r requirements.txt && \
