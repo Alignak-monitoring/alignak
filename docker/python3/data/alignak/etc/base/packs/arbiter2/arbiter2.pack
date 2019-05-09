@@ -1,0 +1,11 @@
+{
+    "name":"arbiter2",
+    "description":"Check shinken 2.x daemon health.",
+    "path":"shinken/",
+    "macros":{
+        "_shinken_daemon": {
+            "type":"list",
+            "description": "list of daemon types to check (arbiter,poller,broker,scheduler,receiver,reactionner)"
+        },
+    }
+}
