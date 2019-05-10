@@ -119,7 +119,7 @@ services:
     networks:
       - alignak
     ports:
-      - "8000:80"
+      - "8080:80"
       - "2003-2004:2003-2004"
       - "2023-2024:2023-2024"
       - "8125:8125/udp"
@@ -163,4 +163,4 @@ networks:
   alignak:
   default:
     external:
-      name: ${PROXY_NETWORK}
+      name: default

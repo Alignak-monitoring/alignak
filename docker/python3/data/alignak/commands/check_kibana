@@ -1,0 +1,207 @@
+#!/usr/bin/perl
+##############################################################################
+#
+# Nagios check_kibana plugin
+#
+# License: GPL
+# Copyright (c) 2013 Joerg Linge <pitchfork@ederdrom.de>
+#
+# Description:
+#
+# This plugin is used to query kibana ( http://kibana.org )
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+#
+##############################################################################
+
+use strict;
+use warnings;
+use utf8;
+use Encode qw( encode_utf8 );
+use URI::Escape;
+use Data::Dumper;
+use Nagios::Plugin;
+
+unless ( eval 'use JSON::XS;1' ){
+    die "Perl Module JSON::XS not found";
+}
+unless ( eval 'use LWP::Simple;1' ){
+    die "Perl Module LWP::Simple not found";
+}
+unless ( eval "use Nagios::Plugin;1" ){
+    die "Perl Module Nagios::Plugin not found";
+}
+unless ( eval "use MIME::Base64;1" ){
+    die "Perl Module MIME::Base84 not found";
+}
+
+my $np = Nagios::Plugin->new(
+    usage   => "Usage: %s [-t <timeout>] " . "[-U <URL to Kibana>]",
+    version => '0.1',
+    plugin  => 'check_kibana',
+    timeout => 15,
+);
+
+$np->add_arg(
+    spec => 'url|U=s',
+    help =>
+        '-U, --url=<HOSTNAME>. URL to Kibana Webinterface'
+);
+
+$np->add_arg(
+    spec => 'query|q=s',
+    help =>
+        '-q, --query=<Base64 encoded Query>. Base64 encoded Query as shown in the Kibana UI'
+);
+
+$np->add_arg(
+    spec => 'label|l=s',
+    help =>
+        '-l, --label=<LABEL>. Label your query'
+);
+
+$np->add_arg(
+    spec => 'statistic|s=s',
+    default => 'mean',
+    help =>
+        '-s, --statistic=[max|min|mean|count|total]. The statistical value you want to analyze'
+);
+
+$np->add_arg(
+     spec => 'warning|w=s',
+     required => 1,
+     default => "1000:4000",
+     help => '-w, --warning=INTEGER:INTEGER .  See '
+       . 'http://nagiosplug.sourceforge.net/developer-guidelines.html#THRESHOLDFORMAT '
+       . 'for the threshold format. ',
+   );
+
+$np->add_arg(
+     spec => 'critical|c=s',
+     required => 1,
+     default => "500:5000",
+     help => '-c, --critical=INTEGER:INTEGER',
+   );
+
+$np->getopts;
+
+#install an alarm to be able to timeout on a hanging socket
+alarm $np->opts->timeout;
+
+# Default ES Query
+my $default_query = "eyJzZWFyY2giOiIiLCJmaWVsZHMiOltdLCJvZmZzZXQiOjAsInRpbWVmcmFtZSI6OTAwLCJncmFwaG1vZGUiOiJjb3VudCJ9";
+
+my $url   = $np->opts->url||"http://localhost/kibana/";
+my $query = $np->opts->query||$default_query;
+
+my $decoded_query = decode_json( MIME::Base64::decode( uri_unescape($query) ) );
+my $esquery       = $decoded_query->{search};
+#print Dumper $decoded_query;
+
+my $mode          = $decoded_query->{mode}||'search';
+my $analyze_field = $decoded_query->{analyze_field}||"";
+my ($field)       = $analyze_field=~ m/\@fields\.(.*)$/;
+
+my $request;
+if($mode eq "mean"){
+    $request = sprintf("%s/api/analyze/%s/%s/%s", $url, $analyze_field, $mode,$query);
+}else{
+    $request = sprintf("%s/api/%s/%s", $url, $mode, $query);
+}
+#print $request."\n\n";
+my $state = "OK";
+my $data  = get($request);
+#print Dumper $data;
+
+$np->nagios_exit( CRITICAL,
+    "CRIT: Could not query Kibana on $url" )
+    unless $data;
+
+#my $trend = get($url.$payload."&mode=trend");
+
+$data  = decode_json(encode_utf8($data));
+#print Dumper $data;
+if($mode eq "search"){
+    my $label        = $np->opts->label||"Hits";
+    my $hits         = $data->{hits}->{total}||0;
+    my $total        = $data->{kibana}->{total}||1;
+    # Date format is 2012-07-18T12:43:19+02:00
+    my ($from)       = $data->{kibana}->{time}->{from} =~ m/T(.*)\+/;
+    my ($to)         = $data->{kibana}->{time}->{to}   =~ m/T(.*)\+/;
+
+    $np->nagios_exit( UNKNOWN,
+        "UNKNOWN: Elasticsearch returns no results" )
+        if ( $total == 0);
+
+
+    my $warning_threshold  = $np->opts->warning;
+    my $critical_threshold = $np->opts->critical;
+
+    my $code = $np->check_threshold(
+         check => $hits,
+         warning => $warning_threshold,
+         critical => $critical_threshold,
+       );
+
+    my $message = "";
+    $message .= sprintf "%s: %d hits between %s - %s ",$label, $hits, $from, $to;
+    $message .= sprintf "Query: '%s'\n", $esquery;
+    $message .= sprintf "More Infos on <a href=\"%s/\#%s\">Kibana</a>\n", $url, $query;
+
+    $np->add_perfdata(
+	label => 'hits',
+	value => "${hits}",
+	warning => $warning_threshold,
+	critical => $critical_threshold,
+    );
+    #print Dumper $data;
+    $np->nagios_exit( $code, $message );
+}elsif($mode eq "mean"){
+    my $hits         = $data->{hits}->{total}||0;
+    my $total        = $data->{kibana}->{total}||1;
+    # Date format is 2012-07-18T12:43:19+02:00
+    my ($from)       = $data->{kibana}->{time}->{from} =~ m/T(.*)\+/;
+    my ($to)         = $data->{kibana}->{time}->{to}   =~ m/T(.*)\+/;
+
+    $np->nagios_exit( UNKNOWN,
+        "UNKNOWN: Elasticsearch returns no results" )
+        if ( $total == 0);
+
+    my $warning_threshold  = $np->opts->warning;
+    my $critical_threshold = $np->opts->critical;
+    my $label              = $np->opts->label||$np->opts->statistic;
+    my $statistic_value    = $np->opts->statistic;
+    my $value = $data->{facets}->{stats}->{$statistic_value};
+
+
+    my $code = $np->check_threshold(
+         check => $value,
+         warning => $warning_threshold,
+         critical => $critical_threshold,
+       );
+
+    my $message = "";
+    $message .= sprintf "%s %s value was %s between %s - %s ",$field, $mode, $value , $from, $to;
+    $message .= sprintf "Query: '%s'\n", $esquery;
+    $message .= sprintf "More Infos on <a href=\"%s/\#%s\">Kibana</a>\n", $url, $query;
+
+    $np->add_perfdata(
+	label => $statistic_value,
+	value => "${value}",
+	warning => $warning_threshold,
+	critical => $critical_threshold,
+    );
+    #print Dumper $data;
+    $np->nagios_exit( $code, $message );
+}

@@ -41,7 +41,6 @@ RUN cd /repos && \
     pip3 install .
 
 # Get the Shinken / Alignak Web UI
-RUN mkdir /usr/local/lib/python3.7/site-packages/alignak_webui
 RUN cd /repos && \
     git clone https://github.com/mohierf/mod-ui-graphite && \
     cd mod-ui-graphite && \
