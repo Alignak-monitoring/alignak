@@ -613,6 +613,13 @@ if os.name != 'nt':
                 self.execution_time = time.time() - self.check_time
 
                 raise ActionError('process_launch_failed')
+
+                self.output = "Missing executable command: %s" % cmd
+                self.exit_status = 2
+                self.status = ACT_STATUS_DONE
+                self.execution_time = time.time() - self.check_time
+
+                raise ActionError('process_launch_failed')
             except OSError as exp:  # pylint: disable=duplicate-except
                 logger.error("Fail launching command: %s, force shell: %s, OSError: %s",
                              self.command, force_shell, exp)
