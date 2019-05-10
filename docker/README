@@ -1,0 +1,53 @@
+# Docker Alignak
+
+To be completed...
+
+## Build and run
+
+```bash
+    docker-compose build
+```
+
+```bash
+    docker-compose up
+```
+
+## Some commands
+
+Check the Alignak configuration:
+```bash
+   docker-compose run arbiter-master
+   or
+   make check
+```
+
+## Using the makefile
+
+```bash
+
+   # Push an image to your repository
+   # Direct
+   TAG=0.0.1 DOCKER_USER=username DOCKER_PASS=password make push
+
+   export TAG=0.0.1
+   export DOCKER_USER=username
+   export DOCKER_PASS=password
+   make push
+```
+
+## Metrics and Graphite
+
+ View https://github.com/graphite-project/docker-graphite-statsd
+
+```bash
+    docker run -d\
+     --name graphite\
+     --restart=always\
+     -p 80:80\
+     -p 2003-2004:2003-2004\
+     -p 2023-2024:2023-2024\
+     -p 8125:8125/udp\
+     -p 8126:8126\
+     graphiteapp/graphite-statsd
+```
+
