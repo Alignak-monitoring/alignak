@@ -223,12 +223,9 @@ class Module(Item):
         We must also exclude the reference to the daemon that loaded the module!
         """
         res = super(Module, self).serialize()
-        logger.info("Module serialize %s: %s", self.get_name(), res)
 
         cls = self.__class__
-        logger.info("Serialize module %s", self.get_name())
         for prop in self.__dict__:
-            logger.info(" - %s = %s", prop, getattr(self, prop))
             if prop in cls.properties or \
                     prop in cls.running_properties or \
                     prop in ['properties', 'old_properties', 'my_daemon']:
@@ -237,9 +234,7 @@ class Module(Item):
                 res[prop] = [m.serialize() for m in self.modules]
             else:
                 res[prop] = getattr(self, prop)
-        logger.info("Result: %s", res)
 
-        logger.info("Module serialize %s: %s", self.get_name(), res)
         return res
 
 
