@@ -238,6 +238,7 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
             logger.info(" the module is disabled.")
             return True
 
+        connections = False
         try:
             connections = self.test_connection()
         except Exception as exp:  # pylint: disable=broad-except
