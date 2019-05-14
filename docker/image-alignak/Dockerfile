@@ -19,6 +19,8 @@ RUN apt-get install -y --no-install-recommends \
 
 RUN apt-get autoremove && apt-get clean
 
+RUN pip3 install --upgrade pip setuptools
+
 # Location for the git repositories
 RUN mkdir -p /repos
 

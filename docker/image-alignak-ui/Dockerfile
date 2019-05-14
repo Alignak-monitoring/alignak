@@ -7,19 +7,19 @@ RUN apt-get update
 
 RUN apt-get install -y --no-install-recommends \
     nginx \
-    uwsgi \
-    uwsgi-plugin-python3 \
     python3-pip \
     python3-dev \
     supervisor
 
-RUN pip3 install --upgrade pip setuptools
+RUN apt-get install -y --no-install-recommends vim
 
 RUN apt-get autoremove && apt-get clean
 
+RUN pip3 install --upgrade pip setuptools
+
 ## Location for the git repositories
 RUN mkdir -p /repos
-#
+
 ## Get the Shinken / Alignak Web UI
 RUN cd /repos && \
     git clone https://github.com/mohierf/mod-webui && \
@@ -39,14 +39,8 @@ RUN cd /repos && \
 # Copy the Nginx global conf
 COPY nginx.conf /etc/nginx/
 # Copy the Flask Nginx site conf
-COPY alignak-site-nginx.conf /etc/nginx/conf.d/
-# Copy the base uWSGI ini file to enable default dynamic uwsgi process number
-COPY uwsgi.ini /etc/uwsgi/
+COPY alignak-webui.conf /etc/nginx/conf.d/
 # Custom Supervisord config
 COPY supervisord.conf /etc/supervisord.conf
 
-#USER $ALIGNAK_USER
-#
-# Run the broker
-#CMD ["alignak-broker", "-n", "broker-master", "-e", "/repos/alignak/etc/alignak.ini" ]
 CMD ["/usr/bin/supervisord", "-c", "/etc/supervisord.conf"]
