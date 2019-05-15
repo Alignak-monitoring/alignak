@@ -146,7 +146,7 @@ services:
     networks:
       - alignak
     volumes:
-      - ${MONGO_DATADIR}/db:/data/db
+      - mongodb_data:/data/db
     logging:
       driver: "json-file"
       options:
@@ -169,3 +169,6 @@ networks:
   default:
     external:
       name: default
+
+volumes:
+  mongodb_data:

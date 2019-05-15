@@ -7,6 +7,7 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN apt-get install -y --no-install-recommends \
     nginx \
     python3-pip \
+    python3-dev \
     supervisor
 
 RUN apt-get autoremove && apt-get clean
