@@ -132,7 +132,7 @@ NO_LONGER_USED = (u'This parameter is not longer take from the main file, but mu
                   u'in the status_dat broker module instead. But Alignak will create you one '
                   u'if there are no present and use this parameter in it, so no worry.')
 NOT_INTERESTING = u'We do not think such an option is interesting to manage.'
-NOT_MANAGED = (u'This Nagios legacy parameter is not managed by Alignak. Ignoring...')
+NOT_MANAGED = u'This Nagios legacy parameter is not managed by Alignak. Ignoring...'
 
 
 class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance-attributes
@@ -382,6 +382,23 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
         'events_log_count':
             IntegerProp(default=100, fill_brok=[FULL_STATUS]),
+
+        'log_filename':
+            StringProp(default='alignak_events.log'),
+        # Override log level - default is to not change anything
+        'log_level':
+            StringProp(default=''),
+
+        'log_rotation_when':
+            StringProp(default='midnight'),
+        'log_rotation_interval':
+            IntegerProp(default=1),
+        'log_rotation_count':
+            IntegerProp(default=365),
+        'log_format':
+            StringProp(default='[%(my_date)s] %(levelname)s: %(message)s'),
+        'log_date':
+            StringProp(default='%Y-%m-%d %H:%M:%S'),
 
         'log_notifications':
             BoolProp(default=True, fill_brok=[FULL_STATUS],
@@ -774,7 +791,7 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
             IntegerProp(default=5, fill_brok=[FULL_STATUS]),
 
         'daemons_stop_timeout':
-            IntegerProp(default=5, fill_brok=[FULL_STATUS]),
+            IntegerProp(default=10, fill_brok=[FULL_STATUS]),
     }
 
     macros = {

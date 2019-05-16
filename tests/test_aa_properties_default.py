@@ -174,6 +174,15 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('state_retention_dir', ''),
         ('retention_update_interval', 0),
         ('use_syslog', False),
+
+        ('log_filename', 'alignak_events.log'),
+        ('log_level', ''),
+        ('log_rotation_when', 'midnight'),
+        ('log_rotation_interval', 1),
+        ('log_rotation_count', 365),
+        ('log_format', '[%(my_date)s] %(levelname)s: %(message)s'),
+        ('log_date', '%Y-%m-%d %H:%M:%S'),
+
         ('log_notifications', True),
         ('log_alerts', True),
         ('log_acknowledgements', True),
@@ -269,7 +278,7 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('daemons_start_timeout', 1),
         ('daemons_dispatch_timeout', 5),
         ('daemons_new_conf_timeout', 1),
-        ('daemons_stop_timeout', 5),
+        ('daemons_stop_timeout', 10),
         ('daemons_failure_kill', True),
 
         ('alignak_env', []),

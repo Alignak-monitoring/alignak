@@ -702,5 +702,4 @@ else:  # pragma: no cover, not currently tested with Windows...
             :return: None
             TODO: This look like python2.5 style. Maybe we change that.
             """
-            # pylint: disable=E1101
             ctypes.windll.kernel32.TerminateProcess(int(self.process._handle), -1)

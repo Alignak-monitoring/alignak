@@ -286,7 +286,7 @@ class Dispatcher(object):
 
         elif self.not_configured and self.first_dispatch_done:
             logger.info("Dispatcher, these daemons are not configured: %s, "
-                        "and a configuration has yet been dispatched dispatch, "
+                        "and a configuration has yet been dispatched, "
                         "a new dispatch is required...",
                         ','.join(d.name for d in self.not_configured))
             self.dispatch_ok = False

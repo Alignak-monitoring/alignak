@@ -68,8 +68,13 @@ logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Receiver(Satellite):
-    """Receiver class. Referenced as "app" in most Interface
-
+    """Receiver class.
+    The receiver daemon is the satellite that is in charge to "listen" on the external
+    World. Thanks to extra modules, it will listen to:
+    - NSCA messages
+    - external comands
+    - HTTP passive checks
+    -...
     """
     my_type = 'receiver'
 
@@ -118,7 +123,7 @@ class Receiver(Satellite):
         # external commands may be received as a dictionary when pushed from the WebUI
         if isinstance(elt, dict) and 'my_type' in elt and elt['my_type'] == "externalcommand":
             if 'cmd_line' not in elt:
-                logger.debug("Received a bad formated external command: %s. "
+                logger.debug("Received a badly formatted external command: %s. "
                              "No cmd_line!", elt)
                 return
 

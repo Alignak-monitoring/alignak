@@ -1106,7 +1106,7 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
                         _type = 'snapshot'
                     ref = self.find_item_by_id(self.checks[action.uuid].ref)
                     logger.info("%s %s command '%s' timed out after %d seconds",
-                                ref.__class__.my_type.capitalize(),  # pylint: disable=E1101
+                                ref.__class__.my_type.capitalize(),
                                 _type, self.actions[action.uuid].command,
                                 int(action.execution_time))
 

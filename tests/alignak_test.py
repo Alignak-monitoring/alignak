@@ -175,7 +175,7 @@ class AlignakTest(unittest2.TestCase):
         """Set the test logger at the provided level -
         useful for some tests that check debug log
         """
-        # Change the logger and its hadlers log level
+        # Change the logger and its handlers log level
         print("Set unit_tests logger: %s" % log_level)
         logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
         logger_.setLevel(log_level)

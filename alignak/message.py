@@ -79,7 +79,7 @@ class Message(object):
         """Getter of _data attribute
 
         :return: Message data
-        :rtype: str
+        :rtype: dict
         """
         return self._data
 

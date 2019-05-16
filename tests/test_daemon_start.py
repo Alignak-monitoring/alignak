@@ -174,7 +174,7 @@ class template_Daemon_Start():
         print("Starting daemon: %s" % daemon.name)
         # daemon.load_modules_manager()
         # daemon.do_load_modules([])
-        daemon.do_daemon_init_and_start(set_proc_title=False)
+        daemon.do_daemon_init_and_start(set_process_title=False)
         print("Started: %s" % daemon.name)
 
     def stop_daemon(self, daemon):
@@ -373,8 +373,8 @@ class template_Daemon_Start():
 
         daemon = self.get_daemon()
         assert daemon.pid_filename == os.path.abspath('%s/%s.pid' % (daemon.workdir, daemon.name))
-        # assert daemon.log_filename == os.path.abspath('./cfg/daemons/log/%s.log' % daemon.name)
-        assert daemon.log_filename == ''    # Because logs are defined in the logger configuration
+        assert daemon.log_filename == os.path.abspath('%s/%s.log' % (daemon.workdir, daemon.name))
+        # assert daemon.log_filename == ''    # Because logs are defined in the logger configuration
 
         # Do not reload the configuration file (avoid replacing modified properties for the test...)
         daemon.setup_alignak_logger()

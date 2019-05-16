@@ -333,7 +333,7 @@ define host {
         start = time.time()
         if request_stop_uri:
             req = requests.Session()
-            raw_data = req.get("%s/stop_request" % request_stop_uri, params={'stop_now': '1'})
+            raw_data = req.get("%s/stop_request?stop_now=1" % request_stop_uri)
             data = raw_data.json()
 
             # Let the process 20 seconds to exit
@@ -504,7 +504,7 @@ define host {
                 # Daemons launching and check
                 cfg.set('alignak-configuration', 'polling_interval', '1')
                 cfg.set('alignak-configuration', 'daemons_check_period', '1')
-                cfg.set('alignak-configuration', 'daemons_stop_timeout', '20')
+                cfg.set('alignak-configuration', 'daemons_stop_timeout', '10')
                 cfg.set('alignak-configuration', 'daemons_start_timeout', '5')
                 cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '1')
                 cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '1')

@@ -71,7 +71,9 @@ class TestDispatcher(AlignakTest):
         :return: None
         """
         args = {
-            'env_file': env_filename, 'alignak_name': 'alignak-test', 'daemon_name': 'arbiter-master'
+            'env_file': env_filename,
+            'alignak_name': 'alignak-test',
+            'daemon_name': 'arbiter-master'
         }
         my_arbiter = Arbiter(**args)
         my_arbiter.setup_alignak_logger()
@@ -153,6 +155,7 @@ class TestDispatcher(AlignakTest):
                 assert my_dispatcher.dispatch_ok is False
                 assert my_dispatcher.first_dispatch_done is False
                 assert my_dispatcher.new_to_dispatch is False
+                self.show_logs()
                 # Not yet configured ...
                 for link in my_dispatcher.all_daemons_links:
                     if link == my_dispatcher.arbiter_link:

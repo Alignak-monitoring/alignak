@@ -639,7 +639,6 @@ class DependencyNodeFactory(object):
             # here we have Alignak SchedulingItem object (Host/Service)
             if obj is not None:
                 # Set host or service
-                # pylint: disable=E1101
                 node.operand = obj.__class__.my_type
                 node.sons.append(obj.uuid)  # Only store the uuid, not the full object.
             else:

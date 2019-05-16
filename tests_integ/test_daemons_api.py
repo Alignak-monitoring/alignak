@@ -346,7 +346,6 @@ class TestDaemonsApi(AlignakTest):
             rst_write = "../../alignak-doc/source/07_alignak_features/api/%s" % rst_file
         if rst_write:
             with open(rst_write, mode='wt') as out:
-            # with open(rst_write, mode='wt', encoding='utf-8') as out:
                 out.write('\n'.join(doc))
         # -----
 
@@ -361,7 +360,7 @@ class TestDaemonsApi(AlignakTest):
         doc.append("Alignak daemons statistics")
         doc.append("==========================")
         for name, port in list(satellite_map.items()):
-            print("- for %s" % (name))
+            print("- for %s" % name)
             raw_data = req.get("%s://localhost:%s/stats" % (scheme, port), verify=False)
             print("Got /stats: %s" % raw_data.content)
             assert raw_data.status_code == 200
@@ -430,13 +429,12 @@ class TestDaemonsApi(AlignakTest):
         if os.path.exists("../../alignak-doc/source/07_alignak_features/api"):
             rst_write = "../../alignak-doc/source/07_alignak_features/api/%s" % rst_file
         if rst_write:
-            # with open(rst_write, mode='wt', encoding='utf-8') as out:
             with open(rst_write, mode='wt') as out:
                 out.write('\n'.join(doc))
 
         print("Testing stats (detailed)")
         for name, port in list(satellite_map.items()):
-            print("- for %s" % (name))
+            print("- for %s" % name)
             raw_data = req.get("%s://localhost:%s/stats?details=1" % (scheme, port), verify=False)
             print("Got /stats?details=1: %s" % raw_data.content)
             assert raw_data.status_code == 200
@@ -539,7 +537,7 @@ class TestDaemonsApi(AlignakTest):
         # -----
         print("Testing managed_configurations")
         for name, port in list(satellite_map.items()):
-            print("%s, what I manage?" % (name))
+            print("%s, what I manage?" % name)
             raw_data = req.get("%s://localhost:%s/managed_configurations" % (scheme, port), verify=False)
             assert raw_data.status_code == 200
             data = raw_data.json()
@@ -573,7 +571,7 @@ class TestDaemonsApi(AlignakTest):
             print("%s, raw: %s" % (name, raw_data.content))
             data = raw_data.json()
             print("%s, log level: %s" % (name, data))
-            # Initially forced the INFO log level
+            # Initially forced the ERROR log level (no logger configuration file)
             assert data['log_level'] == 20
             assert data['log_level_name'] == 'INFO'
 
@@ -710,11 +708,11 @@ class TestDaemonsApi(AlignakTest):
             for proc in psutil.process_iter():
                 if 'alignak' in proc.name() and daemon in proc.name():
                     # SIGUSR1: memory dump
-                    print("%s, send signal SIGUSR1" % (name))
+                    print("%s, send signal SIGUSR1" % name)
                     proc.send_signal(signal.SIGUSR1)
                     time.sleep(1.0)
                     # SIGUSR2: objects dump
-                    print("%s, send signal SIGUSR2" % (name))
+                    print("%s, send signal SIGUSR2" % name)
                     proc.send_signal(signal.SIGUSR2)
                     time.sleep(1.0)
                     # SIGHUP: reload configuration
@@ -737,6 +735,7 @@ class TestDaemonsApi(AlignakTest):
         for name, port in satellite_map.items():
             if name in ['arbiter']:
                 continue
+            print("%s, you will stop soon" % name)
             raw_data = req.get("%s://localhost:%s/stop_request?stop_now=0" % (scheme, port),
                                verify=False)
             data = raw_data.json()
@@ -747,6 +746,7 @@ class TestDaemonsApi(AlignakTest):
         for name, port in satellite_map.items():
             if name in ['arbiter']:
                 continue
+            print("%s, you should stop now!" % name)
             raw_data = req.get("%s://localhost:%s/stop_request?stop_now=1" % (scheme, port),
                                verify=False)
             data = raw_data.json()
@@ -871,20 +871,25 @@ class TestDaemonsApi(AlignakTest):
         for name, port in list(satellite_map.items()):
             if name in ['arbiter']:
                 continue
-            raw_data = req.get("%s://localhost:%s/stop_request?stop_now=" % (scheme, port),
-                               params={'stop_now': False}, verify=False)
+            raw_data = req.get("%s://localhost:%s/stop_request?stop_now=0" % (scheme, port),
+                               verify=False)
             data = raw_data.json()
             assert data is True
 
-        time.sleep(2)
+        time.sleep(1)
+
         print("Testing stop_request - tell the daemons they must stop now!")
         for name, port in list(satellite_map.items()):
             if name in ['arbiter']:
                 continue
-            raw_data = req.get("%s://localhost:%s/stop_request?stop_now=" % (scheme, port),
-                               params={'stop_now': True}, verify=False)
+            raw_data = req.get("%s://localhost:%s/stop_request?stop_now=1" % (scheme, port),
+                               verify=False)
             data = raw_data.json()
             assert data is True
+
+        # This function will only send a SIGTERM to the arbiter daemon
+        # and this will make all the daemons stop
+        self._stop_alignak_daemons(arbiter_only=True)
 
     def test_get_objects_from_scheduler(self):
         """ Running all the Alignak daemons - get host and other objects
@@ -1494,7 +1499,7 @@ class TestDaemonsApi(AlignakTest):
 
         print("--- stats")
         for name, port in list(satellite_map.items()):
-            print("- for %s" % (name))
+            print("- for %s" % name)
             raw_data = req.get("http://localhost:%s/stats%s" % (port, '?details=1' if details else ''), verify=False)
             print("%s, my stats: %s" % (name, raw_data.text))
             assert raw_data.status_code == 200

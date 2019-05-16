@@ -1313,12 +1313,6 @@ def parse_daemon_args(arbiter=False):
     parser.add_argument('-r', '--replace', dest='do_replace', default=False, action='store_true',
                         help='Replace previous running daemon if any pid file is found.')
 
-    parser.add_argument('-vv', '--debug', dest='debug', default=False, action='store_true',
-                        help='Set log level to debug mode (DEBUG)')
-
-    parser.add_argument('-v', '--verbose', dest='verbose', default=False, action='store_true',
-                        help='Set log level to verbose mode (INFO)')
-
     parser.add_argument('-o', '--host', dest='host',
                         help='Host interface used by the daemon. '
                              'Default is 0.0.0.0 (all interfaces).')
@@ -1330,9 +1324,15 @@ def parse_daemon_args(arbiter=False):
     parser.add_argument('-l', '--log_file', dest='log_filename',
                         help='File used for the daemon log. Set as empty to disable log file.')
 
-    parser.add_argument('-Lm', '--log_level', dest='log_level',
+    parser.add_argument('-L', '--log_level', dest='log_level',
                         help='Log level: DEBUG, INFO, WARNING, ERROR or CRITICAL. '
                              'Overrides the -v and -vv options.')
+
+    parser.add_argument('-v', '--verbose', dest='verbose', default=False, action='store_true',
+                        help='Set log level to verbose mode, same as -L INFO.')
+
+    parser.add_argument('-vv', '--debug', dest='debug', default=False, action='store_true',
+                        help='Set log level to debug mode (DEBUG)')
 
     parser.add_argument('-i', '--pid_file', dest='pid_filename',
                         help='File used to store the daemon pid')
