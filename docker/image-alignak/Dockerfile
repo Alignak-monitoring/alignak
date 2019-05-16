@@ -1,6 +1,8 @@
 FROM python:3.6
 
-MAINTAINER Frédéric Mohier (frederic.mohier@alignak.net)
+LABEL maintainer="Frédéric Mohier (frederic.mohier@alignak.net)"
+
+LABEL alignak.image_type="Generic"
 
 ENV DEBIAN_FRONTEND noninteractive
 

@@ -3,6 +3,9 @@ SHELL := /bin/bash
 
 .PHONY: help
 
+# Get the environment variables
+include .env
+
 ifndef DOCKER_TAG
 $(error The image TAG variable (DOCKER_TAG) is missing.)
 endif
@@ -10,8 +13,10 @@ endif
 # Default values for the image
 DOCKER_TAG ?= 0.0.0
 DOCKER_REPOSITORY ?= alignak
-DOCKER_SERVICE ?= alignak
-DOCKER_IMAGE ?= $(DOCKER_REPOSITORY)/$(DOCKER_SERVICE)
+DOCKER_ALIGNAK_DAEMON ?= alignak
+DOCKER_ALIGNAK_WEBUI ?= alignak-ui
+DOCKER_IMAGE_DAEMON ?= $(DOCKER_REPOSITORY)/$(DOCKER_ALIGNAK_DAEMON)
+DOCKER_IMAGE_WEBUI ?= $(DOCKER_REPOSITORY)/$(DOCKER_ALIGNAK_WEBUI)
 
 # User credentials from environment
 DOCKER_USER := ${DOCKER_USER}
@@ -32,32 +37,28 @@ banner: ## This help message
 	@echo -e "--------------------"
 
 build: banner  ## Build the image
-	$(info Building "$(DOCKER_TAG)" tagged images.)
-	@docker build -t $(DOCKER_IMAGE):$(DOCKER_TAG) -f ./Dockerfile .
-	@make -s tag
+	$(info Building Alignak $(DOCKER_TAG) tagged images.)
+	@docker-compose build
 	@make -s clean
 
-tag: banner    ## Tag an image
-	$(info Tagging image with "$(DOCKER_TAG)".)
-	-docker tag $(DOCKER_IMAGE):latest $(DOCKER_IMAGE):$(DOCKER_TAG)
-
 remove: banner ## Remove image
-	$(info Removing "$(DOCKER_IMAGE):$(DOCKER_TAG)" image...)
-	@docker rm $(DOCKER_IMAGE):$(DOCKER_TAG)
+	$(info Removing "$(DOCKER_IMAGE_DAEMON):$(DOCKER_TAG)" image...)
+	@docker rm $(DOCKER_IMAGE_DAEMON):$(DOCKER_TAG)
+	@docker rm $(DOCKER_IMAGE_WEBUI):$(DOCKER_TAG)
 
 clean: banner  ## Clean all
 	@docker system prune --volumes --force
 
 start: banner  ## Start the services
-	$(info Starting "$(DOCKER_IMAGE)"...)
+	$(info Starting Alignak...)
 	@docker-compose up -d
 
 stop: banner   ## Stop the services
-	$(info Stopping "$(DOCKER_IMAGE)"...)
+	$(info Stopping Alignak...)
 	@docker-compose down
 
-restart: banner   ## Stop and start
-	$(info Restarting "$(DOCKER_IMAGE)"...)
+restart:       ## Stop and start
+	$(info Restarting Alignak...)
 	@make -s stop
 	@make -s start
 

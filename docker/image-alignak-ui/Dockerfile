@@ -1,6 +1,6 @@
 FROM alignak/alignak:0.0.1
 
-MAINTAINER Frédéric Mohier (frederic.mohier@alignak.net)
+LABEL maintainer="Frédéric Mohier (frederic.mohier@alignak.net)"
 
 ENV DEBIAN_FRONTEND noninteractive
 
