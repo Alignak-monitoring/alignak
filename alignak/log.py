@@ -195,6 +195,35 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
         logger_dictConfig(config)
 
 
+def set_monitoring_logger(log_filename, log_rotation_when, log_rotation_interval,
+                          log_rotation_count, log_format, log_date):
+    """Set the Alignak monitoring events logger with a file log handler.
+
+    :param log_filename: file name
+
+    :param log_rotation_count:
+    :param log_rotation_interval:
+    :param log_rotation_when:
+    :param log_format:
+    :param log_date:
+
+    :return: n/a
+    """
+    logger_ = logging.getLogger(MONITORING_LOGGER_NAME)
+    logger_.setLevel(logging.DEBUG)
+
+    for handler in logger_.handlers:
+        if isinstance(handler, TimedRotatingFileHandler):
+            # We still have a file logger
+            break
+    else:
+        file_handler = TimedRotatingFileHandler(
+            log_filename, when=log_rotation_when,
+            interval=log_rotation_interval, backupCount=log_rotation_count)
+        file_handler.setFormatter(Formatter(log_format, log_date))
+        logger_.addHandler(file_handler)
+
+
 def set_log_file(log_filename, log_rotation_when, log_rotation_interval, log_rotation_count,
                  log_format, log_date):
     """Set the Alignak daemons logger have a file log handler.
@@ -209,7 +238,6 @@ def set_log_file(log_filename, log_rotation_when, log_rotation_interval, log_rot
 
     :return: n/a
     """
-    print("Daemon log file: %s" % (log_filename))
     logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
 
     for handler in logger_.handlers:
