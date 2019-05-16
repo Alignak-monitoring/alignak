@@ -611,15 +611,24 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         if os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None):
             self.logger_configuration = os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None)
         if self.logger_configuration:
-            if self.logger_configuration in ['DEFAULT']:
-                self.logger_configuration = os.path.join(self.etcdir, 'alignak-logger.json')
-
             if self.logger_configuration != os.path.abspath(self.logger_configuration):
-                if self.logger_configuration in ['./alignak-logger.json', 'alignak-logger.json']:
+                if self.logger_configuration == './alignak-logger.json':
                     self.logger_configuration = os.path.join(os.path.dirname(self.env_filename),
                                                              self.logger_configuration)
                 else:
                     self.logger_configuration = os.path.abspath(self.logger_configuration)
+
+            if not os.path.exists(self.logger_configuration):
+                self.exit_on_error("Configured logger configuration file (%s) does not exist."
+                                   % self.logger_configuration, exit_code=3)
+            print("Daemon '%s' logger configuration file: %s"
+                  % (self.name, self.logger_configuration))
+
+        # # Make my paths properties be absolute paths
+        # for prop, entry in list(my_properties.items()):
+        #     # Set absolute paths for
+        #     if isinstance(my_properties[prop], PathProp):
+        #         setattr(self, prop, os.path.abspath(getattr(self, prop)))
 
         # Log file...
         self.log_filename = PathProp().pythonize("%s.log" % self.name)
@@ -644,18 +653,9 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
             else:
                 self.logger_configuration = None
                 self.logdir = os.path.dirname(self.log_filename)
-            # print("Daemon '%s' is started with an overridden log file: %s"
-            #       % (self.name, self.log_filename))
-
-        if self.logger_configuration:
-            if not os.path.exists(self.logger_configuration):
-                print("Daemon '%s', configured logger configuration file (%s) does not exist."
-                      % (self.name, self.logger_configuration))
-            else:
-                print("Daemon '%s' logger configuration file: %s"
-                      % (self.name, self.logger_configuration))
-        else:
-            print("Daemon '%s' log file: %s" % (self.name, self.log_filename))
+            print("Daemon '%s' is started with an overridden log file: %s"
+                  % (self.name, self.log_filename))
+        print("Daemon '%s' log file: %s" % (self.name, self.log_filename))
 
         # Check the log directory (and create if it does not exist)
         # self.check_dir(os.path.dirname(self.log_filename))
@@ -2182,10 +2182,10 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         """
         # Configure the daemon logger
         try:
-            # Make sure that the log directory is existing
-            self.check_dir(self.logdir)
-
             if not self.logger_configuration:
+                # Make sure that the log directory is existing
+                self.check_dir(self.logdir)
+
                 # Configure a timed rotation file logger
                 set_log_file(self.log_filename, self.log_rotation_when,
                              self.log_rotation_interval, self.log_rotation_count,
