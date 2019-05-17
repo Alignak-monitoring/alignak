@@ -156,11 +156,17 @@ class Hostdependencies(Items):
         # more than one host or a host group will be in it
         hstdep_to_remove = []
 
+        print("*** host: %s items" % (len(self.items)))
         # Then for every host create a copy of the dependency with just the host
         # because we are adding services, we can't just loop in it
         hostdeps = list(self.items.keys())
         for h_id in hostdeps:
             hostdep = self.items[h_id]
+
+            print("Host dep: %s" % hostdep)
+            # from pprint import pprint
+            # pprint(host_dep.__dict__)
+
             # We explode first the dependent (son) part
             dephnames = []
             if hasattr(hostdep, 'dependent_hostgroup_name'):
@@ -176,6 +182,8 @@ class Hostdependencies(Items):
 
             if hasattr(hostdep, 'dependent_host_name'):
                 dephnames.extend([n.strip() for n in hostdep.dependent_host_name.split(',')])
+
+            print("- son hosts: %s" % (dephnames))
 
             # Ok, and now the father part :)
             hnames = []
@@ -193,6 +201,8 @@ class Hostdependencies(Items):
             if hasattr(hostdep, 'host_name'):
                 hnames.extend([n.strip() for n in hostdep.host_name.split(',')])
 
+            print("- father hosts: %s" % (hnames))
+
             # Loop over all sons and fathers to get S*F host deps
             for dephname in dephnames:
                 dephname = dephname.strip()
@@ -203,7 +213,9 @@ class Hostdependencies(Items):
                     self.add_item(new_hd)
             hstdep_to_remove.append(h_id)
 
+        print("- remove %s items" % (len(hstdep_to_remove)))
         self.delete_hostsdep_by_id(hstdep_to_remove)
+        print("/// host: %s items" % (len(self.items)))
 
     def linkify(self, hosts, timeperiods):
         """Create link between objects::

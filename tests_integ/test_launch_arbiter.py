@@ -129,8 +129,8 @@ class TestLaunchArbiter(AlignakTest):
         # Remove the daemons configuration part!
         shutil.rmtree('%s/etc/alignak.d' % cfg_folder)
 
-        if os.path.exists('%s/arbiter-master.log' % self._launch_dir):
-            os.remove('%s/arbiter-master.log' % self._launch_dir)
+        if os.path.exists('/tmp/alignak/log/arbiter-master.log'):
+            os.remove('/tmp/alignak/log/arbiter-master.log')
 
         files = ['%s/etc/alignak.ini' % cfg_folder,
                  '%s/etc/alignak.d/daemons.ini' % cfg_folder,
@@ -230,7 +230,8 @@ class TestLaunchArbiter(AlignakTest):
                 u"Sorry, I bail out, exit code: 4"
             ]
         all_ok = True
-        with open('%s/arbiter-master.log' % self._launch_dir) as f:
+        print("*** Arbiter file: '%s/arbiter-master.log" % self._launch_dir)
+        with open('/tmp/alignak/log/arbiter-master.log') as f:
             for line in f:
                 if 'WARNING:' in line:
                     ok = False

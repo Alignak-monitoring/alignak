@@ -816,7 +816,7 @@ class TestDaemonsApi(AlignakTest):
         # 1/ get the running identifier (confirm the daemon is running)
         print("--- get_running_id")
         for name, port in list(satellite_map.items()):
-            raw_data = req.get("%s://localhost:%s/identity" % (scheme, port), verify=False)
+            raw_data = req.get("%s://localhost:%s/identity" % (scheme, port))
             print("Got (raw): %s" % raw_data)
             data = raw_data.json()
             assert "running_id" in data
@@ -830,11 +830,11 @@ class TestDaemonsApi(AlignakTest):
         for name, port in list(satellite_map.items()):
             if name == 'arbiter-master':
                 continue
-            raw_data = req.get("%s://localhost:%s/_have_conf" % (scheme, port), verify=False)
+            raw_data = req.get("%s://localhost:%s/_have_conf" % (scheme, port))
             print("have_conf %s, got (raw): %s" % (name, raw_data))
             data = raw_data.json()
             print("%s, have_conf: %s" % (name, data))
-            assert data == True, "Daemon %s should have a conf!" % name
+            assert data is True, "Daemon %s should have a conf!" % name
 
         # -----
         # 3/ ask to wait for a new configuration
@@ -842,10 +842,10 @@ class TestDaemonsApi(AlignakTest):
         for name, port in list(satellite_map.items()):
             if name == 'arbiter-master':
                 continue
-            raw_data = req.get("%s://localhost:%s/_wait_new_conf" % (scheme, port), verify=False)
+            raw_data = req.get("%s://localhost:%s/_wait_new_conf" % (scheme, port))
             print("wait_new_conf %s, got (raw): %s" % (name, raw_data))
             data = raw_data.json()
-            assert data == None
+            assert data is None
         # -----
 
         # -----
@@ -855,11 +855,11 @@ class TestDaemonsApi(AlignakTest):
         for name, port in list(satellite_map.items()):
             if name == 'arbiter-master':
                 continue
-            raw_data = req.get("%s://localhost:%s/_have_conf" % (scheme, port), verify=False)
+            raw_data = req.get("%s://localhost:%s/_have_conf" % (scheme, port))
             print("have_conf %s, got (raw): %s" % (name, raw_data))
             data = raw_data.json()
             print("%s, have_conf: %s" % (name, data))
-            assert data == False, "Daemon %s should not have a conf!" % name
+            assert data is False, "Daemon %s should not have a conf!" % name
 
         # This function will only send a SIGTERM to the arbiter daemon
         # self._stop_alignak_daemons(arbiter_only=True)
@@ -871,8 +871,7 @@ class TestDaemonsApi(AlignakTest):
         for name, port in list(satellite_map.items()):
             if name in ['arbiter']:
                 continue
-            raw_data = req.get("%s://localhost:%s/stop_request?stop_now=0" % (scheme, port),
-                               verify=False)
+            raw_data = req.get("%s://localhost:%s/stop_request?stop_now=0" % (scheme, port))
             data = raw_data.json()
             assert data is True
 
@@ -882,8 +881,7 @@ class TestDaemonsApi(AlignakTest):
         for name, port in list(satellite_map.items()):
             if name in ['arbiter']:
                 continue
-            raw_data = req.get("%s://localhost:%s/stop_request?stop_now=1" % (scheme, port),
-                               verify=False)
+            raw_data = req.get("%s://localhost:%s/stop_request?stop_now=1" % (scheme, port))
             data = raw_data.json()
             assert data is True
 

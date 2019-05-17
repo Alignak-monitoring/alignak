@@ -223,8 +223,9 @@ class TestDependencies(AlignakTest):
         self.setup_with_file('cfg/cfg_dependencies.cfg',
                              dispatching=True)
         assert self.conf_is_correct
+        self.show_logs()
         assert len(self.configuration_errors) == 0
-        assert len(self.configuration_warnings) == 0
+        assert len(self.configuration_warnings) == 1
 
         # duplicate servicegroup 'pending', from:
         # '/home/alignak/alignak/test/cfg/default/servicegroups.cfg:48' and

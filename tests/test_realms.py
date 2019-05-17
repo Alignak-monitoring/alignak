@@ -624,7 +624,7 @@ class TestRealms(AlignakTest):
 
         # Get the B-world broker
         # This broker is defined in the realm World and it manages sub-realms
-        bworld = self._arbiter.conf.brokers.find_by_name('broker-B-world')
+        bworld = self._arbiter.conf.brokers.find_by_name('broker-b')
         assert bworld is not None
 
         # broker should be in the world level

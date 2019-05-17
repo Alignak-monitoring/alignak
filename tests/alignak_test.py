@@ -84,6 +84,7 @@ from alignak.daemons.brokerdaemon import Broker
 from alignak.daemons.arbiterdaemon import Arbiter
 from alignak.daemons.receiverdaemon import Receiver
 
+
 class AlignakTest(unittest2.TestCase):
 
     if sys.version_info < (2, 7):
@@ -279,6 +280,7 @@ define host {
             cfg.set('DEFAULT', '_dist_RUN', '%s/run' % cfg_folder)
             cfg.set('DEFAULT', '_dist_LOG', '%s/log' % cfg_folder)
 
+            # Logger configuration file
             cfg.set('DEFAULT', 'logger_configuration', '%s/etc/alignak-logger.json' % cfg_folder)
 
             # Nagios legacy files

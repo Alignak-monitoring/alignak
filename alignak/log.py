@@ -43,7 +43,7 @@ import json
 import time
 import datetime
 import logging
-from logging import Handler, Formatter, StreamHandler
+from logging import Handler, Formatter, FileHandler, StreamHandler
 from logging.handlers import TimedRotatingFileHandler
 from logging.config import dictConfig as logger_dictConfig
 
@@ -225,20 +225,27 @@ def set_monitoring_logger(log_filename, log_rotation_when, log_rotation_interval
 
 
 def set_log_file(log_filename, log_rotation_when, log_rotation_interval, log_rotation_count,
-                 log_format, log_date):
+                 log_format, log_date, log_level=None):
     """Set the Alignak daemons logger have a file log handler.
 
-    :param log_filename: file name
+    :param log_filename: the file name for the log
 
-    :param log_rotation_count:
+    :param log_rotation_count: all for the Timed Rotating default file handler
     :param log_rotation_interval:
     :param log_rotation_when:
-    :param log_format:
+
+    :param log_format: both for the log formatter
     :param log_date:
+
+    :param log_level: optional to sel the logger and new handler log level
+    Default log level is ERROR if this parameter is not set
 
     :return: n/a
     """
     logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+
+    log_level = log_level if log_level else logging.INFO
+    logger_.setLevel(log_level)
 
     for handler in logger_.handlers:
         if isinstance(handler, TimedRotatingFileHandler):
@@ -249,8 +256,11 @@ def set_log_file(log_filename, log_rotation_when, log_rotation_interval, log_rot
             log_filename, when=log_rotation_when,
             interval=log_rotation_interval, backupCount=log_rotation_count)
         file_handler.setFormatter(Formatter(log_format, log_date))
+        file_handler.setLevel(log_level)
         logger_.addHandler(file_handler)
-        logger_.debug("Logger (default), added a TimedRotatingFileHandler")
+        logger_.debug("Logger (%s), added a TimedRotatingFileHandler", ALIGNAK_LOGGER_NAME)
+        print("Logger (%s), added a file handler: %s / %s"
+              % (ALIGNAK_LOGGER_NAME, log_level, log_filename))
 
 
 def set_log_console(log_level=logging.INFO):

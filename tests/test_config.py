@@ -52,7 +52,9 @@ class TestConfig(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('../etc/alignak.cfg', './etc/alignak.ini')
+        self.setup_with_file(configuration_file='../etc/alignak.cfg',
+                             env_file='./etc/alignak.ini',
+                             dispatching=False)
         assert self.conf_is_correct
 
         # No error messages
@@ -92,7 +94,9 @@ class TestConfig(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('../etc/alignak.cfg', '../etc/alignak.ini')
+        self.setup_with_file(configuration_file='../etc/alignak.cfg',
+                             env_file='./etc/alignak.ini',
+                             dispatching=False)
         assert self.conf_is_correct
 
         # No error messages
@@ -279,7 +283,10 @@ class TestConfig(AlignakTest):
 
         # Arbiter named as Default
         assert self._arbiter.conf.conf_is_correct
-        arbiter_link = self._arbiter.conf.arbiters.find_by_name('Default-Arbiter')
+        # Use the generic daemon name in the alignak.ini file!
+        arbiter_link = self._arbiter.conf.arbiters.find_by_name('daemon')
+        for arb in self._arbiter.conf.arbiters:
+            print("Arbiters: %s" % arb.name)
         assert arbiter_link is not None
         assert not hasattr(arbiter_link, 'configuration_errors')
         assert not hasattr(arbiter_link, 'configuration_warnings')

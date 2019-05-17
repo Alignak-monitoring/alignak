@@ -484,6 +484,13 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                                          "file to declare one or more 'cfg=' variables."))
 
                 my_configuration = list(self.alignak_env.get_daemons(daemon_name=self.name).items())
+                if not my_configuration:
+                    self.pre_log.append(("WARNING",
+                                         "No defined configuration for the daemon: %s. "
+                                         "Using only the default parameters for its configuration."
+                                         % self.name))
+                    my_configuration = list(self.alignak_env.get_alignak_configuration().items())
+
                 for prop, value in my_configuration:
                     self.pre_log.append(("DEBUG",
                                          " found daemon parameter, %s = %s" % (prop, value)))
@@ -502,38 +509,6 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                         setattr(self, prop, my_properties[prop].pythonize(value))
                         self.pre_log.append(("DEBUG", " -> updating %s = %s to %s"
                                              % (prop, current_prop, getattr(self, prop))))
-                if not my_configuration:
-                    self.pre_log.append(("WARNING",
-                                         "No defined configuration for the daemon: %s. "
-                                         % self.name))
-
-                    # todo: why doing this? It is quite tricky to configure daemon if it does not
-                    # have its own configuration section, perhaps removing this should be fine!
-                    # self.pre_log.append(("DEBUG",
-                    #                      "No defined configuration for the daemon: %s. "
-                    #                      "Using the 'alignak-configuration' section "
-                    #                      "variables as parameters for the daemon:" % self.name))
-                    #
-                    # # Set the global Alignak configuration parameters
-                    # # as the current daemon properties
-                    # self.pre_log.append(("INFO",
-                    #                      "Get alignak configuration to configure the daemon..."))
-                    # alignak_configuration = self.alignak_env.get_alignak_configuration()
-                    # if alignak_configuration:
-                    #     for prop, value in list(alignak_configuration.items()):
-                    #         if prop in ['name'] or prop.startswith('_'):
-                    #             self.pre_log.append(("DEBUG",
-                    #                                  "- ignoring '%s' variable." % prop))
-                    #             continue
-                    #         if prop in self.properties:
-                    #             entry = self.properties[prop]
-                    #             setattr(self, prop, entry.pythonize(value))
-                    #         else:
-                    #             setattr(self, prop, value)
-                    #         print("Daemon %s, prop: %s = %s" % (self.name, prop, value))
-                    #         self.pre_log.append(("DEBUG",
-                    #                              "- setting '%s' as %s" % (prop,
-                    # getattr(self, prop))))
 
             except configparser.ParsingError as exp:
                 self.exit_on_exception(EnvironmentFile(exp.message))
@@ -557,6 +532,9 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
             raise EnvironmentFile("Using daemon configuration file is now deprecated. "
                                   "The daemon -c command line parameter should not be "
                                   "used anymore in favor the -e environment file parameter.")
+
+        print("Daemon '%s' is started with an environment file: %s"
+              % (self.name, self.env_filename))
 
         if 'is_daemon' in kwargs and kwargs['is_daemon']:
             self.is_daemon = BoolProp().pythonize(kwargs['is_daemon'])
@@ -631,6 +609,7 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         #         setattr(self, prop, os.path.abspath(getattr(self, prop)))
 
         # Log file...
+        print("Daemon '%s' log dir: %s" % (self.name, self.logdir))
         self.log_filename = PathProp().pythonize("%s.log" % self.name)
         self.log_filename = os.path.abspath(os.path.join(self.logdir, self.log_filename))
         if 'log_filename' in kwargs and kwargs['log_filename']:
@@ -1657,6 +1636,9 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         if hasattr(os, 'initgroups'):
             try:
                 os.initgroups(self.user, gid)
+            except PermissionError:
+                logger.info("The current user (%s) is not allowed to initialize "
+                            "the groups access list for '%s'", get_cur_user(), self.user)
             except OSError as err:
                 if err.errno == errno.EPERM:
                     logger.info("The current user (%s) is not allowed to initialize "
@@ -2195,6 +2177,7 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                 setup_logger(logger_configuration_file=self.logger_configuration,
                              log_dir=self.logdir, process_name=self.name,
                              log_file=self.log_filename)
+                print("Configured a logger with directory as: %s" % self.logdir)
 
             if self.debug:
                 # Force the global logger at DEBUG level

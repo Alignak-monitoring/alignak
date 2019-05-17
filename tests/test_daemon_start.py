@@ -373,7 +373,7 @@ class template_Daemon_Start():
 
         daemon = self.get_daemon()
         assert daemon.pid_filename == os.path.abspath('%s/%s.pid' % (daemon.workdir, daemon.name))
-        assert daemon.log_filename == os.path.abspath('%s/%s.log' % (daemon.workdir, daemon.name))
+        assert daemon.log_filename == os.path.abspath('%s/%s.log' % (daemon.logdir, daemon.name))
         # assert daemon.log_filename == ''    # Because logs are defined in the logger configuration
 
         # Do not reload the configuration file (avoid replacing modified properties for the test...)
