@@ -1322,7 +1322,9 @@ def parse_daemon_args(arbiter=False):
                              'Default is set according to the daemon type.')
 
     parser.add_argument('-l', '--log_file', dest='log_filename',
-                        help='File used for the daemon log. Set as empty to disable log file.')
+                        help='File used for the daemon log. Set as empty to disable log file. '
+                             'If this parameter is a directory it will be completed with the '
+                             'daemon name to build a file name.')
 
     parser.add_argument('-L', '--log_level', dest='log_level',
                         help='Log level: DEBUG, INFO, WARNING, ERROR or CRITICAL. '
@@ -1335,7 +1337,8 @@ def parse_daemon_args(arbiter=False):
                         help='Set log level to debug mode (DEBUG)')
 
     parser.add_argument('-i', '--pid_file', dest='pid_filename',
-                        help='File used to store the daemon pid')
+                        help='File used to store the daemon pid. If this parameter is a directory '
+                             'it will be completed with the daemon name to build a file name.')
 
     parser.add_argument('-e', '--environment', dest='env_file', required=True,
                         default='../../etc/alignak.ini',

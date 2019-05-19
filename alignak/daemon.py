@@ -621,37 +621,41 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                 else:
                     self.logger_configuration = os.path.abspath(self.logger_configuration)
 
-            if not os.path.exists(self.logger_configuration):
-                print("Daemon '%s' , configured logger configuration file (%s) does not exist."
-                      % (self.name, self.logger_configuration))
-            else:
-                print("Daemon '%s' logger configuration file: %s"
-                      % (self.name, self.logger_configuration))
-
-        # # Make my paths properties be absolute paths
-        # for prop, entry in list(my_properties.items()):
-        #     # Set absolute paths for
-        #     if isinstance(my_properties[prop], PathProp):
-        #         setattr(self, prop, os.path.abspath(getattr(self, prop)))
-
         # Log file...
         self.log_filename = PathProp().pythonize("%s.log" % self.name)
         self.log_filename = os.path.abspath(os.path.join(self.logdir, self.log_filename))
         if 'log_filename' in kwargs and kwargs['log_filename']:
             self.log_filename = PathProp().pythonize(kwargs['log_filename'].strip())
+
+            # If we received a directory, transform to a file
+            if os.path.isdir(self.log_filename):
+                self.log_filename = os.path.abspath(
+                    os.path.join(self.log_filename, "%s.log" % self.name))
+
             # Make it an absolute path file in the log directory
             if self.log_filename != os.path.abspath(self.log_filename):
                 if self.log_filename:
+                    self.logger_configuration = None
                     self.log_filename = os.path.abspath(os.path.join(self.logdir,
                                                                      self.log_filename))
                 else:
                     self.use_log_file = False
                     print("Daemon '%s' will not log to a file: %s" % (self.name))
             else:
+                self.logger_configuration = None
                 self.logdir = os.path.dirname(self.log_filename)
-            print("Daemon '%s' is started with an overridden log file: %s"
-                  % (self.name, self.log_filename))
-        print("Daemon '%s' log file: %s" % (self.name, self.log_filename))
+            # print("Daemon '%s' is started with an overridden log file: %s"
+            #       % (self.name, self.log_filename))
+
+        if self.logger_configuration:
+            if not os.path.exists(self.logger_configuration):
+                print("Daemon '%s', configured logger configuration file (%s) does not exist."
+                      % (self.name, self.logger_configuration))
+            else:
+                print("Daemon '%s' logger configuration file: %s"
+                      % (self.name, self.logger_configuration))
+        else:
+            print("Daemon '%s' log file: %s" % (self.name, self.log_filename))
 
         # Check the log directory (and create if it does not exist)
         # self.check_dir(os.path.dirname(self.log_filename))
@@ -679,11 +683,16 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         self.pid_filename = os.path.abspath(os.path.join(self.workdir, self.pid_filename))
         if 'pid_filename' in kwargs and kwargs['pid_filename']:
             self.pid_filename = PathProp().pythonize(kwargs['pid_filename'].strip())
+
+            # If we received a directory, transform to a file
+            if os.path.isdir(self.pid_filename):
+                self.pid_filename = os.path.abspath(
+                    os.path.join(self.pid_filename, "%s.pid" % self.name))
+
             # Make it an absolute path file in the pid directory
             if self.pid_filename != os.path.abspath(self.pid_filename):
                 self.pid_filename = os.path.abspath(os.path.join(self.workdir, self.pid_filename))
             self.workdir = os.path.dirname(self.pid_filename)
-            print("Daemon working directory: %s" % self.workdir)
         print("Daemon '%s' pid file: %s" % (self.name, self.pid_filename))
         self.pre_log.append(("INFO",
                              "Daemon '%s' pid file: %s" % (self.name, self.pid_filename)))
