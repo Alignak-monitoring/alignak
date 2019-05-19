@@ -755,9 +755,7 @@ define host {
             'env_file': self.env_filename
         }
         if configuration_file:
-            args.update({
-                'legacy_cfg_files': [configuration_file]
-            })
+            args.update({'legacy_cfg_files': [configuration_file]})
         self._arbiter = Arbiter(**args)
 
         try:

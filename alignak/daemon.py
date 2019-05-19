@@ -611,8 +611,6 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         if os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None):
             self.logger_configuration = os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None)
         if self.logger_configuration:
-            print("Daemon '%s' logger configuration file: %s"
-                  % (self.name, self.logger_configuration))
             if self.logger_configuration in ['DEFAULT']:
                 self.logger_configuration = os.path.join(self.etcdir, 'alignak-logger.json')
 
@@ -624,10 +622,11 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                     self.logger_configuration = os.path.abspath(self.logger_configuration)
 
             if not os.path.exists(self.logger_configuration):
-                self.exit_on_error("Configured logger configuration file (%s) does not exist."
-                                   % self.logger_configuration, exit_code=3)
-            print("Daemon '%s' logger configuration file: %s"
-                  % (self.name, self.logger_configuration))
+                print("Daemon '%s' , configured logger configuration file (%s) does not exist."
+                      % (self.name, self.logger_configuration))
+            else:
+                print("Daemon '%s' logger configuration file: %s"
+                      % (self.name, self.logger_configuration))
 
         # # Make my paths properties be absolute paths
         # for prop, entry in list(my_properties.items()):

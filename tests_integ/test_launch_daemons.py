@@ -123,7 +123,7 @@ class TestLaunchDaemons(AlignakTest):
         # Arbiter process must exit with a return code == 2
         assert ret == 2
 
-    @pytest.mark.skip("To be re-activated with spare mode")
+    # @pytest.mark.skip("To be re-activated with spare mode")
     def test_arbiter_class_no_environment(self):
         """ Instantiate the Alignak Arbiter class without environment file
 
@@ -140,8 +140,7 @@ class TestLaunchDaemons(AlignakTest):
             'legacy_cfg_files': ['../etc/alignak.cfg']
         }
         # Exception because the logger configuration file does not exist
-        with pytest.raises(SystemExit):
-            self.arbiter = Arbiter(**args)
+        self.arbiter = Arbiter(**args)
 
         print("Arbiter: %s" % (self.arbiter))
         assert self.arbiter.env_filename == ''
