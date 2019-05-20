@@ -175,7 +175,7 @@ class AlignakTest(unittest2.TestCase):
         """Set the test logger at the provided level -
         useful for some tests that check debug log
         """
-        # Change the logger and its hadlers log level
+        # Change the logger and its handlers log level
         print("Set unit_tests logger: %s" % log_level)
         logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
         logger_.setLevel(log_level)
@@ -278,6 +278,8 @@ define host {
             cfg.set('DEFAULT', '_dist_VAR', '%s/var' % cfg_folder)
             cfg.set('DEFAULT', '_dist_RUN', '%s/run' % cfg_folder)
             cfg.set('DEFAULT', '_dist_LOG', '%s/log' % cfg_folder)
+
+            cfg.set('DEFAULT', 'logger_configuration', '%s/etc/alignak-logger.json' % cfg_folder)
 
             # Nagios legacy files
             cfg.set('alignak-configuration', 'cfg', '%s/etc/alignak.cfg' % cfg_folder)
@@ -755,9 +757,7 @@ define host {
             'env_file': self.env_filename
         }
         if configuration_file:
-            args.update({
-                'legacy_cfg_files': [configuration_file]
-            })
+            args.update({'legacy_cfg_files': [configuration_file]})
         self._arbiter = Arbiter(**args)
 
         try:
