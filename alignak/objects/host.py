@@ -91,6 +91,7 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
 
     ok_up = u'UP'
     my_type = 'host'
+    my_name_property = "%s_name" % my_type
 
     # if Host(or more generally Item) instances were created with all properties
     # having a default value set in the instance then we wouldn't need this:
@@ -250,15 +251,17 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
         'hostgroup': 'hostgroups',
     })
 
-    def __init__(self, params=None, parsing=True):
+    def __init__(self, params, parsing=True):
         # Must convert the unreachable properties to manage the new 'x' option value
         self.convert_conf_for_unreachable(params=params)
+
         super(Host, self).__init__(params, parsing=parsing)
 
     def __str__(self):  # pragma: no cover
-        return '<Host %s, uuid=%s, %s (%s), realm: %s, use: %s />' \
-               % (self.get_full_name(), self.uuid, self.state, self.state_type,
-                  getattr(self, 'realm', 'Unset'), getattr(self, 'use', None))
+        return '<Host%s %s, uuid=%s, %s (%s), realm: %s, use: %s />' \
+               % (' template' if self.is_a_template() else '', self.get_full_name(), self.uuid,
+                  self.state, self.state_type, getattr(self, 'realm', 'Unset'),
+                  getattr(self, 'use', None))
     __repr__ = __str__
 
 #######
@@ -330,11 +333,10 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
 
         # Internal checks before executing inherited function...
         cls = self.__class__
-        if hasattr(self, 'host_name'):
+        if getattr(self, 'host_name', ''):
             for char in cls.illegal_object_name_chars:
                 if char in self.host_name:
-                    self.add_error("[%s::%s] host_name contains an illegal character: %s"
-                                   % (self.my_type, self.get_name(), char))
+                    self.add_error("host_name contains an illegal character: %s" % char)
                     state = False
 
         # Fred: do not alert about missing check_command for an host... this because 1/ it is
@@ -343,10 +345,9 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
         #     self.add_warning("[%s::%s] has no defined check command"
         #                      % (self.my_type, self.get_name()))
 
-        if self.notifications_enabled and not self.contacts:
-            self.add_warning("[%s::%s] notifications are enabled but no contacts nor "
-                             "contact_groups property is defined for this host"
-                             % (self.my_type, self.get_name()))
+        if getattr(self, 'notifications_enabled', None) and not getattr(self, 'contacts', None):
+            self.add_warning("notifications are enabled but no contacts nor "
+                             "contact_groups property is defined for this host")
 
         return super(Host, self).is_correct() and state
 
@@ -358,33 +359,13 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
         """
         return self.services
 
-    def get_name(self):
-        """Get the host name.
-        Try several attributes before returning UNNAMED*
-
-        :return: The name of the host
-        :rtype: str
-        """
-        if not self.is_tpl():
-            try:
-                return self.host_name
-            except AttributeError:  # outch, no hostname
-                return 'UNNAMEDHOST'
-        else:
-            try:
-                return self.name
-            except AttributeError:  # outch, no name for this template
-                return 'UNNAMEDHOSTTEMPLATE'
-
     def get_full_name(self):
         """Accessor to host_name attribute
 
         :return: host_name
         :rtype: str
         """
-        if self.is_tpl():
-            return "tpl-%s" % (self.name)
-        return getattr(self, 'host_name', 'unnamed')
+        return self.get_name()
 
     def get_groupname(self, hostgroups):
         """Get name of the first host's hostgroup (alphabetic sort)
@@ -459,7 +440,7 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
         :rtype: bool
         """
         return self.is_excluded_for_sdesc(
-            getattr(service, 'service_description', None), service.is_tpl()
+            getattr(service, 'service_description', None), service.is_a_template()
         )
 
     def is_excluded_for_sdesc(self, sdesc, is_tpl=False):
@@ -1174,16 +1155,16 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
             return ''
         return getattr(self.acknowledgement, "comment", '')
 
-    def get_check_command(self):
-        """Wrapper to get the name of the check_command attribute
-
-        :return: check_command name
-        :rtype: str
-        """
-        if not getattr(self, 'check_command', None):
-            return ''
-        return self.check_command.get_name()
-
+    # def get_check_command(self):
+    #     """Wrapper to get the name of the check_command attribute
+    #
+    #     :return: check_command name
+    #     :rtype: str
+    #     """
+    #     if not getattr(self, 'check_command', None):
+    #         return ''
+    #     return self.check_command.get_name()
+    #
     def get_snapshot_command(self):
         """Wrapper to get the name of the snapshot_command attribute
 
@@ -1348,21 +1329,21 @@ class Hosts(SchedulingItems):
         self.linkify_with_timeperiods(timeperiods, 'snapshot_period')
         self.linkify_h_by_h()
         self.linkify_h_by_hg(hostgroups)
-        self.linkify_one_command_with_commands(commands, 'check_command')
-        self.linkify_one_command_with_commands(commands, 'event_handler')
-        self.linkify_one_command_with_commands(commands, 'snapshot_command')
+        self.linkify_with_commands(commands, 'check_command')
+        self.linkify_with_commands(commands, 'event_handler')
+        self.linkify_with_commands(commands, 'snapshot_command')
 
         self.linkify_with_contacts(contacts)
         # No more necessary
         self.linkify_h_by_realms(realms)
-        self.linkify_with_resultmodulations(resultmodulations)
+        self.linkify_with_result_modulations(resultmodulations)
         self.linkify_with_business_impact_modulations(businessimpactmodulations)
         # WARNING: all escalations will not be link here
         # (just the escalation here, not serviceesca or hostesca).
         # This last one will be link in escalations linkify.
         self.linkify_with_escalations(escalations)
-        self.linkify_with_checkmodulations(checkmodulations)
-        self.linkify_with_macromodulations(macromodulations)
+        self.linkify_with_check_modulations(checkmodulations)
+        self.linkify_with_macro_modulations(macromodulations)
 
     def fill_predictive_missing_parameters(self):
         """Loop on hosts and call Host.fill_predictive_missing_parameters()
@@ -1386,9 +1367,8 @@ class Hosts(SchedulingItems):
                 if o_parent is not None:
                     new_parents.append(o_parent.uuid)
                 else:
-                    err = "the parent '%s' for the host '%s' is unknown!" % (parent,
-                                                                             host.get_name())
-                    self.add_error(err)
+                    self.add_error("the parent '%s' for the host '%s' is unknown"
+                                   % (parent, host.get_name()))
             # We find the id, we replace the names
             host.parents = new_parents
 
@@ -1474,8 +1454,8 @@ class Hosts(SchedulingItems):
         :return: None
         """
         for host in self:
-            for parent_id in getattr(host, 'parents', []):
-                if parent_id is None:
+            for parent_id in getattr(host, 'parents', None):
+                if not parent_id:
                     continue
                 parent = self[parent_id]
                 if parent.active_checks_enabled:

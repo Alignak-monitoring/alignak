@@ -68,16 +68,8 @@ class Servicedependency(Item):
 
     """
     my_type = "servicedependency"
-
-    # F is dep of D
-    # host_name                      Host B
-    #       service_description             Service D
-    #       dependent_host_name             Host C
-    #       dependent_service_description   Service F
-    #       execution_failure_criteria      o
-    #       notification_failure_criteria   w,u
-    #       inherits_parent         1
-    #       dependency_period       24x7
+    my_name_property = "service_relation"
+    my_index_property = "service_relation"
 
     properties = Item.properties.copy()
     properties.update({
@@ -105,18 +97,37 @@ class Servicedependency(Item):
             BoolProp(default=False)
     })
 
-    def get_name(self):
+    def __str__(self):  # pragma: no cover
+        return '<Servicedependency %s %s, uuid=%s, use: %s />' \
+               % ('template' if self.is_a_template() else '', self.get_full_name(), self.uuid,
+                  getattr(self, 'use', None))
+    __repr__ = __str__
+
+    @property
+    def service_relation(self):
+        """Unique key for a service dependency
+
+        :return: Tuple with host_name/service and dependent_host_name/service
+        :rtype: tuple
+        """
+        return "{}/{}->{}/{}".format(getattr(self, 'host_name', 'unknown'),
+                                     getattr(self, 'service_description', 'unknown'),
+                                     getattr(self, 'dependent_host_name', 'independant'),
+                                     getattr(self, 'dependent_service_description', 'unknown'))
+
+    def get_full_name(self):
         """Get name based on 4 class attributes
-        Each attribute is substituted by '' if attribute does not exist
+        Each attribute is replaced with 'unknown' if attribute is not set
 
         :return: dependent_host_name/dependent_service_description..host_name/service_description
         :rtype: str
-        TODO: Clean this function (use format for string)
         """
-        return getattr(self, 'dependent_host_name', '') + '/'\
-            + getattr(self, 'dependent_service_description', '') \
-            + '..' + getattr(self, 'host_name', '') + '/' \
-            + getattr(self, 'service_description', '')
+        if self.is_a_template():
+            return self.get_name()
+        return "{}/{}->{}/{}".format(getattr(self, 'host_name', 'unknown'),
+                                     getattr(self, 'service_description', 'unknown'),
+                                     getattr(self, 'dependent_host_name', 'independant'),
+                                     getattr(self, 'dependent_service_description', 'unknown'))
 
 
 class Servicedependencies(Items):
@@ -124,9 +135,9 @@ class Servicedependencies(Items):
        used for parsing configuration
 
     """
-    inner_class = Servicedependency  # use for know what is in items
+    inner_class = Servicedependency
 
-    def delete_servicesdep_by_id(self, ids):
+    def delete_svc_dep_by_id(self, ids):
         """Delete a list of servicedependency
 
         :param ids: ids list to delete
@@ -154,16 +165,16 @@ class Servicedependencies(Items):
         :return: None
         """
         # We create a "standard" service_dep
-        prop = {
-            'dependent_host_name':           dep_host_name,
+        params = {
+            'host_name': par_host_name,
+            'service_description': par_service_description,
+            'dependent_host_name': dep_host_name,
             'dependent_service_description': dep_service_description,
-            'host_name':                     par_host_name,
-            'service_description':           par_service_description,
             'notification_failure_criteria': 'u,c,w',
-            'inherits_parent': '1',
+            'inherits_parent': '1'
         }
-        servicedep = Servicedependency(prop)
-        self.add_item(servicedep)
+        print("-> new service dep: %s" % (params))
+        self.add_item(Servicedependency(params))
 
     def explode_hostgroup(self, svc_dep, hostgroups):
         # pylint: disable=too-many-locals
@@ -215,92 +226,89 @@ class Servicedependencies(Items):
         """
         # The "old" services will be removed. All services with
         # more than one host or a host group will be in it
-        srvdep_to_remove = []
+        to_be_removed = []
 
         # Then for every host create a copy of the service with just the host
         # because we are adding services, we can't just loop in it
-        servicedeps = list(self.items.keys())
-        for s_id in servicedeps:
-            servicedep = self.items[s_id]
+        for svc_dep_id in list(self.items.keys()):
+            svc_dep = self.items[svc_dep_id]
 
-            # First case: we only have to propagate the services dependencies to all the hosts
-            # of some hostgroups
-            # Either a specific property is defined (Shinken) or no dependent hosts groups
-            # is defined
-            if bool(getattr(servicedep, 'explode_hostgroup', 0)) or \
-                    (hasattr(servicedep, 'hostgroup_name') and
-                     not hasattr(servicedep, 'dependent_hostgroup_name')):
-                self.explode_hostgroup(servicedep, hostgroups)
-                srvdep_to_remove.append(s_id)
+            # First case: we only have to propagate the services dependencies to
+            # all the hosts of some hostgroups
+            # Either a specific property is defined (Shinken/Alignak) or
+            # no dependent hosts groups is defined
+            if getattr(svc_dep, 'explode_hostgroup', '0') == '1' or \
+                    (hasattr(svc_dep, 'hostgroup_name') and
+                     not hasattr(svc_dep, 'dependent_hostgroup_name')):
+                self.explode_hostgroup(svc_dep, hostgroups)
+                to_be_removed.append(svc_dep_id)
                 continue
 
-            # Get the list of all FATHER hosts and service dependenciess
-            hnames = []
-            if hasattr(servicedep, 'hostgroup_name'):
-                hg_names = [n.strip() for n in servicedep.hostgroup_name.split(',')]
-                hg_names = [hg_name.strip() for hg_name in hg_names]
+            # Get the list of all FATHER hosts and service dependencies
+            father_hosts = []
+            if getattr(svc_dep, 'host_name', ''):
+                father_hosts.extend([h.strip() for h in svc_dep.host_name.split(',')])
+
+            if getattr(svc_dep, 'hostgroup_name', ''):
+                hg_names = [g.strip() for g in svc_dep.hostgroup_name.split(',')]
                 for hg_name in hg_names:
                     hostgroup = hostgroups.find_by_name(hg_name)
                     if hostgroup is None:
-                        err = "ERROR: the servicedependecy got an" \
-                              " unknown hostgroup_name '%s'" % hg_name
-                        hostgroup.add_error(err)
+                        hostgroup.add_error("A servicedependecy got an unknown "
+                                            "hostgroup_name '%s'" % hg_name)
                         continue
-                    hnames.extend([m.strip() for m in hostgroup.get_hosts()])
+                    father_hosts.extend([m.strip() for m in hostgroup.get_hosts()])
 
-            if not hasattr(servicedep, 'host_name'):
-                servicedep.host_name = ''
+            services = []
+            if getattr(svc_dep, 'service_description', ''):
+                services = [s.strip() for s in svc_dep.service_description.split(',')]
 
-            if servicedep.host_name != '':
-                hnames.extend([n.strip() for n in servicedep.host_name.split(',')])
-            snames = [d.strip() for d in servicedep.service_description.split(',')]
             couples = []
-            for hname in hnames:
-                for sname in snames:
-                    couples.append((hname.strip(), sname.strip()))
+            for host_name in father_hosts:
+                for service_description in services:
+                    couples.append((host_name, service_description))
 
-            if not hasattr(servicedep, 'dependent_hostgroup_name') \
-                    and hasattr(servicedep, 'hostgroup_name'):
-                servicedep.dependent_hostgroup_name = servicedep.hostgroup_name
+            if not hasattr(svc_dep, 'dependent_hostgroup_name') \
+                    and hasattr(svc_dep, 'hostgroup_name'):
+                svc_dep.dependent_hostgroup_name = svc_dep.hostgroup_name
 
             # Now the dependent part (the sons)
-            dep_hnames = []
-            if hasattr(servicedep, 'dependent_hostgroup_name'):
-                hg_names = [n.strip() for n in servicedep.dependent_hostgroup_name.split(',')]
-                hg_names = [hg_name.strip() for hg_name in hg_names]
+            son_hosts = []
+            if getattr(svc_dep, 'dependent_hostgroup_name', ''):
+                hg_names = [g.strip() for g in svc_dep.dependent_hostgroup_name.split(',')]
                 for hg_name in hg_names:
                     hostgroup = hostgroups.find_by_name(hg_name)
                     if hostgroup is None:
-                        err = "ERROR: the servicedependecy got an " \
-                              "unknown dependent_hostgroup_name '%s'" % hg_name
-                        hostgroup.add_error(err)
+                        hostgroup.add_error("A servicedependecy got an unknown "
+                                            "dependent_hostgroup_name '%s'" % hg_name)
                         continue
-                    dep_hnames.extend([m.strip() for m in hostgroup.get_hosts()])
+                    son_hosts.extend([m.strip() for m in hostgroup.get_hosts()])
 
-            if not hasattr(servicedep, 'dependent_host_name'):
-                servicedep.dependent_host_name = getattr(servicedep, 'host_name', '')
+            if not hasattr(svc_dep, 'dependent_host_name'):
+                svc_dep.dependent_host_name = getattr(svc_dep, 'host_name', '')
+            if getattr(svc_dep, 'dependent_host_name', ''):
+                son_hosts.extend([h.strip() for h in svc_dep.dependent_host_name.split(',')])
 
-            if servicedep.dependent_host_name != '':
-                dep_hnames.extend([n.strip() for n in servicedep.dependent_host_name.split(',')])
-            dep_snames = [d.strip() for d in servicedep.dependent_service_description.split(',')]
+            dep_snames = [s.strip() for s in svc_dep.dependent_service_description.split(',')]
             dep_couples = []
-            for dep_hname in dep_hnames:
+            for dep_hname in son_hosts:
                 for dep_sname in dep_snames:
                     dep_couples.append((dep_hname.strip(), dep_sname.strip()))
 
-            # Create the new service deps from all of this.
+            # Create the new service dependencies from all this stuff
             for (dep_hname, dep_sname) in dep_couples:  # the sons, like HTTP
-                for (hname, sname) in couples:  # the fathers, like MySQL
-                    new_sd = servicedep.copy()
-                    new_sd.host_name = hname
-                    new_sd.service_description = sname
+                for (host_name, service_description) in couples:  # the fathers, like MySQL
+                    new_sd = svc_dep.copy()
+                    new_sd.host_name = host_name
+                    new_sd.service_description = service_description
                     new_sd.dependent_host_name = dep_hname
                     new_sd.dependent_service_description = dep_sname
                     self.add_item(new_sd)
+                    print("-> new SD: %s" % new_sd)
                 # Ok so we can remove the old one
-                srvdep_to_remove.append(s_id)
+                to_be_removed.append(svc_dep_id)
 
-        self.delete_servicesdep_by_id(srvdep_to_remove)
+        self.delete_svc_dep_by_id(to_be_removed)
 
     def linkify(self, hosts, services, timeperiods):
         """Create link between objects::
@@ -317,11 +325,11 @@ class Servicedependencies(Items):
         :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: None
         """
-        self.linkify_sd_by_s(hosts, services)
-        self.linkify_sd_by_tp(timeperiods)
-        self.linkify_s_by_sd(services)
+        self.linkify_svc_dep_by_service(hosts, services)
+        self.linkify_svc_dep_by_timeperiod(timeperiods)
+        self.linkify_service_by_svc_dep(services)
 
-    def linkify_sd_by_s(self, hosts, services):
+    def linkify_svc_dep_by_service(self, hosts, services):
         """Replace dependent_service_description and service_description
         in service dependency by the real object
 
@@ -332,101 +340,99 @@ class Servicedependencies(Items):
         :return: None
         """
         to_del = []
-        errors = self.configuration_errors
-        warns = self.configuration_warnings
-        for servicedep in self:
+        for svc_dep in self:
             try:
-                s_name = servicedep.dependent_service_description
-                hst_name = servicedep.dependent_host_name
+                s_name = svc_dep.dependent_service_description
+                hst_name = svc_dep.dependent_host_name
 
                 # The new member list, in id
-                serv = services.find_srv_by_name_and_hostname(hst_name, s_name)
-                if serv is None:
+                service = services.find_srv_by_name_and_hostname(hst_name, s_name)
+                if service is None:
                     host = hosts.find_by_name(hst_name)
                     if not (host and host.is_excluded_for_sdesc(s_name)):
-                        errors.append("Service %s not found for host %s" % (s_name, hst_name))
+                        self.add_error("Service %s not found for host %s" % (s_name, hst_name))
                     elif host:
-                        warns.append("Service %s is excluded from host %s ; "
-                                     "removing this servicedependency as it's unusuable."
-                                     % (s_name, hst_name))
-                    to_del.append(servicedep)
+                        self.add_warning("Service %s is excluded from host %s ; "
+                                         "removing this service dependency as it's unusable."
+                                         % (s_name, hst_name))
+                    to_del.append(svc_dep)
                     continue
-                servicedep.dependent_service_description = serv.uuid
+                svc_dep.dependent_service_description = service.uuid
 
-                s_name = servicedep.service_description
-                hst_name = servicedep.host_name
+                s_name = svc_dep.service_description
+                hst_name = svc_dep.host_name
 
                 # The new member list, in id
-                serv = services.find_srv_by_name_and_hostname(hst_name, s_name)
-                if serv is None:
+                service = services.find_srv_by_name_and_hostname(hst_name, s_name)
+                if service is None:
                     host = hosts.find_by_name(hst_name)
                     if not (host and host.is_excluded_for_sdesc(s_name)):
-                        errors.append("Service %s not found for host %s" % (s_name, hst_name))
+                        self.add_error("Service %s not found for host %s" % (s_name, hst_name))
                     elif host:
-                        warns.append("Service %s is excluded from host %s ; "
-                                     "removing this servicedependency as it's unusuable."
-                                     % (s_name, hst_name))
-                    to_del.append(servicedep)
+                        self.add_warning("Service %s is excluded from host %s ; "
+                                         "removing this service dependency as it's unusable."
+                                         % (s_name, hst_name))
+                    to_del.append(svc_dep)
                     continue
-                servicedep.service_description = serv.uuid
+                svc_dep.service_description = service.uuid
 
             except AttributeError as err:
                 logger.error("[servicedependency] fail to linkify by service %s: %s",
-                             servicedep, err)
-                to_del.append(servicedep)
+                             svc_dep, err)
+                to_del.append(svc_dep)
 
-        for servicedep in to_del:
-            self.remove_item(servicedep)
+        for svc_dep in to_del:
+            self.remove_item(svc_dep)
 
-    def linkify_sd_by_tp(self, timeperiods):
+    def linkify_svc_dep_by_timeperiod(self, timeperiods):
         """Replace dependency_period by a real object in service dependency
 
         :param timeperiods: list of timeperiod, used to look for a specific one
         :type timeperiods: alignak.objects.timeperiod.Timeperiods
         :return: None
         """
-        for servicedep in self:
+        for svc_dep in self:
             try:
-                tp_name = servicedep.dependency_period
-                timeperiod = timeperiods.find_by_name(tp_name)
+                svc_dep.dependency_period = ''
+                timeperiod = timeperiods.find_by_name(svc_dep.dependency_period)
                 if timeperiod:
-                    servicedep.dependency_period = timeperiod.uuid
-                else:
-                    servicedep.dependency_period = ''
+                    svc_dep.dependency_period = timeperiod.uuid
             except AttributeError as exp:
                 logger.error("[servicedependency] fail to linkify by timeperiods: %s", exp)
 
-    def linkify_s_by_sd(self, services):
+    def linkify_service_by_svc_dep(self, services):
         """Add dependency in service objects
 
         :return: None
         """
-        for servicedep in self:
+        for svc_dep in self:
             # Only used for debugging purpose when loops are detected
-            setattr(servicedep, "service_description_string", "undefined")
-            setattr(servicedep, "dependent_service_description_string", "undefined")
+            setattr(svc_dep, "service_description_string", "undefined")
+            setattr(svc_dep, "dependent_service_description_string", "undefined")
 
-            if getattr(servicedep, 'service_description', None) is None or\
-                    getattr(servicedep, 'dependent_service_description', None) is None:
+            if getattr(svc_dep, 'service_description', None) is None:
                 continue
 
-            services.add_act_dependency(servicedep.dependent_service_description,
-                                        servicedep.service_description,
-                                        servicedep.notification_failure_criteria,
-                                        getattr(servicedep, 'dependency_period', ''),
-                                        servicedep.inherits_parent)
+            if getattr(svc_dep, 'dependent_service_description', None) is None:
+                continue
 
-            services.add_chk_dependency(servicedep.dependent_service_description,
-                                        servicedep.service_description,
-                                        servicedep.execution_failure_criteria,
-                                        getattr(servicedep, 'dependency_period', ''),
-                                        servicedep.inherits_parent)
+            services.add_act_dependency(svc_dep.dependent_service_description,
+                                        svc_dep.service_description,
+                                        svc_dep.notification_failure_criteria,
+                                        getattr(svc_dep, 'dependency_period', '24x7'),
+                                        svc_dep.inherits_parent)
+
+            services.add_chk_dependency(svc_dep.dependent_service_description,
+                                        svc_dep.service_description,
+                                        svc_dep.execution_failure_criteria,
+                                        getattr(svc_dep, 'dependency_period', '24x7'),
+                                        svc_dep.inherits_parent)
 
             # Only used for debugging purpose when loops are detected
-            setattr(servicedep, "service_description_string",
-                    services[servicedep.service_description].get_name())
-            setattr(servicedep, "dependent_service_description_string",
-                    services[servicedep.dependent_service_description].get_name())
+            setattr(svc_dep, "service_description_string",
+                    services[svc_dep.service_description].get_name())
+            setattr(svc_dep, "dependent_service_description_string",
+                    services[svc_dep.dependent_service_description].get_name())
 
     def is_correct(self):
         """Check if this servicedependency configuration is correct ::
@@ -442,22 +448,19 @@ class Servicedependencies(Items):
         # Internal checks before executing inherited function...
         loop = self.no_loop_in_parents("service_description", "dependent_service_description")
         if loop:
-            msg = "Loop detected while checking service dependencies"
-            self.add_error(msg)
+            self.add_error("Loop detected while checking service dependencies:")
             state = False
             for item in self:
                 for elem in loop:
                     if elem == item.service_description:
-                        msg = "Service %s is parent service_description in dependency "\
-                              "defined in %s" % (
-                                  item.service_description_string, item.imported_from
-                              )
-                        self.add_error(msg)
+                        self.add_error("- service %s is a parent service_description "
+                                       "in dependency defined in %s"
+                                       % (item.service_description_string,
+                                          item.imported_from))
                     elif elem == item.dependent_service_description:
-                        msg = "Service %s is child service_description in dependency"\
-                              " defined in %s" % (
-                                  item.dependent_service_description_string, item.imported_from
-                              )
-                        self.add_error(msg)
+                        self.add_error("- service %s is a child service_description "
+                                       "in dependency defined in %s"
+                                       % (item.dependent_service_description_string,
+                                          item.imported_from))
 
         return super(Servicedependencies, self).is_correct() and state

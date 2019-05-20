@@ -52,7 +52,7 @@ class TestDispatcher(AlignakTest):
     def _dispatching(self, env_filename='cfg/dispatcher/simple.ini', loops=3, multi_realms=False):
         """ Dispatching process: prepare, check, dispatch
 
-        This function realize all the dispatching operations:
+        This function realizes all the dispatching operations:
         - load a monitoring configuration
         - prepare the dispatching
         - dispatch

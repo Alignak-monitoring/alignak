@@ -274,7 +274,7 @@ class ComplexExpressionFactory(object):
 
         if pattern == '*':
             obj = [h.host_name for h in list(self.all_elements.items.values())
-                   if getattr(h, 'host_name', '') != '' and not h.is_tpl()]
+                   if getattr(h, 'host_name', '') != '' and not h.is_a_template()]
             return obj, error
 
         # Ok a more classic way
@@ -293,7 +293,7 @@ class ComplexExpressionFactory(object):
             # Maybe the hostgroup memebrs is '*', if so expand with all hosts
             if '*' in elts:
                 elts.extend([h.host_name for h in list(self.all_elements.items.values())
-                             if getattr(h, 'host_name', '') != '' and not h.is_tpl()])
+                             if getattr(h, 'host_name', '') != '' and not h.is_a_template()])
                 # And remove this strange hostname too :)
                 elts.remove('*')
             return elts, error

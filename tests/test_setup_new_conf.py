@@ -95,7 +95,7 @@ class TestSetupNewConf(AlignakTest):
             assert scheduler_daemon.modules[0].option_2 == 'bar'
             assert scheduler_daemon.modules[0].option_3 == 'foobar'
             for host in scheduler_daemon.sched.pushed_conf.hosts:
-                print(("Host: %s" % host))
+                print("Host: %s" % host)
             # Two hosts declared in the configuration
             # One host provided by the Example module loaded in the arbiter
             assert 3 == len(scheduler_daemon.sched.pushed_conf.hosts)

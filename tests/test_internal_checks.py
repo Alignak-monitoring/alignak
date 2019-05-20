@@ -64,15 +64,15 @@ class TestInternalChecks(AlignakTest):
 
         :return: None
         """
+        if 'ALIGNAK_INTERNAL_HOST_PERFDATA' in os.environ:
+            del os.environ['ALIGNAK_INTERNAL_HOST_PERFDATA']
+        if 'ALIGNAK_INTERNAL_SERVICE_PERFDATA' in os.environ:
+            del os.environ['ALIGNAK_INTERNAL_SERVICE_PERFDATA']
+
         # Set environment variables that define a [0 - N] random range for the performance data
         if perf_data:
             os.environ['ALIGNAK_INTERNAL_HOST_PERFDATA'] = '5'
             os.environ['ALIGNAK_INTERNAL_SERVICE_PERFDATA'] = '5'
-        else:
-            if 'ALIGNAK_INTERNAL_HOST_PERFDATA' in os.environ:
-                del os.environ['ALIGNAK_INTERNAL_HOST_PERFDATA']
-            if 'ALIGNAK_INTERNAL_SERVICE_PERFDATA' in os.environ:
-                del os.environ['ALIGNAK_INTERNAL_SERVICE_PERFDATA']
 
         self.setup_with_file('cfg/cfg_internal_checks.cfg',
                              dispatching=True)
@@ -113,8 +113,8 @@ class TestInternalChecks(AlignakTest):
             for check in checks:
                 if check.command.startswith("/test"):
                     continue
-                # pprint(check.__dict__)
-                print("%s: %s" % (datetime.datetime.utcfromtimestamp(check.t_to_go).strftime('%Y-%m-%d %H:%M:%S'), check.command))
+                print("%s: %s" % (datetime.datetime.utcfromtimestamp(check.t_to_go).
+                                  strftime('%Y-%m-%d %H:%M:%S'), check.command))
                 assert check.creation_time == now
                 assert check.t_to_go >= now
                 assert check.t_to_go <= now + (5 * 60)
@@ -137,7 +137,9 @@ class TestInternalChecks(AlignakTest):
             if check.command.startswith("/test"):
                 continue
             print("Check: %s" % check)
-            print("%s: %s - %s" % (datetime.datetime.utcfromtimestamp(check.t_to_go).strftime('%Y-%m-%d %H:%M:%S'), check.command, check.perf_data))
+            print("%s: %s - %s"
+                  % (datetime.datetime.utcfromtimestamp(check.t_to_go).
+                     strftime('%Y-%m-%d %H:%M:%S'), check.command, check.perf_data))
 
             if check.command.startswith('_internal') and check.status not in ['scheduled']:
                 if perf_data:
@@ -149,6 +151,7 @@ class TestInternalChecks(AlignakTest):
         # self.show_logs()
         # self.show_events()
 
+        print("Logs:")
         logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
         for handler in logger_.handlers:
             if not isinstance(handler, CollectorHandler):
@@ -164,44 +167,57 @@ class TestInternalChecks(AlignakTest):
 
                 # Always UP
                 if 'Internal check: host_0 ' in log:
-                    assert '--ALC-- Internal check: host_0 - _internal_host_check;0;I am always Up' in log
+                    assert '--ALC-- Internal check: host_0 - ' \
+                           '_internal_host_check;0;I am always Up' in log
                     continue
                 if 'check result for host_0,' in log:
-                    assert '--ALC-- check result for host_0, exit: 0, output: I am always Up' in log
+                    assert '--ALC-- check result for host_0, ' \
+                           'exit: 0, output: I am always Up' in log
                     continue
 
                 # Always UNREACHABLE
                 if 'Internal check: host_1 ' in log:
-                    assert '--ALC-- Internal check: host_1 - _internal_host_check;1;I am always Down' in log
+                    assert '--ALC-- Internal check: host_1 - ' \
+                           '_internal_host_check;1;I am always Down' in log
                     continue
                 if 'check result for host_1,' in log:
-                    assert '--ALC-- check result for host_1, exit: 1, output: I am always Down' in log
+                    assert '--ALC-- check result for host_1, ' \
+                           'exit: 1, output: I am always Down' in log
                     continue
 
                 # Always DOWN
                 if 'Internal check: host_2 ' in log:
-                    assert '--ALC-- Internal check: host_2 - _internal_host_check;2;I am always Down' in log
+                    assert '--ALC-- Internal check: host_2 - ' \
+                           '_internal_host_check;2;I am always Down' in log
                     continue
                 if 'check result for host_2,' in log:
                     # state_id is 2 or 1 for an host
-                    assert '--ALC-- check result for host_2, exit: 2, output: I am always Down' in log or '--ALC-- check result for host_2, exit: 1, output: I am always Down'
+                    assert '--ALC-- check result for host_2, ' \
+                           'exit: 2, output: I am always Down' in log \
+                           or '--ALC-- check result for host_2, exit: 1, output: I am always Down'
                     continue
 
                 # Always UNKNOWN
                 if 'Internal check: host_3 ' in log:
-                    assert '--ALC-- Internal check: host_3 - _internal_host_check;3;I am always Unknown' in log
+                    assert '--ALC-- Internal check: host_3 - ' \
+                           '_internal_host_check;3;I am always Unknown' in log
                     continue
                 if 'check result for host_3,' in log:
                     # state_id is 2 or 1 for an host
-                    assert '--ALC-- check result for host_3, exit: 3, output: I am always Unknown' in log or '--ALC-- check result for host_3, exit: 1, output: I am always Unknown' in log
+                    assert '--ALC-- check result for host_3, ' \
+                           'exit: 3, output: I am always Unknown' in log \
+                           or '--ALC-- check result for host_3, exit: 1, output: ' \
+                              'I am always Unknown' in log
                     continue
 
                 # Always UNREACHABLE
                 if 'Internal check: host_4 ' in log:
-                    assert '--ALC-- Internal check: host_4 - _internal_host_check;4;I am always Unreachable' in log
+                    assert '--ALC-- Internal check: host_4 - ' \
+                           '_internal_host_check;4;I am always Unreachable' in log
                     continue
                 if 'check result for host_4,' in log:
-                    assert '--ALC-- check result for host_4, exit: 4, output: I am always Unreachable' in log
+                    assert '--ALC-- check result for host_4, ' \
+                           'exit: 4, output: I am always Unreachable' in log
                     continue
 
                 # Output built by Alignak
@@ -209,17 +225,19 @@ class TestInternalChecks(AlignakTest):
                     assert '--ALC-- Internal check: host_5 - _internal_host_check;0;' in log
                     continue
                 if 'check result for host_5,' in log:
-                    assert '--ALC-- check result for host_5, exit: 0, output: Host internal check result: 0' in log
+                    assert '--ALC-- check result for host_5, exit: 0, output: ' \
+                           'Host internal check result: 0' in log
                     continue
 
                 # Random exit code
-                if 'Internal check: host_6 ' in log:
-                    assert '--ALC-- Internal check: host_6 - _internal_host_check;0,2;' in log
-                    continue
                 if 'check result for host_6,' in log:
                     assert \
-                        ('--ALC-- check result for host_6, exit: 0, output: Host internal check result: 0' in log) or \
-                        ('--ALC-- check result for host_6, exit: 1, output: Host internal check result: 1' in log) or \
-                        ('--ALC-- check result for host_6, exit: 2, output: Host internal check result: 2' in log) or \
-                        ('--ALC-- check result for host_6, exit: 3, output: Host internal check result: 3' in log)
+                        ('--ALC-- check result for host_6, exit: 0, output: '
+                         'Host internal check result: 0' in log) or \
+                        ('--ALC-- check result for host_6, exit: 1, output: '
+                         'Host internal check result: 1' in log) or \
+                        ('--ALC-- check result for host_6, exit: 2, output: '
+                         'Host internal check result: 2' in log) or \
+                        ('--ALC-- check result for host_6, exit: 3, output: '
+                         'Host internal check result: 3' in log)
                     continue

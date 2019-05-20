@@ -46,7 +46,7 @@ class GenericExtInfo(Item):
 #                        |___/
 ######
 
-    def get_name(self):
+    def get_name(self, index=False):
         """Accessor to host_name attribute or name if first not defined
 
         :return: host name, use to search the host to merge

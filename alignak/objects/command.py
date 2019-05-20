@@ -67,6 +67,7 @@ class Command(Item):
     __metaclass__ = AutoSlots
 
     my_type = "command"
+    my_name_property = "%s_name" % my_type
 
     properties = Item.properties.copy()
     properties.update({
@@ -79,49 +80,26 @@ class Command(Item):
         'reactionner_tag':
             StringProp(default=u'None'),
         'module_type':
-            StringProp(default=None),
+            StringProp(default=u'fork'),
         'timeout':
             IntegerProp(default=-1),
         'enable_environment_macros':
             BoolProp(default=False),
     })
 
-    def __init__(self, params=None, parsing=True):
-
-        if params is None:
-            params = {}
+    def __init__(self, params, parsing=True):
         super(Command, self).__init__(params, parsing=parsing)
 
-        if not hasattr(self, 'timeout'):
-            self.timeout = -1
+        self.fill_default()
 
-        if not hasattr(self, 'enable_environment_macros'):
-            self.enable_environment_macros = False
-        if not hasattr(self, 'poller_tag'):
-            self.poller_tag = u'None'
-        if not hasattr(self, 'reactionner_tag'):
-            self.reactionner_tag = u'None'
-        if not hasattr(self, 'module_type'):
-            # If the command start with a _, set the module_type
-            # as the name of the command, without the _
-            if getattr(self, 'command_line', '').startswith('_'):
-                # For an internal command...
-                self.module_type = u'internal'
-                # module_type = getattr(self, 'command_line', '').split(' ')[0]
-                # # and we remove the first _
-                # self.module_type = module_type[1:]
-            # If no command starting with _, be fork :)
-            else:
-                self.module_type = u'fork'
+        if getattr(self, 'command_line', '').startswith('_'):
+            # For an internal command...
+            self.module_type = u'internal'
 
-    def get_name(self):
-        """
-        Get the name of the command
-
-        :return: the command name string
-        :rtype: str
-        """
-        return self.command_name
+    def __str__(self):  # pragma: no cover
+        return '<Command %s, command line: %s/>' % \
+               (self.get_name(), getattr(self, 'command_line', 'Unset'))
+    __repr__ = __str__
 
     def fill_data_brok_from(self, data, brok_type):
         """
@@ -163,30 +141,27 @@ class Command(Item):
             parameters = self.command_line.split(';')
             if len(parameters) < 2:
                 self.command_name = "_internal_host_check;0;Host assumed to be UP"
-                self.add_warning("[%s::%s] has no defined state nor output. Changed to %s"
-                                 % (self.my_type, self.command_name, self.command_name))
+                self.add_warning("has no defined state nor output. Changed to %s"
+                                 % self.command_name)
             elif len(parameters) < 3:
                 state = 3
                 try:
                     state = int(parameters[1])
                 except ValueError:
-                    self.add_warning("[%s::%s] required a non integer state: %s. Using 3."
-                                     % (self.my_type, self.command_name, parameters[1]))
+                    self.add_warning("required a non integer state: %s. Using 3."
+                                     % parameters[1])
 
                 if state > 4:
-                    self.add_warning("[%s::%s] required an impossible state: %d. Using 3."
-                                     % (self.my_type, self.command_name, state))
+                    self.add_warning("required an impossible state: %d. Using 3." % state)
 
                 output = {0: "UP", 1: "DOWN", 2: "DOWN", 3: "UNKNOWN", 4: "UNREACHABLE", }[state]
                 self.command_name = "_internal_host_check;Host assumed to be %s" % output
 
-                self.add_warning("[%s::%s] has no defined output. Changed to %s"
-                                 % (self.my_type, self.command_name, self.command_name))
+                self.add_warning("has no defined output. Changed to %s" % self.command_name)
             elif len(parameters) > 3:
                 self.command_name = "%s;%s;%s" % (parameters[0], parameters[1], parameters[2])
 
-                self.add_warning("[%s::%s] has too many parameters. Changed to %s"
-                                 % (self.my_type, self.command_name, self.command_name))
+                self.add_warning("has too many parameters. Changed to %s" % self.command_name)
 
         return super(Command, self).is_correct() and state
 
@@ -197,6 +172,4 @@ class Commands(Items):
     A command is an external command the poller module run to
     see if something is ok or not
     """
-
     inner_class = Command
-    name_property = "command_name"

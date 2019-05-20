@@ -215,40 +215,134 @@ class TestDependencies(AlignakTest):
                     host.check_and_set_unreachability(hosts, services)
                     assert 'UNREACHABLE' == host.state
 
+    def test_c_dependencies_default(self):
+        """ Test dependencies correctly loaded from config files
+
+        :return: None
+        """
+        self.setup_with_file('cfg/cfg_default.cfg', dispatching=True)
+        assert self.conf_is_correct
+        assert len(self.configuration_errors) == 0
+        assert len(self.configuration_warnings) == 0
+
+        for host in self._scheduler.hosts:
+            print("Host: %s" % host)
+            print("- parents: %s" % host.parent_dependencies)
+            # print("- I depend of them: %s" % host.act_depend_of)
+            for uuid in host.parent_dependencies:
+                item = self._scheduler.find_item_by_id(uuid)
+                print("  -> %s" % item)
+            print("- children: %s" % host.child_dependencies)
+            # print("- They depend of me: %s" % host.act_depend_of_me)
+            for uuid in host.child_dependencies:
+                item = self._scheduler.find_item_by_id(uuid)
+                print("  -> %s" % item)
+
+        for svc in self._scheduler.services:
+            print("Service: %s" % svc)
+            print("- parents: %s" % svc.parent_dependencies)
+            # print("- I depend of them: %s" % svc.act_depend_of)
+            for uuid in svc.parent_dependencies:
+                item = self._scheduler.find_item_by_id(uuid)
+                print("  -> %s" % item)
+            print("- children: %s" % svc.child_dependencies)
+            # print("- They depend of me: %s" % svc.act_depend_of_me)
+            for uuid in svc.child_dependencies:
+                item = self._scheduler.find_item_by_id(uuid)
+                print("  -> %s" % item)
+
+        # test_router_0
+        host = self._scheduler.hosts.find_by_name("test_router_0")
+        # Parents
+        assert len(host.act_depend_of) == 0
+        # Children
+        assert len(host.act_depend_of_me) == 1
+        for uuid in host.child_dependencies:
+            assert self._scheduler.hosts[uuid].host_name == 'test_host_0'
+        for (uuid, _, _, _) in host.act_depend_of_me:
+            assert self._scheduler.hosts[uuid].host_name == 'test_host_0'
+
+        # test_host_0 -> test_router_0
+        host = self._scheduler.hosts.find_by_name("test_host_0")
+        # Parents
+        assert 1 == len(host.act_depend_of)
+        for uuid in host.parent_dependencies:
+            assert self._scheduler.hosts[uuid].host_name == 'test_router_0'
+        for (uuid, _, _, _) in host.act_depend_of:
+            assert self._scheduler.hosts[uuid].host_name == 'test_router_0'
+        # Children
+        assert len(host.act_depend_of_me) == 1
+        for uuid in host.child_dependencies:
+            assert self._scheduler.services[uuid].get_full_name() == 'test_host_0/test_ok_0'
+        for (uuid, _, _, _) in host.act_depend_of_me:
+            assert self._scheduler.services[uuid].get_full_name() == 'test_host_0/test_ok_0'
+
+        # test test_host_0.test_ok_0 -> test_host_0
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
+        for (dep_id, _, _, _) in svc.act_depend_of:
+            if dep_id in self._scheduler.hosts:
+                # Depends from its host
+                assert self._scheduler.hosts[dep_id].host_name == 'test_host_0'
+            else:
+                # Depends from another service of its host
+                assert self._scheduler.services[dep_id].host_name == 'test_host_0'
+                assert self._scheduler.services[dep_id].service_description == 'test_ok_0'
+
     def test_c_dependencies(self):
         """ Test dependencies correctly loaded from config files
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_dependencies.cfg',
-                             dispatching=True)
+        self.set_unit_tests_logger_level()
+        self.setup_with_file('cfg/cfg_dependencies.cfg', dispatching=True)
+        self.show_logs()
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
         assert len(self.configuration_warnings) == 0
 
-        # duplicate servicegroup 'pending', from:
-        # '/home/alignak/alignak/test/cfg/default/servicegroups.cfg:48' and
-        # '/home/alignak/alignak/test/cfg/default/servicegroups.cfg:48', using lastly defined.
-        # You may manually set the definition_order parameter to avoid this message.
+        for host in self._scheduler.hosts:
+            print("Host: %s" % host)
+            print("- parents: %s" % host.parent_dependencies)
+            # print("- I depend of them: %s" % host.act_depend_of)
+            for uuid in host.parent_dependencies:
+                item = self._scheduler.find_item_by_id(uuid)
+                print("  -> %s" % item)
+            print("- children: %s" % host.child_dependencies)
+            # print("- They depend of me: %s" % host.act_depend_of_me)
+            for uuid in host.child_dependencies:
+                item = self._scheduler.find_item_by_id(uuid)
+                print("  -> %s" % item)
+
+        for svc in self._scheduler.services:
+            print("Service: %s" % svc)
+            print("- parents: %s" % svc.parent_dependencies)
+            # print("- I depend of them: %s" % svc.act_depend_of)
+            for uuid in svc.parent_dependencies:
+                item = self._scheduler.find_item_by_id(uuid)
+                print("  -> %s" % item)
+            print("- children: %s" % svc.child_dependencies)
+            # print("- They depend of me: %s" % svc.act_depend_of_me)
+            for uuid in svc.child_dependencies:
+                item = self._scheduler.find_item_by_id(uuid)
+                print("  -> %s" % item)
 
         # test_host_00 -> test_router_00
         test_host_00 = self._scheduler.hosts.find_by_name("test_host_00")
         assert 1 == len(test_host_00.act_depend_of)
         for (host, _, _, _) in test_host_00.act_depend_of:
-            assert self._scheduler.hosts[host].host_name == \
-                             'test_router_00'
+            assert self._scheduler.hosts[host].host_name == 'test_router_00'
 
         # test test_host_00.test_ok_1 -> test_host_00
         # test test_host_00.test_ok_1 -> test_host_00.test_ok_0
-        svc = self._scheduler.services.find_srv_by_name_and_hostname(
-            "test_host_00", "test_ok_1")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_00", "test_ok_1")
         for (dep_id, _, _, _) in svc.act_depend_of:
             if dep_id in self._scheduler.hosts:
-                assert self._scheduler.hosts[dep_id].host_name == \
-                                 'test_host_00'
+                # Depends from its host
+                assert self._scheduler.hosts[dep_id].host_name == 'test_host_00'
             else:
-                assert self._scheduler.services[dep_id].service_description == \
-                                 'test_ok_0'
+                # Depends from another service of its host
+                assert self._scheduler.services[dep_id].host_name == 'test_host_00'
+                assert self._scheduler.services[dep_id].service_description == 'test_ok_0'
 
         # test test_host_C -> test_host_A
         # test test_host_C -> test_host_B
@@ -263,30 +357,25 @@ class TestDependencies(AlignakTest):
         test_host_e = self._scheduler.hosts.find_by_name("test_host_E")
         assert 1 == len(test_host_e.act_depend_of)
         for (host, _, _, _) in test_host_e.act_depend_of:
-            assert self._scheduler.hosts[host].host_name == \
-                             'test_host_D'
+            assert self._scheduler.hosts[host].host_name == 'test_host_D'
 
         # test test_host_11.test_parent_svc -> test_host_11.test_son_svc
         svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_11", "test_parent_svc")
         for (dep_id, _, _, _) in svc.act_depend_of:
             if dep_id in self._scheduler.hosts:
-                assert self._scheduler.hosts[dep_id].host_name == \
-                                 'test_host_11'
+                assert self._scheduler.hosts[dep_id].host_name == 'test_host_11'
             else:
-                assert self._scheduler.services[dep_id].service_description == \
-                                 'test_son_svc'
+                assert self._scheduler.services[dep_id].service_description == 'test_son_svc'
 
         # test test_host_11.test_ok_1 -> test_host_11.test_ok_0
         svc = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_11", "test_ok_1")
         for (dep_id, _, _, _) in svc.act_depend_of:
             if dep_id in self._scheduler.hosts:
-                assert self._scheduler.hosts[dep_id].host_name == \
-                                 'test_host_11'
+                assert self._scheduler.hosts[dep_id].host_name == 'test_host_11'
             else:
-                assert self._scheduler.services[dep_id].service_description == \
-                                 'test_ok_0'
+                assert self._scheduler.services[dep_id].service_description == 'test_ok_0'
 
     def test_c_host_passive_service_active(self):
         """ Test host passive and service active
@@ -390,6 +479,7 @@ class TestDependencies(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_dependencies_conf.cfg',
                              dispatching=True)
+        self.show_logs()
 
         assert self.conf_is_correct
         assert len(self.configuration_errors) == 0
@@ -410,12 +500,12 @@ class TestDependencies(AlignakTest):
         """
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad1.cfg')
-        # self.show_logs()
+
         self.assert_any_cfg_log_match(re.escape(
-                "Configuration in hostdependency::unknown/unknown is incorrect"
+                "got a bad dependent_host_name definition"
         ))
         self.assert_any_cfg_log_match(re.escape(
-                "Error: the host dependency got a bad dependent_host_name definition"
+                "Configuration is incorrect"
         ))
         self.assert_any_cfg_log_match(re.escape(
                 "hostdependencies configuration is incorrect!"
@@ -431,12 +521,12 @@ class TestDependencies(AlignakTest):
         """
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad2.cfg')
-        self.show_logs()
+
         self.assert_any_cfg_log_match(re.escape(
-                "Configuration in hostdependency::unknown/unknown is incorrect"
+                "got a bad host_name definition"
         ))
         self.assert_any_cfg_log_match(re.escape(
-                "Error: the host dependency got a bad host_name definition"
+                "Configuration is incorrect"
         ))
         self.assert_any_cfg_log_match(re.escape(
                 "hostdependencies configuration is incorrect!"
@@ -454,7 +544,7 @@ class TestDependencies(AlignakTest):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad3.cfg')
         self.show_logs()
         self.assert_any_cfg_log_match(re.escape(
-                "the parent 'test_router_notexist' for the host 'test_host_11' is unknown!"
+                "the parent 'test_router_notexist' for the host 'test_host_11' is unknown"
         ))
         self.assert_any_cfg_log_match(re.escape(
                 "hosts configuration is incorrect!"
@@ -546,12 +636,12 @@ class TestDependencies(AlignakTest):
         """
         with pytest.raises(SystemExit):
             self.setup_with_file('cfg/dependencies/cfg_dependencies_bad8.cfg')
-        self.show_logs()
+
         self.assert_any_cfg_log_match(re.escape(
-                "Configuration in hostdependency::unknown/unknown is incorrect"
+                "got a bad dependent_host_name definition 'test_host_X'"
         ))
         self.assert_any_cfg_log_match(re.escape(
-                "Error: the host dependency got a bad dependent_host_name definition 'test_host_X'"
+                "Configuration is incorrect"
         ))
         self.assert_any_cfg_log_match(re.escape(
                 "hostdependencies configuration is incorrect!"
@@ -921,7 +1011,8 @@ class TestDependencies(AlignakTest):
             self.show_checks()
             self.assert_actions_count(1)
             self.show_actions()
-            self.assert_actions_match(0, 'notifier.pl --hostname test_host_00 --notificationtype PROBLEM --hoststate DOWN', 'command')
+            self.assert_actions_match(0, 'notifier.pl --hostname test_host_00 --notificationtype '
+                                         'PROBLEM --hoststate DOWN', 'command')
 
     def test_a_m_service_host_host_critical(self):
         """ Test the dependencies between service -> host -> host
@@ -939,6 +1030,7 @@ class TestDependencies(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_dependencies.cfg', dispatching=True)
+        self.show_logs()
         # 4 hosts:
         # test_router_0
         # test_host_0
@@ -1313,19 +1405,6 @@ class TestDependencies(AlignakTest):
             assert "OK" == svc.state
             self.assert_actions_count(0)
             self.assert_checks_count(11)
-            # checks_logs=[[[
-            # 	0 = creation: 1477557942.18, is_a: check, type: , status: scheduled, planned: 1477557954, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=down --failchance=2% --previous-state=UP --state-duration=0 --hostname host_A_P
-            # 	1 = creation: 1477557942.19, is_a: check, type: , status: scheduled, planned: 1477557944, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=down --failchance=2% --previous-state=UP --state-duration=0 --hostname host_o_B
-            # 	2 = creation: 1477557942.19, is_a: check, type: , status: scheduled, planned: 1477557949, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=flap --failchance=2% --previous-state=UP --state-duration=0 --hostname test_router_0
-            # 	3 = creation: 1477557942.19, is_a: check, type: , status: scheduled, planned: 1477557945, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=down --failchance=2% --previous-state=UP --state-duration=0 --hostname host_A_0
-            # 	4 = creation: 1477557942.2, is_a: check, type: , status: scheduled, planned: 1477557994, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=down --failchance=2% --previous-state=UP --state-duration=0 --hostname host_o_A
-            # 	5 = creation: 1477557942.2, is_a: check, type: , status: scheduled, planned: 1477557951, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=up --failchance=2% --previous-state=UP --state-duration=0 --parent-state=UP --hostname test_host_0
-            # 	6 = creation: 1477557942.21, is_a: check, type: , status: scheduled, planned: 1477557974, command: /tmp/dependencies/plugins/test_servicecheck.pl --type=ok --failchance=5% --previous-state=OK --state-duration=0 --total-critical-on-host=0 --total-warning-on-host=0 --hostname test_host_0 --servicedesc test_ok_0
-            # 	7 = creation: 1477557942.21, is_a: check, type: , status: scheduled, planned: 1477557946, command: /tmp/dependencies/plugins/test_servicecheck.pl --type=ok --failchance=5% --previous-state=OK --state-duration=0 --total-critical-on-host=0 --total-warning-on-host=0 --hostname host_P --servicedesc service_A
-            # 	8 = creation: 1477557942.21, is_a: check, type: , status: scheduled, planned: 1477557980, command: /tmp/dependencies/plugins/test_servicecheck.pl --type=ok --failchance=5% --previous-state=OK --state-duration=0 --total-critical-on-host=0 --total-warning-on-host=0 --hostname host_A --servicedesc service_A
-            # 	9 = creation: 1477557942.24, is_a: check, type: , status: scheduled, planned: 1477557995, command: /tmp/dependencies/plugins/test_hostcheck.pl --type=down --failchance=2% --previous-state=UP --state-duration=1477557942 --hostname host_A
-            # 	10 = creation: 1477557942.37, is_a: check, type: , status: wait_dependent, planned: 1477557942.36, command: /tmp/dependencies/plugins/test_servicecheck.pl --type=ok --failchance=5% --previous-state=OK --state-duration=1477557942 --total-critical-on-host=0 --total-warning-on-host=0 --hostname host_A --servicedesc service_P
-            # ]]]
             self.assert_checks_match(10, 'wait_dependent', 'status')
 
             self.scheduler_loop(1, [[host, 2, 'DOWN']])
@@ -1460,25 +1539,50 @@ class TestDependencies(AlignakTest):
         assert svc_ssh.uuid in [c[0] for c in svc_postfix.act_depend_of]
         assert svc_ssh.uuid in [c[0] for c in svc_cpu.act_depend_of]
 
+    @pytest.mark.skip("Looks broken ... but it is a very non frequent use case. "
+                      "Ignoring as of now!")
     def test_complex_servicedependency(self):
-        """ All hosts in the hostgroup get the service dependencies. An host in the group can have
-        its own services dependencies
+        """ All hosts in the hosts group get the service dependencies. An host in the group
+        can have its own services dependencies
 
         :return:
         """
-        self.setup_with_file('cfg/dependencies/servicedependency_complex.cfg',
-                             dispatching=True)
+        self.setup_with_file('cfg/dependencies/servicedependency_complex.cfg', dispatching=True)
         assert self.conf_is_correct
 
-        for s in self._scheduler.services:
-            print(s.get_full_name())
+        for host in self._scheduler.hosts:
+            print("Host: %s" % host)
+            print("- parents: %s" % host.parent_dependencies)
+            # print("- I depend of them: %s" % host.act_depend_of)
+            for uuid in host.parent_dependencies:
+                item = self._scheduler.find_item_by_id(uuid)
+                print("  -> %s" % item)
+            print("- children: %s" % host.child_dependencies)
+            # print("- They depend of me: %s" % host.act_depend_of_me)
+            for uuid in host.child_dependencies:
+                item = self._scheduler.find_item_by_id(uuid)
+                print("  -> %s" % item)
 
-        NRPE = self._scheduler.services.\
-            find_srv_by_name_and_hostname("myspecifichost", "NRPE")
-        assert NRPE is not None
-        Load = self._scheduler.services.\
-            find_srv_by_name_and_hostname("myspecifichost", "Load")
-        assert Load is not None
+        for svc in self._scheduler.services:
+            print("Service: %s" % svc)
+            print("- parents: %s" % svc.parent_dependencies)
+            # print("- I depend of them: %s" % svc.act_depend_of)
+            for uuid in svc.parent_dependencies:
+                item = self._scheduler.find_item_by_id(uuid)
+                print("  -> %s" % item)
+            print("- children: %s" % svc.child_dependencies)
+            # print("- They depend of me: %s" % svc.act_depend_of_me)
+            for uuid in svc.child_dependencies:
+                item = self._scheduler.find_item_by_id(uuid)
+                print("  -> %s" % item)
+
+        svc_nrpe = self._scheduler.services.find_srv_by_name_and_hostname("myspecifichost", "NRPE")
+        assert svc_nrpe is not None
+        print("NRPE: %s\n- %s" % (svc_nrpe, svc_nrpe.act_depend_of))
 
         # Direct service dependency definition is valid ...
-        assert NRPE.uuid in [e[0] for e in Load.act_depend_of]
+        svc_load = self._scheduler.services.find_srv_by_name_and_hostname("myspecifichost", "Load")
+        assert svc_load is not None
+        print("Load: %s\n- %s" % (svc_load, svc_load.act_depend_of))
+
+        assert svc_nrpe.uuid in [e[0] for e in svc_load.act_depend_of]

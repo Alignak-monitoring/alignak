@@ -178,18 +178,19 @@ class TestBrokAckDowntime(AlignakTest):
 
         host_brok = False
         service_brok = False
-        hdata = unserialize(brok_ack[0].data)
-        assert hdata['host'] == 'test_host_0'
-        if 'service' in hdata:
-            assert hdata['service'] == 'test_ok_0'
+
+        brok_data = unserialize(brok_ack[0].data)
+        assert brok_data['host'] == 'test_host_0'
+        if 'service' in brok_data:
+            assert brok_data['service'] == 'test_ok_0'
             service_brok = True
         else:
             host_brok = True
 
-        hdata = unserialize(brok_ack[1].data)
-        assert hdata['host'] == 'test_host_0'
-        if 'service' in hdata:
-            assert hdata['service'] == 'test_ok_0'
+        brok_data = unserialize(brok_ack[1].data)
+        assert brok_data['host'] == 'test_host_0'
+        if 'service' in brok_data:
+            assert brok_data['service'] == 'test_ok_0'
             service_brok = True
         else:
             host_brok = True
@@ -212,18 +213,18 @@ class TestBrokAckDowntime(AlignakTest):
 
         host_brok = False
         service_brok = False
-        hdata = unserialize(brok_ack_expire[0].data)
-        assert hdata['host'] == 'test_host_0'
-        if 'service' in hdata:
-            assert hdata['service'] == 'test_ok_0'
+        brok_data = unserialize(brok_ack_expire[0].data)
+        assert brok_data['host'] == 'test_host_0'
+        if 'service' in brok_data:
+            assert brok_data['service'] == 'test_ok_0'
             service_brok = True
         else:
             host_brok = True
 
-        hdata = unserialize(brok_ack_expire[1].data)
-        assert hdata['host'] == 'test_host_0'
-        if 'service' in hdata:
-            assert hdata['service'] == 'test_ok_0'
+        brok_data = unserialize(brok_ack_expire[1].data)
+        assert brok_data['host'] == 'test_host_0'
+        if 'service' in brok_data:
+            assert brok_data['service'] == 'test_ok_0'
             service_brok = True
         else:
             host_brok = True
@@ -258,9 +259,9 @@ class TestBrokAckDowntime(AlignakTest):
         assert len(brok_ack_raise) == 2
         assert len(brok_ack_expire) == 1
 
-        hdata = unserialize(brok_ack_expire[0].data)
-        assert hdata['host'] == 'test_host_0'
-        assert 'service' not in hdata
+        brok_data = unserialize(brok_ack_expire[0].data)
+        assert brok_data['host'] == 'test_host_0'
+        assert 'service' not in brok_data
 
     def test_fixed_downtime_service(self):
         """Test broks when downtime

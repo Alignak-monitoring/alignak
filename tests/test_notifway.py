@@ -84,6 +84,8 @@ class TestNotificationWay(AlignakTest):
             'service_notification_options': ['wucrf'],
             'use': [],
             # Some more properties
+            'imported_from': 'alignak-self',
+            # 'name': '',
             'configuration_errors': [],
             'configuration_warnings': [],
             'customs': {},
@@ -99,6 +101,7 @@ class TestNotificationWay(AlignakTest):
     def test_correct_nw(self):
         """ Test check notification way is correct"""
         now = time.time()
+        self.show_logs()
 
         # Get a NW
         email_in_day = self._scheduler.notificationways.find_by_name('email_in_day')
@@ -118,6 +121,7 @@ class TestNotificationWay(AlignakTest):
         test.__dict__.pop('service_notification_commands')
         test.configuration_errors = []
         assert not test.is_correct()
+        print(test.__dict__)
         assert test.configuration_errors == [
             '[notificationway::email_in_day] do not have any service_notification_commands defined',
             '[notificationway::email_in_day] do not have any host_notification_commands defined'
@@ -143,7 +147,7 @@ class TestNotificationWay(AlignakTest):
     def test_contact_nw(self):
         """ Test notification ways for a contact"""
         now = time.time()
-        
+
         # Get the contact
         contact = self._scheduler.contacts.find_by_name("test_contact")
 

@@ -62,6 +62,7 @@ class CheckModulation(Item):
 
     """
     my_type = 'checkmodulation'
+    my_name_property = "%s_name" % my_type
 
     properties = Item.properties.copy()
     properties.update({
@@ -79,19 +80,16 @@ class CheckModulation(Item):
 
     macros = {}
 
-    def __init__(self, params=None, parsing=True):
-        if params is None:
-            params = {}
-
-        # At deserialization, thoses are dict
-        # TODO: Separate parsing instance from recreated ones
-        if 'check_command' in params and isinstance(params['check_command'], dict):
+    def __init__(self, params, parsing=True):
+        # When deserialized, those are dict
+        if not parsing and 'check_command' in params and isinstance(params['check_command'], dict):
             # We recreate the object
             self.check_command = CommandCall(params['check_command'])
             # And remove prop, to prevent from being overridden
             del params['check_command']
 
         super(CheckModulation, self).__init__(params, parsing=parsing)
+        self.fill_default()
 
     def serialize(self):
         res = super(CheckModulation, self).serialize()
@@ -99,16 +97,6 @@ class CheckModulation(Item):
         if getattr(self, 'check_command', None):
             res['check_command'] = self.check_command.serialize()
         return res
-
-    def get_name(self):
-        """Accessor to checkmodulation_name attribute
-
-        :return: check modulation name
-        :rtype: str
-        """
-        if hasattr(self, 'checkmodulation_name'):
-            return self.checkmodulation_name
-        return 'Unnamed'
 
     def get_check_command(self, timeperiods, t_to_go):
         """Get the check_command if we are in the check period modulation
@@ -135,19 +123,17 @@ class CheckModulation(Item):
 
         # Internal checks before executing inherited function...
         if not hasattr(self, 'check_command'):
-            msg = "[checkmodulation::%s] do not have any check_command defined" % (
-                self.get_name()
-            )
-            self.add_error(msg)
+            self.add_error("[checkmodulation::%s] do not have any check_command defined"
+                           % self.get_name())
             state = False
         else:
             if self.check_command is None:
-                msg = "[checkmodulation::%s] a check_command is missing" % (self.get_name())
-                self.add_error(msg)
+                self.add_error("[checkmodulation::%s] a check_command is missing"
+                               % self.get_name())
                 state = False
             if self.check_command and not self.check_command.is_valid():
-                msg = "[checkmodulation::%s] a check_command is invalid" % (self.get_name())
-                self.add_error(msg)
+                self.add_error("[checkmodulation::%s] a check_command is invalid"
+                               % self.get_name())
                 state = False
 
         # Ok just put None as check_period, means 24x7
@@ -161,7 +147,6 @@ class CheckModulations(CommandCallItems):
     """CheckModulations class allowed to handle easily several CheckModulation objects
 
     """
-    name_property = "checkmodulation_name"
     inner_class = CheckModulation
 
     def linkify(self, timeperiods, commands):
@@ -175,7 +160,7 @@ class CheckModulations(CommandCallItems):
         :return: None
         """
         self.linkify_with_timeperiods(timeperiods, 'check_period')
-        self.linkify_one_command_with_commands(commands, 'check_command')
+        self.linkify_with_commands(commands, 'check_command')
 
     def new_inner_member(self, name=None, params=None):
         """Create a CheckModulation object and add it to items

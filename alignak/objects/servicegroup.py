@@ -64,8 +64,10 @@ class Servicegroup(Itemgroup):
     A servicegroup is used to group services
     """
     my_type = 'servicegroup'
+    my_name_property = "%s_name" % my_type
+
     members_property = "members"
-    group_members_property = "servicegroup_members"
+    group_members_property = "%s_members" % my_type
 
     properties = Itemgroup.properties.copy()
     properties.update({
@@ -91,10 +93,6 @@ class Servicegroup(Itemgroup):
         'SERVICEGROUPNOTESURL': 'notes_url',
         'SERVICEGROUPACTIONURL': 'action_url'
     }
-
-    def get_name(self):
-        """Get the group name"""
-        return getattr(self, 'servicegroup_name', 'Unnamed')
 
     def get_services(self):
         """Get the services of the group
@@ -158,7 +156,6 @@ class Servicegroups(Itemgroups):
     """
     Class to manage all servicegroups
     """
-    name_property = "servicegroup_name"
     inner_class = Servicegroup
 
     def add_member(self, service_name, servicegroup_name):
@@ -171,13 +168,13 @@ class Servicegroups(Itemgroups):
         :return: None
         """
         servicegroup = self.find_by_name(servicegroup_name)
-        if not servicegroup:
-            servicegroup = Servicegroup({'servicegroup_name': servicegroup_name,
-                                         'alias': servicegroup_name,
-                                         'members': service_name})
-            self.add(servicegroup)
-        else:
+        if servicegroup:
             servicegroup.add_members(service_name)
+            return
+
+        servicegroup = Servicegroup({
+            'servicegroup_name': servicegroup_name, 'members': service_name})
+        self.add(servicegroup)
 
     def get_members_of_group(self, gname):
         """Get all members of a group which name is given in parameter
@@ -218,24 +215,29 @@ class Servicegroups(Itemgroups):
         :return: None
         """
         for servicegroup in self:
-            mbrs = servicegroup.get_services()
+            members = servicegroup.get_services()
+
+            # Only on item in the expected couple
+            if len(members) == 1 and members[0] != '':
+                servicegroup.add_unknown_members('%s' % members[0])
+                continue
+
             # The new member list, in id
-            new_mbrs = []
+            new_members = []
             seek = 0
             host_name = ''
-            if len(mbrs) == 1 and mbrs[0] != '':
-                servicegroup.add_unknown_members('%s' % mbrs[0])
 
-            for mbr in mbrs:
-                if not mbr:
+            for member in members:
+                if not member:
                     continue
                 if seek % 2 == 0:
-                    host_name = mbr.strip()
+                    host_name = member.strip()
                 else:
-                    service_desc = mbr.strip()
+                    service_desc = member.strip()
+
                     find = services.find_srv_by_name_and_hostname(host_name, service_desc)
                     if find is not None:
-                        new_mbrs.append(find.uuid)
+                        new_members.append(find.uuid)
                     else:
                         host = hosts.find_by_name(host_name)
                         if not (host and host.is_excluded_for_sdesc(service_desc)):
@@ -247,10 +249,10 @@ class Servicegroups(Itemgroups):
                 seek += 1
 
             # Make members uniq
-            new_mbrs = list(set(new_mbrs))
+            new_members = list(set(new_members))
 
             # We find the id, we replace the names
-            servicegroup.replace_members(new_mbrs)
+            servicegroup.replace_members(new_members)
             for srv_id in servicegroup.members:
                 serv = services[srv_id]
                 serv.servicegroups.append(servicegroup.uuid)

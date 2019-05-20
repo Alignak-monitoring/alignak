@@ -67,8 +67,10 @@ class Hostgroup(Itemgroup):
     A Hostgroup is used to manage a group of hosts
     """
     my_type = 'hostgroup'
+    my_name_property = "%s_name" % my_type
+
     members_property = "members"
-    group_members_property = "hostgroup_members"
+    group_members_property = "%s_members" % my_type
 
     properties = Itemgroup.properties.copy()
     properties.update({
@@ -110,10 +112,6 @@ class Hostgroup(Itemgroup):
         'HOSTGROUPACTIONURL': 'action_url',
         'HOSTGROUPREALM': 'realm_name'
     }
-
-    def get_name(self):
-        """Get the group name"""
-        return getattr(self, 'hostgroup_name', 'Unnamed')
 
     def get_hosts(self):
         """Get the hosts of the group
@@ -172,7 +170,6 @@ class Hostgroups(Itemgroups):
     Class to manage list of Hostgroup
     Hostgroups is used to regroup all Hostgroup
     """
-    name_property = "hostgroup_name"
     inner_class = Hostgroup
 
     def add_member(self, host_name, hostgroup_name):
@@ -185,14 +182,14 @@ class Hostgroups(Itemgroups):
         :type hostgroup_name: str
         :return: None
         """
-        hostgroup = self.find_by_name(hostgroup_name)
-        if not hostgroup:
-            hostgroup = Hostgroup({'hostgroup_name': hostgroup_name,
-                                   'alias': hostgroup_name,
-                                   'members': host_name})
-            self.add(hostgroup)
-        else:
-            hostgroup.add_members(host_name)
+        group = self.find_by_name(hostgroup_name)
+        if group:
+            group.add_members(host_name)
+            return
+
+        group = Hostgroup({
+            'hostgroup_name': hostgroup_name, 'members': host_name})
+        self.add(group)
 
     def get_members_of_group(self, gname):
         """Get all members of a group which name is given in parameter
@@ -340,12 +337,11 @@ class Hostgroups(Itemgroups):
                                 else:
                                     # It still exists a candidate realm for the hostgroup,
                                     # raise an error !
-                                    hostgroup.add_error("hostgroup %s got the default realm but "
-                                                        "it has some hosts that are from different "
-                                                        "realms: %s and %s. The defined realm "
+                                    hostgroup.add_error("got the default realm but it has some "
+                                                        "hosts that are from different realms: "
+                                                        "%s and %s. The defined realm "
                                                         "cannot be adjusted!"
-                                                        % (hostgroup.get_name(),
-                                                           hostgroup_new_realm_name,
+                                                        % (hostgroup_new_realm_name,
                                                            host_realm_name))
                                     hostgroup_new_realm_failed = True
                                     break

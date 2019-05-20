@@ -62,8 +62,7 @@ class TestPerfdataCommands(AlignakTest):
     """
     def setUp(self):
         super(TestPerfdataCommands, self).setUp()
-        self.setup_with_file('cfg/cfg_perfdata_commands.cfg',
-                             dispatching=True)
+        self.setup_with_file('cfg/cfg_perfdata_commands.cfg', dispatching=True)
         assert self.conf_is_correct
 
     def test_service_perfdata_command(self):

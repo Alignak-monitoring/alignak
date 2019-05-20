@@ -57,6 +57,7 @@ class SchedulerLink(SatelliteLink):
 
     # Ok we lie a little here because we are a mere link in fact
     my_type = 'scheduler'
+    my_name_property = "%s_name" % my_type
 
     properties = SatelliteLink.properties.copy()
     properties.update({

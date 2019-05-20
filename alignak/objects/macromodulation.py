@@ -61,6 +61,7 @@ class MacroModulation(Item):
     night)
     """
     my_type = 'macromodulation'
+    my_name_property = "%s_name" % my_type
 
     properties = Item.properties.copy()
     properties.update({
@@ -79,17 +80,6 @@ class MacroModulation(Item):
     special_properties = ('modulation_period',)
 
     macros = {}
-
-    def get_name(self):
-        """
-        Get the name of the macromodulation
-
-        :return: the macromodulation name string
-        :rtype: str
-        """
-        if hasattr(self, 'macromodulation_name'):
-            return self.macromodulation_name
-        return 'Unnamed'
 
     def is_active(self, timperiods):
         """
@@ -120,8 +110,8 @@ class MacroModulation(Item):
             self.modulation_period = None
 
         if not hasattr(self, 'customs') or not self.customs:
-            msg = "[macromodulation::%s] contains no macro definition" % (self.get_name())
-            self.add_error(msg)
+            self.add_error("[macromodulation::%s] contains no macro definition"
+                           % self.get_name())
             state = False
 
         return super(MacroModulation, self).is_correct() and state

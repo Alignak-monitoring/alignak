@@ -188,9 +188,11 @@ class Notification(Action):  # pylint: disable=too-many-instance-attributes
             if brok_type in entry.fill_brok:
                 data[prop] = getattr(self, prop)
 
-    def get_initial_status_brok(self):
+    def get_initial_status_brok(self, extra=None):  # pylint: disable=unused-argument
         """Get a initial status brok
 
+        :param extra: not used by the notifications
+        :type extra: alignak.objects.item.Items
         :return: brok with wanted data
         :rtype: alignak.brok.Brok
         """

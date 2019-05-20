@@ -54,6 +54,8 @@ class PollerLink(SatelliteLink):
     can communicate with a poller
     """
     my_type = 'poller'
+    my_name_property = "%s_name" % my_type
+
     # To_send: send or not to satellite conf
     properties = SatelliteLink.properties.copy()
     properties.update({

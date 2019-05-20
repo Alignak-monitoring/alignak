@@ -64,6 +64,7 @@ class Escalation(Item):
 
     """
     my_type = 'escalation'
+    my_name_property = "%s_name" % my_type
 
     properties = Item.properties.copy()
     properties.update({
@@ -107,22 +108,14 @@ class Escalation(Item):
     special_properties_time_based = ('contacts', 'contact_groups',
                                      'first_notification', 'last_notification')
 
-    def __init__(self, params=None, parsing=True):
-        if params is None:
-            params = {}
-
+    def __init__(self, params, parsing=True):
+        # Update default options
         for prop in ['escalation_options']:
             if prop in params:
                 params[prop] = [p.replace('u', 'x') for p in params[prop]]
+
         super(Escalation, self).__init__(params, parsing=parsing)
-
-    def get_name(self):
-        """Accessor to escalation_name attribute
-
-        :return: escalation name
-        :rtype: str
-        """
-        return self.escalation_name
+        self.fill_default()
 
     def is_eligible(self, timestamp, status, notif_number, in_notif_time, interval, escal_period):
         # pylint: disable=too-many-return-statements

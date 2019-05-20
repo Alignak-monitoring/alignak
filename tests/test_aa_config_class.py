@@ -52,14 +52,14 @@ class TestConfigClassBase(AlignakTest):
         # # importlib.reload('alignak.objects.config')
         # print("Reference to Config: %s" % sys.getrefcount(Config))
 
-        # Fresh initialized configuration
-        alignak_cfg = Config()
+        # Fresh initialized configuration
+        alignak_cfg = Config({})
         assert alignak_cfg.magic_hash
         next_instance_id = "Config_%s" % Config._next_id
         # assert str(alignak_cfg) == '<Config Config_1 - unknown />'
 
-        # Another fresh initialized configuration
-        alignak_cfg = Config()
+        # Another fresh initialized configuration
+        alignak_cfg = Config({})
         assert alignak_cfg.magic_hash
         # Config instance_id incremented!
         assert next_instance_id == alignak_cfg.instance_id

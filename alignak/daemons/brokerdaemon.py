@@ -201,7 +201,7 @@ class Broker(BaseSatellite):
             try:
                 _t0 = time.time()
                 module.manage_brok(brok)
-                statsmgr.timer('manage-broks.internal.%s' % module.get_name(), time.time() - _t0)
+                statsmgr.timer('manage-broks.internal.%s' % module.name, time.time() - _t0)
             except Exception as exp:  # pylint: disable=broad-except
                 logger.warning("The module %s raised an exception: %s, "
                                "I'm tagging it to restart later", module.get_name(), str(exp))

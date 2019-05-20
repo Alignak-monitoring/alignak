@@ -47,8 +47,16 @@ class TestComments(AlignakTest):
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
-        assert "DOWN" == host.state
-        assert "SOFT" == host.state_type
+        assert host.state == "DOWN"
+        assert host.state_type == "SOFT"
+        self.scheduler_loop(1, [[host, 2, 'DOWN']])
+        time.sleep(0.1)
+        assert host.state == "DOWN"
+        assert host.state_type == "SOFT"
+        self.scheduler_loop(1, [[host, 2, 'DOWN']])
+        time.sleep(0.1)
+        assert host.state == "DOWN"
+        assert host.state_type == "HARD"
 
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n".\

@@ -96,6 +96,8 @@ class Service(SchedulingItem):
     ok_up = u'OK'
     # used by item class for format specific value like for Broks
     my_type = 'service'
+    my_name_property = "service_description"
+    my_index_property = "host_service"
 
     # properties defined by configuration
     # required: is required in conf
@@ -237,9 +239,9 @@ class Service(SchedulingItem):
     })
 
     def __str__(self):  # pragma: no cover
-        return '<Service %s, uuid=%s, %s (%s), use: %s />' \
-               % (self.get_full_name(), self.uuid, self.state, self.state_type,
-                  getattr(self, 'use', None))
+        return '<Service%s %s, uuid=%s, %s (%s), use: %s />' \
+               % (' template' if self.is_a_template() else '', self.get_full_name(), self.uuid,
+                  self.state, self.state_type, getattr(self, 'use', None))
     __repr__ = __str__
 
     @property
@@ -317,13 +319,13 @@ class Service(SchedulingItem):
             self.state = u'UNREACHABLE'
 
     @property
-    def unique_key(self):  # actually only used for (un)indexitem() via name_property..
-        """Unique key for this service
+    def host_service(self):  # actually only used for (un)indexitem() via name_property..
+        """Unique key for a service
 
         :return: Tuple with host_name and service_description
         :rtype: tuple
         """
-        return self.host_name, self.service_description
+        return getattr(self, 'host_name', 'unhosted'), self.get_name()
 
     @property
     def display_name(self):
@@ -333,9 +335,10 @@ class Service(SchedulingItem):
         :rtype: str
         """
         display_name = getattr(self, '_display_name', None)
-        if not display_name:
-            return self.service_description
-        return display_name
+        if display_name:
+            return display_name
+
+        return self.get_name()
 
     @display_name.setter
     def display_name(self, display_name):
@@ -346,29 +349,27 @@ class Service(SchedulingItem):
         """
         self._display_name = display_name
 
-    def get_name(self):
-        """Accessor to service_description attribute or name if first not defined
-
-        :return: service name
-        :rtype: str
-        """
-        if hasattr(self, 'service_description'):
-            return self.service_description
-        if hasattr(self, 'name'):
-            return self.name
-        return 'SERVICE-DESCRIPTION-MISSING'
-
+    # def get_name(self):
+    #     """Accessor to service_description attribute or name if first not defined
+    #
+    #     :return: service name
+    #     :rtype: str
+    #     """
+    #     if hasattr(self, 'service_description'):
+    #         return self.service_description
+    #     if hasattr(self, 'name'):
+    #         return self.name
+    #     return 'SERVICE-DESCRIPTION-MISSING'
+    #
     def get_full_name(self):
         """Get the full name for debugging (host_name/service_description)
 
         :return: service full name
         :rtype: str
         """
-        if self.is_tpl():
-            return "tpl-%s/%s" % (getattr(self, 'host_name', 'XxX'), self.name)
         if hasattr(self, 'host_name') and hasattr(self, 'service_description'):
             return "%s/%s" % (self.host_name, self.service_description)
-        return 'UNKNOWN-SERVICE'
+        return self.get_name()
 
     def get_servicegroups(self):
         """Accessor to servicegroups attribute
@@ -428,16 +429,14 @@ class Service(SchedulingItem):
 
         if not sdesc:
             self.add_error("a %s has been defined without service_description, from: %s"
-                           % (cls, self.imported_from))
-        elif not hname:
-            self.add_error("[%s::%s] not bound to any host."
-                           % (self.my_type, self.get_name()))
+                           % (self.my_type, self.imported_from))
         elif not hname and not hgname:
             self.add_error("a %s has been defined without host_name nor "
                            "hostgroup_name, from: %s" % (self.my_type, self.imported_from))
+        elif not hname:
+            self.add_error("not bound to any host.")
         elif self.host is None:
-            self.add_error("[%s::%s] unknown host_name '%s'"
-                           % (self.my_type, self.get_name(), self.host_name))
+            self.add_error("unknown host_name '%s'" % self.host_name)
 
         # Set display_name if needed
         if not getattr(self, 'display_name', ''):
@@ -447,8 +446,7 @@ class Service(SchedulingItem):
             if char not in self.service_description:
                 continue
 
-            self.add_error("[%s::%s] service_description got an illegal character: %s"
-                           % (self.my_type, self.get_name(), char))
+            self.add_error("service_description got an illegal character: %s" % char)
 
         return super(Service, self).is_correct() and state
 
@@ -504,7 +502,7 @@ class Service(SchedulingItem):
                 continue
             new_s = self.copy()
             new_s.host_name = host.get_name()
-            if self.is_tpl():  # if template, the new one is not
+            if self.is_a_template():  # if template, the new one is not
                 new_s.register = 1
             for key in key_value:
                 if key == 'KEY':
@@ -1098,17 +1096,17 @@ class Service(SchedulingItem):
             return ''
         return getattr(self.acknowledgement, "comment", '')
 
-    def get_check_command(self):
-        """Wrapper to get the name of the check_command attribute
-
-        :return: check_command name
-        :rtype: str
-        TODO: Move to util or SchedulingItem class
-        """
-        if not getattr(self, 'check_command', None):
-            return ''
-        return self.check_command.get_name()
-
+    # def get_check_command(self):
+    #     """Wrapper to get the name of the check_command attribute
+    #
+    #     :return: check_command name
+    #     :rtype: str
+    #     TODO: Move to util or SchedulingItem class
+    #     """
+    #     if not getattr(self, 'check_command', None):
+    #         return ''
+    #     return self.check_command.get_name()
+    #
     def get_snapshot_command(self):
         """Wrapper to get the name of the snapshot_command attribute
 
@@ -1304,42 +1302,41 @@ class Services(SchedulingItems):
     """Class for the services lists. It's mainly for configuration
 
     """
-    name_property = 'unique_key'  # only used by (un)indexitem (via 'name_property')
-    inner_class = Service  # use for know what is in items
+    inner_class = Service
 
-    def add_template(self, tpl):
+    def add_template(self, template):
         """
         Adds and index a template into the `templates` container.
 
         This implementation takes into account that a service has two naming
         attribute: `host_name` and `service_description`.
 
-        :param tpl: The template to add
-        :type tpl:
+        :param template: The template to add
+        :type template:
         :return: None
         """
-        objcls = self.inner_class.my_type
-        name = getattr(tpl, 'name', '')
-        sdesc = getattr(tpl, 'service_description', '')
-        hname = getattr(tpl, 'host_name', '')
+        name = template.get_name()
+        service_description = getattr(template, 'service_description', '')
+        host_name = getattr(template, 'host_name', '')
         logger.debug("Adding a %s template: host_name: %s, name: %s, service_description: %s",
-                     objcls, hname, name, sdesc)
-        if not name and not hname:
-            msg = "a %s template has been defined without name nor host_name. from: %s" \
-                  % (objcls, tpl.imported_from)
-            tpl.add_error(msg)
-        elif not name and not sdesc:
-            msg = "a %s template has been defined without name nor service_description. from: %s" \
-                  % (objcls, tpl.imported_from)
-            tpl.add_error(msg)
+                     self.inner_class.my_type, host_name, name, service_description)
+
+        if not name and not host_name:
+            template.add_error("a %s template has been defined without name nor host_name. "
+                               "from: %s" % (self.inner_class.my_type, template.imported_from))
+        elif not name and not service_description:
+            template.add_error("a %s template has been defined without name nor "
+                               "service_description. from: %s"
+                               % (self.inner_class.my_type, template.imported_from))
         elif not name:
             # If name is not defined, use the host_name_service_description as name (fix #791)
-            setattr(tpl, 'name', "%s_%s" % (hname, sdesc))
-            tpl = self.index_template(tpl)
+            setattr(template, 'name', "%s_%s" % (host_name, service_description))
+            template = self.index_template(template)
         elif name:
-            tpl = self.index_template(tpl)
-        self.templates[tpl.uuid] = tpl
-        logger.debug('\tAdded service template #%d %s', len(self.templates), tpl)
+            template = self.index_template(template)
+
+        self.templates[template.uuid] = template
+        logger.debug('\tAdded service template #%d %s', len(self.templates), template)
 
     def apply_inheritance(self):
         """ For all items and templates inherit properties and custom
@@ -1368,17 +1365,17 @@ class Services(SchedulingItems):
             return host.get_services()
         return None
 
-    def find_srv_by_name_and_hostname(self, host_name, sdescr):
+    def find_srv_by_name_and_hostname(self, host_name, service_description):
         """Get a specific service based on a host_name and service_description
 
         :param host_name: host name linked to needed service
         :type host_name: str
-        :param sdescr:  service name we need
-        :type sdescr: str
+        :param service_description:  service name we need
+        :type service_description: str
         :return: the service found or None
         :rtype: alignak.objects.service.Service
         """
-        key = (host_name, sdescr)
+        key = (host_name, service_description)
         return self.name_to_item.get(key, None)
 
     def linkify(self, hosts, commands, timeperiods, contacts,  # pylint: disable=R0913
@@ -1420,18 +1417,18 @@ class Services(SchedulingItems):
         self.linkify_with_timeperiods(timeperiods, 'snapshot_period')
         self.linkify_s_by_hst(hosts)
         self.linkify_s_by_sg(servicegroups)
-        self.linkify_one_command_with_commands(commands, 'check_command')
-        self.linkify_one_command_with_commands(commands, 'event_handler')
-        self.linkify_one_command_with_commands(commands, 'snapshot_command')
+        self.linkify_with_commands(commands, 'check_command')
+        self.linkify_with_commands(commands, 'event_handler')
+        self.linkify_with_commands(commands, 'snapshot_command')
         self.linkify_with_contacts(contacts)
-        self.linkify_with_resultmodulations(resultmodulations)
+        self.linkify_with_result_modulations(resultmodulations)
         self.linkify_with_business_impact_modulations(businessimpactmodulations)
         # WARNING: all escalations will not be link here
         # (just the escalation here, not serviceesca or hostesca).
         # This last one will be link in escalations linkify.
         self.linkify_with_escalations(escalations)
-        self.linkify_with_checkmodulations(checkmodulations)
-        self.linkify_with_macromodulations(macromodulations)
+        self.linkify_with_check_modulations(checkmodulations)
+        self.linkify_with_macro_modulations(macromodulations)
 
     def override_properties(self, hosts):
         """Handle service_overrides property for hosts
@@ -1453,21 +1450,22 @@ class Services(SchedulingItems):
                 # Checks service override syntax
                 match = ovr_re.search(ovr)
                 if match is None:
-                    host.add_error("Error: invalid service override syntax: %s" % ovr)
+                    host.add_error("invalid service override syntax: %s" % ovr)
                     continue
                 sdescr, prop, value = match.groups()
                 # Looks for corresponding service
+                # print("Override %s: %s / %s / %s" % (host, sdescr, prop, value))
                 service = self.find_srv_by_name_and_hostname(getattr(host, "host_name", ""), sdescr)
                 if service is None:
-                    host.add_error("Error: trying to override property '%s' on service '%s' "
+                    host.add_error("trying to override property '%s' on service '%s' "
                                    "but it's unknown for this host" % (prop, sdescr))
                     continue
                 # Checks if override is allowed
-                excludes = ['host_name', 'service_description', 'use',
-                            'servicegroups', 'trigger_name']
+                excludes = ['host_name', 'service_description', 'use', 'servicegroups',
+                            'trigger_name']
                 if prop in excludes:
-                    host.add_error("Error: trying to override '%s', "
-                                   "a forbidden property for service '%s'" % (prop, sdescr))
+                    host.add_error("trying to override '%s', a forbidden property "
+                                   "for service '%s'" % (prop, sdescr))
                     continue
 
                 # Pythonize the value because here value is str.
@@ -1518,19 +1516,18 @@ class Services(SchedulingItems):
         :type servicegroups: alignak.objects.servicegroup.Servicegroups
         :return: None
         """
-        for serv in self:
+        for service in self:
             new_servicegroups = []
-            if hasattr(serv, 'servicegroups') and serv.servicegroups != '':
-                for sg_name in serv.servicegroups:
+            if hasattr(service, 'servicegroups') and getattr(service, 'servicegroups'):
+                for sg_name in service.servicegroups:
                     sg_name = sg_name.strip()
                     servicegroup = servicegroups.find_by_name(sg_name)
                     if servicegroup is not None:
                         new_servicegroups.append(servicegroup.uuid)
                     else:
-                        err = "Error: the servicegroup '%s' of the service '%s' is unknown" %\
-                              (sg_name, serv.get_dbg_name())
-                        serv.add_error(err)
-            serv.servicegroups = new_servicegroups
+                        service.add_error("Error: the servicegroup '%s' of the service '%s' "
+                                          "is unknown" % (sg_name, service.get_full_name()))
+            service.servicegroups = new_servicegroups
 
     def delete_services_by_id(self, ids):
         """Delete a list of services
@@ -1762,24 +1759,23 @@ class Services(SchedulingItems):
         :return: None
         """
         # We explode service_dependencies into Servicedependency
-        # We just create serviceDep with goods values (as STRING!),
-        # the link pass will be done after
-        sdeps = [d.strip() for d in getattr(service, "service_dependencies", [])]
-        # %2=0 are for hosts, !=0 are for service_description
+        svc_deps = [d.strip() for d in getattr(service, "service_dependencies", [])]
+
         i = 0
-        hname = ''
-        for elt in sdeps:
-            if i % 2 == 0:  # host
-                hname = elt
-            else:  # description
-                desc = elt
-                # we can register it (service) (depend on) -> (hname, desc)
-                # If we do not have enough data for service, it'service no use
-                if hasattr(service, 'service_description') and hasattr(service, 'host_name'):
-                    if hname == '':
-                        hname = service.host_name
-                    servicedependencies.add_service_dependency(
-                        service.host_name, service.service_description, hname, desc)
+        host_name = service.host_name
+        for elt in svc_deps:
+            # %2=0 is for hosts, %2!=0 is for service_description
+            if i % 2 == 0:
+                host_name = elt
+                continue
+
+            service_description = elt
+            # we can register it (service) (depend on) -> (hname, desc)
+            # If we do not have enough data for service, it'service no use
+            if hasattr(service, 'service_description') and hasattr(service, 'host_name'):
+                servicedependencies.add_service_dependency(
+                    service.host_name, service.service_description,
+                    host_name, service_description)
             i += 1
 
     # We create new service if necessary (host groups and co)

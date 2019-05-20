@@ -450,7 +450,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = '2015-07-26 - 2016-08-20 / 3 00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -472,7 +472,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = '2015-07-26 / 7             00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -494,7 +494,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = '2015-07-26 - 2016-08-20    00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -516,7 +516,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = '2015-07-26  00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -538,7 +538,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'tuesday 1 october - friday 2 may / 6 00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -560,7 +560,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'monday 4 - thursday 3 / 2 00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -582,7 +582,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'march 4 - july 3 / 2 00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -604,7 +604,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'day 4 - day 3 / 2 00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -626,7 +626,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'friday 2 - 15 / 5             00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -648,7 +648,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'july 2 - 15 / 5             00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -670,7 +670,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'day 8 - 15 / 5             00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -692,7 +692,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'tuesday 3 july - friday 2 september 00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -714,7 +714,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'friday 1 - 3         00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -736,7 +736,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'july -10 - -1              00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -758,7 +758,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'day 1 - 15         00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -780,7 +780,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'monday 3 - thursday 4      00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -802,7 +802,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'april 10 - may 15          00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -824,7 +824,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'day 10 - day 15          00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -846,7 +846,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'tuesday 3 november        00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -868,7 +868,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'tuesday 3      00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -890,7 +890,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'may 3      00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -912,7 +912,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'day 3      00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 
@@ -934,7 +934,7 @@ class TestDateRanges(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         entry = 'sunday 00:00-24:00'
         timeperiod.resolve_daterange(timeperiod.dateranges, entry)
 

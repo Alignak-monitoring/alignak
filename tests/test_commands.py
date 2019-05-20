@@ -61,9 +61,7 @@ class TestCommand(AlignakTest):
 
     def setUp(self):
         super(TestCommand, self).setUp()
-        self.setup_with_file('cfg/cfg_commands.cfg',
-                             verbose=False,
-                             dispatching=True)
+        self.setup_with_file('cfg/cfg_commands.cfg', verbose=False, dispatching=True)
         assert self.conf_is_correct
 
     def test_css_in_commands(self):
@@ -91,10 +89,21 @@ class TestCommand(AlignakTest):
         assert len(svc.actions) == 1
         for action in svc.actions:
             assert action.is_a == 'eventhandler'
-            assert action.command == '/usr/lib/nagios/plugins/test_eventhandler.pl sudo -s pkill toto ; cd /my/path && ./exec'
+            assert action.command == '/usr/lib/nagios/plugins/test_eventhandler.pl ' \
+                                     'sudo -s pkill toto ; cd /my/path && ./exec'
 
     def test_spaces_in_commands(self):
-        """Test spaces in commands """
+        """Test spaces in commands
+        Service is defined as:
+        service_description     svc_spaces
+        check_command           check_snmp_int!public!"Nortel Ethernet Routing Switch 5530-24TFD
+                                Module - Port 2          "!"90000,90000"!"120000,120000"
+
+        And command as:
+        command_name            check_snmp_int
+        command_line            $USER1$/check_snmp_int.pl -H $HOSTADDRESS$ -C $ARG1$ -n $ARG2$
+                                -r -f -k -Y -B -w $ARG3$ -c $ARG4$
+        """
         # Get the hosts and services"
         host = self._scheduler.hosts.find_by_name("test_host_0")
         assert host is not None
@@ -104,13 +113,23 @@ class TestCommand(AlignakTest):
         svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "svc_spaces")
         assert svc is not None
 
+        for command in self._scheduler.commands:
+            print("-act: %s" % command)
+
         # Schedule checks
         svc.schedule(self._scheduler.hosts, self._scheduler.services, self._scheduler.timeperiods,
-                     self._scheduler.macromodulations, self._scheduler.checkmodulations, self._scheduler.checks)
+                     self._scheduler.macromodulations, self._scheduler.checkmodulations,
+                     self._scheduler.checks)
         assert len(svc.actions) == 1
         for action in svc.actions:
+            print("Action: %s" % action)
+            # command:'/usr/lib/nagios/plugins/check_snmp_int.pl -H 127.0.0.1 -C public
+            # -n "Nortel Ethernet Routing Switch 5530-24TFD Module -
+            # Port 2          " -r -f -k -Y -B -w "90000 -c 90000"'
             assert action.is_a == 'check'
-            assert action.command == '/usr/lib/nagios/plugins/check_snmp_int.pl -H 127.0.0.1 -C public ' \
+            assert action.command == '/usr/lib/nagios/plugins/check_snmp_int.pl ' \
+                                     '-H 127.0.0.1 ' \
+                                     '-C public ' \
                                      '-n "Nortel Ethernet Routing Switch 5530-24TFD ' \
                                      'Module - Port 2          " ' \
                                      '-r -f -k -Y -B -w "90000,90000" -c "120000,120000"'
@@ -123,8 +142,10 @@ class TestCommand(AlignakTest):
         assert len(untagged_checks) == 1
         for check in untagged_checks:
             assert check.is_a == 'check'
-            assert check.command == '/usr/lib/nagios/plugins/check_snmp_int.pl -H 127.0.0.1 -C ' \
-                                    'public -n "Nortel Ethernet Routing Switch 5530-24TFD ' \
+            assert check.command == '/usr/lib/nagios/plugins/check_snmp_int.pl ' \
+                                    '-H 127.0.0.1 ' \
+                                    '-C public ' \
+                                    '-n "Nortel Ethernet Routing Switch 5530-24TFD ' \
                                     'Module - Port 2          " ' \
                                     '-r -f -k -Y -B -w "90000,90000" -c "120000,120000"'
 
@@ -134,7 +155,7 @@ class TestCommand(AlignakTest):
         :return: None
         """
         # No parameters
-        c = Command()
+        c = Command({})
         # No command_name nor command_line attribute exist!
         # Todo: __init__ may raise an exception because of this, no?
         assert getattr(c, 'command_name', None) is None
@@ -248,24 +269,35 @@ class TestCommand(AlignakTest):
         assert 'command_name' in b.data
         assert 'command_line' in b.data
 
-    def test_commands_pack(self):
-        """ Test commands pack build
+    def test_commands_call(self):
+        """ Test commands call
 
         :return: None
         """
-        c = Command({
-            'command_name': 'check_command_test',
+        c1 = Command({
+            'command_name': 'check_command_test1',
             'command_line': '/tmp/dummy_command.sh $ARG1$ $ARG2$',
             'module_type': 'nrpe-booster',
             'poller_tag': 'DMZ',
             'reactionner_tag': 'REAC'
         })
 
-        # now create a commands packs
-        cs = Commands([c])
-        dummy_call = "check_command_test!titi!toto"
-        cc = CommandCall({"commands": cs, "call": dummy_call})
+        c2 = Command({
+            'command_name': 'check_command_test2',
+            'command_line': '/tmp/dummy_command.sh $ARG1$ $ARG2$',
+            'module_type': 'nrpe-booster',
+            'poller_tag': 'DMZ',
+            'reactionner_tag': 'REAC'
+        })
+
+        # now create a commands list
+        cs = Commands([c1, c2])
+
+        # And a command call with commands (used on configuration parsing)
+        dummy_call = "check_command_test1!titi!toto"
+        cc = CommandCall({"commands": cs, "command_line": dummy_call}, parsing=True)
         assert True == cc.is_valid()
-        assert c == cc.command
+        # Got the command object matching the command line
+        assert c1 == cc.command
         assert 'DMZ' == cc.poller_tag
         assert 'REAC' == cc.reactionner_tag

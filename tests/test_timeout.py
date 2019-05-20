@@ -91,7 +91,7 @@ class TestWorkerTimeout(AlignakTest):
         w.i_am_dying = False
 
         # We prepare a notification in the to_queue
-        contact = Contact()
+        contact = Contact({})
         contact.contact_name = "alignak"
 
         data = {

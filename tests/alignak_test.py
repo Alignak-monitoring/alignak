@@ -286,7 +286,7 @@ define host {
             cfg.set('alignak-configuration', 'polling_interval', '1')
             cfg.set('alignak-configuration', 'daemons_check_period', '1')
             cfg.set('alignak-configuration', 'daemons_stop_timeout', '10')
-            cfg.set('alignak-configuration', 'daemons_start_timeout', '1')
+            cfg.set('alignak-configuration', 'daemons_start_timeout', '10')
             cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '1')
             cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '1')
 
@@ -1019,10 +1019,11 @@ define host {
                     # else:
                         #     print(" . %s ...ignoring, period: %d" % (name, nb_ticks))
                 else:
-                    print("*** check is still in progress for %s!" % (item.get_full_name()))
+                    print("*** check is still in progress for %s!" % item.get_full_name())
 
                 self.assertGreater(len(item.checks_in_progress), 0)
                 chk = scheduler.checks[item.checks_in_progress[0]]
+                print("- check: %s" % chk)
                 chk.set_type_active()
                 chk.check_time = time.time()
                 chk.wait_time = 0.0001
@@ -1136,6 +1137,7 @@ define host {
         c = svc_br.actions[0]
         self.assertEqual(True, c.internal)
         self.assertTrue(c.is_launchable(now))
+        print("Internal check: %s" % c)
 
         # ask the scheduler to launch this check
         # and ask 2 loops: one to launch the check

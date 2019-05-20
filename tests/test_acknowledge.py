@@ -726,13 +726,16 @@ class TestAcknowledges(AlignakTest):
 
         :return: None
         """
+        import os
+        os.environ['ALIGNAK_LOG_ACTIONS'] = 'WARNING'
+        self.clear_logs()
+
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self._scheduler.services.find_srv_by_name_and_hostname(
-            "test_host_0", "test_ok_0")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
@@ -743,6 +746,7 @@ class TestAcknowledges(AlignakTest):
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
+        self.show_logs()
         assert "DOWN" == host.state
         assert "SOFT" == host.state_type
 
