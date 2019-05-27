@@ -21,7 +21,7 @@ services:
 
   # - scheduler(s)
   scheduler-master:
-    image: mohierf/alignak:${DOCKER_TAG}
+    image: ${DOCKER_REPOSITORY}/alignak:${DOCKER_TAG}
     env_file:
       - .env
     networks:
@@ -33,7 +33,7 @@ services:
     command: "alignak-scheduler -e ${ALIGNAK_CONFIGURATION_FILE} -n scheduler-master"
 
   scheduler-north:
-    image: mohierf/alignak:${DOCKER_TAG}
+    image: ${DOCKER_REPOSITORY}/alignak:${DOCKER_TAG}
     env_file:
       - .env
     networks:
@@ -45,7 +45,7 @@ services:
     command: "alignak-scheduler -e ${ALIGNAK_CONFIGURATION_FILE} -n scheduler-north"
 
   scheduler-south:
-    image: mohierf/alignak:${DOCKER_TAG}
+    image: ${DOCKER_REPOSITORY}/alignak:${DOCKER_TAG}
     env_file:
       - .env
     networks:
@@ -58,7 +58,7 @@ services:
 
   # - reactionner
   reactionner-master:
-    image: mohierf/alignak:${DOCKER_TAG}
+    image: ${DOCKER_REPOSITORY}/alignak:${DOCKER_TAG}
     env_file:
       - .env
     networks:
@@ -71,7 +71,7 @@ services:
 
   # - poller
   poller-master:
-    image: mohierf/alignak:${DOCKER_TAG}
+    image: ${DOCKER_REPOSITORY}/alignak:${DOCKER_TAG}
     env_file:
       - .env
     networks:
@@ -103,7 +103,7 @@ services:
 
   # - receiver
   receiver-master:
-    image: mohierf/alignak:${DOCKER_TAG}
+    image: ${DOCKER_REPOSITORY}/alignak:${DOCKER_TAG}
     env_file:
       - .env
     networks:
