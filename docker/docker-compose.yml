@@ -90,6 +90,7 @@ services:
       context: image-alignak-ui
       args:
         ALIGNAK_SHARE_DIR: /alignak
+        SHINKEN_WEBUI_GIT_REPO: ${SHINKEN_WEBUI_GIT_REPO}
     env_file:
       - .env
     networks:
