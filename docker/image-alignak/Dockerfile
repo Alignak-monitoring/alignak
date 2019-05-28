@@ -26,9 +26,11 @@ RUN pip3 install --upgrade pip setuptools
 # Location for the git repositories
 RUN mkdir -p /repos
 
+ARG ALIGNAK_GIT_REPO=alignak-monitoring/alignak
 # Get the Alignak repository on develop branch
+RUN echo https://github.com/$ALIGNAK_GIT_REPO
 RUN cd /repos && \
-    git clone https://github.com/alignak-monitoring/alignak && \
+    git clone https://github.com/$ALIGNAK_GIT_REPO && \
     cd alignak && \
     git checkout develop && \
     pip3 install -r requirements.txt && \
