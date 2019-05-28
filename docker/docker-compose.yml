@@ -9,6 +9,7 @@ services:
       context: ./image-alignak
       args:
         ALIGNAK_SHARE_DIR: /alignak
+        ALIGNAK_GIT_REPO: ${ALIGNAK_GIT_REPO}
     env_file:
       - .env
     networks:
