@@ -17,7 +17,7 @@ RUN pip3 install --upgrade pip setuptools
 RUN mkdir -p /repos
 
 # Get the Shinken / Alignak Web UI
-ARG SHINKEN_WEBUI_GIT_REPO=mohierf/mod-webui
+ARG SHINKEN_WEBUI_GIT_REPO
 RUN cd /repos && \
     git clone https://github.com/${SHINKEN_WEBUI_GIT_REPO} && \
     cd mod-webui && \
