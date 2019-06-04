@@ -1170,6 +1170,8 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
                     except psutil.AccessDenied:
                         logger.warning("Process %s is %s", process.name(), process.status())
 
+            time.sleep(1)
+
             procs = []
             for daemon in list(self.my_daemons.values()):
                 # Stop the daemon and its children process

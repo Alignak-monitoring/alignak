@@ -132,12 +132,9 @@ class TestLaunchArbiter(AlignakTest):
         if os.path.exists('%s/arbiter-master.log' % os.getcwd()):
             os.remove('%s/arbiter-master.log' % os.getcwd())
 
-        files = ['%s/etc/alignak.ini' % cfg_folder,
-                 '%s/etc/alignak.d/daemons.ini' % cfg_folder,
-                 '%s/etc/alignak.d/modules.ini' % cfg_folder]
         try:
             cfg = configparser.ConfigParser()
-            cfg.read(files)
+            cfg.read(['%s/etc/alignak.ini' % cfg_folder])
 
             # Arbiter launches the daemons
             if alignak_launched:
@@ -231,6 +228,11 @@ class TestLaunchArbiter(AlignakTest):
                 u"Sorry, I bail out, exit code: 4"
             ]
 
+        if alignak_launched:
+            # This function will only send a SIGTERM to the arbiter daemon
+            # self._stop_daemons(['arbiter'])
+            self._stop_alignak_daemons(arbiter_only=False)
+
         all_ok = True
         with open('%s/arbiter-master.log' % os.getcwd()) as f:
             for line in f:
@@ -272,7 +274,9 @@ class TestLaunchArbiter(AlignakTest):
         # Update monitoring configuration file variables
         try:
             cfg = configparser.ConfigParser()
-            cfg.read(['/tmp/alignak/etc/alignak.ini', '/tmp/alignak/etc/alignak.d/daemons.ini'])
+            cfg.read(['/tmp/alignak/etc/alignak.ini',
+                      '/tmp/alignak/etc/alignak.d/daemons.ini'])
+
             cfg.set('alignak-configuration', 'launch_missing_daemons', '1')
             cfg.set('alignak-configuration', 'polling_interval', '1')
             cfg.set('alignak-configuration', 'daemons_check_period', '5')
@@ -280,11 +284,11 @@ class TestLaunchArbiter(AlignakTest):
             cfg.set('alignak-configuration', 'daemons_start_timeout', '1')
             cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '1')
             cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '1')
-            cfg.set('alignak-configuration', 'min_workers', '1')
-            cfg.set('alignak-configuration', 'max_workers', '1')
             cfg.set('daemon.arbiter-master', 'alignak_launched', '1')
             cfg.set('daemon.scheduler-master', 'alignak_launched', '1')
             cfg.set('daemon.poller-master', 'alignak_launched', '1')
+            cfg.set('daemon.poller-master', 'min_workers', '1')
+            cfg.set('daemon.poller-master', 'max_workers', '1')
             cfg.set('daemon.reactionner-master', 'alignak_launched', '1')
             cfg.set('daemon.receiver-master', 'alignak_launched', '1')
             cfg.set('daemon.broker-master', 'alignak_launched', '1')
@@ -310,7 +314,7 @@ class TestLaunchArbiter(AlignakTest):
         self._ping_daemons()
 
         # Sleep some few seconds to let the arbiter ping the daemons by itself
-        sleep(60)
+        sleep(30)
 
         self._ping_daemons()
 
@@ -343,11 +347,11 @@ class TestLaunchArbiter(AlignakTest):
             cfg.set('alignak-configuration', 'daemons_start_timeout', '1')
             cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '1')
             cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '1')
-            cfg.set('alignak-configuration', 'min_workers', '1')
-            cfg.set('alignak-configuration', 'max_workers', '1')
             cfg.set('daemon.arbiter-master', 'alignak_launched', '1')
             cfg.set('daemon.scheduler-master', 'alignak_launched', '1')
             cfg.set('daemon.poller-master', 'alignak_launched', '1')
+            cfg.set('daemon.poller-master', 'min_workers', '1')
+            cfg.set('daemon.poller-master', 'max_workers', '1')
             cfg.set('daemon.reactionner-master', 'alignak_launched', '1')
             cfg.set('daemon.receiver-master', 'alignak_launched', '1')
             cfg.set('daemon.broker-master', 'alignak_launched', '1')

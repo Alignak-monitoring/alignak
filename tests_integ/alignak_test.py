@@ -181,8 +181,8 @@ class AlignakTest(unittest2.TestCase):
         logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
         logger_.setLevel(log_level)
         for handler in logger_.handlers:
-            # print("- handler: %s" % handler)
-            handler.setLevel(log_level)
+            print("- handler: %s" % handler)
+            # handler.setLevel(log_level)
             if getattr(handler, '_name', None) == 'unit_tests':
                 self.former_log_level = handler.level
                 handler.setLevel(log_level)
@@ -512,10 +512,6 @@ define host {
                 cfg.set('alignak-configuration', 'daemons_start_timeout', '5')
                 cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '1')
                 cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '1')
-
-                # Poller/reactionner workers count limited to 1
-                cfg.set('alignak-configuration', 'min_workers', '1')
-                cfg.set('alignak-configuration', 'max_workers', '1')
 
                 with open('%s/etc/alignak.ini' % cfg_folder, "w") as modified:
                     cfg.write(modified)

@@ -144,9 +144,6 @@ class Dispatcher(object):
         for realm in self.alignak_conf.realms:
             logger.info("- %s:", realm.name)
             for cfg_part in list(realm.parts.values()):
-                print(" .%s (%s), flavor:%s, %s"
-                      % (cfg_part.instance_id, cfg_part.uuid, cfg_part.push_flavor, cfg_part))
-                print(" -> hosts: %s" % cfg_part.hosts.__dict__)
                 logger.info("  .%s (%s), flavor:%s, %s",
                             cfg_part.instance_id, cfg_part.uuid, cfg_part.push_flavor, cfg_part)
 
@@ -708,7 +705,7 @@ class Dispatcher(object):
                     })
 
                     # Hash the whole configuration
-                    print("Scheduler link cfg: %s" % scheduler_link.cfg)
+                    cfg_string = json.dumps(scheduler_link.cfg, sort_keys=True).encode('utf-8')
                     cfg_string = json.dumps(scheduler_link.cfg, sort_keys=True).encode('utf-8')
                     scheduler_link.cfg['hash'] = hashlib.sha1(cfg_string).hexdigest()
 
