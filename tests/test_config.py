@@ -323,7 +323,10 @@ class TestConfig(AlignakTest):
 
         # Arbiter named as Default
         assert self._arbiter.conf.conf_is_correct
+        # Use the generic daemon name in the alignak.ini file!
         arbiter_link = self._arbiter.conf.arbiters.find_by_name('Default-Arbiter')
+        for arb in self._arbiter.conf.arbiters:
+            print("Arbiters: %s" % arb.name)
         assert arbiter_link is not None
 
         # # This will be verified only if the configuration is configured with `clean_objects=1`

@@ -75,7 +75,7 @@ from collections import deque
 import psutil
 
 
-from alignak.log import make_monitoring_log, set_log_level, set_log_console
+from alignak.log import make_monitoring_log, set_monitoring_logger, set_log_level, set_log_console
 from alignak.misc.common import SIGNALS_TO_NAMES_DICT
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.config import Config
@@ -393,7 +393,7 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
             # Force adding a console handler to the Alignak logger
             set_log_console(logging.INFO if not self.debug else logging.DEBUG)
             # Force the global logger at INFO level
-            set_log_level(logging.INFO if not self.debug else logging.DEBUG)
+            set_log_level(logging.INFO if not self.debug else logging.DEBUG, handlers=True)
             logger.info("-----")
             logger.info("Arbiter is in configuration check mode")
             logger.info("Arbiter log level got increased to a minimum of INFO")
@@ -454,11 +454,25 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
                         setattr(self.conf, key, entry.pythonize(value))
                     else:
                         setattr(self.conf, key, value)
-                    logger.debug("- setting '%s' as %s", key, getattr(self.conf, key))
+                    logger.debug("- setting '%s' as %s - %s",
+                                 key, type(key), getattr(self.conf, key))
                 logger.info("Got Alignak global configuration")
 
         self.alignak_name = getattr(self.conf, "alignak_name", self.name)
         logger.info("Configuration for Alignak: %s", self.alignak_name)
+
+        # Configure the global monitoring events logger
+        if self.conf.log_filename != os.path.abspath(self.conf.log_filename):
+            if self.conf.log_filename:
+                self.conf.log_filename = os.path.abspath(os.path.join(
+                    self.logdir, self.conf.log_filename))
+        if self.conf.log_filename:
+            set_monitoring_logger(self.conf.log_filename, self.conf.log_rotation_when,
+                                  self.conf.log_rotation_interval, self.conf.log_rotation_count,
+                                  self.conf.log_format, self.conf.log_date)
+            print("Configured a monitoring events logger: %s" % self.conf.log_filename)
+        else:
+            self.exit_on_error(message="No monitoring events log configured!", exit_code=2)
 
         if macros:
             self.conf.load_params(macros)
@@ -694,14 +708,14 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
         # Create objects for all the configuration
         self.conf.create_objects(raw_objects)
 
-        # Manage all post-conf modules
-        self.hook_point('early_configuration')
-
         # Maybe configuration is already invalid
         if not self.conf.conf_is_correct:
             self.conf.show_errors()
             self.request_stop("*** One or more problems were encountered while processing "
                               "the configuration (second check)...", exit_code=1)
+
+        # Manage all post-conf modules
+        self.hook_point('early_configuration')
 
         # Here we got all our Alignak configuration and the monitored system configuration
         # from the legacy configuration files and extra modules.

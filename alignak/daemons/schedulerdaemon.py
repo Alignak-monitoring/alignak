@@ -325,7 +325,6 @@ class Alignak(BaseSatellite):
             if 'conf_part' not in self.cur_conf:
                 self.cur_conf['conf_part'] = None
             conf_part = self.cur_conf['conf_part']
-            # logger.info("Monitored configuration: %s", conf_part)
 
             # Ok now we can save the retention data
             if self.sched.pushed_conf is not None:

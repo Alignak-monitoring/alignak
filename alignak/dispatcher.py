@@ -686,7 +686,6 @@ class Dispatcher(object):
                         realm.to_satellites_managed_by[sat_type][cfg_part.instance_id] = []
                     # ---
 
-                    print("s_part: %s" % realm.parts[cfg_part.instance_id].hosts.templates)
                     scheduler_link.cfg.update({
                         # Global instance configuration
                         'instance_id': scheduler_link.instance_id,

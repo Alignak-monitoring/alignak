@@ -542,13 +542,6 @@ class Realms(Itemgroups):
         super(Realms, self).__init__(items, index_items, parsing)
         self.default = None
 
-    # def __repr__(self):  # pragma: no cover
-    #     res = []
-    #     for _realm in sorted(self, key=lambda _realm: _realm.level):
-    #         res.append('%s %s' % ('+' * _realm.level, _realm.get_name()))
-    #     return '\n'.join(res)
-    # __str__ = __repr__
-
     def linkify(self):
         """The realms linkify is done during the default realms/satellites initialization in the
         Config class.

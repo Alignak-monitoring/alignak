@@ -23,7 +23,6 @@
 
 from alignak.objects.item import Items
 from alignak.commandcall import CommandCall
-from alignak.util import strip_and_uniq
 
 
 class CommandCallItems(Items):

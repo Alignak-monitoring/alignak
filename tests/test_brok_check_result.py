@@ -100,7 +100,7 @@ class TestBrokCheckResult(AlignakTest):
         self._main_broker.broks = []
 
     def test_brok_checks_results(self):
-        """Test checks results broks
+        """Test broks checks results
 
         :return: None
         """

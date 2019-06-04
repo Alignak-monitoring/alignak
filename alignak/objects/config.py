@@ -387,6 +387,23 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         'events_log_count':
             IntegerProp(default=100, fill_brok=[FULL_STATUS]),
 
+        'log_filename':
+            StringProp(default='alignak-events.log'),
+        # Override log level - default is to not change anything
+        'log_level':
+            StringProp(default=''),
+
+        'log_rotation_when':
+            StringProp(default='midnight'),
+        'log_rotation_interval':
+            IntegerProp(default=1),
+        'log_rotation_count':
+            IntegerProp(default=365),
+        'log_format':
+            StringProp(default='[%(my_date)s] %(levelname)s: %(message)s'),
+        'log_date':
+            StringProp(default='%Y-%m-%d %H:%M:%S'),
+
         'log_notifications':
             BoolProp(default=True, fill_brok=[FULL_STATUS],
                      class_inherit=[(Host, None), (Service, None)]),

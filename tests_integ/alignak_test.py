@@ -84,6 +84,7 @@ from alignak.daemons.brokerdaemon import Broker
 from alignak.daemons.arbiterdaemon import Arbiter
 from alignak.daemons.receiverdaemon import Receiver
 
+
 class AlignakTest(unittest2.TestCase):
 
     if sys.version_info < (2, 7):
@@ -175,7 +176,7 @@ class AlignakTest(unittest2.TestCase):
         """Set the test logger at the provided level -
         useful for some tests that check debug log
         """
-        # Change the logger and its hadlers log level
+        # Change the logger and its handlers log level
         print("Set unit_tests logger: %s" % log_level)
         logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
         logger_.setLevel(log_level)
@@ -279,6 +280,9 @@ define host {
             cfg.set('DEFAULT', '_dist_RUN', '%s/run' % cfg_folder)
             cfg.set('DEFAULT', '_dist_LOG', '%s/log' % cfg_folder)
 
+            # Logger configuration file
+            cfg.set('DEFAULT', 'logger_configuration', '%s/etc/alignak-logger.json' % cfg_folder)
+
             # Nagios legacy files
             cfg.set('alignak-configuration', 'cfg', '%s/etc/alignak.cfg' % cfg_folder)
 
@@ -286,7 +290,7 @@ define host {
             cfg.set('alignak-configuration', 'polling_interval', '1')
             cfg.set('alignak-configuration', 'daemons_check_period', '1')
             cfg.set('alignak-configuration', 'daemons_stop_timeout', '10')
-            cfg.set('alignak-configuration', 'daemons_start_timeout', '10')
+            cfg.set('alignak-configuration', 'daemons_start_timeout', '1')
             cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '1')
             cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '1')
 
@@ -333,7 +337,7 @@ define host {
         start = time.time()
         if request_stop_uri:
             req = requests.Session()
-            raw_data = req.get("%s/stop_request" % request_stop_uri, params={'stop_now': '1'})
+            raw_data = req.get("%s/stop_request?stop_now=1" % request_stop_uri)
             data = raw_data.json()
 
             # Let the process 20 seconds to exit
@@ -504,7 +508,7 @@ define host {
                 # Daemons launching and check
                 cfg.set('alignak-configuration', 'polling_interval', '1')
                 cfg.set('alignak-configuration', 'daemons_check_period', '1')
-                cfg.set('alignak-configuration', 'daemons_stop_timeout', '20')
+                cfg.set('alignak-configuration', 'daemons_stop_timeout', '10')
                 cfg.set('alignak-configuration', 'daemons_start_timeout', '5')
                 cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '1')
                 cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '1')
@@ -755,9 +759,7 @@ define host {
             'env_file': self.env_filename
         }
         if configuration_file:
-            args.update({
-                'legacy_cfg_files': [configuration_file]
-            })
+            args.update({'legacy_cfg_files': [configuration_file]})
         self._arbiter = Arbiter(**args)
 
         try:

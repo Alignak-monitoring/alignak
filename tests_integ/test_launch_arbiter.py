@@ -129,8 +129,8 @@ class TestLaunchArbiter(AlignakTest):
         # Remove the daemons configuration part!
         shutil.rmtree('%s/etc/alignak.d' % cfg_folder)
 
-        if os.path.exists('%s/arbiter-master.log' % self._launch_dir):
-            os.remove('%s/arbiter-master.log' % self._launch_dir)
+        if os.path.exists('%s/arbiter-master.log' % os.getcwd()):
+            os.remove('%s/arbiter-master.log' % os.getcwd())
 
         files = ['%s/etc/alignak.ini' % cfg_folder,
                  '%s/etc/alignak.d/daemons.ini' % cfg_folder,
@@ -142,20 +142,9 @@ class TestLaunchArbiter(AlignakTest):
             # Arbiter launches the daemons
             if alignak_launched:
                 cfg.set('alignak-configuration', 'launch_missing_daemons', '1')
-                # cfg.set('daemon.arbiter-master', 'alignak_launched', '1')
-                # cfg.set('daemon.scheduler-master', 'alignak_launched', '1')
-                # cfg.set('daemon.poller-master', 'alignak_launched', '1')
-                # cfg.set('daemon.reactionner-master', 'alignak_launched', '1')
-                # cfg.set('daemon.receiver-master', 'alignak_launched', '1')
-                # cfg.set('daemon.broker-master', 'alignak_launched', '1')
             else:
                 cfg.set('alignak-configuration', 'launch_missing_daemons', '0')
-                # cfg.set('daemon.arbiter-master', 'alignak_launched', '0')
-                # cfg.set('daemon.scheduler-master', 'alignak_launched', '0')
-                # cfg.set('daemon.poller-master', 'alignak_launched', '0')
-                # cfg.set('daemon.reactionner-master', 'alignak_launched', '0')
-                # cfg.set('daemon.receiver-master', 'alignak_launched', '0')
-                # cfg.set('daemon.broker-master', 'alignak_launched', '0')
+
             with open('%s/etc/alignak.ini' % cfg_folder, "w") as modified:
                 cfg.write(modified)
         except Exception as exp:
@@ -185,7 +174,8 @@ class TestLaunchArbiter(AlignakTest):
             u"Configuration warnings:",
             # u"the parameter $DIST_BIN$ is ambiguous! No value after =, assuming an empty string",
             u"No Nagios-like legacy configuration files configured.",
-            u"If you need some, edit the 'alignak.ini' configuration file to declare one or more 'cfg=' variables.",
+            u"If you need some, edit the 'alignak.ini' configuration file "
+            u"to declare one or more 'cfg=' variables.",
 
             u"There is no arbiter, I add myself (arbiter-master) reachable on 127.0.0.1:7770",
             u"No realms defined, I am adding one as All",
@@ -197,40 +187,52 @@ class TestLaunchArbiter(AlignakTest):
         ]
         if not alignak_launched:
             expected_warnings.extend([
-                u"A daemon (reactionner/Default-Reactionner) that we must be related with cannot be connected: ",
+                u"A daemon (reactionner/Default-Reactionner) "
+                u"that we must be related with cannot be connected: ",
                 u"Setting the satellite Default-Reactionner as dead :(",
                 u"Default-Reactionner is not alive for get_running_id",
 
-                u"A daemon (poller/Default-Poller) that we must be related with cannot be connected: ",
+                u"A daemon (poller/Default-Poller) "
+                u"that we must be related with cannot be connected: ",
                 u"Setting the satellite Default-Poller as dead :(",
                 u"Default-Poller is not alive for get_running_id",
 
-                u"A daemon (broker/Default-Broker) that we must be related with cannot be connected: ",
+                u"A daemon (broker/Default-Broker) "
+                u"that we must be related with cannot be connected: ",
                 u"Setting the satellite Default-Broker as dead :(",
                 u"Default-Broker is not alive for get_running_id",
 
-                u"A daemon (receiver/Default-Receiver) that we must be related with cannot be connected: ",
+                u"A daemon (receiver/Default-Receiver) "
+                u"that we must be related with cannot be connected: ",
                 u"Setting the satellite Default-Receiver as dead :(",
                 u"Default-Receiver is not alive for get_running_id",
 
-                u"A daemon (scheduler/Default-Scheduler) that we must be related with cannot be connected: ",
+                u"A daemon (scheduler/Default-Scheduler) "
+                u"that we must be related with cannot be connected: ",
                 u"Setting the satellite Default-Scheduler as dead :(",
                 u"Default-Scheduler is not alive for get_running_id",
 
-                u"satellites connection #1 is not correct; let's give another chance after 1 seconds...",
-                u"satellites connection #2 is not correct; let's give another chance after 1 seconds...",
-                u"satellites connection #3 is not correct; let's give another chance after 1 seconds...",
+                u"satellites connection #1 is not correct; "
+                u"let's give another chance after 1 seconds...",
+
+                u"satellites connection #2 is not correct; "
+                u"let's give another chance after 1 seconds...",
+
+                u"satellites connection #3 is not correct; "
+                u"let's give another chance after 1 seconds...",
             ])
 
         expected_errors = [
         ]
         if not alignak_launched:
             expected_errors = [
-                u"All the daemons connections could not be established despite 3 tries! Sorry, I bail out!",
+                u"All the daemons connections could not be established despite 3 tries! "
+                u"Sorry, I bail out!",
                 u"Sorry, I bail out, exit code: 4"
             ]
+
         all_ok = True
-        with open('%s/arbiter-master.log' % self._launch_dir) as f:
+        with open('%s/arbiter-master.log' % os.getcwd()) as f:
             for line in f:
                 if 'WARNING:' in line:
                     ok = False

@@ -1155,16 +1155,6 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
             return ''
         return getattr(self.acknowledgement, "comment", '')
 
-    # def get_check_command(self):
-    #     """Wrapper to get the name of the check_command attribute
-    #
-    #     :return: check_command name
-    #     :rtype: str
-    #     """
-    #     if not getattr(self, 'check_command', None):
-    #         return ''
-    #     return self.check_command.get_name()
-    #
     def get_snapshot_command(self):
         """Wrapper to get the name of the snapshot_command attribute
 

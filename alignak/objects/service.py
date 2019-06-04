@@ -349,18 +349,6 @@ class Service(SchedulingItem):
         """
         self._display_name = display_name
 
-    # def get_name(self):
-    #     """Accessor to service_description attribute or name if first not defined
-    #
-    #     :return: service name
-    #     :rtype: str
-    #     """
-    #     if hasattr(self, 'service_description'):
-    #         return self.service_description
-    #     if hasattr(self, 'name'):
-    #         return self.name
-    #     return 'SERVICE-DESCRIPTION-MISSING'
-    #
     def get_full_name(self):
         """Get the full name for debugging (host_name/service_description)
 
@@ -1096,17 +1084,6 @@ class Service(SchedulingItem):
             return ''
         return getattr(self.acknowledgement, "comment", '')
 
-    # def get_check_command(self):
-    #     """Wrapper to get the name of the check_command attribute
-    #
-    #     :return: check_command name
-    #     :rtype: str
-    #     TODO: Move to util or SchedulingItem class
-    #     """
-    #     if not getattr(self, 'check_command', None):
-    #         return ''
-    #     return self.check_command.get_name()
-    #
     def get_snapshot_command(self):
         """Wrapper to get the name of the snapshot_command attribute
 

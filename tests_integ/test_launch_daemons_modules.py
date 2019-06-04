@@ -77,7 +77,7 @@ class TestLaunchDaemonsModules(AlignakTest):
             cfg = configparser.ConfigParser()
             cfg.read(files)
 
-            # Arbiter launches the other daemons
+            # Arbiter launches the other daemons
             cfg.set('daemon.arbiter-master', 'alignak_launched', '1')
             cfg.set('daemon.scheduler-master', 'alignak_launched', '1')
             cfg.set('daemon.poller-master', 'alignak_launched', '1')
@@ -115,14 +115,8 @@ class TestLaunchDaemonsModules(AlignakTest):
             "hosts configuration warnings:",
             "Configuration warnings:",
             # u"the parameter $DIST_BIN$ is ambiguous! No value after =, assuming an empty string",
-            "[host::module_host_1] notifications are enabled but no contacts nor contact_groups "
-            "property is defined for this host",
+            "[host::module_host_1] notifications are enabled but no contacts nor contact_groups property is defined for this host",
             "Did not get any ",
-
-            # Temporary failures on daemons start
-            "that we must be related with cannot be connected",
-            "Setting the satellite ",
-            "is not alive for get_running_id",
 
             # Modules related warnings
             "The module Example is not a worker one, I remove it from the worker list.",

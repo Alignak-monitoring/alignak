@@ -1620,10 +1620,10 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
 
         if 'ALIGNAK_LOG_ACTIONS' in os.environ:
             if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
-                logger.warning("Got check result: %d for %s",
+                logger.warning("Got check result: %s for %s",
                                chk.exit_status, self.get_full_name())
             else:
-                logger.info("Got check result: %d for %s",
+                logger.info("Got check result: %s for %s",
                             chk.exit_status, self.get_full_name())
 
         if os.getenv('ALIGNAK_LOG_CHECKS', None):

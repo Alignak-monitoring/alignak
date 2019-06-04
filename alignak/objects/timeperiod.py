@@ -264,28 +264,6 @@ class Timeperiod(Item):
 
         return res
 
-    # def get_raw_import_values(self):  # pragma: no cover, deprecation
-    #     """
-    #     Get some properties of timeperiod (timeperiod is a bit different
-    #     from classic item)
-    #
-    #     TODO: never called anywhere, still useful?
-    #
-    #     :return: a dictionary of some properties
-    #     :rtype: dict
-    #     """
-    #     properties = ['timeperiod_name', 'alias', 'use', 'register']
-    #     res = {}
-    #     for prop in properties:
-    #         if hasattr(self, prop):
-    #             val = getattr(self, prop)
-    #             res[prop] = val
-    #     # Now the unresolved one. The only way to get rid of same key things is to put
-    #     # directly the full value as the key
-    #     for other in self.unresolved:
-    #         res[other] = ''
-    #     return res
-    #
     def is_time_valid(self, timestamp):
         """
         Check if a time is valid or not

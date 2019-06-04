@@ -565,27 +565,6 @@ class Item(AlignakObject):
                 setattr(self, new_name, value)
                 delattr(self, old_name)
 
-    # def get_raw_import_values(self):  # pragma: no cover, deprecation
-    #     """
-    #     Get properties => values of this object
-    #
-    #     TODO: never called anywhere, still useful?
-    #
-    #     :return: dictionary of properties => values
-    #     :rtype: dict
-    #     """
-    #     res = {}
-    #     properties = list(self.__class__.properties.keys())
-    #     # Register is not by default in the properties
-    #     if 'register' not in properties:
-    #         properties.append('register')
-    #
-    #     for prop in properties:
-    #         if hasattr(self, prop):
-    #             val = getattr(self, prop)
-    #             res[prop] = val
-    #     return res
-    #
     def add_downtime(self, downtime):
         """
         Add a downtime in this object
@@ -759,27 +738,6 @@ class Item(AlignakObject):
         }
         self.fill_data_brok_from(data, CHECK_RESULT)
         return Brok({'type': self.my_type + '_snapshot', 'data': data})
-
-    # def dump(self, dump_file_name=None):  # pragma: no cover, never called
-    #     # pylint: disable=unused-argument
-    #     """
-    #     Dump Item object properties
-    #
-    #     :return: dictionary with properties
-    #     :rtype: dict
-    #     """
-    #     dump = {}
-    #     for prop in self.properties:
-    #         if not hasattr(self, prop):
-    #             continue
-    #         attr = getattr(self, prop)
-    #         if isinstance(attr, list) and attr and isinstance(attr[0], Item):
-    #             dump[prop] = [i.dump() for i in attr]
-    #         elif isinstance(attr, Item):
-    #             dump[prop] = attr.dump()
-    #         elif attr:
-    #             dump[prop] = getattr(self, prop)
-    #     return dump
 
 
 class Items(object):
