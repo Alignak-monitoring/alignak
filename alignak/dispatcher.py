@@ -144,9 +144,9 @@ class Dispatcher(object):
         for realm in self.alignak_conf.realms:
             logger.info("- %s:", realm.name)
             for cfg_part in list(realm.parts.values()):
-                print(" .%s (%s), flavor:%s, %s"
-                      % (cfg_part.instance_id, cfg_part.uuid, cfg_part.push_flavor, cfg_part))
-                print(" -> hosts: %s" % cfg_part.hosts.__dict__)
+                # print(" .%s (%s), flavor:%s, %s"
+                #       % (cfg_part.instance_id, cfg_part.uuid, cfg_part.push_flavor, cfg_part))
+                # print(" -> hosts: %s" % cfg_part.hosts.__dict__)
                 logger.info("  .%s (%s), flavor:%s, %s",
                             cfg_part.instance_id, cfg_part.uuid, cfg_part.push_flavor, cfg_part)
 
