@@ -1519,19 +1519,13 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
         self.pushed_conf.skip_initial_broks = getattr(self.pushed_conf, 'skip_initial_broks', False)
         logger.debug("Skipping initial broks? %s", str(self.pushed_conf.skip_initial_broks))
         if not self.pushed_conf.skip_initial_broks:
-            from pprint import pprint
-            pprint(self.__dict__)
             #  Get initial_status broks for all these types of objects
             #  The order is important, service need host...
-            print("Items - ")
             for t in [self.timeperiods, self.commands,
                       self.notificationways, self.contacts, self.contactgroups,
                       self.hosts, self.hostgroups, self.hostdependencies,
                       self.services, self.servicegroups, self.servicedependencies,
                       self.escalations]:
-                print("Type: %s" % (t))
-                print("Items: %d %s" % (len(t.items), t.items))
-                print("Templates: %d %s" % (len(t.templates), t.templates))
                 if not t:
                     continue
                 for item in t:
@@ -1547,11 +1541,7 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
 
             #  Get initial_status broks for all these types of templates
             #  The order is important, service need host...
-            print("Templates - ")
             for t in [self.contacts, self.hosts, self.services]:
-                print("Type: %s" % (t))
-                print("Items: %d %s" % (len(t.items), t.items))
-                print("Templates: %d %s" % (len(t.templates), t.templates))
                 if not t:
                     continue
                 for item_uuid in t.templates:

@@ -173,7 +173,6 @@ class Servicedependencies(Items):
             'notification_failure_criteria': 'u,c,w',
             'inherits_parent': '1'
         }
-        print("-> new service dep: %s" % (params))
         self.add_item(Servicedependency(params))
 
     def explode_hostgroup(self, svc_dep, hostgroups):
@@ -304,7 +303,6 @@ class Servicedependencies(Items):
                     new_sd.dependent_host_name = dep_hname
                     new_sd.dependent_service_description = dep_sname
                     self.add_item(new_sd)
-                    print("-> new SD: %s" % new_sd)
                 # Ok so we can remove the old one
                 to_be_removed.append(svc_dep_id)
 

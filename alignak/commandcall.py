@@ -165,7 +165,6 @@ class CommandCall(AlignakObject):
         res['command'] = None
         if self.command:
             res['command'] = serialize(self.command)
-        # print("serialize: %s" % (res))
         return res
 
     def get_command_and_args(self):

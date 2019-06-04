@@ -1431,7 +1431,6 @@ class Services(SchedulingItems):
                     continue
                 sdescr, prop, value = match.groups()
                 # Looks for corresponding service
-                # print("Override %s: %s / %s / %s" % (host, sdescr, prop, value))
                 service = self.find_srv_by_name_and_hostname(getattr(host, "host_name", ""), sdescr)
                 if service is None:
                     host.add_error("trying to override property '%s' on service '%s' "
