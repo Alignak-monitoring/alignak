@@ -10,9 +10,9 @@ ENV DEBIAN_FRONTEND noninteractive
 RUN ln -fs /usr/share/zoneinfo/Europe/Paris /etc/localtime && \
     dpkg-reconfigure -f noninteractive tzdata
 
-# Install base required packages
 RUN apt-get update
 
+# Install base required packages
 RUN apt-get install -y --no-install-recommends \
     nagios-plugins \
     nagios-nrpe-plugin \
@@ -40,20 +40,17 @@ RUN cd /repos && \
 ENV ALIGNAK_GROUP "alignak"
 ENV ALIGNAK_USER  "alignak"
 
-# Create alignak system user/group for Alignak application#
+# Create alignak system user/group for Alignak application
 # Note that the group is set a gid (1024), this to allow easy sharing with the doker host
 ARG ALIGNAK_SHARE_ID=1024
 RUN groupadd --system --gid $ALIGNAK_SHARE_ID $ALIGNAK_GROUP
 RUN useradd --system $ALIGNAK_USER --uid $ALIGNAK_SHARE_ID --gid $ALIGNAK_SHARE_ID
 
-# Create a share directory and set proper credentials
-ARG ALIGNAK_SHARE_DIR=/alignak
-RUN mkdir -p $ALIGNAK_SHARE_DIR
-RUN chown $ALIGNAK_USER:$ALIGNAK_GROUP $ALIGNAK_SHARE_DIR
-RUN chmod -R 775 $ALIGNAK_SHARE_DIR
+ENV ALIGNAK_SHARE_DIR=$ALIGNAK_SHARE_DIR
+COPY ./entrypoint.sh /entrypoint.sh
+RUN chown $ALIGNAK_USER:$ALIGNAK_GROUP /entrypoint.sh
+RUN chmod 500 /entrypoint.sh
 
-# Run as the newly created user
-#USER $ALIGNAK_USER
-
-# Default is to run the Alignak arbiter in check mode for the default shipped configuration
+ENTRYPOINT ["/entrypoint.sh"]
+# Run the arbiter in check mode for the configuration in the Alignak directory
 CMD ["alignak-arbiter", "-V", "-e", "/repos/alignak/etc/alignak.ini" ]
