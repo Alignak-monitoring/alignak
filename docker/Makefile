@@ -7,10 +7,11 @@ SHELL := /bin/bash
 include .env
 
 ifndef DOCKER_TAG
-$(error The image TAG variable (DOCKER_TAG) is missing.)
+$(info The image TAG variable (DOCKER_TAG) is missing. Setting a default value!)
 endif
 
 # Default values for the image
+PYTHON_VERSION ?= 3.6
 DOCKER_TAG ?= 0.0.0
 DOCKER_REPOSITORY ?= alignak
 DOCKER_ALIGNAK_DAEMON ?= alignak

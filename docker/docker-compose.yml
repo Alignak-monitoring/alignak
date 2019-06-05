@@ -8,6 +8,7 @@ services:
     build:
       context: ./image-alignak
       args:
+        PYTHON_BASE_VERSION: 3.6
         ALIGNAK_SHARE_DIR: /alignak
         ALIGNAK_GIT_REPO: ${ALIGNAK_GIT_REPO}
     env_file:
@@ -91,6 +92,7 @@ services:
       args:
         ALIGNAK_SHARE_DIR: /alignak
         SHINKEN_WEBUI_GIT_REPO: ${SHINKEN_WEBUI_GIT_REPO}
+        SHINKEN_UI_GRAPHITE_GIT_REPO: ${SHINKEN_UI_GRAPHITE_GIT_REPO}
     env_file:
       - .env
     networks:

@@ -26,8 +26,9 @@ RUN cd /repos && \
     pip3 install .
 
 # Get the Shinken / Alignak Web UI Graphite extension module
+ARG SHINKEN_UI_GRAPHITE_GIT_REPO
 RUN cd /repos && \
-    git clone https://github.com/mohierf/mod-ui-graphite && \
+    git clone https://github.com/${SHINKEN_UI_GRAPHITE_GIT_REPO} && \
     cd mod-ui-graphite && \
     git checkout alignak-python3 && \
     pip3 install -r requirements.txt && \

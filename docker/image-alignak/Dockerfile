@@ -1,4 +1,15 @@
-FROM python:3.6
+ARG PYTHON_BASE_VERSION
+
+FROM python:${PYTHON_BASE_VERSION}
+
+ARG PYTHON_BASE_VERSION
+ARG ALIGNAK_IMAGE_TAG
+
+ENV ALIGNAK_IMAGE_TAG $ALIGNAK_IMAGE_TAG
+ENV PYTHON_BASE_VERSION $PYTHON_BASE_VERSION
+
+LABEL alignak.image.version=$ALIGNAK_IMAGE_TAG \
+      alignak.python.version=$PYTHON_BASE_VERSION
 
 LABEL maintainer="Frédéric Mohier (frederic.mohier@alignak.net)"
 
