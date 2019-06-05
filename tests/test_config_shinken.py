@@ -53,18 +53,19 @@ class TestConfigShinken(AlignakTest):
         assert len(self.configuration_errors) == 0
         # No warning messages
         print(self.configuration_warnings)
-        assert len(self.configuration_warnings) == 1
+        assert len(self.configuration_warnings) == 2
         # l = [
         #     u"Some hosts exist in the realm 'France' but no broker is defined for this realm",
         #     u"Added a broker (broker-France, http://127.0.0.1:7772/) for the realm 'France'",
-        #     u'Host graphite use/inherit from an unknown template: graphite ! from: /home/alignak/alignak/test/cfg/_shinken/hosts/graphite.cfg:1'
+        #     u'Host graphite use/inherit from an unknown template: graphite ! from:
+        #     /home/alignak/alignak/test/cfg/_shinken/hosts/graphite.cfg:1'
         # ]
-        self.assert_any_cfg_log_match(
-            "Host graphite use/inherit from an unknown template: graphite ! "
-        )
-        # self.assert_any_cfg_log_match(
+        self.assert_any_cfg_log_match(re.escape(
+            "[host::graphite] use/inherit from an unknown template: graphite;"
+        ))
+        # self.assert_any_cfg_log_match(re.escape(
         #     "Some hosts exist in the realm 'France' but no broker is defined for this realm"
-        # )
+        # ))
         # self.assert_any_cfg_log_match(re.escape(
         #     "Added a broker (broker-France, http://127.0.0.1:7772/) for the realm 'France'"
         # ))
@@ -95,33 +96,33 @@ class TestConfigShinken(AlignakTest):
         assert link is not None
 
         for item in self._arbiter.conf.commands:
-            print(("Command: %s" % item))
+            print("Command: %s" % item)
         assert len(self._arbiter.conf.commands) == 108
 
         for item in self._arbiter.conf.timeperiods:
-            print(("Timeperiod: %s" % item))
+            print("Timeperiod: %s" % item)
         assert len(self._arbiter.conf.timeperiods) == 4
 
         for item in self._arbiter.conf.contacts:
-            print(("Contact: %s" % item))
+            print("Contact: %s" % item)
         assert len(self._arbiter.conf.contacts) == 7
 
         for item in self._arbiter.conf.contactgroups:
-            print(("Contacts group: %s" % item))
+            print("Contacts group: %s" % item)
         assert len(self._arbiter.conf.contactgroups) == 3
 
         for item in self._arbiter.conf.hosts:
-            print(("Host: %s" % item))
+            print("Host: %s" % item)
         assert len(self._arbiter.conf.hosts) == 13
 
         for item in self._arbiter.conf.hostgroups:
-            print(("Hosts group: %s" % item))
+            print("Hosts group: %s" % item)
         assert len(self._arbiter.conf.hostgroups) == 8
 
         for item in self._arbiter.conf.services:
-            print(("Service: %s" % item))
+            print("Service: %s" % item)
         assert len(self._arbiter.conf.services) == 94
 
         for item in self._arbiter.conf.servicegroups:
-            print(("Services group: %s" % item))
+            print("Services group: %s" % item)
         assert len(self._arbiter.conf.servicegroups) == 5

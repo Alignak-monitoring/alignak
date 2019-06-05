@@ -508,23 +508,24 @@ class TestExternalCommands(AlignakTest):
 
         :return: None
         """
-        # A TP...
+        # A TP...
         tp = self._scheduler.timeperiods.find_by_name("24x7")
         assert tp.timeperiod_name == "24x7"
         tp2 = self._scheduler.timeperiods.find_by_name("none")
         assert tp2.timeperiod_name == "none"
 
-        # A command...
+        # A command...
         command = self._scheduler.commands.find_by_name("check-host-alive")
         assert command.command_name == "check-host-alive"
         command2 = self._scheduler.commands.find_by_name("check-host-alive-parent")
         assert command2.command_name == "check-host-alive-parent"
 
-        # An host...
+        # An host...
         host = self._scheduler.hosts.find_by_name("test_host_0")
         assert host.customs is not None
-        assert host.get_check_command() == \
-                         "check-host-alive-parent!up!$HOSTSTATE:test_router_0$"
+        assert host.get_check_command() == "check-host-alive-parent"
+        # assert host.get_check_command() == \
+        #                  "check-host-alive-parent!up!$HOSTSTATE:test_router_0$"
         assert host.customs['_OSLICENSE'] == 'gpl'
         assert host.customs['_OSTYPE'] == 'gnulinux'
         # Todo: check if it is normal ... host.check_period is the TP uuid and not an object!
@@ -637,37 +638,36 @@ class TestExternalCommands(AlignakTest):
 
         :return: None
         """
-        # A TP...
+        # A TP...
         tp = self._scheduler.timeperiods.find_by_name("24x7")
         assert tp.timeperiod_name == "24x7"
         tp2 = self._scheduler.timeperiods.find_by_name("none")
         assert tp2.timeperiod_name == "none"
 
-        # A command...
+        # A command...
         command = self._scheduler.commands.find_by_name("check-host-alive")
         assert command.command_name == "check-host-alive"
         command2 = self._scheduler.commands.find_by_name("check-host-alive-parent")
         assert command2.command_name == "check-host-alive-parent"
 
-        # An host...
+        # An host...
         host = self._scheduler.hosts.find_by_name("test_host_0")
         assert host.customs is not None
-        assert host.get_check_command() == \
-                         "check-host-alive-parent!up!$HOSTSTATE:test_router_0$"
+        assert host.get_check_command() == "check-host-alive-parent"
         assert host.customs['_OSLICENSE'] == 'gpl'
         assert host.customs['_OSTYPE'] == 'gnulinux'
         # Todo: check if it is normal ... host.check_period is the TP uuid and not an object!
         assert host.check_period == tp.uuid
 
-        # A service...
+        # A service...
         svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         assert svc is not None
-        assert svc.get_check_command() == "check_service!ok"
+        assert svc.get_check_command() == "check_service"
         assert svc.customs['_CUSTNAME'] == 'custvalue'
         # Todo: check if it is normal ... host.check_period is the TP uuid and not an object!
         assert svc.check_period == tp.uuid
 
-        # A contact...
+        # A contact...
         contact = self._scheduler.contacts[host.contacts[0]]
         assert contact is not None
         assert contact.contact_name == "test_contact"
@@ -852,8 +852,9 @@ class TestExternalCommands(AlignakTest):
         # An host...
         host = self._scheduler.hosts.find_by_name("test_host_0")
         assert host.customs is not None
-        assert host.get_check_command() == \
-                         "check-host-alive-parent!up!$HOSTSTATE:test_router_0$"
+        assert host.get_check_command() == "check-host-alive-parent"
+        # assert host.get_check_command() == \
+        #                  "check-host-alive-parent!up!$HOSTSTATE:test_router_0$"
         assert host.customs['_OSLICENSE'] == 'gpl'
         assert host.customs['_OSTYPE'] == 'gnulinux'
         assert host.comments == {}
@@ -942,7 +943,8 @@ class TestExternalCommands(AlignakTest):
         # A service...
         svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         assert svc.customs is not None
-        assert svc.get_check_command() == "check_service!ok"
+        assert svc.get_check_command() == "check_service"
+        # assert svc.get_check_command() == "check_service!ok"
         assert svc.customs['_CUSTNAME'] == 'custvalue'
         assert svc.comments == {}
 
@@ -1791,7 +1793,8 @@ class TestExternalCommands(AlignakTest):
         # A service...
         svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         assert svc.customs is not None
-        assert svc.get_check_command() == "check_service!ok"
+        assert svc.get_check_command() == "check_service"
+        # assert svc.get_check_command() == "check_service!ok"
         assert svc.customs['_CUSTNAME'] == 'custvalue'
         assert svc.comments == {}
 

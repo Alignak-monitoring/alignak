@@ -55,6 +55,8 @@ class ReceiverLink(SatelliteLink):
     Class to manage the receiver information
     """
     my_type = 'receiver'
+    my_name_property = "%s_name" % my_type
+
     properties = SatelliteLink.properties.copy()
     properties.update({
         'type':

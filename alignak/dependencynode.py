@@ -52,19 +52,21 @@ This module provides DependencyNode and DependencyNodeFactory used for parsing
 expression (business rules)
 """
 import re
-from alignak.util import filter_any, filter_none
-from alignak.util import filter_host_by_name, filter_host_by_regex, filter_host_by_group,\
-    filter_host_by_tag
-from alignak.util import filter_service_by_name
-from alignak.util import filter_service_by_regex_name
-from alignak.util import filter_service_by_regex_host_name
-from alignak.util import filter_service_by_host_name
-from alignak.util import filter_service_by_bp_rule_label
-from alignak.util import filter_service_by_hostgroup_name
-from alignak.util import filter_service_by_host_tag_name
-from alignak.util import filter_service_by_servicegroup_name
-from alignak.util import filter_host_by_bp_rule_label
-from alignak.util import filter_service_by_host_bp_rule_label
+from alignak.util import (
+    filter_any, filter_none,
+    filter_host_by_name, filter_host_by_regex,
+    filter_host_by_group, filter_host_by_tag,
+    filter_service_by_name,
+    filter_service_by_regex_name,
+    filter_service_by_regex_host_name,
+    filter_service_by_host_name,
+    filter_service_by_bp_rule_label,
+    filter_service_by_hostgroup_name,
+    filter_service_by_host_tag_name,
+    filter_service_by_servicegroup_name,
+    filter_host_by_bp_rule_label,
+    filter_service_by_host_bp_rule_label)
+
 from alignak.misc.serialization import serialize, unserialize
 
 
@@ -507,7 +509,7 @@ class DependencyNodeFactory(object):
                 # that should not be good in fact !
                 if stacked_parenthesis == 1 and tmp != '':
                     # TODO : real error
-                    print("ERROR : bad expression near", tmp)
+                    print("ERROR : bad expression near '%s'" % tmp)
                     continue
 
                 # If we are already in a par, add this (
@@ -520,7 +522,7 @@ class DependencyNodeFactory(object):
 
                 if stacked_parenthesis < 0:
                     # TODO : real error
-                    print("Error : bad expression near", tmp, "too much ')'")
+                    print("Error : bad expression near '%s' too much ')'" % tmp)
                     continue
 
                 if stacked_parenthesis == 0:
@@ -552,7 +554,7 @@ class DependencyNodeFactory(object):
             elif char == '!':
                 tmp = tmp.strip()
                 if tmp and tmp[0] != '!':
-                    print("Error : bad expression near", tmp, "wrong position for '!'")
+                    print("Error : bad expression near '%s', wrong position for '!'" % tmp)
                     continue
                 # Flags next node not state
                 son_is_not = True
@@ -682,12 +684,12 @@ class DependencyNodeFactory(object):
         if is_service:
             obj = services.find_srv_by_name_and_hostname(host_name, service_description)
             if not obj:
-                error = "Business rule uses unknown service %s/%s"\
+                error = "business rule uses unknown service %s/%s"\
                         % (host_name, service_description)
         else:
             obj = hosts.find_by_name(host_name)
             if not obj:
-                error = "Business rule uses unknown host %s" % (host_name,)
+                error = "business rule uses unknown host %s" % (host_name,)
         return obj, error
 
     def expand_expression(self, pattern, hosts, services, hostgroups, servicegroups, running=False):
@@ -733,10 +735,10 @@ class DependencyNodeFactory(object):
                 filters.extend(self.get_host_filters(host_expr))
                 items = hosts.find_by_filter(filters, all_items)
         except re.error as regerr:
-            error = "Business rule uses invalid regex %s: %s" % (pattern, regerr)
+            error = "business rule uses invalid regex %s: %s" % (pattern, regerr)
         else:
             if not items:
-                error = "Business rule got an empty result for pattern %s" % pattern
+                error = "business rule got an empty result for pattern '%s'" % pattern
 
         # Checks if we got result
         if error:

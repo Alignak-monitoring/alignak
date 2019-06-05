@@ -62,6 +62,8 @@ class ArbiterLink(SatelliteLink):
     With it, a master arbiter can communicate with  a spare Arbiter daemon
     """
     my_type = 'arbiter'
+    my_name_property = "%s_name" % my_type
+
     properties = SatelliteLink.properties.copy()
     properties.update({
         'type':
@@ -119,20 +121,4 @@ class ArbiterLinks(SatelliteLinks):
     Class to manage list of ArbiterLink.
     ArbiterLinks is used to regroup all links with Arbiter daemon
     """
-    name_property = "arbiter_name"
     inner_class = ArbiterLink
-
-    def linkify(self, modules=None):
-        """Link modules to Arbiter
-
-        # TODO: why having this specific method?
-        Because of this, Arbiters do not link with realms!
-
-        :param realms: Realm object list (always None for an arbiter)
-        :type realms: list
-        :param modules: list of modules
-        :type modules: list
-        :return: None
-        """
-        logger.debug("Linkify %s with %s", self, modules)
-        self.linkify_s_by_module(modules)

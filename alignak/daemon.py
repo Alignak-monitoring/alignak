@@ -197,7 +197,7 @@ except ImportError as exp:  # pragma: no cover, not for unit tests...
         """
         return []
 
-from alignak.log import setup_logger, set_log_level
+from alignak.log import setup_logger, set_log_file, set_log_level
 from alignak.http.daemon import HTTPDaemon, PortNotFree
 from alignak.stats import statsmgr
 from alignak.modulesmanager import ModulesManager
@@ -295,13 +295,25 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
 
         # File for logger configuration
         'logger_configuration':
-            StringProp(default=u'./alignak-logger.json'),
+            StringProp(default=u'DEFAULT'),
         # Override log file name - default is to not override
         'log_filename':
             StringProp(default=u''),
         # Override log level - default is to not change anything
         'log_level':
             StringProp(default=u''),
+
+        'log_rotation_when':
+            StringProp(default='midnight'),
+        'log_rotation_interval':
+            IntegerProp(default=1),
+        'log_rotation_count':
+            IntegerProp(default=7),
+        'log_format':
+            StringProp(default='[%(asctime)s] %(levelname)s: [%(name)s] %(message)s'),
+        'log_date':
+            StringProp(default='%Y-%m-%d %H:%M:%S'),
+
         # Set True to include cherrypy logs in the daemon log file
         'log_cherrypy':
             BoolProp(default=False),
@@ -472,6 +484,13 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                                          "file to declare one or more 'cfg=' variables."))
 
                 my_configuration = list(self.alignak_env.get_daemons(daemon_name=self.name).items())
+                if not my_configuration:
+                    self.pre_log.append(("WARNING",
+                                         "No defined configuration for the daemon: %s. "
+                                         "Using only the default parameters for its configuration."
+                                         % self.name))
+                    my_configuration = []
+
                 for prop, value in my_configuration:
                     self.pre_log.append(("DEBUG",
                                          " found daemon parameter, %s = %s" % (prop, value)))
@@ -490,38 +509,6 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                         setattr(self, prop, my_properties[prop].pythonize(value))
                         self.pre_log.append(("DEBUG", " -> updating %s = %s to %s"
                                              % (prop, current_prop, getattr(self, prop))))
-                if not my_configuration:
-                    self.pre_log.append(("WARNING",
-                                         "No defined configuration for the daemon: %s. "
-                                         % self.name))
-
-                    # todo: why doing this? It is quite tricky to configure daemon if it  does not
-                    # have its own configuration section, perhaps removing this should be fine!
-                    # self.pre_log.append(("DEBUG",
-                    #                      "No defined configuration for the daemon: %s. "
-                    #                      "Using the 'alignak-configuration' section "
-                    #                      "variables as parameters for the daemon:" % self.name))
-                    #
-                    # # Set the global Alignak configuration parameters
-                    # # as the current daemon properties
-                    # self.pre_log.append(("INFO",
-                    #                      "Get alignak configuration to configure the daemon..."))
-                    # alignak_configuration = self.alignak_env.get_alignak_configuration()
-                    # if alignak_configuration:
-                    #     for prop, value in list(alignak_configuration.items()):
-                    #         if prop in ['name'] or prop.startswith('_'):
-                    #             self.pre_log.append(("DEBUG",
-                    #                                  "- ignoring '%s' variable." % prop))
-                    #             continue
-                    #         if prop in self.properties:
-                    #             entry = self.properties[prop]
-                    #             setattr(self, prop, entry.pythonize(value))
-                    #         else:
-                    #             setattr(self, prop, value)
-                    #         print("Daemon %s, prop: %s = %s" % (self.name, prop, value))
-                    #         self.pre_log.append(("DEBUG",
-                    #                              "- setting '%s' as %s" % (prop,
-                    # getattr(self, prop))))
 
             except configparser.ParsingError as exp:
                 self.exit_on_exception(EnvironmentFile(exp.message))
@@ -545,6 +532,9 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
             raise EnvironmentFile("Using daemon configuration file is now deprecated. "
                                   "The daemon -c command line parameter should not be "
                                   "used anymore in favor the -e environment file parameter.")
+
+        print("Daemon '%s' is started with an environment file: %s"
+              % (self.name, self.env_filename))
 
         if 'is_daemon' in kwargs and kwargs['is_daemon']:
             self.is_daemon = BoolProp().pythonize(kwargs['is_daemon'])
@@ -598,40 +588,55 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         # Alignak logger configuration file
         if os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None):
             self.logger_configuration = os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None)
-        if self.logger_configuration != os.path.abspath(self.logger_configuration):
-            if self.logger_configuration == './alignak-logger.json':
-                self.logger_configuration = os.path.join(os.path.dirname(self.env_filename),
-                                                         self.logger_configuration)
-            else:
-                self.logger_configuration = os.path.abspath(self.logger_configuration)
-        print("Daemon '%s' logger configuration file: %s" % (self.name, self.logger_configuration))
+        if self.logger_configuration:
+            if self.logger_configuration in ['DEFAULT']:
+                self.logger_configuration = os.path.join(self.etcdir, 'alignak-logger.json')
 
-        # # Make my paths properties be absolute paths
-        # for prop, entry in list(my_properties.items()):
-        #     # Set absolute paths for
-        #     if isinstance(my_properties[prop], PathProp):
-        #         setattr(self, prop, os.path.abspath(getattr(self, prop)))
+            if self.logger_configuration != os.path.abspath(self.logger_configuration):
+                if self.logger_configuration in ['./alignak-logger.json', 'alignak-logger.json']:
+                    self.logger_configuration = os.path.join(os.path.dirname(self.env_filename),
+                                                             self.logger_configuration)
+                else:
+                    self.logger_configuration = os.path.abspath(self.logger_configuration)
 
         # Log file...
         self.log_filename = PathProp().pythonize("%s.log" % self.name)
         self.log_filename = os.path.abspath(os.path.join(self.logdir, self.log_filename))
         if 'log_filename' in kwargs and kwargs['log_filename']:
             self.log_filename = PathProp().pythonize(kwargs['log_filename'].strip())
+
+            # If we received a directory, transform to a file
+            if os.path.isdir(self.log_filename):
+                self.log_filename = os.path.abspath(
+                    os.path.join(self.log_filename, "%s.log" % self.name))
+
             # Make it an absolute path file in the log directory
             if self.log_filename != os.path.abspath(self.log_filename):
                 if self.log_filename:
+                    self.logger_configuration = None
                     self.log_filename = os.path.abspath(os.path.join(self.logdir,
                                                                      self.log_filename))
                 else:
                     self.use_log_file = False
                     print("Daemon '%s' will not log to a file: %s" % (self.name))
             else:
+                self.logger_configuration = None
                 self.logdir = os.path.dirname(self.log_filename)
-            print("Daemon '%s' is started with an overridden log file: %s"
-                  % (self.name, self.log_filename))
+            # print("Daemon '%s' is started with an overridden log file: %s"
+            #       % (self.name, self.log_filename))
+
+        if self.logger_configuration:
+            if not os.path.exists(self.logger_configuration):
+                print("Daemon '%s', configured logger configuration file (%s) does not exist."
+                      % (self.name, self.logger_configuration))
+            else:
+                print("Daemon '%s' logger configuration file: %s"
+                      % (self.name, self.logger_configuration))
+        else:
+            print("Daemon '%s' log file: %s" % (self.name, self.log_filename))
 
         # Check the log directory (and create if it does not exist)
-        self.check_dir(os.path.dirname(self.log_filename))
+        # self.check_dir(os.path.dirname(self.log_filename))
 
         # Specific monitoring log directory
         # self.check_dir(os.path.join(os.path.dirname(self.log_filename), 'monitoring-log'))
@@ -644,7 +649,7 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                       % (self.name, self.log_cherrypy))
             else:
                 self.log_cherrypy = None
-            self.log_filename = ''
+            # self.log_filename = ''
 
         # Log level...
         if 'log_level' in kwargs and kwargs['log_level']:
@@ -656,11 +661,16 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         self.pid_filename = os.path.abspath(os.path.join(self.workdir, self.pid_filename))
         if 'pid_filename' in kwargs and kwargs['pid_filename']:
             self.pid_filename = PathProp().pythonize(kwargs['pid_filename'].strip())
+
+            # If we received a directory, transform to a file
+            if os.path.isdir(self.pid_filename):
+                self.pid_filename = os.path.abspath(
+                    os.path.join(self.pid_filename, "%s.pid" % self.name))
+
             # Make it an absolute path file in the pid directory
             if self.pid_filename != os.path.abspath(self.pid_filename):
                 self.pid_filename = os.path.abspath(os.path.join(self.workdir, self.pid_filename))
             self.workdir = os.path.dirname(self.pid_filename)
-            print("Daemon working directory: %s" % self.workdir)
         print("Daemon '%s' pid file: %s" % (self.name, self.pid_filename))
         self.pre_log.append(("INFO",
                              "Daemon '%s' pid file: %s" % (self.name, self.pid_filename)))
@@ -850,10 +860,6 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
             self.http_thread.join(timeout=3)
             if self.http_thread.is_alive():  # pragma: no cover, should never happen...
                 logger.warning("HTTP thread did not terminated. Force stopping the thread..")
-                # try:
-                #     self.http_thread._Thread__stop()  # pylint: disable=E1101
-                # except Exception as exp:  # pylint: disable=broad-except
-                #     print("Exception: %s" % exp)
             else:
                 logger.debug("HTTP thread exited")
             self.http_thread = None
@@ -1026,7 +1032,7 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
 
             # Maybe someone said we will stop...
             if self.will_stop and not self.type == 'arbiter':
-                logger.debug("death-wait mode... waiting for death")
+                logger.info("death-wait mode... waiting for death")
                 _, _ = self.make_a_pause(1.0)
                 continue
 
@@ -1465,18 +1471,18 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         manager.start()
         return manager
 
-    def do_daemon_init_and_start(self, set_proc_title=True):
+    def do_daemon_init_and_start(self, set_process_title=True):
         """Main daemon function.
         Clean, allocates, initializes and starts all necessary resources to go in daemon mode.
 
         The set_proc_title parameter is mainly useful for the Alignak unit tests.
         This to avoid changing the test process name!
 
-        :param set_proc_title: if set (default), the process title is changed to the daemon name
-        :type set_proc_title: bool
+        :param set_process_title: if set (default), the process title is changed to the daemon name
+        :type set_process_title: bool
         :return: False if the HTTP daemon can not be initialized, else True
         """
-        if set_proc_title:
+        if set_process_title:
             self.set_proctitle(self.name)
 
         # Change to configured user/group account
@@ -1497,22 +1503,6 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
             # Else, I set my own pid as the reference one
             self.write_pid(os.getpid())
 
-        # # TODO: check if really necessary!
-        # # -------
-        # # Set ownership on some default log files. It may happen that these default
-        # # files are owned by a privileged user account
-        # try:
-        #     for log_file in ['alignak.log', 'alignak-events.log']:
-        #         if os.path.exists('/tmp/%s' % log_file):
-        #             with open('/tmp/%s' % log_file, "w") as file_log_file:
-        #                 os.fchown(file_log_file.fileno(), self.uid, self.gid)
-        #         if os.path.exists('/tmp/monitoring-log/%s' % log_file):
-        #             with open('/tmp/monitoring-log/%s' % log_file, "w") as file_log_file:
-        #                 os.fchown(file_log_file.fileno(), self.uid, self.gid)
-        # except Exception as exp:  # pylint: disable=broad-except
-        #     #  pragma: no cover
-        #     print("Could not set default log files ownership, exception: %s" % str(exp))
-
         # Configure the daemon logger
         self.setup_alignak_logger()
 
@@ -1521,18 +1511,17 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
             logger.error("I could not setup my communication daemon :(")
             return False
 
-        # Creating synchonisation manager (inter-daemon queues...)
+        # Creating synchronisation manager (inter-daemon queues...)
         self.sync_manager = self._create_manager()
 
         # Start the CherryPy server through a detached thread
         logger.info("Starting http_daemon thread")
-        # pylint: disable=bad-thread-instantiation
         self.http_thread = threading.Thread(target=self.http_daemon_thread,
                                             name='%s-http_thread' % self.name)
-        # Setting the thread as a daemon allows to Ctrl+C to kill the main daemon
+        # Setting the thread as a daemon allows to kill the thread with the main daemon
         self.http_thread.daemon = True
         self.http_thread.start()
-        # time.sleep(1)
+
         logger.info("HTTP daemon thread started")
 
         return True
@@ -1574,7 +1563,6 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                 logger.info("Enabling hard SSL server name verification")
 
         # Let's create the HTTPDaemon, it will be started later
-        # pylint: disable=E1101
         try:
             logger.info('Setting up HTTP daemon (%s:%d), %d threads',
                         self.host, self.port, self.thread_pool_size)
@@ -1648,8 +1636,12 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
             try:
                 os.initgroups(self.user, gid)
             except OSError as err:
-                logger.warning('Cannot call the additional groups setting with initgroups: %s',
-                               err.strerror)
+                if err.errno == errno.EPERM:
+                    logger.info("The current user (%s) is not allowed to initialize "
+                                "the groups access list for '%s'", get_cur_user(), self.user)
+                else:
+                    logger.warning('Cannot call the additional groups setting with initgroups: %s',
+                                   err.strerror)
         elif hasattr(os, 'setgroups'):  # pragma: no cover, not with unit tests on Travis
             # Else try to call the setgroups if it exists...
             groups = [gid] + \
@@ -2170,24 +2162,40 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         try:
             # Make sure that the log directory is existing
             self.check_dir(self.logdir)
-            setup_logger(logger_configuration_file=self.logger_configuration,
-                         log_dir=self.logdir, process_name=self.name,
-                         log_file=self.log_filename)
+
+            if self.logger_configuration and not os.path.exists(self.logger_configuration):
+                print("The logger configuration file does not exist: %s"
+                      % self.logger_configuration)
+                print("Logging to: %s" % self.log_filename)
+                self.logger_configuration = None
+
+            if not self.logger_configuration:
+                # Configure a timed rotation file logger
+                set_log_file(self.log_filename, self.log_rotation_when,
+                             self.log_rotation_interval, self.log_rotation_count,
+                             self.log_format, self.log_date)
+            else:
+                # Configure the logger with a configuration file
+                setup_logger(logger_configuration_file=self.logger_configuration,
+                             log_dir=self.logdir, process_name=self.name,
+                             log_file=self.log_filename)
+                print("Configured a logger with directory as: %s" % self.logdir)
+
             if self.debug:
                 # Force the global logger at DEBUG level
-                set_log_level('DEBUG')
+                set_log_level('DEBUG', handlers=True)
                 logger.info("-----")
                 logger.info("Daemon log level set to a minimum of DEBUG")
                 logger.info("-----")
             elif self.verbose:
                 # Force the global logger at INFO level
-                set_log_level('INFO')
+                set_log_level('INFO', handlers=True)
                 logger.info("-----")
                 logger.info("Daemon log level set to a minimum of INFO")
                 logger.info("-----")
             elif self.log_level:
                 # Force the global logger at provided level
-                set_log_level(self.log_level)
+                set_log_level(self.log_level, handlers=True)
                 logger.info("-----")
                 logger.info("Daemon log level set to %s", self.log_level)
                 logger.info("-----")
@@ -2210,10 +2218,4 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
             for level, message in self.pre_log:
                 fun_level = level.lower()
                 getattr(logger, fun_level)("- %s", message)
-                # if level.lower() == "debug":
-                #     logger.debug(message)
-                # elif level.lower() == "info":
-                #     logger.info(message)
-                # elif level.lower() == "warning":
-                #     logger.warning(message)
             logger.debug("--- Stop - Log prior to our configuration")

@@ -468,8 +468,7 @@ class ActionBase(AlignakObject):
             if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
                 logger.warning("Action '%s' exited with code %d", self.command, self.exit_status)
             else:
-                logger.info("Action '%s' exited with code %d",
-                            self.command, self.exit_status)
+                logger.info("Action '%s' exited with code %d", self.command, self.exit_status)
 
         # We do not need the process now
         del self.process

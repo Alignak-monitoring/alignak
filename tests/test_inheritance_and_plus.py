@@ -61,6 +61,8 @@ class TestInheritanceAndPlus(AlignakTest):
 
         print("Hosts: ")
         pprint(self._arbiter.conf.hosts.__dict__)
+        for host in self._arbiter.conf.hosts:
+            print("Host conf: %d / %s\n" % (host.max_check_attempts, host))
 
         print("Services: ")
         pprint(self._arbiter.conf.services.__dict__)

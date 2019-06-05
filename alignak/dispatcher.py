@@ -650,8 +650,10 @@ class Dispatcher(object):
 
                     logger.debug("   preparing configuration part '%s' for the scheduler '%s'",
                                  cfg_part.instance_id, scheduler_link.name)
-                    logger.debug("   - %d hosts, %d services",
-                                 len(cfg_part.hosts), len(cfg_part.services))
+                    logger.info("   - %d hosts, %d services",
+                                len(cfg_part.hosts), len(cfg_part.services))
+                    logger.info("   - %d host templates, %d service templates",
+                                len(cfg_part.hosts.templates), len(cfg_part.services.templates))
 
                     # Serialization and hashing
                     s_conf_part = serialize(realm.parts[cfg_part.instance_id])
@@ -695,6 +697,7 @@ class Dispatcher(object):
                         'modules': serialize(scheduler_link.modules, True),
 
                         'conf_part': serialize(realm.parts[cfg_part.instance_id]),
+                        # 'conf_part': s_conf_part,
                         'managed_conf_id': cfg_part.instance_id,
                         'push_flavor': cfg_part.push_flavor,
 
@@ -702,6 +705,7 @@ class Dispatcher(object):
                     })
 
                     # Hash the whole configuration
+                    cfg_string = json.dumps(scheduler_link.cfg, sort_keys=True).encode('utf-8')
                     cfg_string = json.dumps(scheduler_link.cfg, sort_keys=True).encode('utf-8')
                     scheduler_link.cfg['hash'] = hashlib.sha1(cfg_string).hexdigest()
 

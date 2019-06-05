@@ -250,13 +250,13 @@ class TestRealms(AlignakTest):
                                             "(pollers:1/0) (reactionners:1/0) (brokers:1/0) "
                                             "(receivers:1/0)"))
 
-        assert "Some hosts exist in the realm 'Distant' " \
+        assert "[config::Alignak global configuration] Some hosts exist in the realm 'Distant' " \
                "but no scheduler is defined for this realm." in self.configuration_warnings
-        assert "Some hosts exist in the realm 'Distant' " \
+        assert "[config::Alignak global configuration] Some hosts exist in the realm 'Distant' " \
                "but no reactionner is defined for this realm." in self.configuration_warnings
-        assert "Some hosts exist in the realm 'Distant' " \
+        assert "[config::Alignak global configuration] Some hosts exist in the realm 'Distant' " \
                "but no receiver is defined for this realm." in self.configuration_warnings
-        assert "Some hosts exist in the realm 'Distant' " \
+        assert "[config::Alignak global configuration] Some hosts exist in the realm 'Distant' " \
                "but no scheduler is defined for this realm." in self.configuration_warnings
 
         # Scheduler added for the realm
@@ -327,10 +327,11 @@ class TestRealms(AlignakTest):
         assert not self.conf_is_correct
 
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in hostgroup::in_realm2 is incorrect; "
+            "[hostgroup::in_realm2] Configuration is incorrect; "
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "host test_host3_hg_realm2 (realm: realm1) is not in the same realm than its hostgroup in_realm2 (realm: realm2)"
+            "[hostgroup::in_realm2] host test_host3_hg_realm2 (realm: realm1) is not in "
+            "the same realm than its hostgroup in_realm2 (realm: realm2)"
         ))
 
         # self.assert_any_cfg_log_match(re.escape(
@@ -380,10 +381,11 @@ class TestRealms(AlignakTest):
         assert not self.conf_is_correct
 
         self.assert_any_cfg_log_match(re.escape(
-            "Configuration in hostgroup::in_realm2 is incorrect; "
+            "[hostgroup::in_realm2] Configuration is incorrect; "
         ))
         self.assert_any_cfg_log_match(re.escape(
-            "host test_host3_hg_realm2 (realm: realm1) is not in the same realm than its hostgroup in_realm2 (realm: realm2)"
+            "[hostgroup::in_realm2] host test_host3_hg_realm2 (realm: realm1) is not "
+            "in the same realm than its hostgroup in_realm2 (realm: realm2)"
         ))
 
         # self.assert_any_cfg_log_match(re.escape(
@@ -624,7 +626,7 @@ class TestRealms(AlignakTest):
 
         # Get the B-world broker
         # This broker is defined in the realm World and it manages sub-realms
-        bworld = self._arbiter.conf.brokers.find_by_name('broker-B-world')
+        bworld = self._arbiter.conf.brokers.find_by_name('broker-b')
         assert bworld is not None
 
         # broker should be in the world level

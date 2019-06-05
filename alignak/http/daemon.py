@@ -76,14 +76,6 @@ class HTTPDaemon(object):
         self.port = port
         self.host = host
         self.use_ssl = use_ssl
-
-        # # Make sure that the host ip/name is propely encoded for CherryPy
-        # try:
-        #     self.host = self.host.encode('utf-8')
-        # except Exception as exp:
-        #     pass
-        # logger.warning("self.host: %s (%s)", self.host, type(self.host))
-        #
         self.uri = '%s://%s:%s' % ('https' if self.use_ssl else 'http', self.host, self.port)
         logger.debug("Configured HTTP server on %s, %d threads", self.uri, thread_pool_size)
 

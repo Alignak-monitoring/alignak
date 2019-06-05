@@ -53,12 +53,12 @@ class TestAcknowledges(AlignakTest):
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert not host.problem_has_been_acknowledged
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host.state
         assert "SOFT" == host.state_type
 
@@ -68,19 +68,19 @@ class TestAcknowledges(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host.state
         assert "SOFT" == host.state_type
         assert host.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host.state
         assert "HARD" == host.state_type
         assert host.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "UP" == host.state
         assert "HARD" == host.state_type
         assert not host.problem_has_been_acknowledged
@@ -108,7 +108,7 @@ class TestAcknowledges(AlignakTest):
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [host_router, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "UP" == host_router.state
         assert "HARD" == host_router.state_type
         assert "UP" == host.state
@@ -117,7 +117,7 @@ class TestAcknowledges(AlignakTest):
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "SOFT" == host_router.state_type
         # Unchanged
@@ -125,7 +125,7 @@ class TestAcknowledges(AlignakTest):
         assert "HARD" == host.state_type
 
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "SOFT" == host_router.state_type
         # Unchanged
@@ -133,7 +133,7 @@ class TestAcknowledges(AlignakTest):
         assert "HARD" == host.state_type
 
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
         # Goes unreachable hard
@@ -141,9 +141,9 @@ class TestAcknowledges(AlignakTest):
         assert "HARD" == host.state_type
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
         # Unchanged
@@ -156,9 +156,9 @@ class TestAcknowledges(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
         assert "UNREACHABLE" == host.state
@@ -166,9 +166,9 @@ class TestAcknowledges(AlignakTest):
         assert host.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
         assert "UNREACHABLE" == host.state
@@ -176,7 +176,7 @@ class TestAcknowledges(AlignakTest):
         assert host.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[host_router, 0, 'UP']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "UP" == host_router.state
         assert "HARD" == host_router.state_type
         assert "UNREACHABLE" == host.state
@@ -184,9 +184,9 @@ class TestAcknowledges(AlignakTest):
         assert host.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         self.scheduler_loop(1, [[host_router, 0, 'UP']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "UP" == host_router.state
         assert "HARD" == host_router.state_type
         assert "DOWN" == host.state
@@ -194,7 +194,7 @@ class TestAcknowledges(AlignakTest):
         assert host.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "UP" == host.state
         assert "HARD" == host.state_type
         assert not host.problem_has_been_acknowledged
@@ -216,12 +216,12 @@ class TestAcknowledges(AlignakTest):
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert not host.problem_has_been_acknowledged
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host.state
         assert "SOFT" == host.state_type
 
@@ -231,19 +231,19 @@ class TestAcknowledges(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host.state
         assert "SOFT" == host.state_type
         assert host.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host.state
         assert "HARD" == host.state_type
         assert host.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "UP" == host.state
         assert "HARD" == host.state_type
         assert not host.problem_has_been_acknowledged
@@ -270,7 +270,7 @@ class TestAcknowledges(AlignakTest):
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [host_router, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "UP" == host_router.state
         assert "HARD" == host_router.state_type
         assert "UP" == host.state
@@ -279,7 +279,7 @@ class TestAcknowledges(AlignakTest):
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "SOFT" == host_router.state_type
         # Unchanged
@@ -287,7 +287,7 @@ class TestAcknowledges(AlignakTest):
         assert "HARD" == host.state_type
 
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "SOFT" == host_router.state_type
         # Unchanged
@@ -295,7 +295,7 @@ class TestAcknowledges(AlignakTest):
         assert "HARD" == host.state_type
 
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
         # Goes unreachable hard
@@ -303,9 +303,9 @@ class TestAcknowledges(AlignakTest):
         assert "HARD" == host.state_type
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
         # Unchanged
@@ -318,9 +318,9 @@ class TestAcknowledges(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
         assert "UNREACHABLE" == host.state
@@ -328,9 +328,9 @@ class TestAcknowledges(AlignakTest):
         assert host.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         self.scheduler_loop(1, [[host_router, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host_router.state
         assert "HARD" == host_router.state_type
         assert "UNREACHABLE" == host.state
@@ -338,7 +338,7 @@ class TestAcknowledges(AlignakTest):
         assert host.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[host_router, 0, 'UP']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "UP" == host_router.state
         assert "HARD" == host_router.state_type
         assert "UNREACHABLE" == host.state
@@ -346,9 +346,9 @@ class TestAcknowledges(AlignakTest):
         assert host.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         self.scheduler_loop(1, [[host_router, 0, 'UP']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "UP" == host_router.state
         assert "HARD" == host_router.state_type
         assert "DOWN" == host.state
@@ -356,7 +356,7 @@ class TestAcknowledges(AlignakTest):
         assert not host.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "UP" == host.state
         assert "HARD" == host.state_type
         assert not host.problem_has_been_acknowledged
@@ -380,12 +380,12 @@ class TestAcknowledges(AlignakTest):
         svc.max_check_attempts = 3
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert not svc.problem_has_been_acknowledged
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "WARNING" == svc.state
         assert "SOFT" == svc.state_type
 
@@ -396,25 +396,25 @@ class TestAcknowledges(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "WARNING" == svc.state
         assert "SOFT" == svc.state_type
         assert svc.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "WARNING" == svc.state
         assert "HARD" == svc.state_type
         assert svc.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "CRITICAL" == svc.state
         assert "HARD" == svc.state_type
         assert svc.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "OK" == svc.state
         assert "HARD" == svc.state_type
         assert not svc.problem_has_been_acknowledged
@@ -437,12 +437,12 @@ class TestAcknowledges(AlignakTest):
         svc.max_check_attempts = 3
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert not svc.problem_has_been_acknowledged
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "WARNING" == svc.state
         assert "SOFT" == svc.state_type
 
@@ -453,19 +453,19 @@ class TestAcknowledges(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "WARNING" == svc.state
         assert "SOFT" == svc.state_type
         assert svc.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "CRITICAL" == svc.state
         assert "HARD" == svc.state_type
         assert svc.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "OK" == svc.state
         assert "HARD" == svc.state_type
         assert not svc.problem_has_been_acknowledged
@@ -489,12 +489,12 @@ class TestAcknowledges(AlignakTest):
         svc.max_check_attempts = 3
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert not svc.problem_has_been_acknowledged
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "WARNING" == svc.state
         assert "SOFT" == svc.state_type
 
@@ -505,19 +505,19 @@ class TestAcknowledges(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "WARNING" == svc.state
         assert "SOFT" == svc.state_type
         assert svc.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "CRITICAL" == svc.state
         assert "HARD" == svc.state_type
         assert not svc.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "OK" == svc.state
         assert "HARD" == svc.state_type
         assert not svc.problem_has_been_acknowledged
@@ -542,12 +542,12 @@ class TestAcknowledges(AlignakTest):
         svc.max_check_attempts = 3
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert not svc.problem_has_been_acknowledged
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "WARNING" == svc.state
         assert "SOFT" == svc.state_type
 
@@ -559,19 +559,19 @@ class TestAcknowledges(AlignakTest):
         assert svc.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "CRITICAL" == svc.state
         assert "SOFT" == svc.state_type
         assert not svc.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "CRITICAL" == svc.state
         assert "HARD" == svc.state_type
         assert not svc.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "OK" == svc.state
         assert "HARD" == svc.state_type
         assert not svc.problem_has_been_acknowledged
@@ -594,12 +594,12 @@ class TestAcknowledges(AlignakTest):
         svc.max_check_attempts = 3
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert not svc.problem_has_been_acknowledged
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "WARNING" == svc.state
         assert "SOFT" == svc.state_type
 
@@ -610,7 +610,7 @@ class TestAcknowledges(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "OK" == svc.state
         assert "HARD" == svc.state_type
         assert not svc.problem_has_been_acknowledged
@@ -634,12 +634,12 @@ class TestAcknowledges(AlignakTest):
         svc.max_check_attempts = 3
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert not svc.problem_has_been_acknowledged
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "WARNING" == svc.state
         assert "SOFT" == svc.state_type
 
@@ -650,7 +650,7 @@ class TestAcknowledges(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "OK" == svc.state
         assert "HARD" == svc.state_type
         assert not svc.problem_has_been_acknowledged
@@ -674,23 +674,23 @@ class TestAcknowledges(AlignakTest):
         svc.max_check_attempts = 3
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert not svc.problem_has_been_acknowledged
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "CRITICAL" == svc.state
         assert "SOFT" == svc.state_type
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "CRITICAL" == svc.state
         assert "SOFT" == svc.state_type
         assert not svc.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "CRITICAL" == svc.state
         assert "HARD" == svc.state_type
         assert not svc.problem_has_been_acknowledged
@@ -702,20 +702,20 @@ class TestAcknowledges(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "CRITICAL" == svc.state
         assert "HARD" == svc.state_type
         assert svc.problem_has_been_acknowledged
 
         time.sleep(2.5)
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "CRITICAL" == svc.state
         assert "HARD" == svc.state_type
         assert not svc.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "OK" == svc.state
         assert "HARD" == svc.state_type
         assert not svc.problem_has_been_acknowledged
@@ -731,29 +731,28 @@ class TestAcknowledges(AlignakTest):
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
-        svc = self._scheduler.services.find_srv_by_name_and_hostname(
-            "test_host_0", "test_ok_0")
+        svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0", "test_ok_0")
         svc.checks_in_progress = []
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert not host.problem_has_been_acknowledged
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host.state
         assert "SOFT" == host.state_type
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host.state
         assert "SOFT" == host.state_type
         assert not host.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host.state
         assert "HARD" == host.state_type
         assert not host.problem_has_been_acknowledged
@@ -764,14 +763,14 @@ class TestAcknowledges(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host.state
         assert "HARD" == host.state_type
         assert host.problem_has_been_acknowledged
 
         time.sleep(2.5)
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host.state
         assert "HARD" == host.state_type
         assert not host.problem_has_been_acknowledged
@@ -793,12 +792,12 @@ class TestAcknowledges(AlignakTest):
         svc.act_depend_of = []  # no hostchecks on critical checkresults
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert not host.problem_has_been_acknowledged
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host.state
         assert "SOFT" == host.state_type
 
@@ -808,13 +807,13 @@ class TestAcknowledges(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host.state
         assert "SOFT" == host.state_type
         assert host.problem_has_been_acknowledged
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host.state
         assert "HARD" == host.state_type
         assert host.problem_has_been_acknowledged
@@ -845,17 +844,17 @@ class TestAcknowledges(AlignakTest):
         svc.max_check_attempts = 3
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert not svc.problem_has_been_acknowledged
         self.assert_actions_count(0)
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "CRITICAL" == svc.state
         assert "SOFT" == svc.state_type
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "CRITICAL" == svc.state
         assert "SOFT" == svc.state_type
         assert not svc.problem_has_been_acknowledged
@@ -867,7 +866,7 @@ class TestAcknowledges(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 2, 'CRITICAL']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "CRITICAL" == svc.state
         assert "HARD" == svc.state_type
         assert svc.problem_has_been_acknowledged

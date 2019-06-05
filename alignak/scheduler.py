@@ -78,6 +78,10 @@ from collections import defaultdict
 from six import string_types
 
 from alignak.objects.item import Item
+from alignak.objects.hostgroup import Hostgroup
+from alignak.objects.servicegroup import Servicegroup
+from alignak.objects.contactgroup import Contactgroup
+
 from alignak.macroresolver import MacroResolver
 
 from alignak.action import (ACT_STATUS_SCHEDULED, ACT_STATUS_POLLED,
@@ -290,7 +294,7 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
                     instance_id, self.pushed_conf.instance_id)
         logger.debug("Properties:")
         for key in sorted(self.pushed_conf.properties):
-            logger.debug("- %s: %s", key, getattr(self.pushed_conf, key, []))
+            logger.debug("- %s: %s", key, getattr(self.pushed_conf, key, None))
         logger.debug("Macros:")
         for key in sorted(self.pushed_conf.macros):
             logger.debug("- %s: %s", key, getattr(self.pushed_conf.macros, key, []))
@@ -299,10 +303,19 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
             if strclss in ['arbiters', 'schedulers', 'brokers',
                            'pollers', 'reactionners', 'receivers']:
                 continue
-            setattr(self, strclss, getattr(self.pushed_conf, strclss, []))
+            if getattr(self.pushed_conf, strclss, None) is None:
+                logger.debug("- no %s", strclss)
+                continue
+
+            lst_objects = getattr(self.pushed_conf, strclss, [])
+            setattr(self, strclss, lst_objects)
             # Internal statistics
-            logger.debug("- %d %s", len(getattr(self, strclss)), strclss)
-            statsmgr.gauge('configuration.%s' % strclss, len(getattr(self, strclss)))
+            logger.debug("- %d %s, %d templates", len(getattr(lst_objects, 'items')),
+                         strclss, len(getattr(lst_objects, 'templates')))
+            statsmgr.gauge('configuration.%s' % strclss,
+                           len(getattr(lst_objects, 'items')))
+            statsmgr.gauge('configuration.templates_%s' % strclss,
+                           len(getattr(lst_objects, 'templates')))
 
         # We need reversed list for searching in the retention file read
         # todo: check what it is about...
@@ -517,7 +530,7 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
         self.actions[notification.uuid] = notification
         self.nb_notifications += 1
 
-        # A notification which is not a master one asks for a brok
+        # A notification which is not a master one raises a brok
         if notification.contact is not None:
             self.add(notification.get_initial_status_brok())
 
@@ -1503,32 +1516,37 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
         brok = self.get_program_status_brok()
         self.add_brok(brok, broker_uuid)
 
-        #  We can't call initial_status from all this types
-        #  The order is important, service need host...
-        initial_status_types = (self.timeperiods, self.commands,
-                                self.contacts, self.contactgroups,
-                                self.hosts, self.hostgroups,
-                                self.services, self.servicegroups)
-
         self.pushed_conf.skip_initial_broks = getattr(self.pushed_conf, 'skip_initial_broks', False)
         logger.debug("Skipping initial broks? %s", str(self.pushed_conf.skip_initial_broks))
         if not self.pushed_conf.skip_initial_broks:
-            #  We call initial_status from all this types
+            #  Get initial_status broks for all these types of objects
             #  The order is important, service need host...
-            initial_status_types = (self.realms, self.timeperiods, self.commands,
-                                    self.notificationways, self.contacts, self.contactgroups,
-                                    self.hosts, self.hostgroups, self.hostdependencies,
-                                    self.services, self.servicegroups, self.servicedependencies,
-                                    self.escalations)
+            for t in [self.timeperiods, self.commands,
+                      self.notificationways, self.contacts, self.contactgroups,
+                      self.hosts, self.hostgroups, self.hostdependencies,
+                      self.services, self.servicegroups, self.servicedependencies,
+                      self.escalations]:
+                if not t:
+                    continue
+                for item in t:
+                    members = None
+                    if isinstance(item, Hostgroup):
+                        members = self.hosts
+                    if isinstance(item, Servicegroup):
+                        members = self.services
+                    if isinstance(item, Contactgroup):
+                        members = self.contacts
+                    brok = item.get_initial_status_brok(members)
+                    self.add_brok(brok, broker_uuid)
 
-            for tab in initial_status_types:
-                for item in tab:
-                    # Awful! simply to get the group members property name... :(
-                    # todo: replace this!
-                    member_items = None
-                    if hasattr(item, 'members'):
-                        member_items = getattr(self, item.my_type.replace("group", "s"))
-                    brok = item.get_initial_status_brok(member_items)
+            #  Get initial_status broks for all these types of templates
+            #  The order is important, service need host...
+            for t in [self.contacts, self.hosts, self.services]:
+                if not t:
+                    continue
+                for item_uuid in t.templates:
+                    item = t.templates[item_uuid]
+                    brok = item.get_initial_status_brok(extra=None)
                     self.add_brok(brok, broker_uuid)
 
         # Add a brok to say that we finished all initial_pass
@@ -1624,6 +1642,7 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
             if chk.status == ACT_STATUS_WAIT_CONSUME:
                 logger.debug("Consuming: %s", chk)
                 item = self.find_item_by_id(chk.ref)
+
                 notification_period = None
                 if getattr(item, 'notification_period', None) is not None:
                     notification_period = self.timeperiods[item.notification_period]
@@ -1642,7 +1661,7 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
                 #     item.raise_check_result()
                 #
                 for check in dep_checks:
-                    logger.debug("-> raised a dependency check: %s", chk)
+                    logger.debug("-> raised a dependency check: %s", check)
                     self.add(check)
 
         # loop to resolve dependencies
@@ -1659,7 +1678,7 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
                     # REMOVE OLD DEP CHECK -> zombie
                     chk.status = ACT_STATUS_ZOMBIE
 
-            # Now, reinteger dep checks
+            # Now, inclmude dependent checks
             for chk in list(self.checks.values()):
                 if chk.status == ACT_STATUS_WAIT_DEPEND and not chk.depend_on:
                     item = self.find_item_by_id(chk.ref)
@@ -2206,7 +2225,7 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
         """Get item based on its id or uuid
 
         :param object_id:
-        :type object_id: int | str
+        :type object_id: str
         :return:
         :rtype: alignak.objects.item.Item | None
         """

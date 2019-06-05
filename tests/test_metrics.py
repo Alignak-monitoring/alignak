@@ -262,27 +262,37 @@ class TestMetricsSetup(AlignakTest):
             #
             self.assert_log_match(
                 "targets configuration: graphite: True, influxdb: True, "
-                "file: /tmp/alignak-metrics.log", 11)
+                "file: /tmp/alignak-metrics.log", 9)
 
             self.assert_log_match(
                 "Storing metrics in an output file is configured. Do not forget "
-                "to regularly clean this file to avoid important disk usage!", 12)
+                "to regularly clean this file to avoid important disk usage!", 10)
 
-            self.assert_log_match("Trying to initialize module: inner-metrics", 24)
+            index = 22
+            self.assert_log_match("Trying to initialize module: inner-metrics", index)
+            index += 1
 
-            self.assert_log_match("testing storage to /tmp/alignak-metrics.log ...", 25)
-            self.assert_log_match("Ok", 26)
+            self.assert_log_match("testing storage to /tmp/alignak-metrics.log ...", index)
+            index += 1
+            self.assert_log_match("Ok", index)
+            index += 1
 
-            self.assert_log_match("testing connection to InfluxDB localhost:8086 ...", 27)
-            self.assert_log_match("connected, InfluxDB version 1.7.2", 28)
-            self.assert_log_match("testing connection to Graphite localhost:2004 ...", 29)
-            self.assert_log_match("Ok", 30)
+            self.assert_log_match("testing connection to InfluxDB localhost:8086 ...", index)
+            index += 1
+            self.assert_log_match("connected, InfluxDB version 1.7.2", index)
+            index += 1
+            self.assert_log_match("testing connection to Graphite localhost:2004 ...", index)
+            index += 1
+            self.assert_log_match("Ok", index)
+            index += 1
 
-            self.assert_log_match("creating database alignak...", 31)
+            self.assert_log_match("creating database alignak...", index)
+            index += 1
             # self.assert_log_match("creating database retention policy: alignak - 1y - 1...", 32)
             # self.assert_log_match("Ok", 33)
 
-            self.assert_log_match("Module inner-metrics is initialized.", 32)
+            self.assert_log_match("Module inner-metrics is initialized.", index)
+            index += 1
 
             # Module is an internal one (no external process) in the broker daemon modules manager
             my_module = self._broker_daemon.modules_manager.instances[0]

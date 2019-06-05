@@ -60,13 +60,8 @@ from alignak.util import to_float, to_split, to_char, to_int, unique_value, list
 
 __all__ = ('UnusedProp', 'BoolProp', 'IntegerProp', 'FloatProp',
            'CharProp', 'StringProp', 'SetProp', 'ListProp', 'DictProp',
+           'ToGuessProp', 'PythonizeError',
            'AddrProp', 'FULL_STATUS', 'CHECK_RESULT')
-
-# Suggestion
-# Is this useful? see above
-__author__ = "Hartmut Goebel <h.goebel@goebel-consult.de>"
-__copyright__ = "Copyright 2010-2011 by Hartmut Goebel <h.goebel@goebel-consult.de>"
-__licence__ = "GNU Affero General Public License version 3 (AGPL v3)"
 
 FULL_STATUS = 'full_status'
 CHECK_RESULT = 'check_result'

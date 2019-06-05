@@ -67,8 +67,10 @@ class Contactgroup(Itemgroup):
     A Contactgroup is used to manage a group of contacts
     """
     my_type = 'contactgroup'
+    my_name_property = "%s_name" % my_type
+
     members_property = "members"
-    group_members_property = "contactgroup_members"
+    group_members_property = "%s_members" % my_type
 
     properties = Itemgroup.properties.copy()
     properties.update({
@@ -86,10 +88,6 @@ class Contactgroup(Itemgroup):
         'CONTACTGROUPMEMBERS': 'get_members',
         'CONTACTGROUPGROUPMEMBERS': 'get_contactgroup_members'
     }
-
-    def get_name(self):
-        """Get the group name"""
-        return getattr(self, 'contactgroup_name', 'Unnamed')
 
     def get_contacts(self):
         """Get the contacts of the group
@@ -153,7 +151,6 @@ class Contactgroups(Itemgroups):
     Contactgroups is used to regroup all Contactgroup
 
     """
-    name_property = "contactgroup_name"
     inner_class = Contactgroup
 
     def add_member(self, contact_name, contactgroup_name):
@@ -166,14 +163,14 @@ class Contactgroups(Itemgroups):
         :type contactgroup_name: str
         :return: None
         """
-        contactgroup = self.find_by_name(contactgroup_name)
-        if not contactgroup:
-            contactgroup = Contactgroup({'contactgroup_name': contactgroup_name,
-                                         'alias': contactgroup_name,
-                                         'members': contact_name})
-            self.add_contactgroup(contactgroup)
-        else:
-            contactgroup.add_members(contact_name)
+        group = self.find_by_name(contactgroup_name)
+        if group:
+            group.add_members(contact_name)
+            return
+
+        group = Contactgroup({
+            'contactgroup_name': contactgroup_name, 'members': contact_name})
+        self.add_contactgroup(group)
 
     def get_members_of_group(self, gname):
         """Get all members of a group which name is given in parameter

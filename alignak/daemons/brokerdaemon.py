@@ -62,8 +62,6 @@ import traceback
 import threading
 import logging
 
-# from multiprocessing import active_children
-#
 # pylint: disable=wildcard-import,unused-wildcard-import
 # This import, despite not used, is necessary to include all Alignak objects modules
 from alignak.objects import *
@@ -253,10 +251,10 @@ class Broker(BaseSatellite):
                     if tmp_broks:
                         logger.debug("Got %d Broks from %s in %s",
                                      len(tmp_broks), satellite_link.name, time.time() - _t0)
-                        statsmgr.gauge('get-new-broks-count.%s'
-                                       % (satellite_link.name), len(tmp_broks))
-                        statsmgr.timer('get-new-broks-time.%s'
-                                       % (satellite_link.name), time.time() - _t0)
+                        statsmgr.gauge('get-new-broks-count.%s' % satellite_link.name,
+                                       len(tmp_broks))
+                        statsmgr.timer('get-new-broks-time.%s' % satellite_link.name,
+                                       time.time() - _t0)
                         for brok in tmp_broks:
                             brok.instance_id = satellite_link.instance_id
 

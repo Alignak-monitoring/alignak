@@ -51,7 +51,7 @@ import os
 import logging
 import time
 
-from alignak.util import get_obj_name_two_args_and_void
+from alignak.util import strip_and_uniq, get_obj_name_two_args_and_void
 from alignak.misc.serialization import unserialize, get_alignak_class
 from alignak.objects.item import Item, Items
 from alignak.property import (BoolProp, IntegerProp, FloatProp, StringProp,
@@ -219,7 +219,7 @@ class SatelliteLink(Item):
             DictProp(default={}),
     })
 
-    def __init__(self, params=None, parsing=True):
+    def __init__(self, params, parsing=True):
         """Initialize a SatelliteLink
 
         If parsing is True, we are initializing from a configuration, else we are initializing
@@ -1013,3 +1013,24 @@ class SatelliteLinks(Items):
         """
         logger.debug("Linkify %s with %s", self, modules)
         self.linkify_s_by_module(modules)
+
+    def linkify_s_by_module(self, modules):
+        """
+        Link modules to items
+
+        :param modules: Modules object (list of all the modules found in the configuration)
+        :type modules: alignak.objects.module.Modules
+        :return: None
+        """
+        for i in self:
+
+            links_list = strip_and_uniq(i.modules)
+            new = []
+            for name in [e for e in links_list if e]:
+                module = modules.find_by_name(name)
+                if module is not None and module.uuid not in new:
+                    new.append(module)
+                else:
+                    i.add_error("Error: the module %s is unknown for %s" % (name, i.get_name()))
+
+            i.modules = new

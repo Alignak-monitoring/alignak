@@ -111,12 +111,12 @@ class TestHostGroup(AlignakTest):
         # No warning messages
         assert len(self.configuration_warnings) == 0
         # Error is an unknown member in a group (\ escape the [ and ' ...)
-        self.assert_any_cfg_log_match(
-            "\[hostgroup::allhosts_bad\] as hostgroup, got unknown member \'BAD_HOST\'"
-        )
-        self.assert_any_cfg_log_match(
-            "Configuration in hostgroup::allhosts_bad is incorrect; from: "
-        )
+        self.assert_any_cfg_log_match(re.escape(
+            "[hostgroup::allhosts_bad] as hostgroup, got unknown member \'BAD_HOST\'"
+        ))
+        self.assert_any_cfg_log_match(re.escape(
+            "[hostgroup::allhosts_bad] Configuration is incorrect; from: "
+        ))
         self.assert_any_cfg_log_match(re.escape(
             "The hostgroup 'allhosts_bad_realm' is affected to an unknown realm: 'Unknown'"
         ))

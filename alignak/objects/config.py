@@ -84,7 +84,7 @@ from io import StringIO
 import json
 
 from alignak.alignakobject import get_a_new_object_id
-from alignak.misc.serialization import serialize
+from alignak.misc.serialization import serialize, unserialize
 
 from alignak.commandcall import CommandCall
 from alignak.objects.item import Item
@@ -150,29 +150,33 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
     cache_path = "objects.cache"
     my_type = "config"
+    my_name_property = "config_name"
 
-    # Properties:
-    # *required: if True, there is not default, and the config must put them
-    # *default: if not set, take this value
-    # *pythonize: function call to
-    # *class_inherit: (Service, 'blabla'): must set this property to the
-    #  Service class with name blabla
-    #  if (Service, None): must set this property to the Service class with
-    #  same name
-    # *unused: just to warn the user that the option he use is no more used
-    #  in Alignak
-    # *usage_text: if present, will print it to explain why it's no more useful
-    # ---
-    # All the properties with FULL_STATUS in the fill_brok will be include in the
-    # 'program_status' and 'update_program_status' broks.
-    # ---
     """Configuration properties:
+    * required: if True, there is not default, and the config must put them
+    * default: if not set, take this value
+    * pythonize: function call to
+    * class_inherit: (Service, 'blabla'): must set this configuration property to the
+      Service class with name blabla
+      If (Service, None): must set this property to the Service class with same name
+    * unused: just to warn the user that the option he use is no more used in Alignak
+    * usage_text: if present, will print it to explain why it's no more useful
+    ---
+    All the properties with FULL_STATUS in the fill_brok will be included in the
+    'program_status' and 'update_program_status' broks.
+    ---
     """
     properties = {
         # Some tuning parameters
+        # ----------
+        # When set, this parameter makes run the configuration clean once the data are
+        # ready to be prepared for dispatching to the daemons.
+        'clean_objects':
+            BoolProp(default=False),
+
         # When set, this parameter makes the configuration checked for consistency between
-        # hostgroups and hosts realmq. If hosts and their hostgroups do not belong to the
-        # same realm the configuration is declared as cirrupted
+        # hostgroups and hosts realms. If hosts and their hostgroups do not belong to the
+        # same realm the configuration is declared as coirrupted
         'forced_realms_hostgroups':
             BoolProp(default=True),
 
@@ -382,6 +386,23 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
         'events_log_count':
             IntegerProp(default=100, fill_brok=[FULL_STATUS]),
+
+        'log_filename':
+            StringProp(default='alignak-events.log'),
+        # Override log level - default is to not change anything
+        'log_level':
+            StringProp(default=''),
+
+        'log_rotation_when':
+            StringProp(default='midnight'),
+        'log_rotation_interval':
+            IntegerProp(default=1),
+        'log_rotation_count':
+            IntegerProp(default=365),
+        'log_format':
+            StringProp(default='[%(my_date)s] %(levelname)s: %(message)s'),
+        'log_date':
+            StringProp(default='%Y-%m-%d %H:%M:%S'),
 
         'log_notifications':
             BoolProp(default=True, fill_brok=[FULL_STATUS],
@@ -806,7 +827,7 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
     #   Class of object,
     #   Class of objects list,
     #   'name of the Config property for the objects',
-    #   True to create an intial index,
+    #   True to create an initial index,
     #   True if the property is clonable
     # }
     types_creations = {
@@ -849,14 +870,14 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         'poller':
             (PollerLink, PollerLinks, 'pollers', True, False),
         'realm':
-            (Realm, Realms, 'realms', True, False),
+            (Realm, Realms, 'realms', True, True),
         'module':
             (Module, Modules, 'modules', True, False),
         'resultmodulation':
             (Resultmodulation, Resultmodulations, 'resultmodulations', True, True),
         'businessimpactmodulation':
-            (Businessimpactmodulation, Businessimpactmodulations,
-             'businessimpactmodulations', True, True),
+            (Businessimpactmodulation, Businessimpactmodulations, 'businessimpactmodulations',
+             True, True),
         'escalation':
             (Escalation, Escalations, 'escalations', True, True),
         'serviceescalation':
@@ -908,30 +929,34 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                 self.__class__.properties['$USER%d$' % i] = StringProp(default='')
 
             # Fill all the configuration properties with their default values
-            self.fill_default()
+            # self.fill_default()
         elif 'instance_id' not in params:
             logger.error("When not parsing a configuration, an instance_id "
                          "must exist in the provided parameters for a configuration!")
         else:
             self.instance_id = params['instance_id']
-
-        # At deserialization, those are dictionaries
-        # TODO: Separate parsing instance from recreated ones
-        for prop in ['host_perfdata_command', 'service_perfdata_command',
-                     'global_host_event_handler', 'global_service_event_handler']:
-            if prop in params and isinstance(params[prop], dict):
-                # We recreate the object
-                setattr(self, prop, CommandCall(params[prop], parsing=parsing))
-                # And remove prop, to prevent from being overridden
-                del params[prop]
-
-        for _, clss, strclss, _, _ in list(self.types_creations.values()):
-            if strclss in params and isinstance(params[strclss], dict):
-                setattr(self, strclss, clss(params[strclss], parsing=parsing))
+            # Un serialize objects lists
+            for _, _, strclss, _, _ in list(self.types_creations.values()):
+                if strclss in ['arbiters', 'schedulers', 'brokers',
+                               'pollers', 'reactionners', 'receivers']:
+                    continue
+                if strclss not in params:
+                    continue
+                setattr(self, strclss, unserialize(params[strclss]))
                 del params[strclss]
 
+            for prop in ['host_perfdata_command', 'service_perfdata_command',
+                         'global_host_event_handler', 'global_service_event_handler']:
+                if prop not in params or params[prop] is None:
+                    continue
+                setattr(self, prop, unserialize(params[prop]))
+                del params[prop]
+
         super(Config, self).__init__(params, parsing=parsing)
-        self.params = {}
+
+        self.fill_default()
+
+        # self.params = {}
         self.resource_macros_names = []
 
         # The configuration files I read
@@ -956,20 +981,30 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
     __str__ = __repr__
 
     def serialize(self):
+        logger.debug("Serializing the configuration: %s", self)
         res = super(Config, self).serialize()
 
         # The following are not in properties so not in the dict
-        for prop in ['hosts', 'services', 'hostgroups', 'notificationways',
-                     'checkmodulations', 'macromodulations', 'businessimpactmodulations',
-                     'resultmodulations', 'contacts', 'contactgroups',
-                     'servicegroups', 'timeperiods', 'commands',
-                     'escalations',
-                     'host_perfdata_command', 'service_perfdata_command',
+        # todo: may be using an 'objects' dictionary for all the objects?
+        for _, _, strclss, _, _ in list(self.types_creations.values()):
+            if strclss in ['arbiters', 'schedulers', 'brokers',
+                           'pollers', 'reactionners', 'receivers']:
+                continue
+            if getattr(self, strclss, None) is None:
+                logger.debug("- no %s", strclss)
+                continue
+
+            items = getattr(self, strclss)
+            logger.debug("- %d %s", len(items), strclss)
+            res[strclss] = serialize(items)
+
+        # Some special properties
+        for prop in ['host_perfdata_command', 'service_perfdata_command',
                      'global_host_event_handler', 'global_service_event_handler']:
-            if getattr(self, prop, None) in [None, '', 'None']:
-                res[prop] = None
-            else:
-                res[prop] = getattr(self, prop).serialize()
+            res[prop] = None
+            if getattr(self, prop, None) not in [None, '', 'None']:
+                res[prop] = serialize(getattr(self, prop))
+
         res['macros'] = self.macros
         return res
 
@@ -1276,14 +1311,15 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         continuation_line = False
         tmp_line = ''
         lines = cfg_buffer.split('\n')
-        line_nb = 0  # Keep the line number for the file path
-        filefrom = ''
+        # Keep the line number for the file path
+        line_nb = 0
+        file_from = ''
         for line in lines:
             if line.startswith("# imported_from="):
-                filefrom = line.split('=')[1]
+                file_from = line.split('=')[1]
                 line_nb = 0  # reset the line number too
                 if not self.read_config_silent:
-                    logger.debug("#####\n# file: %s", filefrom)
+                    logger.debug("#####\n# file: %s", file_from)
                 continue
             if not self.read_config_silent:
                 logger.debug("- %d: %s", line_nb, line)
@@ -1318,7 +1354,8 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
             if re.search(r"^\s*#|^\s*$|^\s*}", line) is not None:
                 pass
-            # A define must be catched and the type saved
+
+            # A define must be catch and the type saved
             # The old entry must be saved before
             elif re.search("^define", line) is not None:
                 if re.search(r".*\{.*$", line) is not None:  # pylint: disable=R0102
@@ -1326,11 +1363,16 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                 else:
                     almost_in_define = True
 
+                # Save previous object definition
                 if tmp_type not in objectscfg:
                     objectscfg[tmp_type] = []
                 objectscfg[tmp_type].append(tmp)
+
+                # Start a new object definition
                 tmp = []
-                tmp.append("imported_from %s:%s" % (filefrom, line_nb))
+                imported_from = u"imported_from %s:%s" % (file_from, line_nb)
+                tmp.append(imported_from)
+
                 # Get new type
                 elts = re.split(r'\s', line)
                 # Maybe there was space before and after the type
@@ -1357,7 +1399,7 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                 tmp_obj = {}
                 for line in items:
                     elts = self._cut_line(line)
-                    if elts == []:
+                    if not elts:
                         continue
                     prop = elts[0]
                     if prop not in tmp_obj:
@@ -1386,32 +1428,27 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         # Business rule
         raw_objects['command'].append({
             'command_name': 'bp_rule',
-            'command_line': 'bp_rule',
-            'imported_from': 'alignak-self'
+            'command_line': 'bp_rule'
         })
         # Internal host checks
         raw_objects['command'].append({
             'command_name': '_internal_host_up',
-            'command_line': '_internal_host_up',
-            'imported_from': 'alignak-self'
+            'command_line': '_internal_host_up'
         })
         raw_objects['command'].append({
             'command_name': '_internal_host_check',
             # Command line must contain: state_id;output
-            'command_line': '_internal_host_check;$ARG1$;$ARG2$',
-            'imported_from': 'alignak-self'
+            'command_line': '_internal_host_check;$ARG1$;$ARG2$'
         })
         # Internal service check
         raw_objects['command'].append({
             'command_name': '_echo',
-            'command_line': '_echo',
-            'imported_from': 'alignak-self'
+            'command_line': '_echo'
         })
         raw_objects['command'].append({
             'command_name': '_internal_service_check',
             # Command line must contain: state_id;output
-            'command_line': '_internal_service_check;$ARG1$;$ARG2$',
-            'imported_from': 'alignak-self'
+            'command_line': '_internal_service_check;$ARG1$;$ARG2$'
         })
 
     def early_create_objects(self, raw_objects):
@@ -1519,30 +1556,29 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
     def linkify_one_command_with_commands(self, commands, prop):
         """
-        Link a command
+        Link a command call (executable) with a configured commad
 
         :param commands: object commands
-        :type commands: object
+        :type commands: alignak.objects.command.Commands
         :param prop: property name
         :type prop: str
         :return: None
         """
-
-        if not hasattr(self, prop):
-            return
-
-        command = getattr(self, prop).strip()
+        command = getattr(self, prop, None).strip()
         if not command:
             setattr(self, prop, None)
             return
 
-        data = {"commands": commands, "call": command}
+        data = {
+            "command_line": command,
+            "commands": commands
+        }
         if hasattr(self, 'poller_tag'):
             data.update({"poller_tag": self.poller_tag})
         if hasattr(self, 'reactionner_tag'):
             data.update({"reactionner_tag": self.reactionner_tag})
 
-        setattr(self, prop, CommandCall(data))
+        setattr(self, prop, CommandCall(data, parsing=True))
 
     def linkify(self):
         """ Make 'links' between elements, like a host got a services list
@@ -1550,7 +1586,6 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
         :return: None
         """
-
         self.services.optimize_service_search(self.hosts)
 
         # First linkify myself like for some global commands
@@ -1720,41 +1755,65 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         self.hosts.apply_dependencies()
         self.services.apply_dependencies(self.hosts)
 
+        logger.debug("Dependencies:")
+        for host in self.hosts:
+            logger.debug("host: %s", host)
+            for uuid in host.parent_dependencies:
+                logger.debug("  <- %s",
+                             self.hosts[uuid] if uuid in self.hosts else self.services[uuid])
+            for uuid in host.child_dependencies:
+                logger.debug("  -> %s",
+                             self.hosts[uuid] if uuid in self.hosts else self.services[uuid])
+
+        for host in self.hostdependencies:
+            logger.debug("hd: %s", host)
+
+        for svc in self.services:
+            logger.debug("service: %s", svc)
+            for uuid in svc.parent_dependencies:
+                logger.debug("  <- %s",
+                             self.hosts[uuid] if uuid in self.hosts else self.services[uuid])
+            for uuid in svc.child_dependencies:
+                logger.debug("  -> %s",
+                             self.hosts[uuid] if uuid in self.hosts else self.services[uuid])
+
+        for svc in self.servicedependencies:
+            logger.debug("sd: %s", svc)
+
     def apply_inheritance(self):
-        """Apply inheritance over templates
-        Template can be used in the following objects::
+        """Apply inheritance from the templates
+        Templates can be used in the following objects:
 
         * hosts
         * contacts
         * services
-        * servicedependencies
-        * hostdependencies
+        * services dependencies
+        * hosts dependencies
         * timeperiods
-        * hostsextinfo
-        * servicesextinfo
-        * serviceescalations
-        * hostescalations
+        * hosts extinfo
+        * services extinfo
+        * service escalations
+        * host escalations
         * escalations
 
         :return: None
         """
-        # inheritance properties by template
-        self.hosts.apply_inheritance()
-        self.contacts.apply_inheritance()
-        self.services.apply_inheritance()
-        self.servicedependencies.apply_inheritance()
-        self.hostdependencies.apply_inheritance()
-        # Also timeperiods
-        self.timeperiods.apply_inheritance()
-        # Also "Hostextinfo"
-        self.hostsextinfo.apply_inheritance()
-        # Also "Serviceextinfo"
-        self.servicesextinfo.apply_inheritance()
+        logger.debug("Applying inheritance:")
 
-        # Now escalations too
-        self.serviceescalations.apply_inheritance()
-        self.hostescalations.apply_inheritance()
-        self.escalations.apply_inheritance()
+        types_creations = self.__class__.types_creations
+        for o_type in types_creations:
+            (_, _, inner_property, _, _) = types_creations[o_type]
+            # Not yet for the realms and daemons links
+            if inner_property in ['realms', 'arbiters', 'schedulers', 'reactionners',
+                                  'pollers', 'brokers', 'receivers',
+                                  'modules']:
+                continue
+            logger.debug("  . for %s", inner_property,)
+            inner_object = getattr(self, inner_property, None)
+            if inner_object is None:
+                logger.debug("No %s to fill with default values", inner_property)
+                continue
+            inner_object.apply_inheritance()
 
     def apply_implicit_inheritance(self):
         """Wrapper for calling apply_implicit_inheritance method of services attributes
@@ -1786,19 +1845,18 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
             inner_object.fill_default()
 
         # We have all monitored elements, we can create a default realm if none is defined
-        if getattr(self, 'realms', None) is not None:
+        if not getattr(self, 'realms', None):
+            print("Set default realm: %s" % self.realms.__dict__)
             self.fill_default_realm()
             self.realms.fill_default()
 
-            # Then we create missing satellites, so no other satellites will be created after
-            self.fill_default_satellites(self.launch_missing_daemons)
+        # Then we create missing satellites, so no other satellites will be created after
+        # We also define the default realm
+        self.fill_default_satellites(self.launch_missing_daemons)
 
         types_creations = self.__class__.types_creations
         for o_type in types_creations:
             (_, _, inner_property, _, _) = types_creations[o_type]
-            if getattr(self, inner_property, None) is None:
-                logger.debug("No %s to fill with default values", inner_property)
-                continue
             # Only for the daemons links
             if inner_property in ['schedulers', 'reactionners', 'pollers', 'brokers', 'receivers']:
                 logger.debug("  . for %s", inner_property,)
@@ -1855,7 +1913,7 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         logger.debug("Alignak configured daemons list:")
         self.log_daemons_list()
 
-        # We must create relations betweens the realms first. This is necessary to have
+        # We must create relations between the realms first. This is necessary to have
         # an accurate map of the situation!
         self.realms.linkify()
         self.realms.get_default(check=True)
@@ -2152,7 +2210,7 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         """
 
         for item in itertools.chain(self.hosts, self.services):
-            if not item.got_business_rule:
+            if not getattr(item, 'got_business_rule', None):
                 continue
 
             bp_items = item.business_rule.list_all_elements()
@@ -2233,7 +2291,6 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                 'name': 'inner-metrics',
                 'type': 'metrics',
                 'python_name': 'alignak.modules.inner_metrics',
-                'imported_from': 'inner',
                 'enabled': True
             }
             if getattr(self, 'host_perfdata_file', None):
@@ -2261,7 +2318,6 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                 'name': 'inner-retention',
                 'type': 'retention',
                 'python_name': 'alignak.modules.inner_retention',
-                'imported_from': 'inner',
                 'enabled': True
             }
             if getattr(self, 'state_retention_file', None) is not None:
@@ -2309,16 +2365,18 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
         :return: None
         """
-        self.hosts.linkify_templates()
-        self.contacts.linkify_templates()
-        self.services.linkify_templates()
-        self.servicedependencies.linkify_templates()
-        self.hostdependencies.linkify_templates()
         self.timeperiods.linkify_templates()
+        self.contacts.linkify_templates()
+
+        self.hosts.linkify_templates()
+        self.services.linkify_templates()
+        self.hostdependencies.linkify_templates()
+        self.servicedependencies.linkify_templates()
+
         self.hostsextinfo.linkify_templates()
         self.servicesextinfo.linkify_templates()
+
         self.escalations.linkify_templates()
-        # But also old srv and host escalations
         self.serviceescalations.linkify_templates()
         self.hostescalations.linkify_templates()
 
@@ -2399,15 +2457,13 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
         # If we got global event handlers, they should be valid
         if self.global_host_event_handler and not self.global_host_event_handler.is_valid():
-            msg = "[%s::%s] global host event_handler '%s' is invalid" \
-                  % (self.my_type, self.get_name(), self.global_host_event_handler.command)
-            self.add_error(msg)
+            self.add_error("global host event_handler '%s' is invalid"
+                           % self.global_host_event_handler.command)
             valid = False
 
         if self.global_service_event_handler and not self.global_service_event_handler .is_valid():
-            msg = "[%s::%s] global service event_handler '%s' is invalid" \
-                  % (self.my_type, self.get_name(), self.global_service_event_handler .command)
-            self.add_error(msg)
+            self.add_error("global service event_handler '%s' is invalid"
+                           % self.global_service_event_handler.command)
             valid = False
 
         if not self.read_config_silent:
@@ -2418,6 +2474,7 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
         classes = [strclss for _, _, strclss, _, _ in list(self.types_creations.values())]
         for strclss in sorted(classes):
+            # todo: check why ignored!
             if strclss in ['hostescalations', 'serviceescalations']:
                 logger.debug("Ignoring correctness check for '%s'...", strclss)
                 continue
@@ -2493,7 +2550,7 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
         # Check that all hosts involved in business_rules are from the same realm
         for item in self.hosts:
-            if not item.got_business_rule:
+            if getattr(item, 'got_business_rule', None):
                 continue
 
             realm = self.realms.find_by_name(item.realm)
@@ -2546,12 +2603,20 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
         :return: None
         """
-        self.hosts.remove_templates()
+        self.timeperiods.remove_templates()
         self.contacts.remove_templates()
+
+        self.hosts.remove_templates()
         self.services.remove_templates()
+        self.hostdependencies.remove_templates()
+        self.servicedependencies.remove_templates()
+
+        self.hostsextinfo.remove_templates()
+        self.servicesextinfo.remove_templates()
+
+        self.escalations.remove_templates()
         self.servicedependencies.remove_templates()
         self.hostdependencies.remove_templates()
-        self.timeperiods.remove_templates()
 
     def show_errors(self):
         """
@@ -2666,6 +2731,8 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
             logger.debug(" - host pack hosts:")
             for host_id in hosts_pack:
                 host = self.hosts[host_id]
+                if not host:
+                    continue
                 logger.debug("  - %s", host.get_name())
                 passively_checked_hosts = passively_checked_hosts or host.passive_checks_enabled
                 actively_checked_hosts = actively_checked_hosts or host.active_checks_enabled
@@ -2792,6 +2859,8 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                 old_pack = -1
                 for host_id in hosts_pack:
                     host = self.hosts[host_id]
+                    if not host:
+                        continue
                     old_i = assoc.get(host.get_name(), -1)
                     # Maybe it's a new, if so, don't count it
                     if old_i == -1:
@@ -2817,6 +2886,8 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
                 for host_id in hosts_pack:
                     host = self.hosts[host_id]
+                    if not host:
+                        continue
                     packs[packindices[i]].append(host_id)
                     assoc[host.get_name()] = i
 
@@ -2892,21 +2963,28 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                 if not clonable:
                     logger.debug("  . do not clone: %s", inner_property)
                     continue
-                # todo: Indeed contactgroups should be managed like hostgroups...
+
+                # todo: Indeed contactgroups should be managed like hostgroups... to be confirmed!
                 if inner_property in ['hostgroups', 'servicegroups']:
                     new_groups = []
                     for group in getattr(self, inner_property):
                         new_groups.append(group.copy_shell())
                     setattr(self.parts[part_index], inner_property, clss(new_groups))
-                elif inner_property in ['hosts', 'services']:
+                elif inner_property in ['hosts']:
                     setattr(self.parts[part_index], inner_property, clss([]))
+                    # And include the templates
+                    setattr(self.parts[part_index].hosts, 'templates', self.hosts.templates)
+                elif inner_property in ['services']:
+                    setattr(self.parts[part_index], inner_property, clss([]))
+                    # And include the templates
+                    setattr(self.parts[part_index].services, 'templates', self.services.templates)
                 else:
                     setattr(self.parts[part_index], inner_property, getattr(self, inner_property))
                 logger.debug("  . cloned %s: %s -> %s", inner_property,
                              getattr(self, inner_property),
                              getattr(self.parts[part_index], inner_property))
 
-            # The elements of the others conf will be tag here
+            # The elements of the other conf will be tag here
             self.parts[part_index].other_elements = {}
 
             # No scheduler has yet accepted the configuration
@@ -2976,14 +3054,14 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                         hostgroup.members.append(host.uuid)
 
             # And also relink the hosts with the valid hostgroups
-            for host in cfg.hosts:
-                orig_hgs = host.hostgroups
+            for item in cfg.hosts:
+                orig_hgs = item.hostgroups
                 nhgs = []
                 for ohg_id in orig_hgs:
                     ohg = self.hostgroups[ohg_id]
                     nhg = cfg.hostgroups.find_by_name(ohg.get_name())
                     nhgs.append(nhg.uuid)
-                host.hostgroups = nhgs
+                item.hostgroups = nhgs
 
             # Fill servicegroup
             for ori_sg in self.servicegroups:
@@ -2998,14 +3076,14 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                         servicegroup.members.append(service.uuid)
 
             # And also relink the services with the valid servicegroups
-            for host in cfg.services:
-                orig_hgs = host.servicegroups
+            for item in cfg.services:
+                orig_hgs = item.servicegroups
                 nhgs = []
                 for ohg_id in orig_hgs:
                     ohg = self.servicegroups[ohg_id]
                     nhg = cfg.servicegroups.find_by_name(ohg.get_name())
                     nhgs.append(nhg.uuid)
-                host.servicegroups = nhgs
+                item.servicegroups = nhgs
 
         # Now we fill other_elements by host (service are with their host
         # so they are not tagged)

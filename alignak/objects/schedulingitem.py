@@ -71,18 +71,18 @@ import traceback
 import logging
 import numpy
 
+from alignak.misc.serialization import serialize, unserialize
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
-from alignak.dependencynode import DependencyNode
 
-from alignak.action import ACT_STATUS_WAIT_CONSUME, ACT_STATUS_ZOMBIE, \
-    ACT_STATUS_WAIT_DEPEND, ACT_STATUS_WAITING_ME, ACT_STATUS_POLLED
+from alignak.action import (ACT_STATUS_WAIT_CONSUME, ACT_STATUS_ZOMBIE,
+                            ACT_STATUS_WAIT_DEPEND, ACT_STATUS_WAITING_ME, ACT_STATUS_POLLED)
 from alignak.check import Check
 from alignak.property import (BoolProp, IntegerProp, FloatProp, SetProp,
                               CharProp, StringProp, ListProp, DictProp,
                               FULL_STATUS, CHECK_RESULT)
-from alignak.util import to_serialized, from_serialized, dict_to_serialized_dict, \
-    from_set_to_list, from_list_to_set
+from alignak.util import (to_serialized, from_serialized, dict_to_serialized_dict,
+                          from_set_to_list, from_list_to_set)
 from alignak.notification import Notification
 from alignak.macroresolver import MacroResolver
 from alignak.eventhandler import EventHandler
@@ -145,18 +145,15 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         'retain_nonstatus_information':
             BoolProp(default=True, fill_brok=[FULL_STATUS]),
         'contacts':
-            ListProp(default=[],
-                     fill_brok=[FULL_STATUS], merging='join', split_on_comma=True),
+            ListProp(default=[], fill_brok=[FULL_STATUS], merging='join', split_on_comma=True),
         'contact_groups':
-            ListProp(default=[], fill_brok=[FULL_STATUS],
-                     merging='join', split_on_comma=True),
+            ListProp(default=[], fill_brok=[FULL_STATUS], merging='join', split_on_comma=True),
         'notification_interval':
             IntegerProp(default=60, fill_brok=[FULL_STATUS], special=True),
         'first_notification_delay':
             IntegerProp(default=0, fill_brok=[FULL_STATUS]),
         'notification_period':
-            StringProp(fill_brok=[FULL_STATUS],
-                       special=True),
+            StringProp(fill_brok=[FULL_STATUS], special=True),
         'notifications_enabled':
             BoolProp(default=True, fill_brok=[FULL_STATUS], retention=True),
         'stalking_options':
@@ -179,21 +176,16 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
             StringProp(default=u'None'),
         'reactionner_tag':
             StringProp(default=u'None'),
-        'resultmodulations':
-            ListProp(default=[], merging='join'),
-        'business_impact_modulations':
-            ListProp(default=[], merging='join'),
+
         'escalations':
             ListProp(default=[], fill_brok=[FULL_STATUS], merging='join', split_on_comma=True),
         'maintenance_period':
-            StringProp(default=r'',
-                       fill_brok=[FULL_STATUS]),
+            StringProp(default=r'', fill_brok=[FULL_STATUS]),
         'time_to_orphanage':
             IntegerProp(default=300, fill_brok=[FULL_STATUS]),
 
         'labels':
-            ListProp(default=[], fill_brok=[FULL_STATUS], merging='join',
-                     split_on_comma=True),
+            ListProp(default=[], fill_brok=[FULL_STATUS], merging='join', split_on_comma=True),
 
         # BUSINESS CORRELATOR PART
         # Business rules output format template
@@ -222,6 +214,10 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         'checkmodulations':
             ListProp(default=[], fill_brok=[FULL_STATUS], merging='join'),
         'macromodulations':
+            ListProp(default=[], merging='join'),
+        'resultmodulations':
+            ListProp(default=[], merging='join'),
+        'business_impact_modulations':
             ListProp(default=[], merging='join'),
 
         # Custom views
@@ -409,6 +405,7 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         # if the state change, we know so we do not revert it
         'state_changed_since_impact':
             BoolProp(default=False),
+
         # BUSINESS CORRELATOR PART
         # Say if we are business based rule or not
         'got_business_rule':
@@ -419,6 +416,7 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         # Our Dependency node for the business rule
         'business_rule':
             StringProp(default=None),
+
         # Here it's the elements we are depending on
         # so our parents as network relation, or a host
         # we are depending in a hostdependency
@@ -466,24 +464,21 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
 
     special_properties = []
 
-    def __init__(self, params=None, parsing=True):
-        if params is None:
-            params = {}
-
-        # At deserialization, these are dictionaries
-        # TODO: Separate parsing instance from recreated ones
-        for prop in ['check_command', 'event_handler', 'snapshot_command']:
-            if prop in params and isinstance(params[prop], dict):
-                # We recreate the object
-                setattr(self, prop, CommandCall(params[prop], parsing=parsing))
-                # And remove prop, to prevent from being overridden
+    def __init__(self, params, parsing=True):
+        if not parsing:
+            # When deserialized, those are dictionaries
+            for prop in ['check_command', 'event_handler', 'snapshot_command',
+                         'business_rule', 'acknowledgement']:
+                if prop not in params or params[prop] is None:
+                    continue
+                setattr(self, prop, unserialize(params[prop]))
                 del params[prop]
-        if 'business_rule' in params and isinstance(params['business_rule'], dict):
-            self.business_rule = DependencyNode(params['business_rule'])
-            del params['business_rule']
-        if 'acknowledgement' in params and isinstance(params['acknowledgement'], dict):
-            self.acknowledgement = Acknowledge(params['acknowledgement'])
+        # else:
+        #     self.processed_business_rule = None
+        #     self.business_rule = None
+
         super(SchedulingItem, self).__init__(params, parsing=parsing)
+        # Default will be filled in Host or Service class!
 
     @property
     def monitored(self):
@@ -513,40 +508,61 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
     def serialize(self):
         res = super(SchedulingItem, self).serialize()
 
-        for prop in ['check_command', 'event_handler', 'snapshot_command', 'business_rule',
-                     'acknowledgement']:
+        for prop in ['check_command', 'event_handler', 'snapshot_command',
+                     'business_rule', 'acknowledgement']:
             res[prop] = None
             if getattr(self, prop, None) is not None:
-                res[prop] = getattr(self, prop).serialize()
+                res[prop] = serialize(getattr(self, prop))
 
         return res
 
-    def change_check_command(self, command_params):
-        """
+    def get_check_command(self):
+        """Wrapper to get the name of the check_command attribute
 
-        :param command_params: command parameters
-        :type command_params: dict
+        :return: check_command name
+        :rtype: str
+        """
+        if not getattr(self, 'check_command', None):
+            return ''
+        return self.check_command.get_name()
+
+    def change_check_command(self, command, commands):
+        """
+        Change the check command
+
+        :param command: the new command
+        :type command: str
+        :param commands: the available command items
+        :type command: alignak.objecrs.command.Commands
         :return:
         """
-        setattr(self, 'check_command', CommandCall(command_params))
+        data = {"commands": commands, "command_line": command, "poller_tag": self.poller_tag}
+        setattr(self, 'check_command', CommandCall(data, parsing=True))
 
-    def change_event_handler(self, command_params):
+    def change_event_handler(self, command, commands):
         """
+        Change the event handler command
 
-        :param command_params: command parameters
-        :type command_params: dict
+        :param command: the new command
+        :type command: str
+        :param commands: the available command items
+        :type command: alignak.objecrs.command.Commands
         :return:
         """
-        setattr(self, 'event_handler', CommandCall(command_params))
+        data = {"commands": commands, "command_line": command, "poller_tag": self.poller_tag}
+        setattr(self, 'event_handler', CommandCall(data, parsing=True))
 
-    def change_snapshot_command(self, command_params):
+    def change_snapshot_command(self, command, commands):
         """
+        Change the snapshot command
 
-        :param command_params: command parameters
-        :type command_params: dict
-        :return:
+        :param command: the new command
+        :type command: str
+        :param commands: the available command items
+        :type command: alignak.objecrs.command.Commands
         """
-        setattr(self, 'snapshot_command', CommandCall(command_params))
+        data = {"commands": commands, "command_line": command, "poller_tag": self.poller_tag}
+        setattr(self, 'snapshot_command', CommandCall(data, parsing=True))
 
     def add_flapping_change(self, sample):
         """Add a flapping sample and keep cls.flap_history samples
@@ -809,9 +825,6 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         :param bi_modulations: business impact modulations objects
         :type bi_modulations: alignak.object.businessimpactmodulation.Businessimpactmodulations
         :return: None
-        TODO: SchedulingItem object should not handle other schedulingitem obj.
-              We should call obj.register* on both obj.
-              This is 'Java' style
         """
         # First save our business_impact if not already do
         if self.my_own_business_impact == -1:
@@ -856,9 +869,6 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         :param bi_modulations: business impact modulation are used when setting myself as problem
         :type bi_modulations: alignak.object.businessimpactmodulation.Businessimpactmodulations
         :return: None
-        TODO: SchedulingItem object should not handle other schedulingitem obj.
-              We should call obj.register* on both obj.
-              This is 'Java' style
         """
         was_pb = self.is_problem
         if self.is_problem:
@@ -903,9 +913,6 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         :type bi_modulations: alignak.object.businessimpactmodulation.Businessimpactmodulations
         :return: list of host/service that are impacts
         :rtype: list[alignak.objects.schedulingitem.SchedulingItem]
-        TODO: SchedulingItem object should not handle other schedulingitem obj.
-              We should call obj.register* on both obj.
-              This is 'Java' style
         """
         # Maybe we already have this problem? If so, bailout too
         if prob.uuid in self.source_problems:
@@ -1416,16 +1423,16 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
                          "The item %s is in a scheduled downtime", self.get_full_name())
             return
 
-        if self.event_handler is not None:
+        if self.event_handler:
             event_handler = self.event_handler
-        elif cls.global_event_handler is not None:
+        elif cls.global_event_handler:
             event_handler = cls.global_event_handler
         else:
             return
 
-        macroresolver = MacroResolver()
+        mr = MacroResolver()
         data = self.get_data_for_event_handler(hosts)
-        cmd = macroresolver.resolve_command(event_handler, data, macromodulations, timeperiods)
+        cmd = mr.resolve_command(event_handler, data, macromodulations, timeperiods)
 
         event_h = EventHandler({
             'command': cmd,
@@ -1483,10 +1490,9 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
             return
 
         cls = self.__class__
-        macroresolver = MacroResolver()
+        mr = MacroResolver()
         data = self.get_data_for_event_handler(hosts)
-        cmd = macroresolver.resolve_command(self.snapshot_command, data, macromodulations,
-                                            timeperiods)
+        cmd = mr.resolve_command(self.snapshot_command, data, macromodulations, timeperiods)
         reac_tag = self.snapshot_command.reactionner_tag
         event_h = EventHandler({
             'command': cmd,
@@ -1577,9 +1583,9 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
 
         Special cases::
 
-        * is_flapping: immediate notif when problem
+        * is_flapping: immediate notification when a problem raises
         * is_in_scheduled_downtime: no notification
-        * is_volatile: notif immediately (service only)
+        * is_volatile: immediate notification when a problem raises (service only)
 
         Basically go through all cases (combination of last_state, current_state, attempt number)
         and do necessary actions (add attempt, raise notification., change state type.)
@@ -1614,10 +1620,10 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
 
         if 'ALIGNAK_LOG_ACTIONS' in os.environ:
             if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
-                logger.warning("Got check result: %d for %s",
+                logger.warning("Got check result: %s for %s",
                                chk.exit_status, self.get_full_name())
             else:
-                logger.info("Got check result: %d for %s",
+                logger.info("Got check result: %s for %s",
                             chk.exit_status, self.get_full_name())
 
         if os.getenv('ALIGNAK_LOG_CHECKS', None):
@@ -2464,10 +2470,10 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
                         break
 
                 # Get the command to launch
-                macroresolver = MacroResolver()
+                mr = MacroResolver()
                 data = self.get_data_for_checks(hosts)
-                command_line = macroresolver.resolve_command(check_command, data,
-                                                             macromodulations, timeperiods)
+                command_line = mr.resolve_command(check_command, data,
+                                                  macromodulations, timeperiods)
 
                 # remember it, for pure debugging purpose
                 self.last_check_command = command_line
@@ -2475,7 +2481,7 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
             # And get all environment variables only if needed
             if cls.enable_environment_macros or (check_command and
                                                  check_command.enable_environment_macros):
-                env = macroresolver.get_env_macros(data)
+                env = mr.get_env_macros(data)
 
             # By default we take the global timeout, but we use the command one if it
             # is defined (default is -1 for no timeout)
@@ -2483,9 +2489,7 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
             if check_command and check_command.timeout != -1:
                 timeout = check_command.timeout
 
-            # Make the Check object and put the service in checking
-            # Make the check inherit poller_tag from the command
-            # And reactionner_tag too
+            # Build the Check object and put the service in checking
             data = {
                 'command': command_line,
                 'timeout': timeout,
@@ -2544,11 +2548,10 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         if not cls.process_performance_data or not self.process_perf_data:
             return
 
-        if cls.perfdata_command is not None:
-            macroresolver = MacroResolver()
+        if cls.perfdata_command:
+            mr = MacroResolver()
             data = self.get_data_for_event_handler(hosts)
-            cmd = macroresolver.resolve_command(cls.perfdata_command, data, macromodulations,
-                                                timeperiods)
+            cmd = mr.resolve_command(cls.perfdata_command, data, macromodulations, timeperiods)
             reactionner_tag = cls.perfdata_command.reactionner_tag
             event_h = EventHandler({
                 'command': cmd,
@@ -2573,42 +2576,41 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         :type running: bool
         :return: None
         """
-        cmdcall = getattr(self, 'check_command', None)
-
-        # If we do not have a command, we bailout
-        if cmdcall is None:
+        cmd_call = getattr(self, 'check_command', None)
+        if cmd_call is None:
             return
 
         # we get our base command, like
         # bp_rule!(host,svc & host, svc) -> bp_rule
-        cmd = cmdcall.call
-        elts = cmd.split('!')
-        base_cmd = elts[0]
+        # cmd = cmd_call.call
+        # elts = cmd.split('!')
+        # base_cmd = elts[0]
+        if cmd_call.command_name not in ['bp_rule']:
+            return
 
         # If it's bp_rule, we got a rule :)
-        if base_cmd == 'bp_rule':
-            self.got_business_rule = True
-            rule = ''
-            if len(elts) >= 2:
-                rule = '!'.join(elts[1:])
-            # Only (re-)evaluate the business rule if it has never been
-            # evaluated before, or it contains a macro.
-            if re.match(r"\$[\w\d_-]+\$", rule) or self.business_rule is None:
-                macroresolver = MacroResolver()
-                data = self.get_data_for_checks(hosts)
-                rule = macroresolver.resolve_simple_macros_in_string(rule, data,
-                                                                     macromodulations,
-                                                                     timeperiods)
-                prev = getattr(self, "processed_business_rule", "")
-                if rule == prev:
-                    # Business rule did not changed (no macro was modulated)
-                    return
+        self.got_business_rule = True
+        rule = ''
+        if cmd_call.args:
+            rule = '!'.join(cmd_call.args)
 
-                fact = DependencyNodeFactory(self)
-                node = fact.eval_cor_pattern(rule, hosts, services,
-                                             hostgroups, servicegroups, running)
-                self.processed_business_rule = rule
-                self.business_rule = node
+        # Only (re-)evaluate the business rule if it has never been
+        # evaluated before, or it contains a macro.
+        if self.business_rule is None or re.match(r"\$[\w\d_-]+\$", rule):
+            mr = MacroResolver()
+            rule = mr.resolve_simple_macros_in_string(rule,
+                                                      self.get_data_for_checks(hosts),
+                                                      macromodulations,
+                                                      timeperiods)
+            if rule == getattr(self, "processed_business_rule", None):
+                # Business rule did not changed (no macro was modulated)
+                return
+
+            self.processed_business_rule = rule
+
+            fact = DependencyNodeFactory(self)
+            self.business_rule = fact.eval_cor_pattern(rule, hosts, services,
+                                                       hostgroups, servicegroups, running)
 
     def get_business_rule_output(self, hosts, services, macromodulations, timeperiods):
         # pylint: disable=too-many-locals, too-many-branches
@@ -2651,7 +2653,7 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         output_template = self.business_rule_output_template
         if not output_template:
             return ""
-        macroresolver = MacroResolver()
+        mr = MacroResolver()
 
         # Extracts children template strings
         elts = re.findall(r"\$\((.*)\)\$", output_template)
@@ -2677,10 +2679,9 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
                 ok_count += 1
                 continue
             data = item.get_data_for_checks(hosts)
-            children_output += macroresolver.resolve_simple_macros_in_string(child_template_string,
-                                                                             data,
-                                                                             macromodulations,
-                                                                             timeperiods)
+            children_output += mr.resolve_simple_macros_in_string(child_template_string,
+                                                                  data, macromodulations,
+                                                                  timeperiods)
 
         if ok_count == len(items):
             children_output = "all checks were successful."
@@ -2688,8 +2689,8 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         # Replaces children output string
         template_string = re.sub(r"\$\(.*\)\$", children_output, output_template)
         data = self.get_data_for_checks(hosts)
-        output = macroresolver.resolve_simple_macros_in_string(template_string, data,
-                                                               macromodulations, timeperiods)
+        output = mr.resolve_simple_macros_in_string(template_string, data,
+                                                    macromodulations, timeperiods)
         return output.strip()
 
     def business_rule_notification_is_blocked(self, hosts, services):
@@ -3310,11 +3311,8 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        state = True
-
         if hasattr(self, 'trigger') and getattr(self, 'trigger', None):
-            self.add_warning("[%s::%s] 'trigger' property is not allowed"
-                             % (self.my_type, self.get_name()))
+            self.add_warning("'trigger' property is not allowed")
 
         # If no notif period, set it to None, mean 24x7
         if not hasattr(self, 'notification_period'):
@@ -3324,52 +3322,39 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         if hasattr(self, 'freshness_threshold') and not self.freshness_threshold:
             if getattr(self, 'check_interval', 0):
                 self.freshness_threshold = self.check_interval * 60
-                # self.add_warning("[%s::%s] using check interval as a freshness threshold: %d s"
-                #                  % (self.my_type, self.get_name(), self.freshness_threshold))
             elif getattr(self, 'retry_interval', 0):
                 self.freshness_threshold = self.retry_interval * 60
-                # self.add_warning("[%s::%s] using retry interval as a freshness threshold: %d s"
-                #                  % (self.my_type, self.get_name(), self.freshness_threshold))
 
         # If we got an event handler, it should be valid
         if getattr(self, 'event_handler', None) and not self.event_handler.is_valid():
-            self.add_error("[%s::%s] event_handler '%s' is invalid"
-                           % (self.my_type, self.get_name(), self.event_handler.command))
-            state = False
+            self.add_error("event_handler '%s' is invalid" % self.event_handler.command)
 
         if not hasattr(self, 'check_command'):
             # todo: This should never happen because the default exists as an empty string
-            self.add_error("[%s::%s] no property check_command" % (self.my_type, self.get_name()))
-            state = False
+            self.add_error("no check_command property")
         # Ok got a command, but maybe it's invalid
         else:
             # if not self.check_command:
             #     self.add_warning("[%s::%s] no check_command, will always be considered as Up"
             #                      % (self.my_type, self.get_name()))
             if self.check_command and not self.check_command.is_valid():
-                self.add_error("[%s::%s] check_command '%s' invalid"
-                               % (self.my_type, self.get_name(), self.check_command.command))
-                state = False
+                self.add_error("check_command '%s' invalid" % self.check_command.command)
+                # state = False
             if self.got_business_rule:
                 if not self.business_rule.is_valid():
-                    self.add_error("[%s::%s] business_rule invalid"
-                                   % (self.my_type, self.get_name()))
-                    for bperror in self.business_rule.configuration_errors:
-                        self.add_error("[%s::%s]: %s" % (self.my_type, self.get_name(), bperror))
-                    state = False
+                    self.add_error("business_rule invalid")
+                    for business_rule_error in self.business_rule.configuration_errors:
+                        self.add_error("%s" % business_rule_error)
 
         if not hasattr(self, 'notification_interval') \
-                and self.notifications_enabled is True:  # pragma: no cover, should never happen
-            self.add_error("[%s::%s] no notification_interval but notifications enabled"
-                           % (self.my_type, self.get_name()))
-            state = False
+                and getattr(self, 'notifications_enabled', None) is True:
+            self.add_error("no notification_interval but notifications enabled")
 
         # if no check_period, means 24x7, like for services
         if not hasattr(self, 'check_period'):
             self.check_period = None
 
-        state = super(SchedulingItem, self).is_correct()
-        return state
+        return super(SchedulingItem, self).is_correct() and self.conf_is_correct
 
 
 class SchedulingItems(CommandCallItems):
@@ -3424,8 +3409,7 @@ class SchedulingItems(CommandCallItems):
         if son_id in self:
             son = self[son_id]
         else:
-            msg = "Dependency son (%s) unknown, configuration error" % son_id
-            self.add_error(msg)
+            self.add_error("Dependent son (%s) is unknown, configuration error!" % son_id)
         parent = self[parent_id]
         son.act_depend_of.append((parent_id, notif_failure_criteria, dep_period, inherits_parents))
         parent.act_depend_of_me.append((son_id, notif_failure_criteria, dep_period,

@@ -75,7 +75,7 @@ from collections import deque
 import psutil
 
 
-from alignak.log import make_monitoring_log, set_log_level, set_log_console
+from alignak.log import make_monitoring_log, set_monitoring_logger, set_log_level, set_log_console
 from alignak.misc.common import SIGNALS_TO_NAMES_DICT
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.config import Config
@@ -360,7 +360,7 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
                 logger.debug("Satellite '%s' initial brok: %s", satellite.name, brok)
                 self.add(brok)
 
-    def load_monitoring_config_file(self, clean=True):
+    def load_monitoring_config_file(self, clean=False):
         # pylint: disable=too-many-branches,too-many-statements, too-many-locals
         """Load main configuration file (alignak.cfg)::
 
@@ -379,6 +379,8 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
         only used to parse the configuration and create the objects. Some utilities (like
         alignak-backend-import script) may need to avoid the cleaning ;)
 
+        Note that default is no cleaning!
+
         :param clean: set True to clean the created items
         :type clean: bool
 
@@ -391,7 +393,7 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
             # Force adding a console handler to the Alignak logger
             set_log_console(logging.INFO if not self.debug else logging.DEBUG)
             # Force the global logger at INFO level
-            set_log_level(logging.INFO if not self.debug else logging.DEBUG)
+            set_log_level(logging.INFO if not self.debug else logging.DEBUG, handlers=True)
             logger.info("-----")
             logger.info("Arbiter is in configuration check mode")
             logger.info("Arbiter log level got increased to a minimum of INFO")
@@ -452,11 +454,25 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
                         setattr(self.conf, key, entry.pythonize(value))
                     else:
                         setattr(self.conf, key, value)
-                    logger.debug("- setting '%s' as %s", key, getattr(self.conf, key))
+                    logger.debug("- setting '%s' as %s - %s",
+                                 key, type(key), getattr(self.conf, key))
                 logger.info("Got Alignak global configuration")
 
         self.alignak_name = getattr(self.conf, "alignak_name", self.name)
         logger.info("Configuration for Alignak: %s", self.alignak_name)
+
+        # Configure the global monitoring events logger
+        if self.conf.log_filename != os.path.abspath(self.conf.log_filename):
+            if self.conf.log_filename:
+                self.conf.log_filename = os.path.abspath(os.path.join(
+                    self.logdir, self.conf.log_filename))
+        if self.conf.log_filename:
+            set_monitoring_logger(self.conf.log_filename, self.conf.log_rotation_when,
+                                  self.conf.log_rotation_interval, self.conf.log_rotation_count,
+                                  self.conf.log_format, self.conf.log_date)
+            print("Configured a monitoring events logger: %s" % self.conf.log_filename)
+        else:
+            self.exit_on_error(message="No monitoring events log configured!", exit_code=2)
 
         if macros:
             self.conf.load_params(macros)
@@ -721,7 +737,8 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
         self.conf.fill_default_configuration()
 
         # Remove templates from config
-        self.conf.remove_templates()
+        # Do not remove anymore!
+        # self.conf.remove_templates()
 
         # Overrides specific service instances properties
         self.conf.override_properties()
@@ -870,8 +887,8 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
                     if o_type not in raw_objects:
                         raw_objects[o_type] = []
                     # Update the imported_from property if the module did not set
-                    if 'imported_from' not in obj:
-                        obj['imported_from'] = 'module:%s' % instance.name
+                    # if 'imported_from' not in obj:
+                    #     obj['imported_from'] = 'module:%s' % instance.name
                     # Append to the raw objects
                     raw_objects[o_type].append(obj)
                 logger.debug("Added %i %s objects from %s",
@@ -1152,6 +1169,8 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
                         process.terminate()
                     except psutil.AccessDenied:
                         logger.warning("Process %s is %s", process.name(), process.status())
+
+            time.sleep(1)
 
             procs = []
             for daemon in list(self.my_daemons.values()):
