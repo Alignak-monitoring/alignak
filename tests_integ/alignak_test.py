@@ -286,6 +286,9 @@ define host {
             # Nagios legacy files
             cfg.set('alignak-configuration', 'cfg', '%s/etc/alignak.cfg' % cfg_folder)
 
+            # Directory for running daemons
+            cfg.set('alignak-configuration', 'daemons_script_location', '')
+
             # Daemons launching and check
             cfg.set('alignak-configuration', 'polling_interval', '1')
             cfg.set('alignak-configuration', 'daemons_check_period', '1')
@@ -505,6 +508,9 @@ define host {
                 # Nagios legacy files
                 cfg.set('alignak-configuration', 'cfg', '%s/etc/alignak.cfg' % cfg_folder)
 
+                # Directory for running daemons
+                cfg.set('alignak-configuration', 'daemons_script_location', '')
+
                 # Daemons launching and check
                 cfg.set('alignak-configuration', 'polling_interval', '1')
                 cfg.set('alignak-configuration', 'daemons_check_period', '1')
@@ -512,6 +518,10 @@ define host {
                 cfg.set('alignak-configuration', 'daemons_start_timeout', '5')
                 cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '1')
                 cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '1')
+
+                # Poller/reactionner workers count limited to 1
+                cfg.set('alignak-configuration', 'min_workers', '1')
+                cfg.set('alignak-configuration', 'max_workers', '1')
 
                 with open('%s/etc/alignak.ini' % cfg_folder, "w") as modified:
                     cfg.write(modified)
