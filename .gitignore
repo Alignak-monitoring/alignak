@@ -1,5 +1,6 @@
 # Project files #
-######################
+#################
+.idea
 *.egg-info
 *.egg-tmp/
 .eggs/
@@ -12,12 +13,24 @@ INSTALLED_FILES
 .gitignore
 modules/*
 
+# Virtual env #
+###############
+python27
+python35
+python36
+
 # Logs and databases #
 ######################
 *.log*
 *.sqlite
 *.db*
 
+# Docker files #
+################
+docker/data/mongodb/*
+docker/data/alignak/run/*.pid
+docker/data/alignak/log/*.pid
+docker/data/alignak/retention/*.json
 
 # OS generated files #
 ######################
@@ -40,8 +53,9 @@ docs/build
 docs/tools/media/
 docs/tools/pages/
 
-
-# test and coverage
+# tests and coverage #
+######################
+.pytest_cache
 tests/.coverage
 tests/.coverage.*
 
