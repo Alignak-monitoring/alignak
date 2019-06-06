@@ -107,6 +107,9 @@ class TestDaemonsApi(AlignakTest):
             cfg = configparser.ConfigParser()
             cfg.read(files)
 
+            # Directory for running daemons
+            cfg.set('alignak-configuration', 'daemons_script_location', '/usr/local/bin')
+
             cfg.set('alignak-configuration', 'launch_missing_daemons', '1')
 
             cfg.set('alignak-configuration', 'daemons_check_period', '5')

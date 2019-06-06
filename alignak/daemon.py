@@ -201,8 +201,8 @@ from alignak.log import setup_logger, set_log_file, set_log_level
 from alignak.http.daemon import HTTPDaemon, PortNotFree
 from alignak.stats import statsmgr
 from alignak.modulesmanager import ModulesManager
-from alignak.property import StringProp, BoolProp, PathProp
-from alignak.property import IntegerProp, FloatProp, ListProp
+from alignak.property import (StringProp, BoolProp, PathProp,
+                              IntegerProp, FloatProp, ListProp)
 from alignak.misc.common import setproctitle, SIGNALS_TO_NAMES_DICT
 from alignak.version import VERSION
 
@@ -244,7 +244,8 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         'env_filename':
             StringProp(default=u''),
 
-        'log_loop':         # Set True to log the daemon loop activity
+        # Set True to log the daemon loop activity
+        'log_loop':
             BoolProp(default=False),
 
         'pid_filename':
@@ -261,6 +262,10 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
             PathProp(default=DEFAULT_WORK_DIR),
         'bindir':   # Default is empty
             PathProp(default=''),
+
+        # Create missing directories
+        'create_directories':
+            BoolProp(default=False),
 
         # Interface the daemon will listen to
         'host':
@@ -387,6 +392,8 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
 
         :param kwargs: list of key/value pairs from the daemon command line and configuration
         """
+        self.use_ssl = False
+
         self.alignak_env = None
         self.legacy_cfg_files = []
         self.modules_manager = None
@@ -406,6 +413,9 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         self.name = name
         self.host_name = socket.getfqdn()
         self.address = '127.0.0.1'
+        self.pre_log.append(("INFO",
+                             "Daemon '%s' running on host: %s"
+                             % (self.name, self.host_name)))
 
         # Check if /dev/shm exists and usable...
         self.check_shm()
@@ -516,7 +526,7 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                 print("Daemon '%s' did not correctly read Alignak environment file: %s"
                       % (self.name, args['<cfg_file>']))
                 print("Exception: %s\n%s" % (exp, traceback.format_exc()))
-                self.exit_on_exception(EnvironmentFile("Exception: %s" % (exp)))
+                self.exit_on_exception(EnvironmentFile("Exception: %s" % exp))
 
         # Stop me if it I am disabled in the configuration
         if not self.active:
@@ -584,6 +594,13 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         if self.uid is None or self.gid is None:
             self.exit_on_error("Configured user/group (%s/%s) are not valid."
                                % (self.user, self.group), exit_code=3)
+
+        # Check the configured daemon directories, and create some if configuration allows
+        self.workdir = self.check_dir(self.workdir, self.create_directories)
+        self.etcdir = self.check_dir(self.etcdir, False)
+        self.vardir = self.check_dir(self.vardir, False)
+        self.logdir = self.check_dir(self.logdir, self.create_directories)
+        self.bindir = self.check_dir(self.bindir, False)
 
         # Alignak logger configuration file
         if os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None):
@@ -783,46 +800,72 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
             _scheme = 'https'
         return _scheme
 
-    def check_dir(self, dirname):
+    def check_dir(self, dir_name, create):
         """Check and create directory
 
-        :param dirname: file name
-        :type dirname; str
+        If the directory name is a relative, this function will consider it
+        relative to the working directory. It will return the full path of the
+        directory
 
-        :return: None
+        :param create: create if it does not exist
+        :type create: bool
+
+        :param dir_name: file name
+        :type dir_name; str
+
+        :return: str, the real directory full path
         """
         try:
-            os.makedirs(dirname)
-            dir_stat = os.stat(dirname)
-            print("Created the directory: %s, stat: %s" % (dirname, dir_stat))
-            if not dir_stat.st_uid == self.uid:
-                os.chown(dirname, self.uid, self.gid)
-                os.chmod(dirname, 0o775)
-                dir_stat = os.stat(dirname)
+            if dir_name in [self.workdir]:
+                if dir_name != os.path.abspath(dir_name):
+                    # It is not an absolute path, so make it absolute!
+                    dir_name = os.path.abspath(dir_name)
+            else:
+                if dir_name != os.path.abspath(dir_name):
+                    # It is not an absolute path, so it is relative to the working dir...
+                    dir_name = os.path.abspath(os.path.join(self.workdir, dir_name))
+
+            if not os.path.exists(dir_name):
+                if create:
+                    os.makedirs(dir_name)
+                    dir_stat = os.stat(dir_name)
+                    print("I created the directory: %s, stat: %s" % (dir_name, dir_stat))
+                else:
+                    print("The directory: %s does not exist" % dir_name)
+                    return dir_name
+
+            dir_stat = os.stat(dir_name)
+            if create and not dir_stat.st_uid == self.uid:
+                os.chown(dir_name, self.uid, self.gid)
+                os.chmod(dir_name, 0o775)
+                dir_stat = os.stat(dir_name)
                 print("Changed directory ownership and permissions: %s, stat: %s"
-                      % (dirname, dir_stat))
+                      % (dir_name, dir_stat))
+
+                self.pre_log.append(("INFO",
+                                     "Daemon '%s' directory %s did not exist, I created it. "
+                                     "I set ownership for this directory to %s:%s."
+                                     % (self.name, dir_name, self.user, self.group)))
 
             self.pre_log.append(("DEBUG",
                                  "Daemon '%s' directory %s checking... "
                                  "User uid: %s, directory stat: %s."
-                                 % (self.name, dirname, os.getuid(), dir_stat)))
+                                 % (self.name, dir_name, os.getuid(), dir_stat)))
 
-            self.pre_log.append(("INFO",
-                                 "Daemon '%s' directory %s did not exist, I created it. "
-                                 "I set ownership for this directory to %s:%s."
-                                 % (self.name, dirname, self.user, self.group)))
+            return dir_name
+
         except OSError as exp:
-            if exp.errno == errno.EEXIST and os.path.isdir(dirname):
+            if exp.errno == errno.EEXIST and os.path.isdir(dir_name):
                 # Directory still exists...
                 pass
             else:
                 self.pre_log.append(("ERROR",
                                      "Daemon directory '%s' did not exist, "
                                      "and I could not create. Exception: %s"
-                                     % (dirname, exp)))
+                                     % (dir_name, exp)))
                 self.exit_on_error("Daemon directory '%s' did not exist, "
                                    "and I could not create.'. Exception: %s"
-                                   % (dirname, exp), exit_code=3)
+                                   % (dir_name, exp), exit_code=3)
 
     def do_stop(self):
         """Execute the stop of this daemon:
@@ -1238,9 +1281,9 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
 
         :return: None
         """
-        logger.info("Changing working directory to: %s", self.workdir)
+        self.pre_log.append(("INFO", "Changing working directory to: %s" % self.workdir))
 
-        self.check_dir(self.workdir)
+        # self.check_dir(self.workdir)
         try:
             os.chdir(self.workdir)
         except OSError as exp:
@@ -1748,7 +1791,9 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
                   u"-----",
                   u"Python: %s.%s" % (sys.version_info.major, sys.version_info.minor),
                   u"-----",
-                  u"My pid: %s" % self.pid]
+                  u"My pid: %s" % self.pid,
+                  u"My host name: %s" % self.host_name,
+                  u"-----"]
 
         if configuration:
             header = ["My configuration: "]
@@ -2161,7 +2206,7 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         # Configure the daemon logger
         try:
             # Make sure that the log directory is existing
-            self.check_dir(self.logdir)
+            # self.check_dir(self.logdir)
 
             if self.logger_configuration and not os.path.exists(self.logger_configuration):
                 print("The logger configuration file does not exist: %s"
