@@ -13,6 +13,9 @@ LABEL maintainer="Frédéric Mohier (frederic.mohier@alignak.net)" \
 
 ENV DEBIAN_FRONTEND noninteractive
 
+# Run as the root user
+USER root
+
 RUN apt-get install -y --no-install-recommends \
     nginx \
     python3-pip \
@@ -42,6 +45,13 @@ RUN cd /repos && \
     git checkout alignak-python3 && \
     pip3 install -r requirements.txt && \
     pip3 install .
+
+# Define some environment variables
+ENV ALIGNAK_GROUP "alignak"
+ENV ALIGNAK_USER  "alignak"
+
+# Run as the newly created user
+USER $ALIGNAK_USER
 
 # Copy the Nginx global conf
 COPY nginx.conf /etc/nginx/

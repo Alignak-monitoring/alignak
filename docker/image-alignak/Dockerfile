@@ -50,16 +50,19 @@ ENV ALIGNAK_GROUP "alignak"
 ENV ALIGNAK_USER  "alignak"
 
 # Create alignak system user/group for Alignak application
-# Note that the group is set a gid (1024), this to allow easy sharing with the doker host
+# Note that the group is set a gid (1024), this to allow easy sharing with the Docker host
 ARG ALIGNAK_SHARE_ID=1024
 RUN groupadd --system --gid $ALIGNAK_SHARE_ID $ALIGNAK_GROUP
 RUN useradd --system $ALIGNAK_USER --uid $ALIGNAK_SHARE_ID --gid $ALIGNAK_SHARE_ID
 
-ENV ALIGNAK_SHARE_DIR=$ALIGNAK_SHARE_DIR
-COPY ./entrypoint.sh /entrypoint.sh
-RUN chown $ALIGNAK_USER:$ALIGNAK_GROUP /entrypoint.sh
-RUN chmod 500 /entrypoint.sh
+# Create the shared directory if it does not exist and set proper credentials
+ARG ALIGNAK_SHARE_DIR=/alignak
+RUN mkdir -p $ALIGNAK_SHARE_DIR
+RUN chown $ALIGNAK_USER:$ALIGNAK_GROUP $ALIGNAK_SHARE_DIR
+RUN chmod -R 775 $ALIGNAK_SHARE_DIR
 
-ENTRYPOINT ["/entrypoint.sh"]
+# Run as the newly created user
+USER $ALIGNAK_USER
+
 # Run the arbiter in check mode for the configuration in the Alignak directory
 CMD ["alignak-arbiter", "-V", "-e", "/alignak/etc/alignak.ini" ]

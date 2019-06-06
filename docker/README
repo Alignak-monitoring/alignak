@@ -1,13 +1,18 @@
 # Docker Alignak
 
-To be completed...
+## Host / containers shared volume
+
+The *data/alignak* directory is shared between the host system and the running containers.
+
+
+## Using the makefile
+
 A GNU makefile exists to help for the most common operations with Alignak Docker images.
 
 The Makefile includes the *.env* file existing in the current directory.
 
 Note: If the *.env* file does not exist, running make will copy the default *.env.dist* file to a new *.env* file.
 
-## Using the makefile
 
 ```bash
 
