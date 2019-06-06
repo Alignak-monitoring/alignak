@@ -1,6 +1,15 @@
-FROM alignak/alignak:0.0.1
+ARG ALIGNAK_IMAGE_TAG
 
-LABEL maintainer="Frédéric Mohier (frederic.mohier@alignak.net)"
+FROM alignak/alignak:${ALIGNAK_IMAGE_TAG}
+
+ARG ALIGNAK_IMAGE_TAG
+
+ENV ALIGNAK_IMAGE_TAG $ALIGNAK_IMAGE_TAG
+
+LABEL maintainer="Frédéric Mohier (frederic.mohier@alignak.net)" \
+      alignak.image_type="UI" \
+      alignak.image.version=$ALIGNAK_IMAGE_TAG \
+      alignak.python.version=$PYTHON_BASE_VERSION
 
 ENV DEBIAN_FRONTEND noninteractive
 

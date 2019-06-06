@@ -1,18 +1,19 @@
+#!make
 # Specify a shell
 SHELL := /bin/bash
 
 .PHONY: help
 
 # Get the environment variables
+$(shell cp .env.dist .env)
 include .env
 
-ifndef DOCKER_TAG
-$(info The image TAG variable (DOCKER_TAG) is missing. Setting a default value!)
+ifndef ALIGNAK_IMAGE_TAG
+$(error The image TAG variable (ALIGNAK_IMAGE_TAG) is missing.)
 endif
 
 # Default values for the image
-PYTHON_VERSION ?= 3.6
-DOCKER_TAG ?= 0.0.0
+PYTHON_BASE_VERSION ?= 3.6
 DOCKER_REPOSITORY ?= alignak
 DOCKER_ALIGNAK_DAEMON ?= alignak
 DOCKER_ALIGNAK_WEBUI ?= alignak-ui
@@ -34,7 +35,7 @@ help: banner
 # --------------------
 banner: ## This help message
 	@echo -e "--------------------"
-	@echo -e "\x1b[36mImage\x1b[m:$(DOCKER_IMAGE):$(DOCKER_TAG)" | column -c2 -t -s :
+	@echo -e "\x1b[36mImage\x1b[m:$(DOCKER_IMAGE):$(ALIGNAK_IMAGE_TAG)" | column -c2 -t -s :
 	@echo -e "--------------------"
 
 build: banner  ## Build the image
@@ -68,8 +69,8 @@ check: banner  ## Check the Alignak configuration
 	docker-compose run arbiter-master alignak-arbiter -V -e $(ALIGNAK_CONFIGURATION_FILE)
 
 push: banner login   ## Push the image to the repository
-	$(info Pushing "$(DOCKER_IMAGE)":"$(DOCKER_TAG)" tagged image.)
-	@docker push $(DOCKER_IMAGE):$(DOCKER_TAG)
+	$(info Pushing "$(DOCKER_IMAGE)":"$(ALIGNAK_IMAGE_TAG)" tagged image.)
+	@docker push $(DOCKER_IMAGE):$(ALIGNAK_IMAGE_TAG)
 
 pull: banner   ## Pull the image
 	$(info Pulling "$(DOCKER_TAG)" tagged image.)

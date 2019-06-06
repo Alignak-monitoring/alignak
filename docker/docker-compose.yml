@@ -4,7 +4,7 @@ services:
   # Alignak daemons
   # - arbiter
   arbiter-master:
-    image: ${DOCKER_REPOSITORY}/${DOCKER_ALIGNAK_DAEMON}:${DOCKER_TAG}
+    image: ${DOCKER_REPOSITORY}/${DOCKER_SERVICE}:${ALIGNAK_IMAGE_TAG}
     build:
       context: ./image-alignak
       args:
@@ -86,7 +86,7 @@ services:
 
   # - broker
   broker-master:
-    image: ${DOCKER_REPOSITORY}/${DOCKER_ALIGNAK_WEBUI}:${DOCKER_TAG}
+    image: ${DOCKER_REPOSITORY}/${DOCKER_SERVICE_UI}:${ALIGNAK_IMAGE_TAG}
     build:
       context: image-alignak-ui
       args:

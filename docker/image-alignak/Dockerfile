@@ -8,12 +8,10 @@ ARG ALIGNAK_IMAGE_TAG
 ENV ALIGNAK_IMAGE_TAG $ALIGNAK_IMAGE_TAG
 ENV PYTHON_BASE_VERSION $PYTHON_BASE_VERSION
 
-LABEL alignak.image.version=$ALIGNAK_IMAGE_TAG \
+LABEL maintainer="Frédéric Mohier (frederic.mohier@alignak.net)" \
+      alignak.image_type="Generic" \
+      alignak.image.version=$ALIGNAK_IMAGE_TAG \
       alignak.python.version=$PYTHON_BASE_VERSION
-
-LABEL maintainer="Frédéric Mohier (frederic.mohier@alignak.net)"
-
-LABEL alignak.image_type="Generic"
 
 ENV DEBIAN_FRONTEND noninteractive
 
@@ -64,4 +62,4 @@ RUN chmod 500 /entrypoint.sh
 
 ENTRYPOINT ["/entrypoint.sh"]
 # Run the arbiter in check mode for the configuration in the Alignak directory
-CMD ["alignak-arbiter", "-V", "-e", "/repos/alignak/etc/alignak.ini" ]
+CMD ["alignak-arbiter", "-V", "-e", "/alignak/etc/alignak.ini" ]

@@ -1,8 +1,38 @@
 # Docker Alignak
 
 To be completed...
+A GNU makefile exists to help for the most common operations with Alignak Docker images.
+
+The Makefile includes the *.env* file existing in the current directory.
+
+Note: If the *.env* file does not exist, running make will copy the default *.env.dist* file to a new *.env* file.
+
+## Using the makefile
+
+```bash
+
+   # View all the available targets + doc
+   make
+
+   # Build the images
+   make build
+   # This will build the images according to the values defined in the .env file
+
+   # Clean extra unused images
+   make clean
+
+   # Push an image to your repository
+   # Direct
+   TAG=0.0.1 DOCKER_USER=username DOCKER_PASS=password make push
+
+   export TAG=0.0.1
+   export DOCKER_USER=username
+   export DOCKER_PASS=password
+   make push
+```
 
 ## Build and run
+You can also use usual docker-compose to build the Alignak images:
 
 ```bash
     docker-compose build
@@ -19,20 +49,6 @@ Check the Alignak configuration:
    docker-compose run arbiter-master
    or
    make check
-```
-
-## Using the makefile
-
-```bash
-
-   # Push an image to your repository
-   # Direct
-   TAG=0.0.1 DOCKER_USER=username DOCKER_PASS=password make push
-
-   export TAG=0.0.1
-   export DOCKER_USER=username
-   export DOCKER_PASS=password
-   make push
 ```
 
 ## Metrics and Graphite
