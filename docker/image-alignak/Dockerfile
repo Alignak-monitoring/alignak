@@ -35,13 +35,13 @@ RUN pip3 install --upgrade pip setuptools
 # Location for the git repositories
 RUN mkdir -p /repos
 
-ARG ALIGNAK_GIT_REPO=alignak-monitoring/alignak
 # Get the Alignak repository on develop branch
-RUN echo https://github.com/$ALIGNAK_GIT_REPO
+ARG ALIGNAK_GIT_REPO=alignak-monitoring/alignak
+ARG ALIGNAK_GIT_BRANCH=develop
 RUN cd /repos && \
     git clone https://github.com/$ALIGNAK_GIT_REPO && \
     cd alignak && \
-    git checkout develop && \
+    git checkout $ALIGNAK_GIT_BRANCH && \
     pip3 install -r requirements.txt && \
     pip3 install .
 
@@ -62,7 +62,7 @@ RUN chown $ALIGNAK_USER:$ALIGNAK_GROUP $ALIGNAK_SHARE_DIR
 RUN chmod -R 775 $ALIGNAK_SHARE_DIR
 
 # Run as the newly created user
-USER $ALIGNAK_USER
+#USER $ALIGNAK_USER
 
 # Run the arbiter in check mode for the configuration in the Alignak directory
 CMD ["alignak-arbiter", "-V", "-e", "/alignak/etc/alignak.ini" ]

@@ -54,6 +54,7 @@ implements contact for notification. Basically used for parsing.
 import logging
 from alignak.misc.serialization import unserialize
 from alignak.objects.item import Item
+from alignak.objects.notificationway import NotificationWay
 from alignak.objects.commandcallitem import CommandCallItems
 
 from alignak.util import strip_and_uniq
@@ -175,13 +176,6 @@ class Contact(Item):
         'service_notification_period', 'host_notification_period',
         'service_notification_options', 'host_notification_options',
         'contact_name'
-    )
-
-    simple_way_parameters = (
-        'service_notification_period', 'host_notification_period',
-        'service_notification_options', 'host_notification_options',
-        'service_notification_commands', 'host_notification_commands',
-        'min_business_impact'
     )
 
     def __init__(self, params, parsing=True):
@@ -320,8 +314,8 @@ class Contact(Item):
     def get_notification_commands(self, notifways, n_type, command_name=False):
         """Get notification commands for object type
 
-        :param notifways: list of alignak.objects.NotificationWay objects
-        :type notifways: NotificationWays
+        :param notifways: list of notification ways objects
+        :type notifways: alignak.objects.notificationway.NotificationWays
         :param n_type: object type (host or service)
         :type n_type: string
         :param command_name: True to update the inner property with the name of the command,

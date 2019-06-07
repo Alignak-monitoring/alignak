@@ -18,6 +18,7 @@ modules/*
 python27
 python35
 python36
+python37
 
 # Logs and databases #
 ######################
@@ -27,9 +28,10 @@ python36
 
 # Docker files #
 ################
+docker/.env
 docker/data/mongodb/*
 docker/data/alignak/run/*.pid
-docker/data/alignak/log/*.pid
+docker/data/alignak/log/*.log
 docker/data/alignak/retention/*.json
 
 # OS generated files #

@@ -18,40 +18,54 @@ USER root
 
 RUN apt-get install -y --no-install-recommends \
     nginx \
-    python3-pip \
     supervisor
 
 RUN apt-get autoremove && apt-get clean
 
-RUN pip3 install --upgrade pip setuptools
+#RUN pip3 install --upgrade pip setuptools
 
 # Location for the git repositories
 RUN mkdir -p /repos
 
+# Location for the external Shinken modules
+RUN mkdir -p /shinken_modules
+
 # Get the Shinken / Alignak Web UI
-ARG SHINKEN_WEBUI_GIT_REPO
+ARG SHINKEN_WEBUI_VERSION
 RUN cd /repos && \
-    git clone https://github.com/${SHINKEN_WEBUI_GIT_REPO} && \
+    git clone https://github.com/mohierf/mod-webui && \
     cd mod-webui && \
-    git checkout python3 && \
-    pip3 install -r requirements.txt && \
-    pip3 install .
+    git checkout ${SHINKEN_WEBUI_VERSION} && \
+    pip3 install -r requirements.txt
+
+# Shoud be installable, but :/
+#    pip3 install .
+RUN cd /repos && \
+    cd mod-webui && ls -alht && \
+    mkdir -p /shinken_modules/alignak_webui && \
+    cp -R module/* /shinken_modules/alignak_webui/
 
 # Get the Shinken / Alignak Web UI Graphite extension module
-ARG SHINKEN_UI_GRAPHITE_GIT_REPO
 RUN cd /repos && \
-    git clone https://github.com/${SHINKEN_UI_GRAPHITE_GIT_REPO} && \
+    git clone https://github.com/mohierf/mod-ui-graphite && \
     cd mod-ui-graphite && \
-    git checkout alignak-python3 && \
-    pip3 install -r requirements.txt && \
-    pip3 install .
+    git checkout develop && \
+    pip3 install -r requirements.txt
+
+# Shoud be installable, but :/
+#    pip3 install .
+# Note that this module is installable with pip install but we copy as for the main Web UI !
+RUN cd /repos && \
+    cd mod-ui-graphite && ls -alht && \
+    mkdir -p /shinken_modules/alignak_webui_graphite && \
+    cp -R alignak_webui_graphite/* /shinken_modules/alignak_webui_graphite/
 
 # Define some environment variables
 ENV ALIGNAK_GROUP "alignak"
 ENV ALIGNAK_USER  "alignak"
 
 # Run as the newly created user
-USER $ALIGNAK_USER
+#USER $ALIGNAK_USER
 
 # Copy the Nginx global conf
 COPY nginx.conf /etc/nginx/

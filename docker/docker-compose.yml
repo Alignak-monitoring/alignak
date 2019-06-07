@@ -9,6 +9,7 @@ services:
       context: ./image-alignak
       args:
         PYTHON_BASE_VERSION: 3.6
+        ALIGNAK_IMAGE_TAG: ${ALIGNAK_IMAGE_TAG}
         ALIGNAK_SHARE_DIR: /alignak
         ALIGNAK_GIT_REPO: ${ALIGNAK_GIT_REPO}
     env_file:
@@ -23,7 +24,7 @@ services:
 
   # - scheduler(s)
   scheduler-master:
-    image: ${DOCKER_REPOSITORY}/${DOCKER_ALIGNAK_DAEMON}:${DOCKER_TAG}
+    image: ${DOCKER_REPOSITORY}/${DOCKER_SERVICE}:${ALIGNAK_IMAGE_TAG}
     env_file:
       - .env
     networks:
@@ -35,7 +36,7 @@ services:
     command: "alignak-scheduler -e ${ALIGNAK_CONFIGURATION_FILE} -n scheduler-master"
 
   scheduler-north:
-    image: ${DOCKER_REPOSITORY}/${DOCKER_ALIGNAK_DAEMON}:${DOCKER_TAG}
+    image: ${DOCKER_REPOSITORY}/${DOCKER_SERVICE}:${ALIGNAK_IMAGE_TAG}
     env_file:
       - .env
     networks:
@@ -47,7 +48,7 @@ services:
     command: "alignak-scheduler -e ${ALIGNAK_CONFIGURATION_FILE} -n scheduler-north"
 
   scheduler-south:
-    image: ${DOCKER_REPOSITORY}/${DOCKER_ALIGNAK_DAEMON}:${DOCKER_TAG}
+    image: ${DOCKER_REPOSITORY}/${DOCKER_SERVICE}:${ALIGNAK_IMAGE_TAG}
     env_file:
       - .env
     networks:
@@ -60,7 +61,7 @@ services:
 
   # - reactionner
   reactionner-master:
-    image: ${DOCKER_REPOSITORY}/${DOCKER_ALIGNAK_DAEMON}:${DOCKER_TAG}
+    image: ${DOCKER_REPOSITORY}/${DOCKER_SERVICE}:${ALIGNAK_IMAGE_TAG}
     env_file:
       - .env
     networks:
@@ -73,7 +74,7 @@ services:
 
   # - poller
   poller-master:
-    image: ${DOCKER_REPOSITORY}/${DOCKER_ALIGNAK_DAEMON}:${DOCKER_TAG}
+    image: ${DOCKER_REPOSITORY}/${DOCKER_SERVICE}:${ALIGNAK_IMAGE_TAG}
     env_file:
       - .env
     networks:
@@ -90,9 +91,9 @@ services:
     build:
       context: image-alignak-ui
       args:
+        ALIGNAK_IMAGE_TAG: ${ALIGNAK_IMAGE_TAG}
         ALIGNAK_SHARE_DIR: /alignak
-        SHINKEN_WEBUI_GIT_REPO: ${SHINKEN_WEBUI_GIT_REPO}
-        SHINKEN_UI_GRAPHITE_GIT_REPO: ${SHINKEN_UI_GRAPHITE_GIT_REPO}
+        SHINKEN_WEBUI_VERSION: ${SHINKEN_WEBUI_VERSION}
     env_file:
       - .env
     networks:
@@ -108,7 +109,7 @@ services:
 
   # - receiver
   receiver-master:
-    image: ${DOCKER_REPOSITORY}/${DOCKER_ALIGNAK_DAEMON}:${DOCKER_TAG}
+    image: ${DOCKER_REPOSITORY}/${DOCKER_SERVICE}:${ALIGNAK_IMAGE_TAG}
     env_file:
       - .env
     networks:

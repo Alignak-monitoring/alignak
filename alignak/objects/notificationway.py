@@ -58,6 +58,7 @@ from alignak.objects.commandcallitem import CommandCallItems
 
 from alignak.property import IntegerProp, StringProp, ListProp, FULL_STATUS
 from alignak.commandcall import CommandCall
+from alignak.misc.serialization import serialize
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -154,11 +155,11 @@ class NotificationWay(Item):
         res = super(NotificationWay, self).serialize()
 
         res['service_notification_commands'] = \
-            [elem.serialize(no_json=no_json, printing=printing)
+            [serialize(elem, no_json=no_json, printing=printing)
              for elem in getattr(self, 'service_notification_commands')]
 
         res['host_notification_commands'] = \
-            [elem.serialize(no_json=no_json, printing=printing)
+            [serialize(elem, no_json=no_json, printing=printing)
              for elem in getattr(self, 'host_notification_commands')]
 
         return res

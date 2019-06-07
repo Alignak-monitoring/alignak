@@ -4,8 +4,11 @@ SHELL := /bin/bash
 
 .PHONY: help
 
+# Create the .env file if it does not exist
+ifeq (,$(wildcard .env))
+   $(shell cp .env.dist .env)
+endif
 # Get the environment variables
-$(shell cp .env.dist .env)
 include .env
 
 ifndef ALIGNAK_IMAGE_TAG
@@ -39,14 +42,14 @@ banner: ## This help message
 	@echo -e "--------------------"
 
 build: banner  ## Build the image
-	$(info Building Alignak $(DOCKER_TAG) tagged images.)
+	$(info Building Alignak $(ALIGNAK_IMAGE_TAG) tagged images.)
 	@docker-compose build
 	@make -s clean
 
 remove: banner ## Remove image
-	$(info Removing "$(DOCKER_IMAGE_DAEMON):$(DOCKER_TAG)" image...)
-	@docker rm $(DOCKER_IMAGE_DAEMON):$(DOCKER_TAG)
-	@docker rm $(DOCKER_IMAGE_WEBUI):$(DOCKER_TAG)
+	$(info Removing "$(DOCKER_IMAGE_DAEMON):$(ALIGNAK_IMAGE_TAG)" image...)
+	@docker rm $(DOCKER_IMAGE_DAEMON):$(ALIGNAK_IMAGE_TAG)
+	@docker rm $(DOCKER_IMAGE_WEBUI):$(ALIGNAK_IMAGE_TAG)
 
 clean: banner  ## Clean all
 	@docker system prune --volumes --force
@@ -73,8 +76,8 @@ push: banner login   ## Push the image to the repository
 	@docker push $(DOCKER_IMAGE):$(ALIGNAK_IMAGE_TAG)
 
 pull: banner   ## Pull the image
-	$(info Pulling "$(DOCKER_TAG)" tagged image.)
-	@docker pull $(DOCKER_IMAGE):$(DOCKER_TAG)
+	$(info Pulling "$(ALIGNAK_IMAGE_TAG)" tagged image.)
+	@docker pull $(DOCKER_IMAGE):$(ALIGNAK_IMAGE_TAG)
 
 login: banner  ## Login to the repository
 	$(info Login to Docker Hub, user $(DOCKER_USER).)
