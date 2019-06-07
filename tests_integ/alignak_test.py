@@ -287,7 +287,7 @@ define host {
             cfg.set('alignak-configuration', 'cfg', '%s/etc/alignak.cfg' % cfg_folder)
 
             # Directory for running daemons
-            cfg.set('alignak-configuration', 'daemons_script_location', '/usr/local/bin')
+            cfg.set('alignak-configuration', 'daemons_script_location', '')
 
             # Daemons launching and check
             cfg.set('alignak-configuration', 'polling_interval', '1')
@@ -509,7 +509,7 @@ define host {
                 cfg.set('alignak-configuration', 'cfg', '%s/etc/alignak.cfg' % cfg_folder)
 
                 # Directory for running daemons
-                cfg.set('alignak-configuration', 'daemons_script_location', '/usr/local/bin')
+                cfg.set('alignak-configuration', 'daemons_script_location', '')
 
                 # Daemons launching and check
                 cfg.set('alignak-configuration', 'polling_interval', '1')
