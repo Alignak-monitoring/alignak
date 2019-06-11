@@ -69,7 +69,7 @@ class PropertiesTester(object):
         item = self.item # shortcut
         print("Testing properties without default:")
         for name in self.without_default:
-            print(("- %s" % name))
+            print("- %s" % name)
             assert name in item.properties, \
                           'property %r not found in %s' % (name, self.item.my_type)
             assert isinstance(item.properties[name], ( ListProp, StringProp, IntegerProp )), \
@@ -80,7 +80,7 @@ class PropertiesTester(object):
         item = self.item # shortcut
         print("Testing properties with default:")
         for name, value in self.properties.items():
-            print(("- %s=%s" % (name, value)))
+            print("- %s=%s" % (name, value))
             assert name in item.properties, \
                           'property %r not found in %s' % (name, self.item.my_type)
             if hasattr(item.properties[name], 'default'):
@@ -96,11 +96,11 @@ class PropertiesTester(object):
         prop_names = set(list(self.properties.keys()) + self.unused_props + self.without_default)
 
         print("Testing all properties are tested:")
-        print(("- list: %s" % prop_names))
+        print("- list: %s" % prop_names)
         for name in item.properties:
             if name.startswith('$') and name.endswith('$'):
                 continue
-            print(("- %s" % name))
+            print("- %s" % name)
             assert name in prop_names, 'unknown property %r found' % name
 
 
@@ -359,8 +359,8 @@ class TestContact(PropertiesTester, AlignakTest):
         ('service_notification_commands', []),
         ('host_notification_period', ''),
         ('service_notification_period', ''),
-        ('service_notification_options', ['']),
-        ('host_notification_options', ['']),
+        ('service_notification_options', []),
+        ('host_notification_options', []),
         ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
@@ -672,8 +672,8 @@ class TestNotificationWay(PropertiesTester, AlignakTest):
         ]
 
     properties = dict([
-        ('service_notification_options', ['']),
-        ('host_notification_options', ['']),
+        ('service_notification_options', []),
+        ('host_notification_options', []),
         ('host_notification_commands', []),
         ('service_notification_commands', []),
         ('imported_from', 'alignak-self'),
@@ -681,8 +681,6 @@ class TestNotificationWay(PropertiesTester, AlignakTest):
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
-        ('host_notifications_enabled', True),
-        ('service_notifications_enabled', True),
         ('min_business_impact', 0),
         ])
 
