@@ -124,7 +124,9 @@ class AlignakObject(object):
         for prop, entry in self.__class__.properties.items():
             if hasattr(self, prop):
                 continue
-            if not hasattr(entry, 'default') or entry.default is NONE_OBJECT:
+            if not hasattr(entry, 'default'):
+                continue
+            if not entry.has_default:
                 continue
 
             if hasattr(entry.default, '__iter__'):

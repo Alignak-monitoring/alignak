@@ -147,7 +147,6 @@ class CommandCall(AlignakObject):
                 self.timeout = int(self.command.timeout)
         else:
             # Link the provided Alignak command with myself
-            unserialize(params['command'])
             self.command = unserialize(params['command'])
 
     def __str__(self):
