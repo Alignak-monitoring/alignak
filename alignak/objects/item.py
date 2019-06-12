@@ -106,11 +106,11 @@ class Item(AlignakObject):
     properties = AlignakObject.properties.copy()
     properties.update({
         'name':
-            StringProp(default=u''),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'imported_from':
-            StringProp(default=u'alignak-self'),
+            StringProp(default=u'alignak-self', fill_brok=[FULL_STATUS]),
         'use':
-            ListProp(default=[], split_on_comma=True),
+            ListProp(default=[], split_on_comma=True, fill_brok=[FULL_STATUS]),
         'definition_order':
             IntegerProp(default=100),
         'register':
