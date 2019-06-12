@@ -293,10 +293,7 @@ class NotificationWay(Item):
         :return: command list
         :rtype: list[alignak.objects.command.Command]
         """
-        # service_notification_commands for service
-        notif_commands_prop = o_type + '_notification_commands'
-        notif_commands = getattr(self, notif_commands_prop)
-        return notif_commands
+        return getattr(self, o_type + '_notification_commands', []) or []
 
     def is_correct(self):
         # pylint: disable=too-many-branches
