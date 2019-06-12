@@ -828,10 +828,6 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
                                "Nothing to worry about, but you should define them, "
                                "else Alignak will use its default configuration.")
 
-            # Display found warnings and errors
-            self.conf.show_errors()
-            self.request_stop()
-
         del raw_objects
 
         # Display found warnings and errors
@@ -898,8 +894,6 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
         """Load Alignak configuration from the arbiter modules
         If module implements get_alignak_configuration, call this function
 
-        :param raw_objects: raw objects we got from reading config files
-        :type raw_objects: dict
         :return: None
         """
         alignak_cfg = {}
@@ -2134,6 +2128,9 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
 
             # Load monitoring configuration files
             self.load_monitoring_config_file()
+            if self.verify_only:
+                # Exit!
+                self.request_stop()
 
             # Set my own process title
             self.set_proctitle(self.name)
@@ -2155,7 +2152,7 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
                     self.request_stop()
                 else:
                     # Loop if a configuration reload is raised while
-                    # still reloading the configuration
+                    # we are still reloading the configuration
                     while self.need_config_reload:
                         # Clear the former configuration
                         self.need_config_reload = False
