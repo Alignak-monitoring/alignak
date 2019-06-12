@@ -106,11 +106,11 @@ class Item(AlignakObject):
     properties = AlignakObject.properties.copy()
     properties.update({
         'name':
-            StringProp(default=u''),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'imported_from':
-            StringProp(default=u'alignak-self'),
+            StringProp(default=u'alignak-self', fill_brok=[FULL_STATUS]),
         'use':
-            ListProp(default=[], split_on_comma=True),
+            ListProp(default=[], split_on_comma=True, fill_brok=[FULL_STATUS]),
         'definition_order':
             IntegerProp(default=100),
         'register':
@@ -972,7 +972,7 @@ class Items(object):
         :type template: alignak.objects.item.Item
         :return: None
         """
-        logger.info("Removing template: %s", template.get_name())
+        logger.debug("Removing %s template: %s", template.my_type, template.get_name())
         self.unindex_template(template)
         self.templates.pop(template.uuid, None)
 
@@ -1072,7 +1072,7 @@ class Items(object):
         :type item: alignak.objects.item.Item
         :return: None
         """
-        logger.info("Removing item: %s", item.get_name())
+        logger.debug("Removing %s item: %s", item.my_type, item.get_name())
         self.unindex_item(item)
         self.items.pop(item.uuid, None)
 

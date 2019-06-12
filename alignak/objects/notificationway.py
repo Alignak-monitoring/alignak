@@ -56,7 +56,7 @@ import logging
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
 
-from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, FULL_STATUS
+from alignak.property import IntegerProp, StringProp, ListProp, FULL_STATUS
 from alignak.commandcall import CommandCall
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -293,10 +293,7 @@ class NotificationWay(Item):
         :return: command list
         :rtype: list[alignak.objects.command.Command]
         """
-        # service_notification_commands for service
-        notif_commands_prop = o_type + '_notification_commands'
-        notif_commands = getattr(self, notif_commands_prop)
-        return notif_commands
+        return getattr(self, o_type + '_notification_commands', []) or []
 
     def is_correct(self):
         # pylint: disable=too-many-branches

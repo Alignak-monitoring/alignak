@@ -164,8 +164,7 @@ class Broker(BaseSatellite):
                     c_id = data['full_instance_id']
                     source = getattr(elt, 'source', getattr(elt, '_source', None))
                     logger.info('The module %s is asking me to get all initial data '
-                                'from the scheduler %d',
-                                source, c_id)
+                                'from the scheduler %s', source, c_id)
                     # so we just reset the connection and the running_id,
                     # it will just get all new things
                     try:

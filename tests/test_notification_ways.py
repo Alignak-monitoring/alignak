@@ -136,6 +136,18 @@ class TestNotificationWay(AlignakTest):
         ]
 
         test = copy.deepcopy(email_in_day)
+        # No defined commands
+        test.host_notification_commands = None
+        test.service_notification_commands = None
+        assert test.is_correct()
+        assert test.configuration_warnings == [
+            '[notificationway::email_in_day] do not have any service_notification_commands defined',
+            '[notificationway::email_in_day] do not have any host_notification_commands defined'
+        ]
+        assert test.get_notification_commands('host') == []
+        assert test.get_notification_commands('service') == []
+
+        test = copy.deepcopy(email_in_day)
         test.host_notification_period = None
         test.host_notification_commands = [None]
         test.service_notification_period = None

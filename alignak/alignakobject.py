@@ -23,7 +23,7 @@
 
 import uuid
 from copy import copy
-from alignak.property import NONE_OBJECT, SetProp
+from alignak.property import SetProp
 
 
 def get_a_new_object_id():
