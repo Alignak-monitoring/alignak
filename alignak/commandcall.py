@@ -69,7 +69,7 @@ class CommandCall(AlignakObject):
     my_type = 'CommandCall'
 
     properties = {
-        # Initial command line lie in the configuration
+        # Initial command line in the configuration
         'command_line':
             StringProp(),
         # Command line split: name and arguments
@@ -114,12 +114,9 @@ class CommandCall(AlignakObject):
         super(CommandCall, self).__init__(params, parsing=False)
 
         for key in params:
-            # We want to create instance of object with the good type.
-            # Here we've just parsed config files so everything is a string or a list.
-            # We use the pythonize method to get the good type.
             try:
-                if key in self.properties:
-                    val = self.properties[key].pythonize(params[key])
+                if key in self.__class__.properties:
+                    val = self.__class__.properties[key].pythonize(params[key])
                 else:
                     val = ToGuessProp().pythonize(params[key])
             except (PythonizeError, AttributeError, ValueError, TypeError) as exp:
@@ -158,12 +155,12 @@ class CommandCall(AlignakObject):
         # uuid is not in *_properties
         res = {'uuid': self.uuid}
         for prop in self.__class__.properties:
-            if hasattr(self, prop):
+            if prop in ['command']:
+                # Specific for the command (alignak.objects.command.Command object)
+                res[prop] = serialize(getattr(self, prop))
+            elif hasattr(self, prop):
                 res[prop] = getattr(self, prop)
 
-        res['command'] = None
-        if self.command:
-            res['command'] = serialize(self.command)
         return res
 
     def get_command_and_args(self):

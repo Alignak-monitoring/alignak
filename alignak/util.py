@@ -706,7 +706,7 @@ def unique_value(val):
     :return: single value
     :rtype: str
     """
-    return val if not isinstance(val, list) else val[-1]
+    return val if not isinstance(val, list) else val[-1] if val else ''
 
 
 # ##################### Sorting ################
