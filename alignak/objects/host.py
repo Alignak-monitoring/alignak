@@ -259,8 +259,9 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
 
     def __str__(self):  # pragma: no cover
         return '<Host%s %s, uuid=%s, %s (%s), realm: %s, use: %s />' \
-               % (' template' if self.is_a_template() else '', self.get_full_name(), self.uuid,
-                  self.state, self.state_type, getattr(self, 'realm', 'Unset'),
+               % (' template' if self.is_a_template() else '', self.get_full_name(),
+                  getattr(self, 'uuid', 'n/a'), getattr(self, 'state', 'n/a'),
+                  getattr(self, 'state_type', 'n/a'), getattr(self, 'realm', 'Default'),
                   getattr(self, 'use', None))
     __repr__ = __str__
 

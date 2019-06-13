@@ -53,9 +53,12 @@ This module provide Command class used to define external commands to
 check if something is ok or not
 """
 
+import logging
 from alignak.objects.item import Item, Items
 from alignak.property import StringProp, IntegerProp, BoolProp, FULL_STATUS
 from alignak.autoslots import AutoSlots
+
+logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
 class Command(Item):
@@ -164,6 +167,10 @@ class Command(Item):
                 self.add_warning("has too many parameters. Changed to %s" % self.command_name)
 
         return super(Command, self).is_correct() and state
+
+    def serialize(self):
+        res = super(Command, self).serialize()
+        return res
 
 
 class Commands(Items):

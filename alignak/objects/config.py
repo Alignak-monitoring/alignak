@@ -921,20 +921,18 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
             self.instance_id = u'%s_%d' % (self.__class__.__name__, self.__class__._next_id)
             self.__class__._next_id += 1
 
-            # let's compute the "USER" properties and macros..
+            # Compute the "USER" properties and macros
             for i in range(1, 65):
                 if '$USER%d$' % i in self.__class__.properties:
                     continue
                 self.__class__.macros['USER%d' % i] = '$USER%s$' % i
                 self.__class__.properties['$USER%d$' % i] = StringProp(default='')
-
-            # Fill all the configuration properties with their default values
-            # self.fill_default()
         elif 'instance_id' not in params:
             logger.error("When not parsing a configuration, an instance_id "
                          "must exist in the provided parameters for a configuration!")
         else:
             self.instance_id = params['instance_id']
+
             # Un serialize objects lists
             for _, _, strclss, _, _ in list(self.types_creations.values()):
                 if strclss in ['arbiters', 'schedulers', 'brokers',
@@ -949,7 +947,9 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                          'global_host_event_handler', 'global_service_event_handler']:
                 if prop not in params or params[prop] is None:
                     continue
+                print("Config %s = %s" % (prop, params[prop]))
                 setattr(self, prop, unserialize(params[prop]))
+                print("Config %s = %s" % (prop, getattr(self, prop)))
                 del params[prop]
 
         super(Config, self).__init__(params, parsing=parsing)
@@ -1001,9 +1001,10 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         # Some special properties
         for prop in ['host_perfdata_command', 'service_perfdata_command',
                      'global_host_event_handler', 'global_service_event_handler']:
-            res[prop] = None
-            if getattr(self, prop, None) not in [None, '', 'None']:
-                res[prop] = serialize(getattr(self, prop))
+            # res[prop] = None
+            # if getattr(self, prop, None) not in [None, '', 'None']:
+            #     res[prop] = serialize(getattr(self, prop))
+            res[prop] = serialize(getattr(self, prop, None))
 
         res['macros'] = self.macros
         return res
@@ -1846,7 +1847,6 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
         # We have all monitored elements, we can create a default realm if none is defined
         if not getattr(self, 'realms', None):
-            print("Set default realm: %s" % self.realms.__dict__)
             self.fill_default_realm()
             self.realms.fill_default()
 

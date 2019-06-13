@@ -469,8 +469,6 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
             # When deserialized, those are dictionaries
             for prop in ['check_command', 'event_handler', 'snapshot_command',
                          'business_rule', 'acknowledgement']:
-                if prop not in params or params[prop] is None:
-                    continue
                 setattr(self, prop, unserialize(params[prop]))
                 del params[prop]
         # else:
@@ -478,7 +476,7 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         #     self.business_rule = None
 
         super(SchedulingItem, self).__init__(params, parsing=parsing)
-        # Default will be filled in Host or Service class!
+        # Default values for unset parameters will be filled in Host or Service class!
 
     @property
     def monitored(self):
@@ -510,9 +508,7 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
 
         for prop in ['check_command', 'event_handler', 'snapshot_command',
                      'business_rule', 'acknowledgement']:
-            res[prop] = None
-            if getattr(self, prop, None) is not None:
-                res[prop] = serialize(getattr(self, prop))
+            res[prop] = serialize(getattr(self, prop, None))
 
         return res
 
@@ -2365,8 +2361,13 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         # pylint: disable=too-many-branches, too-many-return-statements
         """Launch a check (command)
 
+        :param hosts: list of all hosts
+        :param services: list of all services
+        :param timeperiods: list of all time periods
+        :param checks: list of all current checks
         :param timestamp:
         :type timestamp: int
+        :param macromodulations: list of all macro modulations
         :param checkmodulations: Checkmodulations objects, used to change check command if necessary
         :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
         :param ref_check:
@@ -2403,6 +2404,7 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
 
             c_in_progress = checks[self.checks_in_progress[0]]
 
+            # todo: create a copy function in the Check class
             # c_in_progress has almost everything we need but we cant copy.deepcopy() it
             # we need another c.uuid
             data = {
@@ -2457,6 +2459,7 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
             check_command = self.check_command
             command_line = ''
             if check_command:
+                print("CC: %s / %s" % (self, check_command))
                 poller_tag = check_command.poller_tag
                 module_type = check_command.module_type
 

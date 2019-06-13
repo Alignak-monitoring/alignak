@@ -201,8 +201,7 @@ class UnusedProp(Property):
                                          managed=True)
 
         if text is None:
-            text = ("This parameter is no longer useful in the "
-                    "Alignak architecture.")
+            text = "This parameter is no longer useful in the Alignak architecture."
         self.text = text
         self.unused = True
 
