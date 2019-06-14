@@ -360,14 +360,6 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
         """
         return self.services
 
-    def get_full_name(self):
-        """Accessor to host_name attribute
-
-        :return: host_name
-        :rtype: str
-        """
-        return self.get_name()
-
     def get_groupname(self, hostgroups):
         """Get name of the first host's hostgroup (alphabetic sort)
 

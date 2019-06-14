@@ -377,14 +377,6 @@ class Item(AlignakObject):
         """
         return self.get_name()
 
-    # def get_full_name(self):
-    #     """Accessor to name attribute
-    #
-    #     :return: name
-    #     :rtype: str
-    #     """
-    #     return getattr(self, 'name', 'unnamed')
-    #
     def is_a_template(self):
         """
         Check if this object is a template
@@ -744,7 +736,6 @@ class Items(object):
     """
     Class to manage all Item objects of the same type
     """
-
     inner_class = Item
 
     def __init__(self, items, index_items=True, parsing=True):
@@ -775,10 +766,13 @@ class Items(object):
                          len(self.items), len(self.templates))
 
     def __repr__(self):  # pragma: no cover
-        # Build a sorted list of unicode elements name or uuid, this to make it easier to compare ;)
-        dump_list = sorted([str(item.get_name()
-                                if isinstance(item, Item) else item) for item in self])
-        return '<%r, %d elements: %r/>' % (self.__class__.__name__, len(self), dump_list)
+        # Build a sorted list of the 10 first elements name, this to make it easier to compare ;)
+        dump_list = sorted([str(item.get_full_name()
+                                if isinstance(item, Item) else item) for item in self])[:10]
+        if self.templates:
+            return "<%s, %d templates, %d elements: %s.../>" \
+                   % (self.__class__.__name__, len(self.templates), len(self.items), dump_list)
+        return "<%s, %d elements: %s/>" % (self.__class__.__name__, len(self.items), dump_list)
     __str__ = __repr__
 
     def __iter__(self):

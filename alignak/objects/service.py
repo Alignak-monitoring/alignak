@@ -234,8 +234,8 @@ class Service(SchedulingItem):
     # Or Alignak deprecated names like criticity
     old_properties = SchedulingItem.old_properties.copy()
     old_properties.update({
-        'hostgroup':    'hostgroup_name',
-        'hostgroups':    'hostgroup_name',
+        'hostgroup': 'hostgroup_name',
+        'hostgroups': 'hostgroup_name',
     })
 
     def __str__(self):  # pragma: no cover
