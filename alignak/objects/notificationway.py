@@ -159,7 +159,6 @@ class NotificationWay(Item):
             else:
                 res[prop] = [elem.serialize() for elem in getattr(self, prop)]
 
-        print("Serialize nw: %s / %s" % (self, res))
         return res
 
     def want_service_notification(self, timeperiods, timestamp, state, n_type, business_impact,
@@ -305,8 +304,6 @@ class NotificationWay(Item):
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        # print("Checking NW: %s" % self.__dict__)
-
         # Internal checks before executing inherited function...
 
         # Service part

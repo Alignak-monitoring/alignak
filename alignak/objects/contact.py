@@ -52,6 +52,7 @@
 implements contact for notification. Basically used for parsing.
 """
 import logging
+from alignak.misc.serialization import unserialize
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
 
@@ -59,7 +60,6 @@ from alignak.util import strip_and_uniq
 from alignak.property import (BoolProp, IntegerProp, StringProp, ListProp,
                               DictProp, FULL_STATUS, CHECK_RESULT)
 from alignak.log import make_monitoring_log
-from alignak.commandcall import CommandCall
 from alignak.objects.notificationway import NotificationWay
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
@@ -186,17 +186,18 @@ class Contact(Item):
 
     def __init__(self, params, parsing=True):
         # When deserialized, those are dict
-        for prop in ['service_notification_commands', 'host_notification_commands']:
-            if prop in params and isinstance(params[prop], list) and params[prop] \
-                    and isinstance(params[prop][0], dict):
-                new_list = [CommandCall(elem, parsing=parsing) for elem in params[prop]]
-                # We recreate the object
+        if not parsing:
+            for prop in ['service_notification_commands', 'host_notification_commands']:
+                if prop not in params:
+                    continue
+
+                # We recreate the list of objects
+                new_list = [unserialize(elem, True) for elem in params[prop]]
                 setattr(self, prop, new_list)
                 # And remove prop, to prevent from being overridden
                 del params[prop]
 
         super(Contact, self).__init__(params, parsing=parsing)
-        # self.fill_default()
 
     def __str__(self):  # pragma: no cover
         return '<Contact%s %s, uuid=%s, use: %s />' \
@@ -216,17 +217,6 @@ class Contact(Item):
         elif getattr(self, 'alias', None) and getattr(self, 'alias', None) != 'none':
             name = "({}) {}".format(getattr(self, 'alias'), name)
         return name
-
-    def serialize(self):
-        res = super(Contact, self).serialize()
-
-        for prop in ['service_notification_commands', 'host_notification_commands']:
-            if getattr(self, prop, None) is None:
-                res[prop] = None
-            else:
-                res[prop] = [c.serialize() for c in getattr(self, prop)]
-
-        return res
 
     def get_groupname(self):
         """
