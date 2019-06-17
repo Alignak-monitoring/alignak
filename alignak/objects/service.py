@@ -326,7 +326,7 @@ class Service(SchedulingItem):
         :return: Tuple with host_name and service_description
         :rtype: tuple
         """
-        return getattr(self, 'host_name', 'unhosted'), self.get_name()
+        return self.get_host_name(), self.get_name()
 
     @property
     def display_name(self):
@@ -335,11 +335,7 @@ class Service(SchedulingItem):
         :return: service description or service display_name
         :rtype: str
         """
-        display_name = getattr(self, '_display_name', None)
-        if display_name:
-            return display_name
-
-        return self.get_name()
+        return getattr(self, '_display_name', self.get_name())
 
     @display_name.setter
     def display_name(self, display_name):
@@ -350,14 +346,25 @@ class Service(SchedulingItem):
         """
         self._display_name = display_name
 
+    def get_host_name(self):
+        """Returns the service host name
+
+        :return: service' host name
+        :rtype: str
+        """
+        host_name = getattr(self, 'host_name', 'unhosted')
+        if not host_name:
+            return 'unhosted'
+        return host_name
+
     def get_full_name(self):
         """Get the full name for debugging (host_name/service_description)
 
         :return: service full name
         :rtype: str
         """
-        if hasattr(self, 'host_name') and hasattr(self, 'service_description'):
-            return "%s/%s" % (self.host_name, self.service_description)
+        if self.get_host_name() and hasattr(self, 'service_description'):
+            return "%s/%s" % (self.get_host_name(), self.service_description)
         return self.get_name()
 
     def get_servicegroups(self):
