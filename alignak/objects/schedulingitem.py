@@ -2461,7 +2461,6 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
             check_command = self.check_command
             command_line = ''
             if check_command:
-                print("CC: %s / %s" % (self, check_command))
                 poller_tag = check_command.poller_tag
                 module_type = check_command.module_type
 
