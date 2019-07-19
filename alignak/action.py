@@ -611,7 +611,7 @@ if os.name != 'nt':
                 self.status = ACT_STATUS_DONE
                 self.execution_time = time.time() - self.check_time
 
-                raise ActionError('process_launch_failed')
+                raise ActionError('process_launch_failed: ' + self.output)
             except OSError as exp:  # pylint: disable=duplicate-except
                 logger.error("Fail launching command: %s, force shell: %s, OSError: %s",
                              self.command, force_shell, exp)
@@ -627,13 +627,13 @@ if os.name != 'nt':
 
                 # Maybe we run out of file descriptor. It's not good at all!
                 if exp.errno == 24 and exp.strerror == 'Too many open files':
-                    raise ActionError('toomanyopenfiles')
+                    raise ActionError('toomanyopenfiles: ' + self.output)
 
-                raise ActionError('process_launch_failed')
+                raise ActionError('process_launch_failed: ' + self.output)
             except Exception as exp:  # pylint: disable=broad-except
                 logger.error("Fail launching command: %s, force shell: %s, exception: %s",
                              self.command, force_shell, exp)
-                raise ActionError('process_launch_failed')
+                raise ActionError('process_launch_failed: ' + self.output)
 
             # logger.info("- %s launched (pid=%d, gids=%s)",
             #             self.process.name(), self.process.pid, self.process.gids())
