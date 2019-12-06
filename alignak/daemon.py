@@ -409,8 +409,10 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         # Used to track debug, info warnings that will be logged once the logger is effective
         self.pre_log = []
 
-        # I got my name
+        # I got my name and I define an environment variable with my name
         self.name = name
+        os.environ['ALIGNAK_DAEMON'] = self.name
+
         self.host_name = socket.getfqdn()
         self.address = '127.0.0.1'
         self.pre_log.append(("INFO",

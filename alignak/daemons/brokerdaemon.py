@@ -89,9 +89,7 @@ class Broker(BaseSatellite):
         'type':
             StringProp(default='broker'),
         'port':
-            IntegerProp(default=7772),
-        'got_initial_broks':
-            BoolProp(default=False)
+            IntegerProp(default=7772)
 
     })
 
@@ -101,6 +99,8 @@ class Broker(BaseSatellite):
         :param kwargs: command line arguments
         """
         super(Broker, self).__init__(kwargs.get('daemon_name', 'Default-broker'), **kwargs)
+
+        self.got_initial_broks = False
 
         # Our schedulers and arbiters are initialized in the base class
 

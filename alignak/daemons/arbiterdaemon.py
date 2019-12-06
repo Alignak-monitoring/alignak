@@ -128,6 +128,11 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
         self.my_monitor = None
         self.my_status = 0
 
+        # Verify mode is set thanks to the -V command line parameter
+        self.verify_only = False
+        if 'verify_only' in kwargs and kwargs['verify_only']:
+            self.verify_only = kwargs.get('verify_only', False)
+
         super(Arbiter, self).__init__(kwargs.get('daemon_name', 'Default-Arbiter'), **kwargs)
 
         # Our schedulers and arbiters are initialized in the base class
@@ -159,9 +164,6 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
                 my_cfg_files.append(os.path.abspath(cfg_file))
         self.legacy_cfg_files = my_cfg_files
 
-        self.verify_only = False
-        if 'verify_only' in kwargs and kwargs['verify_only']:
-            self.verify_only = kwargs.get('verify_only', False)
         self.alignak_name = self.name
         if 'alignak_name' in kwargs and kwargs['alignak_name']:
             self.alignak_name = kwargs['alignak_name']
