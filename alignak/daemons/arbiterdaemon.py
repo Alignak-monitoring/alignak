@@ -232,9 +232,9 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
                 with self.events_lock:
                     self.events.append(elt)
                 statsmgr.counter('events', 1)
-            else:
-                with self.broks_lock:
-                    self.broks.append(elt)
+            # Also add to our broks
+            with self.broks_lock:
+                self.broks.append(elt)
             statsmgr.counter('broks.added', 1)
         elif isinstance(elt, ExternalCommand):
             logger.debug("Queuing an external command '%s'", str(elt.__dict__))
