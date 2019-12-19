@@ -585,7 +585,7 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
             data['fields'].update({metric: value})
 
         # Flush if necessary
-        logger.debug("Data: %s", data)
+        logger.debug("Metrics data: %s", data)
         self.my_metrics.append(data)
 
         if self.metrics_count >= self.metrics_flush_count:
