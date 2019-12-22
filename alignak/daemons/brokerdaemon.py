@@ -67,7 +67,7 @@ import logging
 from alignak.objects import *
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.satellite import BaseSatellite
-from alignak.property import IntegerProp, StringProp, BoolProp
+from alignak.property import IntegerProp, StringProp
 from alignak.stats import statsmgr
 from alignak.http.broker_interface import BrokerInterface
 from alignak.objects.satellitelink import SatelliteLink, LinkError
@@ -142,9 +142,9 @@ class Broker(BaseSatellite):
                 with self.events_lock:
                     self.events.append(elt)
                 statsmgr.counter('events', 1)
-            else:
-                with self.broks_lock:
-                    self.broks.append(elt)
+            # Also add to our broks
+            with self.broks_lock:
+                self.broks.append(elt)
             statsmgr.counter('broks.added', 1)
         elif isinstance(elt, ExternalCommand):
             logger.debug("Queuing an external command '%s'", str(elt.__dict__))
@@ -439,7 +439,7 @@ class Broker(BaseSatellite):
 
         logger.debug("Begin Loop: still some old broks to manage (%d)", len(self.external_broks))
         if self.external_broks:
-            statsmgr.gauge('unmanaged.broks', len(self.external_broks))
+            statsmgr.gauge('broks.unmanaged', len(self.external_broks))
 
         # Try to see if one of my module is dead, and restart previously dead modules
         self.check_and_del_zombie_modules()

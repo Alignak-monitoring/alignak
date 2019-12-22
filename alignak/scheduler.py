@@ -496,7 +496,7 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
             with self.my_daemon.events_lock:
                 self.my_daemon.events.append(brok)
             statsmgr.counter('events', 1)
-            return
+            # return
 
         if broker_uuid:
             if broker_uuid not in self.my_daemon.brokers:

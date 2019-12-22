@@ -344,7 +344,7 @@ class TestLaunchArbiter(AlignakTest):
             cfg.set('alignak-configuration', 'polling_interval', '1')
             cfg.set('alignak-configuration', 'daemons_check_period', '3')
             cfg.set('alignak-configuration', 'daemons_stop_timeout', '1')
-            cfg.set('alignak-configuration', 'daemons_start_timeout', '1')
+            cfg.set('alignak-configuration', 'daemons_start_timeout', '3')
             cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '1')
             cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '1')
             cfg.set('daemon.arbiter-master', 'alignak_launched', '1')
@@ -357,6 +357,7 @@ class TestLaunchArbiter(AlignakTest):
             cfg.set('daemon.broker-master', 'alignak_launched', '1')
             with open('/tmp/alignak/etc/alignak.ini', "w") as modified:
                 cfg.write(modified)
+            os.remove('/tmp/alignak/etc/alignak.d/daemons.ini')
         except Exception as exp:
             print("* parsing error in config file: %s" % exp)
             assert False
@@ -367,7 +368,7 @@ class TestLaunchArbiter(AlignakTest):
 
         # Sleep some few seconds because of the time needed to start the processes,
         # poll them and declare as faulty !
-        sleep(15)
+        sleep(30)
 
         # The arbiter will NOT have stopped! It is still running
         ret = self.procs['arbiter-master'].poll()
@@ -379,10 +380,28 @@ class TestLaunchArbiter(AlignakTest):
 
         print("Killing one daemon process...")
         self._stop_daemons(['receiver'])
-        sleep(1)
-        self._ping_daemons()
-        sleep(2)
+        # sleep(1)
+        # self._ping_daemons()
+        # sleep(2)
 
         sleep(30)
 
         self._stop_daemons(['arbiter'])
+
+        all_ok = 0
+        with open('/tmp/alignak/log/arbiter-master.log') as f:
+            for line in f:
+                if 'WARNING:' in line:
+                    if "A daemon (receiver/receiver-master) that we must be " \
+                       "related with cannot be connected" in line:
+                        all_ok = all_ok + 1
+                        print("... %s" % line.rstrip())
+                    if "Setting the satellite receiver-master as dead :(" in line:
+                        all_ok = all_ok + 1
+                        print("... %s" % line.rstrip())
+                    if "Dispatcher, these daemons are not configured: receiver-master, and a " \
+                       "configuration has yet been dispatched dispatch, " \
+                       "a new dispatch is required..." in line:
+                        all_ok = all_ok + 1
+                        print("... %s" % line.rstrip())
+        assert all_ok >= 3

@@ -531,8 +531,8 @@ class ExternalCommandManager(object):
 
         self.accept_passive_unknown_check_results = accept_unknown
         self.log_external_commands = log_external_commands
-        logger.info("External command manager, log commands: %s, accept unknown check: %s",
-                    self.log_external_commands, self.accept_passive_unknown_check_results)
+        logger.debug("External command manager, log commands: %s, accept unknown check: %s",
+                     self.log_external_commands, self.accept_passive_unknown_check_results)
 
         # Will change for each command read, so if a command need it,
         # it can get it

@@ -301,7 +301,8 @@ class Stats(object):
                         self.name, self.statsd_host, self.statsd_port, self.statsd_prefix)
 
             self.carbon = CarbonIface(self.statsd_host, self.statsd_port)
-            logger.info('Alignak internal statistics will be sent to Graphite.')
+            logger.info('Statistics for %s will be sent to %s:%s.',
+                        self.name, self.statsd_host, self.statsd_port)
 
         return self.statsd_enabled
 
@@ -329,7 +330,8 @@ class Stats(object):
             return True
 
         try:
-            logger.debug("Flushing %d metrics to Graphite/carbon", self.metrics_count)
+            logger.debug("Flushing %d metrics to %s:%s for %s.",
+                         self.metrics_count, self.statsd_host, self.statsd_port, self.name)
             if self.carbon.send_data():
                 self.my_metrics = []
             else:
