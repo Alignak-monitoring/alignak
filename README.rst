@@ -8,12 +8,12 @@ Presentation of the Alignak project
     :target: https://travis-ci.org/Alignak-monitoring/alignak
     :alt: Develop branch build status
 
-.. image:: https://landscape.io/github/Alignak-monitoring/alignak/develop/landscape.svg?style=flat
-    :target: https://landscape.io/github/Alignak-monitoring/alignak/develop
+.. image:: https://api.codacy.com/project/badge/Grade/e5835ab85cdd4680bc67c8e0b2d509f5
+    :target: https://www.codacy.com/manual/Alignak/alignak?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Alignak-monitoring/alignak&amp;utm_campaign=Badge_Grade
     :alt: Development code static analysis
 
-.. image:: https://coveralls.io/repos/Alignak-monitoring/alignak/badge.svg?branch=develop
-    :target: https://coveralls.io/r/Alignak-monitoring/alignak
+.. image:: https://codecov.io/gh/Alignak-monitoring/alignak/branch/develop/graph/badge.svg
+    :target: https://codecov.io/gh/Alignak-monitoring/alignak
     :alt: Development code tests coverage
 
 .. image:: https://readthedocs.org/projects/alignak-doc/badge/?version=latest
