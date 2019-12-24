@@ -654,12 +654,6 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         else:
             print("Daemon '%s' log file: %s" % (self.name, self.log_filename))
 
-        # Check the log directory (and create if it does not exist)
-        # self.check_dir(os.path.dirname(self.log_filename))
-
-        # Specific monitoring log directory
-        # self.check_dir(os.path.join(os.path.dirname(self.log_filename), 'monitoring-log'))
-
         if 'log_filename' not in kwargs or not kwargs['log_filename']:
             # Log file name is not overridden, the logger will use the configured default one
             if self.log_cherrypy:
@@ -809,6 +803,10 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         relative to the working directory. It will return the full path of the
         directory
 
+        If the daemon is in very mode (arbiter -V command line) and the directory
+        cannot be created, then this function will return the system temporary files
+        directory
+
         :param create: create if it does not exist
         :type create: bool
 
@@ -857,6 +855,11 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
             return dir_name
 
         except OSError as exp:
+            if self.verify_only and exp.errno == 13:
+                # In verify mode, forward directory to the /tmp
+                print("Exception: %s" % exp)
+                return tempfile.gettempdir()
+
             if exp.errno == errno.EEXIST and os.path.isdir(dir_name):
                 # Directory still exists...
                 pass
