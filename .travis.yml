@@ -26,7 +26,9 @@ script:
     echo "Starting tests '$TEST_SUITE' ..."
     pytest --verbose --durations=0 --no-print-logs --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
     # Upload coverage results to codecov
-    bash <(curl -s https://codecov.io/bash) -e $TEST_SUITE -c -F $TEST_SUITE
+    # bash <(curl -s https://codecov.io/bash) -e $TEST_SUITE -c -F $TEST_SUITE
+    # The same flag (-F) whatever the test suite!
+    bash <(curl -s https://codecov.io/bash) -e $TEST_SUITE -c -F Alignak
     cd ..
 after_success:
 notifications:
