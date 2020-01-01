@@ -153,11 +153,11 @@ class NotificationWay(Item):
     def serialize(self):
         res = super(NotificationWay, self).serialize()
 
-        for prop in ['service_notification_commands', 'host_notification_commands']:
-            if getattr(self, prop) is None:
-                res[prop] = None
-            else:
-                res[prop] = [elem.serialize() for elem in getattr(self, prop)]
+        res['service_notification_commands'] = \
+            [elem.serialize() for elem in getattr(self, 'service_notification_commands')]
+
+        res['host_notification_commands'] = \
+            [elem.serialize() for elem in getattr(self, 'host_notification_commands')]
 
         return res
 
@@ -362,16 +362,3 @@ class NotificationWays(CommandCallItems):
         self.linkify_with_timeperiods(timeperiods, 'host_notification_period')
         self.linkify_with_commands(commands, 'service_notification_commands', is_a_list=True)
         self.linkify_with_commands(commands, 'host_notification_commands', is_a_list=True)
-
-    def new_inner_member(self, name, params):
-        """Create new instance of NotificationWay with given name and parameters
-        and add it to the item list
-
-        :param name: notification way name
-        :type name: str
-        :param params: notification wat parameters
-        :type params: dict
-        :return: None
-        """
-        params['notificationway_name'] = name
-        self.add_item(NotificationWay(params))

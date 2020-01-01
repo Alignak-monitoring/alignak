@@ -337,10 +337,9 @@ class Contact(Item):
             res.extend(notifway.get_notification_commands(n_type))
 
         # Update inner notification commands property with command name or command
+        setattr(self, n_type + '_notification_commands', res)
         if command_name:
             setattr(self, n_type + '_notification_commands', [c.get_name() for c in res])
-        else:
-            setattr(self, n_type + '_notification_commands', res)
 
         return res
 
@@ -495,8 +494,7 @@ class Contacts(CommandCallItems):
             for contactgroup in contact.contactgroups:
                 contactgroups.add_member(contact.contact_name, contactgroup.strip())
 
-        # Now create a notification way with the simple parameter of the
-        # contacts
+        # Now create a notification way with the simple parameter of the contacts
         for contact in self:
             # Fill default values for all the properties
             contact.fill_default()

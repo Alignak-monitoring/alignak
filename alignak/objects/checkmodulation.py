@@ -47,8 +47,6 @@
 This module provide CheckModulation and CheckModulations classes used to describe
 the modulation of a check command. Modulation occurs on a check period (Timeperiod)
 """
-import uuid
-
 from alignak.commandcall import CommandCall
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
@@ -161,23 +159,3 @@ class CheckModulations(CommandCallItems):
         """
         self.linkify_with_timeperiods(timeperiods, 'check_period')
         self.linkify_with_commands(commands, 'check_command')
-
-    def new_inner_member(self, name=None, params=None):
-        """Create a CheckModulation object and add it to items
-
-        :param name: CheckModulation name
-        :type name: str
-        :param params: parameters to init CheckModulation
-        :type params: dict
-        :return: None
-        TODO: Remove this default mutable argument. Usually result in unexpected behavior
-        """
-        if name is None:
-            name = 'Generated_checkmodulation_%s' % uuid.uuid4()
-
-        if params is None:
-            params = {}
-
-        params['checkmodulation_name'] = name
-        checkmodulation = CheckModulation(params)
-        self.add_item(checkmodulation)
