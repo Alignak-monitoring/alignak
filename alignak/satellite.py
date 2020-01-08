@@ -497,7 +497,7 @@ class Satellite(BaseSatellite):  # pylint: disable=too-many-instance-attributes
         # We tag it as "return wanted", and move it in the wait return queue
         try:
             self.schedulers[scheduler_uuid].wait_homerun[action.uuid] = action
-        except KeyError:  # pragma: no cover, simple protection
+        except KeyError as exp:  # pragma: no cover, simple protection
             logger.error("KeyError Add home run action: %s / %s - %s",
                          scheduler_uuid, action.uuid, str(exp))
 
