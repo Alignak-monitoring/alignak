@@ -69,7 +69,7 @@ class PropertiesTester(object):
         item = self.item # shortcut
         print("Testing properties without default:")
         for name in self.without_default:
-            print(("- %s" % name))
+            print("- %s" % name)
             assert name in item.properties, \
                           'property %r not found in %s' % (name, self.item.my_type)
             assert isinstance(item.properties[name], ( ListProp, StringProp, IntegerProp )), \
@@ -80,7 +80,7 @@ class PropertiesTester(object):
         item = self.item # shortcut
         print("Testing properties with default:")
         for name, value in self.properties.items():
-            print(("- %s=%s" % (name, value)))
+            print("- %s=%s" % (name, value))
             assert name in item.properties, \
                           'property %r not found in %s' % (name, self.item.my_type)
             if hasattr(item.properties[name], 'default'):
@@ -96,11 +96,11 @@ class PropertiesTester(object):
         prop_names = set(list(self.properties.keys()) + self.unused_props + self.without_default)
 
         print("Testing all properties are tested:")
-        print(("- list: %s" % prop_names))
+        print("- list: %s" % prop_names)
         for name in item.properties:
             if name.startswith('$') and name.endswith('$'):
                 continue
-            print(("- %s" % name))
+            print("- %s" % name)
             assert name in prop_names, 'unknown property %r found' % name
 
 
@@ -132,6 +132,7 @@ class TestConfig(PropertiesTester, AlignakTest):
     without_default = []
 
     properties = dict([
+        ('clean_objects', False),
         ('forced_realms_hostgroups', True),
         ('program_start', 0),
         ('last_alive', 0),
@@ -174,6 +175,15 @@ class TestConfig(PropertiesTester, AlignakTest):
         ('state_retention_dir', ''),
         ('retention_update_interval', 0),
         ('use_syslog', False),
+
+        ('log_filename', 'alignak-events.log'),
+        ('log_level', ''),
+        ('log_rotation_when', 'midnight'),
+        ('log_rotation_interval', 1),
+        ('log_rotation_count', 365),
+        ('log_format', '[%(my_date)s] %(levelname)s: %(message)s'),
+        ('log_date', '%Y-%m-%d %H:%M:%S'),
+
         ('log_notifications', True),
         ('log_alerts', True),
         ('log_acknowledgements', True),
@@ -291,14 +301,14 @@ class TestCommand(PropertiesTester, AlignakTest):
     without_default = ['command_name', 'command_line']
 
     properties = dict([
-        ('imported_from', 'unknown'),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
         ('poller_tag', 'None'),
         ('reactionner_tag', 'None'),
-        ('module_type', None),
+        ('module_type', 'fork'),
         ('timeout', -1),
         ('enable_environment_macros', False),
         ])
@@ -307,7 +317,7 @@ class TestCommand(PropertiesTester, AlignakTest):
         super(TestCommand, self).setUp()
         from alignak.objects.command import Command
         self.item = None
-        self.item = Command(parsing=True)
+        self.item = Command({}, parsing=True)
         print(self.item.properties)
 
 
@@ -320,7 +330,7 @@ class TestContactgroup(PropertiesTester, AlignakTest):
     properties = dict([
         ('alias', ''),
         ('members', []),
-        ('imported_from', 'unknown'),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
@@ -332,7 +342,7 @@ class TestContactgroup(PropertiesTester, AlignakTest):
     def setUp(self):
         super(TestContactgroup, self).setUp()
         from alignak.objects.contactgroup import Contactgroup
-        self.item = Contactgroup(parsing=True)
+        self.item = Contactgroup({}, parsing=True)
 
 
 class TestContact(PropertiesTester, AlignakTest):
@@ -349,9 +359,9 @@ class TestContact(PropertiesTester, AlignakTest):
         ('service_notification_commands', []),
         ('host_notification_period', ''),
         ('service_notification_period', ''),
-        ('service_notification_options', ['']),
-        ('host_notification_options', ['']),
-        ('imported_from', 'unknown'),
+        ('service_notification_options', []),
+        ('host_notification_options', []),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
@@ -379,7 +389,7 @@ class TestContact(PropertiesTester, AlignakTest):
     def setUp(self):
         super(TestContact, self).setUp()
         from alignak.objects.contact import Contact
-        self.item = Contact(parsing=True)
+        self.item = Contact({}, parsing=True)
 
 
 class TestEscalation(PropertiesTester, AlignakTest):
@@ -395,7 +405,7 @@ class TestEscalation(PropertiesTester, AlignakTest):
         ('service_description', ''),
         ('contact_groups', []),
         ('contacts', []),
-        ('imported_from', 'unknown'),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
@@ -408,7 +418,7 @@ class TestEscalation(PropertiesTester, AlignakTest):
     def setUp(self):
         super(TestEscalation, self).setUp()
         from alignak.objects.escalation import Escalation
-        self.item = Escalation(parsing=True)
+        self.item = Escalation({}, parsing=True)
 
 
 class TestHostdependency(PropertiesTester, AlignakTest):
@@ -418,7 +428,7 @@ class TestHostdependency(PropertiesTester, AlignakTest):
     without_default = ['dependent_host_name', 'host_name']
 
     properties = dict([
-        ('imported_from', 'unknown'),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
@@ -434,7 +444,7 @@ class TestHostdependency(PropertiesTester, AlignakTest):
     def setUp(self):
         super(TestHostdependency, self).setUp()
         from alignak.objects.hostdependency import Hostdependency
-        self.item = Hostdependency(parsing=True)
+        self.item = Hostdependency({}, parsing=True)
 
 
 class TestHostescalation(PropertiesTester, AlignakTest):
@@ -448,7 +458,7 @@ class TestHostescalation(PropertiesTester, AlignakTest):
         ]
 
     properties = dict([
-        ('imported_from', 'unknown'),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
@@ -463,7 +473,7 @@ class TestHostescalation(PropertiesTester, AlignakTest):
     def setUp(self):
         super(TestHostescalation, self).setUp()
         from alignak.objects.hostescalation import Hostescalation
-        self.item = Hostescalation(parsing=True)
+        self.item = Hostescalation({}, parsing=True)
 
 
 class TestHostextinfo(PropertiesTester, AlignakTest):
@@ -473,7 +483,7 @@ class TestHostextinfo(PropertiesTester, AlignakTest):
     without_default = ['host_name']
 
     properties = dict([
-        ('imported_from', 'unknown'),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
@@ -491,7 +501,7 @@ class TestHostextinfo(PropertiesTester, AlignakTest):
     def setUp(self):
         super(TestHostextinfo, self).setUp()
         from alignak.objects.hostextinfo import HostExtInfo
-        self.item = HostExtInfo(parsing=True)
+        self.item = HostExtInfo({}, parsing=True)
 
 
 class TestHostgroup(PropertiesTester, AlignakTest):
@@ -503,7 +513,7 @@ class TestHostgroup(PropertiesTester, AlignakTest):
     properties = dict([
         ('alias', ''),
         ('members', []),
-        ('imported_from', 'unknown'),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
@@ -519,7 +529,7 @@ class TestHostgroup(PropertiesTester, AlignakTest):
     def setUp(self):
         super(TestHostgroup, self).setUp()
         from alignak.objects.hostgroup import Hostgroup
-        self.item = Hostgroup(parsing=True)
+        self.item = Hostgroup({}, parsing=True)
 
 
 class TestHost(PropertiesTester, AlignakTest):
@@ -536,7 +546,7 @@ class TestHost(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('alias', ''),
-        ('imported_from', 'unknown'),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
@@ -614,7 +624,7 @@ class TestHost(PropertiesTester, AlignakTest):
     def setUp(self):
         super(TestHost, self).setUp()
         from alignak.objects.host import Host
-        self.item = Host(parsing=True)
+        self.item = Host({}, parsing=True)
 
 
 class TestModule(PropertiesTester, AlignakTest):
@@ -625,7 +635,7 @@ class TestModule(PropertiesTester, AlignakTest):
     without_default = ['module_alias', 'python_name']
 
     properties = dict([
-        ('imported_from', 'unknown'),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
@@ -646,7 +656,7 @@ class TestModule(PropertiesTester, AlignakTest):
         super(TestModule, self).setUp()
         from alignak.objects.module import Module
 
-        self.item = Module(parsing=True)
+        self.item = Module({}, parsing=True)
         print("Item properties:")
         for name in self.item.properties:
             print(("- %s" % name))
@@ -662,24 +672,22 @@ class TestNotificationWay(PropertiesTester, AlignakTest):
         ]
 
     properties = dict([
-        ('service_notification_options', ['']),
-        ('host_notification_options', ['']),
+        ('service_notification_options', []),
+        ('host_notification_options', []),
         ('host_notification_commands', []),
         ('service_notification_commands', []),
-        ('imported_from', 'unknown'),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
         ('name', ''),
-        ('host_notifications_enabled', True),
-        ('service_notifications_enabled', True),
         ('min_business_impact', 0),
         ])
 
     def setUp(self):
         super(TestNotificationWay, self).setUp()
         from alignak.objects.notificationway import NotificationWay
-        self.item = NotificationWay(parsing=True)
+        self.item = NotificationWay({}, parsing=True)
 
 
 class TestRealm(PropertiesTester, AlignakTest):
@@ -691,7 +699,7 @@ class TestRealm(PropertiesTester, AlignakTest):
     properties = dict([
         ('alias', ''),
         ('members', []),
-        ('imported_from', 'unknown'),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
@@ -706,7 +714,7 @@ class TestRealm(PropertiesTester, AlignakTest):
     def setUp(self):
         super(TestRealm, self).setUp()
         from alignak.objects.realm import Realm
-        self.item = Realm(parsing=True)
+        self.item = Realm({}, parsing=True)
 
 
 class TestResultmodulation(PropertiesTester, AlignakTest):
@@ -716,7 +724,7 @@ class TestResultmodulation(PropertiesTester, AlignakTest):
     without_default = ['resultmodulation_name']
 
     properties = dict([
-        ('imported_from', 'unknown'),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
@@ -729,7 +737,7 @@ class TestResultmodulation(PropertiesTester, AlignakTest):
     def setUp(self):
         super(TestResultmodulation, self).setUp()
         from alignak.objects.resultmodulation import Resultmodulation
-        self.item = Resultmodulation(parsing=True)
+        self.item = Resultmodulation({}, parsing=True)
 
 
 class TestServicedependency(PropertiesTester, AlignakTest):
@@ -739,7 +747,7 @@ class TestServicedependency(PropertiesTester, AlignakTest):
     without_default = ['dependent_host_name', 'dependent_service_description', 'host_name', 'service_description']
 
     properties = dict([
-        ('imported_from', 'unknown'),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
@@ -756,7 +764,7 @@ class TestServicedependency(PropertiesTester, AlignakTest):
     def setUp(self):
         super(TestServicedependency, self).setUp()
         from alignak.objects.servicedependency import Servicedependency
-        self.item = Servicedependency(parsing=True)
+        self.item = Servicedependency({}, parsing=True)
 
 
 class TestServiceescalation(PropertiesTester, AlignakTest):
@@ -770,7 +778,7 @@ class TestServiceescalation(PropertiesTester, AlignakTest):
         'first_notification_time', 'last_notification_time']
 
     properties = dict([
-        ('imported_from', 'unknown'),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
@@ -785,7 +793,7 @@ class TestServiceescalation(PropertiesTester, AlignakTest):
     def setUp(self):
         super(TestServiceescalation, self).setUp()
         from alignak.objects.serviceescalation import Serviceescalation
-        self.item = Serviceescalation(parsing=True)
+        self.item = Serviceescalation({}, parsing=True)
 
 
 class TestServiceextinfo(PropertiesTester, AlignakTest):
@@ -795,7 +803,7 @@ class TestServiceextinfo(PropertiesTester, AlignakTest):
     without_default = ['host_name', 'service_description']
 
     properties = dict([
-        ('imported_from', 'unknown'),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
@@ -809,7 +817,7 @@ class TestServiceextinfo(PropertiesTester, AlignakTest):
     def setUp(self):
         super(TestServiceextinfo, self).setUp()
         from alignak.objects.serviceextinfo import ServiceExtInfo
-        self.item = ServiceExtInfo(parsing=True)
+        self.item = ServiceExtInfo({}, parsing=True)
 
 
 class TestServicegroup(PropertiesTester, AlignakTest):
@@ -821,7 +829,7 @@ class TestServicegroup(PropertiesTester, AlignakTest):
     properties = dict([
         ('alias', ''),
         ('members', []),
-        ('imported_from', 'unknown'),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
@@ -836,7 +844,7 @@ class TestServicegroup(PropertiesTester, AlignakTest):
     def setUp(self):
         super(TestServicegroup, self).setUp()
         from alignak.objects.servicegroup import Servicegroup
-        self.item = Servicegroup(parsing=True)
+        self.item = Servicegroup({}, parsing=True)
 
 
 class TestService(PropertiesTester, AlignakTest):
@@ -854,7 +862,7 @@ class TestService(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('alias', ''),
-        ('imported_from', 'unknown'),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('register', True),
         ('definition_order', 100),
@@ -931,7 +939,7 @@ class TestService(PropertiesTester, AlignakTest):
     def setUp(self):
         super(TestService, self).setUp()
         from alignak.objects.service import Service
-        self.item = Service(parsing=True)
+        self.item = Service({}, parsing=True)
 
 
 class TestTimeperiod(PropertiesTester, AlignakTest):
@@ -942,7 +950,7 @@ class TestTimeperiod(PropertiesTester, AlignakTest):
 
     properties = dict([
         ('alias', ''),
-        ('imported_from', 'unknown'),
+        ('imported_from', 'alignak-self'),
         ('use', []),
         ('definition_order', 100),
         ('name', ''),
@@ -958,4 +966,4 @@ class TestTimeperiod(PropertiesTester, AlignakTest):
     def setUp(self):
         super(TestTimeperiod, self).setUp()
         from alignak.objects.timeperiod import Timeperiod
-        self.item = Timeperiod(parsing=True)
+        self.item = Timeperiod({}, parsing=True)

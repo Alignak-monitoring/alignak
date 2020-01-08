@@ -53,7 +53,8 @@ class TestMacroModulations(AlignakTest):
 
     def setUp(self):
         super(TestMacroModulations, self).setUp()
-        self.setup_with_file('cfg/cfg_macros_modulation.cfg')
+        self.setup_with_file('cfg/cfg_macros_modulation.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
     def test_macros_modulation(self):

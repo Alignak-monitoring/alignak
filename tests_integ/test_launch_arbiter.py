@@ -129,33 +129,19 @@ class TestLaunchArbiter(AlignakTest):
         # Remove the daemons configuration part!
         shutil.rmtree('%s/etc/alignak.d' % cfg_folder)
 
-        if os.path.exists('%s/arbiter-master.log' % self._launch_dir):
-            os.remove('%s/arbiter-master.log' % self._launch_dir)
+        if os.path.exists('%s/arbiter-master.log' % os.getcwd()):
+            os.remove('%s/arbiter-master.log' % os.getcwd())
 
-        files = ['%s/etc/alignak.ini' % cfg_folder,
-                 '%s/etc/alignak.d/daemons.ini' % cfg_folder,
-                 '%s/etc/alignak.d/modules.ini' % cfg_folder]
         try:
             cfg = configparser.ConfigParser()
-            cfg.read(files)
+            cfg.read(['%s/etc/alignak.ini' % cfg_folder])
 
             # Arbiter launches the daemons
             if alignak_launched:
                 cfg.set('alignak-configuration', 'launch_missing_daemons', '1')
-                # cfg.set('daemon.arbiter-master', 'alignak_launched', '1')
-                # cfg.set('daemon.scheduler-master', 'alignak_launched', '1')
-                # cfg.set('daemon.poller-master', 'alignak_launched', '1')
-                # cfg.set('daemon.reactionner-master', 'alignak_launched', '1')
-                # cfg.set('daemon.receiver-master', 'alignak_launched', '1')
-                # cfg.set('daemon.broker-master', 'alignak_launched', '1')
             else:
                 cfg.set('alignak-configuration', 'launch_missing_daemons', '0')
-                # cfg.set('daemon.arbiter-master', 'alignak_launched', '0')
-                # cfg.set('daemon.scheduler-master', 'alignak_launched', '0')
-                # cfg.set('daemon.poller-master', 'alignak_launched', '0')
-                # cfg.set('daemon.reactionner-master', 'alignak_launched', '0')
-                # cfg.set('daemon.receiver-master', 'alignak_launched', '0')
-                # cfg.set('daemon.broker-master', 'alignak_launched', '0')
+
             with open('%s/etc/alignak.ini' % cfg_folder, "w") as modified:
                 cfg.write(modified)
         except Exception as exp:
@@ -183,9 +169,10 @@ class TestLaunchArbiter(AlignakTest):
 
             u"- ignoring repeated file: /tmp/alignak/etc/arbiter/packs/resource.d/readme.cfg",
             u"Configuration warnings:",
-            u"the parameter $DIST_BIN$ is ambiguous! No value after =, assuming an empty string",
+            # u"the parameter $DIST_BIN$ is ambiguous! No value after =, assuming an empty string",
             u"No Nagios-like legacy configuration files configured.",
-            u"If you need some, edit the 'alignak.ini' configuration file to declare one or more 'cfg=' variables.",
+            u"If you need some, edit the 'alignak.ini' configuration file "
+            u"to declare one or more 'cfg=' variables.",
 
             u"There is no arbiter, I add myself (arbiter-master) reachable on 127.0.0.1:7770",
             u"No realms defined, I am adding one as All",
@@ -197,40 +184,57 @@ class TestLaunchArbiter(AlignakTest):
         ]
         if not alignak_launched:
             expected_warnings.extend([
-                u"A daemon (reactionner/Default-Reactionner) that we must be related with cannot be connected: ",
+                u"A daemon (reactionner/Default-Reactionner) "
+                u"that we must be related with cannot be connected: ",
                 u"Setting the satellite Default-Reactionner as dead :(",
                 u"Default-Reactionner is not alive for get_running_id",
 
-                u"A daemon (poller/Default-Poller) that we must be related with cannot be connected: ",
+                u"A daemon (poller/Default-Poller) "
+                u"that we must be related with cannot be connected: ",
                 u"Setting the satellite Default-Poller as dead :(",
                 u"Default-Poller is not alive for get_running_id",
 
-                u"A daemon (broker/Default-Broker) that we must be related with cannot be connected: ",
+                u"A daemon (broker/Default-Broker) "
+                u"that we must be related with cannot be connected: ",
                 u"Setting the satellite Default-Broker as dead :(",
                 u"Default-Broker is not alive for get_running_id",
 
-                u"A daemon (receiver/Default-Receiver) that we must be related with cannot be connected: ",
+                u"A daemon (receiver/Default-Receiver) "
+                u"that we must be related with cannot be connected: ",
                 u"Setting the satellite Default-Receiver as dead :(",
                 u"Default-Receiver is not alive for get_running_id",
 
-                u"A daemon (scheduler/Default-Scheduler) that we must be related with cannot be connected: ",
+                u"A daemon (scheduler/Default-Scheduler) "
+                u"that we must be related with cannot be connected: ",
                 u"Setting the satellite Default-Scheduler as dead :(",
                 u"Default-Scheduler is not alive for get_running_id",
 
-                u"satellites connection #1 is not correct; let's give another chance after 1 seconds...",
-                u"satellites connection #2 is not correct; let's give another chance after 1 seconds...",
-                u"satellites connection #3 is not correct; let's give another chance after 1 seconds...",
+                u"satellites connection #1 is not correct; "
+                u"let's give another chance after 1 seconds...",
+
+                u"satellites connection #2 is not correct; "
+                u"let's give another chance after 1 seconds...",
+
+                u"satellites connection #3 is not correct; "
+                u"let's give another chance after 1 seconds...",
             ])
 
         expected_errors = [
         ]
         if not alignak_launched:
             expected_errors = [
-                u"All the daemons connections could not be established despite 3 tries! Sorry, I bail out!",
+                u"All the daemons connections could not be established despite 3 tries! "
+                u"Sorry, I bail out!",
                 u"Sorry, I bail out, exit code: 4"
             ]
+
+        if alignak_launched:
+            # This function will only send a SIGTERM to the arbiter daemon
+            # self._stop_daemons(['arbiter'])
+            self._stop_alignak_daemons(arbiter_only=False)
+
         all_ok = True
-        with open('%s/arbiter-master.log' % self._launch_dir) as f:
+        with open('%s/arbiter-master.log' % os.getcwd()) as f:
             for line in f:
                 if 'WARNING:' in line:
                     ok = False
@@ -270,7 +274,9 @@ class TestLaunchArbiter(AlignakTest):
         # Update monitoring configuration file variables
         try:
             cfg = configparser.ConfigParser()
-            cfg.read(['/tmp/alignak/etc/alignak.ini', '/tmp/alignak/etc/alignak.d/daemons.ini'])
+            cfg.read(['/tmp/alignak/etc/alignak.ini',
+                      '/tmp/alignak/etc/alignak.d/daemons.ini'])
+
             cfg.set('alignak-configuration', 'launch_missing_daemons', '1')
             cfg.set('alignak-configuration', 'polling_interval', '1')
             cfg.set('alignak-configuration', 'daemons_check_period', '5')
@@ -278,11 +284,11 @@ class TestLaunchArbiter(AlignakTest):
             cfg.set('alignak-configuration', 'daemons_start_timeout', '1')
             cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '1')
             cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '1')
-            cfg.set('alignak-configuration', 'min_workers', '1')
-            cfg.set('alignak-configuration', 'max_workers', '1')
             cfg.set('daemon.arbiter-master', 'alignak_launched', '1')
             cfg.set('daemon.scheduler-master', 'alignak_launched', '1')
             cfg.set('daemon.poller-master', 'alignak_launched', '1')
+            cfg.set('daemon.poller-master', 'min_workers', '1')
+            cfg.set('daemon.poller-master', 'max_workers', '1')
             cfg.set('daemon.reactionner-master', 'alignak_launched', '1')
             cfg.set('daemon.receiver-master', 'alignak_launched', '1')
             cfg.set('daemon.broker-master', 'alignak_launched', '1')
@@ -308,7 +314,7 @@ class TestLaunchArbiter(AlignakTest):
         self._ping_daemons()
 
         # Sleep some few seconds to let the arbiter ping the daemons by itself
-        sleep(60)
+        sleep(30)
 
         self._ping_daemons()
 
@@ -338,19 +344,20 @@ class TestLaunchArbiter(AlignakTest):
             cfg.set('alignak-configuration', 'polling_interval', '1')
             cfg.set('alignak-configuration', 'daemons_check_period', '3')
             cfg.set('alignak-configuration', 'daemons_stop_timeout', '1')
-            cfg.set('alignak-configuration', 'daemons_start_timeout', '1')
+            cfg.set('alignak-configuration', 'daemons_start_timeout', '3')
             cfg.set('alignak-configuration', 'daemons_new_conf_timeout', '1')
             cfg.set('alignak-configuration', 'daemons_dispatch_timeout', '1')
-            cfg.set('alignak-configuration', 'min_workers', '1')
-            cfg.set('alignak-configuration', 'max_workers', '1')
             cfg.set('daemon.arbiter-master', 'alignak_launched', '1')
             cfg.set('daemon.scheduler-master', 'alignak_launched', '1')
             cfg.set('daemon.poller-master', 'alignak_launched', '1')
+            cfg.set('daemon.poller-master', 'min_workers', '1')
+            cfg.set('daemon.poller-master', 'max_workers', '1')
             cfg.set('daemon.reactionner-master', 'alignak_launched', '1')
             cfg.set('daemon.receiver-master', 'alignak_launched', '1')
             cfg.set('daemon.broker-master', 'alignak_launched', '1')
             with open('/tmp/alignak/etc/alignak.ini', "w") as modified:
                 cfg.write(modified)
+            os.remove('/tmp/alignak/etc/alignak.d/daemons.ini')
         except Exception as exp:
             print("* parsing error in config file: %s" % exp)
             assert False
@@ -361,7 +368,7 @@ class TestLaunchArbiter(AlignakTest):
 
         # Sleep some few seconds because of the time needed to start the processes,
         # poll them and declare as faulty !
-        sleep(15)
+        sleep(30)
 
         # The arbiter will NOT have stopped! It is still running
         ret = self.procs['arbiter-master'].poll()
@@ -373,10 +380,28 @@ class TestLaunchArbiter(AlignakTest):
 
         print("Killing one daemon process...")
         self._stop_daemons(['receiver'])
-        sleep(1)
-        self._ping_daemons()
-        sleep(2)
+        # sleep(1)
+        # self._ping_daemons()
+        # sleep(2)
 
         sleep(30)
 
         self._stop_daemons(['arbiter'])
+
+        all_ok = 0
+        with open('/tmp/alignak/log/arbiter-master.log') as f:
+            for line in f:
+                if 'WARNING:' in line:
+                    if "A daemon (receiver/receiver-master) that we must be " \
+                       "related with cannot be connected" in line:
+                        all_ok = all_ok + 1
+                        print("... %s" % line.rstrip())
+                    if "Setting the satellite receiver-master as dead :(" in line:
+                        all_ok = all_ok + 1
+                        print("... %s" % line.rstrip())
+                    if "Dispatcher, these daemons are not configured: receiver-master, and a " \
+                       "configuration has yet been dispatched dispatch, " \
+                       "a new dispatch is required..." in line:
+                        all_ok = all_ok + 1
+                        print("... %s" % line.rstrip())
+        assert all_ok >= 3

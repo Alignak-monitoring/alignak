@@ -55,6 +55,7 @@ from alignak.objects.item import Items
 
 logger = logging.getLogger(__name__)
 
+
 class TestEndParsingType(AlignakTest):
     """
     This class test properties types after config loaded and parsed
@@ -84,7 +85,8 @@ class TestEndParsingType(AlignakTest):
             # host_name may be a bytes string (socket name) or a string (host dependency) !
             # address6 may be an IPv6 address or a contact address field!
             # todo: change this and then modify the test!
-            if prop in ['host_name', 'address6', 'instance_id', 'push_flavor', 'hash']:
+            if prop in ['host_name', 'address6', 'instance_id', 'push_flavor', 'hash',
+                        'imported_from']:
                 return
             if prop in ['realm', 'check_period', 'check_command', 'event_handler',
                         'snapshot_period', 'maintenance_period', 'notification_period',
@@ -92,8 +94,8 @@ class TestEndParsingType(AlignakTest):
                 return
 
             assert isinstance(value, obj_expected_type), \
-                "The %s attr/property of %s object isn't a %s: %s, value=%s" \
-                % (prop, obj, obj_expected_type, value.__class__, value)
+                "The %s property isn't a %s: %s, value=%s, for: %s" \
+                % (prop, obj_expected_type, value.__class__, value, obj)
 
     @staticmethod
     def map_type(obj):
@@ -205,7 +207,7 @@ class TestEndParsingType(AlignakTest):
 
                     assert isinstance(value, obj_expected_type), \
                         "The %s attr/property of %s object isn't a %s: %s, value=%s" \
-                        % (prop, check.properties, obj_expected_type, value.__class__, value)
+                        % (prop, notification.properties, obj_expected_type, value.__class__, value)
                 else:
                     print("Skipping %s " % prop)
 
@@ -226,12 +228,12 @@ class TestEndParsingType(AlignakTest):
 
                 assert isinstance(value, obj_expected_type), \
                     "The '%s' attr/property of %s object isn't a %s: %s, value=%s" \
-                    % (prop, check.properties, obj_expected_type, value.__class__, value)
+                    % (prop, eventhandler.properties, obj_expected_type, value.__class__, value)
             else:
                 print("Skipping %s " % prop)
 
         print("== test Timeperiod() ==")
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         for prop in timeperiod.properties:
             if not hasattr(timeperiod, prop):
                 continue
@@ -246,7 +248,7 @@ class TestEndParsingType(AlignakTest):
 
                 assert isinstance(value, obj_expected_type), \
                     "The %s attr/property of %s object isn't a %s: %s, value=%s" \
-                    % (prop, check.properties, obj_expected_type, value.__class__, value)
+                    % (prop, timeperiod.properties, obj_expected_type, value.__class__, value)
             else:
                 print("Skipping %s " % prop)
 
@@ -263,9 +265,8 @@ class TestEndParsingType(AlignakTest):
                     if prop in ['uuid']:
                         obj_expected_type = bytes
 
-                    print("TESTING %s with value %s" % (prop, value))
                     assert isinstance(value, obj_expected_type), \
                         "The %s attr/property of %s object isn't a %s: %s, value=%s" \
-                        % (prop, check.properties, obj_expected_type, value.__class__, value)
+                        % (prop, command.properties, obj_expected_type, value.__class__, value)
                 else:
                     print("Skipping %s " % prop)

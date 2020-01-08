@@ -124,7 +124,7 @@ class Brok(object):
         :rtype: tuple
         """
         self.prepare()
-        return (self.creation_time, self.data['level'], self.data['message'])
+        return self.creation_time, self.data['level'], self.data['message']
 
     def serialize(self):
         """This function serialize into a simple dict object.
@@ -136,8 +136,11 @@ class Brok(object):
         :rtype: dict
         """
         return {
-            "uuid": self.uuid, "type": self.type, "instance_id": self.instance_id,
-            "prepared": self.prepared, "creation_time": self.creation_time,
+            "uuid": self.uuid,
+            "type": self.type,
+            "instance_id": self.instance_id,
+            "prepared": self.prepared,
+            "creation_time": self.creation_time,
             "data": self.data
         }
 

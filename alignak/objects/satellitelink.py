@@ -51,11 +51,11 @@ import os
 import logging
 import time
 
-from alignak.util import get_obj_name_two_args_and_void
+from alignak.util import strip_and_uniq, get_obj_name_two_args_and_void
 from alignak.misc.serialization import unserialize, get_alignak_class
 from alignak.objects.item import Item, Items
-from alignak.property import BoolProp, IntegerProp, FloatProp
-from alignak.property import StringProp, ListProp, DictProp, AddrProp
+from alignak.property import (BoolProp, IntegerProp, FloatProp, StringProp,
+                              ListProp, DictProp, AddrProp, FULL_STATUS)
 from alignak.http.client import HTTPClient, HTTPClientException, HTTPClientDataException
 from alignak.http.client import HTTPClientConnectionException, HTTPClientTimeoutException
 
@@ -97,11 +97,11 @@ class SatelliteLink(Item):
 
         # When this property is set, the Arbiter will launch the corresponding daemon
         'alignak_launched':
-            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
+            BoolProp(default=False, fill_brok=[FULL_STATUS], to_send=True),
         # This property is set by the Arbiter when it detects that this daemon
         # is needed but not declared in the configuration
         'missing_daemon':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
 
         # Sent to the satellites and used to check the managed configuration
         # Those are not to_send=True because they are updated by the configuration Dispatcher
@@ -115,21 +115,21 @@ class SatelliteLink(Item):
 
         # A satellite link has the type/name of the daemon it is related to
         'type':
-            StringProp(default=u'', fill_brok=['full_status'], to_send=True),
+            StringProp(default=u'', fill_brok=[FULL_STATUS], to_send=True),
         'name':
-            StringProp(default=u'', fill_brok=['full_status'], to_send=True),
+            StringProp(default=u'', fill_brok=[FULL_STATUS], to_send=True),
 
         # Listening interface and address used by the other daemons
         'host':
             StringProp(default=u'0.0.0.0', to_send=True),
         'address':
-            StringProp(default=u'127.0.0.1', fill_brok=['full_status'], to_send=True),
+            StringProp(default=u'127.0.0.1', fill_brok=[FULL_STATUS], to_send=True),
         'active':
-            BoolProp(default=True, fill_brok=['full_status'], to_send=True),
+            BoolProp(default=True, fill_brok=[FULL_STATUS], to_send=True),
         'short_timeout':
-            IntegerProp(default=3, fill_brok=['full_status'], to_send=True),
+            IntegerProp(default=3, fill_brok=[FULL_STATUS], to_send=True),
         'long_timeout':
-            IntegerProp(default=120, fill_brok=['full_status'], to_send=True),
+            IntegerProp(default=120, fill_brok=[FULL_STATUS], to_send=True),
 
         # the delay (seconds) between two ping retries
         'ping_period':
@@ -137,39 +137,39 @@ class SatelliteLink(Item):
 
         # The maximum number of retries before setting the daemon as dead
         'max_check_attempts':
-            IntegerProp(default=3, fill_brok=['full_status']),
+            IntegerProp(default=3, fill_brok=[FULL_STATUS]),
 
         # For a spare daemon link
         'spare':
-            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
+            BoolProp(default=False, fill_brok=[FULL_STATUS], to_send=True),
         'spare_check_interval':
-            IntegerProp(default=5, fill_brok=['full_status']),
+            IntegerProp(default=5, fill_brok=[FULL_STATUS]),
         'spare_max_check_attempts':
-            IntegerProp(default=3, fill_brok=['full_status']),
+            IntegerProp(default=3, fill_brok=[FULL_STATUS]),
 
         'manage_sub_realms':
-            BoolProp(default=True, fill_brok=['full_status'], to_send=True),
+            BoolProp(default=True, fill_brok=[FULL_STATUS], to_send=True),
         'manage_arbiters':
-            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
+            BoolProp(default=False, fill_brok=[FULL_STATUS], to_send=True),
         'modules':
             ListProp(default=[''], split_on_comma=True),
         'polling_interval':
-            IntegerProp(default=5, fill_brok=['full_status'], to_send=True),
+            IntegerProp(default=5, fill_brok=[FULL_STATUS], to_send=True),
         'use_timezone':
             StringProp(default=u'NOTSET', to_send=True),
         'realm':
-            StringProp(default=u'', fill_brok=['full_status'],
+            StringProp(default=u'', fill_brok=[FULL_STATUS],
                        brok_transformation=get_obj_name_two_args_and_void),
         'realm_name':
             StringProp(default=u''),
         'satellite_map':
             DictProp(default={}, elts_prop=AddrProp, to_send=True, override=True),
         'use_ssl':
-            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
+            BoolProp(default=False, fill_brok=[FULL_STATUS], to_send=True),
         'hard_ssl_name_check':
-            BoolProp(default=True, fill_brok=['full_status'], to_send=True),
+            BoolProp(default=True, fill_brok=[FULL_STATUS], to_send=True),
         'passive':
-            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
+            BoolProp(default=False, fill_brok=[FULL_STATUS], to_send=True),
     })
 
     running_properties = Item.running_properties.copy()
@@ -180,35 +180,35 @@ class SatelliteLink(Item):
             StringProp(default=None),
 
         'reachable':    # Can be reached - assumed True as default ;)
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
         'alive':        # Is alive (attached process s launched...)
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
         'valid':        # Is valid (the daemon is the expected one)
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
         'need_conf':    # The daemon needs to receive a configuration
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=[FULL_STATUS]),
         'have_conf':    # The daemon has received a configuration
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
 
         'stopping':     # The daemon is requested to stop
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
 
         'running_id':   # The running identifier of my related daemon
-            FloatProp(default=0, fill_brok=['full_status']),
+            FloatProp(default=0, fill_brok=[FULL_STATUS]),
 
         # the number of poll attempt from the arbiter dispatcher
         'attempt':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
 
         # the last connection attempt timestamp
         'last_connection':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
         # the number of failed attempt for the connection
         'connection_attempt':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
 
         'last_check':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
         'cfg_managed':
             DictProp(default=None),
         'cfg_to_manage':
@@ -219,7 +219,7 @@ class SatelliteLink(Item):
             DictProp(default={}),
     })
 
-    def __init__(self, params=None, parsing=True):
+    def __init__(self, params, parsing=True):
         """Initialize a SatelliteLink
 
         If parsing is True, we are initializing from a configuration, else we are initializing
@@ -606,7 +606,8 @@ class SatelliteLink(Item):
 
                 try:
                     if not link.reachable:
-                        raise LinkError("The %s %s is not reachable" % (link.type, link.name))
+                        raise LinkError("The %s %s is not reachable, %s"
+                                        % (link.type, link.name, fn_name))
 
                     logger.debug("[%s] Calling: %s, %s, %s", link.name, fn_name, args, kwargs)
                     return func(*args, **kwargs)
@@ -626,11 +627,12 @@ class SatelliteLink(Item):
                                                   "with '%s': %s" % (fn_name, str(exp)))
                     return False
                 except HTTPClientDataException as exp:
-                    # A Data error is raised when the daemon HTTP reponse is not 200!
+                    # A Data error is raised when the daemon HTTP response is not 200!
                     # No way with the communication if some problems exist in the daemon interface!
                     # Abort all
                     err = "Some daemons that we must be related with " \
-                          "have some interface problems. Sorry, I bail out"
+                          "have some interface problems. Sorry, I bail out! Problems are: %s" \
+                          % str(exp)
                     logger.error(err)
                     os.sys.exit(err)
                 except HTTPClientException as exp:
@@ -1011,3 +1013,24 @@ class SatelliteLinks(Items):
         """
         logger.debug("Linkify %s with %s", self, modules)
         self.linkify_s_by_module(modules)
+
+    def linkify_s_by_module(self, modules):
+        """
+        Link modules to items
+
+        :param modules: Modules object (list of all the modules found in the configuration)
+        :type modules: alignak.objects.module.Modules
+        :return: None
+        """
+        for i in self:
+
+            links_list = strip_and_uniq(i.modules)
+            new = []
+            for name in [e for e in links_list if e]:
+                module = modules.find_by_name(name)
+                if module is not None and module.uuid not in new:
+                    new.append(module)
+                else:
+                    i.add_error("Error: the module %s is unknown for %s" % (name, i.get_name()))
+
+            i.modules = new

@@ -59,7 +59,8 @@ class TestBusinessCorrelator(AlignakTest):
 
     def setUp(self):
         super(TestBusinessCorrelator, self).setUp()
-        self.setup_with_file('cfg/cfg_business_correlator.cfg')
+        self.setup_with_file('cfg/cfg_business_correlator.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
         self._sched = self._scheduler
 
@@ -67,9 +68,10 @@ class TestBusinessCorrelator(AlignakTest):
         """ Launch an internal check for the business rule service provided """
         # Launch an internal check
         now = time.time()
-        self._sched.add(svc_br.launch_check(now - 1, self._sched.hosts, self._sched.services,
-                                            self._sched.timeperiods, self._sched.macromodulations,
-                                            self._sched.checkmodulations, self._sched.checks))
+        self._sched.add(svc_br.launch_check(
+            now - 1, self._sched.hosts, self._sched.services,
+            self._sched.timeperiods, self._sched.macromodulations,
+            self._sched.checkmodulations, self._sched.checks))
         c = svc_br.actions[0]
         assert True == c.internal
         assert c.is_launchable(now)
@@ -112,7 +114,7 @@ class TestBusinessCorrelator(AlignakTest):
         assert svc_cor.got_business_rule
         assert svc_cor.business_rule is not None
 
-        svc_cor2 = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_0", "Simple_Or")
+        svc_cor2 = self._sched.services.find_srv_by_name_and_hostname("test_host_0", "Simple_Or")
         # Is a Business Rule, not a simple service...
         assert svc_cor2.got_business_rule
         assert svc_cor2.business_rule is not None
@@ -1865,7 +1867,7 @@ class TestBusinessCorrelator(AlignakTest):
         :param with_pct: True if a percentage is set
         :return:
         """
-        now =time.time()
+        now = time.time()
 
         # Get the hosts
         host = self._sched.hosts.find_by_name("test_host_0")

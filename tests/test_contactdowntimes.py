@@ -60,7 +60,7 @@ class TestContactDowntime(AlignakTest):
 
     def setUp(self):
         super(TestContactDowntime, self).setUp()
-        self.setup_with_file("cfg/cfg_default.cfg")
+        self.setup_with_file("cfg/cfg_default.cfg", dispatching=True)
         self._sched = self._scheduler
 
     def test_contact_downtime(self):
@@ -141,7 +141,6 @@ class TestContactDowntime(AlignakTest):
 
         for n in list(svc.notifications_in_progress.values()):
             print("NOTIF", n, n.t_to_go, time.time(), time.time() - n.t_to_go)
-
 
     def test_contact_downtime_and_cancel(self):
         # schedule a 2-minute downtime

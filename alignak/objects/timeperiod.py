@@ -128,7 +128,7 @@ from alignak.daterange import Daterange, CalendarDaterange
 from alignak.daterange import StandardDaterange, MonthWeekDayDaterange
 from alignak.daterange import MonthDateDaterange, WeekDayDaterange
 from alignak.daterange import MonthDayDaterange
-from alignak.property import IntegerProp, StringProp, ListProp, BoolProp
+from alignak.property import IntegerProp, StringProp, ListProp, BoolProp, FULL_STATUS
 from alignak.log import make_monitoring_log
 from alignak.misc.serialization import get_alignak_class
 from alignak.util import merge_periods
@@ -143,13 +143,14 @@ class Timeperiod(Item):
     and add day exceptions (like non working days)
     """
     my_type = 'timeperiod'
+    my_name_property = "%s_name" % my_type
 
     properties = Item.properties.copy()
     properties.update({
         'timeperiod_name':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'alias':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'use':
             ListProp(default=[]),
         'register':
@@ -157,13 +158,13 @@ class Timeperiod(Item):
 
         # These are needed if a broker module calls methods on timeperiod objects
         'dateranges':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         'exclude':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         'unresolved':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         'invalid_entries':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         'is_active':
             BoolProp(default=False),
         'activated_once':
@@ -171,11 +172,7 @@ class Timeperiod(Item):
     })
     running_properties = Item.running_properties.copy()
 
-    def __init__(self, params=None, parsing=True):
-
-        if params is None:
-            params = {}
-
+    def __init__(self, params, parsing=True):
         # Get standard params
         standard_params = dict(
             [(k, v) for k, v in list(params.items()) if k in self.__class__.properties])
@@ -195,13 +192,14 @@ class Timeperiod(Item):
             self.dateranges = new_list
             # And remove prop, to prevent from being overridden
             del standard_params['dateranges']
+
         # Handle standard params
         super(Timeperiod, self).__init__(params=standard_params, parsing=parsing)
         self.cache = {}  # For tuning purpose only
         self.invalid_cache = {}  # same but for invalid search
 
         # We use the uuid presence to assume we are reserializing
-        if 'uuid' in params:
+        if not parsing:
             self.uuid = params['uuid']
         else:
             # Initial creation here, uuid already created in super
@@ -220,6 +218,32 @@ class Timeperiod(Item):
                     else:
                         value = ''
                 self.unresolved.append(key + ' ' + value)
+
+    def __str__(self):  # pragma: no cover
+        """
+        Get readable object
+
+        :return: this object in readable format
+        :rtype: str
+        """
+        string = '<Timeperiod%s %s, uuid=%s, ' \
+                 % (' template' if self.is_a_template() else '', self.get_name(), self.uuid)
+
+        # string = str(self.__dict__) + '\n'
+        if getattr(self, 'unresolved'):
+            string += ', unresolved: ' + ', '.join([elt for elt in self.unresolved])
+        if getattr(self, 'dateranges'):
+            string += ', date ranges: '
+            for elt in self.dateranges:
+                (start, end) = elt.get_start_and_end_time()
+                start = time.asctime(time.localtime(start))
+                end = time.asctime(time.localtime(end))
+                string += str(elt) + " (" + str((start, end)) + ")"
+        if getattr(self, 'exclude'):
+            string += ', exclude: ' + ', '.join([str(elt) for elt in self.exclude])
+
+        string += ' />'
+        return string
 
     def serialize(self):
         """This function serialize into a simple dict object.
@@ -240,37 +264,6 @@ class Timeperiod(Item):
 
         return res
 
-    def get_name(self):
-        """
-        Get the name of the timeperiod
-
-        :return: the timeperiod name string
-        :rtype: str
-        """
-        return getattr(self, 'timeperiod_name', 'unknown_timeperiod')
-
-    def get_raw_import_values(self):  # pragma: no cover, deprecation
-        """
-        Get some properties of timeperiod (timeperiod is a bit different
-        from classic item)
-
-        TODO: never called anywhere, still useful?
-
-        :return: a dictionnary of some properties
-        :rtype: dict
-        """
-        properties = ['timeperiod_name', 'alias', 'use', 'register']
-        res = {}
-        for prop in properties:
-            if hasattr(self, prop):
-                val = getattr(self, prop)
-                res[prop] = val
-        # Now the unresolved one. The only way to get ride of same key things is to put
-        # directly the full value as the key
-        for other in self.unresolved:
-            res[other] = ''
-        return res
-
     def is_time_valid(self, timestamp):
         """
         Check if a time is valid or not
@@ -287,7 +280,6 @@ class Timeperiod(Item):
                 return True
         return False
 
-    # will give the first time > t which is valid
     def get_min_from_t(self, timestamp):
         """
         Get the first time > timestamp which is valid
@@ -303,9 +295,9 @@ class Timeperiod(Item):
             mins_incl.append(daterange.get_min_from_t(timestamp))
         return min(mins_incl)
 
-    # will give the first time > t which is not valid
     def get_not_in_min_from_t(self, first):
         """
+        Get the first time > timestamp which is not valid
 
         :return: None
         TODO: not used, so delete it
@@ -554,27 +546,6 @@ class Timeperiod(Item):
             self.add_error("[timeperiod::%s] invalid entry '%s'" % (self.get_name(), entry))
 
         return super(Timeperiod, self).is_correct() and state
-
-    def __str__(self):  # pragma: no cover
-        """
-        Get readable object
-
-        :return: this object in readable format
-        :rtype: str
-        """
-        string = ''
-        string += str(self.__dict__) + '\n'
-        for elt in self.dateranges:
-            string += str(elt)
-            (start, end) = elt.get_start_and_end_time()
-            start = time.asctime(time.localtime(start))
-            end = time.asctime(time.localtime(end))
-            string += "\nStart and end:" + str((start, end))
-        string += '\nExclude'
-        for elt in self.exclude:
-            string += str(elt)
-
-        return string
 
     def resolve_daterange(self, dateranges, entry):
         # pylint: disable=too-many-return-statements,too-many-statements,
@@ -854,12 +825,12 @@ class Timeperiod(Item):
                 data = {'day': day, 'other': other}
                 dateranges.append(StandardDaterange(data))
                 return
-        logger.info("[timeentry::%s] no match for %s", self.get_name(), entry)
+        logger.info("[timeperiod::%s] no match for %s", self.get_name(), entry)
         self.invalid_entries.append(entry)
 
     def apply_inheritance(self):
         """
-        Inherite no properties and no custom variables for timeperiod
+        Do not inherit any property nor custom variables for a timeperiod
 
         :return: None
         """
@@ -885,15 +856,15 @@ class Timeperiod(Item):
         """
         new_exclude = []
         if hasattr(self, 'exclude') and self.exclude != []:
-            logger.debug("[timeentry::%s] have excluded %s", self.get_name(), self.exclude)
+            logger.debug("[timeperiod::%s] have excluded %s", self.get_name(), self.exclude)
             excluded_tps = self.exclude
             for tp_name in excluded_tps:
-                timepriod = timeperiods.find_by_name(tp_name.strip())
-                if timepriod is not None:
-                    new_exclude.append(timepriod.uuid)
+                timeperiod = timeperiods.find_by_name(tp_name.strip())
+                if timeperiod is not None:
+                    new_exclude.append(timeperiod.uuid)
                 else:
-                    msg = "[timeentry::%s] unknown %s timeperiod" % (self.get_name(), tp_name)
-                    self.add_error(msg)
+                    self.add_error("[timeperiod::%s] unknown %s timeperiod"
+                                   % (self.get_name(), tp_name))
         self.exclude = new_exclude
 
     def check_exclude_rec(self):
@@ -905,8 +876,8 @@ class Timeperiod(Item):
         :rtype: bool
         """
         if self.rec_tag:
-            msg = "[timeentry::%s] is in a loop in exclude parameter" % (self.get_name())
-            self.add_error(msg)
+            self.add_error("[timeperiod::%s] is in a loop in exclude parameter"
+                           % self.get_name())
             return False
         self.rec_tag = True
         for timeperiod in self.exclude:
@@ -988,7 +959,7 @@ class Timeperiods(Items):
             self.get_customs_properties_by_inheritance(i)
 
         # And now apply inheritance for unresolved properties
-        # like the dateranges in fact
+        # like the date ranges
         for timeperiod in self:
             self.get_unresolved_properties_by_inheritance(timeperiod)
 
@@ -1017,11 +988,9 @@ class Timeperiods(Items):
             # Now other checks
             if not timeperiod.is_correct():
                 valid = False
-                source = getattr(timeperiod, 'imported_from', "unknown source")
-                msg = "Configuration in %s::%s is incorrect; from: %s" % (
-                    timeperiod.my_type, timeperiod.get_name(), source
-                )
-                self.add_error(msg)
+                self.add_error("Configuration in %s::%s is incorrect; from: %s"
+                               % (timeperiod.my_type, timeperiod.get_name(),
+                                  timeperiod.imported_from))
 
             self.configuration_errors += timeperiod.configuration_errors
             self.configuration_warnings += timeperiod.configuration_warnings

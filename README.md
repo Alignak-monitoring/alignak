@@ -5,8 +5,8 @@
 
 [![Master branch build status](https://img.shields.io/travis/Alignak-monitoring/alignak/master.svg?label=master)](https://travis-ci.org/Alignak-monitoring/alignak/branches)
 [![Develop branch build status](https://img.shields.io/travis/Alignak-monitoring/alignak/develop.svg?label=develop)](https://github.com/Alignak-monitoring/alignak)
-[![Develop branch code quality](https://landscape.io/github/Alignak-monitoring/alignak/develop/landscape.svg?style=flat)](https://landscape.io/github/Alignak-monitoring/alignak/develop)
-[![Develop branch code coverage](https://img.shields.io/codecov/c/github/codecov/example-python/master.svg)](https://codecov.io/gh/Alignak-monitoring/alignak/branch/develop)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/e5835ab85cdd4680bc67c8e0b2d509f5)](https://www.codacy.com/manual/Alignak/alignak?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=Alignak-monitoring/alignak&amp;utm_campaign=Badge_Grade)
+[![codecov](https://codecov.io/gh/Alignak-monitoring/alignak/branch/develop/graph/badge.svg)](https://codecov.io/gh/Alignak-monitoring/alignak)
 
 [![Read the Docs (stable)](https://img.shields.io/readthedocs/pip/stable.svg?label=doc-stable)](http://docs.alignak.net/en/master/)
 [![Read the Docs (develop)](https://img.shields.io/readthedocs/pip/stable.svg?label=doc-develop)](http://docs.alignak.net/en/develop/)

@@ -197,12 +197,12 @@ except ImportError as exp:  # pragma: no cover, not for unit tests...
         """
         return []
 
-from alignak.log import setup_logger, set_log_level
+from alignak.log import setup_logger, set_log_file, set_log_level
 from alignak.http.daemon import HTTPDaemon, PortNotFree
 from alignak.stats import statsmgr
 from alignak.modulesmanager import ModulesManager
-from alignak.property import StringProp, BoolProp, PathProp
-from alignak.property import IntegerProp, FloatProp, LogLevelProp, ListProp
+from alignak.property import (StringProp, BoolProp, PathProp,
+                              IntegerProp, FloatProp, ListProp)
 from alignak.misc.common import setproctitle, SIGNALS_TO_NAMES_DICT
 from alignak.version import VERSION
 
@@ -229,8 +229,7 @@ class EnvironmentFile(Exception):
         Exception.__init__(self, msg)
 
 
-# pylint: disable=R0902
-class Daemon(object):
+class Daemon(object):  # pylint: disable=too-many-instance-attributes
     """Class providing daemon level call for Alignak
     """
 
@@ -245,7 +244,8 @@ class Daemon(object):
         'env_filename':
             StringProp(default=u''),
 
-        'log_loop':         # Set True to log the daemon loop activity
+        # Set True to log the daemon loop activity
+        'log_loop':
             BoolProp(default=False),
 
         'pid_filename':
@@ -262,6 +262,10 @@ class Daemon(object):
             PathProp(default=DEFAULT_WORK_DIR),
         'bindir':   # Default is empty
             PathProp(default=''),
+
+        # Create missing directories
+        'create_directories':
+            BoolProp(default=False),
 
         # Interface the daemon will listen to
         'host':
@@ -294,27 +298,27 @@ class Daemon(object):
         'server_dh':
             StringProp(default=u''),
 
-        # Deprecated in favor of logger_configuration
-        # 'human_timestamp_log':
-        #     BoolProp(default=True),
-        # 'human_date_format':
-        #     StringProp(default='%Y-%m-%d %H:%M:%S %Z'),
-        # 'log_level':
-        #     LogLevelProp(default='INFO'),
-        # 'log_rotation_when':
-        #     StringProp(default='midnight'),
-        # 'log_rotation_interval':
-        #     IntegerProp(default=1),
-        # 'log_rotation_count':
-        #     IntegerProp(default=7),
+        # File for logger configuration
         'logger_configuration':
-            StringProp(default=u'./alignak-logger.json'),
+            StringProp(default=u'DEFAULT'),
         # Override log file name - default is to not override
         'log_filename':
             StringProp(default=u''),
         # Override log level - default is to not change anything
         'log_level':
             StringProp(default=u''),
+
+        'log_rotation_when':
+            StringProp(default='midnight'),
+        'log_rotation_interval':
+            IntegerProp(default=1),
+        'log_rotation_count':
+            IntegerProp(default=7),
+        'log_format':
+            StringProp(default='[%(asctime)s] %(levelname)s: [%(name)s] %(message)s'),
+        'log_date':
+            StringProp(default='%Y-%m-%d %H:%M:%S'),
+
         # Set True to include cherrypy logs in the daemon log file
         'log_cherrypy':
             BoolProp(default=False),
@@ -388,6 +392,8 @@ class Daemon(object):
 
         :param kwargs: list of key/value pairs from the daemon command line and configuration
         """
+        self.use_ssl = False
+
         self.alignak_env = None
         self.legacy_cfg_files = []
         self.modules_manager = None
@@ -403,10 +409,15 @@ class Daemon(object):
         # Used to track debug, info warnings that will be logged once the logger is effective
         self.pre_log = []
 
-        # I got my name
+        # I got my name and I define an environment variable with my name
         self.name = name
+        os.environ['ALIGNAK_DAEMON'] = self.name
+
         self.host_name = socket.getfqdn()
         self.address = '127.0.0.1'
+        self.pre_log.append(("INFO",
+                             "Daemon '%s' running on host: %s"
+                             % (self.name, self.host_name)))
 
         # Check if /dev/shm exists and usable...
         self.check_shm()
@@ -485,6 +496,13 @@ class Daemon(object):
                                          "file to declare one or more 'cfg=' variables."))
 
                 my_configuration = list(self.alignak_env.get_daemons(daemon_name=self.name).items())
+                if not my_configuration:
+                    self.pre_log.append(("WARNING",
+                                         "No defined configuration for the daemon: %s. "
+                                         "Using only the default parameters for its configuration."
+                                         % self.name))
+                    my_configuration = []
+
                 for prop, value in my_configuration:
                     self.pre_log.append(("DEBUG",
                                          " found daemon parameter, %s = %s" % (prop, value)))
@@ -503,38 +521,6 @@ class Daemon(object):
                         setattr(self, prop, my_properties[prop].pythonize(value))
                         self.pre_log.append(("DEBUG", " -> updating %s = %s to %s"
                                              % (prop, current_prop, getattr(self, prop))))
-                if not my_configuration:
-                    self.pre_log.append(("WARNING",
-                                         "No defined configuration for the daemon: %s. "
-                                         % self.name))
-
-                    # todo: why doing this? It is quite tricky to configure daemon if it  does not
-                    # have its own configuration section, perhaps removing this should be fine!
-                    # self.pre_log.append(("DEBUG",
-                    #                      "No defined configuration for the daemon: %s. "
-                    #                      "Using the 'alignak-configuration' section "
-                    #                      "variables as parameters for the daemon:" % self.name))
-                    #
-                    # # Set the global Alignak configuration parameters
-                    # # as the current daemon properties
-                    # self.pre_log.append(("INFO",
-                    #                      "Get alignak configuration to configure the daemon..."))
-                    # alignak_configuration = self.alignak_env.get_alignak_configuration()
-                    # if alignak_configuration:
-                    #     for prop, value in list(alignak_configuration.items()):
-                    #         if prop in ['name'] or prop.startswith('_'):
-                    #             self.pre_log.append(("DEBUG",
-                    #                                  "- ignoring '%s' variable." % prop))
-                    #             continue
-                    #         if prop in self.properties:
-                    #             entry = self.properties[prop]
-                    #             setattr(self, prop, entry.pythonize(value))
-                    #         else:
-                    #             setattr(self, prop, value)
-                    #         print("Daemon %s, prop: %s = %s" % (self.name, prop, value))
-                    #         self.pre_log.append(("DEBUG",
-                    #                              "- setting '%s' as %s" % (prop,
-                    # getattr(self, prop))))
 
             except configparser.ParsingError as exp:
                 self.exit_on_exception(EnvironmentFile(exp.message))
@@ -542,7 +528,7 @@ class Daemon(object):
                 print("Daemon '%s' did not correctly read Alignak environment file: %s"
                       % (self.name, args['<cfg_file>']))
                 print("Exception: %s\n%s" % (exp, traceback.format_exc()))
-                self.exit_on_exception(EnvironmentFile("Exception: %s" % (exp)))
+                self.exit_on_exception(EnvironmentFile("Exception: %s" % exp))
 
         # Stop me if it I am disabled in the configuration
         if not self.active:
@@ -558,6 +544,9 @@ class Daemon(object):
             raise EnvironmentFile("Using daemon configuration file is now deprecated. "
                                   "The daemon -c command line parameter should not be "
                                   "used anymore in favor the -e environment file parameter.")
+
+        print("Daemon '%s' is started with an environment file: %s"
+              % (self.name, self.env_filename))
 
         if 'is_daemon' in kwargs and kwargs['is_daemon']:
             self.is_daemon = BoolProp().pythonize(kwargs['is_daemon'])
@@ -608,46 +597,62 @@ class Daemon(object):
             self.exit_on_error("Configured user/group (%s/%s) are not valid."
                                % (self.user, self.group), exit_code=3)
 
+        # Check the configured daemon directories, and create some if configuration allows
+        self.workdir = self.check_dir(self.workdir, self.create_directories)
+        self.etcdir = self.check_dir(self.etcdir, False)
+        self.vardir = self.check_dir(self.vardir, False)
+        self.logdir = self.check_dir(self.logdir, self.create_directories)
+        self.bindir = self.check_dir(self.bindir, False)
+
         # Alignak logger configuration file
         if os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None):
             self.logger_configuration = os.getenv('ALIGNAK_LOGGER_CONFIGURATION', None)
-        if self.logger_configuration != os.path.abspath(self.logger_configuration):
-            if self.logger_configuration == './alignak-logger.json':
-                self.logger_configuration = os.path.join(os.path.dirname(self.env_filename),
-                                                         self.logger_configuration)
-            else:
-                self.logger_configuration = os.path.abspath(self.logger_configuration)
-        print("Daemon '%s' logger configuration file: %s" % (self.name, self.logger_configuration))
+        if self.logger_configuration:
+            if self.logger_configuration in ['DEFAULT']:
+                self.logger_configuration = os.path.join(self.etcdir, 'alignak-logger.json')
 
-        # # Make my paths properties be absolute paths
-        # for prop, entry in list(my_properties.items()):
-        #     # Set absolute paths for
-        #     if isinstance(my_properties[prop], PathProp):
-        #         setattr(self, prop, os.path.abspath(getattr(self, prop)))
+            if self.logger_configuration != os.path.abspath(self.logger_configuration):
+                if self.logger_configuration in ['./alignak-logger.json', 'alignak-logger.json']:
+                    self.logger_configuration = os.path.join(os.path.dirname(self.env_filename),
+                                                             self.logger_configuration)
+                else:
+                    self.logger_configuration = os.path.abspath(self.logger_configuration)
 
         # Log file...
         self.log_filename = PathProp().pythonize("%s.log" % self.name)
         self.log_filename = os.path.abspath(os.path.join(self.logdir, self.log_filename))
         if 'log_filename' in kwargs and kwargs['log_filename']:
             self.log_filename = PathProp().pythonize(kwargs['log_filename'].strip())
+
+            # If we received a directory, transform to a file
+            if os.path.isdir(self.log_filename):
+                self.log_filename = os.path.abspath(
+                    os.path.join(self.log_filename, "%s.log" % self.name))
+
             # Make it an absolute path file in the log directory
             if self.log_filename != os.path.abspath(self.log_filename):
                 if self.log_filename:
+                    self.logger_configuration = None
                     self.log_filename = os.path.abspath(os.path.join(self.logdir,
                                                                      self.log_filename))
                 else:
                     self.use_log_file = False
                     print("Daemon '%s' will not log to a file: %s" % (self.name))
             else:
+                self.logger_configuration = None
                 self.logdir = os.path.dirname(self.log_filename)
-            print("Daemon '%s' is started with an overridden log file: %s"
-                  % (self.name, self.log_filename))
+            # print("Daemon '%s' is started with an overridden log file: %s"
+            #       % (self.name, self.log_filename))
 
-        # Check the log directory (and create if it does not exist)
-        self.check_dir(os.path.dirname(self.log_filename))
-
-        # Specific monitoring log directory
-        # self.check_dir(os.path.join(os.path.dirname(self.log_filename), 'monitoring-log'))
+        if self.logger_configuration:
+            if not os.path.exists(self.logger_configuration):
+                print("Daemon '%s', configured logger configuration file (%s) does not exist."
+                      % (self.name, self.logger_configuration))
+            else:
+                print("Daemon '%s' logger configuration file: %s"
+                      % (self.name, self.logger_configuration))
+        else:
+            print("Daemon '%s' log file: %s" % (self.name, self.log_filename))
 
         if 'log_filename' not in kwargs or not kwargs['log_filename']:
             # Log file name is not overridden, the logger will use the configured default one
@@ -657,7 +662,7 @@ class Daemon(object):
                       % (self.name, self.log_cherrypy))
             else:
                 self.log_cherrypy = None
-            self.log_filename = ''
+            # self.log_filename = ''
 
         # Log level...
         if 'log_level' in kwargs and kwargs['log_level']:
@@ -669,11 +674,16 @@ class Daemon(object):
         self.pid_filename = os.path.abspath(os.path.join(self.workdir, self.pid_filename))
         if 'pid_filename' in kwargs and kwargs['pid_filename']:
             self.pid_filename = PathProp().pythonize(kwargs['pid_filename'].strip())
+
+            # If we received a directory, transform to a file
+            if os.path.isdir(self.pid_filename):
+                self.pid_filename = os.path.abspath(
+                    os.path.join(self.pid_filename, "%s.pid" % self.name))
+
             # Make it an absolute path file in the pid directory
             if self.pid_filename != os.path.abspath(self.pid_filename):
                 self.pid_filename = os.path.abspath(os.path.join(self.workdir, self.pid_filename))
             self.workdir = os.path.dirname(self.pid_filename)
-            print("Daemon working directory: %s" % self.workdir)
         print("Daemon '%s' pid file: %s" % (self.name, self.pid_filename))
         self.pre_log.append(("INFO",
                              "Daemon '%s' pid file: %s" % (self.name, self.pid_filename)))
@@ -786,46 +796,81 @@ class Daemon(object):
             _scheme = 'https'
         return _scheme
 
-    def check_dir(self, dirname):
+    def check_dir(self, dir_name, create):
         """Check and create directory
 
-        :param dirname: file name
-        :type dirname; str
+        If the directory name is a relative, this function will consider it
+        relative to the working directory. It will return the full path of the
+        directory
 
-        :return: None
+        If the daemon is in very mode (arbiter -V command line) and the directory
+        cannot be created, then this function will return the system temporary files
+        directory
+
+        :param create: create if it does not exist
+        :type create: bool
+
+        :param dir_name: file name
+        :type dir_name; str
+
+        :return: str, the real directory full path
         """
         try:
-            os.makedirs(dirname)
-            dir_stat = os.stat(dirname)
-            print("Created the directory: %s, stat: %s" % (dirname, dir_stat))
-            if not dir_stat.st_uid == self.uid:
-                os.chown(dirname, self.uid, self.gid)
-                os.chmod(dirname, 0o775)
-                dir_stat = os.stat(dirname)
+            if dir_name in [self.workdir]:
+                if dir_name != os.path.abspath(dir_name):
+                    # It is not an absolute path, so make it absolute!
+                    dir_name = os.path.abspath(dir_name)
+            else:
+                if dir_name != os.path.abspath(dir_name):
+                    # It is not an absolute path, so it is relative to the working dir...
+                    dir_name = os.path.abspath(os.path.join(self.workdir, dir_name))
+
+            if not os.path.exists(dir_name):
+                if create:
+                    os.makedirs(dir_name)
+                    dir_stat = os.stat(dir_name)
+                    print("I created the directory: %s, stat: %s" % (dir_name, dir_stat))
+                else:
+                    print("The directory: %s does not exist" % dir_name)
+                    return dir_name
+
+            dir_stat = os.stat(dir_name)
+            if create and not dir_stat.st_uid == self.uid:
+                os.chown(dir_name, self.uid, self.gid)
+                os.chmod(dir_name, 0o775)
+                dir_stat = os.stat(dir_name)
                 print("Changed directory ownership and permissions: %s, stat: %s"
-                      % (dirname, dir_stat))
+                      % (dir_name, dir_stat))
+
+                self.pre_log.append(("INFO",
+                                     "Daemon '%s' directory %s did not exist, I created it. "
+                                     "I set ownership for this directory to %s:%s."
+                                     % (self.name, dir_name, self.user, self.group)))
 
             self.pre_log.append(("DEBUG",
                                  "Daemon '%s' directory %s checking... "
                                  "User uid: %s, directory stat: %s."
-                                 % (self.name, dirname, os.getuid(), dir_stat)))
+                                 % (self.name, dir_name, os.getuid(), dir_stat)))
 
-            self.pre_log.append(("INFO",
-                                 "Daemon '%s' directory %s did not exist, I created it. "
-                                 "I set ownership for this directory to %s:%s."
-                                 % (self.name, dirname, self.user, self.group)))
+            return dir_name
+
         except OSError as exp:
-            if exp.errno == errno.EEXIST and os.path.isdir(dirname):
+            if self.verify_only and exp.errno == 13:
+                # In verify mode, forward directory to the /tmp
+                print("Exception: %s" % exp)
+                return tempfile.gettempdir()
+
+            if exp.errno == errno.EEXIST and os.path.isdir(dir_name):
                 # Directory still exists...
                 pass
             else:
                 self.pre_log.append(("ERROR",
                                      "Daemon directory '%s' did not exist, "
                                      "and I could not create. Exception: %s"
-                                     % (dirname, exp)))
+                                     % (dir_name, exp)))
                 self.exit_on_error("Daemon directory '%s' did not exist, "
                                    "and I could not create.'. Exception: %s"
-                                   % (dirname, exp), exit_code=3)
+                                   % (dir_name, exp), exit_code=3)
 
     def do_stop(self):
         """Execute the stop of this daemon:
@@ -863,10 +908,6 @@ class Daemon(object):
             self.http_thread.join(timeout=3)
             if self.http_thread.is_alive():  # pragma: no cover, should never happen...
                 logger.warning("HTTP thread did not terminated. Force stopping the thread..")
-                # try:
-                #     self.http_thread._Thread__stop()  # pylint: disable=E1101
-                # except Exception as exp:  # pylint: disable=broad-except
-                #     print("Exception: %s" % exp)
             else:
                 logger.debug("HTTP thread exited")
             self.http_thread = None
@@ -880,7 +921,7 @@ class Daemon(object):
         # Force output to stderr
         if exit_code:
             if message:
-                logger.error(message)
+                logger.error("stderr: %s", message)
                 try:
                     sys.stderr.write(message)
                 except Exception:  # pylint: disable=broad-except
@@ -1039,7 +1080,7 @@ class Daemon(object):
 
             # Maybe someone said we will stop...
             if self.will_stop and not self.type == 'arbiter':
-                logger.debug("death-wait mode... waiting for death")
+                logger.info("death-wait mode... waiting for death")
                 _, _ = self.make_a_pause(1.0)
                 continue
 
@@ -1245,9 +1286,9 @@ class Daemon(object):
 
         :return: None
         """
-        logger.info("Changing working directory to: %s", self.workdir)
+        self.pre_log.append(("INFO", "Changing working directory to: %s" % self.workdir))
 
-        self.check_dir(self.workdir)
+        # self.check_dir(self.workdir)
         try:
             os.chdir(self.workdir)
         except OSError as exp:
@@ -1478,18 +1519,18 @@ class Daemon(object):
         manager.start()
         return manager
 
-    def do_daemon_init_and_start(self, set_proc_title=True):
+    def do_daemon_init_and_start(self, set_process_title=True):
         """Main daemon function.
         Clean, allocates, initializes and starts all necessary resources to go in daemon mode.
 
         The set_proc_title parameter is mainly useful for the Alignak unit tests.
         This to avoid changing the test process name!
 
-        :param set_proc_title: if set (default), the process title is changed to the daemon name
-        :type set_proc_title: bool
+        :param set_process_title: if set (default), the process title is changed to the daemon name
+        :type set_process_title: bool
         :return: False if the HTTP daemon can not be initialized, else True
         """
-        if set_proc_title:
+        if set_process_title:
             self.set_proctitle(self.name)
 
         # Change to configured user/group account
@@ -1510,22 +1551,6 @@ class Daemon(object):
             # Else, I set my own pid as the reference one
             self.write_pid(os.getpid())
 
-        # # TODO: check if really necessary!
-        # # -------
-        # # Set ownership on some default log files. It may happen that these default
-        # # files are owned by a privileged user account
-        # try:
-        #     for log_file in ['alignak.log', 'alignak-events.log']:
-        #         if os.path.exists('/tmp/%s' % log_file):
-        #             with open('/tmp/%s' % log_file, "w") as file_log_file:
-        #                 os.fchown(file_log_file.fileno(), self.uid, self.gid)
-        #         if os.path.exists('/tmp/monitoring-log/%s' % log_file):
-        #             with open('/tmp/monitoring-log/%s' % log_file, "w") as file_log_file:
-        #                 os.fchown(file_log_file.fileno(), self.uid, self.gid)
-        # except Exception as exp:  # pylint: disable=broad-except
-        #     #  pragma: no cover
-        #     print("Could not set default log files ownership, exception: %s" % str(exp))
-
         # Configure the daemon logger
         self.setup_alignak_logger()
 
@@ -1534,18 +1559,17 @@ class Daemon(object):
             logger.error("I could not setup my communication daemon :(")
             return False
 
-        # Creating synchonisation manager (inter-daemon queues...)
+        # Creating synchronisation manager (inter-daemon queues...)
         self.sync_manager = self._create_manager()
 
         # Start the CherryPy server through a detached thread
         logger.info("Starting http_daemon thread")
-        # pylint: disable=bad-thread-instantiation
         self.http_thread = threading.Thread(target=self.http_daemon_thread,
                                             name='%s-http_thread' % self.name)
-        # Setting the thread as a daemon allows to Ctrl+C to kill the main daemon
+        # Setting the thread as a daemon allows to kill the thread with the main daemon
         self.http_thread.daemon = True
         self.http_thread.start()
-        # time.sleep(1)
+
         logger.info("HTTP daemon thread started")
 
         return True
@@ -1587,7 +1611,6 @@ class Daemon(object):
                 logger.info("Enabling hard SSL server name verification")
 
         # Let's create the HTTPDaemon, it will be started later
-        # pylint: disable=E1101
         try:
             logger.info('Setting up HTTP daemon (%s:%d), %d threads',
                         self.host, self.port, self.thread_pool_size)
@@ -1661,8 +1684,12 @@ class Daemon(object):
             try:
                 os.initgroups(self.user, gid)
             except OSError as err:
-                logger.warning('Cannot call the additional groups setting with initgroups: %s',
-                               err.strerror)
+                if err.errno == errno.EPERM:
+                    logger.info("The current user (%s) is not allowed to initialize "
+                                "the groups access list for '%s'", get_cur_user(), self.user)
+                else:
+                    logger.warning('Cannot call the additional groups setting with initgroups: %s',
+                                   err.strerror)
         elif hasattr(os, 'setgroups'):  # pragma: no cover, not with unit tests on Travis
             # Else try to call the setgroups if it exists...
             groups = [gid] + \
@@ -1769,7 +1796,9 @@ class Daemon(object):
                   u"-----",
                   u"Python: %s.%s" % (sys.version_info.major, sys.version_info.minor),
                   u"-----",
-                  u"My pid: %s" % self.pid]
+                  u"My pid: %s" % self.pid,
+                  u"My host name: %s" % self.host_name,
+                  u"-----"]
 
         if configuration:
             header = ["My configuration: "]
@@ -2182,25 +2211,41 @@ class Daemon(object):
         # Configure the daemon logger
         try:
             # Make sure that the log directory is existing
-            self.check_dir(self.logdir)
-            setup_logger(logger_configuration_file=self.logger_configuration,
-                         log_dir=self.logdir, process_name=self.name,
-                         log_file=self.log_filename)
+            # self.check_dir(self.logdir)
+
+            if self.logger_configuration and not os.path.exists(self.logger_configuration):
+                print("The logger configuration file does not exist: %s"
+                      % self.logger_configuration)
+                print("Logging to: %s" % self.log_filename)
+                self.logger_configuration = None
+
+            if not self.logger_configuration:
+                # Configure a timed rotation file logger
+                set_log_file(self.log_filename, self.log_rotation_when,
+                             self.log_rotation_interval, self.log_rotation_count,
+                             self.log_format, self.log_date)
+            else:
+                # Configure the logger with a configuration file
+                setup_logger(logger_configuration_file=self.logger_configuration,
+                             log_dir=self.logdir, process_name=self.name,
+                             log_file=self.log_filename)
+                print("Configured a logger with directory as: %s" % self.logdir)
+
             if self.debug:
                 # Force the global logger at DEBUG level
-                set_log_level('DEBUG')
+                set_log_level('DEBUG', handlers=True)
                 logger.info("-----")
                 logger.info("Daemon log level set to a minimum of DEBUG")
                 logger.info("-----")
             elif self.verbose:
                 # Force the global logger at INFO level
-                set_log_level('INFO')
+                set_log_level('INFO', handlers=True)
                 logger.info("-----")
                 logger.info("Daemon log level set to a minimum of INFO")
                 logger.info("-----")
             elif self.log_level:
                 # Force the global logger at provided level
-                set_log_level(self.log_level)
+                set_log_level(self.log_level, handlers=True)
                 logger.info("-----")
                 logger.info("Daemon log level set to %s", self.log_level)
                 logger.info("-----")
@@ -2223,10 +2268,4 @@ class Daemon(object):
             for level, message in self.pre_log:
                 fun_level = level.lower()
                 getattr(logger, fun_level)("- %s", message)
-                # if level.lower() == "debug":
-                #     logger.debug(message)
-                # elif level.lower() == "info":
-                #     logger.info(message)
-                # elif level.lower() == "warning":
-                #     logger.warning(message)
             logger.debug("--- Stop - Log prior to our configuration")

@@ -65,6 +65,7 @@ class Resultmodulation(Item):
 
     """
     my_type = 'resultmodulation'
+    my_name_property = "%s_name" % my_type
 
     properties = Item.properties.copy()
     properties.update({
@@ -79,16 +80,6 @@ class Resultmodulation(Item):
     })
 
     special_properties = ('modulation_period',)
-
-    def get_name(self):
-        """Accessor to resultmodulation_name attribute
-
-        :return: result modulation name
-        :rtype: str
-        """
-        if hasattr(self, 'resultmodulation_name'):
-            return self.resultmodulation_name
-        return 'Unnamed'
 
     def is_active(self, timperiods):
         """

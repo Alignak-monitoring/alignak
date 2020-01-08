@@ -56,7 +56,7 @@ implements realm for Alignak. Basically used for parsing.
 import copy
 import logging
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
-from alignak.property import BoolProp, StringProp, DictProp, ListProp, IntegerProp
+from alignak.property import BoolProp, StringProp, DictProp, ListProp, IntegerProp, FULL_STATUS
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -71,15 +71,17 @@ class Realm(Itemgroup):
 
     """
     my_type = 'realm'
+    my_name_property = "%s_name" % my_type
+
     members_property = "members"
     group_members_property = "realm_members"
 
     properties = Itemgroup.properties.copy()
     properties.update({
         'realm_name':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'alias':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'realm_members':
             ListProp(default=[], split_on_comma=True),
         'group_members':
@@ -146,8 +148,12 @@ class Realm(Itemgroup):
         'REALMHOSTS_COUNT': 'hosts_count',
     }
 
-    def __init__(self, params=None, parsing=True):
+    def __init__(self, params, parsing=True):
         super(Realm, self).__init__(params, parsing)
+
+        self.level = -1
+        self.all_sub_members = []
+        self.all_sub_members_names = []
 
         self.fill_default()
 
@@ -187,36 +193,43 @@ class Realm(Itemgroup):
             setattr(self, "nb_%ss" % sat_type, 0)
             setattr(self, 'potential_%ss' % sat_type, [])
 
-    def __repr__(self):
-        res = '<%r %r (%d)' % (self.__class__.__name__, self.get_name(), self.level)
+    def __str__(self):
+        res = '<Realm %s (%d)' % (self.get_name(), self.level)
         if self.realm_members:
-            res = res + ', %d sub-realms: %r' \
+            res = res + ', %d sub-realms: %s' \
                         % (len(self.realm_members), ', '.join([str(s) for s in self.realm_members]))
             if self.all_sub_members_names:
-                res = res + ', %d all sub-realms: %r' \
+                res = res + ', %d all sub-realms: %s' \
                             % (len(self.all_sub_members_names),
                                ', '.join([str(s) for s in self.all_sub_members_names]))
-        if self.hosts_count:
+        if getattr(self, 'hosts_count', None):
             res = res + ', %d hosts' % self.hosts_count
         if getattr(self, 'parts', None):
             res = res + ', %d parts' % len(self.parts)
         if getattr(self, 'packs', None):
             res = res + ', %d packs' % len(self.packs)
         return res + '/>'
-    __str__ = __repr__
+    __repr__ = __str__
 
     @property
     def name(self):
         """Get the realm name"""
         return self.get_name()
 
-    def get_name(self):
-        """Accessor to realm_name attribute
+    def serialize(self):
+        """This function serialize into a simple dict object.
+        It is used when transferring data to other daemons over the network (http)
 
-        :return: realm name
-        :rtype: str
+        Here we directly return all attributes
+
+        :return:
+        :rtype: dict
         """
-        return getattr(self, 'realm_name', 'unset')
+        return {
+            "uuid": self.uuid,
+            "realm_name": self.get_name(),
+            "level": self.level
+        }
 
     def add_group_members(self, members):
         """Add a new group member to the groups list
@@ -523,19 +536,11 @@ class Realms(Itemgroups):
     """Realms manage a list of Realm objects, used for parsing configuration
 
     """
-    name_property = "realm_name"
     inner_class = Realm
 
     def __init__(self, items, index_items=True, parsing=True):
         super(Realms, self).__init__(items, index_items, parsing)
         self.default = None
-
-    def __repr__(self):  # pragma: no cover
-        res = []
-        for _realm in sorted(self, key=lambda _realm: _realm.level):
-            res.append('%s %s' % ('+' * _realm.level, _realm.get_name()))
-        return '\n'.join(res)
-    __str__ = __repr__
 
     def linkify(self):
         """The realms linkify is done during the default realms/satellites initialization in the

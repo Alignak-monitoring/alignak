@@ -107,6 +107,9 @@ class TestDaemonsApi(AlignakTest):
             cfg = configparser.ConfigParser()
             cfg.read(files)
 
+            # Directory for running daemons
+            cfg.set('alignak-configuration', 'daemons_script_location', '')
+
             cfg.set('alignak-configuration', 'launch_missing_daemons', '1')
 
             cfg.set('alignak-configuration', 'daemons_check_period', '5')
@@ -125,12 +128,15 @@ class TestDaemonsApi(AlignakTest):
             for daemon in daemons_list:
                 if cfg.has_section('daemon.%s' % daemon):
                     cfg.set('daemon.%s' % daemon, 'alignak_launched', '1')
+                    cfg.set('daemon.%s' % daemon, 'min_workers', '1')
+                    cfg.set('daemon.%s' % daemon, 'max_workers', '1')
             for daemon in remove_daemons:
                 if cfg.has_section('daemon.%s' % daemon):
                     print("Remove daemon: %s" % daemon)
                     cfg.remove_section('daemon.%s' % daemon)
 
             if os.path.exists('%s/etc/alignak.d' % self.cfg_folder):
+                # Remove default or former modules/daemons configuration!
                 print("- removing %s/etc/alignak.d" % self.cfg_folder)
                 shutil.rmtree('%s/etc/alignak.d' % self.cfg_folder)
 
@@ -343,7 +349,6 @@ class TestDaemonsApi(AlignakTest):
             rst_write = "../../alignak-doc/source/07_alignak_features/api/%s" % rst_file
         if rst_write:
             with open(rst_write, mode='wt') as out:
-            # with open(rst_write, mode='wt', encoding='utf-8') as out:
                 out.write('\n'.join(doc))
         # -----
 
@@ -358,7 +363,7 @@ class TestDaemonsApi(AlignakTest):
         doc.append("Alignak daemons statistics")
         doc.append("==========================")
         for name, port in list(satellite_map.items()):
-            print("- for %s" % (name))
+            print("- for %s" % name)
             raw_data = req.get("%s://localhost:%s/stats" % (scheme, port), verify=False)
             print("Got /stats: %s" % raw_data.content)
             assert raw_data.status_code == 200
@@ -427,13 +432,12 @@ class TestDaemonsApi(AlignakTest):
         if os.path.exists("../../alignak-doc/source/07_alignak_features/api"):
             rst_write = "../../alignak-doc/source/07_alignak_features/api/%s" % rst_file
         if rst_write:
-            # with open(rst_write, mode='wt', encoding='utf-8') as out:
             with open(rst_write, mode='wt') as out:
                 out.write('\n'.join(doc))
 
         print("Testing stats (detailed)")
         for name, port in list(satellite_map.items()):
-            print("- for %s" % (name))
+            print("- for %s" % name)
             raw_data = req.get("%s://localhost:%s/stats?details=1" % (scheme, port), verify=False)
             print("Got /stats?details=1: %s" % raw_data.content)
             assert raw_data.status_code == 200
@@ -536,7 +540,7 @@ class TestDaemonsApi(AlignakTest):
         # -----
         print("Testing managed_configurations")
         for name, port in list(satellite_map.items()):
-            print("%s, what I manage?" % (name))
+            print("%s, what I manage?" % name)
             raw_data = req.get("%s://localhost:%s/managed_configurations" % (scheme, port), verify=False)
             assert raw_data.status_code == 200
             data = raw_data.json()
@@ -570,7 +574,7 @@ class TestDaemonsApi(AlignakTest):
             print("%s, raw: %s" % (name, raw_data.content))
             data = raw_data.json()
             print("%s, log level: %s" % (name, data))
-            # Initially forced the INFO log level
+            # Initially forced the ERROR log level (no logger configuration file)
             assert data['log_level'] == 20
             assert data['log_level_name'] == 'INFO'
 
@@ -707,11 +711,11 @@ class TestDaemonsApi(AlignakTest):
             for proc in psutil.process_iter():
                 if 'alignak' in proc.name() and daemon in proc.name():
                     # SIGUSR1: memory dump
-                    print("%s, send signal SIGUSR1" % (name))
+                    print("%s, send signal SIGUSR1" % name)
                     proc.send_signal(signal.SIGUSR1)
                     time.sleep(1.0)
                     # SIGUSR2: objects dump
-                    print("%s, send signal SIGUSR2" % (name))
+                    print("%s, send signal SIGUSR2" % name)
                     proc.send_signal(signal.SIGUSR2)
                     time.sleep(1.0)
                     # SIGHUP: reload configuration
@@ -725,6 +729,7 @@ class TestDaemonsApi(AlignakTest):
         # -----
 
         # # This function will only send a SIGTERM to the arbiter daemon
+        # # and this will make all the daemons stop
         # self._stop_alignak_daemons(arbiter_only=True)
         #
         # The arbiter daemon will then request its satellites to stop...
@@ -733,8 +738,9 @@ class TestDaemonsApi(AlignakTest):
         for name, port in satellite_map.items():
             if name in ['arbiter']:
                 continue
+            print("%s, you will stop soon" % name)
             raw_data = req.get("%s://localhost:%s/stop_request?stop_now=0" % (scheme, port),
-                               params={'stop_now': False}, verify=False)
+                               verify=False)
             data = raw_data.json()
             assert data is True
 
@@ -743,10 +749,15 @@ class TestDaemonsApi(AlignakTest):
         for name, port in satellite_map.items():
             if name in ['arbiter']:
                 continue
+            print("%s, you should stop now!" % name)
             raw_data = req.get("%s://localhost:%s/stop_request?stop_now=1" % (scheme, port),
-                               params={'stop_now': True}, verify=False)
+                               verify=False)
             data = raw_data.json()
             assert data is True
+
+        # This function will only send a SIGTERM to the arbiter daemon
+        # and this will make all the daemons stop
+        self._stop_alignak_daemons(arbiter_only=True)
 
     def test_daemons_configuration(self):
         """ Running all the Alignak daemons to check their correct configuration
@@ -792,8 +803,8 @@ class TestDaemonsApi(AlignakTest):
                 satellite_map[sat] = full_satellite_map[sat]
 
         print("Satellites map: %s" % satellite_map)
-        self._run_alignak_daemons(cfg_folder=self.cfg_folder, daemons_list=daemons_list, runtime=5,
-                                  update_configuration=False)
+        self._run_alignak_daemons(cfg_folder=self.cfg_folder, daemons_list=daemons_list,
+                                  runtime=5, update_configuration=False)
 
         scheme = 'http'
         if ssl:
@@ -808,7 +819,7 @@ class TestDaemonsApi(AlignakTest):
         # 1/ get the running identifier (confirm the daemon is running)
         print("--- get_running_id")
         for name, port in list(satellite_map.items()):
-            raw_data = req.get("%s://localhost:%s/identity" % (scheme, port), verify=False)
+            raw_data = req.get("%s://localhost:%s/identity" % (scheme, port))
             print("Got (raw): %s" % raw_data)
             data = raw_data.json()
             assert "running_id" in data
@@ -822,11 +833,11 @@ class TestDaemonsApi(AlignakTest):
         for name, port in list(satellite_map.items()):
             if name == 'arbiter-master':
                 continue
-            raw_data = req.get("%s://localhost:%s/_have_conf" % (scheme, port), verify=False)
+            raw_data = req.get("%s://localhost:%s/_have_conf" % (scheme, port))
             print("have_conf %s, got (raw): %s" % (name, raw_data))
             data = raw_data.json()
             print("%s, have_conf: %s" % (name, data))
-            assert data == True, "Daemon %s should have a conf!" % name
+            assert data is True, "Daemon %s should have a conf!" % name
 
         # -----
         # 3/ ask to wait for a new configuration
@@ -834,10 +845,10 @@ class TestDaemonsApi(AlignakTest):
         for name, port in list(satellite_map.items()):
             if name == 'arbiter-master':
                 continue
-            raw_data = req.get("%s://localhost:%s/_wait_new_conf" % (scheme, port), verify=False)
+            raw_data = req.get("%s://localhost:%s/_wait_new_conf" % (scheme, port))
             print("wait_new_conf %s, got (raw): %s" % (name, raw_data))
             data = raw_data.json()
-            assert data == None
+            assert data is None
         # -----
 
         # -----
@@ -847,11 +858,11 @@ class TestDaemonsApi(AlignakTest):
         for name, port in list(satellite_map.items()):
             if name == 'arbiter-master':
                 continue
-            raw_data = req.get("%s://localhost:%s/_have_conf" % (scheme, port), verify=False)
+            raw_data = req.get("%s://localhost:%s/_have_conf" % (scheme, port))
             print("have_conf %s, got (raw): %s" % (name, raw_data))
             data = raw_data.json()
             print("%s, have_conf: %s" % (name, data))
-            assert data == False, "Daemon %s should not have a conf!" % name
+            assert data is False, "Daemon %s should not have a conf!" % name
 
         # This function will only send a SIGTERM to the arbiter daemon
         # self._stop_alignak_daemons(arbiter_only=True)
@@ -863,20 +874,23 @@ class TestDaemonsApi(AlignakTest):
         for name, port in list(satellite_map.items()):
             if name in ['arbiter']:
                 continue
-            raw_data = req.get("%s://localhost:%s/stop_request?stop_now=" % (scheme, port),
-                               params={'stop_now': False}, verify=False)
+            raw_data = req.get("%s://localhost:%s/stop_request?stop_now=0" % (scheme, port))
             data = raw_data.json()
             assert data is True
 
-        time.sleep(2)
+        time.sleep(1)
+
         print("Testing stop_request - tell the daemons they must stop now!")
         for name, port in list(satellite_map.items()):
             if name in ['arbiter']:
                 continue
-            raw_data = req.get("%s://localhost:%s/stop_request?stop_now=" % (scheme, port),
-                               params={'stop_now': True}, verify=False)
+            raw_data = req.get("%s://localhost:%s/stop_request?stop_now=1" % (scheme, port))
             data = raw_data.json()
             assert data is True
+
+        # This function will only send a SIGTERM to the arbiter daemon
+        # and this will make all the daemons stop
+        self._stop_alignak_daemons(arbiter_only=True)
 
     def test_get_objects_from_scheduler(self):
         """ Running all the Alignak daemons - get host and other objects
@@ -1296,13 +1310,15 @@ class TestDaemonsApi(AlignakTest):
 
         raw_data = req.get("http://localhost:7770/_external_commands")
         assert raw_data.status_code == 200
-        print("%s _external_commands, got (raw): %s" % (name, raw_data))
         data = raw_data.json()
-        print("---Got: %s" % data)
-        assert len(data) == 1
-        assert 'creation_timestamp' in data[0]
-        assert data[0]['cmd_line'] == 'DISABLE_NOTIFICATIONS'
-        assert data[0]['my_type'] == 'externalcommand'
+        print("_external_commands, got: %s" % data)
+        assert len(data) <= 1
+        if data:
+            assert 'creation_timestamp' in data[0]
+            assert data[0]['cmd_line'] == 'DISABLE_NOTIFICATIONS'
+            assert data[0]['my_type'] == 'externalcommand'
+        else:
+            print("Command consumed.")
 
         # -----
         # 3/ notify an external command to the arbiter (WS interface).
@@ -1327,10 +1343,13 @@ class TestDaemonsApi(AlignakTest):
         print("%s _external_commands, got (raw): %s" % (name, raw_data))
         data = raw_data.json()
         print("---Got: %s" % data)
-        assert len(data) == 1
-        assert 'creation_timestamp' in data[0]
-        assert data[0]['cmd_line'] == 'PROCESS_HOST_CHECK_RESULT;Host_name;0;I am alive!'
-        assert data[0]['my_type'] == 'externalcommand'
+        assert len(data) <= 1
+        if data:
+            assert 'creation_timestamp' in data[0]
+            assert data[0]['cmd_line'] == 'PROCESS_HOST_CHECK_RESULT;Host_name;0;I am alive!'
+            assert data[0]['my_type'] == 'externalcommand'
+        else:
+            print("Command consumed.")
 
         # -----
         # 3/ notify an external command to the arbiter (WS interface).
@@ -1356,10 +1375,13 @@ class TestDaemonsApi(AlignakTest):
         print("%s _external_commands, got (raw): %s" % (name, raw_data))
         data = raw_data.json()
         print("---Got: %s" % data)
-        assert len(data) == 1
-        assert 'creation_timestamp' in data[0]
-        assert data[0]['cmd_line'] == 'PROCESS_HOST_CHECK_RESULT;Host_name;0;I am alive!'
-        assert data[0]['my_type'] == 'externalcommand'
+        assert len(data) <= 1
+        if data:
+            assert 'creation_timestamp' in data[0]
+            assert data[0]['cmd_line'] == 'PROCESS_HOST_CHECK_RESULT;Host_name;0;I am alive!'
+            assert data[0]['my_type'] == 'externalcommand'
+        else:
+            print("Command consumed.")
 
         # -----
         # 3/ notify an external command to the arbiter (WS interface).
@@ -1385,10 +1407,13 @@ class TestDaemonsApi(AlignakTest):
         print("%s _external_commands, got (raw): %s" % (name, raw_data))
         data = raw_data.json()
         print("---Got: %s" % data)
-        assert len(data) == 1
-        assert 'creation_timestamp' in data[0]
-        assert data[0]['cmd_line'] == 'DISABLE_PASSIVE_HOST_CHECKS;host_name;p1;p2;p3'
-        assert data[0]['my_type'] == 'externalcommand'
+        assert len(data) <= 1
+        if data:
+            assert 'creation_timestamp' in data[0]
+            assert data[0]['cmd_line'] == 'DISABLE_PASSIVE_HOST_CHECKS;host_name;p1;p2;p3'
+            assert data[0]['my_type'] == 'externalcommand'
+        else:
+            print("Command consumed.")
 
         raw_data = req.post("http://localhost:7770/command",
                             data=json.dumps({
@@ -1463,6 +1488,7 @@ class TestDaemonsApi(AlignakTest):
         assert data['_message'] == 'Got command: TEST;user_name;p1;p2;p3'
         assert data['command'] == 'TEST;user_name;p1;p2;p3'
 
+        # Some time to let the daemons handle the commands
         time.sleep(5)
 
         # -----
@@ -1470,9 +1496,8 @@ class TestDaemonsApi(AlignakTest):
         for name, port in list(satellite_map.items()):
             raw_data = req.get("http://localhost:%s/_external_commands" % port, verify=False)
             assert raw_data.status_code == 200
-            print("%s _external_commands, got (raw): %s" % (name, raw_data))
             data = raw_data.json()
-            print("Got: %s" % data)
+            print("%s _external_commands, got: %s" % (name, data))
             # External commands got consumed by the daemons - not always all !
             # May be 0 but it seems that sometimes 5 are remaining
             assert len(data) in [0, 5]
@@ -1486,7 +1511,7 @@ class TestDaemonsApi(AlignakTest):
 
         print("--- stats")
         for name, port in list(satellite_map.items()):
-            print("- for %s" % (name))
+            print("- for %s" % name)
             raw_data = req.get("http://localhost:%s/stats%s" % (port, '?details=1' if details else ''), verify=False)
             print("%s, my stats: %s" % (name, raw_data.text))
             assert raw_data.status_code == 200
@@ -2202,14 +2227,32 @@ class TestDaemonsApi(AlignakTest):
         # Host is alive :)
         # Created and raised an host passive check command
         # No issues
-        assert data == {
-            u'_status': u'OK',
-            u'_result': [
+        assert '_status' in data
+        assert data['_status'] == u'OK'
+        assert '_issues' in data
+        assert data['_issues'] == []
+        assert '_result' in data
+        if data['_result'] != [
                 u'test_host is alive :)',
-                u"Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;Output...|'counter'=1\nLong output..." % now
-            ],
-            u'_issues': []
-        }
+                u"Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;Output..."
+                u"|'counter'=1\nLong output..." % now
+            ]:
+            if data['_result'] != [
+                u'test_host is alive :)',
+                u"Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;Output..."
+                u"|'counter'=1\nLong output..." % (now + 1)
+            ]:
+                assert False
+
+        # assert data == {
+        #     u'_status': u'OK',
+        #     u'_result': [
+        #         u'test_host is alive :)',
+        #         u"Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;Output..."
+        #         u"|'counter'=1\nLong output..." % now
+        #     ],
+        #     u'_issues': []
+        # }
 
         # -----
         # 3/ Upload an host and its services information
@@ -2241,18 +2284,39 @@ class TestDaemonsApi(AlignakTest):
         # Services are in OK state
         # Created and raised some host and services passive check command
         # No issues
-        assert data == {
-            u'_status': u'OK',
-            u'_result': [
+        assert '_status' in data
+        assert data['_status'] == u'OK'
+        assert '_issues' in data
+        assert data['_issues'] == []
+        assert '_result' in data
+        if data['_result'] != [
                 u'test_host is alive :)',
                 u'Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;' % now,
                 u'Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_0;0;' % now,
                 u'Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_1;0;' % now,
                 u'Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_2;0;' % now
-            ],
-            u'_issues': []
-        }
+            ]:
+            if data['_result'] != [
+                u'test_host is alive :)',
+                u'Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;' % (now + 1),
+                u'Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_0;0;' % (now + 1),
+                u'Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_1;0;' % (now + 1),
+                u'Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_2;0;' % (now + 1)
+            ]:
+                assert False
 
+        # assert data == {
+        #     u'_status': u'OK',
+        #     u'_result': [
+        #         u'test_host is alive :)',
+        #         u'Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;' % now,
+        #         u'Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_0;0;' % now,
+        #         u'Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_1;0;' % now,
+        #         u'Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_2;0;' % now
+        #     ],
+        #     u'_issues': []
+        # }
+        #
         # Now, with live state data
         now = int(time.time())
         data = {
@@ -2298,14 +2362,41 @@ class TestDaemonsApi(AlignakTest):
         # Host is alive :)
         # Created and raised some host and services passive check command
         # No issues
-        assert data == {
-            u'_status': u'OK',
-            u'_result': [
+        assert '_status' in data
+        assert data['_status'] == u'OK'
+        assert '_issues' in data
+        assert data['_issues'] == []
+        assert '_result' in data
+        if data['_result'] != [
                 u'test_host is alive :)',
                 u"Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;" % now,
-                u"Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_0;0;Output 0|'counter'=0\nLong output 0" % now,
-                u"Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_1;1;Output 1|'counter'=1\nLong output 1" % now,
-                u"Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_2;2;Output 2|'counter'=2\nLong output 2" % now
-            ],
-            u'_issues': []
-        }
+                u"Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_0;0;Output 0"
+                u"|'counter'=0\nLong output 0" % now,
+                u"Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_1;1;Output 1"
+                u"|'counter'=1\nLong output 1" % now,
+                u"Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_2;2;Output 2"
+                u"|'counter'=2\nLong output 2" % now
+            ]:
+            if data['_result'] != [
+                u'test_host is alive :)',
+                u"Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;" % (now + 1),
+                u"Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_0;0;Output 0"
+                u"|'counter'=0\nLong output 0" % (now + 1),
+                u"Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_1;1;Output 1"
+                u"|'counter'=1\nLong output 1" % (now + 1),
+                u"Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_2;2;Output 2"
+                u"|'counter'=2\nLong output 2" % (now + 1)
+            ]:
+                assert False
+
+        # assert data == {
+        #     u'_status': u'OK',
+        #     u'_result': [
+        #         u'test_host is alive :)',
+        #         u"Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;" % now,
+        #         u"Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_0;0;Output 0|'counter'=0\nLong output 0" % now,
+        #         u"Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_1;1;Output 1|'counter'=1\nLong output 1" % now,
+        #         u"Raised: [%s] PROCESS_SERVICE_CHECK_RESULT;test_host;test_ok_2;2;Output 2|'counter'=2\nLong output 2" % now
+        #     ],
+        #     u'_issues': []
+        # }

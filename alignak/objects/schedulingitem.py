@@ -60,8 +60,8 @@
 will find all scheduling related functions, like the schedule
 or the consume_check. It's a very important class!
 """
-# pylint: disable=C0302
-# pylint: disable=R0904
+# pylint: disable=too-many-lines
+# pylint: disable=too-many-public-methods
 import os
 import re
 import random
@@ -71,17 +71,18 @@ import traceback
 import logging
 import numpy
 
+from alignak.misc.serialization import serialize, unserialize
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
-from alignak.dependencynode import DependencyNode
 
-from alignak.action import ACT_STATUS_WAIT_CONSUME, ACT_STATUS_ZOMBIE, \
-    ACT_STATUS_WAIT_DEPEND, ACT_STATUS_WAITING_ME, ACT_STATUS_POLLED
+from alignak.action import (ACT_STATUS_WAIT_CONSUME, ACT_STATUS_ZOMBIE,
+                            ACT_STATUS_WAIT_DEPEND, ACT_STATUS_WAITING_ME, ACT_STATUS_POLLED)
 from alignak.check import Check
 from alignak.property import (BoolProp, IntegerProp, FloatProp, SetProp,
-                              CharProp, StringProp, ListProp, DictProp)
-from alignak.util import to_serialized, from_serialized, dict_to_serialized_dict, \
-    from_set_to_list, from_list_to_set
+                              CharProp, StringProp, ListProp, DictProp,
+                              FULL_STATUS, CHECK_RESULT)
+from alignak.util import (to_serialized, from_serialized, dict_to_serialized_dict,
+                          from_set_to_list, from_list_to_set)
 from alignak.notification import Notification
 from alignak.macroresolver import MacroResolver
 from alignak.eventhandler import EventHandler
@@ -93,7 +94,7 @@ from alignak.commandcall import CommandCall
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class SchedulingItem(Item):  # pylint: disable=R0902
+class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
     """SchedulingItem class provide method for Scheduler to handle Service or Host objects
 
     """
@@ -105,127 +106,123 @@ class SchedulingItem(Item):  # pylint: disable=R0902
     properties = Item.properties.copy()
     properties.update({
         'display_name':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'initial_state':
-            CharProp(default='o', fill_brok=['full_status']),
+            CharProp(default='o', fill_brok=[FULL_STATUS]),
         'max_check_attempts':
-            IntegerProp(default=1, fill_brok=['full_status']),
+            IntegerProp(default=1, fill_brok=[FULL_STATUS]),
         'check_interval':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT]),
         'retry_interval':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT]),
         'active_checks_enabled':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
+            BoolProp(default=True, fill_brok=[FULL_STATUS], retention=True),
         'passive_checks_enabled':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
+            BoolProp(default=True, fill_brok=[FULL_STATUS], retention=True),
         'check_period':
-            StringProp(fill_brok=['full_status'], special=True),
+            StringProp(fill_brok=[FULL_STATUS], special=True),
         # Set a default freshness threshold not 0 if parameter is missing
         # and check_freshness is enabled
         'check_freshness':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
         'freshness_threshold':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
 
         'event_handler':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default='', fill_brok=[FULL_STATUS]),
         'event_handler_enabled':
-            BoolProp(default=False, fill_brok=['full_status'], retention=True),
+            BoolProp(default=False, fill_brok=[FULL_STATUS], retention=True),
         'low_flap_threshold':
-            IntegerProp(default=25, fill_brok=['full_status']),
+            IntegerProp(default=25, fill_brok=[FULL_STATUS]),
         'high_flap_threshold':
-            IntegerProp(default=50, fill_brok=['full_status']),
+            IntegerProp(default=50, fill_brok=[FULL_STATUS]),
         'flap_detection_enabled':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
+            BoolProp(default=True, fill_brok=[FULL_STATUS], retention=True),
         'process_perf_data':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
+            BoolProp(default=True, fill_brok=[FULL_STATUS], retention=True),
         'retain_status_information':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=[FULL_STATUS]),
         'retain_nonstatus_information':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=[FULL_STATUS]),
         'contacts':
-            ListProp(default=[],
-                     fill_brok=['full_status'], merging='join', split_on_comma=True),
+            ListProp(default=[], fill_brok=[FULL_STATUS], merging='join', split_on_comma=True),
         'contact_groups':
-            ListProp(default=[], fill_brok=['full_status'],
-                     merging='join', split_on_comma=True),
+            ListProp(default=[], fill_brok=[FULL_STATUS], merging='join', split_on_comma=True),
         'notification_interval':
-            IntegerProp(default=60, fill_brok=['full_status'], special=True),
+            IntegerProp(default=60, fill_brok=[FULL_STATUS], special=True),
         'first_notification_delay':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
         'notification_period':
-            StringProp(fill_brok=['full_status'],
-                       special=True),
+            StringProp(fill_brok=[FULL_STATUS], special=True),
         'notifications_enabled':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
+            BoolProp(default=True, fill_brok=[FULL_STATUS], retention=True),
         'stalking_options':
-            ListProp(default=[], fill_brok=['full_status'], merging='join'),
+            ListProp(default=[], fill_brok=[FULL_STATUS], merging='join'),
         'notes':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'notes_url':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'action_url':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'icon_image':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'icon_image_alt':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'icon_set':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
 
         # Alignak specific
         'poller_tag':
             StringProp(default=u'None'),
         'reactionner_tag':
             StringProp(default=u'None'),
-        'resultmodulations':
-            ListProp(default=[], merging='join'),
-        'business_impact_modulations':
-            ListProp(default=[], merging='join'),
+
         'escalations':
-            ListProp(default=[], fill_brok=['full_status'], merging='join', split_on_comma=True),
+            ListProp(default=[], fill_brok=[FULL_STATUS], merging='join', split_on_comma=True),
         'maintenance_period':
-            StringProp(default=r'',
-                       fill_brok=['full_status']),
+            StringProp(default=r'', fill_brok=[FULL_STATUS]),
         'time_to_orphanage':
-            IntegerProp(default=300, fill_brok=['full_status']),
+            IntegerProp(default=300, fill_brok=[FULL_STATUS]),
 
         'labels':
-            ListProp(default=[], fill_brok=['full_status'], merging='join',
-                     split_on_comma=True),
+            ListProp(default=[], fill_brok=[FULL_STATUS], merging='join', split_on_comma=True),
 
         # BUSINESS CORRELATOR PART
         # Business rules output format template
         'business_rule_output_template':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         # Business rules notifications mode
         'business_rule_smart_notifications':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
         # Treat downtimes as acknowledgements in smart notifications
         'business_rule_downtime_as_ack':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
         # Enforces child nodes notification options
         'business_rule_host_notification_options':
-            ListProp(default=[], fill_brok=['full_status'], split_on_comma=True),
+            ListProp(default=[], fill_brok=[FULL_STATUS], split_on_comma=True),
         'business_rule_service_notification_options':
-            ListProp(default=[], fill_brok=['full_status'], split_on_comma=True),
+            ListProp(default=[], fill_brok=[FULL_STATUS], split_on_comma=True),
         # Business_Impact value
         'business_impact':
-            IntegerProp(default=2, fill_brok=['full_status']),
+            IntegerProp(default=2, fill_brok=[FULL_STATUS]),
 
         # Trending
         'trending_policies':
-            ListProp(default=[], fill_brok=['full_status'], merging='join'),
+            ListProp(default=[], fill_brok=[FULL_STATUS], merging='join'),
 
         # Our check ways. By defualt void, but will filled by an inner if need
         'checkmodulations':
-            ListProp(default=[], fill_brok=['full_status'], merging='join'),
+            ListProp(default=[], fill_brok=[FULL_STATUS], merging='join'),
         'macromodulations':
+            ListProp(default=[], merging='join'),
+        'resultmodulations':
+            ListProp(default=[], merging='join'),
+        'business_impact_modulations':
             ListProp(default=[], merging='join'),
 
         # Custom views
         'custom_views':
-            ListProp(default=[], fill_brok=['full_status'], merging='join'),
+            ListProp(default=[], fill_brok=[FULL_STATUS], merging='join'),
 
         # Snapshot part
         'snapshot_enabled':
@@ -241,53 +238,53 @@ class SchedulingItem(Item):  # pylint: disable=R0902
     running_properties = Item.running_properties.copy()
     running_properties.update({
         'modified_attributes':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS], retention=True),
         'last_chk':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'next_chk':
-            IntegerProp(default=0, fill_brok=['full_status', 'next_schedule'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, 'next_schedule'], retention=True),
         'in_checking':
-            BoolProp(default=False, fill_brok=['full_status', 'check_result', 'next_schedule']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS, CHECK_RESULT, 'next_schedule']),
         'in_maintenance':
-            IntegerProp(default=-1, fill_brok=['full_status'], retention=True),
+            StringProp(default='', fill_brok=[FULL_STATUS], retention=True),
         'latency':
-            FloatProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            FloatProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'attempt':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'state_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'current_event_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'last_event_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'last_state':
             StringProp(default='PENDING',
-                       fill_brok=['full_status', 'check_result'], retention=True),
+                       fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'last_state_type':
-            StringProp(default='HARD', fill_brok=['full_status', 'check_result'], retention=True),
+            StringProp(default='HARD', fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'last_state_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'last_state_change':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'last_hard_state_change':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'last_hard_state':
             StringProp(default='PENDING',
-                       fill_brok=['full_status', 'check_result'], retention=True),
+                       fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'last_hard_state_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'state_type':
-            StringProp(default='HARD', fill_brok=['full_status', 'check_result'], retention=True),
+            StringProp(default='HARD', fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'state_type_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'duration_sec':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS], retention=True),
         'output':
-            StringProp(default='', fill_brok=['full_status', 'check_result'], retention=True),
+            StringProp(default='', fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'long_output':
-            StringProp(default='', fill_brok=['full_status', 'check_result'], retention=True),
+            StringProp(default='', fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'is_flapping':
-            BoolProp(default=False, fill_brok=['full_status'], retention=True),
+            BoolProp(default=False, fill_brok=[FULL_STATUS], retention=True),
         #  dependencies for actions like notification or event handler,
         # so AFTER check return
         'act_depend_of':
@@ -302,71 +299,71 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'chk_depend_of_me':
             ListProp(default=[]),
         'last_state_update':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS], retention=True),
         'checks_in_progress':
             ListProp(default=[]),
         'notifications_in_progress':
             DictProp(default={},
                      retention=True, retention_preparation=dict_to_serialized_dict),
         'comments':
-            DictProp(default={}, fill_brok=['full_status'],
+            DictProp(default={}, fill_brok=[FULL_STATUS],
                      retention=True, retention_preparation=dict_to_serialized_dict),
         'flapping_changes':
-            ListProp(default=[], fill_brok=['full_status'], retention=True),
+            ListProp(default=[], fill_brok=[FULL_STATUS], retention=True),
         'flapping_comment_id':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS], retention=True),
         'percent_state_change':
-            FloatProp(default=0.0, fill_brok=['full_status', 'check_result'], retention=True),
+            FloatProp(default=0.0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'problem_has_been_acknowledged':
-            BoolProp(default=False, fill_brok=['full_status', 'check_result'], retention=True),
+            BoolProp(default=False, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'acknowledgement':
             StringProp(default=None,
                        retention=True,
                        retention_preparation=to_serialized, retention_restoration=from_serialized),
         'acknowledgement_type':
-            IntegerProp(default=1, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=1, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'has_been_checked':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'should_be_scheduled':
-            IntegerProp(default=1, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=1, fill_brok=[FULL_STATUS], retention=True),
         'last_problem_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'current_problem_id':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'execution_time':
-            FloatProp(default=0.0, fill_brok=['full_status', 'check_result'], retention=True),
+            FloatProp(default=0.0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'u_time':
             FloatProp(default=0.0),
         's_time':
             FloatProp(default=0.0),
         'last_notification':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS], retention=True),
         'current_notification_number':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS], retention=True),
         'current_notification_id':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS], retention=True),
         'check_flapping_recovery_notification':
-            BoolProp(default=True, fill_brok=['full_status'], retention=True),
+            BoolProp(default=True, fill_brok=[FULL_STATUS], retention=True),
         'scheduled_downtime_depth':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS], retention=True),
         'pending_flex_downtime':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS], retention=True),
         'timeout':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'start_time':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'end_time':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'early_timeout':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'return_code':
-            IntegerProp(default=0, fill_brok=['full_status', 'check_result'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'perf_data':
-            StringProp(default='', fill_brok=['full_status', 'check_result'], retention=True),
+            StringProp(default='', fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'last_perf_data':
             StringProp(default='', retention=True),
         'customs':
-            DictProp(default={}, fill_brok=['full_status']),
+            DictProp(default={}, fill_brok=[FULL_STATUS]),
         # Warning: for the notified_contacts retention save,
         # we save only the names of the contacts, and we should RELINK
         # them when we load it.
@@ -377,7 +374,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         'notified_contacts_ids':
             SetProp(default=set()),
         'in_scheduled_downtime':
-            BoolProp(default=False, fill_brok=['full_status', 'check_result'], retention=True),
+            BoolProp(default=False, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'in_scheduled_downtime_during_last_check':
             BoolProp(default=False, retention=True),
         'actions':
@@ -387,18 +384,18 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         # Problem/impact part
         'is_problem':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
         'is_impact':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
         # the save value of our business_impact for "problems"
         'my_own_business_impact':
-            IntegerProp(default=-1, fill_brok=['full_status']),
+            IntegerProp(default=-1, fill_brok=[FULL_STATUS]),
         # list of problems that make us an impact
         'source_problems':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         # list of the impact I'm the cause of
         'impacts':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         # keep a trace of the old state before being an impact
         'state_before_impact':
             StringProp(default='PENDING'),
@@ -408,26 +405,28 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # if the state change, we know so we do not revert it
         'state_changed_since_impact':
             BoolProp(default=False),
+
         # BUSINESS CORRELATOR PART
         # Say if we are business based rule or not
         'got_business_rule':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
         # Previously processed business rule (with macro expanded)
         'processed_business_rule':
-            StringProp(default="", fill_brok=['full_status']),
+            StringProp(default="", fill_brok=[FULL_STATUS]),
         # Our Dependency node for the business rule
         'business_rule':
             StringProp(default=None),
+
         # Here it's the elements we are depending on
         # so our parents as network relation, or a host
         # we are depending in a hostdependency
         # or even if we are business based.
         'parent_dependencies':
-            SetProp(default=set(), fill_brok=['full_status']),
+            SetProp(default=set(), fill_brok=[FULL_STATUS]),
         # Here it's the guys that depend on us. So it's the total
         # opposite of the parent_dependencies
         'child_dependencies':
-            SetProp(default=set(), fill_brok=['full_status']),
+            SetProp(default=set(), fill_brok=[FULL_STATUS]),
         # Manage the unknown/unreachable during hard state
         'in_hard_unknown_reach_phase':
             BoolProp(default=False, retention=True),
@@ -435,16 +434,16 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             BoolProp(default=False, retention=True),
         # Set if the element just change its father/son topology
         'topology_change':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
         # snapshots part
         'last_snapshot':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS], retention=True),
         # Keep the string of the last command launched for this element
         'last_check_command':
             StringProp(default=''),
         # Define if we are in the freshness expiration period
         'freshness_expired':
-            BoolProp(default=False, fill_brok=['full_status'], retention=True),
+            BoolProp(default=False, fill_brok=[FULL_STATUS], retention=True),
         # Store if the freshness log got raised
         'freshness_log_raised':
             BoolProp(default=False, retention=True),
@@ -465,24 +464,21 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
     special_properties = []
 
-    def __init__(self, params=None, parsing=True):
-        if params is None:
-            params = {}
-
-        # At deserialization, these are dictionaries
-        # TODO: Separate parsing instance from recreated ones
-        for prop in ['check_command', 'event_handler', 'snapshot_command']:
-            if prop in params and isinstance(params[prop], dict):
-                # We recreate the object
-                setattr(self, prop, CommandCall(params[prop], parsing=parsing))
-                # And remove prop, to prevent from being overridden
+    def __init__(self, params, parsing=True):
+        if not parsing:
+            # When deserialized, those are dictionaries
+            for prop in ['check_command', 'event_handler', 'snapshot_command',
+                         'business_rule', 'acknowledgement']:
+                if prop not in params or params[prop] is None:
+                    continue
+                setattr(self, prop, unserialize(params[prop]))
                 del params[prop]
-        if 'business_rule' in params and isinstance(params['business_rule'], dict):
-            self.business_rule = DependencyNode(params['business_rule'])
-            del params['business_rule']
-        if 'acknowledgement' in params and isinstance(params['acknowledgement'], dict):
-            self.acknowledgement = Acknowledge(params['acknowledgement'])
+        # else:
+        #     self.processed_business_rule = None
+        #     self.business_rule = None
+
         super(SchedulingItem, self).__init__(params, parsing=parsing)
+        # Default values for unset parameters will be filled in Host or Service class!
 
     @property
     def monitored(self):
@@ -512,40 +508,59 @@ class SchedulingItem(Item):  # pylint: disable=R0902
     def serialize(self):
         res = super(SchedulingItem, self).serialize()
 
-        for prop in ['check_command', 'event_handler', 'snapshot_command', 'business_rule',
-                     'acknowledgement']:
-            res[prop] = None
-            if getattr(self, prop, None) is not None:
-                res[prop] = getattr(self, prop).serialize()
+        for prop in ['check_command', 'event_handler', 'snapshot_command',
+                     'business_rule', 'acknowledgement']:
+            res[prop] = serialize(getattr(self, prop, None))
 
         return res
 
-    def change_check_command(self, command_params):
-        """
+    def get_check_command(self):
+        """Wrapper to get the name of the check_command attribute
 
-        :param command_params: command parameters
-        :type command_params: dict
+        :return: check_command name
+        :rtype: str
+        """
+        if not getattr(self, 'check_command', None):
+            return ''
+        return self.check_command.get_name()
+
+    def change_check_command(self, command, commands):
+        """
+        Change the check command
+
+        :param command: the new command
+        :type command: str
+        :param commands: the available command items
+        :type command: alignak.objecrs.command.Commands
         :return:
         """
-        setattr(self, 'check_command', CommandCall(command_params))
+        data = {"commands": commands, "command_line": command, "poller_tag": self.poller_tag}
+        setattr(self, 'check_command', CommandCall(data, parsing=True))
 
-    def change_event_handler(self, command_params):
+    def change_event_handler(self, command, commands):
         """
+        Change the event handler command
 
-        :param command_params: command parameters
-        :type command_params: dict
+        :param command: the new command
+        :type command: str
+        :param commands: the available command items
+        :type command: alignak.objecrs.command.Commands
         :return:
         """
-        setattr(self, 'event_handler', CommandCall(command_params))
+        data = {"commands": commands, "command_line": command, "poller_tag": self.poller_tag}
+        setattr(self, 'event_handler', CommandCall(data, parsing=True))
 
-    def change_snapshot_command(self, command_params):
+    def change_snapshot_command(self, command, commands):
         """
+        Change the snapshot command
 
-        :param command_params: command parameters
-        :type command_params: dict
-        :return:
+        :param command: the new command
+        :type command: str
+        :param commands: the available command items
+        :type command: alignak.objecrs.command.Commands
         """
-        setattr(self, 'snapshot_command', CommandCall(command_params))
+        data = {"commands": commands, "command_line": command, "poller_tag": self.poller_tag}
+        setattr(self, 'snapshot_command', CommandCall(data, parsing=True))
 
     def add_flapping_change(self, sample):
         """Add a flapping sample and keep cls.flap_history samples
@@ -808,9 +823,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :param bi_modulations: business impact modulations objects
         :type bi_modulations: alignak.object.businessimpactmodulation.Businessimpactmodulations
         :return: None
-        TODO: SchedulingItem object should not handle other schedulingitem obj.
-              We should call obj.register* on both obj.
-              This is 'Java' style
         """
         # First save our business_impact if not already do
         if self.my_own_business_impact == -1:
@@ -855,9 +867,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :param bi_modulations: business impact modulation are used when setting myself as problem
         :type bi_modulations: alignak.object.businessimpactmodulation.Businessimpactmodulations
         :return: None
-        TODO: SchedulingItem object should not handle other schedulingitem obj.
-              We should call obj.register* on both obj.
-              This is 'Java' style
         """
         was_pb = self.is_problem
         if self.is_problem:
@@ -902,9 +911,6 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type bi_modulations: alignak.object.businessimpactmodulation.Businessimpactmodulations
         :return: list of host/service that are impacts
         :rtype: list[alignak.objects.schedulingitem.SchedulingItem]
-        TODO: SchedulingItem object should not handle other schedulingitem obj.
-              We should call obj.register* on both obj.
-              This is 'Java' style
         """
         # Maybe we already have this problem? If so, bailout too
         if prob.uuid in self.source_problems:
@@ -1415,16 +1421,16 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                          "The item %s is in a scheduled downtime", self.get_full_name())
             return
 
-        if self.event_handler is not None:
+        if self.event_handler:
             event_handler = self.event_handler
-        elif cls.global_event_handler is not None:
+        elif cls.global_event_handler:
             event_handler = cls.global_event_handler
         else:
             return
 
-        macroresolver = MacroResolver()
+        mr = MacroResolver()
         data = self.get_data_for_event_handler(hosts)
-        cmd = macroresolver.resolve_command(event_handler, data, macromodulations, timeperiods)
+        cmd = mr.resolve_command(event_handler, data, macromodulations, timeperiods)
 
         event_h = EventHandler({
             'command': cmd,
@@ -1482,10 +1488,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             return
 
         cls = self.__class__
-        macroresolver = MacroResolver()
+        mr = MacroResolver()
         data = self.get_data_for_event_handler(hosts)
-        cmd = macroresolver.resolve_command(self.snapshot_command, data, macromodulations,
-                                            timeperiods)
+        cmd = mr.resolve_command(self.snapshot_command, data, macromodulations, timeperiods)
         reac_tag = self.snapshot_command.reactionner_tag
         event_h = EventHandler({
             'command': cmd,
@@ -1576,9 +1581,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         Special cases::
 
-        * is_flapping: immediate notif when problem
+        * is_flapping: immediate notification when a problem raises
         * is_in_scheduled_downtime: no notification
-        * is_volatile: notif immediately (service only)
+        * is_volatile: immediate notification when a problem raises (service only)
 
         Basically go through all cases (combination of last_state, current_state, attempt number)
         and do necessary actions (add attempt, raise notification., change state type.)
@@ -1613,10 +1618,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
         if 'ALIGNAK_LOG_ACTIONS' in os.environ:
             if os.environ['ALIGNAK_LOG_ACTIONS'] == 'WARNING':
-                logger.warning("Got check result: %d for %s",
+                logger.warning("Got check result: %s for %s",
                                chk.exit_status, self.get_full_name())
             else:
-                logger.info("Got check result: %d for %s",
+                logger.info("Got check result: %s for %s",
                             chk.exit_status, self.get_full_name())
 
         if os.getenv('ALIGNAK_LOG_CHECKS', None):
@@ -2358,8 +2363,13 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # pylint: disable=too-many-branches, too-many-return-statements
         """Launch a check (command)
 
+        :param hosts: list of all hosts
+        :param services: list of all services
+        :param timeperiods: list of all time periods
+        :param checks: list of all current checks
         :param timestamp:
         :type timestamp: int
+        :param macromodulations: list of all macro modulations
         :param checkmodulations: Checkmodulations objects, used to change check command if necessary
         :type checkmodulations: alignak.objects.checkmodulation.Checkmodulations
         :param ref_check:
@@ -2396,6 +2406,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
 
             c_in_progress = checks[self.checks_in_progress[0]]
 
+            # todo: create a copy function in the Check class
             # c_in_progress has almost everything we need but we cant copy.deepcopy() it
             # we need another c.uuid
             data = {
@@ -2463,10 +2474,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                         break
 
                 # Get the command to launch
-                macroresolver = MacroResolver()
+                mr = MacroResolver()
                 data = self.get_data_for_checks(hosts)
-                command_line = macroresolver.resolve_command(check_command, data,
-                                                             macromodulations, timeperiods)
+                command_line = mr.resolve_command(check_command, data,
+                                                  macromodulations, timeperiods)
 
                 # remember it, for pure debugging purpose
                 self.last_check_command = command_line
@@ -2474,7 +2485,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             # And get all environment variables only if needed
             if cls.enable_environment_macros or (check_command and
                                                  check_command.enable_environment_macros):
-                env = macroresolver.get_env_macros(data)
+                env = mr.get_env_macros(data)
 
             # By default we take the global timeout, but we use the command one if it
             # is defined (default is -1 for no timeout)
@@ -2482,9 +2493,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
             if check_command and check_command.timeout != -1:
                 timeout = check_command.timeout
 
-            # Make the Check object and put the service in checking
-            # Make the check inherit poller_tag from the command
-            # And reactionner_tag too
+            # Build the Check object and put the service in checking
             data = {
                 'command': command_line,
                 'timeout': timeout,
@@ -2543,11 +2552,10 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if not cls.process_performance_data or not self.process_perf_data:
             return
 
-        if cls.perfdata_command is not None:
-            macroresolver = MacroResolver()
+        if cls.perfdata_command:
+            mr = MacroResolver()
             data = self.get_data_for_event_handler(hosts)
-            cmd = macroresolver.resolve_command(cls.perfdata_command, data, macromodulations,
-                                                timeperiods)
+            cmd = mr.resolve_command(cls.perfdata_command, data, macromodulations, timeperiods)
             reactionner_tag = cls.perfdata_command.reactionner_tag
             event_h = EventHandler({
                 'command': cmd,
@@ -2572,42 +2580,41 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :type running: bool
         :return: None
         """
-        cmdcall = getattr(self, 'check_command', None)
-
-        # If we do not have a command, we bailout
-        if cmdcall is None:
+        cmd_call = getattr(self, 'check_command', None)
+        if cmd_call is None:
             return
 
         # we get our base command, like
         # bp_rule!(host,svc & host, svc) -> bp_rule
-        cmd = cmdcall.call
-        elts = cmd.split('!')
-        base_cmd = elts[0]
+        # cmd = cmd_call.call
+        # elts = cmd.split('!')
+        # base_cmd = elts[0]
+        if cmd_call.command_name not in ['bp_rule']:
+            return
 
         # If it's bp_rule, we got a rule :)
-        if base_cmd == 'bp_rule':
-            self.got_business_rule = True
-            rule = ''
-            if len(elts) >= 2:
-                rule = '!'.join(elts[1:])
-            # Only (re-)evaluate the business rule if it has never been
-            # evaluated before, or it contains a macro.
-            if re.match(r"\$[\w\d_-]+\$", rule) or self.business_rule is None:
-                macroresolver = MacroResolver()
-                data = self.get_data_for_checks(hosts)
-                rule = macroresolver.resolve_simple_macros_in_string(rule, data,
-                                                                     macromodulations,
-                                                                     timeperiods)
-                prev = getattr(self, "processed_business_rule", "")
-                if rule == prev:
-                    # Business rule did not changed (no macro was modulated)
-                    return
+        self.got_business_rule = True
+        rule = ''
+        if cmd_call.args:
+            rule = '!'.join(cmd_call.args)
 
-                fact = DependencyNodeFactory(self)
-                node = fact.eval_cor_pattern(rule, hosts, services,
-                                             hostgroups, servicegroups, running)
-                self.processed_business_rule = rule
-                self.business_rule = node
+        # Only (re-)evaluate the business rule if it has never been
+        # evaluated before, or it contains a macro.
+        if self.business_rule is None or re.match(r"\$[\w\d_-]+\$", rule):
+            mr = MacroResolver()
+            rule = mr.resolve_simple_macros_in_string(rule,
+                                                      self.get_data_for_checks(hosts),
+                                                      macromodulations,
+                                                      timeperiods)
+            if rule == getattr(self, "processed_business_rule", None):
+                # Business rule did not changed (no macro was modulated)
+                return
+
+            self.processed_business_rule = rule
+
+            fact = DependencyNodeFactory(self)
+            self.business_rule = fact.eval_cor_pattern(rule, hosts, services,
+                                                       hostgroups, servicegroups, running)
 
     def get_business_rule_output(self, hosts, services, macromodulations, timeperiods):
         # pylint: disable=too-many-locals, too-many-branches
@@ -2650,7 +2657,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         output_template = self.business_rule_output_template
         if not output_template:
             return ""
-        macroresolver = MacroResolver()
+        mr = MacroResolver()
 
         # Extracts children template strings
         elts = re.findall(r"\$\((.*)\)\$", output_template)
@@ -2676,10 +2683,9 @@ class SchedulingItem(Item):  # pylint: disable=R0902
                 ok_count += 1
                 continue
             data = item.get_data_for_checks(hosts)
-            children_output += macroresolver.resolve_simple_macros_in_string(child_template_string,
-                                                                             data,
-                                                                             macromodulations,
-                                                                             timeperiods)
+            children_output += mr.resolve_simple_macros_in_string(child_template_string,
+                                                                  data, macromodulations,
+                                                                  timeperiods)
 
         if ok_count == len(items):
             children_output = "all checks were successful."
@@ -2687,8 +2693,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         # Replaces children output string
         template_string = re.sub(r"\$\(.*\)\$", children_output, output_template)
         data = self.get_data_for_checks(hosts)
-        output = macroresolver.resolve_simple_macros_in_string(template_string, data,
-                                                               macromodulations, timeperiods)
+        output = mr.resolve_simple_macros_in_string(template_string, data,
+                                                    macromodulations, timeperiods)
         return output.strip()
 
     def business_rule_notification_is_blocked(self, hosts, services):
@@ -2943,7 +2949,7 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         super(SchedulingItem, self).fill_data_brok_from(data, brok_type)
         # workaround/easy trick to have the command_name of this
         # SchedulingItem in its check_result brok
-        if brok_type == 'check_result':
+        if brok_type == CHECK_RESULT:
             data['command_name'] = ''
             if self.check_command:
                 data['command_name'] = self.check_command.command.command_name
@@ -3309,11 +3315,8 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        state = True
-
         if hasattr(self, 'trigger') and getattr(self, 'trigger', None):
-            self.add_warning("[%s::%s] 'trigger' property is not allowed"
-                             % (self.my_type, self.get_name()))
+            self.add_warning("'trigger' property is not allowed")
 
         # If no notif period, set it to None, mean 24x7
         if not hasattr(self, 'notification_period'):
@@ -3323,52 +3326,39 @@ class SchedulingItem(Item):  # pylint: disable=R0902
         if hasattr(self, 'freshness_threshold') and not self.freshness_threshold:
             if getattr(self, 'check_interval', 0):
                 self.freshness_threshold = self.check_interval * 60
-                # self.add_warning("[%s::%s] using check interval as a freshness threshold: %d s"
-                #                  % (self.my_type, self.get_name(), self.freshness_threshold))
             elif getattr(self, 'retry_interval', 0):
                 self.freshness_threshold = self.retry_interval * 60
-                # self.add_warning("[%s::%s] using retry interval as a freshness threshold: %d s"
-                #                  % (self.my_type, self.get_name(), self.freshness_threshold))
 
         # If we got an event handler, it should be valid
         if getattr(self, 'event_handler', None) and not self.event_handler.is_valid():
-            self.add_error("[%s::%s] event_handler '%s' is invalid"
-                           % (self.my_type, self.get_name(), self.event_handler.command))
-            state = False
+            self.add_error("event_handler '%s' is invalid" % self.event_handler.command)
 
         if not hasattr(self, 'check_command'):
             # todo: This should never happen because the default exists as an empty string
-            self.add_error("[%s::%s] no property check_command" % (self.my_type, self.get_name()))
-            state = False
+            self.add_error("no check_command property")
         # Ok got a command, but maybe it's invalid
         else:
             # if not self.check_command:
             #     self.add_warning("[%s::%s] no check_command, will always be considered as Up"
             #                      % (self.my_type, self.get_name()))
             if self.check_command and not self.check_command.is_valid():
-                self.add_error("[%s::%s] check_command '%s' invalid"
-                               % (self.my_type, self.get_name(), self.check_command.command))
-                state = False
+                self.add_error("check_command '%s' invalid" % self.check_command.command)
+                # state = False
             if self.got_business_rule:
                 if not self.business_rule.is_valid():
-                    self.add_error("[%s::%s] business_rule invalid"
-                                   % (self.my_type, self.get_name()))
-                    for bperror in self.business_rule.configuration_errors:
-                        self.add_error("[%s::%s]: %s" % (self.my_type, self.get_name(), bperror))
-                    state = False
+                    self.add_error("business_rule invalid")
+                    for business_rule_error in self.business_rule.configuration_errors:
+                        self.add_error("%s" % business_rule_error)
 
         if not hasattr(self, 'notification_interval') \
-                and self.notifications_enabled is True:  # pragma: no cover, should never happen
-            self.add_error("[%s::%s] no notification_interval but notifications enabled"
-                           % (self.my_type, self.get_name()))
-            state = False
+                and getattr(self, 'notifications_enabled', None) is True:
+            self.add_error("no notification_interval but notifications enabled")
 
         # if no check_period, means 24x7, like for services
         if not hasattr(self, 'check_period'):
             self.check_period = None
 
-        state = super(SchedulingItem, self).is_correct()
-        return state
+        return super(SchedulingItem, self).is_correct() and self.conf_is_correct
 
 
 class SchedulingItems(CommandCallItems):
@@ -3423,8 +3413,7 @@ class SchedulingItems(CommandCallItems):
         if son_id in self:
             son = self[son_id]
         else:
-            msg = "Dependency son (%s) unknown, configuration error" % son_id
-            self.add_error(msg)
+            self.add_error("Dependent son (%s) is unknown, configuration error!" % son_id)
         parent = self[parent_id]
         son.act_depend_of.append((parent_id, notif_failure_criteria, dep_period, inherits_parents))
         parent.act_depend_of_me.append((son_id, notif_failure_criteria, dep_period,

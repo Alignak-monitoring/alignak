@@ -68,7 +68,7 @@ class TestTimeperiods(AlignakTest):
         """
         now = time.time()
 
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         timeperiod.resolve_daterange(timeperiod.dateranges, '1999-01-28  00:00-24:00')
         t_next = timeperiod.get_next_valid_time_from_t(now)
         self.assertIsNone(t_next)
@@ -84,7 +84,7 @@ class TestTimeperiods(AlignakTest):
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
         print(july_the_12)
 
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         timeperiod.resolve_daterange(timeperiod.dateranges, 'tuesday 16:30-24:00')
         t_next = timeperiod.get_next_valid_time_from_t(july_the_12)
         t_next = time.asctime(time.localtime(t_next))
@@ -106,7 +106,7 @@ class TestTimeperiods(AlignakTest):
 
         # Then a simple same day
         print("Cheking validity for", time.asctime(time.localtime(july_the_12)))
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         timeperiod.resolve_daterange(timeperiod.dateranges, 'tuesday 00:00-07:00,21:30-24:00')
         t_next = timeperiod.get_next_valid_time_from_t(july_the_12)
         t_next = time.asctime(time.localtime(t_next))
@@ -127,7 +127,7 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         timeperiod.resolve_daterange(timeperiod.dateranges, 'monday 00:00-24:00')
         first_nov = int(time.mktime(time.strptime("1 Nov 2010 00:00:00", "%d %b %Y %H:%M:%S")))
         print(first_nov)
@@ -147,10 +147,10 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         timeperiod.resolve_daterange(timeperiod.dateranges, 'monday 00:00-24:00')
 
-        t2 = Timeperiod()
+        t2 = Timeperiod({})
         t2.resolve_daterange(t2.dateranges, 'monday 08:30-21:00')
         timeperiod.exclude = [t2]
 
@@ -172,7 +172,7 @@ class TestTimeperiods(AlignakTest):
 
         :return: None
         """
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         timeperiod.resolve_daterange(timeperiod.dateranges, 'monday 00:00-24:00')
         first_nov = int(time.mktime(time.strptime("26 Oct 2010 00:00:00", "%d %b %Y %H:%M:%S")))
         print(first_nov)
@@ -197,7 +197,7 @@ class TestTimeperiods(AlignakTest):
         print(july_the_12)
 
         # Then a simple same day
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         print("Cheking validity for", time.asctime(time.localtime(july_the_12)))
         timeperiod.resolve_daterange(timeperiod.dateranges, 'monday 00:00-07:00,21:30-24:00')
         timeperiod.resolve_daterange(timeperiod.dateranges, 'tuesday 00:00-07:00,21:30-24:00')
@@ -238,7 +238,7 @@ class TestTimeperiods(AlignakTest):
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
 
         # Now look for the never case
-        tp_all = Timeperiod()
+        tp_all = Timeperiod({})
         tp_all.resolve_daterange(tp_all.dateranges, 'monday 00:00-24:00')
         tp_all.resolve_daterange(tp_all.dateranges, 'tuesday 00:00-24:00')
         tp_all.resolve_daterange(tp_all.dateranges, 'wednesday 00:00-24:00')
@@ -263,13 +263,13 @@ class TestTimeperiods(AlignakTest):
         print("July 12th, 2010: %s" % july_the_12)
 
         # First a false test, no results
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         timeperiod.resolve_daterange(timeperiod.dateranges, '1999-01-28  00:00-24:00')
         t_next = timeperiod.get_next_valid_time_from_t(now)
         self.assertIs(None, t_next)
 
         # Then a simple same day
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         timeperiod.resolve_daterange(timeperiod.dateranges, 'tuesday 16:30-24:00')
         t_next = timeperiod.get_next_valid_time_from_t(july_the_12)
         t_next = time.asctime(time.localtime(t_next))
@@ -277,7 +277,7 @@ class TestTimeperiods(AlignakTest):
         self.assertEqual("Tue Jul 13 16:30:00 2010", t_next)
 
         # Now we add this timeperiod an exception
-        t2 = Timeperiod()
+        t2 = Timeperiod({})
         t2.timeperiod_name = ''
         t2.resolve_daterange(t2.dateranges, 'tuesday 08:30-21:00')
         timeperiod.exclude = [t2]
@@ -302,7 +302,7 @@ class TestTimeperiods(AlignakTest):
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
 
         # Then a simple same day
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         timeperiod.timeperiod_name = 'T1'
         timeperiod.resolve_daterange(timeperiod.dateranges, 'tuesday 2 16:30-24:00')
         t_next = timeperiod.get_next_valid_time_from_t(july_the_12)
@@ -311,7 +311,7 @@ class TestTimeperiods(AlignakTest):
         self.assertEqual("Tue Jul 13 16:30:00 2010", t_next)
 
         # Now we add this timeperiod an exception
-        t2 = Timeperiod()
+        t2 = Timeperiod({})
         t2.timeperiod_name = 'T2'
         t2.resolve_daterange(t2.dateranges, 'tuesday 00:00-23:58')
         timeperiod.exclude = [t2]
@@ -341,7 +341,7 @@ class TestTimeperiods(AlignakTest):
         july_the_12 = time.mktime(time.strptime("12 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
 
         # Then a simple same day
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         timeperiod.timeperiod_name = 'T1'
         timeperiod.resolve_daterange(timeperiod.dateranges, 'tuesday 3 16:30-24:00')
         t_next = timeperiod.get_next_valid_time_from_t(july_the_12)
@@ -352,7 +352,7 @@ class TestTimeperiods(AlignakTest):
         # And a good one: from april (so before) to august (after), and full time.
         # But the 17 is a tuesday, but the 3 of august, so the next 3 tuesday is
         # ..... the Tue Sep 21 :) Yes, we should wait quite a lot :)
-        t2 = Timeperiod()
+        t2 = Timeperiod({})
         t2.timeperiod_name = 'T2'
         t2.resolve_daterange(t2.dateranges, 'april 1 - august 23 00:00-24:00')
         timeperiod.exclude = [t2]
@@ -377,7 +377,7 @@ class TestTimeperiods(AlignakTest):
 
         # Then a funny daterange
         print("Testing daterange", 'tuesday -1 - monday 1  16:30-24:00')
-        timerange = Timeperiod()
+        timerange = Timeperiod({})
         timerange.timeperiod_name = 'T1'
         timerange.resolve_daterange(timerange.dateranges, 'tuesday -1 - monday 1  16:30-24:00')
         t_next = timerange.get_next_valid_time_from_t(july_the_12)
@@ -389,7 +389,7 @@ class TestTimeperiods(AlignakTest):
         # And a good one: from april (so before) to august (after), and full time.
         # But the 27 is now not possible? So what next? Add a month!
         # last tuesday of august, the 31 :)
-        t2 = Timeperiod()
+        t2 = Timeperiod({})
         t2.timeperiod_name = 'T2'
         t2.resolve_daterange(t2.dateranges, 'april 1 - august 16 00:00-24:00')
         timerange.exclude = [t2]
@@ -418,7 +418,7 @@ class TestTimeperiods(AlignakTest):
 
         # Then a funny daterange
         print("Testing daterange", 'tuesday -1 - monday 1  16:30-24:00')
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         timeperiod.timeperiod_name = 'T1'
         timeperiod.resolve_daterange(timeperiod.dateranges, 'tuesday -1 - monday 1  16:30-24:00')
         t_next = timeperiod.get_next_valid_time_from_t(july_the_12)
@@ -435,7 +435,7 @@ class TestTimeperiods(AlignakTest):
         # in september saturday -1 is the 25, and tuesday -1 is 28, so still no
         # A month again! So now tuesday -1 is 26 and saturday -1 is 30. So ok
         # for this one! that was quite long isn't it?
-        t2 = Timeperiod()
+        t2 = Timeperiod({})
         t2.timeperiod_name = 'T2'
         t2.resolve_daterange(t2.dateranges, 'april 1 - august 16 00:00-24:00')
         t2.resolve_daterange(t2.dateranges, 'saturday -1 - monday 1  16:00-24:00')
@@ -461,7 +461,7 @@ class TestTimeperiods(AlignakTest):
 
         # Then a funny daterange
         print("Testing daterange", 'tuesday -1 july - monday 1 september  16:30-24:00')
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         timeperiod.timeperiod_name = 'T1'
         timeperiod.resolve_daterange(timeperiod.dateranges,
                                      'tuesday -1 july - monday 1 september  16:30-24:00')
@@ -472,7 +472,7 @@ class TestTimeperiods(AlignakTest):
 
         # Now we add this timeperiod an exception
         # and from april (before) to august monday 3 (monday 16 august),
-        t2 = Timeperiod()
+        t2 = Timeperiod({})
         t2.timeperiod_name = 'T2'
         t2.resolve_daterange(t2.dateranges, 'thursday 1 april - monday 3 august 00:00-24:00')
         timeperiod.exclude = [t2]
@@ -493,13 +493,13 @@ class TestTimeperiods(AlignakTest):
         print(july_the_13)
 
         # Now we add this timeperiod an exception
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
 
         timeperiod.resolve_daterange(timeperiod.dateranges, 'monday 00:00-24:00')
         timeperiod.resolve_daterange(timeperiod.dateranges, 'tuesday 00:00-24:00')
         timeperiod.resolve_daterange(timeperiod.dateranges, 'wednesday 00:00-24:00')
 
-        t2 = Timeperiod()
+        t2 = Timeperiod({})
         t2.timeperiod_name = ''
         t2.resolve_daterange(t2.dateranges, 'tuesday 00:00-24:00')
         timeperiod.exclude = [t2]
@@ -524,11 +524,11 @@ class TestTimeperiods(AlignakTest):
         july_the_13 = time.mktime(time.strptime("13 Jul 2010 15:00:00", "%d %b %Y %H:%M:%S"))
         print(july_the_13)
 
-        timeperiod = Timeperiod()
+        timeperiod = Timeperiod({})
         timeperiod.resolve_daterange(timeperiod.dateranges, '2010-03-01 - 2020-03-01 00:00-24:00')
 
         # Now we add this timeperiod an exception
-        t2 = Timeperiod()
+        t2 = Timeperiod({})
         t2.timeperiod_name = ''
         t2.resolve_daterange(t2.dateranges, 'tuesday 00:00-24:00')
         timeperiod.exclude = [t2]
@@ -542,7 +542,7 @@ class TestTimeperiods(AlignakTest):
         """
         https://github.com/naparuba/shinken/issues/1385
         """
-        tp = Timeperiod()
+        tp = Timeperiod({})
         tp.timeperiod_name = 'mercredi2-22-02'
         tp.resolve_daterange(tp.dateranges, 'wednesday 2              00:00-02:00,22:00-24:00')
         tp.resolve_daterange(tp.dateranges, 'thursday 2                00:00-02:00,22:00-24:00')
@@ -588,7 +588,7 @@ class TestTimeperiods(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_timeperiods.cfg')
-        tp = self._scheduler.timeperiods.find_by_name("us-holidays")
+        tp = self._arbiter.conf.timeperiods.find_by_name("us-holidays")
         self.assertEqual(7, len(tp.dateranges))
         mydateranges = []
         for daterange in tp.dateranges:

@@ -41,7 +41,8 @@ class TestStats(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_stats.cfg')
+        self.setup_with_file('cfg/cfg_stats.cfg',
+                             dispatching=True)
 
         svc0 = self._scheduler.services.find_srv_by_name_and_hostname(
             "test_host_0", "test_ok_0")

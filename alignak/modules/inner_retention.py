@@ -120,16 +120,16 @@ class InnerRetention(BaseModule):
 
         self.retention_dir = getattr(mod_conf, 'retention_dir', None)
         if os.getenv('ALIGNAK_RETENTION_DIR', None):
-            self.retention_dir = os.getenv('ALIGNAK_RETENTION_DIR', None)
+            self.retention_dir = os.getenv('ALIGNAK_RETENTION_DIR')
         if not self.retention_dir:
-            self.retention_dir = tempfile.gettempdir()
+            self.retention_dir = os.path.join(tempfile.gettempdir(), 'alignak', 'retention')
         if '%s' in self.retention_dir:
             self.retention_dir = self.retention_dir % self.my_daemon.name
 
         self.retention_file = getattr(mod_conf, 'retention_file', None)
         logger.info("inner retention module, retention file: %s", self.retention_file)
         if os.getenv('ALIGNAK_RETENTION_FILE', None):
-            self.retention_file = os.getenv('ALIGNAK_RETENTION_FILE', None)
+            self.retention_file = os.getenv('ALIGNAK_RETENTION_FILE')
         if self.retention_file is None:
             self.retention_file = os.path.join(self.retention_dir, 'alignak-retention-%s.json')
         if '%s' in self.retention_file:
@@ -140,7 +140,7 @@ class InnerRetention(BaseModule):
                         "Trying to create....", self.retention_dir)
             try:
                 os.makedirs(self.retention_dir)
-                logger.error("Retention directory created.")
+                logger.warning("Retention directory created: %s.", self.retention_dir)
             except OSError as exp:
                 logger.error("Directory creation failed because: %s", str(exp))
                 self.retention_dir = '/tmp'
@@ -169,7 +169,7 @@ class InnerRetention(BaseModule):
         """Load retention data from a file
 
         :param scheduler: scheduler instance of alignak
-        :type scheduler: object
+        :type scheduler: alignak.scheduler.Scheduler
         :return: None
         """
         if not self.enabled:
@@ -260,7 +260,7 @@ class InnerRetention(BaseModule):
         """Save retention data to a Json formated file
 
         :param scheduler: scheduler instance of alignak
-        :type scheduler: object
+        :type scheduler: alignak.scheduler.Scheduler
         :return: None
         """
         if not self.enabled:

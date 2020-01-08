@@ -55,11 +55,11 @@ from six import string_types
 
 from alignak.action import Action
 from alignak.brok import Brok
-from alignak.property import BoolProp, IntegerProp, StringProp, SetProp, ListProp
+from alignak.property import BoolProp, IntegerProp, StringProp, SetProp, ListProp, FULL_STATUS
 from alignak.autoslots import AutoSlots
 
 
-class Notification(Action):  # pylint: disable=R0902
+class Notification(Action):  # pylint: disable=too-many-instance-attributes
     """Notification class, inherits from action class. Used to notify contacts
      and execute notification command defined in configuration
 
@@ -76,25 +76,25 @@ class Notification(Action):  # pylint: disable=R0902
         'is_a':
             StringProp(default=u'notification'),
         'start_time':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
         'end_time':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
         'contact_name':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'host_name':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'service_description':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'reason_type':
-            IntegerProp(default=1, fill_brok=['full_status']),
+            IntegerProp(default=1, fill_brok=[FULL_STATUS]),
         'state':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
         'ack_author':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'ack_data':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'escalated':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
         'command_call':
             StringProp(default=None),
         'contact':
@@ -113,13 +113,13 @@ class Notification(Action):  # pylint: disable=R0902
 
         # For authored notifications (eg. downtime...)
         'author':
-            StringProp(default=u'n/a', fill_brok=['full_status']),
+            StringProp(default=u'n/a', fill_brok=[FULL_STATUS]),
         'author_name':
-            StringProp(default=u'n/a', fill_brok=['full_status']),
+            StringProp(default=u'n/a', fill_brok=[FULL_STATUS]),
         'author_alias':
-            StringProp(default=u'n/a', fill_brok=['full_status']),
+            StringProp(default=u'n/a', fill_brok=[FULL_STATUS]),
         'author_comment':
-            StringProp(default=u'n/a', fill_brok=['full_status']),
+            StringProp(default=u'n/a', fill_brok=[FULL_STATUS]),
 
         # All contacts that were notified
         'recipients':
@@ -188,14 +188,16 @@ class Notification(Action):  # pylint: disable=R0902
             if brok_type in entry.fill_brok:
                 data[prop] = getattr(self, prop)
 
-    def get_initial_status_brok(self):
+    def get_initial_status_brok(self, extra=None):  # pylint: disable=unused-argument
         """Get a initial status brok
 
+        :param extra: not used by the notifications
+        :type extra: alignak.objects.item.Items
         :return: brok with wanted data
         :rtype: alignak.brok.Brok
         """
         data = {'uuid': self.uuid}
-        self.fill_data_brok_from(data, 'full_status')
+        self.fill_data_brok_from(data, FULL_STATUS)
         return Brok({'type': 'notification_raise', 'data': data})
 
     def serialize(self):

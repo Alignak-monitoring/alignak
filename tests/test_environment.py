@@ -106,7 +106,6 @@ class TestEnvironment(AlignakTest):
         self.alignak_env = AlignakConfigParser(args)
         assert self.alignak_env.parse()
 
-
     def test_config_several_files_ok(self):
         """ Default shipped configuration has no loading problems ...
 

@@ -43,7 +43,8 @@ class TestMultibroker(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/multibroker/cfg_multi_broker_one_scheduler.cfg')
+        self.setup_with_file('cfg/multibroker/cfg_multi_broker_one_scheduler.cfg',
+                             dispatching=True)
 
         my_scheduler = self._scheduler
 
@@ -154,7 +155,8 @@ class TestMultibroker(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/multibroker/cfg_multi_broker_multi_scheduler.cfg')
+        self.setup_with_file('cfg/multibroker/cfg_multi_broker_multi_scheduler.cfg',
+                             dispatching=True)
         self.clear_logs()
 
         assert 2 == len(self.schedulers)
@@ -289,7 +291,8 @@ class TestMultibroker(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/multibroker/cfg_multi_broker_multi_sched_realms.cfg',
-                             'cfg/multibroker/alignak-multi_broker_multi_sched_realms.ini')
+                             'cfg/multibroker/alignak-multi_broker_multi_sched_realms.ini',
+                             dispatching=True)
 
         # test right brokers sent to right schedulers
         smaster = self._schedulers['scheduler-master']

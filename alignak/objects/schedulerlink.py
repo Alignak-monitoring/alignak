@@ -45,7 +45,7 @@ This module provide SchedulerLink and SchedulerLinks classes used to manage sche
 """
 import logging
 from alignak.objects.satellitelink import SatelliteLink, SatelliteLinks
-from alignak.property import BoolProp, IntegerProp, StringProp
+from alignak.property import BoolProp, IntegerProp, StringProp, FULL_STATUS
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -57,21 +57,22 @@ class SchedulerLink(SatelliteLink):
 
     # Ok we lie a little here because we are a mere link in fact
     my_type = 'scheduler'
+    my_name_property = "%s_name" % my_type
 
     properties = SatelliteLink.properties.copy()
     properties.update({
         'type':
-            StringProp(default=u'scheduler', fill_brok=['full_status'], to_send=True),
+            StringProp(default=u'scheduler', fill_brok=[FULL_STATUS], to_send=True),
         'scheduler_name':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default='', fill_brok=[FULL_STATUS]),
         'port':
-            IntegerProp(default=7768, fill_brok=['full_status'], to_send=True),
+            IntegerProp(default=7768, fill_brok=[FULL_STATUS], to_send=True),
         'weight':
-            IntegerProp(default=1, fill_brok=['full_status']),
+            IntegerProp(default=1, fill_brok=[FULL_STATUS]),
         'skip_initial_broks':
-            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
+            BoolProp(default=False, fill_brok=[FULL_STATUS], to_send=True),
         'accept_passive_unknown_check_results':
-            BoolProp(default=False, fill_brok=['full_status'], to_send=True),
+            BoolProp(default=False, fill_brok=[FULL_STATUS], to_send=True),
     })
 
     running_properties = SatelliteLink.running_properties.copy()

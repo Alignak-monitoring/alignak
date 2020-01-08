@@ -531,8 +531,8 @@ class ExternalCommandManager(object):
 
         self.accept_passive_unknown_check_results = accept_unknown
         self.log_external_commands = log_external_commands
-        logger.info("External command manager, log commands: %s, accept unknown check: %s",
-                    self.log_external_commands, self.accept_passive_unknown_check_results)
+        logger.debug("External command manager, log commands: %s, accept unknown check: %s",
+                     self.log_external_commands, self.accept_passive_unknown_check_results)
 
         # Will change for each command read, so if a command need it,
         # it can get it
@@ -1311,8 +1311,7 @@ class ExternalCommandManager(object):
         :return: None
         """
         host.modified_attributes |= DICT_MODATTR["MODATTR_CHECK_COMMAND"].value
-        data = {"commands": self.commands, "call": check_command, "poller_tag": host.poller_tag}
-        host.change_check_command(data)
+        host.change_check_command(check_command, self.commands)
         self.send_an_element(host.get_update_status_brok())
 
     def change_host_check_timeperiod(self, host, timeperiod):
@@ -1344,8 +1343,7 @@ class ExternalCommandManager(object):
         :return: None
         """
         host.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
-        data = {"commands": self.commands, "call": event_handler_command}
-        host.change_event_handler(data)
+        host.change_event_handler(event_handler_command, self.commands)
         self.send_an_element(host.get_update_status_brok())
 
     def change_host_snapshot_command(self, host, snapshot_command):
@@ -1361,8 +1359,7 @@ class ExternalCommandManager(object):
         :return: None
         """
         host.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
-        data = {"commands": self.commands, "call": snapshot_command}
-        host.change_snapshot_command(data)
+        host.change_snapshot_command(snapshot_command, self.commands)
         self.send_an_element(host.get_update_status_brok())
 
     def change_host_modattr(self, host, value):
@@ -1553,8 +1550,7 @@ class ExternalCommandManager(object):
         :return: None
         """
         service.modified_attributes |= DICT_MODATTR["MODATTR_CHECK_COMMAND"].value
-        data = {"commands": self.commands, "call": check_command, "poller_tag": service.poller_tag}
-        service.change_check_command(data)
+        service.change_check_command(check_command, self.commands)
         self.send_an_element(service.get_update_status_brok())
 
     def change_svc_check_timeperiod(self, service, check_timeperiod):
@@ -1586,15 +1582,14 @@ class ExternalCommandManager(object):
         :return: None
         """
         service.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
-        data = {"commands": self.commands, "call": event_handler_command}
-        service.change_event_handler(data)
+        service.change_event_handler(event_handler_command, self.commands)
         self.send_an_element(service.get_update_status_brok())
 
     def change_svc_snapshot_command(self, service, snapshot_command):
         """Modify host snapshot command
         Format of the line that triggers function call::
 
-        CHANGE_HOST_SNAPSHOT_COMMAND;<host_name>;<event_handler_command>
+        CHANGE_SVC_SNAPSHOT_COMMAND;<host_name>;<event_handler_command>
 
         :param service: service to modify snapshot command
         :type service: alignak.objects.service.Service
@@ -1603,8 +1598,7 @@ class ExternalCommandManager(object):
         :return: None
         """
         service.modified_attributes |= DICT_MODATTR["MODATTR_EVENT_HANDLER_COMMAND"].value
-        data = {"commands": self.commands, "call": snapshot_command}
-        service.change_snapshot_command(data)
+        service.change_snapshot_command(snapshot_command, self.commands)
         self.send_an_element(service.get_update_status_brok())
 
     def change_svc_modattr(self, service, value):

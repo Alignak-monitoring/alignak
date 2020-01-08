@@ -214,7 +214,12 @@ class AlignakConfigParser(object):
                     setattr(self, inner_property, value)
 
                     # Set environment variable
-                    os.environ[inner_property] = value
+                    try:
+                        # Python 3
+                        os.environ[inner_property] = value
+                    except UnicodeEncodeError:
+                        # Python 2
+                        os.environ[inner_property] = value.encode('utf8')
 
                     if self.verbose:
                         print("  %s = %s" % (inner_property, value))

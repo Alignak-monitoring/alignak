@@ -66,13 +66,14 @@ class TestWorkerTimeout(AlignakTest):
         super(TestWorkerTimeout, self).setUp()
 
         # we have an external process, so we must un-fake time functions
-        self.setup_with_file('cfg/cfg_check_worker_timeout.cfg')
+        self.setup_with_file('cfg/cfg_check_worker_timeout.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
     def test_notification_timeout(self):
         """ Test timeout for notification sending
-        
-        :return: 
+
+        :return:
         """
         # Get a test service
         svc = self._scheduler.services.find_srv_by_name_and_hostname("test_host_0",
@@ -90,7 +91,7 @@ class TestWorkerTimeout(AlignakTest):
         w.i_am_dying = False
 
         # We prepare a notification in the to_queue
-        contact = Contact()
+        contact = Contact({})
         contact.contact_name = "alignak"
 
         data = {

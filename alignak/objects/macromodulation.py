@@ -50,7 +50,7 @@ warning level in some periods (like the night)
 import time
 
 from alignak.objects.item import Item, Items
-from alignak.property import StringProp, DictProp
+from alignak.property import StringProp, DictProp, FULL_STATUS
 from alignak.util import to_name_if_possible
 
 
@@ -61,35 +61,25 @@ class MacroModulation(Item):
     night)
     """
     my_type = 'macromodulation'
+    my_name_property = "%s_name" % my_type
 
     properties = Item.properties.copy()
     properties.update({
         'macromodulation_name':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'modulation_period':
-            StringProp(brok_transformation=to_name_if_possible, fill_brok=['full_status']),
+            StringProp(brok_transformation=to_name_if_possible, fill_brok=[FULL_STATUS]),
     })
 
     running_properties = Item.running_properties.copy()
     running_properties.update({
         'customs':
-            DictProp(default={}, fill_brok=['full_status']),
+            DictProp(default={}, fill_brok=[FULL_STATUS]),
     })
 
     special_properties = ('modulation_period',)
 
     macros = {}
-
-    def get_name(self):
-        """
-        Get the name of the macromodulation
-
-        :return: the macromodulation name string
-        :rtype: str
-        """
-        if hasattr(self, 'macromodulation_name'):
-            return self.macromodulation_name
-        return 'Unnamed'
 
     def is_active(self, timperiods):
         """
@@ -120,8 +110,8 @@ class MacroModulation(Item):
             self.modulation_period = None
 
         if not hasattr(self, 'customs') or not self.customs:
-            msg = "[macromodulation::%s] contains no macro definition" % (self.get_name())
-            self.add_error(msg)
+            self.add_error("[macromodulation::%s] contains no macro definition"
+                           % self.get_name())
             state = False
 
         return super(MacroModulation, self).is_correct() and state

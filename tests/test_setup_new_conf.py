@@ -46,30 +46,17 @@ class TestSetupNewConf(AlignakTest):
 
         :return:
         """
-        for count in range (0, 5):
+        for count in range(0, 5):
             perfdatas = []
             my_process = psutil.Process()
             with my_process.oneshot():
-                # perfdatas.append("num_threads=%d" % my_process.num_threads())
-                # # perfdatas.append("num_ctx_switches=%d" % my_process.num_ctx_switches())
-                # perfdatas.append("num_fds=%d" % my_process.num_fds())
-                # # perfdatas.append("num_handles=%d" % my_process.num_handles())
-                # perfdatas.append("create_time=%d" % my_process.create_time())
-                # perfdatas.append("cpu_num=%d" % my_process.cpu_num())
-                # perfdatas.append("cpu_usable=%d" % len(my_process.cpu_affinity()))
                 perfdatas.append("cpu_percent=%.2f%%" % my_process.cpu_percent())
-
-                # cpu_times_percent = my_process.cpu_times()
-                # for key in cpu_times_percent._fields:
-                #     perfdatas.append("cpu_%s_time=%.2fs" % (key,
-                #                                             getattr(cpu_times_percent, key)))
 
                 memory = my_process.memory_full_info()
                 for key in memory._fields:
                     perfdatas.append("mem_%s=%db" % (key, getattr(memory, key)))
 
-                print(("Process pid=%s, cpu/memory|%s" %
-                      (my_process.pid, " ".join(perfdatas))))
+                print("Process pid=%s, cpu/memory|%s" % (my_process.pid, " ".join(perfdatas)))
 
             self.test_conf_scheduler()
 
@@ -79,7 +66,8 @@ class TestSetupNewConf(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_default_with_modules.cfg',
-                             'cfg/default_with_modules/alignak.ini')
+                             'cfg/default_with_modules/alignak.ini',
+                             dispatching=True)
 
         args = {
             'env_file': self.env_filename,
@@ -95,30 +83,36 @@ class TestSetupNewConf(AlignakTest):
             break
         assert scheduler_link is not None
 
-        scheduler_daemon.setup_new_conf()
-        assert 1 == len(scheduler_daemon.modules)
-        assert scheduler_daemon.modules[0].module_alias == 'Example'
-        assert scheduler_daemon.modules[0].option_1 == 'foo'
-        assert scheduler_daemon.modules[0].option_2 == 'bar'
-        assert scheduler_daemon.modules[0].option_3 == 'foobar'
-        for host in scheduler_daemon.sched.pushed_conf.hosts:
-            print(("Host: %s" % host))
-        # Two hosts declared in the configuration
-        # One host provided by the Example module loaded in the arbiter
-        assert 3 == len(scheduler_daemon.sched.pushed_conf.hosts)
-        assert len(scheduler_daemon.pollers) == 1
-        assert len(scheduler_daemon.reactionners) == 1
-        assert len(scheduler_daemon.brokers) == 1
-        assert len(scheduler_daemon.schedulers) == 0
-        if scheduler_link.manage_arbiters:
-            assert len(scheduler_daemon.arbiters) == 1
-        else:
-            assert len(scheduler_daemon.arbiters) == 0
-        assert len(scheduler_daemon.receivers) == 0
+        # Simulate the daemons HTTP interface (very simple simulation !)
+        with requests_mock.mock() as mockreq:
+            for port in [7769, 7771, 7772]:
+                mockreq.get('http://127.0.0.1:%d/identity' % port,
+                            json={"start_time": 0, "running_id": 123456.123456})
+            scheduler_daemon.setup_new_conf()
+            assert 1 == len(scheduler_daemon.modules)
+            assert scheduler_daemon.modules[0].module_alias == 'Example'
+            assert scheduler_daemon.modules[0].option_1 == 'foo'
+            assert scheduler_daemon.modules[0].option_2 == 'bar'
+            assert scheduler_daemon.modules[0].option_3 == 'foobar'
+            for host in scheduler_daemon.sched.pushed_conf.hosts:
+                print("Host: %s" % host)
+            # Two hosts declared in the configuration
+            # One host provided by the Example module loaded in the arbiter
+            assert 3 == len(scheduler_daemon.sched.pushed_conf.hosts)
+            assert len(scheduler_daemon.pollers) == 1
+            assert len(scheduler_daemon.reactionners) == 1
+            assert len(scheduler_daemon.brokers) == 1
+            assert len(scheduler_daemon.schedulers) == 0
+            if scheduler_link.manage_arbiters:
+                assert len(scheduler_daemon.arbiters) == 1
+            else:
+                assert len(scheduler_daemon.arbiters) == 0
+            assert len(scheduler_daemon.receivers) == 0
 
         # send new conf, so it's the second time. This to test the cleanup
         self.setup_with_file('cfg/cfg_default_with_modules.cfg',
-                             'cfg/default_with_modules/alignak.ini')
+                             'cfg/default_with_modules/alignak.ini',
+                             dispatching=True)
         scheduler_link = None
         for satellite in self._arbiter.dispatcher.schedulers:
             scheduler_link = satellite
@@ -126,26 +120,31 @@ class TestSetupNewConf(AlignakTest):
             break
         assert scheduler_link is not None
 
-        scheduler_daemon.setup_new_conf()
-        assert 1 == len(scheduler_daemon.modules)
-        assert scheduler_daemon.modules[0].module_alias == 'Example'
-        assert scheduler_daemon.modules[0].option_1 == 'foo'
-        assert scheduler_daemon.modules[0].option_2 == 'bar'
-        assert scheduler_daemon.modules[0].option_3 == 'foobar'
-        for host in scheduler_daemon.sched.pushed_conf.hosts:
-            print(("Host: %s" % host))
-        # Two hosts declared in the configuration
-        # One host provided by the Example module loaded in the arbiter
-        assert 3 == len(scheduler_daemon.sched.pushed_conf.hosts)
-        assert len(scheduler_daemon.pollers) == 1
-        assert len(scheduler_daemon.reactionners) == 1
-        assert len(scheduler_daemon.brokers) == 1
-        assert len(scheduler_daemon.schedulers) == 0
-        if scheduler_link.manage_arbiters:
-            assert len(scheduler_daemon.arbiters) == 1
-        else:
-            assert len(scheduler_daemon.arbiters) == 0
-        assert len(scheduler_daemon.receivers) == 0
+        # Simulate the daemons HTTP interface (very simple simulation !)
+        with requests_mock.mock() as mockreq:
+            for port in [7769, 7771, 7772]:
+                mockreq.get('http://127.0.0.1:%d/identity' % port,
+                            json={"start_time": 0, "running_id": 123456.123456})
+            scheduler_daemon.setup_new_conf()
+            assert 1 == len(scheduler_daemon.modules)
+            assert scheduler_daemon.modules[0].module_alias == 'Example'
+            assert scheduler_daemon.modules[0].option_1 == 'foo'
+            assert scheduler_daemon.modules[0].option_2 == 'bar'
+            assert scheduler_daemon.modules[0].option_3 == 'foobar'
+            for host in scheduler_daemon.sched.pushed_conf.hosts:
+                print(("Host: %s" % host))
+            # Two hosts declared in the configuration
+            # One host provided by the Example module loaded in the arbiter
+            assert 3 == len(scheduler_daemon.sched.pushed_conf.hosts)
+            assert len(scheduler_daemon.pollers) == 1
+            assert len(scheduler_daemon.reactionners) == 1
+            assert len(scheduler_daemon.brokers) == 1
+            assert len(scheduler_daemon.schedulers) == 0
+            if scheduler_link.manage_arbiters:
+                assert len(scheduler_daemon.arbiters) == 1
+            else:
+                assert len(scheduler_daemon.arbiters) == 0
+            assert len(scheduler_daemon.receivers) == 0
 
         # Stop launched modules
         scheduler_daemon.modules_manager.stop_all()
@@ -156,42 +155,56 @@ class TestSetupNewConf(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_default_with_modules.cfg',
-                             'cfg/default_with_modules/alignak.ini')
+                             'cfg/default_with_modules/alignak.ini',
+                             dispatching=True)
 
         args = {
             'env_file': self.env_filename,
             'alignak_name': 'my-alignak', 'daemon_name': 'unset',
         }
-        receiv = receiverdaemon(**args)
+        receiver = receiverdaemon(**args)
         # receiv.load_modules_manager()
-        if hasattr(receiv, 'modules'):
-            assert 0 == len(receiv.modules)
+        if hasattr(receiver, 'modules'):
+            assert 0 == len(receiver.modules)
 
         for satellite in self._arbiter.dispatcher.satellites:
             if satellite.type == 'receiver':
-                receiv.new_conf = satellite.cfg
-        receiv.setup_new_conf()
-        self.show_logs()
-        assert 1 == len(receiv.modules)
-        assert receiv.modules[0].module_alias == 'Example'
-        assert receiv.modules[0].option_3 == 'foobar'
-        # check get hosts
-        # Two hosts declared in the configuration
-        # On host provided by the Example module loaded in the arbiter
-        assert len(receiv.hosts_schedulers) == 3
-        assert len(receiv.schedulers) == 1
+                receiver.new_conf = satellite.cfg
+
+        # Simulate the daemons HTTP interface (very simple simulation !)
+        with requests_mock.mock() as mockreq:
+            for port in [7768, 7770]:
+                mockreq.get('http://127.0.0.1:%d/identity' % port,
+                            json={"start_time": 0, "running_id": 123456.123456})
+            receiver.setup_new_conf()
+            self.show_logs()
+            assert 1 == len(receiver.modules)
+            assert receiver.modules[0].module_alias == 'Example'
+            assert receiver.modules[0].option_3 == 'foobar'
+            # check get hosts
+            # Two hosts declared in the configuration
+            # On host provided by the Example module loaded in the arbiter
+            assert len(receiver.hosts_schedulers) == 3
+            assert len(receiver.schedulers) == 1
 
         # send new conf, so it's the second time. This test the cleanup
         self.setup_with_file('cfg/cfg_default_with_modules.cfg',
-                             'cfg/default_with_modules/alignak.ini')
+                             'cfg/default_with_modules/alignak.ini',
+                             dispatching=True)
         for satellite in self._arbiter.dispatcher.satellites:
             if satellite.type == 'receiver':
-                receiv.new_conf = satellite.cfg
-        receiv.setup_new_conf()
-        assert len(receiv.schedulers) == 1
+                receiver.new_conf = satellite.cfg
+
+        # Simulate the daemons HTTP interface (very simple simulation !)
+        with requests_mock.mock() as mockreq:
+            for port in [7768, 7770]:
+                mockreq.get('http://127.0.0.1:%d/identity' % port,
+                            json={"start_time": 0, "running_id": 123456.123456})
+            receiver.setup_new_conf()
+            assert len(receiver.schedulers) == 1
 
         # Stop launched modules
-        receiv.modules_manager.stop_all()
+        receiver.modules_manager.stop_all()
 
     def test_conf_poller(self):
         """ Test load new conf in poller
@@ -199,7 +212,8 @@ class TestSetupNewConf(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_default_with_modules.cfg',
-                             'cfg/default_with_modules/alignak.ini')
+                             'cfg/default_with_modules/alignak.ini',
+                             dispatching=True)
 
         args = {
             'env_file': self.env_filename,
@@ -213,22 +227,35 @@ class TestSetupNewConf(AlignakTest):
         for satellite in self._arbiter.dispatcher.satellites:
             if satellite.type == 'poller':
                 poller.new_conf = satellite.cfg
-        poller.setup_new_conf()
-        assert 1 == len(poller.modules)
-        assert poller.modules[0].module_alias == 'Example'
-        assert poller.modules[0].option_1 == 'foo'
-        assert poller.modules[0].option_2 == 'bar'
-        assert poller.modules[0].option_3 == 'foobar'
-        assert len(poller.schedulers) == 1
+
+        # Simulate the daemons HTTP interface (very simple simulation !)
+        with requests_mock.mock() as mockreq:
+            for port in [7768]:
+                mockreq.get('http://127.0.0.1:%d/identity' % port,
+                            json={"start_time": 0, "running_id": 123456.123456})
+            poller.setup_new_conf()
+            assert 1 == len(poller.modules)
+            assert poller.modules[0].module_alias == 'Example'
+            assert poller.modules[0].option_1 == 'foo'
+            assert poller.modules[0].option_2 == 'bar'
+            assert poller.modules[0].option_3 == 'foobar'
+            assert len(poller.schedulers) == 1
 
         # send new conf, so it's the second time. This test the cleanup
         self.setup_with_file('cfg/cfg_default_with_modules.cfg',
-                             'cfg/default_with_modules/alignak.ini')
+                             'cfg/default_with_modules/alignak.ini',
+                             dispatching=True)
         for satellite in self._arbiter.dispatcher.satellites:
             if satellite.type == 'poller':
                 poller.new_conf = satellite.cfg
-        poller.setup_new_conf()
-        assert len(poller.schedulers) == 1
+
+        # Simulate the daemons HTTP interface (very simple simulation !)
+        with requests_mock.mock() as mockreq:
+            for port in [7768]:
+                mockreq.get('http://127.0.0.1:%d/identity' % port,
+                            json={"start_time": 0, "running_id": 123456.123456})
+            poller.setup_new_conf()
+            assert len(poller.schedulers) == 1
 
         # Stop launched modules
         poller.modules_manager.stop_all()
@@ -239,7 +266,8 @@ class TestSetupNewConf(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_default_with_modules.cfg',
-                             'cfg/default_with_modules/alignak.ini')
+                             'cfg/default_with_modules/alignak.ini',
+                             dispatching=True)
 
         args = {
             'env_file': self.env_filename,
@@ -256,11 +284,12 @@ class TestSetupNewConf(AlignakTest):
                 broker.new_conf = satellite.cfg
                 break
         assert broker_link is not None
+
         # Simulate the daemons HTTP interface (very simple simulation !)
         with requests_mock.mock() as mockreq:
-            mockreq.get('http://127.0.0.1:7768/ping', json='pong')
-            mockreq.get('http://127.0.0.1:7768/get_running_id',
-                        json={"running_id": 123456.123456})
+            for port in [7768, 7769, 7771, 7773]:
+                mockreq.get('http://127.0.0.1:%d/identity' % port,
+                            json={"start_time": 0, "running_id": 123456.123456})
             mockreq.get('http://127.0.0.1:7768/fill_initial_broks', json=[])
             mockreq.get('http://127.0.0.1:7768/get_managed_configurations', json={})
 
@@ -285,7 +314,8 @@ class TestSetupNewConf(AlignakTest):
 
         # send new conf, so it's the second time. This tests the cleanup
         self.setup_with_file('cfg/cfg_default_with_modules.cfg',
-                             'cfg/default_with_modules/alignak.ini')
+                             'cfg/default_with_modules/alignak.ini',
+                             dispatching=True)
         broker_link = None
         for satellite in self._arbiter.dispatcher.satellites:
             if satellite.type == 'broker':
@@ -296,9 +326,9 @@ class TestSetupNewConf(AlignakTest):
 
         # Simulate the daemons HTTP interface (very simple simulation !)
         with requests_mock.mock() as mockreq:
-            mockreq.get('http://127.0.0.1:7768/ping', json='pong')
-            mockreq.get('http://127.0.0.1:7768/get_running_id',
-                        json={"running_id": 123456.123456})
+            for port in [7768, 7769, 7771, 7773]:
+                mockreq.get('http://127.0.0.1:%d/identity' % port,
+                            json={"start_time": 0, "running_id": 123456.123456})
             mockreq.get('http://127.0.0.1:7768/fill_initial_broks', json=[])
             mockreq.get('http://127.0.0.1:7768/get_managed_configurations', json={})
 
@@ -321,36 +351,53 @@ class TestSetupNewConf(AlignakTest):
         :return: None
         """
         self.setup_with_file('cfg/cfg_default_with_modules.cfg',
-                             'cfg/default_with_modules/alignak.ini')
+                             'cfg/default_with_modules/alignak.ini',
+                             dispatching=True)
 
         args = {
             'env_file': self.env_filename,
             'alignak_name': 'my-alignak', 'daemon_name': 'unset',
         }
-        reac = reactionnerdaemon(**args)
+        reactionner = reactionnerdaemon(**args)
         # reac.load_modules_manager()
-        if hasattr(reac, 'modules'):
-            assert 0 == len(reac.modules)
+        if hasattr(reactionner, 'modules'):
+            assert 0 == len(reactionner.modules)
 
         for satellite in self._arbiter.dispatcher.satellites:
             if satellite.type == 'reactionner':
-                reac.new_conf = satellite.cfg
-        reac.setup_new_conf()
-        assert 1 == len(reac.modules)
-        assert reac.modules[0].module_alias == 'Example'
-        assert reac.modules[0].option_1 == 'foo'
-        assert reac.modules[0].option_2 == 'bar'
-        assert reac.modules[0].option_3 == 'foobar'
-        assert len(reac.schedulers) == 1
+                reactionner.new_conf = satellite.cfg
+
+        # Simulate the daemons HTTP interface (very simple simulation !)
+        with requests_mock.mock() as mockreq:
+            for port in [7768]:
+                mockreq.get('http://127.0.0.1:%d/identity' % port,
+                            json={"start_time": 0, "running_id": 123456.123456})
+            # mockreq.get('http://127.0.0.1:7768/fill_initial_broks', json=[])
+            # mockreq.get('http://127.0.0.1:7768/get_managed_configurations', json={})
+
+            reactionner.setup_new_conf()
+            assert 1 == len(reactionner.modules)
+            assert reactionner.modules[0].module_alias == 'Example'
+            assert reactionner.modules[0].option_1 == 'foo'
+            assert reactionner.modules[0].option_2 == 'bar'
+            assert reactionner.modules[0].option_3 == 'foobar'
+            assert len(reactionner.schedulers) == 1
 
         # send new conf, so it's the second time. This test the cleanup
         self.setup_with_file('cfg/cfg_default_with_modules.cfg',
-                             'cfg/default_with_modules/alignak.ini')
+                             'cfg/default_with_modules/alignak.ini',
+                             dispatching=True)
         for satellite in self._arbiter.dispatcher.satellites:
             if satellite.type == 'reactionner':
-                reac.new_conf = satellite.cfg
-        reac.setup_new_conf()
-        assert len(reac.schedulers) == 1
+                reactionner.new_conf = satellite.cfg
+
+        # Simulate the daemons HTTP interface (very simple simulation !)
+        with requests_mock.mock() as mockreq:
+            for port in [7768]:
+                mockreq.get('http://127.0.0.1:%d/identity' % port,
+                            json={"start_time": 0, "running_id": 123456.123456})
+            reactionner.setup_new_conf()
+            assert len(reactionner.schedulers) == 1
 
         # Stop launched modules
-        reac.modules_manager.stop_all()
+        reactionner.modules_manager.stop_all()

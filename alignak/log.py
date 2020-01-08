@@ -43,7 +43,8 @@ import json
 import time
 import datetime
 import logging
-from logging import Handler, Formatter, StreamHandler
+from logging import Handler, Formatter, FileHandler, StreamHandler
+from logging.handlers import TimedRotatingFileHandler
 from logging.config import dictConfig as logger_dictConfig
 
 from termcolor import cprint
@@ -159,10 +160,6 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
                 #     print("- handler : %s (%s)" % (hdlr, hdlr.formatter._fmt))
             break
     else:
-        if not logger_configuration_file or not os.path.exists(logger_configuration_file):
-            print("The logger configuration file does not exist: %s" % logger_configuration_file)
-            return
-
         with open(logger_configuration_file, 'rt') as _file:
             config = json.load(_file)
             truncate = False
@@ -198,6 +195,74 @@ def setup_logger(logger_configuration_file, log_dir=None, process_name='', log_f
         logger_dictConfig(config)
 
 
+def set_monitoring_logger(log_filename, log_rotation_when, log_rotation_interval,
+                          log_rotation_count, log_format, log_date):
+    """Set the Alignak monitoring events logger with a file log handler.
+
+    :param log_filename: file name
+
+    :param log_rotation_count:
+    :param log_rotation_interval:
+    :param log_rotation_when:
+    :param log_format:
+    :param log_date:
+
+    :return: n/a
+    """
+    logger_ = logging.getLogger(MONITORING_LOGGER_NAME)
+    logger_.setLevel(logging.DEBUG)
+
+    for handler in logger_.handlers:
+        if isinstance(handler, TimedRotatingFileHandler):
+            # We still have a file logger
+            break
+    else:
+        file_handler = TimedRotatingFileHandler(
+            log_filename, when=log_rotation_when,
+            interval=log_rotation_interval, backupCount=log_rotation_count)
+        file_handler.setFormatter(Formatter(log_format, log_date))
+        logger_.addHandler(file_handler)
+
+
+def set_log_file(log_filename, log_rotation_when, log_rotation_interval, log_rotation_count,
+                 log_format, log_date, log_level=None):
+    """Set the Alignak daemons logger have a file log handler.
+
+    :param log_filename: the file name for the log
+
+    :param log_rotation_count: all for the Timed Rotating default file handler
+    :param log_rotation_interval:
+    :param log_rotation_when:
+
+    :param log_format: both for the log formatter
+    :param log_date:
+
+    :param log_level: optional to sel the logger and new handler log level
+    Default log level is ERROR if this parameter is not set
+
+    :return: n/a
+    """
+    logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+
+    log_level = log_level if log_level else logging.INFO
+    logger_.setLevel(log_level)
+
+    for handler in logger_.handlers:
+        if isinstance(handler, TimedRotatingFileHandler):
+            # We still have a file logger
+            break
+    else:
+        file_handler = TimedRotatingFileHandler(
+            log_filename, when=log_rotation_when,
+            interval=log_rotation_interval, backupCount=log_rotation_count)
+        file_handler.setFormatter(Formatter(log_format, log_date))
+        file_handler.setLevel(log_level)
+        logger_.addHandler(file_handler)
+        logger_.debug("Logger (%s), added a TimedRotatingFileHandler", ALIGNAK_LOGGER_NAME)
+        print("Logger (%s), added a file handler: %s / %s"
+              % (ALIGNAK_LOGGER_NAME, log_level, log_filename))
+
+
 def set_log_console(log_level=logging.INFO):
     """Set the Alignak daemons logger have a console log handler.
 
@@ -206,40 +271,45 @@ def set_log_console(log_level=logging.INFO):
     :param log_level: log level
     :return: n/a
     """
-    # Change the logger and all its handlers log level
     logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
     logger_.setLevel(log_level)
 
-    # Adding a console logger...
-    csh = ColorStreamHandler(sys.stdout)
-    csh.setFormatter(Formatter('[%(asctime)s] %(levelname)s: [%(name)s] %(message)s',
-                               "%Y-%m-%d %H:%M:%S"))
-    logger_.addHandler(csh)
+    for handler in logger_.handlers:
+        if isinstance(handler, (StreamHandler, ColorStreamHandler)) \
+                and not isinstance(handler, FileHandler):
+            # We still have a console logger
+            break
+    else:
+        # Adding a console logger...
+        csh = ColorStreamHandler(sys.stdout)
+        csh.setFormatter(Formatter('[%(asctime)s] %(levelname)s: [%(name)s] %(message)s',
+                                   "%Y-%m-%d %H:%M:%S"))
+        csh.setLevel(log_level)
+        logger_.addHandler(csh)
+        print("Logger (%s), added a console handler: %s" % (ALIGNAK_LOGGER_NAME, log_level))
 
 
-def set_log_level(log_level=logging.INFO, handlers=None):
+def set_log_level(log_level=logging.INFO, handlers=False):
     """Set the Alignak logger log level. This is mainly used for the arbiter verify code to
     set the log level at INFO level whatever the configured log level is set.
 
     This is also used when changing the daemon log level thanks to the WS interface
 
-    If an handlers name list is provided, all the handlers which name is in this list are
-    concerned else only the `daemons` handler log level is changed.
+    If the handlers parameter is True, all the handlers are concerned else only
+    the main logger log level is updated.
 
     :param handlers: list of concerned handlers
     :type: list
     :param log_level: log level
     :return: n/a
     """
-    # print("Setting log level: %s" % (log_level))
     # Change the logger and all its handlers log level
     logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
     logger_.setLevel(log_level)
 
-    if handlers is not None:
+    if handlers:
         for handler in logger_.handlers:
-            if getattr(handler, '_name', None) in handlers:
-                handler.setLevel(log_level)
+            handler.setLevel(log_level)
 
 
 def get_log_level():

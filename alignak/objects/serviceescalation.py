@@ -90,14 +90,13 @@ class Serviceescalation(Item):
             IntegerProp(),
     })
 
-    def __init__(self, params=None, parsing=True):
-        if params is None:
-            params = {}
-
+    def __init__(self, params, parsing=True):
+        # Update default options
         for prop in ['escalation_options']:
             if prop in params:
                 params[prop] = [p.replace('u', 'x') for p in params[prop]]
         super(Serviceescalation, self).__init__(params, parsing=parsing)
+        self.fill_default()
 
 
 class Serviceescalations(Items):

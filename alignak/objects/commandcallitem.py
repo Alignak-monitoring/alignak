@@ -23,7 +23,6 @@
 
 from alignak.objects.item import Items
 from alignak.commandcall import CommandCall
-from alignak.util import strip_and_uniq
 
 
 class CommandCallItems(Items):
@@ -32,74 +31,73 @@ class CommandCallItems(Items):
 
     """
 
-    def linkify_one_command_with_commands(self, commands, prop):
+    def linkify_with_commands(self, commands, prop, is_a_list=False):
         """
         Link a command to a property (check_command for example)
 
-        :param commands: commands object
-        :type commands: alignak.objects.command.Commands
-        :param prop: property name
-        :type prop: str
-        :param default: default command to use if the property is not defined
-        :type default: str
-        :return: None
-        """
-        for i in self:
-            command = getattr(i, prop, '').strip()
-            if command:
-                setattr(i, prop, self.create_commandcall(i, commands, command))
-            else:
-                # No defined command
-                setattr(i, prop, None)
-
-    def linkify_command_list_with_commands(self, commands, prop):
-        """
-        Link a command list (commands with , between) in real CommandCalls
-
-        :param commands: commands object
+        :param is_a_list: True if the property contains a list of commands
+        :type is_a_list: bool
+        :param commands: commands object, the list of all known commands
         :type commands: alignak.objects.command.Commands
         :param prop: property name
         :type prop: str
         :return: None
         """
-        for i in self:
-            if not hasattr(i, prop):
+        for item in self:
+            if not getattr(item, prop, None):
+                # Set/force a non-existing command
+                setattr(item, prop, None)
                 continue
 
-            commands_list = strip_and_uniq(getattr(i, prop, ''))
-            cmds_list = []
-            for command in commands_list:
-                if not command:
-                    continue
+            command_name = getattr(item, prop, None)
+            if not command_name:
+                continue
 
-                cmds_list.append(self.create_commandcall(i, commands, command))
-            setattr(i, prop, cmds_list)
+            if not is_a_list:
+                # Set a CommandCall for the command
+                setattr(item, prop, self.create_commandcall(item, commands, command_name))
+                continue
+
+            setattr(item, prop, [])
+            commands_list = command_name
+            if not isinstance(commands_list, list):
+                commands_list = [commands_list]
+
+            # commands contains the configured commands list,
+            # Something like: [check-host-alive-parent!up!$HOSTSTATE:test_router_0$}
+            cmds_list = []
+            for command_name in commands_list:
+                cmds_list.append(self.create_commandcall(item, commands, command_name))
+
+            setattr(item, prop, cmds_list)
+            if not is_a_list:
+                setattr(item, prop, cmds_list[0])
 
     @staticmethod
-    def create_commandcall(prop, commands, command):
+    def create_commandcall(item, commands, command_line):
         """
         Create CommandCall object with command
 
-        :param prop: property
-        :type prop: str
+        :param item: an item concerned with the command
+        :type item: alignak.objects.item.Item
         :param commands: all commands
         :type commands: alignak.objects.command.Commands
-        :param command: a command object
-        :type command: str
+        :param command_line: a full command line (command and arguments)
+        :type command_line: str
         :return: a commandCall object
         :rtype: alignak.objects.commandcallitem.CommandCall
         """
         cc = {
-            'commands': commands,
-            'call': command
+            'command_line': command_line.strip(),
+            'commands': commands
         }
 
-        if hasattr(prop, 'enable_environment_macros'):
-            cc['enable_environment_macros'] = prop.enable_environment_macros
+        if hasattr(item, 'enable_environment_macros'):
+            cc['enable_environment_macros'] = item.enable_environment_macros
+        if hasattr(item, 'poller_tag'):
+            cc['poller_tag'] = item.poller_tag
+        if hasattr(item, 'reactionner_tag'):
+            cc['reactionner_tag'] = item.reactionner_tag
 
-        if hasattr(prop, 'poller_tag'):
-            cc['poller_tag'] = prop.poller_tag
-        elif hasattr(prop, 'reactionner_tag'):
-            cc['reactionner_tag'] = prop.reactionner_tag
-
-        return CommandCall(cc)
+        # Force parsing for object creation
+        return CommandCall(cc, parsing=True)

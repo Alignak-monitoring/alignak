@@ -62,14 +62,12 @@ import traceback
 import threading
 import logging
 
-# from multiprocessing import active_children
-#
 # pylint: disable=wildcard-import,unused-wildcard-import
 # This import, despite not used, is necessary to include all Alignak objects modules
 from alignak.objects import *
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.satellite import BaseSatellite
-from alignak.property import IntegerProp, StringProp, BoolProp
+from alignak.property import IntegerProp, StringProp
 from alignak.stats import statsmgr
 from alignak.http.broker_interface import BrokerInterface
 from alignak.objects.satellitelink import SatelliteLink, LinkError
@@ -91,9 +89,7 @@ class Broker(BaseSatellite):
         'type':
             StringProp(default='broker'),
         'port':
-            IntegerProp(default=7772),
-        'got_initial_broks':
-            BoolProp(default=False)
+            IntegerProp(default=7772)
 
     })
 
@@ -103,6 +99,8 @@ class Broker(BaseSatellite):
         :param kwargs: command line arguments
         """
         super(Broker, self).__init__(kwargs.get('daemon_name', 'Default-broker'), **kwargs)
+
+        self.got_initial_broks = False
 
         # Our schedulers and arbiters are initialized in the base class
 
@@ -144,9 +142,9 @@ class Broker(BaseSatellite):
                 with self.events_lock:
                     self.events.append(elt)
                 statsmgr.counter('events', 1)
-            else:
-                with self.broks_lock:
-                    self.broks.append(elt)
+            # Also add to our broks
+            with self.broks_lock:
+                self.broks.append(elt)
             statsmgr.counter('broks.added', 1)
         elif isinstance(elt, ExternalCommand):
             logger.debug("Queuing an external command '%s'", str(elt.__dict__))
@@ -166,8 +164,7 @@ class Broker(BaseSatellite):
                     c_id = data['full_instance_id']
                     source = getattr(elt, 'source', getattr(elt, '_source', None))
                     logger.info('The module %s is asking me to get all initial data '
-                                'from the scheduler %d',
-                                source, c_id)
+                                'from the scheduler %s', source, c_id)
                     # so we just reset the connection and the running_id,
                     # it will just get all new things
                     try:
@@ -253,10 +250,10 @@ class Broker(BaseSatellite):
                     if tmp_broks:
                         logger.debug("Got %d Broks from %s in %s",
                                      len(tmp_broks), satellite_link.name, time.time() - _t0)
-                        statsmgr.gauge('get-new-broks-count.%s'
-                                       % (satellite_link.name), len(tmp_broks))
-                        statsmgr.timer('get-new-broks-time.%s'
-                                       % (satellite_link.name), time.time() - _t0)
+                        statsmgr.gauge('get-new-broks-count.%s' % satellite_link.name,
+                                       len(tmp_broks))
+                        statsmgr.timer('get-new-broks-time.%s' % satellite_link.name,
+                                       time.time() - _t0)
                         for brok in tmp_broks:
                             brok.instance_id = satellite_link.instance_id
 
@@ -328,7 +325,7 @@ class Broker(BaseSatellite):
                     new_link = SatelliteLink.get_a_satellite_link(link_type[:-1],
                                                                   rs_conf)
                     my_satellites[new_link.uuid] = new_link
-                    logger.info("I got a new %s satellite: %s", link_type[:-1], new_link)
+                    logger.info("I got a new %s satellite: %s", link_type[:-1], new_link.name)
 
                     new_link.running_id = running_id
                     new_link.external_commands = external_commands
@@ -350,7 +347,7 @@ class Broker(BaseSatellite):
                     logger.error('Cannot un-serialize modules configuration '
                                  'received from arbiter: %s', exp)
                 if self.modules:
-                    logger.info("I received some modules configuration: %s", self.modules)
+                    logger.info("I received some modules configuration")
                     self.have_modules = True
 
                     # Ok now start, or restart them!
@@ -442,7 +439,7 @@ class Broker(BaseSatellite):
 
         logger.debug("Begin Loop: still some old broks to manage (%d)", len(self.external_broks))
         if self.external_broks:
-            statsmgr.gauge('unmanaged.broks', len(self.external_broks))
+            statsmgr.gauge('broks.unmanaged', len(self.external_broks))
 
         # Try to see if one of my module is dead, and restart previously dead modules
         self.check_and_del_zombie_modules()

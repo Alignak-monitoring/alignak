@@ -74,8 +74,8 @@ class TestServiceDescriptionDuplicateForEach(AlignakTest):
         assert expected == rsp
 
     def test_all_duplicate_ok(self):
-        host = self._sched.hosts.find_by_name("my_host")
-        services_desc = set(self._sched.services[s].service_description for s in host.services)
+        host = self._arbiter.conf.hosts.find_by_name("my_host")
+        services_desc = set(self._arbiter.conf.services[s].service_description for s in host.services)
         expected = set(['Generated Service %s' % i for i in range(1, 4)])
         assert expected == services_desc
 

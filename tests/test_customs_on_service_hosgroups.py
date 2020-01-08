@@ -59,7 +59,6 @@ class TestCustomsonservicehosgroups(AlignakTest):
     def setUp(self):
         super(TestCustomsonservicehosgroups, self).setUp()
         self.setup_with_file('cfg/cfg_customs_on_service_hosgroups.cfg')
-        self._sched = self._scheduler
 
     # We look for 3 services: on defined as direct on 1 hosts, on other
     # on 2 hsots, and a last one on a hostgroup
@@ -68,18 +67,18 @@ class TestCustomsonservicehosgroups(AlignakTest):
         Test custom macros on service hostgroups
         """
         # The one host service
-        svc_one_host = self._sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc_one_host = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_0",
                                                                           "test_on_1_host")
         assert svc_one_host is not None
         # The 2 hosts service(s)
-        svc_two_hosts_1 = self._sched.services.find_srv_by_name_and_hostname("test_host_0",
+        svc_two_hosts_1 = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_0",
                                                                              "test_on_2_hosts")
         assert svc_two_hosts_1 is not None
-        svc_two_hosts_2 = self._sched.services.find_srv_by_name_and_hostname("test_router_0",
+        svc_two_hosts_2 = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_router_0",
                                                                              "test_on_2_hosts")
         assert svc_two_hosts_2 is not None
         # Then the one defined on a hostgroup
-        svc_on_group = self._sched.services.find_srv_by_name_and_hostname("test_router_0",
+        svc_on_group = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_router_0",
                                                                           "test_on_group")
         assert svc_on_group is not None
 

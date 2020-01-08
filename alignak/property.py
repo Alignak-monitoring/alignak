@@ -56,18 +56,12 @@ Each class implements a pythonize method that cast data into the wanted type.
 
 """
 import re
-import logging
 from alignak.util import to_float, to_split, to_char, to_int, unique_value, list_split
 
 __all__ = ('UnusedProp', 'BoolProp', 'IntegerProp', 'FloatProp',
-           'CharProp', 'StringProp', 'ListProp', 'DictProp',
-           'FULL_STATUS', 'CHECK_RESULT')
-
-# Suggestion
-# Is this useful? see above
-__author__ = "Hartmut Goebel <h.goebel@goebel-consult.de>"
-__copyright__ = "Copyright 2010-2011 by Hartmut Goebel <h.goebel@goebel-consult.de>"
-__licence__ = "GNU Affero General Public License version 3 (AGPL v3)"
+           'CharProp', 'StringProp', 'SetProp', 'ListProp', 'DictProp',
+           'ToGuessProp', 'PythonizeError',
+           'AddrProp', 'FULL_STATUS', 'CHECK_RESULT')
 
 FULL_STATUS = 'full_status'
 CHECK_RESULT = 'check_result'
@@ -207,8 +201,7 @@ class UnusedProp(Property):
                                          managed=True)
 
         if text is None:
-            text = ("This parameter is no longer useful in the "
-                    "Alignak architecture.")
+            text = "This parameter is no longer useful in the Alignak architecture."
         self.text = text
         self.unused = True
 
@@ -356,23 +349,6 @@ class SetProp(ListProp):
         :rtype: set
         """
         return set(super(SetProp, self).pythonize(val))
-
-
-class LogLevelProp(StringProp):
-    """ A string property representing a logging level """
-
-    def pythonize(self, val):
-        """Convert value into a log level property::
-
-        * If value is a list, try to take the last element
-        * get logging level base on the value
-
-        :param val: value to convert
-        :type val:
-        :return: log level corresponding to value
-        :rtype: str
-        """
-        return logging.getLevelName(unique_value(val))
 
 
 class DictProp(Property):

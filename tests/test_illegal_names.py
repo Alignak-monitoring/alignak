@@ -66,13 +66,13 @@ class TestIllegalNames(AlignakTest):
         self.setup_with_file('cfg/cfg_default.cfg')
 
         illegal_characts = self._arbiter.conf.illegal_object_name_chars
-        print("Illegal caracters: %s" % illegal_characts)
-        host = self._scheduler.hosts.find_by_name("test_host_0")
+        print("Illegal characters: %s" % illegal_characts)
+        host = self._arbiter.conf.hosts.find_by_name("test_host_0")
         # should be correct
         assert host.is_correct()
 
         # Now change the name with incorrect caract
-        host.configuration_errors=[]
+        host.configuration_errors = []
         for charact in illegal_characts:
             host.host_name = 'test_host_0' + charact
             # and Now I want an incorrect here

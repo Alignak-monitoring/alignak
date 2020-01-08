@@ -55,22 +55,20 @@ class TestExcludeServices(AlignakTest):
 
     def setUp(self):
         super(TestExcludeServices, self).setUp()
-
-        self.setup_with_file('cfg/cfg_exclude_include_services.cfg')
-        self._sched = self._scheduler
+        self.setup_with_file('cfg/cfg_exclude_include_services.cfg', dispatching=True)
 
     def test_exclude_services(self):
         """
         Test service_excludes statement in host
         """
 
-        hst1 = self._sched.hosts.find_by_name("test_host_01")
-        hst2 = self._sched.hosts.find_by_name("test_host_02")
+        hst1 = self._scheduler.hosts.find_by_name("test_host_01")
+        hst2 = self._scheduler.hosts.find_by_name("test_host_02")
 
         assert [] == hst1.service_excludes
         assert ["srv-svc11", "srv-svc21", "proc proc1"] == hst2.service_excludes
 
-        Find = self._sched.services.find_srv_by_name_and_hostname
+        Find = self._scheduler.services.find_srv_by_name_and_hostname
 
         # All services should exist for test_host_01
         find = partial(Find, 'test_host_01')
@@ -89,14 +87,13 @@ class TestExcludeServices(AlignakTest):
         for svc in ('srv-svc11', 'srv-svc21', 'proc proc1', ):
             assert find(svc) is None, "%s found" % svc
 
-
     def test_service_includes(self):
         """
         Test service_includes statement in host
-        """ 
-
-        Find = self._sched.services.find_srv_by_name_and_hostname
-        find = partial(Find, 'test_host_03')
+        """
+        find = self._scheduler.services.find_srv_by_name_and_hostname
+        find = partial(find, 'test_host_03')
+        print("Found: %s / %s" % (find, find.__dict__))
 
         for svc in ('srv-svc11', 'proc proc2', 'srv-svc22'):
             assert find(svc) is not None, "%s not found" % svc

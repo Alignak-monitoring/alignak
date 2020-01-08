@@ -157,7 +157,7 @@ class MacroResolverTester(object):
 
         # No arguments are provided - will be valued as empty strings
         dummy_call = "command_with_args"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         # todo: Test problem is here!
@@ -170,7 +170,7 @@ class MacroResolverTester(object):
 
         # Extra arguments are provided - will be ignored
         dummy_call = "command_with_args!arg_1!arg_2!arg_3!arg_4!arg_5!extra argument"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert macros_command == 'plugins/command -H 127.0.0.1 -t 9 -u -c arg_1 ' \
@@ -178,7 +178,7 @@ class MacroResolverTester(object):
 
         # All arguments are provided
         dummy_call = "command_with_args!arg_1!arg_2!arg_3!arg_4!arg_5"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data,  self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert macros_command == 'plugins/command -H 127.0.0.1 -t 9 -u -c arg_1 ' \
@@ -195,23 +195,23 @@ class MacroResolverTester(object):
 
         # Long and short datetime
         dummy_call = "special_macro!$LONGDATETIME$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         dummy_call = "special_macro!$SHORTDATETIME$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         dummy_call = "special_macro!$DATE$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         dummy_call = "special_macro!$TIME$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         dummy_call = "special_macro!$TIMET$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         # Do not check that the output of these macro is correct
@@ -219,12 +219,12 @@ class MacroResolverTester(object):
 
         # Process and event start time
         dummy_call = "special_macro!$PROCESSSTARTTIME$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing n/a' == macros_command
         dummy_call = "special_macro!$EVENTSTARTTIME$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing n/a' == macros_command
@@ -240,18 +240,18 @@ class MacroResolverTester(object):
 
         # Number of hosts UP / DOWN / UNREACHABLE
         dummy_call = "special_macro!$TOTALHOSTSUP$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         # All 3 hosts are UP
         assert 'plugins/nothing 3' == macros_command
         dummy_call = "special_macro!$TOTALHOSTPROBLEMS$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 0' == macros_command
         dummy_call = "special_macro!$TOTALHOSTPROBLEMSUNHANDLED$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 0' == macros_command
@@ -261,19 +261,19 @@ class MacroResolverTester(object):
         hst.is_problem = True
         hst.problem_has_been_acknowledged = False
         dummy_call = "special_macro!$TOTALHOSTSDOWN$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 1' == macros_command
         dummy_call = "special_macro!$TOTALHOSTSDOWNUNHANDLED$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 1' == macros_command
         # Now my host is DOWN but handled
         hst.problem_has_been_acknowledged = True
         dummy_call = "special_macro!$TOTALHOSTSDOWNUNHANDLED$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 0' == macros_command
@@ -283,19 +283,19 @@ class MacroResolverTester(object):
         hst.is_problem = True
         hst.problem_has_been_acknowledged = False
         dummy_call = "special_macro!$TOTALHOSTSUNREACHABLE$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 1' == macros_command
         dummy_call = "special_macro!$TOTALHOSTSUNREACHABLEUNHANDLED$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 1' == macros_command
         # Now my host is UNREACHABLE but handled
         hst.problem_has_been_acknowledged = True
         dummy_call = "special_macro!$TOTALHOSTSUNREACHABLEUNHANDLED$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 0' == macros_command
@@ -305,12 +305,12 @@ class MacroResolverTester(object):
         hst.is_problem = True
         hst.problem_has_been_acknowledged = False
         dummy_call = "special_macro!$TOTALHOSTPROBLEMS$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 1' == macros_command
         dummy_call = "special_macro!$TOTALHOSTPROBLEMSUNHANDLED$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 1' == macros_command
@@ -320,19 +320,19 @@ class MacroResolverTester(object):
         hst.is_problem = False
         hst.problem_has_been_acknowledged = False
         dummy_call = "special_macro!$TOTALHOSTPROBLEMS$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 0' == macros_command
         dummy_call = "special_macro!$TOTALHOSTPROBLEMSUNHANDLED$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 0' == macros_command
 
         # Number of services OK / WARNING / CRITICAL / UNKNOWN
         dummy_call = "special_macro!$TOTALSERVICESOK$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 2' == macros_command
@@ -342,19 +342,19 @@ class MacroResolverTester(object):
         svc.is_problem = True
         svc.problem_has_been_acknowledged = False
         dummy_call = "special_macro!$TOTALSERVICESWARNING$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 1' == macros_command
         dummy_call = "special_macro!$TOTALSERVICESWARNINGUNHANDLED$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 1' == macros_command
         # Now my service problem is handled
         svc.problem_has_been_acknowledged = True
         dummy_call = "special_macro!$TOTALSERVICESWARNINGUNHANDLED$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 0' == macros_command
@@ -364,19 +364,19 @@ class MacroResolverTester(object):
         svc.is_problem = True
         svc.problem_has_been_acknowledged = False
         dummy_call = "special_macro!$TOTALSERVICESCRITICAL$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 1' == macros_command
         dummy_call = "special_macro!$TOTALSERVICESCRITICALUNHANDLED$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 1' == macros_command
         # Now my service problem is handled
         svc.problem_has_been_acknowledged = True
         dummy_call = "special_macro!$TOTALSERVICESCRITICALUNHANDLED$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 0' == macros_command
@@ -386,19 +386,19 @@ class MacroResolverTester(object):
         svc.is_problem = True
         svc.problem_has_been_acknowledged = False
         dummy_call = "special_macro!$TOTALSERVICESUNKNOWN$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 1' == macros_command
         dummy_call = "special_macro!$TOTALSERVICESUNKNOWNUNHANDLED$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 1' == macros_command
         # Now my service problem is handled
         svc.problem_has_been_acknowledged = True
         dummy_call = "special_macro!$TOTALSERVICESUNKNOWNUNHANDLED$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 0' == macros_command
@@ -408,12 +408,12 @@ class MacroResolverTester(object):
         svc.is_problem = True
         svc.problem_has_been_acknowledged = False
         dummy_call = "special_macro!$TOTALSERVICEPROBLEMS$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 1' == macros_command
         dummy_call = "special_macro!$TOTALSERVICEPROBLEMSUNHANDLED$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 1' == macros_command
@@ -423,12 +423,12 @@ class MacroResolverTester(object):
         svc.is_problem = False
         svc.problem_has_been_acknowledged = False
         dummy_call = "special_macro!$TOTALSERVICEPROBLEMS$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 0' == macros_command
         dummy_call = "special_macro!$TOTALSERVICEPROBLEMSUNHANDLED$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 0' == macros_command
@@ -442,7 +442,7 @@ class MacroResolverTester(object):
         data = [hst, svc]
         hst.state = 'UP'
         dummy_call = "special_macro!$HOSTREALM$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         # Macro raised the default realm (All)
@@ -457,7 +457,7 @@ class MacroResolverTester(object):
         data = [hst, svc]
         hst.state = 'UP'
         dummy_call = "special_macro!$$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         # Not a macro but $$ is transformed as $
@@ -474,7 +474,7 @@ class MacroResolverTester(object):
         hst.state = 'UP'
         hst.output = u"На берегу пустынных волн"
         dummy_call = "special_macro!$HOSTOUTPUT$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         # Output is correctly restitued
@@ -484,7 +484,7 @@ class MacroResolverTester(object):
         hst.state = 'UP'
         hst.output = 'Père Noël'
         dummy_call = "special_macro!$HOSTOUTPUT$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         # Output is correctly restitued
@@ -493,7 +493,7 @@ class MacroResolverTester(object):
         hst.state = 'UP'
         hst.output = 'Père Noël'
         dummy_call = "special_macro!$HOSTOUTPUT$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         # Output is correctly restitued
@@ -515,7 +515,7 @@ class MacroResolverTester(object):
 
         for c in illegal_macro_output_chars:
             hst.output = 'fake output' + c
-            cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+            cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
             macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                                 self._scheduler.timeperiods)
             print(macros_command)
@@ -548,21 +548,21 @@ class MacroResolverTester(object):
 
         # $USER1$ macro is defined as 'plugins' in the configuration file
         dummy_call = "special_macro!$USER1$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing plugins' == macros_command
 
         # $PLUGINSDIR$ macro is defined as $USER1$ in the configuration file
         dummy_call = "special_macro!$PLUGINSDIR$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing plugins' == macros_command
 
         # $INTERESTINGVARIABLE$ macro is defined as 'interesting_value' in the configuration file
         dummy_call = "special_macro!$INTERESTINGVARIABLE$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing interesting_value' == macros_command
@@ -570,7 +570,7 @@ class MacroResolverTester(object):
         # Look for multiple = in lines, should split the first
         # and keep others in the macro value
         dummy_call = "special_macro!$ANOTHERVALUE$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing first=second' == macros_command
@@ -592,14 +592,14 @@ class MacroResolverTester(object):
 
         # Request a not existing macro
         dummy_call = "special_macro!$HOSTXXX:test_host_0$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing' == macros_command
 
         # Request a specific host state
         dummy_call = "special_macro!$HOSTSTATE:test_host_0$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing UP' == macros_command
@@ -607,7 +607,7 @@ class MacroResolverTester(object):
         # Call with a void host name, means : myhost
         data = [hst]
         dummy_call = "special_macro!$HOSTSTATE:$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing UP' == macros_command
@@ -615,15 +615,15 @@ class MacroResolverTester(object):
         # Now with a service, for our implicit host state
         data = [hst, svc]
         dummy_call = "special_macro!$HOSTSTATE:test_host_0$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing UP' == macros_command
-                                                        
+
         # Now with a service, for our implicit host state (missing host ...)
         data = [hst, svc]
         dummy_call = "special_macro!$HOSTSTATE:$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing UP' == macros_command
@@ -631,7 +631,7 @@ class MacroResolverTester(object):
         # Now call this data from our previous service - get service state
         data = [hst, svc2]
         dummy_call = "special_macro!$SERVICESTATE:test_host_0:test_another_service$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing OK' == macros_command
@@ -639,7 +639,7 @@ class MacroResolverTester(object):
         # Now call this data from our previous service - get service output
         data = [hst, svc2]
         dummy_call = "special_macro!$SERVICEOUTPUT:test_host_0:test_another_service$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing you should not pass' == macros_command
@@ -648,7 +648,7 @@ class MacroResolverTester(object):
         svc2.output = 'you should not pass'
         data = [hst, svc2]
         dummy_call = "special_macro!$SERVICEOUTPUT::test_another_service$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing you should not pass' == macros_command
@@ -662,28 +662,28 @@ class MacroResolverTester(object):
 
         # First group name
         dummy_call = "special_macro!$HOSTGROUPNAME$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert macros_command == 'plugins/nothing allhosts'
 
         # All group names
         dummy_call = "special_macro!$HOSTGROUPNAMES$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert macros_command == 'plugins/nothing allhosts,hostgroup_01,up'
 
         # First group alias
         dummy_call = "special_macro!$HOSTGROUPALIAS$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert macros_command == 'plugins/nothing All Hosts'
 
         # All group aliases
         dummy_call = "special_macro!$HOSTGROUPALIASES$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert macros_command == 'plugins/nothing All Hosts,All Up Hosts,hostgroup_alias_01'
@@ -706,7 +706,7 @@ class MacroResolverTester(object):
         svc.output = 'you should not pass'
         data = [hst, svc]
         dummy_call = "special_macro!$TOTALHOSTSERVICES$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 2' == macros_command
@@ -721,7 +721,7 @@ class MacroResolverTester(object):
         svc.output = 'you should not pass'
         data = [hst, svc]
         dummy_call = "special_macro!$TOTALHOSTSERVICESOK$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 1' == macros_command
@@ -730,7 +730,7 @@ class MacroResolverTester(object):
         svc.output = 'you should not pass'
         data = [hst, svc]
         dummy_call = "special_macro!$TOTALHOSTSERVICESWARNING$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 1' == macros_command
@@ -739,7 +739,7 @@ class MacroResolverTester(object):
         svc.output = 'you should not pass'
         data = [hst, svc]
         dummy_call = "special_macro!$TOTALHOSTSERVICESCRITICAL$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 0' == macros_command
@@ -748,7 +748,7 @@ class MacroResolverTester(object):
         svc.output = 'you should not pass'
         data = [hst, svc]
         dummy_call = "special_macro!$TOTALHOSTSERVICESUNKNOWN$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 0' == macros_command
@@ -757,7 +757,7 @@ class MacroResolverTester(object):
         svc.output = 'you should not pass'
         data = [hst, svc]
         dummy_call = "special_macro!$TOTALHOSTSERVICESUNREACHABLE$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 0' == macros_command
@@ -772,7 +772,7 @@ class MacroResolverTester(object):
         svc.output = 'you should not pass'
         data = [hst, svc]
         dummy_call = "special_macro!$TOTALHOSTSERVICESOK$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 0' == macros_command
@@ -781,7 +781,7 @@ class MacroResolverTester(object):
         svc.output = 'you should not pass'
         data = [hst, svc]
         dummy_call = "special_macro!$TOTALHOSTSERVICESWARNING$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 0' == macros_command
@@ -790,7 +790,7 @@ class MacroResolverTester(object):
         svc.output = 'you should not pass'
         data = [hst, svc]
         dummy_call = "special_macro!$TOTALHOSTSERVICESCRITICAL$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 1' == macros_command
@@ -799,7 +799,7 @@ class MacroResolverTester(object):
         svc.output = 'you should not pass'
         data = [hst, svc]
         dummy_call = "special_macro!$TOTALHOSTSERVICESUNKNOWN$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 1' == macros_command
@@ -808,7 +808,7 @@ class MacroResolverTester(object):
         svc.output = 'you should not pass'
         data = [hst, svc]
         dummy_call = "special_macro!$TOTALHOSTSERVICESUNREACHABLE$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 0' == macros_command
@@ -824,7 +824,7 @@ class MacroResolverTester(object):
         # Parse custom macro to get contact custom variables based upon a fixed value
         # contact has a custom variable defined as _custom1 = value
         dummy_call = "special_macro!$_CONTACTCUSTOM1$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing value' == macros_command
@@ -832,7 +832,7 @@ class MacroResolverTester(object):
         # Parse custom macro to get service custom variables based upon another macro
         # host has a custom variable defined as _custom2 = $CONTACTNAME$
         dummy_call = "special_macro!$_CONTACTCUSTOM2$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing test_macro_contact' == macros_command
@@ -855,7 +855,7 @@ class MacroResolverTester(object):
         # Parse custom macro to get host custom variables based upon a fixed value
         # host has a custom variable defined as _custom1 = value
         dummy_call = "special_macro!$_HOSTCUSTOM1$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing value' == macros_command
@@ -863,7 +863,7 @@ class MacroResolverTester(object):
         # Parse custom macro to get host custom variables based upon another macro
         # host has a custom variable defined as _custom2 = $HOSTNAME$
         dummy_call = "special_macro!$_HOSTCUSTOM2$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing test_macro_host' == macros_command
@@ -871,10 +871,10 @@ class MacroResolverTester(object):
         # Parse custom macro to get host custom variables based upon another macro
         # host has a custom variable defined as _custom2 = $HOSTNAME$
         dummy_call = "special_macro!$_HOSTCUSTOM3$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
-        print(("Command: %s" % macros_command))
+        print("Command: %s" % macros_command)
         assert 'plugins/nothing 10' == macros_command
 
     def test_service_custom_macros(self):
@@ -893,14 +893,14 @@ class MacroResolverTester(object):
         # Parse custom macro to get service custom variables based upon a fixed value
         # special_macro is defined as: $USER1$/nothing $ARG1$
         dummy_call = "special_macro!$_SERVICECUSTOM1$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing value' == macros_command
 
         # Parse custom macro to get service custom variables based upon another macro
         dummy_call = "special_macro!$_SERVICECUSTOM2$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing test_host_0' == macros_command
@@ -915,7 +915,7 @@ class MacroResolverTester(object):
 
         # Ok sample host call
         dummy_call = "special_macro!$HOSTADDRESS$"
-        cc = CommandCall({"commands": self._arbiter.conf.commands, "call": dummy_call})
+        cc = CommandCall({"commands": self._arbiter.conf.commands, "command_line": dummy_call}, parsing=True)
         macros_command = self.mr.resolve_command(cc, data, self._scheduler.macromodulations,
                                             self._scheduler.timeperiods)
         assert 'plugins/nothing 127.0.0.1' == macros_command
@@ -929,14 +929,14 @@ class TestMacroResolverWithEnv(MacroResolverTester, AlignakTest):
 
         # Do not provide environment file to use the default one
         self.setup_file = 'cfg/cfg_macroresolver.cfg'
-        self.setup_with_file(self.setup_file)
+        self.setup_with_file(self.setup_file, dispatching=True)
         assert self.conf_is_correct
 
         # Get an initialized macro resolver object
         self.mr = MacroResolver()
         self.mr.init(self._scheduler.pushed_conf)
 
-        # Default prefix
+        # Default prefix
         assert self.mr.env_prefix == 'ALIGNAK_'
 
 
@@ -948,7 +948,7 @@ class TestMacroResolverWithoutEnv(MacroResolverTester, AlignakTest):
 
         # Do not provide environment file to use the default one
         self.setup_file = 'cfg/cfg_macroresolver_environment.cfg'
-        self.setup_with_file(self.setup_file)
+        self.setup_with_file(self.setup_file, dispatching=True)
         assert self.conf_is_correct
 
         # Get an initialized macro resolver object

@@ -56,7 +56,7 @@ This module provide Hostgroup and Hostgroups class used to manage host groups
 import logging
 from alignak.objects.itemgroup import Itemgroup, Itemgroups
 
-from alignak.property import StringProp, ListProp, BoolProp
+from alignak.property import StringProp, ListProp, BoolProp, FULL_STATUS
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -67,27 +67,29 @@ class Hostgroup(Itemgroup):
     A Hostgroup is used to manage a group of hosts
     """
     my_type = 'hostgroup'
+    my_name_property = "%s_name" % my_type
+
     members_property = "members"
-    group_members_property = "hostgroup_members"
+    group_members_property = "%s_members" % my_type
 
     properties = Itemgroup.properties.copy()
     properties.update({
         'hostgroup_name':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'alias':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'hostgroup_members':
-            ListProp(default=[], fill_brok=['full_status'], merging='join', split_on_comma=True),
+            ListProp(default=[], fill_brok=[FULL_STATUS], merging='join', split_on_comma=True),
         'notes':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'notes_url':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'action_url':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
 
         # Realm stuff
         'realm':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
     })
 
     # properties set only for running purpose
@@ -110,10 +112,6 @@ class Hostgroup(Itemgroup):
         'HOSTGROUPACTIONURL': 'action_url',
         'HOSTGROUPREALM': 'realm_name'
     }
-
-    def get_name(self):
-        """Get the group name"""
-        return getattr(self, 'hostgroup_name', 'Unnamed')
 
     def get_hosts(self):
         """Get the hosts of the group
@@ -172,7 +170,6 @@ class Hostgroups(Itemgroups):
     Class to manage list of Hostgroup
     Hostgroups is used to regroup all Hostgroup
     """
-    name_property = "hostgroup_name"
     inner_class = Hostgroup
 
     def add_member(self, host_name, hostgroup_name):
@@ -185,14 +182,14 @@ class Hostgroups(Itemgroups):
         :type hostgroup_name: str
         :return: None
         """
-        hostgroup = self.find_by_name(hostgroup_name)
-        if not hostgroup:
-            hostgroup = Hostgroup({'hostgroup_name': hostgroup_name,
-                                   'alias': hostgroup_name,
-                                   'members': host_name})
-            self.add(hostgroup)
-        else:
-            hostgroup.add_members(host_name)
+        group = self.find_by_name(hostgroup_name)
+        if group:
+            group.add_members(host_name)
+            return
+
+        group = Hostgroup({
+            'hostgroup_name': hostgroup_name, 'members': host_name})
+        self.add(group)
 
     def get_members_of_group(self, gname):
         """Get all members of a group which name is given in parameter
@@ -270,7 +267,7 @@ class Hostgroups(Itemgroups):
         :type hosts: alignak.objects.host.Hosts
         :return: None
         """
-        logger.info("Hostgroups / hosts / realms relation")
+        logger.debug("Hostgroups / hosts / realms relation")
         for hostgroup in self:
             hostgroup_realm_name = hostgroup.realm
             if hostgroup.realm not in realms:
@@ -280,9 +277,9 @@ class Hostgroups(Itemgroups):
                 hostgroup.realm = realm.uuid
             else:
                 hostgroup_realm_name = realms[hostgroup.realm].get_name()
-            logger.info("- hg: %s in the realm: %s ",
-                        hostgroup.get_name(),
-                        hostgroup_realm_name + (" (*)" if hostgroup.got_default_realm else ''))
+            logger.debug("- hg: %s in the realm: %s ",
+                         hostgroup.get_name(),
+                         hostgroup_realm_name + (" (*)" if hostgroup.got_default_realm else ''))
 
             hostgroup_hosts_errors = []
             hostgroup_new_realm_name = None
@@ -300,9 +297,9 @@ class Hostgroups(Itemgroups):
                 else:
                     host_realm_name = realms[host.realm].get_name()
 
-                logger.info("  host %s is in the realm: %s",
-                            host.get_name(),
-                            host_realm_name + (" (*)" if host.got_default_realm else ''))
+                logger.debug("  host %s is in the realm: %s",
+                             host.get_name(),
+                             host_realm_name + (" (*)" if host.got_default_realm else ''))
 
                 if host.got_default_realm:
                     # If the host got a default realm it means that no realm is specifically
@@ -340,12 +337,11 @@ class Hostgroups(Itemgroups):
                                 else:
                                     # It still exists a candidate realm for the hostgroup,
                                     # raise an error !
-                                    hostgroup.add_error("hostgroup %s got the default realm but "
-                                                        "it has some hosts that are from different "
-                                                        "realms: %s and %s. The defined realm "
+                                    hostgroup.add_error("got the default realm but it has some "
+                                                        "hosts that are from different realms: "
+                                                        "%s and %s. The defined realm "
                                                         "cannot be adjusted!"
-                                                        % (hostgroup.get_name(),
-                                                           hostgroup_new_realm_name,
+                                                        % (hostgroup_new_realm_name,
                                                            host_realm_name))
                                     hostgroup_new_realm_failed = True
                                     break

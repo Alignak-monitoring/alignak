@@ -375,7 +375,7 @@ class Worker(object):  # pylint: disable=too-many-instance-attributes
             logger.info("[%s] (pid=%d) stopped", self._id, os.getpid())
         except ActionError as exp:
             logger.error("[%s] exited with an ActionError exception : %s", self._id, str(exp))
-            logger.exception(exp)
+            logger.debug(exp)
             raise
         # Catch any exception, log the exception and exit anyway
         except Exception as exp:  # pragma: no cover, this should never happen indeed ;)

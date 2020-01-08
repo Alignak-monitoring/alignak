@@ -57,7 +57,8 @@ class TestBusinesscorrelOutput(AlignakTest):
 
     def setUp(self):
         super(TestBusinesscorrelOutput, self).setUp()
-        self.setup_with_file('cfg/cfg_business_correlator_output.cfg')
+        self.setup_with_file('cfg/cfg_business_correlator_output.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
         self._sched = self._scheduler
 

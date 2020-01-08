@@ -75,7 +75,7 @@ from collections import deque
 import psutil
 
 
-from alignak.log import make_monitoring_log, set_log_level, set_log_console
+from alignak.log import make_monitoring_log, set_monitoring_logger, set_log_level, set_log_console
 from alignak.misc.common import SIGNALS_TO_NAMES_DICT
 from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.config import Config
@@ -95,7 +95,7 @@ from alignak.monitor import MonitorConnection
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
 
-class Arbiter(Daemon):  # pylint: disable=R0902
+class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
     """
     Arbiter class. Referenced as "app" in most Interface
 
@@ -128,6 +128,11 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.my_monitor = None
         self.my_status = 0
 
+        # Verify mode is set thanks to the -V command line parameter
+        self.verify_only = False
+        if 'verify_only' in kwargs and kwargs['verify_only']:
+            self.verify_only = kwargs.get('verify_only', False)
+
         super(Arbiter, self).__init__(kwargs.get('daemon_name', 'Default-Arbiter'), **kwargs)
 
         # Our schedulers and arbiters are initialized in the base class
@@ -159,9 +164,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 my_cfg_files.append(os.path.abspath(cfg_file))
         self.legacy_cfg_files = my_cfg_files
 
-        self.verify_only = False
-        if 'verify_only' in kwargs and kwargs['verify_only']:
-            self.verify_only = kwargs.get('verify_only', False)
         self.alignak_name = self.name
         if 'alignak_name' in kwargs and kwargs['alignak_name']:
             self.alignak_name = kwargs['alignak_name']
@@ -230,9 +232,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 with self.events_lock:
                     self.events.append(elt)
                 statsmgr.counter('events', 1)
-            else:
-                with self.broks_lock:
-                    self.broks.append(elt)
+            # Also add to our broks
+            with self.broks_lock:
+                self.broks.append(elt)
             statsmgr.counter('broks.added', 1)
         elif isinstance(elt, ExternalCommand):
             logger.debug("Queuing an external command '%s'", str(elt.__dict__))
@@ -360,7 +362,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                 logger.debug("Satellite '%s' initial brok: %s", satellite.name, brok)
                 self.add(brok)
 
-    def load_monitoring_config_file(self, clean=True):
+    def load_monitoring_config_file(self, clean=False):
         # pylint: disable=too-many-branches,too-many-statements, too-many-locals
         """Load main configuration file (alignak.cfg)::
 
@@ -379,6 +381,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         only used to parse the configuration and create the objects. Some utilities (like
         alignak-backend-import script) may need to avoid the cleaning ;)
 
+        Note that default is no cleaning!
+
         :param clean: set True to clean the created items
         :type clean: bool
 
@@ -391,7 +395,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
             # Force adding a console handler to the Alignak logger
             set_log_console(logging.INFO if not self.debug else logging.DEBUG)
             # Force the global logger at INFO level
-            set_log_level(logging.INFO if not self.debug else logging.DEBUG)
+            set_log_level(logging.INFO if not self.debug else logging.DEBUG, handlers=True)
             logger.info("-----")
             logger.info("Arbiter is in configuration check mode")
             logger.info("Arbiter log level got increased to a minimum of INFO")
@@ -452,11 +456,25 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                         setattr(self.conf, key, entry.pythonize(value))
                     else:
                         setattr(self.conf, key, value)
-                    logger.debug("- setting '%s' as %s", key, getattr(self.conf, key))
+                    logger.debug("- setting '%s' as %s - %s",
+                                 key, type(key), getattr(self.conf, key))
                 logger.info("Got Alignak global configuration")
 
         self.alignak_name = getattr(self.conf, "alignak_name", self.name)
         logger.info("Configuration for Alignak: %s", self.alignak_name)
+
+        # Configure the global monitoring events logger
+        if self.conf.log_filename != os.path.abspath(self.conf.log_filename):
+            if self.conf.log_filename:
+                self.conf.log_filename = os.path.abspath(os.path.join(
+                    self.logdir, self.conf.log_filename))
+        if self.conf.log_filename:
+            set_monitoring_logger(self.conf.log_filename, self.conf.log_rotation_when,
+                                  self.conf.log_rotation_interval, self.conf.log_rotation_count,
+                                  self.conf.log_format, self.conf.log_date)
+            print("Configured a monitoring events logger: %s" % self.conf.log_filename)
+        else:
+            self.exit_on_error(message="No monitoring events log configured!", exit_code=2)
 
         if macros:
             self.conf.load_params(macros)
@@ -721,7 +739,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         self.conf.fill_default_configuration()
 
         # Remove templates from config
-        self.conf.remove_templates()
+        # Do not remove anymore!
+        # self.conf.remove_templates()
 
         # Overrides specific service instances properties
         self.conf.override_properties()
@@ -811,10 +830,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                                "Nothing to worry about, but you should define them, "
                                "else Alignak will use its default configuration.")
 
-            # Display found warnings and errors
-            self.conf.show_errors()
-            self.request_stop()
-
         del raw_objects
 
         # Display found warnings and errors
@@ -863,15 +878,15 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                             'pollers', 'reactionners', 'receivers', 'modules']:
                     continue
                 if prop not in got_objects:
-                    logger.warning("Did not get any '%s' objects from %s", prop, instance.name)
+                    logger.info("Did not get any '%s' objects from %s", prop, instance.name)
                     continue
                 for obj in got_objects[prop]:
                     # test if raw_objects[k] are already set - if not, add empty array
                     if o_type not in raw_objects:
                         raw_objects[o_type] = []
                     # Update the imported_from property if the module did not set
-                    if 'imported_from' not in obj:
-                        obj['imported_from'] = 'module:%s' % instance.name
+                    # if 'imported_from' not in obj:
+                    #     obj['imported_from'] = 'module:%s' % instance.name
                     # Append to the raw objects
                     raw_objects[o_type].append(obj)
                 logger.debug("Added %i %s objects from %s",
@@ -881,8 +896,6 @@ class Arbiter(Daemon):  # pylint: disable=R0902
         """Load Alignak configuration from the arbiter modules
         If module implements get_alignak_configuration, call this function
 
-        :param raw_objects: raw objects we got from reading config files
-        :type raw_objects: dict
         :return: None
         """
         alignak_cfg = {}
@@ -1152,6 +1165,8 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                         process.terminate()
                     except psutil.AccessDenied:
                         logger.warning("Process %s is %s", process.name(), process.status())
+
+            time.sleep(1)
 
             procs = []
             for daemon in list(self.my_daemons.values()):
@@ -2115,6 +2130,9 @@ class Arbiter(Daemon):  # pylint: disable=R0902
 
             # Load monitoring configuration files
             self.load_monitoring_config_file()
+            if self.verify_only:
+                # Exit!
+                self.request_stop()
 
             # Set my own process title
             self.set_proctitle(self.name)
@@ -2136,7 +2154,7 @@ class Arbiter(Daemon):  # pylint: disable=R0902
                     self.request_stop()
                 else:
                     # Loop if a configuration reload is raised while
-                    # still reloading the configuration
+                    # we are still reloading the configuration
                     while self.need_config_reload:
                         # Clear the former configuration
                         self.need_config_reload = False

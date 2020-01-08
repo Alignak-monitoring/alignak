@@ -346,14 +346,14 @@ class MacroResolver(Borg):
             nb_loop += 1
             # Ok, we want the macros in the command line
             macros = self._get_macros(c_line)
+            if not macros:
+                break
 
             # Put in the macros the type of macro for all macros
             self._get_type_of_macro(macros, data)
 
             # We can get out if we do not have macros this loop
-            still_got_macros = False
-            if macros:
-                still_got_macros = True
+            still_got_macros = True if macros else False
 
             # Now we get values from elements
             for macro in macros:
@@ -440,8 +440,7 @@ class MacroResolver(Borg):
         :type timeperiods: dict
         :rtype: str
         """
-        logger.debug("Resolving: macros in: %s, arguments: %s",
-                     com.command.command_line, com.args)
+        logger.debug("Resolving: macros in: %s, arguments: %s", com.command.command_line, com.args)
         return self.resolve_simple_macros_in_string(com.command.command_line, data,
                                                     macromodulations, timeperiods,
                                                     args=com.args)

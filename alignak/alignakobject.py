@@ -23,7 +23,7 @@
 
 import uuid
 from copy import copy
-from alignak.property import NONE_OBJECT, SetProp
+from alignak.property import SetProp
 
 
 def get_a_new_object_id():
@@ -65,18 +65,17 @@ class AlignakObject(object):
             # Do not manage anything in the properties, it is the job of the Item __init__ function
             if not hasattr(self, 'uuid'):
                 self.uuid = get_a_new_object_id()
-            # else:
-            #     print("AlignakObject: parsing but already have an uuid! Parameters: %s" % params)
             return
 
+        # Fill the default if we are not parsing a configuration. This will define some probable
+        # missing properties
         self.fill_default()
+
         if params is None:
             # Object is created without any parameters
-            # print("AlignakObject: initialized with no parameters but default properties!")
             return
 
         if 'uuid' not in params:
-            # print("AlignakObject: no parsing but do not provide an uuid! Parameters: %s" % params)
             self.uuid = get_a_new_object_id()
 
         all_props = {}
@@ -125,7 +124,9 @@ class AlignakObject(object):
         for prop, entry in self.__class__.properties.items():
             if hasattr(self, prop):
                 continue
-            if not hasattr(entry, 'default') or entry.default is NONE_OBJECT:
+            if not hasattr(entry, 'default'):
+                continue
+            if not entry.has_default:
                 continue
 
             if hasattr(entry.default, '__iter__'):

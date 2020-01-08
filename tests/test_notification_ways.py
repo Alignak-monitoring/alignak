@@ -35,6 +35,8 @@
 
 import time
 import copy
+from pprint import pprint
+
 from alignak.objects.notificationway import NotificationWay
 from .alignak_test import AlignakTest
 
@@ -42,7 +44,7 @@ from .alignak_test import AlignakTest
 class TestNotificationWay(AlignakTest):
     def setUp(self):
         super(TestNotificationWay, self).setUp()
-        self.setup_with_file('cfg/cfg_notification_ways.cfg')
+        self.setup_with_file('cfg/cfg_notification_ways.cfg', dispatching=True)
         assert self.conf_is_correct
 
     def test_create_nw(self):
@@ -54,18 +56,15 @@ class TestNotificationWay(AlignakTest):
 
         # Create a notification way with parameters
         parameters = {
-            'definition_order': 100,
+            'notificationway_name': 'email_in_day',
+            'register': True,
             'host_notification_commands': 'notify-host-sms',
             'host_notification_options': 'durfs',
             'host_notification_period': '24x7',
-            'host_notifications_enabled': '1',
             'min_business_impact': 0,
-            'notificationway_name': 'email_in_day',
-            'register': True,
             'service_notification_commands': 'notify-service-sms',
             'service_notification_options': 'wucrf',
             'service_notification_period': '24x7',
-            'service_notifications_enabled': '1',
             'use': ''
         }
         nw = NotificationWay(parameters)
@@ -75,14 +74,15 @@ class TestNotificationWay(AlignakTest):
         # Those parameters are missing in the provided parameters but they will exist in the object
         parameters.update({
             # Transformed properties
-            'host_notifications_enabled': True,
             'host_notification_commands': ['notify-host-sms'],
             'host_notification_options': ['durfs'],
-            'service_notifications_enabled': True,
             'service_notification_commands': ['notify-service-sms'],
             'service_notification_options': ['wucrf'],
             'use': [],
             # Some more properties
+            # 'definition_order': 100,
+            'imported_from': 'alignak-self',
+            # 'name': '',
             'configuration_errors': [],
             'configuration_warnings': [],
             'customs': {},
@@ -97,32 +97,57 @@ class TestNotificationWay(AlignakTest):
 
     def test_correct_nw(self):
         """ Test check notification way is correct"""
-        now = time.time()
+        # self.show_logs()
 
         # Get a NW
         email_in_day = self._scheduler.notificationways.find_by_name('email_in_day')
-        saved_nw = email_in_day
         assert email_in_day.is_correct()
+        pprint(email_in_day.__dict__)
 
-        # If no notifications enabled, it will be correct whatever else...
-        from pprint import pprint
-
-        test=copy.deepcopy(email_in_day)
-        test.host_notification_options = ['n']
-        test.service_notification_options = ['n']
+        # Default is correct
+        test = copy.deepcopy(email_in_day)
+        assert test.host_notification_options == [u'd', u'u', u'r', u'f', u's']
+        assert test.service_notification_options == [u'w', u'u', u'c', u'r', u'f']
+        assert test.host_notifications_enabled is True
+        assert test.service_notifications_enabled is True
         assert test.is_correct()
 
-        test=copy.deepcopy(email_in_day)
+        # If no notifications are enabled, it will be correct anyway...
+        test = copy.deepcopy(email_in_day)
+        test.host_notification_options = ['n']
+        test.service_notification_options = ['n']
+        assert test.host_notifications_enabled is False
+        assert test.service_notifications_enabled is False
+        assert test.is_correct()
+
+        test = copy.deepcopy(email_in_day)
+        assert test.host_notifications_enabled is True
+        assert test.service_notifications_enabled is True
+        assert test.is_correct()
+
+        test = copy.deepcopy(email_in_day)
+        # No defined commands
         test.__dict__.pop('host_notification_commands')
         test.__dict__.pop('service_notification_commands')
-        test.configuration_errors = []
-        assert not test.is_correct()
-        assert test.configuration_errors == [
+        assert test.is_correct()
+        assert test.configuration_warnings == [
             '[notificationway::email_in_day] do not have any service_notification_commands defined',
             '[notificationway::email_in_day] do not have any host_notification_commands defined'
         ]
 
-        test=copy.deepcopy(email_in_day)
+        test = copy.deepcopy(email_in_day)
+        # No defined commands
+        test.host_notification_commands = None
+        test.service_notification_commands = None
+        assert test.is_correct()
+        assert test.configuration_warnings == [
+            '[notificationway::email_in_day] do not have any service_notification_commands defined',
+            '[notificationway::email_in_day] do not have any host_notification_commands defined'
+        ]
+        assert test.get_notification_commands('host') == []
+        assert test.get_notification_commands('service') == []
+
+        test = copy.deepcopy(email_in_day)
         test.host_notification_period = None
         test.host_notification_commands = [None]
         test.service_notification_period = None
@@ -142,15 +167,16 @@ class TestNotificationWay(AlignakTest):
     def test_contact_nw(self):
         """ Test notification ways for a contact"""
         now = time.time()
-        
+
         # Get the contact
         contact = self._scheduler.contacts.find_by_name("test_contact")
 
         print("All notification Way:")
         for nw in self._scheduler.notificationways:
-            print("\t", nw.notificationway_name)
+            print("\t%s" % nw.notificationway_name)
             assert nw.is_correct()
-        # 3 defined NWs and 3 self created NWs
+        # 3 defined NWs and 3 self created NWs (because 3 contacts exist with some
+        # special properties: period,commands, ...)
         assert len(self._scheduler.notificationways) == 6
 
         email_in_day = self._scheduler.notificationways.find_by_name('email_in_day')
@@ -164,37 +190,38 @@ class TestNotificationWay(AlignakTest):
         assert 5 == sms_the_night.min_business_impact
 
         print("Contact '%s' notification way(s):" % contact.get_name())
-        # 2 NWs for 'test_contact'
-        assert len(contact.notificationways) == 2
         for nw_id in contact.notificationways:
             nw = self._scheduler.notificationways[nw_id]
             print("\t %s (or %s)" % (nw.notificationway_name, nw.get_name()))
             # Get host notifications commands
             for c in nw.host_notification_commands:
-                print("\t\t", c.get_name())
+                print("\t\t%s" % c.get_name())
             for c in nw.get_notification_commands('host'):
-                print("\t\t", c.get_name())
+                print("\t\t%s" % c.get_name())
             # Get service notifications commands
             for c in nw.service_notification_commands:
-                print("\t\t", c.get_name())
+                print("\t\t%s" % c.get_name())
             for c in nw.get_notification_commands('service'):
-                print("\t\t", c.get_name())
+                print("\t\t%s" % c.get_name())
+        # 2 NWs for 'test_contact'
+        assert len(contact.notificationways) == 2
 
         print("Contact '%s' commands:" % (contact.get_name()))
-        # 2 commands for host notification (one from the NW and one contact defined)
-        assert len(contact.host_notification_commands) == 2
-        # 2 commands for service notification (one from the NW and one contact defined)
-        assert len(contact.service_notification_commands) == 2
         # Get host notifications commands
         for c in contact.host_notification_commands:
-            print("\t\tcontact host property:", c.get_name())
+            print("\t\tcontact host property: %s" % c.get_name())
         for c in contact.get_notification_commands(self._scheduler.notificationways, 'host'):
             print("\t\tcontact host get_notification_commands:", c.get_name())
+        # 2 commands for host notification (one from the NW and one contact defined)
+        assert len(contact.host_notification_commands) == 2
+
         # Get service notifications commands
         for c in contact.service_notification_commands:
-            print("\t\tcontact service property:", c.get_name())
+            print("\t\tcontact service property: %s" % c.get_name())
         for c in contact.get_notification_commands(self._scheduler.notificationways, 'service'):
             print("\t\tcontact service get_notification_commands:", c.get_name())
+        # 2 commands for service notification (one from the NW and one contact defined)
+        assert len(contact.service_notification_commands) == 2
 
         contact_simple = self._scheduler.contacts.find_by_name("test_contact_simple")
         # It's the created notification way for this simple contact
@@ -203,9 +230,9 @@ class TestNotificationWay(AlignakTest):
         print("Simple contact")
         for nw_id in contact_simple.notificationways:
             nw = self._scheduler.notificationways[nw_id]
-            print("\t", nw.notificationway_name)
+            print("\t%s" % nw.notificationway_name)
             for c in nw.service_notification_commands:
-                print("\t\t", c.get_name())
+                print("\t\t%s" % c.get_name())
         assert test_contact_simple_inner_notificationway.uuid in contact_simple.notificationways
 
         # we take as criticity a huge value from now
@@ -213,36 +240,36 @@ class TestNotificationWay(AlignakTest):
 
         # Now all want* functions
         # First is ok with warning alerts
-        assert True == email_in_day.want_service_notification(self._scheduler.timeperiods,
-                                                              now, 'WARNING', 'PROBLEM',
-                                                              huge_criticity)
+        assert email_in_day.want_service_notification(self._scheduler.timeperiods,
+                                                      now, 'WARNING', 'PROBLEM',
+                                                      huge_criticity) is True
 
         # But a SMS is now WAY for warning. When we sleep, we wake up for critical only guy!
-        assert False == sms_the_night.want_service_notification(self._scheduler.timeperiods,
-                                                                now, 'WARNING', 'PROBLEM',
-                                                                huge_criticity)
+        assert sms_the_night.want_service_notification(self._scheduler.timeperiods,
+                                                       now, 'WARNING', 'PROBLEM',
+                                                       huge_criticity) is False
 
         # Same with contacts now
         # First is ok for warning in the email_in_day nw
-        assert True == contact.want_service_notification(self._scheduler.notificationways,
-                                                         self._scheduler.timeperiods,
-                                                         now, 'WARNING', 'PROBLEM', huge_criticity)
+        assert contact.want_service_notification(self._scheduler.notificationways,
+                                                 self._scheduler.timeperiods,
+                                                 now, 'WARNING', 'PROBLEM', huge_criticity) is True
         # Simple is not ok for it
-        assert False == contact_simple.want_service_notification(self._scheduler.notificationways,
-                                                                 self._scheduler.timeperiods,
-                                                                 now, 'WARNING', 'PROBLEM',
-                                                                 huge_criticity)
+        assert contact_simple.want_service_notification(self._scheduler.notificationways,
+                                                        self._scheduler.timeperiods,
+                                                        now, 'WARNING', 'PROBLEM',
+                                                        huge_criticity) is False
 
         # Then for host notification
         # First is ok for warning in the email_in_day nw
-        assert True == contact.want_host_notification(self._scheduler.notificationways,
-                                                      self._scheduler.timeperiods,
-                                                      now, 'FLAPPING', 'PROBLEM', huge_criticity)
+        assert contact.want_host_notification(self._scheduler.notificationways,
+                                              self._scheduler.timeperiods,
+                                              now, 'FLAPPING', 'PROBLEM', huge_criticity) is True
         # Simple is not ok for it
-        assert False == contact_simple.want_host_notification(self._scheduler.notificationways,
-                                                              self._scheduler.timeperiods,
-                                                              now, 'FLAPPING', 'PROBLEM',
-                                                              huge_criticity)
+        assert contact_simple.want_host_notification(self._scheduler.notificationways,
+                                                     self._scheduler.timeperiods,
+                                                     now, 'FLAPPING', 'PROBLEM',
+                                                     huge_criticity) is False
 
         # And now we check that we refuse SMS for a low level criticity
         # I do not want to be awaken by a dev server! When I sleep, I sleep!
@@ -250,8 +277,8 @@ class TestNotificationWay(AlignakTest):
 
         # We take the EMAIL test because SMS got the night ony, so we
         # take a very low value for criticity here
-        assert False == email_in_day.want_service_notification(self._scheduler.timeperiods,
-                                                               now, 'WARNING', 'PROBLEM', -1)
+        assert email_in_day.want_service_notification(self._scheduler.timeperiods,
+                                                      now, 'WARNING', 'PROBLEM', -1) is False
 
         # Test the heritage for notification ways
         host_template = self._scheduler.hosts.find_by_name("test_host_contact_template")

@@ -40,26 +40,12 @@ class TestLaunchDaemonsModules(AlignakTest):
     def setUp(self):
         super(TestLaunchDaemonsModules, self).setUp()
 
-        # # copy the default shipped configuration files in /tmp/etc and change the root folder
-        # # used by the daemons for pid and log files in the alignak.ini file
-        # if os.path.exists('/tmp/etc/alignak'):
-        #     shutil.rmtree('/tmp/etc/alignak')
-        #
-        # if os.path.exists('/tmp/alignak.log'):
-        #     os.remove('/tmp/alignak.log')
-        #
-        # if os.path.exists('/tmp/alignak-events.log'):
-        #     os.remove('/tmp/alignak-events.log')
-        #
-        # print("Preparing configuration...")
-        # shutil.copytree('../etc', '/tmp/etc/alignak')
-        # files = ['/tmp/etc/alignak/alignak.ini']
-        # replacements = {
-        #     '_dist=/usr/local/': '_dist=/tmp'
-        # }
-        # self._files_update(files, replacements)
+        if os.path.exists("/tmp/alignak/retention/"):
+            print("Cleaning retention files...")
+            for item in os.listdir("/tmp/alignak/retention/"):
+                if item.endswith(".json"):
+                    os.remove(os.path.join("/tmp/alignak/retention/", item))
 
-        # Clean the former existing pid and log files
         print("Cleaning pid and log files...")
         for daemon in ['arbiter-master', 'scheduler-master', 'broker-master',
                        'poller-master', 'reactionner-master', 'receiver-master']:
@@ -91,7 +77,7 @@ class TestLaunchDaemonsModules(AlignakTest):
             cfg = configparser.ConfigParser()
             cfg.read(files)
 
-            # Arbiter launches the other daemons
+            # Arbiter launches the other daemons
             cfg.set('daemon.arbiter-master', 'alignak_launched', '1')
             cfg.set('daemon.scheduler-master', 'alignak_launched', '1')
             cfg.set('daemon.poller-master', 'alignak_launched', '1')
@@ -126,21 +112,25 @@ class TestLaunchDaemonsModules(AlignakTest):
 
         # Check daemons log files
         ignored_warnings = [
-            u"hosts configuration warnings:",
-            u"Configuration warnings:",
-            u"the parameter $DIST_BIN$ is ambiguous! No value after =, assuming an empty string",
-            u"[host::module_host_1] notifications are enabled but no contacts nor contact_groups property is defined for this host",
-            u"Did not get any ",
+            "hosts configuration warnings:",
+            "Configuration warnings:",
+            # u"the parameter $DIST_BIN$ is ambiguous! No value after =, assuming an empty string",
+            "[host::module_host_1] notifications are enabled but no contacts "
+            "nor contact_groups property is defined for this host",
+            "Did not get any ",
 
             # Modules related warnings
-            u"The module Example is not a worker one, I remove it from the worker list.",
+            "The module Example is not a worker one, I remove it from the worker list.",
             # todo: this log does not look appropriate... investigate more on this!
-            u"is still living 10 seconds after a normal kill, I help it to die",
-            u"inner retention module is loaded but is not enabled."
+            "is still living 10 seconds after a normal kill, I help it to die",
+            "inner retention module is loaded but is not enabled.",
+            "Retention directory created: "
         ]
         ignored_errors = [
-            # Sometims, the retention file is not correctly read .... ths only during the tests on Travis CI
-            'Expecting value: line 1 column 1 (char 0)'
+            # Sometimes, the retention file is not correctly read ....
+            # this only during the tests on Travis CI
+            'Expecting value: line 1 column 1 (char 0)',
+            'Trying to add actions from an unknown scheduler'
         ]
         (errors_raised, warnings_raised) = \
             self._check_daemons_log_for_errors(daemons_list, ignored_warnings=ignored_warnings,
@@ -184,6 +174,7 @@ class TestLaunchDaemonsModules(AlignakTest):
         ignored_errors = [
             # 'Error on backend login: ',
             # 'Configured user account is not allowed for this module'
+            'Trying to add actions from an unknown scheduler'
         ]
         (errors_raised, warnings_raised) = \
             self._check_daemons_log_for_errors(daemons_list, ignored_warnings=ignored_warnings,

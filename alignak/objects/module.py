@@ -53,6 +53,7 @@ This module provide Module and Modules classes used to manage internal and exter
 for each daemon
 """
 import logging
+from alignak.misc.serialization import unserialize, AlignakClassLookupException
 from alignak.objects.item import Item, Items
 
 from alignak.property import StringProp, ListProp, IntegerProp, BoolProp
@@ -65,6 +66,7 @@ class Module(Item):
     Class to manage a module
     """
     my_type = 'module'
+    my_name_property = "name"
 
     properties = Item.properties.copy()
     properties.update({
@@ -85,7 +87,7 @@ class Module(Item):
             StringProp(),
         # Old "deprecated" property - replaced with type
         'module_types':
-            ListProp(default=[u''], split_on_comma=True),
+            ListProp(default=[''], split_on_comma=True),
         # Allow a module to be related some other modules
         'modules':
             ListProp(default=[''], split_on_comma=True),
@@ -107,7 +109,7 @@ class Module(Item):
 
     macros = {}
 
-    def __init__(self, params=None, parsing=True):
+    def __init__(self, params, parsing=True):
         # Must be declared in this function rather than as class variable. This because the
         # modules may have some properties that are not the same from one instance to another.
         # Other objects very often have the same properties... but not the modules!
@@ -165,26 +167,23 @@ class Module(Item):
 
         self.fill_default()
 
+        try:
+            self.modules = unserialize(self.modules, no_load=True)
+        except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
+            logger.error('Cannot un-serialize modules configuration '
+                         'received from arbiter: %s', exp)
+
         # # Remove extra Item base class properties...
         # for prop in ['customs', 'plus', 'downtimes', 'old_properties',
         #              'configuration_errors', 'configuration_warnings']:
         #     if getattr(self, prop, None):
         #         delattr(self, prop)
 
-    def __repr__(self):  # pragma: no cover
-        return '<%r %r, module: %r, type(s): %r />' % \
-               (self.__class__.__name__, self.name, getattr(self, 'python_name', 'Unknown'),
+    def __str__(self):  # pragma: no cover
+        return '<Module %s, module: %s, type(s): %s />' % \
+               (self.get_name(), getattr(self, 'python_name', 'Unknown'),
                 getattr(self, 'type', 'Unknown'))
-    __str__ = __repr__
-
-    def get_name(self):
-        """
-        Get name of module
-
-        :return: Name of module
-        :rtype: str
-        """
-        return getattr(self, 'name', self.module_alias)
+    __repr__ = __str__
 
     def get_types(self):
         """
@@ -209,7 +208,7 @@ class Module(Item):
 
     def serialize(self):
         """A module may have some properties that are not defined in the class properties list.
-        Serializing a module is the same as serializing an Item but we also also include all the
+        Serializing a module is the same as serializing an Item but we also include all the
         existing properties that are not defined in the properties or running_properties
         class list.
 
@@ -217,12 +216,15 @@ class Module(Item):
         """
         res = super(Module, self).serialize()
 
-        cls = self.__class__
         for prop in self.__dict__:
-            if prop in cls.properties or prop in cls.running_properties or prop in ['properties',
-                                                                                    'my_daemon']:
+            if prop in self.__class__.properties or \
+                    prop in self.__class__.running_properties or \
+                    prop in ['properties', 'old_properties', 'my_daemon']:
                 continue
-            res[prop] = getattr(self, prop)
+            if prop in ['modules'] and getattr(self, prop):
+                res[prop] = [m.serialize() for m in self.modules]
+            else:
+                res[prop] = getattr(self, prop)
 
         return res
 
@@ -232,7 +234,6 @@ class Modules(Items):
     Class to manage list of modules
     Modules is used to group all Module
     """
-    name_property = "name"
     inner_class = Module
 
     def linkify(self):
@@ -240,9 +241,9 @@ class Modules(Items):
 
         :return: None
         """
-        self.linkify_s_by_plug()
+        self.linkify_module_by_module()
 
-    def linkify_s_by_plug(self):
+    def linkify_module_by_module(self):
         """Link a module to some other modules
 
         :return: None
@@ -255,8 +256,10 @@ class Modules(Items):
                     continue
                 o_related = self.find_by_name(related)
                 if o_related is not None:
-                    new_modules.append(o_related.uuid)
+                    new_modules.append(o_related)
                 else:
-                    self.add_error("the module '%s' for the module '%s' is unknown!"
+                    self.add_error("the module '%s' for the module '%s' is unknown"
                                    % (related, module.get_name()))
             module.modules = new_modules
+            if module.modules:
+                logger.info("Module %s is linked to %s", module.get_name(), module.modules)

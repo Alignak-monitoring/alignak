@@ -75,7 +75,8 @@ class TestModules(AlignakTest):
         :return:
         """
         self.setup_with_file('cfg/cfg_default_with_modules.cfg',
-                             'cfg/default_with_modules/alignak.ini')
+                             'cfg/default_with_modules/alignak.ini',
+                             dispatching=True)
         assert self.conf_is_correct
         self.show_configuration_logs()
         self.show_logs()
@@ -146,9 +147,11 @@ class TestModules(AlignakTest):
         Check that the feature is detected as disabled
         :return:
         """
-        self.setup_with_file('cfg/modules/alignak_module_with_submodules.cfg')
+        self.setup_with_file('cfg/modules/alignak_module_with_submodules.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
         self.show_configuration_logs()
+        self.show_logs()
 
         # All modules
         modules = [m.module_alias for m in self._arbiter.conf.modules]
@@ -162,7 +165,7 @@ class TestModules(AlignakTest):
         part_a_module = [m for m in self._arbiter.conf.modules if m.module_alias == 'part-A'][0]
         part_b_module = [m for m in self._arbiter.conf.modules if m.module_alias == 'part-B'][0]
         print("Composite module: %s" % test_module.__dict__)
-        assert test_module.modules == [part_a_module.uuid, part_b_module.uuid]
+        assert test_module.modules == [part_a_module, part_b_module]
 
         # Find the new broker
         broker_master = [b for b in self._arbiter.conf.brokers if b.get_name() == 'broker-master'][0]
@@ -185,6 +188,9 @@ class TestModules(AlignakTest):
         modules = [m.name for m in self._scheduler_daemon.modules]
         assert modules == ['Example', 'inner-retention']
 
+        self._broker_daemon.modules_manager.stop_all()
+        self.show_logs()
+
     def test_modulemanager_1(self):
         """ Module manager manages its modules - old form
 
@@ -192,7 +198,8 @@ class TestModules(AlignakTest):
         :return:
         """
         self.setup_with_file('cfg/cfg_default_with_modules.cfg',
-                             'cfg/default_with_modules/alignak.ini')
+                             'cfg/default_with_modules/alignak.ini',
+                             dispatching=True)
         assert self.conf_is_correct
 
         # Create an Alignak module
@@ -210,7 +217,8 @@ class TestModules(AlignakTest):
         :return:
         """
         self.setup_with_file('cfg/cfg_default_with_modules.cfg',
-                             'cfg/default_with_modules/alignak.ini')
+                             'cfg/default_with_modules/alignak.ini',
+                             dispatching=True)
         assert self.conf_is_correct
 
         # Create an Alignak module
@@ -500,7 +508,8 @@ class TestModules(AlignakTest):
         :return:
         """
         self.setup_with_file('cfg/cfg_default_with_modules.cfg',
-                             'cfg/default_with_modules/alignak.ini')
+                             'cfg/default_with_modules/alignak.ini',
+                             dispatching=True)
         assert self.conf_is_correct
 
         # for mod in self._arbiter.conf.modules:

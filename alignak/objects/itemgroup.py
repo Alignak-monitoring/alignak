@@ -52,10 +52,10 @@
 # And itemgroup is like a item, but it's a group of items :)
 
 """
-This module provide Itemgroup and Itemgroups class used to define group of items
+This module provide Itemgroup and Itemgroups class used to define groups of items
 """
 from alignak.objects.item import Item, Items
-from alignak.property import ListProp
+from alignak.property import ListProp, FULL_STATUS
 
 
 class Itemgroup(Item):
@@ -69,7 +69,7 @@ class Itemgroup(Item):
     properties = Item.properties.copy()
     properties.update({
         'members':
-            ListProp(default=[], fill_brok=['full_status'], split_on_comma=True)
+            ListProp(default=[], fill_brok=[FULL_STATUS], split_on_comma=True)
     })
 
     running_properties = Item.running_properties.copy()
@@ -107,16 +107,19 @@ class Itemgroup(Item):
         :return: None
         """
         cls = self.__class__
-        new_i = cls()  # create a new group
+        # create a new group with empty parameters
+        new_i = cls({})
         new_i.uuid = self.uuid  # with the same id
 
         # Copy all properties
         for prop in cls.properties:
-            if hasattr(self, prop):
-                if prop in ['members', 'unknown_members']:
-                    setattr(new_i, prop, [])
-                else:
-                    setattr(new_i, prop, getattr(self, prop))
+            if not hasattr(self, prop):
+                continue
+            # todo: check why a specific initialization is done!
+            if prop in ['members', 'unknown_members']:
+                setattr(new_i, prop, [])
+            else:
+                setattr(new_i, prop, getattr(self, prop))
 
         return new_i
 
@@ -136,10 +139,7 @@ class Itemgroup(Item):
         :return: list of members
         :rtype: list
         """
-        members = getattr(self, 'members', [])
-        if members is None:
-            return []
-        return members
+        return getattr(self, 'members', [])
 
     def add_members(self, members):
         """Add a new member to the members list
@@ -159,8 +159,8 @@ class Itemgroup(Item):
     def add_unknown_members(self, members):
         """Add a new member to the unknown members list
 
-        :param member: member name
-        :type member: str
+        :param members: member name
+        :type members: str
         :return: None
         """
         if not isinstance(members, list):
@@ -174,7 +174,8 @@ class Itemgroup(Item):
     def is_correct(self):
         """
         Check if a group is valid.
-        Valid mean all members exists, so list of unknown_members is empty
+        This means that all the declared group members exist, thus the list of unknown_members
+        must be empty
 
         :return: True if group is correct, otherwise False
         :rtype: bool
@@ -187,10 +188,7 @@ class Itemgroup(Item):
 
         if self.unknown_members:
             for member in self.unknown_members:
-                msg = "[%s::%s] as %s, got unknown member '%s'" % (
-                    self.my_type, self.get_name(), self.__class__.my_type, member
-                )
-                self.add_error(msg)
+                self.add_error("as %s, got unknown member '%s'" % (self.__class__.my_type, member))
             state = False
 
         return super(Itemgroup, self).is_correct() and state
@@ -222,29 +220,15 @@ class Itemgroup(Item):
 class Itemgroups(Items):
     """
     Class to manage list of groups of items
-    An itemgroup is used to regroup items group
+    An itemgroup is used to group items groups
     """
 
-    def add(self, itemgroup):
+    def add(self, item_group):
         """
-        Add an item (itemgroup) to Itemgroups
+        Add an item (Itemgroup) to the known groups
 
-        :param itemgroup: an item
-        :type itemgroup: alignak.objects.itemgroup.Itemgroup
+        :param item_group: an item
+        :type item_group: alignak.objects.itemgroup.Itemgroup
         :return: None
         """
-        self.add_item(itemgroup)
-
-    # def get_members_of_group(self, gname):
-    #     """
-    #     Get members of groups have name in parameter
-    #
-    #     :param gname: name of group
-    #     :rtype gname: str
-    #     :return: list of members
-    #     :rtype: list
-    #     """
-    #     group = self.find_by_name(gname)
-    #     if group is None:
-    #         return []
-    #     return getattr(group, 'members', [])
+        self.add_item(item_group)

@@ -58,25 +58,26 @@ class TestInheritanceAndPlus(AlignakTest):
         """
         self.setup_with_file('cfg/cfg_inheritance.cfg')
         assert self.conf_is_correct
-        self._sched = self._scheduler
 
         print("Hosts: ")
-        pprint(self._sched.hosts.__dict__)
+        pprint(self._arbiter.conf.hosts.__dict__)
+        for host in self._arbiter.conf.hosts:
+            print("Host conf: %d / %s\n" % (host.max_check_attempts, host))
 
         print("Services: ")
-        pprint(self._sched.services.__dict__)
+        pprint(self._arbiter.conf.services.__dict__)
 
         print("Contacts: ")
-        pprint(self._sched.contacts.__dict__)
+        pprint(self._arbiter.conf.contacts.__dict__)
 
         # common objects
-        tp_24x7 = self._sched.timeperiods.find_by_name("24x7")
-        tp_none = self._sched.timeperiods.find_by_name("none")
-        tp_work = self._sched.timeperiods.find_by_name("work")
-        cgtest = self._sched.contactgroups.find_by_name("test_contact")
-        cgadm = self._sched.contactgroups.find_by_name("admins")
-        cmdsvc = self._sched.commands.find_by_name("check_service")
-        cmdtest = self._sched.commands.find_by_name("dummy_command")
+        tp_24x7 = self._arbiter.conf.timeperiods.find_by_name("24x7")
+        tp_none = self._arbiter.conf.timeperiods.find_by_name("none")
+        tp_work = self._arbiter.conf.timeperiods.find_by_name("work")
+        cgtest = self._arbiter.conf.contactgroups.find_by_name("test_contact")
+        cgadm = self._arbiter.conf.contactgroups.find_by_name("admins")
+        cmdsvc = self._arbiter.conf.commands.find_by_name("check_service")
+        cmdtest = self._arbiter.conf.commands.find_by_name("dummy_command")
 
         # Checks we got the objects we need
         assert tp_24x7 is not None
@@ -87,20 +88,21 @@ class TestInheritanceAndPlus(AlignakTest):
         assert cmdtest is not None
 
         # Contacts
-        c_admin = self._sched.contacts.find_by_name("admin")
+        c_admin = self._arbiter.conf.contacts.find_by_name("admin")
         assert c_admin is not None
         # admin inherits from a generic-contact
         print(c_admin.tags)
-        assert c_admin.tags == set(['generic-contact'])
+        assert c_admin.tags == ['generic-contact']
         assert c_admin.email == 'alignak@localhost'
         assert c_admin.host_notifications_enabled is True
         assert c_admin.service_notifications_enabled is True
 
-        c_not_notified = self._sched.contacts.find_by_name("no_notif")
+        c_not_notified = self._arbiter.conf.contacts.find_by_name("no_notif")
         assert c_not_notified is not None
         # no_notif inherits from a not-notified
         print(c_not_notified.tags)
-        assert c_not_notified.tags == set([u'generic-contact', u'not_notified'])
+        assert 'generic-contact' in c_not_notified.tags
+        assert 'not_notified' in c_not_notified.tags
         assert c_not_notified.email == 'none'
         # TODO: uncomment!
         # Issue #1024 - contact templates inheritance
@@ -108,30 +110,31 @@ class TestInheritanceAndPlus(AlignakTest):
         assert c_not_notified.service_notifications_enabled is False
 
         # Hosts
-        test_host_0 = self._sched.hosts.find_by_name("test_host_0")
+        test_host_0 = self._arbiter.conf.hosts.find_by_name("test_host_0")
         assert test_host_0 is not None
-        test_router_0 = self._sched.hosts.find_by_name("test_router_0")
+        test_router_0 = self._arbiter.conf.hosts.find_by_name("test_router_0")
         assert test_router_0 is not None
 
-        hst1 = self._sched.hosts.find_by_name("test_host_01")
+        hst1 = self._arbiter.conf.hosts.find_by_name("test_host_01")
         assert hst1 is not None
-        assert hst1.tags == set(['generic-host', 'srv'])
+        assert 'srv' in hst1.tags
+        assert 'generic-host' in hst1.tags
         assert hst1.check_period == tp_none.uuid
 
-        hst2 = self._sched.hosts.find_by_name("test_host_02")
+        hst2 = self._arbiter.conf.hosts.find_by_name("test_host_02")
         assert hst2 is not None
         assert hst2.check_period == tp_work.uuid
 
         # Services
-        # svc1 = self._sched.services.find_by_name("test_host_01/srv-svc")
-        # svc2 = self._sched.services.find_by_name("test_host_02/srv-svc")
+        # svc1 = self._arbiter.conf.services.find_by_name("test_host_01/srv-svc")
+        # svc2 = self._arbiter.conf.services.find_by_name("test_host_02/srv-svc")
         # assert svc1 is not None
         # assert svc2 is not None
 
         # Inherited services (through hostgroup property)
         # Those services are attached to all hosts of an hostgroup and they both
         # inherit from the srv-from-hostgroup template
-        svc12 = self._sched.services.find_srv_by_name_and_hostname("test_host_01",
+        svc12 = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_01",
                                                                    "srv-from-hostgroup")
         assert svc12 is not None
 
@@ -144,7 +147,7 @@ class TestInheritanceAndPlus(AlignakTest):
         # Todo: explain why we do not have generic-service in tags ...
         assert svc12.tags == set([])
 
-        svc22 = self._sched.services.find_srv_by_name_and_hostname("test_host_02",
+        svc22 = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_02",
                                                                    "srv-from-hostgroup")
         # business_impact inherited
         assert svc22.business_impact == 5
@@ -158,10 +161,10 @@ class TestInheritanceAndPlus(AlignakTest):
         assert svc22.maintenance_period == tp_24x7.uuid
 
         # Duplicate for each services (generic services for each host inheriting from srv template)
-        svc1proc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "proc proc1")
-        svc1proc2 = self._sched.services.find_srv_by_name_and_hostname("test_host_01", "proc proc2")
-        svc2proc1 = self._sched.services.find_srv_by_name_and_hostname("test_host_02", "proc proc1")
-        svc2proc2 = self._sched.services.find_srv_by_name_and_hostname("test_host_02", "proc proc2")
+        svc1proc1 = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_01", "proc proc1")
+        svc1proc2 = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_01", "proc proc2")
+        svc2proc1 = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_02", "proc proc1")
+        svc2proc2 = self._arbiter.conf.services.find_srv_by_name_and_hostname("test_host_02", "proc proc2")
         assert svc1proc1 is not None
         assert svc1proc2 is not None
         assert svc2proc1 is not None
@@ -175,18 +178,18 @@ class TestInheritanceAndPlus(AlignakTest):
         self._sched = self._scheduler
 
         # Get the hostgroups
-        servers = self._sched.hostgroups.find_by_name('servers')
+        servers = self._arbiter.conf.hostgroups.find_by_name('servers')
         assert servers is not None
-        linux = self._sched.hostgroups.find_by_name('linux')
+        linux = self._arbiter.conf.hostgroups.find_by_name('linux')
         assert linux is not None
-        dmz = self._sched.hostgroups.find_by_name('DMZ')
+        dmz = self._arbiter.conf.hostgroups.find_by_name('DMZ')
         assert dmz is not None
-        mysql = self._sched.hostgroups.find_by_name('mysql')
+        mysql = self._arbiter.conf.hostgroups.find_by_name('mysql')
         assert mysql is not None
 
         # Get the hosts
-        host1 = self._sched.hosts.find_by_name("test-server1")
-        host2 = self._sched.hosts.find_by_name("test-server2")
+        host1 = self._arbiter.conf.hosts.find_by_name("test-server1")
+        host2 = self._arbiter.conf.hosts.find_by_name("test-server2")
 
         # HOST 1 is using templates: linux-servers,dmz, so it should be in
         # the hostsgroups named "linux" AND "DMZ"
@@ -203,13 +206,13 @@ class TestInheritanceAndPlus(AlignakTest):
         assert mysql.uuid in host2.hostgroups
 
         # Get the servicegroups
-        generic = self._sched.servicegroups.find_by_name('generic-sg')
+        generic = self._arbiter.conf.servicegroups.find_by_name('generic-sg')
         assert generic is not None
-        another = self._sched.servicegroups.find_by_name('another-sg')
+        another = self._arbiter.conf.servicegroups.find_by_name('another-sg')
         assert another is not None
 
         # Get the service
-        service = self._sched.services.find_srv_by_name_and_hostname("pack-host", 'CHILDSERV')
+        service = self._arbiter.conf.services.find_srv_by_name_and_hostname("pack-host", 'CHILDSERV')
         assert service is not None
 
         # The service inherits from a template with a service group and it has
@@ -218,7 +221,7 @@ class TestInheritanceAndPlus(AlignakTest):
         assert another.uuid in service.servicegroups
 
         # Get another service, built by host/service templates relation
-        service = self._sched.services.find_srv_by_name_and_hostname('pack-host', 'CHECK-123')
+        service = self._arbiter.conf.services.find_srv_by_name_and_hostname('pack-host', 'CHECK-123')
         assert service is not None
 
         # The service should have inherited the custom variable `_CUSTOM_123` because custom

@@ -52,13 +52,15 @@
 implements contact for notification. Basically used for parsing.
 """
 import logging
+from alignak.misc.serialization import unserialize
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
 
 from alignak.util import strip_and_uniq
-from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, DictProp
+from alignak.property import (BoolProp, IntegerProp, StringProp, ListProp,
+                              DictProp, FULL_STATUS, CHECK_RESULT)
 from alignak.log import make_monitoring_log
-from alignak.commandcall import CommandCall
+from alignak.objects.notificationway import NotificationWay
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -68,78 +70,82 @@ class Contact(Item):
     For example it defines host_notification_period, service_notification_period etc.
     """
     my_type = 'contact'
+    my_name_property = "%s_name" % my_type
 
     properties = Item.properties.copy()
     properties.update({
         'contact_name':
-            StringProp(fill_brok=['full_status']),
+            StringProp(fill_brok=[FULL_STATUS]),
         'alias':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'contactgroups':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
+
+        # Those properties must be identical to the corresponding properties
+        # of the Notificationway object
         'host_notifications_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=[FULL_STATUS]),
         'service_notifications_enabled':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=[FULL_STATUS]),
         'host_notification_period':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default='', fill_brok=[FULL_STATUS]),
         'service_notification_period':
-            StringProp(default='', fill_brok=['full_status']),
+            StringProp(default='', fill_brok=[FULL_STATUS]),
         'host_notification_options':
-            ListProp(default=[''], fill_brok=['full_status'], split_on_comma=True),
+            ListProp(default=[], fill_brok=[FULL_STATUS], split_on_comma=True),
         'service_notification_options':
-            ListProp(default=[''], fill_brok=['full_status'], split_on_comma=True),
-        # To be consistent with notificationway object attributes
+            ListProp(default=[], fill_brok=[FULL_STATUS], split_on_comma=True),
         'host_notification_commands':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         'service_notification_commands':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         'min_business_impact':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
+
         'email':
-            StringProp(default=u'none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=[FULL_STATUS]),
         'pager':
-            StringProp(default=u'none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=[FULL_STATUS]),
         'address1':
-            StringProp(default=u'none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=[FULL_STATUS]),
         'address2':
-            StringProp(default=u'none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=[FULL_STATUS]),
         'address3':
-            StringProp(default=u'none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=[FULL_STATUS]),
         'address4':
-            StringProp(default=u'none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=[FULL_STATUS]),
         'address5':
-            StringProp(default=u'none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=[FULL_STATUS]),
         'address6':
-            StringProp(default=u'none', fill_brok=['full_status']),
+            StringProp(default=u'none', fill_brok=[FULL_STATUS]),
         'can_submit_commands':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
         'is_admin':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
         'expert':
-            BoolProp(default=False, fill_brok=['full_status']),
+            BoolProp(default=False, fill_brok=[FULL_STATUS]),
         'retain_status_information':
-            BoolProp(default=True, fill_brok=['full_status']),
+            BoolProp(default=True, fill_brok=[FULL_STATUS]),
         'notificationways':
-            ListProp(default=[], fill_brok=['full_status']),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         'password':
-            StringProp(default=u'NOPASSWORDSET', fill_brok=['full_status']),
+            StringProp(default=u'NOPASSWORDSET', fill_brok=[FULL_STATUS]),
     })
 
     running_properties = Item.running_properties.copy()
     running_properties.update({
         'modified_attributes':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS], retention=True),
         'modified_host_attributes':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS], retention=True),
         'modified_service_attributes':
-            IntegerProp(default=0, fill_brok=['full_status'], retention=True),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS], retention=True),
         'in_scheduled_downtime':
-            BoolProp(default=False, fill_brok=['full_status', 'check_result'], retention=True),
+            BoolProp(default=False, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'broks':
             ListProp(default=[]),  # and here broks raised
         'customs':
-            DictProp(default={}, fill_brok=['full_status']),
+            DictProp(default={}, fill_brok=[FULL_STATUS]),
     })
 
     # This tab is used to transform old parameters name into new ones
@@ -178,47 +184,39 @@ class Contact(Item):
         'min_business_impact'
     )
 
-    def __init__(self, params=None, parsing=True):
-        if params is None:
-            params = {}
+    def __init__(self, params, parsing=True):
+        # When deserialized, those are dict
+        if not parsing:
+            for prop in ['service_notification_commands', 'host_notification_commands']:
+                if prop not in params:
+                    continue
 
-        # At deserialization, thoses are dict
-        # TODO: Separate parsing instance from recreated ones
-        for prop in ['service_notification_commands', 'host_notification_commands']:
-            if prop in params and isinstance(params[prop], list) and params[prop] \
-                    and isinstance(params[prop][0], dict):
-                new_list = [CommandCall(elem, parsing=parsing) for elem in params[prop]]
-                # We recreate the object
+                # We recreate the list of objects
+                new_list = [unserialize(elem, True) for elem in params[prop]]
                 setattr(self, prop, new_list)
                 # And remove prop, to prevent from being overridden
                 del params[prop]
+
         super(Contact, self).__init__(params, parsing=parsing)
 
     def __str__(self):  # pragma: no cover
-        return '<Contact %s, uuid=%s, use: %s />' \
-               % (self.get_name(), self.uuid, getattr(self, 'use', None))
+        return '<Contact%s %s, uuid=%s, use: %s />' \
+               % (' template' if self.is_a_template() else '', self.get_full_name(), self.uuid,
+                  getattr(self, 'use', None))
     __repr__ = __str__
 
-    def serialize(self):
-        res = super(Contact, self).serialize()
+    def get_full_name(self):
+        """Get the full name of the contact
 
-        for prop in ['service_notification_commands', 'host_notification_commands']:
-            if getattr(self, prop) is None:
-                res[prop] = None
-            else:
-                res[prop] = [elem.serialize() for elem in getattr(self, prop)]
-
-        return res
-
-    def get_name(self):
-        """Get contact name
-
-        :return: contact name
+        :return: service full name
         :rtype: str
         """
-        if self.is_tpl():
-            return "tpl-%s" % (getattr(self, 'name', 'unnamed'))
-        return getattr(self, 'contact_name', 'unnamed')
+        name = self.get_name()
+        if getattr(self, 'display_name', None):
+            name = "({}) {}".format(getattr(self, 'display_name'), name)
+        elif getattr(self, 'alias', None) and getattr(self, 'alias', None) != 'none':
+            name = "({}) {}".format(getattr(self, 'alias'), name)
+        return name
 
     def get_groupname(self):
         """
@@ -339,10 +337,9 @@ class Contact(Item):
             res.extend(notifway.get_notification_commands(n_type))
 
         # Update inner notification commands property with command name or command
+        setattr(self, n_type + '_notification_commands', res)
         if command_name:
             setattr(self, n_type + '_notification_commands', [c.get_name() for c in res])
-        else:
-            setattr(self, n_type + '_notification_commands', res)
 
         return res
 
@@ -355,35 +352,29 @@ class Contact(Item):
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        state = True
-        cls = self.__class__
-
         # Internal checks before executing inherited function...
-
-        # There is a case where there is no nw: when there is not special_prop defined
-        # at all!!
-        if not self.notificationways:
-            for prop in self.special_properties:
-                if not hasattr(self, prop):
-                    msg = "[contact::%s] %s property is missing" % (self.get_name(), prop)
-                    self.add_error(msg)
-                    state = False
 
         if not hasattr(self, 'contact_name'):
             if hasattr(self, 'alias'):
                 # Use the alias if we miss the contact_name
                 self.contact_name = self.alias
 
-        for char in cls.illegal_object_name_chars:
+        # There is a case where there is no nw: when there is not special_prop defined
+        # at all!!
+        if not self.notificationways:
+            for prop in self.special_properties:
+                if not hasattr(self, prop):
+                    self.add_error("[contact::%s] %s property is missing"
+                                   % (self.get_name(), prop))
+
+        for char in self.__class__.illegal_object_name_chars:
             if char not in self.contact_name:
                 continue
 
-            msg = "[contact::%s] %s character not allowed in contact_name" \
-                  % (self.get_name(), char)
-            self.add_error(msg)
-            state = False
+            self.add_error("[contact::%s] %s character not allowed in contact_name"
+                           % (self.get_name(), char))
 
-        return super(Contact, self).is_correct() and state
+        return super(Contact, self).is_correct() and self.conf_is_correct
 
     def raise_enter_downtime_log_entry(self):
         """Raise CONTACT DOWNTIME ALERT entry (info level)
@@ -435,42 +426,41 @@ class Contacts(CommandCallItems):
     """Contacts manage a list of Contacts objects, used for parsing configuration
 
     """
-    name_property = "contact_name"
     inner_class = Contact
 
     def linkify(self, commands, notificationways):
-        """Create link between objects::
+        """Create link between contacts and notification ways, and commands
 
-         * contacts -> notificationways
+        :param commands: commands to link with
+        :type commands: alignak.objects.command.Commands
 
-        :param notificationways: notificationways to link
+        :param notificationways: notificationways to link with
         :type notificationways: alignak.objects.notificationway.Notificationways
         :return: None
-        TODO: Clean this function
         """
         self.linkify_with_notificationways(notificationways)
-        self.linkify_command_list_with_commands(commands, 'service_notification_commands')
-        self.linkify_command_list_with_commands(commands, 'host_notification_commands')
+
+        self.linkify_with_commands(commands, 'service_notification_commands', is_a_list=True)
+        self.linkify_with_commands(commands, 'host_notification_commands', is_a_list=True)
 
     def linkify_with_notificationways(self, notificationways):
-        """Link hosts with realms
+        """Link contacts with notification ways
 
-        :param notificationways: notificationways object to link with
+        :param notificationways: notificationways to link with
         :type notificationways: alignak.objects.notificationway.Notificationways
         :return: None
         """
         for i in self:
             if not hasattr(i, 'notificationways'):
                 continue
+
             new_notificationways = []
             for nw_name in strip_and_uniq(i.notificationways):
                 notifway = notificationways.find_by_name(nw_name)
                 if notifway is not None:
                     new_notificationways.append(notifway.uuid)
                 else:
-                    err = "The 'notificationways' of the %s '%s' named '%s' is unknown!" %\
-                          (i.__class__.my_type, i.get_name(), nw_name)
-                    i.add_error(err)
+                    i.add_error("the notificationways named '%s' is unknown" % nw_name)
             # Get the list, but first make elements unique
             i.notificationways = list(set(new_notificationways))
 
@@ -489,6 +479,7 @@ class Contacts(CommandCallItems):
         """
         # Contactgroups property need to be fulfill for got the information
         self.apply_partial_inheritance('contactgroups')
+
         # _special properties maybe came from a template, so
         # import them before grok ourselves
         for prop in Contact.special_properties:
@@ -496,33 +487,48 @@ class Contacts(CommandCallItems):
                 continue
             self.apply_partial_inheritance(prop)
 
-        # Register ourselves into the contactsgroups we are in
+        # Register ourselves into the contacts groups we are in
         for contact in self:
             if not (hasattr(contact, 'contact_name') and hasattr(contact, 'contactgroups')):
                 continue
             for contactgroup in contact.contactgroups:
                 contactgroups.add_member(contact.contact_name, contactgroup.strip())
 
-        # Now create a notification way with the simple parameter of the
-        # contacts
+        # Now create a notification way with the simple parameter of the contacts
         for contact in self:
-            need_notificationway = False
-            params = {}
-            for param in Contact.simple_way_parameters:
-                if hasattr(contact, param):
-                    need_notificationway = True
-                    params[param] = getattr(contact, param)
-                elif contact.properties[param].has_default:  # put a default text value
-                    # Remove the value and put a default value
-                    setattr(contact, param, contact.properties[param].default)
+            # Fill default values for all the properties
+            contact.fill_default()
 
-            if need_notificationway:
-                cname = getattr(contact, 'contact_name', getattr(contact, 'alias', ''))
-                nw_name = cname + '_inner_nw'
-                notificationways.new_inner_member(nw_name, params)
+            # If some NW are still existing, do not create one more...
+            # if hasattr(contact, 'notificationways') and getattr(contact, 'notificationways'):
+            #     # The contact still has some defined NWs
+            #     continue
+            #
+            add_nw = False
+            params = {
+                'notificationway_name': "%s_inner_nw" % contact.get_name()
+            }
+            for prop, entry in list(NotificationWay.properties.items()):
+                if prop not in ['service_notification_period', 'host_notification_period',
+                                'service_notification_options', 'host_notification_options',
+                                'service_notification_commands', 'host_notification_commands',
+                                'min_business_impact']:
+                    continue
+                if getattr(contact, prop, None) is not None:
+                    params[prop] = getattr(contact, prop)
+                    if entry.has_default and getattr(contact, prop) != entry.default:
+                        # Add a NW if no default values
+                        logger.debug("Contact %s, add a notification way because: %s = %s",
+                                     contact.get_name(), prop, getattr(contact, prop))
+                        add_nw = True
 
-                if not hasattr(contact, 'notificationways'):
-                    contact.notificationways = [nw_name]
-                else:
-                    contact.notificationways = list(contact.notificationways)
-                    contact.notificationways.append(nw_name)
+            if not add_nw:
+                continue
+
+            notificationways.add_item(NotificationWay(params, parsing=True))
+
+            if not hasattr(contact, 'notificationways'):
+                contact.notificationways = []
+
+            contact.notificationways = list(contact.notificationways)
+            contact.notificationways.append(params['notificationway_name'])

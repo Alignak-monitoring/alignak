@@ -64,7 +64,8 @@ class TestEscalations(AlignakTest):
     def setUp(self):
         super(TestEscalations, self).setUp()
 
-        self.setup_with_file('./cfg/cfg_escalations.cfg')
+        self.setup_with_file('./cfg/cfg_escalations.cfg',
+                             dispatching=True)
         assert self.conf_is_correct
 
         # No error messages

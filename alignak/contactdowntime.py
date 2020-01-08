@@ -50,7 +50,7 @@ import time
 import logging
 
 from alignak.alignakobject import AlignakObject
-from alignak.property import BoolProp, IntegerProp, StringProp
+from alignak.property import BoolProp, IntegerProp, StringProp, FULL_STATUS
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -63,11 +63,11 @@ class ContactDowntime(AlignakObject):
 
     properties = {
         'start_time':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
         'end_time':
-            IntegerProp(default=0, fill_brok=['full_status']),
+            IntegerProp(default=0, fill_brok=[FULL_STATUS]),
         'author':
-            StringProp(default=u'', fill_brok=['full_status']),
+            StringProp(default=u'', fill_brok=[FULL_STATUS]),
         'comment':
             StringProp(default=u''),
         'is_in_effect':

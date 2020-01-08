@@ -32,14 +32,14 @@ class TestComments(AlignakTest):
     """
     def setUp(self):
         super(TestComments, self).setUp()
+        self.setup_with_file('cfg/cfg_default.cfg',
+                             dispatching=True)
 
     def test_host_acknowledge(self):
         """Test add / delete comment for acknowledge on host
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
@@ -47,8 +47,16 @@ class TestComments(AlignakTest):
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
         time.sleep(0.1)
-        assert "DOWN" == host.state
-        assert "SOFT" == host.state_type
+        assert host.state == "DOWN"
+        assert host.state_type == "SOFT"
+        self.scheduler_loop(1, [[host, 2, 'DOWN']])
+        time.sleep(0.1)
+        assert host.state == "DOWN"
+        assert host.state_type == "SOFT"
+        self.scheduler_loop(1, [[host, 2, 'DOWN']])
+        time.sleep(0.1)
+        assert host.state == "DOWN"
+        assert host.state_type == "HARD"
 
         now = time.time()
         cmd = "[{0}] ACKNOWLEDGE_HOST_PROBLEM;{1};{2};{3};{4};{5};{6}\n".\
@@ -56,7 +64,7 @@ class TestComments(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
 
         assert host.problem_has_been_acknowledged
         # we must have a comment
@@ -69,7 +77,7 @@ class TestComments(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
 
         # we must have a comment
         assert len(host.comments) == 1
@@ -77,7 +85,7 @@ class TestComments(AlignakTest):
             assert host.comments[comment_id].comment == 'normal new process'
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
 
         # we must have no comment (the comment must be deleted like the acknowledge)
         assert not host.problem_has_been_acknowledged
@@ -88,15 +96,13 @@ class TestComments(AlignakTest):
 
         :return: None
         """
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "DOWN" == host.state
         assert "SOFT" == host.state_type
 
@@ -106,7 +112,7 @@ class TestComments(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
 
         assert host.problem_has_been_acknowledged
         # we must have a comment
@@ -114,7 +120,7 @@ class TestComments(AlignakTest):
 
         time.sleep(3)
         self.scheduler_loop(1, [[host, 2, 'DOWN']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
 
         # we must have no comment (the comment must be deleted like the acknowledge)
         assert not host.problem_has_been_acknowledged
@@ -125,9 +131,6 @@ class TestComments(AlignakTest):
 
         :return: None
         """
-
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
@@ -140,10 +143,10 @@ class TestComments(AlignakTest):
         svc.max_check_attempts = 3
 
         self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
         assert "WARNING" == svc.state
         assert "SOFT" == svc.state_type
 
@@ -154,14 +157,14 @@ class TestComments(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[svc, 1, 'WARNING']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
 
         assert svc.problem_has_been_acknowledged
         # we must have a comment
         assert len(svc.comments) == 1
 
         self.scheduler_loop(1, [[svc, 0, 'OK']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
 
         # we must have no comment (the comment must be deleted like the acknowledge)
         assert not svc.problem_has_been_acknowledged
@@ -171,15 +174,13 @@ class TestComments(AlignakTest):
         pass
 
     def test_host_comment(self):
-        self.setup_with_file('cfg/cfg_default.cfg')
-
         host = self._scheduler.hosts.find_by_name("test_host_0")
         host.checks_in_progress = []
         host.act_depend_of = []  # ignore the router
         host.event_handler_enabled = False
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
 
         now = time.time()
         cmd = "[{0}] ADD_HOST_COMMENT;{1};{2};{3};{4}\n". \
@@ -187,7 +188,7 @@ class TestComments(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
 
         # we must have a comment
         assert len(host.comments) == 1
@@ -199,7 +200,7 @@ class TestComments(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
 
         assert len(host.comments) == 2
 
@@ -210,6 +211,6 @@ class TestComments(AlignakTest):
         self._scheduler.run_external_commands([cmd])
 
         self.scheduler_loop(1, [[host, 0, 'UP']])
-        time.sleep(0.1)
+        # time.sleep(0.1)
 
         assert len(host.comments) == 0

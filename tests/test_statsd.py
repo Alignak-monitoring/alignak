@@ -718,7 +718,7 @@ if os.sys.version_info > (2, 7):
             ), index)
             index += 1
             self.assert_log_match(re.escape(
-                'Alignak internal statistics will be sent to Graphite.'
+                'Statistics for arbiter-master will be sent to localhost:8888.'
             ), index)
             index += 1
 
@@ -743,7 +743,7 @@ if os.sys.version_info > (2, 7):
             ), index)
             index += 1
             self.assert_log_match(re.escape(
-                'Alignak internal statistics will be sent to Graphite.'
+                'Statistics for arbiter-master will be sent to localhost:2003.'
             ), index)
             index += 1
 
@@ -843,7 +843,7 @@ if os.sys.version_info > (2, 7):
             ), index)
             index += 1
             self.assert_log_match(re.escape(
-                'Alignak internal statistics will be sent to Graphite.'
+                'Statistics for broker-master will be sent to localhost:2003.'
             ), index)
             index += 1
 
@@ -940,7 +940,7 @@ if os.sys.version_info > (2, 7):
             ), index)
             index += 1
             self.assert_log_match(re.escape(
-                'Alignak internal statistics will be sent to Graphite.'
+                'Statistics for arbiter-master will be sent to localhost:2003.'
             ), index)
             index += 1
 
