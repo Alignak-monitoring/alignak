@@ -496,28 +496,34 @@ class Item(AlignakObject):
         del self.plus[prop]
         return val
 
-    def add_error(self, txt):
+    def add_error(self, message):
         """Add a message in the configuration errors list so we can print them
          all in one place
 
          Set the object configuration as not correct
 
-        :param txt: error message
-        :type txt: str
+        :param message: error message or a list of messages
+        :type message: str | list
         :return: None
         """
-        self.configuration_errors.append("[{}::{}] {}".format(self.my_type, self.get_name(), txt))
+        if not isinstance(message, list):
+            message = [message]
+        for txt in message:
+            self.configuration_errors.append("[{}::{}] {}".format(self.my_type, self.get_name(), txt))
         self.conf_is_correct = False
 
-    def add_warning(self, txt):
+    def add_warning(self, message):
         """Add a message in the configuration warnings list so we can print them
          all in one place
 
-        :param txt: warning message
-        :type txt: str
+        :param message: warning message
+        :type message: str
         :return: None
         """
-        self.configuration_warnings.append("[{}::{}] {}".format(self.my_type, self.get_name(), txt))
+        if not isinstance(message, list):
+            message = [message]
+        for txt in message:
+            self.configuration_warnings.append("[{}::{}] {}".format(self.my_type, self.get_name(), txt))
 
     def is_correct(self):
         """

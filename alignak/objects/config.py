@@ -136,15 +136,15 @@ NOT_MANAGED = (u'This Nagios legacy parameter is not managed by Alignak. Ignorin
 
 
 class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance-attributes
-    """Config is the class that reads, loads and manipulates the main Alignak monitored objects
- configuration. It reads the Nagios legacy configuration files (cfg files ) and gets all
- informations from these files.
+    """Config is the class that reads, loads and manipulates the main Alignak monitored
+    objects configuration. It reads the Nagios legacy configuration files (cfg files )
+    and gets all information from these files.
 
- It creates the monitored objects (eg. hosts, contacts, ...), creates links between them,
- check them, clean them, and cut them into independent parts.
+    It creates the monitored objects (eg. hosts, contacts, ...), creates links between
+    them, check them, clean them, and cut them into independent parts.
 
- The main user of this Config class is the Arbiter daemon when it loads the configuration and
- dispatches to the other daemons."""
+    The main user of this Config class is the Arbiter daemon when it loads the
+    configuration and dispatches to the other daemons."""
     # Next value used for auto generated instance_id
     _next_id = 1
 
@@ -2457,12 +2457,10 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         if self.global_host_event_handler and not self.global_host_event_handler.is_valid():
             self.add_error("global host event_handler '%s' is invalid"
                            % self.global_host_event_handler.command)
-            valid = False
 
-        if self.global_service_event_handler and not self.global_service_event_handler .is_valid():
+        if self.global_service_event_handler and not self.global_service_event_handler.is_valid():
             self.add_error("global service event_handler '%s' is invalid"
                            % self.global_service_event_handler.command)
-            valid = False
 
         if not self.read_config_silent:
             logger.info('Checked')
@@ -2490,12 +2488,11 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                 if not self.read_config_silent:
                     logger.info('Checked %s, configuration is incorrect!', strclss)
 
-                valid = False
-                self.configuration_errors += checked_list.configuration_errors
+                self.add_error(checked_list.configuration_errors)
                 self.add_error("%s configuration is incorrect!" % strclss)
                 logger.error("%s configuration is incorrect!", strclss)
             if checked_list.configuration_warnings:
-                self.configuration_warnings += checked_list.configuration_warnings
+                self.add_warning(checked_list.configuration_warnings)
                 logger.info("    %d warning(s), total: %d",
                             len(checked_list.configuration_warnings),
                             len(self.configuration_warnings))
@@ -2539,12 +2536,10 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
             for tag in hosts_tag.difference(pollers_tag):
                 self.add_error("Error: some hosts have the poller_tag %s but no poller "
                                "has this tag" % tag)
-                valid = False
         if not services_tag.issubset(pollers_tag):
             for tag in services_tag.difference(pollers_tag):
                 self.add_error("some services have the poller_tag %s but no poller "
                                "has this tag" % tag)
-                valid = False
 
         # Check that all hosts involved in business_rules are from the same realm
         for item in self.hosts:
@@ -2575,16 +2570,15 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                                  item.get_full_name(), host_realm.get_name())
                     self.add_error("Error: Business_rule '%s' got hosts from another "
                                    "realm: %s" % (item.get_full_name(), host_realm.get_name()))
-                    valid = False
 
+        # If configuration error messages exist, then the configuration is not valid
+        # Log the error messages
         if self.configuration_errors:
-            valid = False
             logger.error("Configuration errors:")
             for msg in self.configuration_errors:
                 logger.error(msg)
 
-        # If configuration error messages exist, then the configuration is not valid
-        self.conf_is_correct = valid
+        return self.conf_is_correct
 
     def explode_global_conf(self):
         """Explode parameters like cached_service_check_horizon in the
@@ -3107,6 +3101,8 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
     def dump(self, dump_file_name=None):
         """Dump configuration to a file in a JSON format
 
+        If no file name is provided, the function returns an object that can be json-ified
+
         :param dump_file_name: the file to dump configuration to
         :type dump_file_name: str
         :return: None
@@ -3126,18 +3122,17 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                 objs = sorted(objs,
                               key=lambda o: "%s/%s" % (o["host_name"], o["service_description"]))
             elif hasattr(container, "name_property"):
-                name_prop = container.name_property
-                objs = sorted(objs, key=lambda o, prop=name_prop: getattr(o, prop, ''))
+                objs = sorted(objs,
+                              key=lambda o, prop=container.name_property: getattr(o, prop, ''))
             config_dump[category] = objs
 
         if not dump_file_name:
-            dump_file_name = os.path.join(tempfile.gettempdir(),
-                                          'alignak-%s-cfg-dump-%d.json'
-                                          % (self.name, int(time.time())))
+            return config_dump
+
         try:
             logger.info('Dumping configuration to: %s', dump_file_name)
             fd = open(dump_file_name, "w")
-            fd.write(json.dumps(config_dump, indent=4, separators=(',', ': '), sort_keys=True))
+            fd.write(json.dumps(config_dump, indent=2, separators=(',', ':'), sort_keys=True))
             fd.close()
             logger.info('Dumped')
         except (OSError, IndexError) as exp:  # pragma: no cover, should never happen...

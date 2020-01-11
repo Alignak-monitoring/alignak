@@ -774,10 +774,6 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
         # Manage all post-conf modules
         self.hook_point('late_configuration')
 
-        # Configuration is correct?
-        logger.info("Checking configuration...")
-        self.conf.is_correct()
-
         # Clean objects of temporary/unnecessary attributes for live work:
         if clean:
             logger.info("Cleaning configuration objects...")
@@ -793,6 +789,10 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
                                                                          None, None)
             logger.debug("- $%s$ = %s", macro_name, macro_value)
         statsmgr.timer('configuration.loading', time.time() - _t_configuration)
+
+        # Configuration is correct?
+        logger.info("Checking configuration...")
+        self.conf.is_correct()
 
         # REF: doc/alignak-conf-dispatching.png (2)
         logger.info("Splitting configuration...")
