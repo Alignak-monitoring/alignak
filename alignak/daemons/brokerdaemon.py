@@ -172,7 +172,7 @@ class Broker(BaseSatellite):
                         self.schedulers[c_id]['running_id'] = 0
                     except KeyError:  # maybe this instance was not known, forget it
                         logger.warning("the module %s ask me a full_instance_id "
-                                       "for an unknown ID (%d)!", source, c_id)
+                                       "for an unknown ID (%s)!", source, c_id)
             # Maybe a module tells me that it's dead, I must log its last words...
             if elt.get_type() == 'ICrash':
                 data = elt.get_data()

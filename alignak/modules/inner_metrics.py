@@ -162,7 +162,7 @@ class InnerMetrics(BaseModule):  # pylint: disable=too-many-instance-attributes
         self.realms_prefix = (getattr(mod_conf, 'realms_prefix', '0') != '0')
         if isinstance(getattr(mod_conf, 'realms_prefix', '0'), bool):
             self.realms_prefix = getattr(mod_conf, 'realms_prefix')
-        logger.info("graphite prefix: %s, realm prefix: %s data source: %s",
+        logger.info("graphite prefix: %s, realm prefix: %s, data source: %s",
                     self.graphite_prefix, self.realms_prefix, self.graphite_data_source)
 
         if self.graphite_enabled and not self.graphite_host:

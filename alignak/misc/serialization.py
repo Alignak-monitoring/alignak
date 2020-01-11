@@ -28,7 +28,7 @@ except ImportError:
     import json
 
 
-def serialize(obj, no_dump=False):
+def serialize(obj, no_dump=False, printing=False):
     """
     Serialize an object.
 
@@ -45,7 +45,8 @@ def serialize(obj, no_dump=False):
        'content' : obj.serialize()}
     :rtype: dict | str
     """
-    # print("Serialize (%s): %s" % (no_dump, obj))
+    if printing:
+        print("Serialize (%s): %s" % ('as a dict' if no_dump else 'as json', obj))
 
     if hasattr(obj, "serialize") and isinstance(obj.serialize, collections.Callable):
         o_dict = {

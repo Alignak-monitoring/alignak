@@ -555,7 +555,7 @@ class ArbiterInterface(GenericInterface):
         ],
         ...
 
-        More information are available in the scheduler correponding API endpoint.
+        More information are available in the scheduler corresponding API endpoint.
 
         :param o_type: searched object type
         :type o_type: str

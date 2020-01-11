@@ -981,7 +981,7 @@ class SatelliteLink(Item):
     def get_actions(self, params):
         """Send a HTTP request to the satellite (GET /_checks)
         Get actions from the scheduler.
-        Un-serialize data received.
+        Un-serialize the received data.
 
         :param params: the request parameters
         :type params: str
