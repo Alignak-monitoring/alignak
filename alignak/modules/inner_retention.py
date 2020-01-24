@@ -30,6 +30,7 @@ import logging
 
 from alignak.stats import Stats
 from alignak.basemodule import BaseModule
+from alignak.misc.serialization import default_serialize
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
@@ -219,8 +220,8 @@ class InnerRetention(BaseModule):
                 if isinstance(response[0], dict) and 'name' in response[0]:
                     logger.debug('Loaded: %s', response)
                 else:
-                    logger.info("Supposed retention file %s is not correctly encoded! Got: %s",
-                                retention_file, response[0])
+                    logger.warning("Supposed retention file %s is not correctly encoded! "
+                                   "It is probably not a retention file.", retention_file)
                     continue
             except Exception as exp:  # pylint: disable=broad-except
                 # pragma: no cover, should never happen...
@@ -295,7 +296,8 @@ class InnerRetention(BaseModule):
                                                  "%s.json" % host_name)
                         with open(file_name, "w") as fd:
                             fd.write(json.dumps(data_to_save['hosts'][host_name],
-                                                indent=2, separators=(',', ': '),
+                                                indent=2, separators=(',', ':'),
+                                                default=default_serialize,
                                                 sort_keys=True))
                         logger.debug('- saved: %s', file_name)
                     logger.info('Saved')
@@ -303,7 +305,9 @@ class InnerRetention(BaseModule):
                     logger.info('Saving retention data to: %s', self.retention_file)
                     with open(self.retention_file, "w") as fd:
                         fd.write(json.dumps(data_to_save['hosts'],
-                                            indent=2, separators=(',', ': '), sort_keys=True))
+                                            indent=2, separators=(',', ':'),
+                                            default=default_serialize,
+                                            sort_keys=True))
                     logger.info('Saved')
             except Exception as exp:  # pylint: disable=broad-except
                 # pragma: no cover, should never happen...

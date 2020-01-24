@@ -355,7 +355,7 @@ class BaseSatellite(Daemon):
         :return: A copy of the events list
         :rtype: list
         """
-        res = copy.copy(self.events)
+        res = copy.deepcopy(self.events)
         del self.events[:]
         return res
 
@@ -641,13 +641,13 @@ class Satellite(BaseSatellite):  # pylint: disable=too-many-instance-attributes
                 self.external_commands.append(elt)
             statsmgr.counter('external-commands.added', 1)
 
-    def get_broks(self):
+    def give_broks(self):
         """Get brok list from satellite
 
         :return: A copy of the broks list
         :rtype: list
         """
-        res = copy.copy(self.broks)
+        res = copy.deepcopy(self.broks)
         del self.broks[:]
         return res
 
@@ -787,7 +787,7 @@ class Satellite(BaseSatellite):  # pylint: disable=too-many-instance-attributes
             uuid = getattr(action, 'uuid', None)
             if uuid is None:
                 try:
-                    action = unserialize(action, no_load=True)
+                    action = unserialize(action, no_json=True)
                     uuid = action.uuid
                 except AlignakClassLookupException:
                     logger.error('Cannot un-serialize action: %s', action)
@@ -1053,7 +1053,7 @@ class Satellite(BaseSatellite):  # pylint: disable=too-many-instance-attributes
             # Now manage modules
             if not self.have_modules:
                 try:
-                    self.modules = unserialize(self.cur_conf['modules'], no_load=True)
+                    self.modules = unserialize(self.cur_conf['modules'], no_json=True)
                 except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
                     logger.error('Cannot un-serialize modules configuration '
                                  'received from arbiter: %s', exp)

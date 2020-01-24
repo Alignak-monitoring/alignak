@@ -547,7 +547,7 @@ class Dispatcher(object):
             })
 
             # Hash the configuration
-            cfg_string = json.dumps(arbiter_cfg, sort_keys=True).encode('utf-8')
+            cfg_string = serialize(arbiter_cfg, no_json=False).encode('utf-8')
             arbiter_cfg['hash'] = hashlib.sha1(cfg_string).hexdigest()
 
             # Update the arbiters list, but do not include the whole conf
@@ -561,11 +561,12 @@ class Dispatcher(object):
                 })
 
                 # Hash the whole configuration
-                try:
-                    s_conf_part = json.dumps(arbiter_cfg, sort_keys=True).encode('utf-8')
-                except UnicodeDecodeError:
-                    pass
-                arbiter_cfg['hash'] = hashlib.sha1(s_conf_part).hexdigest()
+                # try:
+                #     s_conf_part = json.dumps(arbiter_cfg, sort_keys=True).encode('utf-8')
+                # except UnicodeDecodeError:
+                #     pass
+                cfg_string = serialize(arbiter_cfg, no_json=False).encode('utf-8')
+                arbiter_cfg['hash'] = hashlib.sha1(cfg_string).hexdigest()
 
             # Dump the configuration part size
             pickled_conf = pickle.dumps(arbiter_cfg)
@@ -656,7 +657,7 @@ class Dispatcher(object):
                                 len(cfg_part.hosts.templates), len(cfg_part.services.templates))
 
                     # Serialization and hashing
-                    s_conf_part = serialize(realm.parts[cfg_part.instance_id])
+                    s_conf_part = serialize(realm.parts[cfg_part.instance_id], no_json=False)
                     try:
                         s_conf_part = s_conf_part.encode('utf-8')
                     except UnicodeDecodeError:
@@ -673,7 +674,7 @@ class Dispatcher(object):
                         'push_flavor': cfg_part.push_flavor
                     })
                     # Generate a configuration hash
-                    cfg_string = json.dumps(sat_scheduler_cfg, sort_keys=True).encode('utf-8')
+                    cfg_string = serialize(sat_scheduler_cfg, no_json=False).encode('utf-8')
                     sat_scheduler_cfg['hash'] = hashlib.sha1(cfg_string).hexdigest()
 
                     logger.debug(' satellite scheduler configuration: %s', sat_scheduler_cfg)
@@ -697,7 +698,6 @@ class Dispatcher(object):
                         'modules': serialize(scheduler_link.modules, True),
 
                         'conf_part': serialize(realm.parts[cfg_part.instance_id]),
-                        # 'conf_part': s_conf_part,
                         'managed_conf_id': cfg_part.instance_id,
                         'push_flavor': cfg_part.push_flavor,
 
@@ -705,8 +705,9 @@ class Dispatcher(object):
                     })
 
                     # Hash the whole configuration
-                    cfg_string = json.dumps(scheduler_link.cfg, sort_keys=True).encode('utf-8')
-                    cfg_string = json.dumps(scheduler_link.cfg, sort_keys=True).encode('utf-8')
+                    # cfg_string = json.dumps(scheduler_link.cfg, sort_keys=True).encode('utf-8')
+                    # cfg_string = json.dumps(scheduler_link.cfg, sort_keys=True).encode('utf-8')
+                    cfg_string = serialize(scheduler_link.cfg, no_json=False).encode('utf-8')
                     scheduler_link.cfg['hash'] = hashlib.sha1(cfg_string).hexdigest()
 
                     # Dump the configuration part size
@@ -797,7 +798,7 @@ class Dispatcher(object):
                                 self.alignak_conf.realms, sat_link.manage_sub_realms)})
 
                         # Hash the whole configuration
-                        cfg_string = json.dumps(sat_link.cfg, sort_keys=True).encode('utf-8')
+                        cfg_string = serialize(sat_link.cfg, no_json=False).encode('utf-8')
                         sat_link.cfg['hash'] = hashlib.sha1(cfg_string).hexdigest()
 
                         # Dump the configuration part size

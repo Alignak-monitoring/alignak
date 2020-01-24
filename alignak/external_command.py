@@ -105,7 +105,7 @@ class ExternalCommand(object):
             pass
         self.creation_timestamp = timestamp or time.time()
 
-    def serialize(self):
+    def serialize(self, no_json=True, printing=False):
         """This function serializes into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 

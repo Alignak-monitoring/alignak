@@ -20,7 +20,8 @@
 
 import logging
 import traceback
-from collections import OrderedDict, Callable
+import collections
+from collections import OrderedDict
 
 import cherrypy
 
@@ -237,7 +238,7 @@ class SchedulerInterface(GenericInterface):
             for key in __props__:
                 if hasattr(host, key):
                     __header__.append(key)
-                    if isinstance(getattr(host, key), Callable):
+                    if isinstance(getattr(host, key), collections.Callable):
                         host_data[key] = getattr(host, key)(services)
                     elif isinstance(getattr(host, key), set):
                         host_data[key] = list(getattr(host, key))
@@ -257,7 +258,7 @@ class SchedulerInterface(GenericInterface):
                     if hasattr(service, key):
                         if key not in __header__:
                             __header__.append(key)
-                        if isinstance(getattr(service, key), Callable):
+                        if isinstance(getattr(service, key), collections.Callable):
                             service_data[key] = getattr(services, key)()
                         elif isinstance(getattr(service, key), set):
                             service_data[key] = list(getattr(service, key))
@@ -401,13 +402,23 @@ class SchedulerInterface(GenericInterface):
                 break
         else:
             logger.warning("Requesting broks for an unknown broker: %s", broker_name)
-            return {}
+            return []
 
-        # Now get the broks for this specific broker
-        with self.app.broks_lock:
-            res = self.app.get_broks(broker_name)
+        try:
+            # Now get the broks for this specific broker
+            with self.app.broks_lock:
+                res = self.app.give_broks(broker_name)
 
-        return serialize(res, True)
+            # Serialize but do not make it json encoded
+            res = serialize(res, no_json=True)
+        except Exception as exp:
+            logger.warning("Getting broks for %s from the scheduler", broker_name)
+            logger.warning("Serializing: %s", res)
+            logger.warning("_broks, exception: %s", exp)
+            res = []
+
+        logger.debug("_broks, returns: %s", res)
+        return res
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -445,13 +456,13 @@ class SchedulerInterface(GenericInterface):
         res = self.app.sched.get_to_run_checks(do_checks, do_actions, poller_tags, reactionner_tags,
                                                worker_name, module_types)
 
-        return serialize(res, True)
+        return serialize(res, no_json=True)
 
     @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
-    def put_results(self):
-        """Put results to scheduler, used by poller or reactionner when they are
+    def _results(self):
+        """Put results to scheduler, used by poller and reactionner when they are
         in active mode (passive = False)
 
         This function is not intended for external use. Let the poller and reactionner
@@ -465,15 +476,12 @@ class SchedulerInterface(GenericInterface):
         :rtype: bool
         """
         res = cherrypy.request.json
-        who_sent = res['from']
-        results = res['results']
-
-        results = unserialize(results, no_load=True)
-        if results:
-            logger.debug("Got some results: %d results from %s", len(results), who_sent)
-        else:
+        results = unserialize(res['results'], no_json=True)
+        if not results:
             logger.debug("-> no results")
+            return True
 
+        logger.debug("Got %d results from %s", len(results), res['from'])
         for result in results:
             logger.debug("-> result: %s", result)
 
@@ -536,12 +544,13 @@ class SchedulerInterface(GenericInterface):
             o_list = self._get_objects(o_type)
             if o_list:
                 if o_name is None:
-                    return serialize(o_list, True) if o_list else None
+                    return serialize(o_list, no_json=True) if o_list else None
                 # We expected a name...
                 o_found = o_list.find_by_name(o_name)
                 if not o_found:
-                    # ... but perharps we got an object uuid
+                    # ... but perhaps we got an object uuid
                     o_found = o_list[o_name]
         except Exception:  # pylint: disable=broad-except
             return None
-        return serialize(o_found, True) if o_found else None
+
+        return serialize(o_found, no_json=True) if o_found else None

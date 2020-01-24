@@ -102,18 +102,23 @@ class DependencyNode(object):
                                                           self.not_value)
     __str__ = __repr__
 
-    def serialize(self):
+    def serialize(self, no_json=True, printing=False):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
-        Here we directly return all attributes
+        Here we directly return all attributes except the sons that are serialized
 
         :return: json representation of a DependencyNode
         :rtype: dict
         """
-        return {'operand': self.operand, 'sons': [serialize(elem) for elem in self.sons],
-                'of_values': self.of_values, 'is_of_mul': self.is_of_mul,
-                'not_value': self.not_value}
+        return {
+            'operand': self.operand,
+            'sons': [serialize(elem, no_json=no_json, printing=printing)
+                     for elem in self.sons],
+            'of_values': self.of_values,
+            'is_of_mul': self.is_of_mul,
+            'not_value': self.not_value
+        }
 
     @staticmethod
     def get_reverse_state(state):

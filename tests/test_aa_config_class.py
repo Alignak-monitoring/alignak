@@ -36,6 +36,8 @@ from pprint import pprint
 from .alignak_test import AlignakTest
 
 from alignak.objects.config import Config
+from alignak.objects.contact import Contact
+from alignak.objects.host import Host
 from alignak.misc.serialization import serialize, unserialize
 
 
@@ -68,7 +70,6 @@ class TestConfigClassBase(AlignakTest):
         # Config instance_id incremented!
         assert next_instance_id == alignak_cfg.instance_id
         # assert str(alignak_cfg) == '<Config Config_2 - unknown />'
-        from pprint import pprint
         pprint(alignak_cfg.macros)
 
         # -----------------------------------------------------------------------------------------
@@ -294,28 +295,149 @@ class TestConfigClassBase(AlignakTest):
             setattr(self, 'len_' + category, len(getattr(alignak_cfg, category)))
             print("- %s %s" % (len(getattr(alignak_cfg, category)) if getattr(alignak_cfg, category) else 'no', category))
 
+            for item in getattr(alignak_cfg, category):
+                # Cleanable properties are still existing in the objects
+                for prop in ['imported_from', 'use', 'plus', 'register', 'definition_order',
+                             'configuration_warnings', 'configuration_errors']:
+                    assert hasattr(item, prop)
+
         assert alignak_cfg
         assert alignak_cfg.is_correct()
         assert alignak_cfg.conf_is_correct
-        print(alignak_cfg.show_errors())
+        print("Errors: ", alignak_cfg.show_errors())
 
         alignak_cfg.dump(dump_file_name='/tmp/dumped_configuration.json')
         dump = alignak_cfg.dump()
         # pprint(dump)
 
+        # Configuration cleaning
+        alignak_cfg.clean()
+
+        # Now all objects exist in the attributes
+        print("After objects cleaning:")
+        for _, _, category, _, _ in list(alignak_cfg.types_creations.values()):
+            assert getattr(alignak_cfg, category, None) is not None
+            for item in getattr(alignak_cfg, category):
+                # Cleanable properties are still existing in the objects
+                for prop in ['imported_from', 'use', 'plus', 'definition_order',
+                             'configuration_warnings', 'configuration_errors']:
+                    assert not hasattr(item, prop)
+
+        # --- Contacts
+        # Serialize to send to another daemon
+        print("Contacts: %s" % alignak_cfg.contacts)
+        for contact in alignak_cfg.contacts.templates:
+            print("- %s" % (alignak_cfg.contacts.templates[contact]))
+        for contact in alignak_cfg.contacts.items:
+            print("- %s" % (alignak_cfg.contacts.items[contact]))
+        res = serialize(alignak_cfg.contacts, no_json=True, printing=False)
+        print("Serialized contacts: %s" % res)
+        # pprint(res)
+
+        # Un-serialize when received by a daemon
+        result = unserialize(res, printing=False)
+        print("Unserialized: %s" % result)
+        assert len(result.templates) == 1
+        for uuid in result.templates:
+            contact = result.templates[uuid]
+            print("- %s" % contact)
+            assert isinstance(contact, Contact)
+            assert contact.__class__.my_type == "contact"
+            assert contact.is_a_template() is True
+            assert contact.get_name() in ['generic-contact']
+        assert len(result.items) == 2
+        for uuid in result.items:
+            contact = result.items[uuid]
+            print("- %s" % contact)
+            assert isinstance(contact, Contact)
+            assert contact.__class__.my_type == "contact"
+            assert contact.is_a_template() is False
+            assert contact.get_name() in ['guest', 'admin']
+
+        # --- Hosts
+        # Serialize to send to another daemon
+        print("Hosts: %s" % alignak_cfg.hosts)
+        for host in alignak_cfg.hosts.templates:
+            print("- %s" % (alignak_cfg.hosts.templates[host]))
+        for host in alignak_cfg.hosts.items:
+            print("- %s" % (alignak_cfg.hosts.items[host]))
+        res = serialize(alignak_cfg.hosts, no_json=True, printing=False)
+        print("Serialized hosts: %s" % res)
+        # pprint(res)
+
+        # Un-serialize when received by a daemon
+        result = unserialize(res, printing=False)
+        print("Unserialized: %s" % result)
+        assert len(result.templates) == 9
+        for uuid in result.templates:
+            host = result.templates[uuid]
+            print("- %s" % host)
+            assert isinstance(host, Host)
+            assert host.__class__.my_type == "host"
+            assert host.is_a_template() is True
+            assert host.get_name() in ['generic-host', 'test-host', 'passive-host',
+                                       'no-importance', 'qualification', 'normal', 'important', 'production',
+                                       'top-for-business']
+        assert len(result.items) == 48
+        for uuid in result.items:
+            host = result.items[uuid]
+            print("- %s" % host)
+            assert isinstance(host, Host)
+            assert host.__class__.my_type == "host"
+            assert host.is_a_template() is False
+            # assert host.get_name() in ['guest', 'admin']
+
         # Serialization and hashing
         s_conf_part = serialize(alignak_cfg)
-        try:
-            s_conf_part = s_conf_part.encode('utf-8')
-        except UnicodeDecodeError:
-            pass
-        pprint(s_conf_part)
+        # pprint(s_conf_part)
+        # Update, remove this
+        # try:
+        #     s_conf_part = s_conf_part.encode('utf-8')
+        # except UnicodeDecodeError:
+        #     pass
 
-        data = json.loads(s_conf_part)
+        # Not a JSON object but a dict!
+        # data = json.loads(s_conf_part)
+        data = s_conf_part
         assert '__sys_python_module__' in data
         assert data['__sys_python_module__'] == "alignak.objects.config.Config"
         assert 'content' in data
         assert isinstance(data['content'], dict)
+
+        # print("Serialization content: ")
+        # pprint(data['content'])
+
+        for prop in ['host_perfdata_command', 'service_perfdata_command',
+                     'host_perfdata_file_processing_command',
+                     'service_perfdata_file_processing_command',
+                     'global_host_event_handler', 'global_service_event_handler']:
+            assert prop in data['content']
+            # If a command is set, then:
+            # assert '__sys_python_module__' in data['content'][prop]
+            # assert data['content'][prop]['__sys_python_module__'] == "alignak.commandcall.CommandCall"
+            # but the default configuration used in this test do not define any command!
+
+        # Now all objects exist in the attributes
+        print("After objects unserialization:")
+        for _, TheItems, category, _, _ in list(alignak_cfg.types_creations.values()):
+            print("- %s" % category)
+            if category in ['arbiters', 'schedulers', 'brokers',
+                            'pollers', 'reactionners', 'receivers']:
+                continue
+            assert category in data['content']
+            # pprint(data['content'][category])
+
+            objects = unserialize(data['content'][category], printing=False)
+            # pprint(objects)
+            assert isinstance(objects, TheItems)
+            print("- %s %s (saved: %s)" % (len(objects) if objects else 'no', category, getattr(self, 'len_' + category)))
+
+            # assert 'items' in objects
+            # assert 'templates' in objects
+            #
+            # Store and print the items length
+            assert len(objects) == getattr(self, 'len_' + category)
+            # print("- %s %s" % (len(objects) if objects else 'no', category))
 
         # Create a Config from unserialization (no file parsing)
         new_cfg = Config(data['content'], parsing=False)

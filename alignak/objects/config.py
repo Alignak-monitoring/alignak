@@ -84,7 +84,7 @@ from io import StringIO
 import json
 
 from alignak.alignakobject import get_a_new_object_id
-from alignak.misc.serialization import serialize, unserialize
+from alignak.misc.serialization import serialize, unserialize, default_serialize
 
 from alignak.commandcall import CommandCall
 from alignak.objects.item import Item
@@ -729,9 +729,10 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
         'event_broker_options':
             UnusedProp(text=u'event broker are replaced by modules '
-                            'with a real configuration template.'),
+                            u'with a real configuration template.'),
         'broker_module':
-            StringProp(default=''),
+            UnusedProp(text=u'event broker are replaced by modules '
+                            u'with a real configuration template.'),
 
         'modified_attributes':
             IntegerProp(default=0),
@@ -978,9 +979,9 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                                    getattr(self, 'config_name', 'unknown'))
     __str__ = __repr__
 
-    def serialize(self):
+    def serialize(self, no_json=True, printing=False):
         logger.debug("Serializing the configuration: %s", self)
-        res = super(Config, self).serialize()
+        res = super(Config, self).serialize(no_json=no_json, printing=printing)
 
         # The following are not in properties so not in the dict
         # todo: may be using an 'objects' dictionary for all the objects?
@@ -994,15 +995,19 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
             items = getattr(self, strclss)
             logger.debug("- %d %s", len(items), strclss)
-            res[strclss] = serialize(items)
+            res[strclss] = serialize(items, no_json=no_json, printing=printing)
 
-        # Some special properties
-        for prop in ['host_perfdata_command', 'service_perfdata_command',
-                     'global_host_event_handler', 'global_service_event_handler']:
-            # res[prop] = None
-            # if getattr(self, prop, None) not in [None, '', 'None']:
-            #     res[prop] = serialize(getattr(self, prop))
-            res[prop] = serialize(getattr(self, prop, None))
+        # # Some special properties
+        # todo: comment because it is still managed in the serialize function!
+        # for prop in ['host_perfdata_command', 'service_perfdata_command',
+        #              'host_perfdata_file_processing_command',
+        #              'service_perfdata_file_processing_command',
+        #              'global_host_event_handler', 'global_service_event_handler']:
+        #     # res[prop] = None
+        #     # if getattr(self, prop, None) not in [None, '', 'None']:
+        #     #     res[prop] = serialize(getattr(self, prop))
+        #     res[prop] = serialize(getattr(self, prop, None),
+        #                           no_json=no_json, printing=printing)
 
         res['macros'] = self.macros
         return res
@@ -1669,17 +1674,16 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         self.realms.prepare_satellites(satellites)
 
     def clean(self):
-        """Wrapper for calling the clean method of services attribute
+        """Wrapper for calling the clean method of all the configuration objects
 
         :return: None
         """
-        logger.debug("Cleaning configuration objects before configuration sending:")
+        logger.info("Cleaning configuration objects before configuration sending:")
         types_creations = self.__class__.types_creations
         for o_type in types_creations:
             (_, _, inner_property, _, _) = types_creations[o_type]
             logger.debug("  . for %s", inner_property, )
-            inner_object = getattr(self, inner_property)
-            inner_object.clean()
+            getattr(self, inner_property).clean()
 
     def warn_about_unmanaged_parameters(self):
         """used to raise warning if the user got parameter
@@ -1754,30 +1758,31 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         self.hosts.apply_dependencies()
         self.services.apply_dependencies(self.hosts)
 
-        logger.debug("Dependencies:")
-        for host in self.hosts:
-            logger.debug("host: %s", host)
-            for uuid in host.parent_dependencies:
-                logger.debug("  <- %s",
-                             self.hosts[uuid] if uuid in self.hosts else self.services[uuid])
-            for uuid in host.child_dependencies:
-                logger.debug("  -> %s",
-                             self.hosts[uuid] if uuid in self.hosts else self.services[uuid])
-
-        for host in self.hostdependencies:
-            logger.debug("hd: %s", host)
-
-        for svc in self.services:
-            logger.debug("service: %s", svc)
-            for uuid in svc.parent_dependencies:
-                logger.debug("  <- %s",
-                             self.hosts[uuid] if uuid in self.hosts else self.services[uuid])
-            for uuid in svc.child_dependencies:
-                logger.debug("  -> %s",
-                             self.hosts[uuid] if uuid in self.hosts else self.services[uuid])
-
-        for svc in self.servicedependencies:
-            logger.debug("sd: %s", svc)
+        # # For debugging purpose if needed...
+        # logger.debug("Dependencies:")
+        # for host in self.hosts:
+        #     logger.debug("host: %s", host)
+        #     for uuid in host.parent_dependencies:
+        #         logger.debug("  <- %s",
+        #                      self.hosts[uuid] if uuid in self.hosts else self.services[uuid])
+        #     for uuid in host.child_dependencies:
+        #         logger.debug("  -> %s",
+        #                      self.hosts[uuid] if uuid in self.hosts else self.services[uuid])
+        #
+        # for host in self.hostdependencies:
+        #     logger.debug("hd: %s", host)
+        #
+        # for svc in self.services:
+        #     logger.debug("service: %s", svc)
+        #     for uuid in svc.parent_dependencies:
+        #         logger.debug("  <- %s",
+        #                      self.hosts[uuid] if uuid in self.hosts else self.services[uuid])
+        #     for uuid in svc.child_dependencies:
+        #         logger.debug("  -> %s",
+        #                      self.hosts[uuid] if uuid in self.hosts else self.services[uuid])
+        #
+        # for svc in self.servicedependencies:
+        #     logger.debug("sd: %s", svc)
 
     def apply_inheritance(self):
         """Apply inheritance from the templates
@@ -2216,7 +2221,7 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                 if bp_item_uuid in self.hosts:
                     bp_item = self.hosts[bp_item_uuid]
                     notif_options = item.business_rule_host_notification_options
-                else:  # We have a service
+                else:
                     bp_item = self.services[bp_item_uuid]
                     notif_options = item.business_rule_service_notification_options
 
@@ -2226,9 +2231,11 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                 bp_item.act_depend_of_me.append((item.uuid, ['d', 'u', 's', 'f', 'c', 'w', 'x'],
                                                  '', True))
 
-                # TODO: Is it necessary? We already have this info in act_depend_* attributes
-                item.parent_dependencies.add(bp_item.uuid)
-                bp_item.child_dependencies.add(item.uuid)
+                # Parent / children relations
+                if bp_item.uuid not in item.parent_dependencies:
+                    item.parent_dependencies.append(bp_item.uuid)
+                if item.uuid not in bp_item.child_dependencies:
+                    bp_item.child_dependencies.append(item.uuid)
 
     def hack_old_nagios_parameters(self):
         # pylint: disable=too-many-branches
@@ -2446,7 +2453,7 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                     break
         logger.info('Alignak name is: %s', self.alignak_name)
 
-        # Globally unmanaged parameters
+        # Globally un-managed parameters
         if not self.read_config_silent:
             logger.info('Checking global parameters...')
 
@@ -2461,6 +2468,15 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         if self.global_service_event_handler and not self.global_service_event_handler.is_valid():
             self.add_error("global service event_handler '%s' is invalid"
                            % self.global_service_event_handler.command)
+
+        # If we got perfdata commands, they should be valid
+        if self.host_perfdata_command and not self.host_perfdata_command.is_valid():
+            self.add_error("host perfdata command '%s' is invalid"
+                           % self.host_perfdata_command.command)
+
+        if self.service_perfdata_command and not self.service_perfdata_command.is_valid():
+            self.add_error("service perfdata command '%s' is invalid"
+                           % self.service_perfdata_command.command)
 
         if not self.read_config_silent:
             logger.info('Checked')
@@ -3111,7 +3127,11 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
 
         for _, _, category, _, _ in list(self.types_creations.values()):
             try:
-                objs = [jsonify_r(i) for i in getattr(self, category)]
+                # Dump without the running properties and filter base properties
+                objs = [
+                    jsonify_r(i, running_properties=False,
+                              filter_base_properties=True) for i in getattr(self, category)
+                ]
             except (TypeError, AttributeError):  # pragma: no cover, simple protection
                 logger.warning("Dumping configuration, '%s' not present in the configuration",
                                category)
@@ -3132,8 +3152,11 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         try:
             logger.info('Dumping configuration to: %s', dump_file_name)
             fd = open(dump_file_name, "w")
-            fd.write(json.dumps(config_dump, indent=2, separators=(',', ':'), sort_keys=True))
+            fd.write(json.dumps(config_dump, ensure_ascii=False, sort_keys=True,
+                                indent=2, separators=(', ', ': '),
+                                default=default_serialize))
             fd.close()
             logger.info('Dumped')
         except (OSError, IndexError) as exp:  # pragma: no cover, should never happen...
-            logger.critical("Error when dumping configuration to %s: %s", dump_file_name, str(exp))
+            logger.critical("Error when dumping configuration to %s: %s",
+                            dump_file_name, str(exp))

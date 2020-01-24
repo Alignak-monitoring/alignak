@@ -375,9 +375,26 @@ class GenericInterface(object):
         :return: serialized list
         :rtype: str
         """
-        with self.app.lock:
-            res = self.app.get_results_from_passive(scheduler_instance_id)
-        return serialize(res, True)
+        # logger.warning("Get results for the scheduler: %s", scheduler_instance_id)
+        logger.debug("Get results for the scheduler: %s", scheduler_instance_id)
+
+        try:
+            with self.app.lock:
+                res = self.app.get_results_from_passive(scheduler_instance_id)
+
+            logger.debug("Got results: %s", res)
+            # logger.warning("Got: %s", res)
+            # for a in res:
+            #     logger.warning("-: %s", a)
+            #     logger.warning("-: %s", a.__dict__)
+
+            # Serialize but do not make it json encoded
+            res = serialize(res, no_json=True)
+        except Exception as exp:
+            logger.warning("_results, exception: %s", exp)
+            res = []
+
+        return res
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -389,9 +406,17 @@ class GenericInterface(object):
         :return: Brok list serialized
         :rtype: dict
         """
-        with self.app.broks_lock:
-            res = self.app.get_broks()
-        return serialize(res, True)
+        try:
+            with self.app.broks_lock:
+                res = self.app.give_broks()
+
+            # Serialize but do not make it json encoded
+            res = serialize(res, no_json=True)
+        except Exception as exp:
+            logger.warning("_broks, exception: %s", exp)
+            res = []
+
+        return res
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -403,6 +428,14 @@ class GenericInterface(object):
         :return: Events list serialized
         :rtype: list
         """
-        with self.app.events_lock:
-            res = self.app.get_events()
-        return serialize(res, True)
+        try:
+            with self.app.events_lock:
+                res = self.app.get_events()
+
+                # Serialize but do not make it json encoded
+                res = serialize(res, no_json=True)
+        except Exception as exp:
+            logger.warning("_events, exception: %s", exp)
+            res = []
+
+        return res

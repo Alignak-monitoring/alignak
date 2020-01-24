@@ -87,7 +87,7 @@ class TestNotificationWay(AlignakTest):
             'configuration_warnings': [],
             'customs': {},
             'plus': {},
-            'tags': set([]),
+            'tags': [],
             'downtimes': {},
             'conf_is_correct': True
         })

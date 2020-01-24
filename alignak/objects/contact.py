@@ -202,7 +202,7 @@ class Contact(Item):
     def __str__(self):  # pragma: no cover
         return '<Contact%s %s, uuid=%s, use: %s />' \
                % (' template' if self.is_a_template() else '', self.get_full_name(), self.uuid,
-                  getattr(self, 'use', None))
+                  getattr(self, 'tags', None))
     __repr__ = __str__
 
     def get_full_name(self):
@@ -361,7 +361,7 @@ class Contact(Item):
 
         # There is a case where there is no nw: when there is not special_prop defined
         # at all!!
-        if not self.notificationways:
+        if not getattr(self, 'notificationways', None):
             for prop in self.special_properties:
                 if not hasattr(self, prop):
                     self.add_error("[contact::%s] %s property is missing"

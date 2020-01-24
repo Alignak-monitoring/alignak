@@ -23,7 +23,6 @@
 
 import uuid
 from copy import copy
-from alignak.property import SetProp
 
 
 def get_a_new_object_id():
@@ -67,8 +66,8 @@ class AlignakObject(object):
                 self.uuid = get_a_new_object_id()
             return
 
-        # Fill the default if we are not parsing a configuration. This will define some probable
-        # missing properties
+        # Fill the default if we are not parsing a configuration.
+        # This will define some probable missing properties
         self.fill_default()
 
         if params is None:
@@ -83,20 +82,15 @@ class AlignakObject(object):
         all_props.update(getattr(self, "running_properties", {}))
 
         for key, value in params.items():
-            if key in all_props and isinstance(all_props[key], SetProp):
-                setattr(self, key, set(value))
-            else:
-                setattr(self, key, value)
+            setattr(self, key, value)
 
-    def serialize(self):
+    def serialize(self, no_json=True, printing=False):
         """This function serializes into a simple dictionary object.
 
         It is used when transferring data to other daemons over the network (http)
 
         Here is the generic function that simply export attributes declared in the
         properties dictionary of the object.
-
-        Note that a SetProp property will be serialized as a list.
 
         :return: Dictionary containing key and value from properties
         :rtype: dict
@@ -110,8 +104,6 @@ class AlignakObject(object):
                 continue
 
             res[prop] = getattr(self, prop)
-            if isinstance(self.__class__.properties[prop], SetProp):
-                res[prop] = list(getattr(self, prop))
 
         return res
 

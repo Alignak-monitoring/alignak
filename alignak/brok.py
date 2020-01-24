@@ -52,7 +52,7 @@ import time
 from datetime import datetime
 
 from alignak.alignakobject import get_a_new_object_id
-from alignak.misc.serialization import serialize, unserialize
+from alignak.misc.serialization import serialize, unserialize, default_serialize
 
 
 class Brok(object):
@@ -91,6 +91,8 @@ class Brok(object):
     def __init__(self, params, parsing=True):
         # pylint: disable=unused-argument
         """
+        Note that the data attribute of a Brok is a serialized storage!
+
         :param params: initialization parameters
         :type params: dict
         :param parsing: not used but necessary for serialization/unserialization
@@ -99,14 +101,17 @@ class Brok(object):
         self.uuid = params.get('uuid', get_a_new_object_id())
         self.prepared = params.get('prepared', False)
         self.creation_time = params.get('creation_time', time.time())
-        self.type = params.get('type', u'unknown')
         self.instance_id = params.get('instance_id', None)
+        self.type = params.get('type', u'unknown')
 
         # Need to behave differently when un-serializing
         if 'uuid' in params:
             self.data = params['data']
-        else:
-            self.data = serialize(params['data'])
+            return
+
+        # serialize data as json
+        self.data = params['data']
+        # self.data = serialize(params['data'], no_json=True, printing=False)
 
     def __repr__(self):
         ct = datetime.fromtimestamp(self.creation_time).strftime("%Y-%m-%d %H:%M:%S.%f")
@@ -118,7 +123,7 @@ class Brok(object):
 
         If the type is monitoring_log then the Brok contains a monitoring event
         (alert, notification, ...) information. This function will return a tuple
-        with the creation time, the level and message information
+        with the creation time, the level and the message information
 
         :return: tuple with date, level and message
         :rtype: tuple
@@ -126,33 +131,39 @@ class Brok(object):
         self.prepare()
         return self.creation_time, self.data['level'], self.data['message']
 
-    def serialize(self):
+    def serialize(self, no_json=True, printing=False):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
         Here we directly return all attributes
 
-        :return: json representation of a Brok
+        :return: serialized Brok
         :rtype: dict
         """
         return {
             "uuid": self.uuid,
-            "type": self.type,
-            "instance_id": self.instance_id,
             "prepared": self.prepared,
             "creation_time": self.creation_time,
-            "data": self.data
+            "instance_id": self.instance_id,
+            "type": self.type,
+            "data": serialize(self.data, no_json=False, printing=False)
         }
 
     def prepare(self):
         """Un-serialize data from data attribute and add instance_id key if necessary
 
-        :return: None
+        :return: the brok data part
+        :rtype: dict
         """
-        # Maybe the Brok is a old daemon one or was already prepared
+        # Maybe the Brok is an old daemon one or was already prepared
         # if so, the data is already ok
-        if hasattr(self, 'prepared') and not self.prepared:
-            self.data = unserialize(self.data)
+        if not getattr(self, 'prepared', False):
+            if not isinstance(self.data, dict):
+                # unserialize json data to prepare the brok
+                self.data = unserialize(self.data, no_json=False, printing=False)
+            # todo: check what for? and remove this...
             if self.instance_id:
                 self.data['instance_id'] = self.instance_id
         self.prepared = True
+
+        return self.data

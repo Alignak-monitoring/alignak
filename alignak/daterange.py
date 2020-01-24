@@ -212,6 +212,9 @@ class Timerange(AlignakObject):
         if not parsing:
             super(Timerange, self).__init__(params, parsing=parsing)
             return
+
+        super(Timerange, self).__init__(params, parsing=parsing)
+
         if entry is not None:
             pattern = r'(\d\d):(\d\d)-(\d\d):(\d\d)'
             matches = re.match(pattern, entry)
@@ -230,7 +233,7 @@ class Timerange(AlignakObject):
             self.mend = params["mend"]
             self.is_valid = params["is_valid"]
 
-    def serialize(self):
+    def serialize(self, no_json=True, printing=False):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
@@ -239,9 +242,11 @@ class Timerange(AlignakObject):
         :return: json representation of a Timerange
         :rtype: dict
         """
-        return {"hstart": self.hstart, "mstart": self.mstart,
-                "hend": self.hend, "mend": self.mend,
-                "is_valid": self.is_valid}
+        return {
+            "hstart": self.hstart, "mstart": self.mstart,
+            "hend": self.hend, "mend": self.mend,
+            "is_valid": self.is_valid
+    }
 
     def __str__(self):  # pragma: no cover
         return str(self.__dict__)
@@ -447,11 +452,11 @@ class AbstractDaterange(AlignakObject):
         return not self.is_time_day_valid(timestamp)
 
     def get_next_future_timerange_valid(self, timestamp):
-        """Get the next valid timerange (next timerange start in timeranges attribute)
+        """Get the next valid time range (next timerange start in timeranges attribute)
 
         :param timestamp: base time
         :type timestamp: int
-        :return: next time when a timerange is valid
+        :return: next time when a time range is valid
         :rtype: None | int
         """
         sec_from_morning = get_sec_from_morning(timestamp)
@@ -680,8 +685,18 @@ class Daterange(AbstractDaterange):
         """
         if not parsing:
             super(Daterange, self).__init__(params, parsing=parsing)
+            # Specific time ranges handling
+            if 'timeranges' in params:
+                self.timeranges = [Timerange(params=t) for t in params['timeranges']]
+            else:
+                self.timeranges = []
+                if 'other' in params:
+                    for timeinterval in params['other'].split(','):
+                        self.timeranges.append(Timerange(timeinterval.strip()))
             return
-        super(Daterange, self).__init__()
+
+        super(Daterange, self).__init__(params, parsing=parsing)
+
         self.syear = int(params['syear'])
         self.smon = int(params['smon'])
         self.smday = int(params['smday'])
@@ -704,7 +719,7 @@ class Daterange(AbstractDaterange):
     def get_start_and_end_time(self, ref=None):
         raise NotImplementedError
 
-    def serialize(self):
+    def serialize(self, no_json=True, printing=False):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
@@ -713,12 +728,14 @@ class Daterange(AbstractDaterange):
         :return: json representation of a Daterange
         :rtype: dict
         """
-        return {'syear': self.syear, 'smon': self.smon, 'smday': self.smday,
-                'swday': self.swday, 'swday_offset': self.swday_offset,
-                'eyear': self.eyear, 'emon': self.emon, 'emday': self.emday,
-                'ewday': self.ewday, 'ewday_offset': self.ewday_offset,
-                'skip_interval': self.skip_interval, 'other': self.other,
-                'timeranges': [t.serialize() for t in self.timeranges]}
+        return {
+            'syear': self.syear, 'smon': self.smon, 'smday': self.smday,
+            'swday': self.swday, 'swday_offset': self.swday_offset,
+            'eyear': self.eyear, 'emon': self.emon, 'emday': self.emday,
+            'ewday': self.ewday, 'ewday_offset': self.ewday_offset,
+            'skip_interval': self.skip_interval, 'other': self.other,
+            'timeranges': [t.serialize() for t in self.timeranges]
+        }
 
 
 class CalendarDaterange(Daterange):
@@ -751,10 +768,7 @@ class StandardDaterange(AbstractDaterange):
         :type other: str
         :return: None
         """
-        if not parsing:
-            super(StandardDaterange, self).__init__(params, parsing)
-            return
-
+        super(StandardDaterange, self).__init__(params, parsing=parsing)
         self.other = params['other']
 
         if 'timeranges' in params:
@@ -766,7 +780,7 @@ class StandardDaterange(AbstractDaterange):
 
         self.day = params['day']
 
-    def serialize(self):
+    def serialize(self, no_json=True, printing=False):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
@@ -775,8 +789,10 @@ class StandardDaterange(AbstractDaterange):
         :return: json representation of a Daterange
         :rtype: dict
         """
-        return {'day': self.day, 'other': self.other,
-                'timeranges': [t.serialize() for t in self.timeranges]}
+        return {
+            'day': self.day, 'other': self.other,
+            'timeranges': [t.serialize() for t in self.timeranges]
+        }
 
     def is_correct(self):
         """Check if the Daterange is correct : weekdays are valid

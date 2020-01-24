@@ -55,7 +55,7 @@ from six import string_types
 
 from alignak.action import Action
 from alignak.brok import Brok
-from alignak.property import BoolProp, IntegerProp, StringProp, SetProp, ListProp, FULL_STATUS
+from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, FULL_STATUS
 from alignak.autoslots import AutoSlots
 
 
@@ -107,7 +107,7 @@ class Notification(Action):  # pylint: disable=too-many-instance-attributes
             BoolProp(default=False),
         # Keep a list of currently active escalations
         'already_start_escalations':
-            SetProp(default=set()),
+            ListProp(default=[]),
         'type':
             StringProp(default=u'PROBLEM'),
 
@@ -200,19 +200,24 @@ class Notification(Action):  # pylint: disable=too-many-instance-attributes
         self.fill_data_brok_from(data, FULL_STATUS)
         return Brok({'type': 'notification_raise', 'data': data})
 
-    def serialize(self):
+    def serialize(self, no_json=True, printing=False):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
         Here we directly return all attributes
 
-        :return: json representation of a Timeperiod
+        :return: json representation of a Notification
         :rtype: dict
         """
         res = super(Notification, self).serialize()
 
-        if res['command_call'] is not None:
-            if not isinstance(res['command_call'], string_types) and \
-                    not isinstance(res['command_call'], dict):
-                res['command_call'] = res['command_call'].serialize()
+        # Do not serialize the command call
+        if 'command_call' in res:
+            res['command_call'] = 'n/a'
+        # logger.debug("Serialized notification: %s", res)
+        # if res['command_call'] is not None:
+        #     if not isinstance(res['command_call'], string_types) and \
+        #             not isinstance(res['command_call'], dict):
+        #         res['command_call'] = res['command_call'].serialize()
+
         return res

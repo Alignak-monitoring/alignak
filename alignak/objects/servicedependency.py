@@ -97,11 +97,11 @@ class Servicedependency(Item):
             BoolProp(default=False)
     })
 
-    def __str__(self):  # pragma: no cover
-        return '<Servicedependency %s %s, uuid=%s, use: %s />' \
-               % ('template' if self.is_a_template() else '', self.get_full_name(), self.uuid,
-                  getattr(self, 'use', None))
-    __repr__ = __str__
+    # def __str__(self):  # pragma: no cover
+    #     return '<Servicedependency %s %s, uuid=%s, use: %s />' \
+    #            % ('template' if self.is_a_template() else '', self.get_full_name(), self.uuid,
+    #               getattr(self, 'use', None))
+    # __repr__ = __str__
 
     @property
     def service_relation(self):

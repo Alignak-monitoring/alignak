@@ -150,14 +150,16 @@ class NotificationWay(Item):
         """
         return 'n' not in getattr(self, 'service_notification_options', ['n'])
 
-    def serialize(self):
+    def serialize(self, no_json=True, printing=False):
         res = super(NotificationWay, self).serialize()
 
         res['service_notification_commands'] = \
-            [elem.serialize() for elem in getattr(self, 'service_notification_commands')]
+            [elem.serialize(no_json=no_json, printing=printing)
+             for elem in getattr(self, 'service_notification_commands')]
 
         res['host_notification_commands'] = \
-            [elem.serialize() for elem in getattr(self, 'host_notification_commands')]
+            [elem.serialize(no_json=no_json, printing=printing)
+             for elem in getattr(self, 'host_notification_commands')]
 
         return res
 

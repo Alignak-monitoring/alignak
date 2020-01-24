@@ -242,7 +242,7 @@ class Service(SchedulingItem):
         return '<Service%s %s, uuid=%s, %s (%s), use: %s />' \
                % (' template' if self.is_a_template() else '', self.get_full_name(),
                   getattr(self, 'uuid', 'n/a'), getattr(self, 'state', 'n/a'),
-                  getattr(self, 'state_type', 'n/a'), getattr(self, 'use', None))
+                  getattr(self, 'state_type', 'n/a'), getattr(self, 'tags', None))
     __repr__ = __str__
 
     @property
@@ -1305,6 +1305,9 @@ class Services(SchedulingItems):
         host_name = getattr(template, 'host_name', '')
         logger.debug("Adding a %s template: host_name: %s, name: %s, service_description: %s",
                      self.inner_class.my_type, host_name, name, service_description)
+        # print("Adding a %s template: host_name: '%s', name: '%s', service_description: '%s'"
+        #       % (self.inner_class.my_type, host_name, name, service_description))
+        # print("-> template %s / %s: %s" % (template.is_a_template(), getattr(template, 'register', 'XxX'), template))
 
         if not name and not host_name:
             template.add_error("a %s template has been defined without name nor host_name. "
@@ -1545,7 +1548,7 @@ class Services(SchedulingItems):
                         setattr(serv, prop, getattr(host, prop))
 
     def apply_dependencies(self, hosts):
-        """Wrapper to loop over services and call Service.fill_daddy_dependency()
+        """Loop over services and fill host dependency
 
         :return: None
         """
@@ -1553,14 +1556,20 @@ class Services(SchedulingItems):
             if service.host and service.host_dependency_enabled:
                 host = hosts[service.host]
                 if host.active_checks_enabled:
+                    # Add host in the list
                     service.act_depend_of.append(
                         (service.host, ['d', 'x', 's', 'f'], '', True)
                     )
+                    # Add service in the host
                     host.act_depend_of_me.append(
                         (service.uuid, ['d', 'x', 's', 'f'], '', True)
                     )
-                    host.child_dependencies.add(service.uuid)
-                    service.parent_dependencies.add(service.host)
+
+                    # Parent / children relations between host and service
+                    if service.uuid not in host.child_dependencies:
+                        host.child_dependencies.append(service.uuid)
+                    if service.host not in service.parent_dependencies:
+                        service.parent_dependencies.append(service.host)
 
     def clean(self):
         """Remove services without host object linked to
@@ -1570,11 +1579,13 @@ class Services(SchedulingItems):
         :return: None
         """
         to_del = []
-        for serv in self:
-            if not serv.host:
-                to_del.append(serv.uuid)
+        for service in self:
+            if not service.host:
+                to_del.append(service.uuid)
         for service_uuid in to_del:
             del self.items[service_uuid]
+
+        super(Services, self).clean()
 
     def explode_services_from_hosts(self, hosts, service, hnames):
         """
@@ -1644,7 +1655,10 @@ class Services(SchedulingItems):
         # Creates a real service instance from the template
         new_s = service.copy()
         new_s.host_name = host_name
-        new_s.register = 1
+        new_s.register = True
+        # Indicate which template is used.
+        new_s.imported_from = u'alignak-template-' + service.get_full_name()
+
         self.add_item(new_s)
         return new_s
 
@@ -1665,7 +1679,8 @@ class Services(SchedulingItems):
                          service_template.get_name())
             return
 
-        logger.debug("Explode services %s for the host: %s", service_template.get_name(), hname)
+        logger.debug("Explode services %s for the host: %s",
+                     service_template.get_name(), hname)
 
         # Now really create the services
         if is_complex_expr(hname):

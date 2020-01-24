@@ -198,7 +198,7 @@ class Timeperiod(Item):
         self.cache = {}  # For tuning purpose only
         self.invalid_cache = {}  # same but for invalid search
 
-        # We use the uuid presence to assume we are reserializing
+        # We use the uuid presence to assume we are un-serializing
         if not parsing:
             self.uuid = params['uuid']
         else:
@@ -245,7 +245,7 @@ class Timeperiod(Item):
         string += ' />'
         return string
 
-    def serialize(self):
+    def serialize(self, no_json=True, printing=False):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
@@ -254,13 +254,14 @@ class Timeperiod(Item):
         :return: json representation of a Timeperiod
         :rtype: dict
         """
-        res = super(Timeperiod, self).serialize()
+        res = super(Timeperiod, self).serialize(no_json=no_json, printing=printing)
 
-        res['dateranges'] = []
-        for elem in self.dateranges:
-            res['dateranges'].append({'__sys_python_module__': "%s.%s" % (elem.__module__,
-                                                                          elem.__class__.__name__),
-                                      'content': elem.serialize()})
+        # res['dateranges'] = []
+        # for elem in self.dateranges:
+        #     res['dateranges'].append({'__sys_python_module__': "%s.%s" % (elem.__module__,
+        #                                                                   elem.__class__.__name__),
+        #                               'content': elem.serialize(no_json=no_json,
+        #                                                         printing=printing)})
 
         return res
 

@@ -124,12 +124,12 @@ class Alignak(BaseSatellite):
 
         self.first_scheduling = False
 
-    def get_broks(self, broker_name):
-        """Send broks to a specific broker
+    def give_broks(self, broker_name):
+        """Give broks for a specific broker
 
         :param broker_name: broker name to send broks
         :type broker_name: str
-        :greturn: dict of brok for this broker
+        :return: dict of brok for this broker
         :rtype: dict[alignak.brok.Brok]
         """
         logger.debug("Broker %s requests my broks list", broker_name)
@@ -144,6 +144,7 @@ class Alignak(BaseSatellite):
                     if getattr(brok, 'sent_to_externals', False):
                         res.append(brok)
                         brok.got = True
+                        logger.debug("brok: %s", brok)
                 broker_link.broks = [b for b in broker_link.broks if not getattr(b, 'got', False)]
                 logger.debug("Providing %d broks to %s", len(res), broker_name)
                 break
@@ -423,7 +424,7 @@ class Alignak(BaseSatellite):
             if not self.have_modules:
                 try:
                     logger.debug("Modules configuration: %s", self.cur_conf['modules'])
-                    self.modules = unserialize(self.cur_conf['modules'], no_load=True)
+                    self.modules = unserialize(self.cur_conf['modules'], no_json=True)
                 except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
                     logger.error('Cannot un-serialize modules configuration '
                                  'received from arbiter: %s', exp)

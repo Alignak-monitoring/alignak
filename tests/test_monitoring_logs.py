@@ -165,13 +165,13 @@ class TestMonitoringLogs(AlignakTest):
             # Get sure that host is UP
             self.check(frozen_datetime, host, 0, 'Host is UP',
                        [('info', 'ACTIVE HOST CHECK: test_host_0;UP;0;Host is UP')])
-    
+
             # Service is ok
             self.check(frozen_datetime, svc, 0, 'Service is OK',
                        [('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;0;Service is OK')])
             self.check(frozen_datetime, svc, 0, 'Service is OK',
                        [('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Service is OK')])
-    
+
             # Service goes warning / SOFT
             self.check(frozen_datetime, svc, 1, 'Service is WARNING',
                        [('warning',
@@ -181,7 +181,7 @@ class TestMonitoringLogs(AlignakTest):
                         ('warning',
                          'SERVICE ALERT: test_host_0;test_ok_0;WARNING;SOFT;1;Service is WARNING'),
                         ])
-    
+
             # Service goes warning / HARD
             # Get a service check, an alert and a notification
             self.check(frozen_datetime, svc, 1, 'Service is WARNING',
@@ -195,17 +195,17 @@ class TestMonitoringLogs(AlignakTest):
                          'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
                          'WARNING;1;notify-service;Service is WARNING'),
                         ])
-    
+
             # Notification not raised - too soon!
             self.check(frozen_datetime, svc, 1, 'Service is WARNING',
                        [('warning',
                          'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;WARNING;2;Service is WARNING')])
-    
+
             # Notification not raised - too soon!
             self.check(frozen_datetime, svc, 1, 'Service is WARNING',
                        [('warning',
                          'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;WARNING;2;Service is WARNING')])
-    
+
             # Service goes OK
             self.check(frozen_datetime, svc, 0, 'Service is OK',
                        [('info',
@@ -218,11 +218,11 @@ class TestMonitoringLogs(AlignakTest):
                          'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;OK;0;'
                          'notify-service;Service is OK')
                         ])
-    
+
             self.check(frozen_datetime, svc, 0, 'Service is OK',
                        [('info',
                          'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Service is OK')])
-    
+
             # Service goes CRITICAL
             self.check(frozen_datetime, svc, 2, 'Service is CRITICAL',
                        [('error',
@@ -232,7 +232,7 @@ class TestMonitoringLogs(AlignakTest):
                         ('error',
                          'SERVICE EVENT HANDLER: test_host_0;test_ok_0;CRITICAL;SOFT;1;eventhandler'),
                         ])
-    
+
             self.check(frozen_datetime, svc, 2, 'Service is CRITICAL',
                        [('error',
                          'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;CRITICAL;1;Service is CRITICAL'),
@@ -244,7 +244,7 @@ class TestMonitoringLogs(AlignakTest):
                          'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
                             'CRITICAL;1;notify-service;Service is CRITICAL')
                         ])
-    
+
             # Service goes OK
             self.check(frozen_datetime, svc, 0, 'Service is OK',
                        [('info',
@@ -257,8 +257,8 @@ class TestMonitoringLogs(AlignakTest):
                          'SERVICE NOTIFICATION: test_contact;test_host_0;test_ok_0;'
                          'OK;0;notify-service;Service is OK')
                         ])
-    
-    
+
+
             self.check(frozen_datetime, svc, 0, 'Service OK',
                        [('info', 'ACTIVE SERVICE CHECK: test_host_0;test_ok_0;OK;1;Service OK')])
 
@@ -289,32 +289,32 @@ class TestMonitoringLogs(AlignakTest):
 
             #  Host active checks
             self.check(frozen_datetime, host, 0, 'Host is UP', [])
-    
+
             self.check(frozen_datetime, host, 0, 'Host is UP', [])
-    
+
             # Host goes DOWN / SOFT
             self.check(frozen_datetime, host, 2, 'Host is DOWN',
                        [('error', 'HOST ALERT: test_host_0;DOWN;SOFT;1;Host is DOWN')])
 
             self.check(frozen_datetime, host, 2, 'Host is DOWN',
                        [('error', 'HOST ALERT: test_host_0;DOWN;SOFT;2;Host is DOWN')])
-    
+
             # Host goes DOWN / HARD
             self.check(frozen_datetime, host, 2, 'Host is DOWN',
                        [('error', 'HOST ALERT: test_host_0;DOWN;HARD;3;Host is DOWN')])
-    
+
             # Host notification raised
             self.check(frozen_datetime, host, 2, 'Host is DOWN', [])
-    
+
             self.check(frozen_datetime, host, 2, 'Host is DOWN', [])
-    
+
             #  Host goes UP / HARD
             #  Get an host check, an alert and a notification
             self.check(frozen_datetime, host, 0, 'Host is UP',
                        [('info', 'HOST ALERT: test_host_0;UP;HARD;3;Host is UP')])
-    
+
             self.check(frozen_datetime, host, 0, 'Host is UP', [])
-    
+
             self.check(frozen_datetime, host, 0, 'Host is UP', [])
 
     def test_logs_services_disabled(self):
@@ -349,45 +349,45 @@ class TestMonitoringLogs(AlignakTest):
 
             #  Get sure that host is UP
             self.check(frozen_datetime, host, 0, 'Host is UP', [])
-    
+
             # Service is ok
             self.check(frozen_datetime, svc, 0, 'Service is OK', [])
             self.check(frozen_datetime, svc, 0, 'Service is OK', [])
-    
+
             #  Service goes warning / SOFT
             self.check(frozen_datetime, svc, 1, 'Service is WARNING',
                        [('warning',
                          'SERVICE ALERT: test_host_0;test_ok_0;WARNING;SOFT;1;Service is WARNING')])
-    
+
             #  Service goes warning / HARD
             # Get a service check, an alert and a notification
             self.check(frozen_datetime, svc, 1, 'Service is WARNING',
                        [('warning', 'SERVICE ALERT: test_host_0;test_ok_0;WARNING;HARD;2;Service is WARNING')])
-    
+
             # Service notification raised
             self.check(frozen_datetime, svc, 1, 'Service is WARNING', [])
-    
+
             self.check(frozen_datetime, svc, 1, 'Service is WARNING', [])
-    
+
             # Service goes OK
             self.check(frozen_datetime, svc, 0, 'Service is OK',
                        [('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Service is OK')])
-    
+
             self.check(frozen_datetime, svc, 0, 'Service is OK', [])
-    
+
             # Service goes CRITICAL
             self.check(frozen_datetime, svc, 2, 'Service is CRITICAL',
                        [('error',
                          'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;SOFT;1;Service is CRITICAL')])
-    
+
             self.check(frozen_datetime, svc, 2, 'Service is CRITICAL',
                        [('error',
                          'SERVICE ALERT: test_host_0;test_ok_0;CRITICAL;HARD;2;Service is CRITICAL')])
-    
+
             # Service goes OK
             self.check(frozen_datetime, svc, 0, 'Service is OK',
                        [('info', 'SERVICE ALERT: test_host_0;test_ok_0;OK;HARD;2;Service is OK')])
-    
+
             self.check(frozen_datetime, svc, 0, 'Service OK', [])
 
     def test_external_commands(self):
@@ -702,19 +702,19 @@ class TestMonitoringLogs(AlignakTest):
 
         self.assertIsNot(tp, None)
 
-        data = unserialize(tp.check_and_log_activation_change().data)
+        data = tp.check_and_log_activation_change().prepare()
         assert data['level'] == 'info'
         assert data['message'] == 'TIMEPERIOD TRANSITION: 24x7;-1;1'
 
         # Now make this tp unable to be active again by removing al it's daterange
         dr = tp.dateranges
         tp.dateranges = []
-        data = unserialize(tp.check_and_log_activation_change().data)
+        data = tp.check_and_log_activation_change().prepare()
         assert data['level'] == 'info'
         assert data['message'] == 'TIMEPERIOD TRANSITION: 24x7;1;0'
 
         # Ok, let get back to work
         tp.dateranges = dr
-        data = unserialize(tp.check_and_log_activation_change().data)
+        data = tp.check_and_log_activation_change().prepare()
         assert data['level'] == 'info'
         assert data['message'] == 'TIMEPERIOD TRANSITION: 24x7;0;1'

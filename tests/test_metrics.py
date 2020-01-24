@@ -365,7 +365,7 @@ class TestMetricsSetup(AlignakTest):
                 "has_been_checked": 1,
                 "perf_data": "uptime=1200;rta=0.049000ms;2.000000;3.000000;0.000000 pl=0%;50;80;0"
             }
-            b = Brok({'data': hcr, 'type': 'host_check_result'}, False)
+            b = Brok({'data': hcr, 'type': 'host_check_result'})
             self._broker_daemon.manage_brok(b)
             self.show_logs()
             self.assert_log_count(2)
@@ -426,7 +426,7 @@ class TestMetricsSetup(AlignakTest):
                 "start_time": 0,
                 "end_time": 0
             }
-            b = Brok({'data': scr, 'type': 'service_check_result'}, False)
+            b = Brok({'data': scr, 'type': 'service_check_result'})
             self._broker_daemon.manage_brok(b)
             self.show_logs()
             self.assert_log_count(2)
@@ -438,7 +438,7 @@ class TestMetricsSetup(AlignakTest):
             hcr = {
                 "host_name": "srv001",
             }
-            b = Brok({'data': hcr, 'type': 'initial_host_status'}, False)
+            b = Brok({'data': hcr, 'type': 'initial_host_status'})
             self._broker_daemon.manage_brok(b)
             self.show_logs()
             # The module inner cache stored the host
@@ -452,7 +452,7 @@ class TestMetricsSetup(AlignakTest):
                 "host_name": "srv001",
                 "service_description": "disks"
             }
-            b = Brok({'data': hcr, 'type': 'initial_service_status'}, False)
+            b = Brok({'data': hcr, 'type': 'initial_service_status'})
             self._broker_daemon.manage_brok(b)
             self.show_logs()
             # The module inner cache stored the host
@@ -508,7 +508,7 @@ class TestMetricsSetup(AlignakTest):
                 "has_been_checked": 1,
                 "perf_data": "uptime=1200 rta=0.049000ms;2.000000;3.000000;0.000000 pl=0%;50;80;0"
             }
-            b = Brok({'data': hcr, 'type': 'host_check_result'}, False)
+            b = Brok({'data': hcr, 'type': 'host_check_result'})
             self._broker_daemon.manage_brok(b)
 
             self.show_logs()
@@ -569,7 +569,7 @@ class TestMetricsSetup(AlignakTest):
                 "has_been_checked": 1,
                 "perf_data": "/=2643MB;5948;5958;0;5968 /boot=68MB;88;93;0;98 /home=69357MB;253404;253409;0;253414 /var/log=818MB;970;975;0;980"
             }
-            b = Brok({'data': scr, 'type': 'service_check_result'}, False)
+            b = Brok({'data': scr, 'type': 'service_check_result'})
             self._broker_daemon.manage_brok(b)
 
             self.show_logs()
@@ -686,7 +686,7 @@ class TestMetricsRun(AlignakTest):
             "has_been_checked": 1,
             "perf_data": "uptime=1200;rta=0.049000ms;2.000000;3.000000;0.000000 pl=0%;50;80;0"
         }
-        b = Brok({'data': hcr, 'type': 'host_check_result'}, False)
+        b = Brok({'data': hcr, 'type': 'host_check_result'})
         self._broker_daemon.manage_brok(b)
         self.show_logs()
         self.assert_log_count(0)
@@ -745,7 +745,7 @@ class TestMetricsRun(AlignakTest):
             "start_time": 0,
             "end_time": 0
         }
-        b = Brok({'data': scr, 'type': 'service_check_result'}, False)
+        b = Brok({'data': scr, 'type': 'service_check_result'})
         self._broker_daemon.manage_brok(b)
         self.show_logs()
         self.assert_log_count(0)

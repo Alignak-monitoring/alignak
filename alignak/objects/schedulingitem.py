@@ -69,7 +69,14 @@ import time
 from datetime import datetime
 import traceback
 import logging
-import numpy
+
+# pylint: disable=unused-import
+NUMPY = True
+try:
+    # use numpy if installed
+    import numpy
+except ImportError:  # pragma: no cover
+    NUMPY = False
 
 from alignak.misc.serialization import serialize, unserialize
 from alignak.objects.item import Item
@@ -78,11 +85,10 @@ from alignak.objects.commandcallitem import CommandCallItems
 from alignak.action import (ACT_STATUS_WAIT_CONSUME, ACT_STATUS_ZOMBIE,
                             ACT_STATUS_WAIT_DEPEND, ACT_STATUS_WAITING_ME, ACT_STATUS_POLLED)
 from alignak.check import Check
-from alignak.property import (BoolProp, IntegerProp, FloatProp, SetProp,
+from alignak.property import (BoolProp, IntegerProp, FloatProp,
                               CharProp, StringProp, ListProp, DictProp,
                               FULL_STATUS, CHECK_RESULT)
-from alignak.util import (to_serialized, from_serialized, dict_to_serialized_dict,
-                          from_set_to_list, from_list_to_set)
+from alignak.util import (to_serialized, from_serialized, dict_to_serialized_dict)
 from alignak.notification import Notification
 from alignak.macroresolver import MacroResolver
 from alignak.eventhandler import EventHandler
@@ -364,23 +370,21 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
             StringProp(default='', retention=True),
         'customs':
             DictProp(default={}, fill_brok=[FULL_STATUS]),
-        # Warning: for the notified_contacts retention save,
-        # we save only the names of the contacts, and we should RELINK
-        # them when we load it.
-        # use for having all contacts we have notified
+        # Warning: for the notified_contacts sent to the retention,
+        # we only save the names of the contacts, and we will relink
+        # them on retention loading.
         'notified_contacts':
-            SetProp(default=set(), retention=True,
-                    retention_preparation=from_set_to_list, retention_restoration=from_list_to_set),
+            ListProp(default=[], retention=True),
         'notified_contacts_ids':
-            SetProp(default=set()),
+            ListProp(default=[]),
         'in_scheduled_downtime':
             BoolProp(default=False, fill_brok=[FULL_STATUS, CHECK_RESULT], retention=True),
         'in_scheduled_downtime_during_last_check':
             BoolProp(default=False, retention=True),
         'actions':
-            ListProp(default=[]),  # put here checks and notif raised
+            ListProp(default=[]),
         'broks':
-            ListProp(default=[]),  # and here broks raised
+            ListProp(default=[]),
 
         # Problem/impact part
         'is_problem':
@@ -422,11 +426,11 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         # we are depending in a hostdependency
         # or even if we are business based.
         'parent_dependencies':
-            SetProp(default=set(), fill_brok=[FULL_STATUS]),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         # Here it's the guys that depend on us. So it's the total
         # opposite of the parent_dependencies
         'child_dependencies':
-            SetProp(default=set(), fill_brok=[FULL_STATUS]),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
         # Manage the unknown/unreachable during hard state
         'in_hard_unknown_reach_phase':
             BoolProp(default=False, retention=True),
@@ -462,7 +466,7 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         'criticity': 'business_impact',
     }
 
-    special_properties = []
+    special_properties = ()
 
     def __init__(self, params, parsing=True):
         if not parsing:
@@ -505,14 +509,23 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         """Simple property renaming for better API;)"""
         return self.in_scheduled_downtime
 
-    def serialize(self):
-        res = super(SchedulingItem, self).serialize()
-
-        for prop in ['check_command', 'event_handler', 'snapshot_command',
-                     'business_rule', 'acknowledgement']:
-            res[prop] = serialize(getattr(self, prop, None))
-
-        return res
+    # fixme: Item base class method seems to be enough!
+    # def serialize(self, no_json=True, printing=False):
+    #     if self.my_type == 'service':
+    #         print("*** Serializing service (SI): %s" % self)
+    #
+    #     res = super(SchedulingItem, self).serialize(no_json=no_json,
+    #                                                 printing=printing)
+    #
+    #     if self.my_type == 'service':
+    #         print("*** Serializing service (SI): %s" % res)
+    #
+    #     for prop in ['check_command', 'event_handler', 'snapshot_command',
+    #                  'business_rule', 'acknowledgement']:
+    #         res[prop] = serialize(getattr(self, prop, None),
+    #                               no_json=no_json, printing=printing)
+    #
+    #     return res
 
     def get_check_command(self):
         """Wrapper to get the name of the check_command attribute
@@ -1995,8 +2008,10 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         if notif.status == ACT_STATUS_POLLED:
             self.update_notification_command(notif, contact, macromodulations, timeperiods,
                                              host_ref)
-            self.notified_contacts.add(contact.get_name())
-            self.notified_contacts_ids.add(contact.uuid)
+            if contact.get_name() not in self.notified_contacts:
+                self.notified_contacts.append(contact.get_name())
+            if contact.uuid not in self.notified_contacts_ids:
+                self.notified_contacts_ids.append(contact.uuid)
             self.raise_notification_log_entry(notif, contact, host_ref)
 
     def update_notification_command(self, notif, contact, macromodulations, timeperiods,
@@ -2137,6 +2152,7 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
         in_notif_time = time.time() - notification.creation_time
 
         contacts = set()
+        # new_escalations = set()
         for escalation_id in self.escalations:
             escalation = escalations[escalation_id]
 
@@ -2145,7 +2161,8 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
                                       in_notif_time, cls.interval_length, escalation_period):
                 contacts.update(escalation.contacts)
                 # And we tag this escalations as started now
-                notification.already_start_escalations.add(escalation.get_name())
+                if escalation.get_name() not in notification.already_start_escalations:
+                    notification.already_start_escalations.append(escalation.get_name())
 
         return list(contacts)
 
@@ -2279,10 +2296,10 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
                 # The old way. Only send recover notifications to those contacts
                 # who also got problem notifications
                 notification_contacts = [c_id for c_id in self.notified_contacts_ids]
-            self.notified_contacts.clear()
-            self.notified_contacts_ids.clear()
+            self.notified_contacts = []
+            self.notified_contacts_ids = []
         else:
-            # Check is an escalation match. If yes, get all contacts from escalations
+            # Check if an escalation match. If so, get all contacts from escalations
             if self.is_escalable(notif, escalations, timeperiods):
                 notification_contacts = self.get_escalable_contacts(notif, escalations, timeperiods)
                 escalated = True
@@ -2351,8 +2368,10 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
                     if notif.type == u'PROBLEM':
                         # Remember the contacts. We might need them later in the
                         # recovery code some lines above
-                        self.notified_contacts_ids.add(contact.uuid)
-                        self.notified_contacts.add(contact.get_name())
+                        if contact.uuid not in self.notified_contacts_ids:
+                            self.notified_contacts_ids.append(contact.uuid)
+                        if contact.get_name() not in self.notified_contacts:
+                            self.notified_contacts.append(contact.get_name())
 
         return childnotifications
 
@@ -2839,11 +2858,12 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
 
                         try:
                             state = numpy.random.choice(states, p=probability)
-                        except Exception as exp:  # pylint: disable=broad-except
+                        except Exception:  # pylint: disable=broad-except
                             # If random configuration error, do not change the state
                             logger.warning("Randomly chosen state is not configured correctly "
                                            "for %s: %s", self.get_full_name(), state)
-                            state = self.state_id
+                            # state = self.state_id
+                            state = random.choice(states)
 
                     try:
                         state = int(state)
@@ -3419,9 +3439,11 @@ class SchedulingItems(CommandCallItems):
         parent.act_depend_of_me.append((son_id, notif_failure_criteria, dep_period,
                                         inherits_parents))
 
-        # TODO: Is it necessary? We already have this info in act_depend_* attributes
-        son.parent_dependencies.add(parent_id)
-        parent.child_dependencies.add(son_id)
+        # Parent / children relations
+        if parent_id not in son.parent_dependencies:
+            son.parent_dependencies.append(parent_id)
+        if son_id not in parent.child_dependencies:
+            parent.child_dependencies.append(son_id)
 
     def del_act_dependency(self, son_id, parent_id):  # pragma: no cover, not yet tested
         """Remove act_dependency between two hosts or services.
@@ -3454,9 +3476,9 @@ class SchedulingItems(CommandCallItems):
 
         # Remove in child/parents dependencies too
         # Me in father list
-        parent.child_dependencies.remove(son_id)
+        parent.child_dependencies.delete(son_id)
         # and father list in mine
-        son.parent_dependencies.remove(parent_id)
+        son.parent_dependencies.delete(parent_id)
 
     def add_chk_dependency(self, son_id, parent_id, notif_failure_criteria, dep_period,
                            inherits_parents):
@@ -3478,14 +3500,16 @@ class SchedulingItems(CommandCallItems):
         """
         son = self[son_id]
         parent = self[parent_id]
-        son.chk_depend_of.append((parent_id, notif_failure_criteria, 'logic_dep', dep_period,
-                                  inherits_parents))
-        parent.chk_depend_of_me.append((son_id, notif_failure_criteria, 'logic_dep', dep_period,
-                                        inherits_parents))
+        son.chk_depend_of.append((parent_id, notif_failure_criteria,
+                                  'logic_dep', dep_period, inherits_parents))
+        parent.chk_depend_of_me.append((son_id, notif_failure_criteria,
+                                        'logic_dep', dep_period, inherits_parents))
 
-        # TODO: Is it necessary? We already have this info in act_depend_* attributes
-        son.parent_dependencies.add(parent_id)
-        parent.child_dependencies.add(son_id)
+        # Parent / children relations
+        if parent_id not in son.parent_dependencies:
+            son.parent_dependencies.append(parent_id)
+        if son_id not in parent.child_dependencies:
+            parent.child_dependencies.append(son_id)
 
     def create_business_rules(self, hosts, services, hostgroups, servicegroups,
                               macromodulations, timeperiods):

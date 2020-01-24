@@ -580,10 +580,9 @@ class TestConfig(AlignakTest):
         self.assert_any_cfg_log_match(re.escape(
             "[service::will_error] unknown host_name 'NOEXIST'"
         ))
-        self.assert_any_cfg_log_match(re.escape(
-            "[service::will_error] check_command 'None' invalid"
-        ))
-
+        # self.assert_any_cfg_log_match(re.escape(
+        #     "[service::will_error] check_command 'None' invalid"
+        # ))
         self.assert_any_cfg_log_match(re.escape(
             "services configuration is incorrect!"
         ))
