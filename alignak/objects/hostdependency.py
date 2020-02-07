@@ -97,11 +97,11 @@ class Hostdependency(Item):
                 params[prop] = [p.replace('u', 'x') for p in params[prop]]
         super(Hostdependency, self).__init__(params, parsing=parsing)
 
-    def __str__(self):  # pragma: no cover
-        return '<Hostdependency %s %s, uuid=%s, use: %s />' \
-               % ('template' if self.is_a_template() else '', self.get_full_name(), self.uuid,
-                  getattr(self, 'use', None))
-    __repr__ = __str__
+    # def __str__(self):  # pragma: no cover
+    #     return '<Hostdependency %s %s, uuid=%s, use: %s />' \
+    #            % ('template' if self.is_a_template() else '', self.get_full_name(), self.uuid,
+    #               getattr(self, 'use', None))
+    # __repr__ = __str__
 
     @property
     def host_relation(self):

@@ -52,7 +52,7 @@ import logging
 import time
 
 from alignak.util import strip_and_uniq, get_obj_name_two_args_and_void
-from alignak.misc.serialization import unserialize, get_alignak_class
+from alignak.misc.serialization import serialize, unserialize, get_alignak_class
 from alignak.objects.item import Item, Items
 from alignak.property import (BoolProp, IntegerProp, FloatProp, StringProp,
                               ListProp, DictProp, AddrProp, FULL_STATUS)
@@ -885,14 +885,17 @@ class SatelliteLink(Item):
         :rtype: bool
         """
         logger.debug("Pushing %d actions from %s", len(actions), scheduler_instance_id)
-        return self.con.post('_push_actions', {'actions': actions,
+        for action in actions:
+            logger.debug("- %s", action)
+        res = serialize(actions, no_json=True)
+        return self.con.post('_push_actions', {'actions': res,
                                                'scheduler_instance_id': scheduler_instance_id},
                              wait=True)
 
     @valid_connection()
     @communicate()
     def push_results(self, results, scheduler_name):
-        """Send a HTTP request to the satellite (POST /put_results)
+        """Send a HTTP request to the satellite (POST /_results)
         Send actions results to the satellite
 
         :param results: Results list to send
@@ -902,9 +905,10 @@ class SatelliteLink(Item):
         :return: True on success, False on failure
         :rtype: bool
         """
-        logger.debug("Pushing %d results", len(results))
-        result = self.con.post('put_results', {'results': results, 'from': scheduler_name},
-                               wait=True)
+        logger.debug("Pushing %d results to %s", len(results), scheduler_name)
+        res = serialize(results, no_json=True)
+        result = self.con.post('_results', {'results': res,
+                                            'from': scheduler_name}, wait=True)
         return result
 
     @valid_connection()
@@ -959,6 +963,7 @@ class SatelliteLink(Item):
         :return: Broks list on success, [] on failure
         :rtype: list
         """
+        logger.debug("Getting events from %s", self.name)
         res = self.con.get('_events', wait=False)
         logger.debug("Got events from %s: %s", self.name, res)
         return unserialize(res, True)

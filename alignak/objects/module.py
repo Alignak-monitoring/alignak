@@ -168,7 +168,7 @@ class Module(Item):
         self.fill_default()
 
         try:
-            self.modules = unserialize(self.modules, no_load=True)
+            self.modules = unserialize(self.modules, no_json=True)
         except AlignakClassLookupException as exp:  # pragma: no cover, simple protection
             logger.error('Cannot un-serialize modules configuration '
                          'received from arbiter: %s', exp)
@@ -206,7 +206,7 @@ class Module(Item):
             return module_type in self.type
         return module_type in self.module_types
 
-    def serialize(self):
+    def serialize(self, no_json=True, printing=False):
         """A module may have some properties that are not defined in the class properties list.
         Serializing a module is the same as serializing an Item but we also include all the
         existing properties that are not defined in the properties or running_properties
@@ -214,7 +214,7 @@ class Module(Item):
 
         We must also exclude the reference to the daemon that loaded the module!
         """
-        res = super(Module, self).serialize()
+        res = super(Module, self).serialize(no_json=no_json, printing=printing)
 
         for prop in self.__dict__:
             if prop in self.__class__.properties or \
@@ -222,7 +222,8 @@ class Module(Item):
                     prop in ['properties', 'old_properties', 'my_daemon']:
                 continue
             if prop in ['modules'] and getattr(self, prop):
-                res[prop] = [m.serialize() for m in self.modules]
+                res[prop] = [m.serialize(no_json=no_json, printing=printing)
+                             for m in self.modules]
             else:
                 res[prop] = getattr(self, prop)
 

@@ -661,7 +661,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         # The receiver receives an unknown service external command
         excmd = ExternalCommand('[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;unknownservice;'
                                 '1;Service is WARNING|rtt=9999;5;10;0;10000' % time.time())
-        # This will simply push te commands to the schedulers ...
+        # This will simply push te commands to the schedulers ...
         self._receiver_daemon.unprocessed_external_commands.append(excmd)
         self._receiver_daemon.push_external_commands_to_schedulers()
 
@@ -678,7 +678,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         #     print("Brok: %s" % brok)
 
         for brok in sorted(list(self._receiver_daemon.broks.values()), key=lambda x: x.creation_time):
-            print(("--Brok: %s" % brok))
+            print("--Brok: %s" % brok)
 
         broks = [b for b in broks if b.type == 'unknown_service_check_result']
         assert len(broks) == 1
@@ -715,32 +715,42 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         """
         # unknown_host_check_result_brok
         excmd = '[1234567890] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is UP'
-        expected = {'time_stamp': 1234567890, 'return_code': '2', 'host_name': 'test_host_0',
-                    'output': 'Host is UP', 'perf_data': None}
-        result = json.loads(ExternalCommandManager.get_unknown_check_result_brok(excmd).data)
-        assert expected == result
+        expected = {
+            'time_stamp': 1234567890, 'return_code': '2', 'host_name': 'test_host_0',
+            'output': 'Host is UP', 'perf_data': None
+        }
+        brok = ExternalCommandManager.get_unknown_check_result_brok(excmd)
+        print("Brok: %s" % brok)
+        # the prepare method returns the brok data
+        assert expected == brok.prepare()
 
         # unknown_host_check_result_brok with perfdata
         excmd = '[1234567890] PROCESS_HOST_CHECK_RESULT;test_host_0;2;Host is UP|rtt=9999'
-        expected = {'time_stamp': 1234567890, 'return_code': '2', 'host_name': 'test_host_0',
-                    'output': 'Host is UP', 'perf_data': 'rtt=9999'}
-        result = json.loads(ExternalCommandManager.get_unknown_check_result_brok(excmd).data)
-        assert expected == result
+        expected = {
+            'time_stamp': 1234567890, 'return_code': '2', 'host_name': 'test_host_0',
+            'output': 'Host is UP', 'perf_data': 'rtt=9999'
+        }
+        brok = ExternalCommandManager.get_unknown_check_result_brok(excmd)
+        assert expected == brok.prepare()
 
         # unknown_service_check_result_brok
         excmd = '[1234567890] PROCESS_HOST_CHECK_RESULT;host-checked;0;Everything OK'
-        expected = {'time_stamp': 1234567890, 'return_code': '0', 'host_name': 'host-checked',
-                    'output': 'Everything OK', 'perf_data': None}
-        result = json.loads(ExternalCommandManager.get_unknown_check_result_brok(excmd).data)
-        assert expected == result
+        expected = {
+            'time_stamp': 1234567890, 'return_code': '0', 'host_name': 'host-checked',
+            'output': 'Everything OK', 'perf_data': None
+        }
+        brok = ExternalCommandManager.get_unknown_check_result_brok(excmd)
+        assert expected == brok.prepare()
 
         # unknown_service_check_result_brok with perfdata
         excmd = '[1234567890] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;1;Service is WARNING|rtt=9999;5;10;0;10000'
-        expected = {'host_name': 'test_host_0', 'time_stamp': 1234567890,
-                    'service_description': 'test_ok_0', 'return_code': '1',
-                    'output': 'Service is WARNING', 'perf_data': 'rtt=9999;5;10;0;10000'}
-        result = json.loads(ExternalCommandManager.get_unknown_check_result_brok(excmd).data)
-        assert expected == result
+        expected = {
+            'host_name': 'test_host_0', 'time_stamp': 1234567890,
+            'service_description': 'test_ok_0', 'return_code': '1',
+            'output': 'Service is WARNING', 'perf_data': 'rtt=9999;5;10;0;10000'
+        }
+        brok = ExternalCommandManager.get_unknown_check_result_brok(excmd)
+        assert expected == brok.prepare()
 
     def test_services_acknowledge(self):
         """ Test services acknowledge
@@ -754,7 +764,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         host.passive_checks_enabled = True
         print(("Host: %s - state: %s/%s" % (host, host.state_type, host.state)))
         assert host is not None
-    
+
         # Get dependent host
         router = self._scheduler.hosts.find_by_name("test_router_0")
         router.checks_in_progress = []
@@ -773,7 +783,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         svc.passive_checks_enabled = True
         assert svc is not None
         print(("Service: %s - state: %s/%s" % (svc, svc.state_type, svc.state)))
-    
+
         # Passive checks for services
         # ---------------------------------------------
         # Receive passive service check Warning
@@ -784,7 +794,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         assert 'WARNING' == svc.state
         assert 'Service is WARNING' == svc.output
         assert False == svc.problem_has_been_acknowledged
-    
+
         # Acknowledge service
         excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % time.time()
         self._scheduler.run_external_commands([excmd])
@@ -805,7 +815,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         self.external_command_loop()
         assert 'WARNING' == svc.state
         assert False == svc.problem_has_been_acknowledged
-    
+
         # Receive passive service check Critical
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;2;Service is CRITICAL' % time.time()
         self._scheduler.run_external_commands([excmd])
@@ -814,14 +824,14 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         assert 'CRITICAL' == svc.state
         assert 'Service is CRITICAL' == svc.output
         assert False == svc.problem_has_been_acknowledged
-    
+
         # Acknowledge service
         excmd = '[%d] ACKNOWLEDGE_SVC_PROBLEM;test_host_0;test_ok_0;2;1;1;Big brother;Acknowledge service' % time.time()
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         assert 'CRITICAL' == svc.state
         assert True == svc.problem_has_been_acknowledged
-    
+
         # Service is going ok ...
         excmd = '[%d] PROCESS_SERVICE_CHECK_RESULT;test_host_0;test_ok_0;0;Service is OK' % time.time()
         self._scheduler.run_external_commands([excmd])
@@ -1036,7 +1046,7 @@ class TestExternalCommandsPassiveChecks(AlignakTest):
         print("Host state", router.state, router.problem_has_been_acknowledged)
         assert 'DOWN' == router.state
         assert True == router.problem_has_been_acknowledged
-    
+
         # Remove acknowledge router
         excmd = '[%d] REMOVE_HOST_ACKNOWLEDGEMENT;test_router_0' % int(time.time())
         self._scheduler.run_external_commands([excmd])

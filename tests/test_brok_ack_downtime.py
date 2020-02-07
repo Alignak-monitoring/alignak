@@ -77,7 +77,7 @@ class TestBrokAckDowntime(AlignakTest):
         assert len(brok_ack_raise) == 1
         assert len(brok_ack_expire) == 0
 
-        hdata = unserialize(brok_ack_raise[0].data)
+        hdata = brok_ack_raise[0].prepare()
         assert hdata['host'] == 'test_host_0'
         assert hdata['service'] == 'test_ok_0'
         assert hdata['comment'] == 'normal process'
@@ -96,7 +96,7 @@ class TestBrokAckDowntime(AlignakTest):
         assert len(brok_ack_raise) == 0
         assert len(brok_ack_expire) == 1
 
-        hdata = unserialize(brok_ack_expire[0].data)
+        hdata = brok_ack_expire[0].prepare()
         assert hdata['host'] == 'test_host_0'
         assert hdata['service'] == 'test_ok_0'
 
@@ -119,7 +119,7 @@ class TestBrokAckDowntime(AlignakTest):
         brok_ack_raise = []
         brok_ack_expire = []
         for brok in self._main_broker.broks:
-            print(("Brok: %s" % brok))
+            print("Brok: %s" % brok)
             if brok.type == 'acknowledge_raise':
                 brok_ack_raise.append(brok)
             elif brok.type == 'acknowledge_expire':
@@ -128,7 +128,7 @@ class TestBrokAckDowntime(AlignakTest):
         assert len(brok_ack_raise) == 1
         assert len(brok_ack_expire) == 1
 
-        hdata = unserialize(brok_ack_expire[0].data)
+        hdata = brok_ack_expire[0].prepare()
         assert hdata['host'] == 'test_host_0'
         assert hdata['service'] == 'test_ok_0'
         assert hdata['comment'] == 'normal process'
@@ -179,7 +179,7 @@ class TestBrokAckDowntime(AlignakTest):
         host_brok = False
         service_brok = False
 
-        brok_data = unserialize(brok_ack[0].data)
+        brok_data = brok_ack[0].prepare()
         assert brok_data['host'] == 'test_host_0'
         if 'service' in brok_data:
             assert brok_data['service'] == 'test_ok_0'
@@ -187,7 +187,7 @@ class TestBrokAckDowntime(AlignakTest):
         else:
             host_brok = True
 
-        brok_data = unserialize(brok_ack[1].data)
+        brok_data = brok_ack[1].prepare()
         assert brok_data['host'] == 'test_host_0'
         if 'service' in brok_data:
             assert brok_data['service'] == 'test_ok_0'
@@ -213,7 +213,7 @@ class TestBrokAckDowntime(AlignakTest):
 
         host_brok = False
         service_brok = False
-        brok_data = unserialize(brok_ack_expire[0].data)
+        brok_data = brok_ack_expire[0].prepare()
         assert brok_data['host'] == 'test_host_0'
         if 'service' in brok_data:
             assert brok_data['service'] == 'test_ok_0'
@@ -221,7 +221,7 @@ class TestBrokAckDowntime(AlignakTest):
         else:
             host_brok = True
 
-        brok_data = unserialize(brok_ack_expire[1].data)
+        brok_data = brok_ack_expire[1].prepare()
         assert brok_data['host'] == 'test_host_0'
         if 'service' in brok_data:
             assert brok_data['service'] == 'test_ok_0'
@@ -259,7 +259,7 @@ class TestBrokAckDowntime(AlignakTest):
         assert len(brok_ack_raise) == 2
         assert len(brok_ack_expire) == 1
 
-        brok_data = unserialize(brok_ack_expire[0].data)
+        brok_data = brok_ack_expire[0].prepare()
         assert brok_data['host'] == 'test_host_0'
         assert 'service' not in brok_data
 
@@ -305,7 +305,7 @@ class TestBrokAckDowntime(AlignakTest):
         assert len(brok_downtime_raise) == 1
         assert len(brok_downtime_expire) == 0
 
-        hdata = unserialize(brok_downtime_raise[0].data)
+        hdata = brok_downtime_raise[0].prepare()
         assert hdata['host'] == 'test_host_0'
         assert hdata['service'] == 'test_ok_0'
         assert hdata['comment'] == 'downtime comment'
@@ -326,7 +326,7 @@ class TestBrokAckDowntime(AlignakTest):
         assert len(brok_downtime_raise) == 0
         assert len(brok_downtime_expire) == 1
 
-        hdata = unserialize(brok_downtime_expire[0].data)
+        hdata = brok_downtime_expire[0].prepare()
         assert hdata['host'] == 'test_host_0'
         assert hdata['service'] == 'test_ok_0'
         assert hdata['comment'] == 'downtime comment'
@@ -373,7 +373,7 @@ class TestBrokAckDowntime(AlignakTest):
         assert len(brok_downtime_raise) == 1
         assert len(brok_downtime_expire) == 0
 
-        hdata = unserialize(brok_downtime_raise[0].data)
+        hdata = brok_downtime_raise[0].prepare()
         assert hdata['host'] == 'test_host_0'
         assert 'service' not in hdata
 
@@ -393,7 +393,7 @@ class TestBrokAckDowntime(AlignakTest):
         assert len(brok_downtime_raise) == 0
         assert len(brok_downtime_expire) == 1
 
-        hdata = unserialize(brok_downtime_expire[0].data)
+        hdata = brok_downtime_expire[0].prepare()
         assert hdata['host'] == 'test_host_0'
         assert 'service' not in hdata
 
@@ -451,7 +451,7 @@ class TestBrokAckDowntime(AlignakTest):
         assert len(brok_downtime_raise) == 1
         assert len(brok_downtime_expire) == 0
 
-        hdata = unserialize(brok_downtime_raise[0].data)
+        hdata = brok_downtime_raise[0].prepare()
         assert hdata['host'] == 'test_host_0'
         assert hdata['service'] == 'test_ok_0'
 
@@ -504,7 +504,7 @@ class TestBrokAckDowntime(AlignakTest):
         assert len(brok_downtime_raise) == 0
         assert len(brok_downtime_expire) == 1
 
-        hdata = unserialize(brok_downtime_expire[0].data)
+        hdata = brok_downtime_expire[0].prepare()
         assert hdata['host'] == 'test_host_0'
         assert hdata['service'] == 'test_ok_0'
 
@@ -557,5 +557,5 @@ class TestBrokAckDowntime(AlignakTest):
         assert len(brok_downtime_raise) == 0
         assert len(brok_downtime_expire) == 1
 
-        hdata = unserialize(brok_downtime_expire[0].data)
+        hdata = brok_downtime_expire[0].prepare()
         assert hdata['host'] == 'test_host_0'

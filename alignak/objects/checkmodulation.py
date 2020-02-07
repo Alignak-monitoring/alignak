@@ -89,11 +89,12 @@ class CheckModulation(Item):
         super(CheckModulation, self).__init__(params, parsing=parsing)
         self.fill_default()
 
-    def serialize(self):
+    def serialize(self, no_json=True, printing=False):
         res = super(CheckModulation, self).serialize()
         res['check_command'] = None
         if getattr(self, 'check_command', None):
-            res['check_command'] = self.check_command.serialize()
+            res['check_command'] = self.check_command.serialize(no_json=no_json,
+                                                                printing=printing)
         return res
 
     def get_check_command(self, timeperiods, t_to_go):

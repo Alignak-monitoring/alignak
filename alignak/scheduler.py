@@ -1192,9 +1192,9 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
                     logger.debug("-> no passive results from %s", link.name)
                     continue
 
-                results = unserialize(results, no_load=True)
+                results = unserialize(results, no_json=True)
                 if results:
-                    logger.info("Received %d passive results from %s", len(results), link.name)
+                    logger.debug("Received %d passive results from %s", len(results), link.name)
 
                 for result in results:
                     logger.debug("-> result: %s", result)
@@ -1469,16 +1469,22 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
             item.acknowledgement['ref'] = item.uuid
             item.acknowledgement = Acknowledge(item.acknowledgement)
 
-        # Relink the notified_contacts as a set() of true contacts objects
+        # Relink the notified_contacts as a list of contacts objects
         # if it was loaded from the retention, it's now a list of contacts
         # names
-        new_notified_contacts = set()
-        new_notified_contacts_ids = set()
+        new_notified_contacts = []
+        new_notified_contacts_ids = []
         for contact_name in item.notified_contacts:
             contact = self.contacts.find_by_name(contact_name)
-            if contact is not None:
-                new_notified_contacts.add(contact_name)
-                new_notified_contacts_ids.add(contact.uuid)
+            if contact is None:
+                logger.warning('Restored an unknown contact from the retention: %s',
+                               contact_name)
+                continue
+
+            if contact_name not in new_notified_contacts:
+                new_notified_contacts.append(contact_name)
+            if contact.uuid not in new_notified_contacts_ids:
+                new_notified_contacts_ids.append(contact.uuid)
         item.notified_contacts = new_notified_contacts
         item.notified_contacts_ids = new_notified_contacts_ids
 
@@ -1496,7 +1502,7 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
             logger.debug("Searching broker: %s", broker_link)
             if broker_name == broker_link.name:
                 broker_uuid = broker_link.uuid
-                logger.info("Filling initial broks for: %s (%s)", broker_name, broker_uuid)
+                logger.info("Filling initial broks for %s", broker_name)
                 break
         else:
             if self.pushed_conf:
@@ -1513,8 +1519,7 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
         initial_broks_count = len(self.my_daemon.brokers[broker_uuid].broks)
 
         # First the program status
-        brok = self.get_program_status_brok()
-        self.add_brok(brok, broker_uuid)
+        self.add_brok(self.get_program_status_brok(), broker_uuid)
 
         self.pushed_conf.skip_initial_broks = getattr(self.pushed_conf, 'skip_initial_broks', False)
         logger.debug("Skipping initial broks? %s", str(self.pushed_conf.skip_initial_broks))
@@ -1536,8 +1541,7 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
                         members = self.services
                     if isinstance(item, Contactgroup):
                         members = self.contacts
-                    brok = item.get_initial_status_brok(members)
-                    self.add_brok(brok, broker_uuid)
+                    self.add_brok(item.get_initial_status_brok(members), broker_uuid)
 
             #  Get initial_status broks for all these types of templates
             #  The order is important, service need host...
@@ -1546,8 +1550,7 @@ class Scheduler(object):  # pylint: disable=too-many-instance-attributes
                     continue
                 for item_uuid in t.templates:
                     item = t.templates[item_uuid]
-                    brok = item.get_initial_status_brok(extra=None)
-                    self.add_brok(brok, broker_uuid)
+                    self.add_brok(item.get_initial_status_brok(extra=None), broker_uuid)
 
         # Add a brok to say that we finished all initial_pass
         brok = Brok({'type': 'initial_broks_done', 'data': {'instance_id': self.instance_id}})

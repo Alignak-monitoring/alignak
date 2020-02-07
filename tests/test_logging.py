@@ -127,55 +127,19 @@ class TestLogging(AlignakTest):
 
         :return:
         """
+        set_log_level(logging.INFO)
+
+        # Some special characters
+        # dollar, pound, currency, accented French
+        self.logger.info(u"I love myself $£¤ éàçèùè")
+
         # A russian text
-        set_log_level(logging.INFO)
         self.logger.info(u"На берегу пустынных волн")
-        sutf8 = u'I love myself $£¤'  # dollar, pound, currency
-        self.logger.info(sutf8)
 
-    def test_log_format(self):
-        """ Log string format
+        # A chines text
+        self.logger.info(u"新年快乐")
 
-        :return:
-        """
-        # Use the default unit tests logger
-        # Configure the logger with a daemon name
-        logger_configuration_file = os.path.join(os.getcwd(), './etc/alignak-logger.json')
-        setup_logger(logger_configuration_file, log_dir=None,
-                     process_name='process_name', log_file='')
-        self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
-
-        set_log_level(logging.INFO)
-        msg = "Message"
-        self.logger_.info(msg)
         self.show_logs()
-        # The logger default format is including 'alignak_tests.'
-        self.assert_any_log_match('[\[0-9\]*] INFO: \[arbiter-master.%s\] %s'
-                                  % (self.logger_.name, msg))
-
-        # Configure the logger with a daemon name
-        logger_configuration_file = os.path.join(os.getcwd(), './etc/alignak-logger.json')
-        setup_logger(logger_configuration_file, log_dir=None,
-                     process_name='process_name', log_file='')
-        self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
-
-        print("Logger configuration: ")
-        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
-        for hdlr in logger_.handlers:
-            if getattr(hdlr, 'filename', None) and 'alignak_tests' in hdlr.filename:
-                print("- handler : %s (%s) -> %s" % (hdlr, hdlr.formatter._fmt, hdlr.filename))
-            else:
-                print("- handler : %s (%s)" % (hdlr, hdlr.formatter._fmt))
-
-        set_log_level(logging.INFO)
-        msg2 = "Message 2"
-        self.logger_.info(msg2)
-        self.show_logs()
-        # The logger default format is including 'alignak_tests.'
-        self.assert_any_log_match('[\[0-9\]*] INFO: \[arbiter-master.%s\] %s'
-                                  % (self.logger_.name, msg))
-        self.assert_any_log_match('[\[0-9\]*] INFO: \[arbiter-master.%s\] %s'
-                                  % (self.logger_.name, msg2))
 
 
 class TestLogging2(AlignakTest):
@@ -240,3 +204,75 @@ class TestLogging2(AlignakTest):
                                                           hdlr.filename))
             else:
                 print("- handler : %s - %s (%s)" % (hdlr.level, hdlr, hdlr.formatter._fmt))
+
+
+class TestLogging3(AlignakTest):
+
+    def setUp(self):
+        # Clear logs and reset the logger
+        self.clear_logs()
+        # Remove all existing handlers (if some!)
+        # Former existing configuration
+        self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        self.logger_.handlers = []
+
+    def tearDown(self):
+        print("No tear down")
+
+    def test_log_format(self):
+        """ Log string format
+
+        :return:
+        """
+        # Use the default unit tests logger
+        # Configure the logger with a daemon name
+
+        # Former existing configuration
+        self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        assert not self.logger_.handlers
+
+        logger_configuration_file = os.path.join(os.getcwd(), './etc/alignak-logger.json')
+        setup_logger(logger_configuration_file, log_dir=None,
+                     process_name='process_name', log_file='')
+
+        # Newly configured configuration
+        self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        print("Logger new handlers:")
+        for handler in self.logger_.handlers:
+            print("- handler %s: %s (%s)"
+                  % (getattr(handler, '_name', None), handler, handler.formatter._fmt))
+
+        set_log_level(logging.INFO)
+        msg = "Message"
+        self.logger_.info(msg)
+        self.show_logs()
+        # The logger default format is including 'alignak_tests.'
+        # Now the get process_name in place of alignak_tests!
+        # [2020-01-26 09:48:38] INFO: [process_name.alignak] Message
+        self.assert_any_log_match('[\[0-9\]*] INFO: \[process_name.%s\] %s'
+                                  % (self.logger_.name, msg))
+
+        # Configure the logger with a daemon name
+        logger_configuration_file = os.path.join(os.getcwd(), './etc/alignak-logger.json')
+        setup_logger(logger_configuration_file, log_dir=None,
+                     process_name='process_name', log_file='')
+        self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+
+        print("Logger configuration: ")
+        logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
+        for hdlr in logger_.handlers:
+            if getattr(hdlr, 'filename', None) and 'alignak_tests' in hdlr.filename:
+                print("- handler : %s (%s) -> %s" % (hdlr, hdlr.formatter._fmt, hdlr.filename))
+            else:
+                print("- handler : %s (%s)" % (hdlr, hdlr.formatter._fmt))
+
+        set_log_level(logging.INFO)
+        msg2 = "Message 2"
+        self.logger_.info(msg2)
+        self.show_logs()
+        # The logger default format is including 'alignak_tests.'
+        # Now the get process_name in place of alignak_tests!
+        self.assert_any_log_match('[\[0-9\]*] INFO: \[process_name.%s\] %s'
+                                  % (self.logger_.name, msg))
+        self.assert_any_log_match('[\[0-9\]*] INFO: \[process_name.%s\] %s'
+                                  % (self.logger_.name, msg2))

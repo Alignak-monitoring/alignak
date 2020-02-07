@@ -262,7 +262,7 @@ class Host(SchedulingItem):  # pylint: disable=too-many-public-methods
                % (' template' if self.is_a_template() else '', self.get_full_name(),
                   getattr(self, 'uuid', 'n/a'), getattr(self, 'state', 'n/a'),
                   getattr(self, 'state_type', 'n/a'), getattr(self, 'realm', 'Default'),
-                  getattr(self, 'use', None))
+                  getattr(self, 'tags', None))
     __repr__ = __str__
 
 #######
@@ -1432,8 +1432,6 @@ class Hosts(SchedulingItems):
     def apply_dependencies(self):
         """Loop on hosts and register dependency between parent and son
 
-        call Host.fill_parents_dependency()
-
         :return: None
         """
         for host in self:
@@ -1443,14 +1441,19 @@ class Hosts(SchedulingItems):
                 parent = self[parent_id]
                 if parent.active_checks_enabled:
                     # Add parent in the list
-                    host.act_depend_of.append((parent_id, ['d', 'x', 's', 'f'], '', True))
-
+                    host.act_depend_of.append(
+                        (parent_id, ['d', 'x', 's', 'f'], '', True)
+                    )
                     # Add child in the parent
-                    parent.act_depend_of_me.append((host.uuid, ['d', 'x', 's', 'f'], '', True))
+                    parent.act_depend_of_me.append(
+                        (host.uuid, ['d', 'x', 's', 'f'], '', True)
+                    )
 
                     # And add the parent/child dep filling too, for broking
-                    parent.child_dependencies.add(host.uuid)
-                    host.parent_dependencies.add(parent_id)
+                    if host.uuid not in parent.child_dependencies:
+                        parent.child_dependencies.append(host.uuid)
+                    if parent_id not in host.parent_dependencies:
+                        host.parent_dependencies.append(parent_id)
 
     def find_hosts_that_use_template(self, tpl_name):
         """Find hosts that use the template defined in argument tpl_name

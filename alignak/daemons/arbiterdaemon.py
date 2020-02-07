@@ -362,7 +362,7 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
                 logger.debug("Satellite '%s' initial brok: %s", satellite.name, brok)
                 self.add(brok)
 
-    def load_monitoring_config_file(self, clean=False):
+    def load_monitoring_config_file(self, clean=True):
         # pylint: disable=too-many-branches,too-many-statements, too-many-locals
         """Load main configuration file (alignak.cfg)::
 
@@ -495,6 +495,7 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
             logger.warning("Alignak name changed from the legacy Cfg files: %s", self.alignak_name)
 
         # Maybe conf is already invalid
+        # self.conf.is_correct()
         if not self.conf.conf_is_correct:
             self.conf.show_errors()
             self.request_stop("*** One or more problems were encountered while "
@@ -711,6 +712,7 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
         self.conf.create_objects(raw_objects)
 
         # Maybe configuration is already invalid
+        # self.conf.is_correct()
         if not self.conf.conf_is_correct:
             self.conf.show_errors()
             self.request_stop("*** One or more problems were encountered while processing "
@@ -774,15 +776,11 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
         # Manage all post-conf modules
         self.hook_point('late_configuration')
 
-        # Configuration is correct?
-        logger.info("Checking configuration...")
-        self.conf.is_correct()
-
-        # Clean objects of temporary/unnecessary attributes for live work:
-        if clean:
-            logger.info("Cleaning configuration objects...")
-            self.conf.clean()
-
+        # # Clean objects of temporary/unnecessary attributes for live work:
+        # if clean:
+        #     logger.info("Cleaning configuration objects...")
+        #     self.conf.clean()
+        #
         # Dump Alignak macros
         logger.debug("Alignak global macros:")
 
@@ -793,6 +791,15 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
                                                                          None, None)
             logger.debug("- $%s$ = %s", macro_name, macro_value)
         statsmgr.timer('configuration.loading', time.time() - _t_configuration)
+
+        # Configuration is correct?
+        logger.info("Checking configuration...")
+        self.conf.is_correct()
+
+        # Clean objects of temporary/unnecessary attributes for live work:
+        if clean:
+            logger.info("Cleaning configuration objects...")
+            self.conf.clean()
 
         # REF: doc/alignak-conf-dispatching.png (2)
         logger.info("Splitting configuration...")
@@ -1195,6 +1202,7 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
         """Manage the list of Alignak launched daemons
 
          Check if the daemon process is running
+         Then, check the daemon status and get its monitoring events
 
         :return: True if all daemons are running, else False
         """

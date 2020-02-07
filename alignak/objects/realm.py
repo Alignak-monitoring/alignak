@@ -194,7 +194,7 @@ class Realm(Itemgroup):
             setattr(self, 'potential_%ss' % sat_type, [])
 
     def __str__(self):
-        res = '<Realm %s (%d)' % (self.get_name(), self.level)
+        res = '<Realm %s (%d)' % (self.get_name(), getattr(self, 'level', None))
         if self.realm_members:
             res = res + ', %d sub-realms: %s' \
                         % (len(self.realm_members), ', '.join([str(s) for s in self.realm_members]))
@@ -216,7 +216,7 @@ class Realm(Itemgroup):
         """Get the realm name"""
         return self.get_name()
 
-    def serialize(self):
+    def serialize(self, no_json=True, printing=False):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 

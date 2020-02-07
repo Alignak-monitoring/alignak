@@ -59,7 +59,7 @@ import re
 from alignak.util import to_float, to_split, to_char, to_int, unique_value, list_split
 
 __all__ = ('UnusedProp', 'BoolProp', 'IntegerProp', 'FloatProp',
-           'CharProp', 'StringProp', 'SetProp', 'ListProp', 'DictProp',
+           'CharProp', 'StringProp', 'ListProp', 'DictProp',
            'ToGuessProp', 'PythonizeError',
            'AddrProp', 'FULL_STATUS', 'CHECK_RESULT')
 
@@ -71,7 +71,7 @@ NONE_OBJECT = object()
 
 class Property(object):
     # pylint: disable=too-many-instance-attributes
-    """Baseclass of all properties.
+    """Base class for all properties.
 
     Same semantic for all subclasses (except UnusedProp): The property
     is required if, and only if, the default value is `None`.
@@ -333,22 +333,6 @@ class ListProp(Property):
         return [s.strip() if hasattr(s, "strip") else s
                 for s in to_split(val, self.split_on_comma)
                 if hasattr(s, "strip") and s.strip() != '' or self.keep_empty]
-
-
-class SetProp(ListProp):
-    """ Set property
-    """
-    def pythonize(self, val):
-        """Convert value into a set
-
-        * Simply convert to a set the value return by pythonize from ListProp
-
-        :param val: value to convert
-        :type val: str
-        :return: set corresponding to the value
-        :rtype: set
-        """
-        return set(super(SetProp, self).pythonize(val))
 
 
 class DictProp(Property):

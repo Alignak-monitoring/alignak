@@ -439,11 +439,11 @@ class TestDaemonsApi(AlignakTest):
         for name, port in list(satellite_map.items()):
             print("- for %s" % name)
             raw_data = req.get("%s://localhost:%s/stats?details=1" % (scheme, port), verify=False)
-            print("Got /stats?details=1: %s" % raw_data.content)
+            print("  /stats?details=1: %s" % raw_data.content)
             assert raw_data.status_code == 200
             # print("%s, my stats: %s" % (name, raw_data.text))
             data = raw_data.json()
-            print("%s, my stats (detailed): %s" % (name, json.dumps(data)))
+            print("  (detailed): %s" % (json.dumps(data)))
             # Too complex to check all this stuff
             # expected = {
             #     "alignak": "My Alignak", "type": "arbiter", "name": "Default-arbiter",

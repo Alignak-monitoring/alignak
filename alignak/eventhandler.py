@@ -80,8 +80,9 @@ class EventHandler(Action):
 
         self.fill_default()
 
-        # An event handler mus be launched as soon as possible
+        # An event handler must be launched as soon as possible
         self.t_to_go = time.time()
+        print("EH: %s" % self.__dict__)
 
     def __str__(self):  # pragma: no cover
         return "Event Handler %s, item: %s, status: %s command: %s" \

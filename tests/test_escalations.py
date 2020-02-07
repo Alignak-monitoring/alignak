@@ -126,7 +126,7 @@ class TestEscalations(AlignakTest):
         self.assertIsInstance(tolevel3, Escalation)
         assert tolevel3.uuid in svc.escalations
 
-        # 1 notification pet minute
+        # 1 notification per minute
         svc.notification_interval = 1
 
         # Freeze the time !
@@ -135,9 +135,9 @@ class TestEscalations(AlignakTest):
         with freeze_time(initial_datetime) as frozen_datetime:
             assert frozen_datetime() == initial_datetime
 
-            #--------------------------------------------------------------
+            # --------------------------------------------------------------
             # initialize host/service state
-            #--------------------------------------------------------------
+            # --------------------------------------------------------------
             self.scheduler_loop(1, [[host, 0, 'UP'], [svc, 0, 'OK']])
             assert "HARD" == host.state_type
             assert "UP" == host.state

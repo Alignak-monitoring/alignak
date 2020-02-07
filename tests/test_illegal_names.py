@@ -68,6 +68,7 @@ class TestIllegalNames(AlignakTest):
         illegal_characts = self._arbiter.conf.illegal_object_name_chars
         print("Illegal characters: %s" % illegal_characts)
         host = self._arbiter.conf.hosts.find_by_name("test_host_0")
+        print("Host: %s" % host.__dict__)
         # should be correct
         assert host.is_correct()
 

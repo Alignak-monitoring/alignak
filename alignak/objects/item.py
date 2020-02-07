@@ -60,6 +60,7 @@ elements like service, hosts or contacts.
 """
 # pylint: disable=too-many-lines
 # pylint: disable=too-many-public-methods
+import json
 import time
 import itertools
 import logging
@@ -68,11 +69,11 @@ from copy import copy, deepcopy
 from six import string_types
 
 from alignak.alignakobject import get_a_new_object_id
-from alignak.misc.serialization import serialize
+from alignak.misc.serialization import serialize, unserialize, default_serialize
 
-from alignak.property import (StringProp, ListProp, BoolProp, SetProp, DictProp,
+from alignak.property import (StringProp, ListProp, BoolProp, DictProp,
                               IntegerProp, ToGuessProp, PythonizeError,
-                              FULL_STATUS, CHECK_RESULT)
+                              FULL_STATUS, CHECK_RESULT, NONE_OBJECT)
 
 from alignak.alignakobject import AlignakObject
 from alignak.brok import Brok
@@ -94,7 +95,7 @@ class Item(AlignakObject):
     - use: templates which this object inherits from
     - definition_order: priority if the same object is defined several times
     - tags: the information tags attached to an object
-        Note: some tags are automatically set on an object when it uses some templates.
+        Note: the tags are automatically set on an object when it uses some templates.
 
     And some configuration parsing information:
     - conf_is_correct: whether configuration is correct or not
@@ -129,7 +130,7 @@ class Item(AlignakObject):
 
         # We save all templates we asked us to load from
         'tags':
-            SetProp(default=set(), fill_brok=[FULL_STATUS]),
+            ListProp(default=[], fill_brok=[FULL_STATUS]),
 
         # used by host, service and contact
         # todo: conceptually this should be moved to the SchedulingItem and Contact objects...
@@ -149,6 +150,11 @@ class Item(AlignakObject):
         if params is None:
             params = {}
 
+        # Assuming a default correct configuration
+        self.conf_is_correct = True
+        self.configuration_warnings = []
+        self.configuration_errors = []
+
         # pylint: disable=too-many-branches
         if not parsing:
             # Deserialize an existing object
@@ -160,11 +166,6 @@ class Item(AlignakObject):
         super(Item, self).__init__(params, parsing)
         # The new Alignak object unique identifier is set by the base AlignakObject class...
         logger.debug("New %s: %s", self.__class__.my_type, self.uuid)
-
-        # Assuming a default correct configuration
-        self.conf_is_correct = True
-        self.configuration_warnings = []
-        self.configuration_errors = []
 
         # For unique name identifier - first is to set the item name
         # This, because the aprams is an unordered dictionary and it is better to get
@@ -194,8 +195,6 @@ class Item(AlignakObject):
         self.init_running_properties()
         # [0] = +  -> new key-plus
         # [0] = _  -> new custom entry in UPPER case
-        # if params is None:
-        #     params = {}
         for key in params:
             # We want to create instance of object with the good type.
             # Here we've just parsed config files so everything is a string or a list.
@@ -316,12 +315,13 @@ class Item(AlignakObject):
 
         :return: None
         """
-        for prop in ('imported_from', 'use', 'plus', 'templates', 'register'):
+        for prop in ['imported_from', 'use', 'plus',
+                     'definition_order', 'valid', 'conf_is_correct']:
             try:
                 delattr(self, prop)
             except AttributeError:
                 pass
-        for prop in ('configuration_warnings', 'configuration_errors'):
+        for prop in ['configuration_warnings', 'configuration_errors']:
             try:
                 if hasattr(self, prop) and not getattr(self, prop):
                     delattr(self, prop)
@@ -386,26 +386,56 @@ class Item(AlignakObject):
         """
         return not getattr(self, "register", True)
 
-    def serialize(self):
+    def serialize(self, no_json=True, printing=False):
         """This function serializes into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 
         Here is the generic function that simply export attributes declared in the
         properties dictionary and the running_properties of the object.
 
+        Note that no json dump happens in this method. If json dump must be done,
+        it will be elsewhere!
+
         :return: Dictionary containing key and value from properties and running_properties
         :rtype: dict
         """
         # uuid is not in *_properties
-        res = {'uuid': self.uuid}
-
+        res = {
+            'uuid': self.uuid
+        }
         for prop in self.__class__.properties:
-            if hasattr(self, prop) and getattr(self, prop, None) is not None:
-                res[prop] = serialize(getattr(self, prop), True)
-        for prop in self.__class__.running_properties:
-            if hasattr(self, prop) and getattr(self, prop, None) is not None:
-                res[prop] = serialize(getattr(self, prop), True)
+            try:
+                res[prop] = getattr(self, prop)
+                if hasattr(res[prop], "serialize"):
+                    res[prop] = {
+                        '__sys_python_module__': "%s.%s" % (res[prop].__class__.__module__,
+                                                            res[prop].__class__.__name__),
+                        'content': res[prop].serialize(no_json=no_json, printing=printing)
+                    }
+                if res[prop] is NONE_OBJECT:
+                    print("%s / %s is NONE" % (self, prop))
+                    res[prop] = "None"
 
+            except AttributeError:
+                pass
+        for prop in self.__class__.running_properties:
+            try:
+                res[prop] = getattr(self, prop)
+                if hasattr(res[prop], "serialize"):
+                    res[prop] = {
+                        '__sys_python_module__': "%s.%s" % (res[prop].__class__.__module__,
+                                                            res[prop].__class__.__name__),
+                        'content': res[prop].serialize(no_json=no_json, printing=printing)
+                    }
+                if res[prop] is NONE_OBJECT:
+                    print("%s / %s is NONE" % (self, prop))
+                    res[prop] = "None"
+
+            except AttributeError:
+                pass
+
+        # if self.my_type in ['host']:
+        #     print("---Serialized %s: %s" % (self.my_type, res))
         return res
 
     @classmethod
@@ -496,28 +526,42 @@ class Item(AlignakObject):
         del self.plus[prop]
         return val
 
-    def add_error(self, txt):
+    def add_error(self, message):
         """Add a message in the configuration errors list so we can print them
          all in one place
 
          Set the object configuration as not correct
 
-        :param txt: error message
-        :type txt: str
+        :param message: error message or a list of messages
+        :type message: str | list
         :return: None
         """
-        self.configuration_errors.append("[{}::{}] {}".format(self.my_type, self.get_name(), txt))
+        if not hasattr(self, 'configuration_errors'):
+            self.configuration_errors = []
+
+        if not isinstance(message, list):
+            message = [message]
+        for txt in message:
+            self.configuration_errors.append("[{}::{}] {}".format(self.my_type,
+                                                                  self.get_name(), txt))
         self.conf_is_correct = False
 
-    def add_warning(self, txt):
+    def add_warning(self, message):
         """Add a message in the configuration warnings list so we can print them
          all in one place
 
-        :param txt: warning message
-        :type txt: str
+        :param message: warning message
+        :type message: str
         :return: None
         """
-        self.configuration_warnings.append("[{}::{}] {}".format(self.my_type, self.get_name(), txt))
+        if not hasattr(self, 'configuration_warnings'):
+            self.configuration_warnings = []
+
+        if not isinstance(message, list):
+            message = [message]
+        for txt in message:
+            self.configuration_warnings.append("[{}::{}] {}".format(self.my_type,
+                                                                    self.get_name(), txt))
 
     def is_correct(self):
         """
@@ -696,7 +740,8 @@ class Item(AlignakObject):
         :return: Brok object
         :rtype: alignak.Brok
         """
-        data = {'uuid': self.uuid}
+        # data = {'uuid': self.uuid}
+        data = {}
         self.fill_data_brok_from(data, CHECK_RESULT)
         return Brok({'type': self.my_type + '_check_result', 'data': data})
 
@@ -753,17 +798,28 @@ class Items(object):
         if parsing:
             # We are creating new items from the configuration
             self.add_items(items, index_items)
-        else:
-            # We are un-serializing
-            logger.debug("Unserializing..")
-            if 'items' in items:
-                for uuid in items['items']:
-                    self.add_item(self.inner_class(items['items'][uuid], parsing=parsing))
-            if 'templates' in items:
-                for uuid in items['templates']:
-                    self.add_template(self.inner_class(items['templates'][uuid], parsing=parsing))
-            logger.debug("Unserialized: %dm items and %d templates",
-                         len(self.items), len(self.templates))
+            return
+
+        # We are un-serializing
+        logger.debug("Un-serializing: %s", self.__class__)
+        try:
+            items = json.loads(items)
+        except Exception as exp:
+            logger.error("Items unserialize exception: %s", exp)
+            print("Items unserialize exception: %s" % exp)
+
+        if 'items' in items:
+            for uuid in items['items']:
+                _item = unserialize(items['items'][uuid], no_json=True)
+                self.add_item(_item)
+
+        if 'templates' in items:
+            for uuid in items['templates']:
+                _tpl = unserialize(items['templates'][uuid], no_json=True)
+                self.add_template(_tpl)
+
+        logger.debug("Un-serialized: %d items and %d templates",
+                     len(self.items), len(self.templates))
 
     def __repr__(self):  # pragma: no cover
         # Build a sorted list of the 10 first elements name, this to make it easier to compare ;)
@@ -816,6 +872,9 @@ class Items(object):
         :type error_message: str
         :return: None
         """
+        if not hasattr(self, 'configuration_errors'):
+            self.configuration_errors = []
+
         if isinstance(error_message, list):
             self.configuration_errors += error_message
         else:
@@ -830,6 +889,9 @@ class Items(object):
         :type warning_message: str
         :return: None
         """
+        if not hasattr(self, 'configuration_warnings'):
+            self.configuration_warnings = []
+
         if isinstance(warning_message, list):
             self.configuration_warnings += warning_message
         else:
@@ -1210,8 +1272,6 @@ class Items(object):
         :return: True if the configuration is correct, otherwise False
         :rtype: bool
         """
-        # self.conf_is_correct = True
-
         # Better check individual items before displaying the global items list errors and warnings
         for item in self:
             if not item.is_correct():
@@ -1224,12 +1284,10 @@ class Items(object):
                 self.add_warning(item.configuration_warnings)
 
         # Raise all previous warnings
-        # if self.configuration_warnings:
         for msg in self.configuration_warnings:
             logger.warning(msg)
 
         # Raise all previous errors
-        # if self.configuration_errors:
         for msg in self.configuration_errors:
             logger.error(msg)
 
@@ -1245,12 +1303,15 @@ class Items(object):
 
     def clean(self):
         """
-        Clean the list items
+        Clean the items and templates list
 
         :return: None
         """
-        for item in self:
-            item.clean()
+        for item_uuid in self.items:
+            self.items[item_uuid].clean()
+
+        for item_uuid in self.templates:
+            self.templates[item_uuid].clean()
 
     def fill_default(self):
         """
@@ -1261,24 +1322,43 @@ class Items(object):
         for item in self:
             item.fill_default()
 
-    def serialize(self):
-        """This function serialize items into a simple dict object.
-        It is used when transferring data to other daemons over the network (http)
+    def serialize(self, no_json=True, printing=False):
+        """This function serializes items and their templates into a simple dict
+        object. It is used when transferring data to other daemons over the
+        network (http)
 
-        Here is the generic function that simply serialize each item of the items object
+        Here is the generic function that simply serializes each item of the items
+        list and each item of the templates list
 
-        :return: Dictionary containing item's uuid as key and item as value
-        :rtype: dict
+        Once we get all the items in the list, the whole result is JSON serialized
+        and returned to the caller.
+
+        :param no_json: if True return dict, otherwise return a json
+        :type no_json: bool
+        :param printing: if True, console prints some information to help debugging
+        :type printing: bool
+
+        :return: JSON lists of items and templates
+        :rtype: str
         """
         res = {
             'items': {},
             'templates': {}
         }
-        for key, item in list(self.items.items()):
-            res['items'][key] = item.serialize()
+        for item_uuid in self.items:
+            res['items'][item_uuid] = serialize(self.items[item_uuid],
+                                                no_json=no_json, printing=printing)
 
-        for key, item in list(self.templates.items()):
-            res['templates'][key] = item.serialize()
+        for item_uuid in self.templates:
+            res['templates'][item_uuid] = serialize(self.templates[item_uuid],
+                                                    no_json=no_json, printing=printing)
+
+        try:
+            res = json.dumps(res, ensure_ascii=False, indent=None,
+                             separators=(', ', ': '), default=default_serialize)
+        except Exception as exp:
+            logger.error("Items serialize exception: %s", exp)
+            print("Items serialize exception: %s" % exp)
 
         return res
 
@@ -1290,6 +1370,7 @@ class Items(object):
         :type prop: str
         :return: None
         """
+        # todo: itertools.chain ? Why not doing two loops: items and then templates...
         for item in itertools.chain(iter(list(self.items.values())),
                                     iter(list(self.templates.values()))):
             self.get_property_by_inheritance(item, prop)
@@ -1309,6 +1390,7 @@ class Items(object):
         for prop in self.inner_class.properties:
             self.apply_partial_inheritance(prop)
 
+        # todo: itertools.chain ? Why not doing two loops: items and then templates...
         for item in itertools.chain(iter(list(self.items.values())),
                                     iter(list(self.templates.values()))):
             self.get_customs_properties_by_inheritance(item)

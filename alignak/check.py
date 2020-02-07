@@ -133,7 +133,7 @@ class Check(Action):  # pylint: disable=too-many-instance-attributes
         """
         return self.dependency_check
 
-    def serialize(self):
+    def serialize(self, no_json=True, printing=False):
         """This function serializes into a simple dict object.
 
         The only usage is to send to poller, and it does not need to have the
@@ -142,7 +142,7 @@ class Check(Action):  # pylint: disable=too-many-instance-attributes
         :return: json representation of a Check
         :rtype: dict
         """
-        res = super(Check, self).serialize()
+        res = super(Check, self).serialize(no_json=no_json, printing=printing)
         if 'depend_on' in res:
             del res['depend_on']
         if 'depend_on_me' in res:

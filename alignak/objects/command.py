@@ -100,7 +100,7 @@ class Command(Item):
             self.module_type = u'internal'
 
     def __str__(self):  # pragma: no cover
-        return '<Command %s, command line: %s/>' % \
+        return "<Command %s, command line: %s />" % \
                (self.get_name(), getattr(self, 'command_line', 'Unset'))
     __repr__ = __str__
 
@@ -167,10 +167,6 @@ class Command(Item):
                 self.add_warning("has too many parameters. Changed to %s" % self.command_name)
 
         return super(Command, self).is_correct() and state
-
-    def serialize(self):
-        res = super(Command, self).serialize()
-        return res
 
 
 class Commands(Items):

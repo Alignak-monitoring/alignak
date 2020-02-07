@@ -91,7 +91,7 @@ class Acknowledge(AlignakObject):  # pylint: disable=R0903
 
         self.fill_default()
 
-    def serialize(self):
+    def serialize(self, no_json=True, printing=False):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)
 

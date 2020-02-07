@@ -777,7 +777,7 @@ define host {
             # self._arbiter.load_modules_manager()
 
             # Load and initialize the arbiter configuration
-            self._arbiter.load_monitoring_config_file()
+            self._arbiter.load_monitoring_config_file(clean=False)
 
             # If this assertion does not match, then there is a bug in the arbiter :)
             self.assertTrue(self._arbiter.conf.conf_is_correct)
@@ -1573,7 +1573,7 @@ define host {
         print("Broker broks: %s" % my_broker.broks)
         for brok in my_broker.broks:
             if brok.type == 'monitoring_log':
-                data = unserialize(brok.data)
+                data = brok.prepare()
                 monitoring_logs.append((data['level'], data['message']))
                 if re.search(regex, data['message']) and (level is None or data['level'] == level):
                     self.assertTrue(not assert_not, "Found matching brok:\n"
@@ -1678,7 +1678,6 @@ define host {
 
         my_broker = [b for b in list(self._scheduler.my_daemon.brokers.values())][0]
 
-        monitoring_logs = []
         print("Broker broks: %s" % my_broker.broks)
         for brok in my_broker.broks:
             print("- %s" % brok)
@@ -1688,7 +1687,7 @@ define host {
         print("Scheduler events: %s" % self._scheduler_daemon.events)
         print("Receiver events: %s" % self._receiver_daemon.events)
         for event in self._scheduler_daemon.events:
-            data = unserialize(event.data)
+            data = event.prepare()
             monitoring_logs.append((data['level'], data['message']))
             if re.search(regex, data['message']) and (level is None or data['level'] == level):
                 self.assertTrue(not assert_not,

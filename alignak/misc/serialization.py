@@ -20,25 +20,63 @@
 This module provide object serialization for Alignak objects. It basically converts objects to json
 """
 import sys
+import json
 import collections
+from alignak.property import NONE_OBJECT
 
-try:
-    import ujson as json
-except ImportError:
-    import json
+# try:
+#     import ujson as json
+# except ImportError:
+#     import json
+#
 
 
-def serialize(obj, no_dump=False, printing=False):
+def default_serialize(obj):
+    """JSON serializer for objects not serializable by default json code"""
+
+    # if isinstance(obj, set):  # pragma: no cover, should not have any set in the data!
+    #     # Transform a set to a list
+    #     return list(obj)
+    #
+    if hasattr(obj, "serialize") and isinstance(obj.serialize, collections.Callable):
+        res = {
+            '__sys_python_module__': "%s.%s" % (obj.__class__.__module__,
+                                                obj.__class__.__name__),
+            'content': obj.serialize(no_json=True, printing=False)
+        }
+        return res
+
+    if obj is NONE_OBJECT:
+        return "None"
+
+    print("-> no serializer for %s: %s" % (type(obj), obj))
+
+    return {
+        'type': type(obj),
+        'object': obj
+    }
+
+
+def serialize(obj, no_json=True, printing=False, name=''):
     """
     Serialize an object.
+
+    Returns a dict with the following structure ::
+       {'__sys_python_module__': "%s.%s" % (o_cls.__module__, o_cls.__name__)
+       'content' : obj.serialize()}
 
     Returns a dict containing an `_error` property if a MemoryError happens during the
     object serialization. See #369.
 
     :param obj: the object to serialize
     :type obj: alignak.objects.item.Item | dict | list | str
-    :param no_dump: if True return dict, otherwise return a json
-    :type no_dump: bool
+    :param no_json: if True return dict, otherwise return a json
+    :type no_json: bool
+    :param printing: if True, console prints some information to help debugging
+    :type printing: bool
+    :param name: the name of the object
+    :type name: str
+
     :return: dict or json dumps dict with the following structure ::
 
        {'__sys_python_module__': "%s.%s" % (o_cls.__module__, o_cls.__name__)
@@ -46,56 +84,76 @@ def serialize(obj, no_dump=False, printing=False):
     :rtype: dict | str
     """
     if printing:
-        print("Serialize (%s): %s" % ('as a dict' if no_dump else 'as json', obj))
+        print("Serialize %s (%s): %s" % (name, 'no json' if no_json else 'as json', obj))
 
+    res = obj
     if hasattr(obj, "serialize") and isinstance(obj.serialize, collections.Callable):
-        o_dict = {
-            '__sys_python_module__': "%s.%s" % (obj.__class__.__module__, obj.__class__.__name__),
-            'content': obj.serialize()
+        if printing:
+            print("-> calling %s serialize %s" % (obj.__class__.__name__,
+                                                  'no json' if no_json else 'as json'))
+        res = {
+            '__sys_python_module__': "%s.%s" % (obj.__class__.__module__,
+                                                obj.__class__.__name__),
+            'content': obj.serialize(no_json=no_json, printing=printing)
         }
 
-    elif isinstance(obj, dict):
-        o_dict = {}
-        for key, value in list(obj.items()):
-            o_dict[key] = serialize(value, True)
-
     elif isinstance(obj, (list, set)):
-        o_dict = [serialize(item, True) for item in obj]
+        res = [serialize(item, no_json=no_json, printing=printing) for item in obj]
 
-    else:
-        o_dict = obj
+    if no_json:
+        if isinstance(obj, dict):
+            if printing:
+                print("no json dict object.")
+            res = {}
+            for key in obj:
+                res[key] = serialize(obj[key], no_json=no_json, printing=printing)
 
-    if no_dump:
-        return o_dict
+        if printing:
+            print("no json ->: %s" % res)
+        return res
 
     result = None
     try:
-        result = json.dumps(o_dict, ensure_ascii=False)
+        result = json.dumps(res, ensure_ascii=False, default=default_serialize)
     except MemoryError:
-        return {'_error': 'Not enough memory on this computer to correctly manage Alignak '
-                          'objects serialization! '
-                          'Sorry for this, please log an issue in the project repository.'}
+        result = json.dumps(
+            {'_error': 'Not enough memory on this computer to correctly manage '
+                       'Alignak objects serialization! Sorry for this, '
+                       'please log an issue in the project repository.'})
 
+    if printing:
+        print("json ->: %s" % result)
     return result
 
 
-def unserialize(j_obj, no_load=False):
+# pylint: disable=too-many-return-statements, too-many-branches
+def unserialize(j_obj, no_json=True, printing=False):
     """
     Un-serialize object. If we have __sys_python_module__ we try to safely get the alignak class
     Then we re-instantiate the alignak object
 
     :param j_obj: json object, dict
     :type j_obj: str (before loads)
-    :param no_load: if True, j_obj is a dict, otherwise it's a json and need loads it
-    :type no_load: bool
+    :param no_json: if True, j_obj is a dict, otherwise it's a json and need loads it
+    :type no_json: bool
+    :param printing: if True, console prints some information to help debugging
+    :type printing: bool
     :return: un-serialized object
     """
+    if printing:
+        print("Un-serialize (%s): %s" % ('as a dict' if no_json else 'as json', type(j_obj)))
+
     if not j_obj:
         return j_obj
 
     data = j_obj
-    if not no_load:
+    if not no_json:
+        if printing:
+            print("json ->: %s" % j_obj)
         data = json.loads(j_obj)
+        if printing:
+            print("-> restored data: %s" % data)
+        return data
 
     if isinstance(data, dict):
         if '__sys_python_module__' in data:
@@ -104,16 +162,27 @@ def unserialize(j_obj, no_load=False):
             if data['__sys_python_module__'] in ['alignak.external_command.ExternalCommand']:
                 return cls(data['content']['cmd_line'], data['content']['creation_timestamp'])
 
-            return cls(data['content'], parsing=False)
+            if printing:
+                print("-> restoring object: %s" % data['__sys_python_module__'])
+            content = unserialize(data['content'], no_json=no_json, printing=printing)
+            if printing:
+                print("-> restored content: %s" % content)
+            return cls(content, parsing=False)
 
         data_dict = {}
-        for key, value in list(data.items()):
-            data_dict[key] = unserialize(value, no_load=True)
+        # for key, value in list(data.items()):
+        #     data_dict[key] = unserialize(value, no_json=no_json)
+        for key in data:
+            data_dict[key] = unserialize(data[key], no_json=no_json, printing=False)
+        if printing:
+            print("  -> restoring a dict: %s" % data_dict)
         return data_dict
 
     if isinstance(data, list):
         return [unserialize(item, True) for item in data]
 
+    if printing:
+        print("-> restored data: %s" % data)
     return data
 
 
@@ -124,7 +193,7 @@ def get_alignak_class(python_path):
     * the module does not start with alignak
     * above is false and the module is not is sys.modules
     * above is false and the module does not have the wanted class
-    * above is false and the class in not a ClassType
+    * above is false and the class is not a ClassType
 
     :param python_path:
     :type python_path: str
@@ -139,8 +208,8 @@ def get_alignak_class(python_path):
 
     if a_module not in sys.modules:  # pragma: no cover - should never happen!
         raise AlignakClassLookupException("Can't recreate object in unknown module: %s. "
-                                          "No such Alignak module. Alignak versions may mismatch" %
-                                          a_module)
+                                          "No such Alignak module. "
+                                          "Alignak versions may mismatch" % a_module)
 
     pymodule = sys.modules[a_module]
 

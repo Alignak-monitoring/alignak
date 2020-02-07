@@ -28,7 +28,7 @@ import json
 import pprint
 from .alignak_test import AlignakTest
 
-from alignak.misc.serialization import unserialize
+from alignak.misc.serialization import unserialize, default_serialize
 
 
 class TestRetention(AlignakTest):
@@ -229,11 +229,16 @@ class TestRetention(AlignakTest):
         print('Hosts retention:')
         for host_name in retention['hosts']:
             try:
-                # print('- %s:' % host_name)
-                # pprint.pprint(retention['hosts'][host_name], indent=3)
                 t = json.dumps(retention['hosts'][host_name])
+            except TypeError as exp:
+                assert True, "Some set() property makes JSON not directly possible!"
+
+            # Make the json dump possible thanks to an helper dump function
+            try:
+                t = json.dumps(retention['hosts'][host_name],
+                               default=default_serialize)
             except Exception as err:
-                assert False, 'Json dumps impossible: %s' % str(err)
+                assert False, 'Json dumps impossible: %s' % err
             assert "notifications_in_progress" in t
             assert "downtimes" in t
             assert "acknowledgement" in t
@@ -363,7 +368,10 @@ class TestRetention(AlignakTest):
         assert service_comments == commentssn
 
         # check notified_contacts
-        assert isinstance(hostn.notified_contacts, set)
-        assert isinstance(svcn.notified_contacts, set)
-        assert set([self._scheduler.contacts.find_by_name("test_contact").uuid]) == \
+        assert isinstance(hostn.notified_contacts, list)
+        assert isinstance(svcn.notified_contacts, list)
+        assert [self._scheduler.contacts.find_by_name("test_contact").uuid] == \
                hostn.notified_contacts_ids
+        # Former it was a set, now it is a list!
+        # assert set([self._scheduler.contacts.find_by_name("test_contact").uuid]) == \
+        #        hostn.notified_contacts_ids

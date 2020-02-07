@@ -165,16 +165,32 @@ def split_semicolon(line, maxsplit=None):
     return split_line
 
 
-def jsonify_r(obj):  # pragma: no cover, not for unit tests...
+def jsonify_r(obj, running_properties=False,
+              filter_base_properties=False, filtered_properties=None):
     # pylint: disable=too-many-branches
-    """Convert an object into json (recursively on attribute)
+    """Convert an object into a json-able object
+    Recursively check the object properties and running properties
 
-    :param obj: obj to jsonify
+    If the filtered properties list is not provided (eg. None), then
+    this list is used: 'name', 'imported_from', 'use', 'plus', 'templates',
+    'register', 'definition_order', 'configuration_warnings',
+    'configuration_errors'
+    If filter_base_properties is set, then the properites whose name is
+    contained in the filtered properties list will not be included in the
+    result.
+
+    :param obj: obj to jsonify check
     :type obj: object
+    :param running_properties: include or not the running properties
+    :type running_properties: bool
+    :param filter_base_properties: include or not the base Item properties
+    :type filter_base_properties: bool
+    :param filtered_properties: the properties that will be filtered out
+    :type filtered_properties: list
+
     :return: json representation of obj
     :rtype: dict
     """
-    res = {}
     cls = obj.__class__
     if not hasattr(cls, 'properties'):
         try:
@@ -182,13 +198,34 @@ def jsonify_r(obj):  # pragma: no cover, not for unit tests...
             return obj
         except TypeError:
             return None
+
+    res = {}
+    if hasattr(obj, 'uuid'):
+        # uuid is not in *_properties
+        res = {'_uuid': getattr(obj, 'uuid')}
+
     properties = list(cls.properties.keys())
-    if hasattr(cls, 'running_properties'):
+    if hasattr(cls, 'running_properties') and running_properties:
         properties += list(cls.running_properties.keys())
+
+    # We are filtering some base properties
+    if filtered_properties is None:
+        filtered_properties = ['name', 'imported_from', 'use', 'plus', 'templates',
+                               'register', 'definition_order',
+                               'configuration_warnings', 'configuration_errors']
+
     for prop in properties:
+        if filter_base_properties and prop in filtered_properties:
+            continue
+
         if not hasattr(obj, prop):
             continue
+
         val = getattr(obj, prop)
+
+        if prop in filtered_properties:
+            prop = '_' + prop
+
         # Maybe the property is not jsonable
         try:
             if isinstance(val, set):
@@ -227,7 +264,7 @@ def jsonify_r(obj):  # pragma: no cover, not for unit tests...
 
 
 # ################################## TIME ##################################
-def format_t_into_dhms_format(timestamp):
+def format_t_into_dhms_format(timestamp):  # pragma: no cover, to be deprecated?
     """ Convert an amount of second into day, hour, min and sec
 
     :param timestamp: seconds
@@ -484,6 +521,7 @@ def from_float_to_int(val):  # pragma: no cover, to be deprecated?
     return val
 
 
+# ################################ Broks ######################################
 # Functions for brok_transformations
 # They take 2 parameters: ref, and a value
 # ref is the item like a service, and value
@@ -515,44 +553,15 @@ def to_list_string_of_names(ref, tab):  # pragma: no cover, to be deprecated?
     return ",".join([e.get_name() for e in tab])
 
 
+# ################################ Retention ###############################
 # Functions for retention storage / restoration
-def from_set_to_list(ref, tab):
-    """Convert set into a list
-
-    Used for the retention store
-
-    :param ref: Not used
-    :type ref:
-    :param tab: list to parse
-    :type tab: list
-    :return: list of names
-    :rtype: list
-    """
-    return list(tab)
-
-
-def from_list_to_set(ref, tab):
-    """Convert list to a set
-
-    Used for the retention restore
-
-    :param ref: Not used
-    :type ref:
-    :param tab: list to parse
-    :type tab: list
-    :return: list of names
-    :rtype: list
-    """
-    return set(tab)
-
-
-def to_serialized(ref, the_data):
+def to_serialized(item, the_data):
     """Serialize the property
 
     Used for the retention store
 
-    :param ref: Not used
-    :type ref:
+    :param item: Not used
+    :type item:
     :param the_data: dictionary to convert
     :type the_data: dict
     :return: serialized data
@@ -565,13 +574,13 @@ def to_serialized(ref, the_data):
     return the_data.serialize()
 
 
-def from_serialized(ref, the_data):
+def from_serialized(item, the_data):
     """Unserialize the element
 
     Used for the retention store
 
-    :param ref: Not used
-    :type ref:
+    :param item: Not used
+    :type item:
     :param the_data: dictionary to convert
     :type the_data: dict
     :return: serialized data
@@ -584,19 +593,21 @@ def from_serialized(ref, the_data):
     return the_data.unserialize()
 
 
-def dict_to_serialized_dict(ref, the_dict):
+def dict_to_serialized_dict(item, the_dict):
     """Serialize the list of elements to a dictionary
 
     Used for the retention store
 
-    :param ref: Not used
-    :type ref:
+    :param item: Not used
+    :type item:
     :param the_dict: dictionary to convert
     :type the_dict: dict
     :return: dict of serialized
     :rtype: dict
     """
     result = {}
+    if not the_dict:
+        return result
     for elt in list(the_dict.values()):
         if not getattr(elt, 'serialize', None):
             continue
@@ -604,13 +615,13 @@ def dict_to_serialized_dict(ref, the_dict):
     return result
 
 
-def list_to_serialized(ref, the_list):
+def list_to_serialized(item, the_list):  # pragma: no cover, to be deprecated?
     """Serialize the list of elements
 
     Used for the retention store
 
-    :param ref: Not used
-    :type ref:
+    :param item: Not used
+    :type item:
     :param the_list: dictionary to convert
     :type the_list: dict
     :return: dict of serialized
@@ -624,19 +635,21 @@ def list_to_serialized(ref, the_list):
     return result
 
 
-def to_name_if_possible(ref, value):  # pragma: no cover, to be deprecated?
+def to_name_if_possible(ref, value):
     """Try to get value name (call get_name method)
+
+    eg. Used to brok-ify some commands
 
     :param ref: Not used
     :type ref:
     :param value: value to name
-    :type value: str
-    :return: name or ''
+    :type value: alignak.objects.AlignakObject
+    :return: name or 'XxX - to_name_if_possible - XxX'
     :rtype: str
     """
     if value:
         return value.get_name()
-    return ''
+    return 'XxX - to_name_if_possible - XxX'
 
 
 def to_hostnames_list(ref, tab):  # pragma: no cover, to be deprecated?
