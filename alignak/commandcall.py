@@ -94,6 +94,7 @@ class CommandCall(AlignakObject):
             BoolProp(default=False),
     }
 
+    # pylint: disable=too-many-branches
     def __init__(self, params, parsing=False):
         """
         Note: A CommandCall may receive 'commands' in its parameters; it is the whole
@@ -190,7 +191,7 @@ class CommandCall(AlignakObject):
 
     def get_command_and_args(self):
         """We want to get the command and the args with ! splitting.
-        but don't forget to protect against the \! to avoid splitting on them
+        but don't forget to protect against the ! to avoid splitting on them
 
         Remember: A Nagios-like command is command_name!arg1!arg2!...
 

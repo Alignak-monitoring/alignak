@@ -254,16 +254,7 @@ class Timeperiod(Item):
         :return: json representation of a Timeperiod
         :rtype: dict
         """
-        res = super(Timeperiod, self).serialize(no_json=no_json, printing=printing)
-
-        # res['dateranges'] = []
-        # for elem in self.dateranges:
-        #     res['dateranges'].append({'__sys_python_module__': "%s.%s" % (elem.__module__,
-        #                                                                   elem.__class__.__name__),
-        #                               'content': elem.serialize(no_json=no_json,
-        #                                                         printing=printing)})
-
-        return res
+        return super(Timeperiod, self).serialize(no_json=no_json, printing=printing)
 
     def is_time_valid(self, timestamp):
         """

@@ -84,6 +84,7 @@ class AlignakObject(object):
         for key, value in params.items():
             setattr(self, key, value)
 
+    # pylint: disable=unused-argument
     def serialize(self, no_json=True, printing=False):
         """This function serializes into a simple dictionary object.
 

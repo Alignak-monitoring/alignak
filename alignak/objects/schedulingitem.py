@@ -69,16 +69,10 @@ import time
 from datetime import datetime
 import traceback
 import logging
+# use numpy if installed
+import numpy
 
-# pylint: disable=unused-import
-NUMPY = True
-try:
-    # use numpy if installed
-    import numpy
-except ImportError:  # pragma: no cover
-    NUMPY = False
-
-from alignak.misc.serialization import serialize, unserialize
+from alignak.misc.serialization import unserialize
 from alignak.objects.item import Item
 from alignak.objects.commandcallitem import CommandCallItems
 
@@ -2253,7 +2247,7 @@ class SchedulingItem(Item):  # pylint: disable=too-many-instance-attributes
 
     def scatter_notification(self, notif, contacts, notifways, timeperiods, macromodulations,
                              escalations, host_ref):
-        # pylint: disable=too-many-locals, too-many-boolean-expressions
+        # pylint: disable=too-many-locals, too-many-boolean-expressions, too-many-branches
         """In create_notifications we created a notification master (eg. a template).
         When it's time to hand it over to the reactionner, this master notification needs
         to be split in several child notifications, one for each contact

@@ -52,7 +52,7 @@ import time
 from datetime import datetime
 
 from alignak.alignakobject import get_a_new_object_id
-from alignak.misc.serialization import serialize, unserialize, default_serialize
+from alignak.misc.serialization import serialize, unserialize
 
 
 class Brok(object):
@@ -131,6 +131,7 @@ class Brok(object):
         self.prepare()
         return self.creation_time, self.data['level'], self.data['message']
 
+    # pylint: disable=unused-argument
     def serialize(self, no_json=True, printing=False):
         """This function serialize into a simple dict object.
         It is used when transferring data to other daemons over the network (http)

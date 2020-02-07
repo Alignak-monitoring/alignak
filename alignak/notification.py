@@ -51,8 +51,6 @@
 Used to define monitoring notifications (email, contacts..)
 
 """
-from six import string_types
-
 from alignak.action import Action
 from alignak.brok import Brok
 from alignak.property import BoolProp, IntegerProp, StringProp, ListProp, FULL_STATUS

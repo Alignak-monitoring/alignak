@@ -1305,9 +1305,6 @@ class Services(SchedulingItems):
         host_name = getattr(template, 'host_name', '')
         logger.debug("Adding a %s template: host_name: %s, name: %s, service_description: %s",
                      self.inner_class.my_type, host_name, name, service_description)
-        # print("Adding a %s template: host_name: '%s', name: '%s', service_description: '%s'"
-        #       % (self.inner_class.my_type, host_name, name, service_description))
-        # print("-> template %s / %s: %s" % (template.is_a_template(), getattr(template, 'register', 'XxX'), template))
 
         if not name and not host_name:
             template.add_error("a %s template has been defined without name nor host_name. "

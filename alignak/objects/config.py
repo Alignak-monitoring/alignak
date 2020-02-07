@@ -78,7 +78,6 @@ import socket
 import itertools
 import time
 import random
-import tempfile
 import logging
 from io import StringIO
 import json
@@ -2442,7 +2441,7 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         """
         logger.info('Running pre-flight check on configuration data, initial state: %s',
                     self.conf_is_correct)
-        valid = self.conf_is_correct
+        # valid = self.conf_is_correct
 
         # Check if alignak_name is defined
         if not self.alignak_name:
@@ -3142,6 +3141,7 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
                 objs = sorted(objs,
                               key=lambda o: "%s/%s" % (o["host_name"], o["service_description"]))
             elif hasattr(container, "name_property"):
+                # pylint: disable=cell-var-from-loop
                 objs = sorted(objs,
                               key=lambda o, prop=container.name_property: getattr(o, prop, ''))
             config_dump[category] = objs
@@ -3160,3 +3160,6 @@ class Config(Item):  # pylint: disable=too-many-public-methods,too-many-instance
         except (OSError, IndexError) as exp:  # pragma: no cover, should never happen...
             logger.critical("Error when dumping configuration to %s: %s",
                             dump_file_name, str(exp))
+
+        return json.dumps(config_dump, ensure_ascii=False, sort_keys=True,
+                          indent=2, separators=(', ', ': '), default=default_serialize)

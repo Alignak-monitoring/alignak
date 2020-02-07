@@ -126,6 +126,7 @@ def serialize(obj, no_json=True, printing=False, name=''):
     return result
 
 
+# pylint: disable=too-many-return-statements, too-many-branches
 def unserialize(j_obj, no_json=True, printing=False):
     """
     Un-serialize object. If we have __sys_python_module__ we try to safely get the alignak class

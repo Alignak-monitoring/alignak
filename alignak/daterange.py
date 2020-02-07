@@ -246,7 +246,7 @@ class Timerange(AlignakObject):
             "hstart": self.hstart, "mstart": self.mstart,
             "hend": self.hend, "mend": self.mend,
             "is_valid": self.is_valid
-    }
+        }
 
     def __str__(self):  # pragma: no cover
         return str(self.__dict__)

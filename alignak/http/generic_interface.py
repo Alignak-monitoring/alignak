@@ -375,7 +375,6 @@ class GenericInterface(object):
         :return: serialized list
         :rtype: str
         """
-        # logger.warning("Get results for the scheduler: %s", scheduler_instance_id)
         logger.debug("Get results for the scheduler: %s", scheduler_instance_id)
 
         try:

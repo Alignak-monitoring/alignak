@@ -461,12 +461,16 @@ class SchedulerInterface(GenericInterface):
     @cherrypy.expose
     @cherrypy.tools.json_in()
     @cherrypy.tools.json_out()
+    # pylint: disable=arguments-differ
     def _results(self):
         """Put results to scheduler, used by poller and reactionner when they are
         in active mode (passive = False)
 
         This function is not intended for external use. Let the poller and reactionner
         manage all this stuff by themselves ;)
+
+        Note: This function name should be changed because of a conflicting with
+        the base class function
 
         :param from: poller/reactionner identification
         :type from: str
@@ -475,6 +479,7 @@ class SchedulerInterface(GenericInterface):
         :return: True
         :rtype: bool
         """
+        logger.debug("Put results to the scheduler")
         res = cherrypy.request.json
         results = unserialize(res['results'], no_json=True)
         if not results:

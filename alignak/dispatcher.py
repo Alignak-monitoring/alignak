@@ -59,7 +59,6 @@
 
 import sys
 import hashlib
-import json
 import pickle
 import logging
 import time
@@ -561,10 +560,6 @@ class Dispatcher(object):
                 })
 
                 # Hash the whole configuration
-                # try:
-                #     s_conf_part = json.dumps(arbiter_cfg, sort_keys=True).encode('utf-8')
-                # except UnicodeDecodeError:
-                #     pass
                 cfg_string = serialize(arbiter_cfg, no_json=False).encode('utf-8')
                 arbiter_cfg['hash'] = hashlib.sha1(cfg_string).hexdigest()
 
@@ -705,8 +700,6 @@ class Dispatcher(object):
                     })
 
                     # Hash the whole configuration
-                    # cfg_string = json.dumps(scheduler_link.cfg, sort_keys=True).encode('utf-8')
-                    # cfg_string = json.dumps(scheduler_link.cfg, sort_keys=True).encode('utf-8')
                     cfg_string = serialize(scheduler_link.cfg, no_json=False).encode('utf-8')
                     scheduler_link.cfg['hash'] = hashlib.sha1(cfg_string).hexdigest()
 

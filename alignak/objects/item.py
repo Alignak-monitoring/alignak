@@ -542,7 +542,8 @@ class Item(AlignakObject):
         if not isinstance(message, list):
             message = [message]
         for txt in message:
-            self.configuration_errors.append("[{}::{}] {}".format(self.my_type, self.get_name(), txt))
+            self.configuration_errors.append("[{}::{}] {}".format(self.my_type,
+                                                                  self.get_name(), txt))
         self.conf_is_correct = False
 
     def add_warning(self, message):
@@ -559,7 +560,8 @@ class Item(AlignakObject):
         if not isinstance(message, list):
             message = [message]
         for txt in message:
-            self.configuration_warnings.append("[{}::{}] {}".format(self.my_type, self.get_name(), txt))
+            self.configuration_warnings.append("[{}::{}] {}".format(self.my_type,
+                                                                    self.get_name(), txt))
 
     def is_correct(self):
         """
