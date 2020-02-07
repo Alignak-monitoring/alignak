@@ -49,6 +49,7 @@
 #
 # This file is used to test the poller/reactionner workers that goes to timeout
 #
+import os
 import time
 
 from .alignak_test import AlignakTest
@@ -81,7 +82,7 @@ class TestWorkerTimeout(AlignakTest):
 
         # These queues connect a poller/reactionner with a worker
         to_queue = Queue()
-        from_queue = Queue() #manager.list()
+        from_queue = Queue()
         control_queue = Queue()
 
         # This test script plays the role of the reactionner
@@ -98,7 +99,7 @@ class TestWorkerTimeout(AlignakTest):
             'uuid': 1,
             'type': 'PROBLEM',
             'status': 'scheduled',
-            'command': 'libexec/sleep_command.sh 7',
+            'command': 'tests/libexec/sleep_command.sh 7',
             'command_call': '',
             'ref': svc.uuid,
             'contact': '',
@@ -149,4 +150,4 @@ class TestWorkerTimeout(AlignakTest):
         self._scheduler.manage_results(o)
         self.show_logs()
         self.assert_any_log_match("Contact alignak service notification command "
-                                  "'libexec/sleep_command.sh 7 ' timed out after")
+                                  "'tests/libexec/sleep_command.sh 7 ' timed out after")

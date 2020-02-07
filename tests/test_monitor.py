@@ -47,7 +47,7 @@ class TestMonitor(AlignakTest):
         # Log at DEBUG level
         self.set_unit_tests_logger_level()
 
-    def _monitoring(self, env_filename='cfg/monitor/simple.ini', loops=3, multi_realms=False):
+    def _monitoring(self, env_filename='tests/cfg/monitor/simple.ini', loops=3, multi_realms=False):
         """ monitoring process: prepare, check, dispatch
 
         This function realize all the monitoring operations:
@@ -172,7 +172,7 @@ class TestMonitor(AlignakTest):
     @pytest.mark.skip("Only for local tests ... directly send information to a monitor host.")
     def test_real(self):
         args = {
-            'env_file': 'cfg/monitor/simple.ini',
+            'env_file': os.path.join(self._test_dir, 'cfg/monitor/simple.ini'),
             'alignak_name': 'alignak-test', 'daemon_name': 'arbiter-master'
         }
         my_arbiter = Arbiter(**args)

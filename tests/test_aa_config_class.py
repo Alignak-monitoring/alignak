@@ -222,7 +222,9 @@ class TestConfigClassBase(AlignakTest):
             assert getattr(alignak_cfg, category, None) is None
 
         # Read and parse the legacy configuration files, do not provide environment file name
-        legacy_cfg_files = ['../etc/alignak.cfg']
+        legacy_cfg_files = [
+            os.path.join(self._test_dir, '../etc/alignak.cfg')
+        ]
         raw_objects = alignak_cfg.read_legacy_cfg_files(legacy_cfg_files)
         raw_objects = alignak_cfg.read_config_buf(raw_objects)
 

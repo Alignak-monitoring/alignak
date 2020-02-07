@@ -176,11 +176,13 @@ class TestLaunchDaemonsRealms(AlignakTest):
         self._prepare_configuration(copy=True, cfg_folder=self.cfg_folder)
 
         # Specific daemon load configuration preparation
-        if os.path.exists('./cfg/%s/alignak.cfg' % cfg_dir):
-            shutil.copy('./cfg/%s/alignak.cfg' % cfg_dir, '%s/etc' % self.cfg_folder)
+        if os.path.exists(os.path.join(self._test_dir, './cfg/%s/alignak.cfg' % cfg_dir)):
+            shutil.copy(os.path.join(self._test_dir, './cfg/%s/alignak.cfg' % cfg_dir),
+                        '%s/etc' % self.cfg_folder)
         if os.path.exists('%s/etc/arbiter' % self.cfg_folder):
             shutil.rmtree('%s/etc/arbiter' % self.cfg_folder)
-        shutil.copytree('./cfg/%s/arbiter' % cfg_dir, '%s/etc/arbiter' % self.cfg_folder)
+        shutil.copytree(os.path.join(self._test_dir, './cfg/%s/arbiter' % cfg_dir),
+                        '%s/etc/arbiter' % self.cfg_folder)
 
         self._prepare_hosts_configuration(cfg_folder='%s/etc/arbiter/objects/hosts'
                                                      % self.cfg_folder,
@@ -188,8 +190,9 @@ class TestLaunchDaemonsRealms(AlignakTest):
                                           realms=realms)
 
         # Some script commands must be copied in the test folder
-        if os.path.exists('./libexec/check_command.sh'):
-            shutil.copy('./libexec/check_command.sh', '%s/check_command.sh' % self.cfg_folder)
+        if os.path.exists(os.path.join(self._test_dir, './libexec/check_command.sh')):
+            shutil.copy(os.path.join(self._test_dir, './libexec/check_command.sh'),
+                        '%s/check_command.sh' % self.cfg_folder)
 
         # Update the default configuration files
         files = ['%s/etc/alignak.ini' % self.cfg_folder]
@@ -256,6 +259,7 @@ class TestLaunchDaemonsRealms(AlignakTest):
             u"hosts configuration warnings: 1, total: 2",
             u"[host::localhost2] has no defined check command",
             u"inner retention module is loaded but is not enabled",
+            "Retention directory created",
 
             # Daemons not existing
             u"Some hosts exist in the realm ",

@@ -83,7 +83,9 @@ class TestLaunchDaemons(AlignakTest):
         :return:
         """
         print("Launching arbiter with missing parameters...")
-        args = ["../alignak/bin/alignak_arbiter.py"]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_arbiter.py")
+        ]
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
@@ -105,7 +107,9 @@ class TestLaunchDaemons(AlignakTest):
         :return:
         """
         print("Launching arbiter without environment file...")
-        args = ["../alignak/bin/alignak_arbiter.py"]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_arbiter.py")
+        ]
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
@@ -137,14 +141,14 @@ class TestLaunchDaemons(AlignakTest):
             'alignak_name': 'alignak-test',
             'daemon_name': 'arbiter-master',
             'log_filename': '/tmp/arbiter.log',
-            'legacy_cfg_files': ['../etc/alignak.cfg']
+            'legacy_cfg_files': [os.path.join(self._test_dir, '../etc/alignak.cfg')]
         }
         # Exception because the logger configuration file does not exist
         self.arbiter = Arbiter(**args)
 
         print("Arbiter: %s" % self.arbiter)
         assert self.arbiter.env_filename == ''
-        assert self.arbiter.legacy_cfg_files == [os.path.abspath('../etc/alignak.cfg')]
+        assert self.arbiter.legacy_cfg_files == [os.path.abspath(os.path.join(self._test_dir, '../etc/alignak.cfg'))]
 
         # Configure the logger
         self.arbiter.log_level = 'ERROR'
@@ -210,7 +214,10 @@ class TestLaunchDaemons(AlignakTest):
         :return:
         """
         print("Launching arbiter with a not existing environment file...")
-        args = ["../alignak/bin/alignak_arbiter.py", "-e", "/tmp/etc/unexisting.ini"]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_arbiter.py"),
+            "-e", "/tmp/etc/unexisting.ini"
+        ]
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
@@ -250,7 +257,10 @@ class TestLaunchDaemons(AlignakTest):
             print("* parsing error in config file: %s" % exp)
             assert False
 
-        args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_arbiter.py"),
+            "-e", '%s/etc/alignak.ini' % self.cfg_folder
+        ]
         ret = self._run_command_with_timeout(args, 30)
 
         errors = 0
@@ -283,7 +293,10 @@ class TestLaunchDaemons(AlignakTest):
             print("* parsing error in config file: %s" % exp)
             assert False
 
-        args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_arbiter.py"),
+            "-e", '%s/etc/alignak.ini' % self.cfg_folder
+        ]
         ret = self._run_command_with_timeout(args, 20)
 
         errors = 0
@@ -329,7 +342,10 @@ class TestLaunchDaemons(AlignakTest):
         }
         self._files_update(files, replacements)
 
-        args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_arbiter.py"),
+            "-e", '%s/etc/alignak.ini' % self.cfg_folder
+        ]
         ret = self._run_command_with_timeout(args, 20)
 
         errors = 0
@@ -359,9 +375,11 @@ class TestLaunchDaemons(AlignakTest):
         if os.path.exists('%s/my-arbiter-name.log' % os.getcwd()):
             os.remove('%s/my-arbiter-name.log' % os.getcwd())
 
-        args = ["../alignak/bin/alignak_arbiter.py",
-                "-e", '%s/etc/alignak.ini' % self.cfg_folder,
-                "-n", "my-arbiter-name"]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_arbiter.py"),
+            "-e", '%s/etc/alignak.ini' % self.cfg_folder,
+            "-n", "my-arbiter-name"
+        ]
         ret = self._run_command_with_timeout(args, 20)
 
         errors = 0
@@ -391,9 +409,11 @@ class TestLaunchDaemons(AlignakTest):
         print("Logger configuration file is: %s" % os.environ['ALIGNAK_LOGGER_CONFIGURATION'])
 
         print("Launching arbiter in verification mode...")
-        args = ["../alignak/bin/alignak_arbiter.py",
-                "-e", '%s/etc/alignak.ini' % self.cfg_folder,
-                "-V"]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_arbiter.py"),
+            "-e", '%s/etc/alignak.ini' % self.cfg_folder,
+            "-V"
+        ]
         ret = self._run_command_with_timeout(args, 20)
 
         errors = 0
@@ -426,8 +446,11 @@ class TestLaunchDaemons(AlignakTest):
         if os.path.exists('/tmp/arbiter.pid'):
             os.remove('/tmp/arbiter.pid')
 
-        args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder, "-V",
-                "--pid_file", "/tmp/arbiter.pid"]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_arbiter.py"),
+            "-e", '%s/etc/alignak.ini' % self.cfg_folder, "-V",
+            "--pid_file", "/tmp/arbiter.pid"
+        ]
         ret = self._run_command_with_timeout(args, 20)
 
         # The arbiter unlinks the pid file - I cannot assert it exists!
@@ -457,9 +480,12 @@ class TestLaunchDaemons(AlignakTest):
         if os.path.exists('/tmp/arbiter.log'):
             os.remove('/tmp/arbiter.log')
 
-        args = ["../alignak/bin/alignak_arbiter.py", "-e", '%s/etc/alignak.ini' % self.cfg_folder,
-                "-V", "-vv",
-                "--log_level", "INFO", "--log_file", "/tmp/arbiter.log"]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_arbiter.py"),
+            "-e", '%s/etc/alignak.ini' % self.cfg_folder,
+            "-V", "-vv",
+            "--log_level", "INFO", "--log_file", "/tmp/arbiter.log"
+        ]
         ret = self._run_command_with_timeout(args, 20)
 
         # Log file created because of the -V option
@@ -482,10 +508,12 @@ class TestLaunchDaemons(AlignakTest):
         :return:
         """
         print("Launching arbiter in spare mode...")
-        args = ["../alignak/bin/alignak_arbiter.py",
-                "-a", cfg_folder + "/alignak.cfg",
-                "-c", cfg_folder + "/daemons/arbiterd.ini",
-                "-n", "arbiter-spare"]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_arbiter.py"),
+            "-a", cfg_folder + "/alignak.cfg",
+            "-c", cfg_folder + "/daemons/arbiterd.ini",
+            "-n", "arbiter-spare"
+        ]
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
@@ -504,10 +532,12 @@ class TestLaunchDaemons(AlignakTest):
         :return:
         """
         print("Launching arbiter in spare mode...")
-        args = ["../alignak/bin/alignak_arbiter.py",
-                "-a", cfg_folder + "/alignak.cfg",
-                "-c", cfg_folder + "/daemons/arbiterd.ini",
-                "-n", "arbiter-spare"]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_arbiter.py"),
+            "-a", cfg_folder + "/alignak.cfg",
+            "-c", cfg_folder + "/daemons/arbiterd.ini",
+            "-n", "arbiter-spare"
+        ]
         arbiter = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         print("%s launched (pid=%d)" % ('arbiter', arbiter.pid))
 
@@ -588,8 +618,11 @@ class TestLaunchDaemons(AlignakTest):
         print("Logger configuration file is: %s" % os.environ['ALIGNAK_LOGGER_CONFIGURATION'])
 
         print("Launching arbiter ...")
-        args = ["../alignak/bin/alignak_arbiter.py",
-                "-n", "arbiter-master", "-e", '%s/etc/alignak.ini' % self.cfg_folder]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_arbiter.py"),
+            "-n", "arbiter-master",
+            "-e", '%s/etc/alignak.ini' % self.cfg_folder
+        ]
         if verbosity:
             args.append(verbosity)
         arbiter = subprocess.Popen(args)
@@ -629,7 +662,11 @@ class TestLaunchDaemons(AlignakTest):
         :return:
         """
         print("Launching broker ...")
-        args = ["../alignak/bin/alignak_broker.py", "-n", "broker-master", "-e", '%s/etc/alignak.ini' % self.cfg_folder]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_broker.py"),
+            "-n", "broker-master",
+            "-e", '%s/etc/alignak.ini' % self.cfg_folder
+        ]
         broker = subprocess.Popen(args)
         print("%s launched (pid=%d)" % ('broker', broker.pid))
 
@@ -654,7 +691,11 @@ class TestLaunchDaemons(AlignakTest):
         :return:
         """
         print("Launching poller ...")
-        args = ["../alignak/bin/alignak_poller.py", "-n", "poller-master", "-e", '%s/etc/alignak.ini' % self.cfg_folder]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_poller.py"),
+            "-n", "poller-master",
+            "-e", '%s/etc/alignak.ini' % self.cfg_folder
+        ]
         poller = subprocess.Popen(args)
         print("%s launched (pid=%d)" % ('poller', poller.pid))
 
@@ -679,7 +720,11 @@ class TestLaunchDaemons(AlignakTest):
         :return:
         """
         print("Launching reactionner ...")
-        args = ["../alignak/bin/alignak_reactionner.py", "-n", "reactionner-master", "-e", '%s/etc/alignak.ini' % self.cfg_folder]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_reactionner.py"),
+            "-n", "reactionner-master",
+            "-e", '%s/etc/alignak.ini' % self.cfg_folder
+        ]
         reactionner = subprocess.Popen(args)
         print("%s launched (pid=%d)" % ('reactionner', reactionner.pid))
 
@@ -704,7 +749,11 @@ class TestLaunchDaemons(AlignakTest):
         :return:
         """
         print("Launching receiver ...")
-        args = ["../alignak/bin/alignak_receiver.py", "-n", "receiver-master", "-e", '%s/etc/alignak.ini' % self.cfg_folder]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_receiver.py"),
+            "-n", "receiver-master",
+            "-e", '%s/etc/alignak.ini' % self.cfg_folder
+        ]
         receiver = subprocess.Popen(args)
         print("%s launched (pid=%d)" % ('receiver', receiver.pid))
 
@@ -730,8 +779,11 @@ class TestLaunchDaemons(AlignakTest):
         """
         print("Launching scheduler ...")
 
-        args = ["../alignak/bin/alignak_scheduler.py", "-n", "scheduler-master",
-                "-e", '%s/etc/alignak.ini' % self.cfg_folder]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_scheduler.py"),
+            "-n", "scheduler-master",
+            "-e", '%s/etc/alignak.ini' % self.cfg_folder
+        ]
         scheduler = subprocess.Popen(args)
         print("%s launched (pid=%d)" % ('scheduler', scheduler.pid))
 

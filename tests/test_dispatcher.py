@@ -49,7 +49,7 @@ class TestDispatcher(AlignakTest):
         # Log at DEBUG level
         self.set_unit_tests_logger_level()
 
-    def _dispatching(self, env_filename='cfg/dispatcher/simple.ini', loops=3, multi_realms=False):
+    def _dispatching(self, env_filename='tests/cfg/dispatcher/simple.ini', loops=3, multi_realms=False):
         """ Dispatching process: prepare, check, dispatch
 
         This function realizes all the dispatching operations:
@@ -428,7 +428,7 @@ class TestDispatcher(AlignakTest):
         :return: None
         """
         args = {
-            'env_file': 'cfg/dispatcher/two_master_arbiters.ini',
+            'env_file': os.path.join(self._test_dir, 'cfg/dispatcher/two_master_arbiters.ini'),
             'alignak_name': 'alignak-test', 'daemon_name': 'arbiter-master'
         }
         self.my_arbiter = Arbiter(**args)
@@ -462,21 +462,21 @@ class TestDispatcher(AlignakTest):
 
         :return: None
         """
-        self._dispatching('cfg/dispatcher/simple_multi_schedulers.ini', multi_realms=True)
+        self._dispatching(os.path.join(self._test_dir, 'cfg/dispatcher/simple_multi_schedulers.ini'), multi_realms=True)
 
     def test_dispatching_multiple_pollers(self):
         """ Test the dispatching process: 1 realm, 2 pollers
 
         :return: None
         """
-        self._dispatching('cfg/dispatcher/simple_multi_pollers.ini')
+        self._dispatching(os.path.join(self._test_dir, 'cfg/dispatcher/simple_multi_pollers.ini'))
 
     def test_dispatching_multiple_realms(self):
         """ Test the dispatching process: 2 realms, all daemons duplicated
 
         :return: None
         """
-        self._dispatching('cfg/dispatcher/2-realms.ini', multi_realms=True)
+        self._dispatching(os.path.join(self._test_dir, 'cfg/dispatcher/2-realms.ini'), multi_realms=True)
 
     def test_dispatching_multiple_realms_sub_realms(self):
         """ Test the dispatching process: 2 realms, some daemons are sub_realms managers
@@ -504,7 +504,7 @@ class TestDispatcher(AlignakTest):
 
         :return: None
         """
-        self._dispatching('cfg/dispatcher/realms_with_sub_realms.ini', multi_realms=True)
+        self._dispatching(os.path.join(self._test_dir, 'cfg/dispatcher/realms_with_sub_realms.ini'), multi_realms=True)
 
     def test_dispatching_multiple_realms_sub_realms_multi_schedulers(self):
         """ Test the dispatching process: 2 realms, some daemons are sub_realms managers and
@@ -521,7 +521,7 @@ class TestDispatcher(AlignakTest):
 
         :return: None
         """
-        self._dispatching('cfg/dispatcher/realms_with_sub_realms_multi_schedulers.ini',
+        self._dispatching(os.path.join(self._test_dir, 'cfg/dispatcher/realms_with_sub_realms_multi_schedulers.ini'),
                           multi_realms=True)
 
     @pytest.mark.skip("Currently disabled - spare feature - and whatever this test seems broken!")
@@ -530,178 +530,4 @@ class TestDispatcher(AlignakTest):
 
         :return: None
         """
-        self._dispatching('cfg/dispatcher/spare_arbiter.ini')
-
-    @pytest.mark.skip("Currently disabled - spare feature - and whatever this test seems broken!")
-    def test_simple_scheduler_spare(self):
-        """ Test simple but with spare of scheduler
-
-        :return: None
-        """
-        with requests_mock.mock() as mockreq:
-            for port in ['7768', '7772', '7771', '7769', '7773', '8002']:
-                mockreq.get('http://localhost:%s/ping' % port, json='pong')
-
-            self.setup_with_file('cfg/dispatcher/simple.cfg')
-            self.show_logs()
-            json_managed = {self._scheduler_daemon.conf.uuid:
-                            self._scheduler_daemon.conf.push_flavor}
-            for port in ['7768', '7772', '7771', '7769', '7773']:
-                mockreq.get('http://localhost:%s/what_i_managed' % port, json=json_managed)
-            mockreq.get('http://localhost:8002/what_i_managed', json='{}')
-
-            self._arbiter.dispatcher.check_reachable()
-            self._arbiter.dispatcher.prepare_dispatch()
-            self._arbiter.dispatcher.dispatch_ok = True
-
-            assert 2 == len(self._arbiter.dispatcher.schedulers)
-            assert 4 == len(self._arbiter.dispatcher.satellites)
-            master_sched = None
-            spare_sched = None
-            for scheduler in self._arbiter.dispatcher.schedulers:
-                if scheduler.get_name() == 'scheduler-master':
-                    scheduler.is_sent = True
-                    master_sched = scheduler
-                else:
-                    spare_sched = scheduler
-
-            assert master_sched.ping
-            assert 1 == master_sched.attempt
-            assert spare_sched.ping
-            assert 0 == spare_sched.attempt
-
-        for satellite in self._arbiter.dispatcher.satellites:
-            assert 1 == len(satellite.cfg['schedulers'])
-            scheduler = next(iter(satellite.cfg['schedulers'].values()))
-            assert 'scheduler-master' == scheduler['name']
-
-        # now simulate master sched down
-        master_sched.check_interval = 1
-        spare_sched.check_interval = 1
-        for satellite in self._arbiter.dispatcher.receivers:
-            satellite.check_interval = 1
-        for satellite in self._arbiter.dispatcher.reactionners:
-            satellite.check_interval = 1
-        for satellite in self._arbiter.dispatcher.brokers:
-            satellite.check_interval = 1
-        for satellite in self._arbiter.dispatcher.pollers:
-            satellite.check_interval = 1
-        time.sleep(1)
-
-        with requests_mock.mock() as mockreq:
-            for port in ['7772', '7771', '7769', '7773', '8002']:
-                mockreq.get('http://localhost:%s/ping' % port, json='pong')
-
-            for port in ['7772', '7771', '7769', '7773']:
-                mockreq.get('http://localhost:%s/what_i_managed' % port, json=json_managed)
-            mockreq.get('http://localhost:8002/what_i_managed', json='{}')
-
-            for port in ['7772', '7771', '7769', '7773', '8002']:
-                mockreq.post('http://localhost:%s/put_conf' % port, json='true')
-
-            self._arbiter.dispatcher.check_reachable()
-            self._arbiter.dispatcher.check_dispatch()
-            self._arbiter.dispatcher.prepare_dispatch()
-            self._arbiter.dispatcher.dispatch()
-            self._arbiter.dispatcher.check_bad_dispatch()
-
-            assert master_sched.ping
-            assert 2 == master_sched.attempt
-
-            time.sleep(1)
-            self._arbiter.dispatcher.check_reachable()
-            self._arbiter.dispatcher.check_dispatch()
-            self._arbiter.dispatcher.prepare_dispatch()
-            self._arbiter.dispatcher.dispatch()
-            self._arbiter.dispatcher.check_bad_dispatch()
-
-            assert master_sched.ping
-            assert 3 == master_sched.attempt
-            # assert master_sched.alive
-            #
-            # time.sleep(1)
-            # self.arbiter.dispatcher.check_alive()
-            # self.arbiter.dispatcher.check_dispatch()
-            # self.arbiter.dispatcher.prepare_dispatch()
-            # self.arbiter.dispatcher.dispatch()
-            # self.arbiter.dispatcher.check_bad_dispatch()
-
-            assert not master_sched.alive
-
-            history = mockreq.request_history
-            send_conf_to_sched_master = False
-            conf_sent = {}
-            for index, hist in enumerate(history):
-                if hist.url == 'http://localhost:7768/put_conf':
-                    send_conf_to_sched_master = True
-                elif hist.url == 'http://localhost:8002/put_conf':
-                    conf_sent['scheduler-spare'] = hist.json()
-                elif hist.url == 'http://localhost:7772/put_conf':
-                    conf_sent['broker'] = hist.json()
-                elif hist.url == 'http://localhost:7771/put_conf':
-                    conf_sent['poller'] = hist.json()
-                elif hist.url == 'http://localhost:7769/put_conf':
-                    conf_sent['reactionner'] = hist.json()
-                elif hist.url == 'http://localhost:7773/put_conf':
-                    conf_sent['receiver'] = hist.json()
-
-            assert not send_conf_to_sched_master, 'Conf to scheduler master must not be sent' \
-                                                        'because it is not alive'
-            self.show_logs()
-            assert 5 == len(conf_sent)
-            assert ['conf'] == list(conf_sent['scheduler-spare'].keys())
-
-            json_managed_spare = {}
-            for satellite in self._arbiter.dispatcher.satellites:
-                assert 1 == len(satellite.cfg['schedulers'])
-                scheduler = next(iter(satellite.cfg['schedulers'].values()))
-                assert 'scheduler-spare' == scheduler['name']
-                json_managed_spare[scheduler['instance_id']] = scheduler['push_flavor']
-
-        # return of the scheduler master
-        print("*********** Return of the king / master ***********")
-        with requests_mock.mock() as mockreq:
-            for port in ['7768', '7772', '7771', '7769', '7773', '8002']:
-                mockreq.get('http://localhost:%s/ping' % port, json='pong')
-
-            mockreq.get('http://localhost:7768/what_i_managed', json=json_managed)
-            for port in ['7772', '7771', '7769', '7773', '8002']:
-                mockreq.get('http://localhost:%s/what_i_managed' % port, json=json_managed_spare)
-
-            for port in ['7768', '7772', '7771', '7769', '7773', '8002']:
-                mockreq.post('http://localhost:%s/put_conf' % port, json='true')
-
-            time.sleep(1)
-            self._arbiter.dispatcher.check_reachable()
-            self._arbiter.dispatcher.check_dispatch()
-            self._arbiter.dispatcher.prepare_dispatch()
-            self._arbiter.dispatcher.dispatch()
-            self._arbiter.dispatcher.check_bad_dispatch()
-
-            assert master_sched.ping
-            assert 0 == master_sched.attempt
-
-            history = mockreq.request_history
-            conf_sent = {}
-            for index, hist in enumerate(history):
-                if hist.url == 'http://localhost:7768/put_conf':
-                    conf_sent['scheduler-master'] = hist.json()
-                elif hist.url == 'http://localhost:8002/put_conf':
-                    conf_sent['scheduler-spare'] = hist.json()
-                elif hist.url == 'http://localhost:7772/put_conf':
-                    conf_sent['broker'] = hist.json()
-                elif hist.url == 'http://localhost:7771/put_conf':
-                    conf_sent['poller'] = hist.json()
-                elif hist.url == 'http://localhost:7769/put_conf':
-                    conf_sent['reactionner'] = hist.json()
-                elif hist.url == 'http://localhost:7773/put_conf':
-                    conf_sent['receiver'] = hist.json()
-
-            assert set(['scheduler-master', 'broker', 'poller', 'reactionner',
-                                  'receiver']) == \
-                             set(conf_sent.keys())
-
-            for satellite in self._arbiter.dispatcher.satellites:
-                assert 1 == len(satellite.cfg['schedulers'])
-                scheduler = next(iter(satellite.cfg['schedulers'].values()))
-                assert 'scheduler-master' == scheduler['name']
+        self._dispatching(os.path.join(self._test_dir, 'cfg/dispatcher/spare_arbiter.ini'))

@@ -45,6 +45,7 @@ class TestConfig(AlignakTest):
     This class tests the configuration
     """
     def setUp(self):
+        print("Request: %s" % __file__)
         super(TestConfig, self).setUp()
 
     def test_config_ok(self):
@@ -258,7 +259,8 @@ class TestConfig(AlignakTest):
         assert self._arbiter.conf.conf_is_correct
 
         # Configuration inner properties are valued
-        assert self._arbiter.conf.main_config_file == os.path.abspath('cfg/cfg_default.cfg')
+        assert self._arbiter.conf.main_config_file == os.path.abspath(
+            os.path.join(self._test_dir, 'cfg/cfg_default.cfg'))
 
         # Default Alignak name is the arbiter name but it may be set from the configuration
         assert self._arbiter.conf.alignak_name == 'My Alignak'
@@ -636,7 +638,7 @@ class TestConfig(AlignakTest):
         # Error messages
         assert len(self.configuration_errors) == 2
         u = 'u' if os.sys.version_info[:2] < (3, 0) else ''
-        cwd = os.path.abspath(os.getcwd())
+        cwd = self._test_dir
         self.assert_any_cfg_log_match(
             re.escape(
                 "cannot open file '%s/cfg/config/etc/broken_1/minimal.cfg' "
@@ -777,7 +779,7 @@ class TestConfig(AlignakTest):
         # Error messages
         assert len(self.configuration_errors) == 2
         u = 'u' if os.sys.version_info[:2] < (3, 0) else ''
-        cwd = os.path.abspath(os.getcwd())
+        cwd = self._test_dir
         self.assert_any_cfg_log_match(re.escape(
             u"cannot open directory '%s/cfg/config/not-existing-dir' for reading"
             % (cwd)

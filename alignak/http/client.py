@@ -209,11 +209,11 @@ class HTTPClient(object):
             if rsp.status_code != 200:
                 raise HTTPClientDataException(rsp.status_code, rsp.text, uri)
             return rsp.json()
-        except (requests.Timeout, requests.ConnectTimeout):
+        except (requests.Timeout, requests.ConnectTimeout):  # pragma: no cover
             raise HTTPClientTimeoutException(timeout, uri)
-        except requests.ConnectionError as exp:
+        except requests.ConnectionError as exp:  # pragma: no cover
             raise HTTPClientConnectionException(uri, exp.args[0])
-        except Exception as exp:
+        except Exception as exp:  # pragma: no cover
             raise HTTPClientException('Request error to %s: %s' % (uri, exp))
 
     def post(self, path, args, wait=False):
@@ -239,11 +239,11 @@ class HTTPClient(object):
             if rsp.status_code != 200:
                 raise HTTPClientDataException(rsp.status_code, rsp.text, uri)
             return rsp.content
-        except (requests.Timeout, requests.ConnectTimeout):
+        except (requests.Timeout, requests.ConnectTimeout):  # pragma: no cover
             raise HTTPClientTimeoutException(timeout, uri)
-        except requests.ConnectionError as exp:
+        except requests.ConnectionError as exp:  # pragma: no cover
             raise HTTPClientConnectionException(uri, exp.args[0])
-        except Exception as exp:
+        except Exception as exp:  # pragma: no cover
             raise HTTPClientException('Request error to %s: %s' % (uri, exp))
 
     def put(self, path, args, wait=False):  # pragma: no cover, looks never used!
@@ -266,9 +266,9 @@ class HTTPClient(object):
             if rsp.status_code != 200:
                 raise HTTPClientDataException(rsp.status_code, rsp.text, uri)
             return rsp.content
-        except (requests.Timeout, requests.ConnectTimeout):
+        except (requests.Timeout, requests.ConnectTimeout):  # pragma: no cover
             raise HTTPClientTimeoutException(timeout, uri)
-        except requests.ConnectionError as exp:
+        except requests.ConnectionError as exp:  # pragma: no cover
             raise HTTPClientConnectionException(uri, exp.args[0])
-        except Exception as exp:
+        except Exception as exp:  # pragma: no cover
             raise HTTPClientException('Request error to %s: %s' % (uri, exp))

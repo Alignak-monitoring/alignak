@@ -21,7 +21,7 @@ This module provide object serialization for Alignak objects. It basically conve
 """
 import sys
 import json
-import collections
+from collections import Callable
 from alignak.property import NONE_OBJECT
 
 # try:
@@ -38,7 +38,7 @@ def default_serialize(obj):
     #     # Transform a set to a list
     #     return list(obj)
     #
-    if hasattr(obj, "serialize") and isinstance(obj.serialize, collections.Callable):
+    if hasattr(obj, "serialize") and isinstance(obj.serialize, Callable):
         res = {
             '__sys_python_module__': "%s.%s" % (obj.__class__.__module__,
                                                 obj.__class__.__name__),
@@ -87,7 +87,7 @@ def serialize(obj, no_json=True, printing=False, name=''):
         print("Serialize %s (%s): %s" % (name, 'no json' if no_json else 'as json', obj))
 
     res = obj
-    if hasattr(obj, "serialize") and isinstance(obj.serialize, collections.Callable):
+    if hasattr(obj, "serialize") and isinstance(obj.serialize, Callable):
         if printing:
             print("-> calling %s serialize %s" % (obj.__class__.__name__,
                                                   'no json' if no_json else 'as json'))
