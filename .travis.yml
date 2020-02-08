@@ -4,7 +4,6 @@ sudo: required
 python:
   - '3.7'
   - '3.6'
-  - '3.5'
   - '2.7'
 
 env:
@@ -27,11 +26,6 @@ script:
   # Run tests suite with code coverage analysis
   - echo "Starting tests '$TEST_SUITE' ..."
   - pytest --verbose --durations=0 --no-print-logs --cov=alignak --cov-config .coveragerc $TEST_SUITE
-  # Upload coverage results to codecov
-  # bash <(curl -s https://codecov.io/bash) -e $TEST_SUITE -c -F $TEST_SUITE
-  # The same flag (-F) whatever the test suite!
-#  - bash <(curl -s https://codecov.io/bash) -e $TEST_SUITE -c -F Alignak
-#  - cd ..
 
 after_success:
   - bash <(curl -s https://codecov.io/bash) -e $TEST_SUITE -c -F Alignak
@@ -47,7 +41,7 @@ notifications:
 jobs:
   include:
     - stage: Coding standard
-      python: 3.5
+      python: 3.7
       script:
         # Static code analysis
         # -- pycodestyle (former pep8)
