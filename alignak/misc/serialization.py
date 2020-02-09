@@ -21,7 +21,11 @@ This module provide object serialization for Alignak objects. It basically conve
 """
 import sys
 import json
-from collections import Callable
+try:
+    from collections.abc import Callable
+except ImportError:
+    from collections import Callable
+
 from alignak.property import NONE_OBJECT
 
 # try:
