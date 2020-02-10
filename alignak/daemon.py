@@ -134,7 +134,6 @@ import signal
 from copy import copy
 import threading
 import logging
-import tempfile
 import warnings
 import traceback
 from queue import Empty, Full
