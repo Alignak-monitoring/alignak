@@ -61,7 +61,6 @@ from alignak.util import strip_and_uniq
 from alignak.property import (BoolProp, IntegerProp, StringProp, ListProp,
                               DictProp, FULL_STATUS, CHECK_RESULT)
 from alignak.log import make_monitoring_log
-from alignak.objects.notificationway import NotificationWay
 
 logger = logging.getLogger(__name__)  # pylint: disable=invalid-name
 
