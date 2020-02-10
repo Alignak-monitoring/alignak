@@ -231,7 +231,7 @@ class TestAction(AlignakTest):
         :return: None
         """
         a = Action()
-        a.command = "libexec/dummy_command.sh"
+        a.command = os.path.join(self._test_dir, "libexec/dummy_command.sh")
 
         assert a.got_shell_characters() == False
 
@@ -258,7 +258,7 @@ class TestAction(AlignakTest):
         # Expect no more than 30 seconds execution time
         a.timeout = 30
         # Action is sleeping for 10 seconds
-        a.command = "libexec/sleep_command.sh 10"
+        a.command = os.path.join(self._test_dir, "libexec/sleep_command.sh 10")
 
         # Run the action script
         a.execute()
@@ -278,7 +278,7 @@ class TestAction(AlignakTest):
         # Expect no more than 5 seconds execution time
         a.timeout = 5
         # Action is sleeping for 10 seconds
-        a.command = "libexec/sleep_command.sh 10"
+        a.command = os.path.join(self._test_dir, "libexec/sleep_command.sh 10")
 
         # Run the action script
         a.execute()
@@ -372,7 +372,7 @@ class TestAction(AlignakTest):
         :return: None
         """
         a = Action()
-        a.command = "libexec/dummy_command_nobang.sh"
+        a.command = os.path.join(self._test_dir, "libexec/dummy_command_nobang.sh")
         assert False == a.got_shell_characters()
         a.execute()
 
@@ -394,7 +394,7 @@ class TestAction(AlignakTest):
         :return: None
         """
         a = Action()
-        a.command = "libexec/dummy_command_nobang.sh && echo finished ok"
+        a.command = os.path.join(self._test_dir, "libexec/dummy_command_nobang.sh && echo finished ok")
 
         assert True == a.got_shell_characters()
 
@@ -416,7 +416,7 @@ class TestAction(AlignakTest):
         :return: None
         """
         a = Action()
-        a.command = "libexec/dummy_command_nobang.sh | grep 'I will not match this search!'"
+        a.command = os.path.join(self._test_dir, "libexec/dummy_command_nobang.sh | grep 'I will not match this search!'")
         assert True == a.got_shell_characters()
 
         # Run the action script
@@ -438,8 +438,7 @@ class TestAction(AlignakTest):
         """
         # https://github.com/naparuba/shinken/issues/155
         a = Action()
-        a.command = "libexec/dummy_command_nobang.sh -a 'wwwwzzzzeeee"
-
+        a.command = os.path.join(self._test_dir, "libexec/dummy_command_nobang.sh -a 'wwwwzzzzeeee")
 
         # Run the action script
         with pytest.raises(ActionError):

@@ -209,6 +209,8 @@ class TestLogging2(AlignakTest):
 class TestLogging3(AlignakTest):
 
     def setUp(self):
+        super(TestLogging3, self).setUp()
+
         # Clear logs and reset the logger
         self.clear_logs()
         # Remove all existing handlers (if some!)
@@ -231,7 +233,7 @@ class TestLogging3(AlignakTest):
         self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
         assert not self.logger_.handlers
 
-        logger_configuration_file = os.path.join(os.getcwd(), './etc/alignak-logger.json')
+        logger_configuration_file = os.path.join(self._test_dir, './etc/alignak-logger.json')
         setup_logger(logger_configuration_file, log_dir=None,
                      process_name='process_name', log_file='')
 
@@ -249,11 +251,11 @@ class TestLogging3(AlignakTest):
         # The logger default format is including 'alignak_tests.'
         # Now the get process_name in place of alignak_tests!
         # [2020-01-26 09:48:38] INFO: [process_name.alignak] Message
-        self.assert_any_log_match('[\[0-9\]*] INFO: \[process_name.%s\] %s'
+        self.assert_any_log_match(r'[\[0-9\]*] INFO: \[process_name.%s\] %s'
                                   % (self.logger_.name, msg))
 
         # Configure the logger with a daemon name
-        logger_configuration_file = os.path.join(os.getcwd(), './etc/alignak-logger.json')
+        logger_configuration_file = os.path.join(self._test_dir, './etc/alignak-logger.json')
         setup_logger(logger_configuration_file, log_dir=None,
                      process_name='process_name', log_file='')
         self.logger_ = logging.getLogger(ALIGNAK_LOGGER_NAME)
@@ -272,7 +274,7 @@ class TestLogging3(AlignakTest):
         self.show_logs()
         # The logger default format is including 'alignak_tests.'
         # Now the get process_name in place of alignak_tests!
-        self.assert_any_log_match('[\[0-9\]*] INFO: \[process_name.%s\] %s'
+        self.assert_any_log_match(r'[\[0-9\]*] INFO: \[process_name.%s\] %s'
                                   % (self.logger_.name, msg))
-        self.assert_any_log_match('[\[0-9\]*] INFO: \[process_name.%s\] %s'
+        self.assert_any_log_match(r'[\[0-9\]*] INFO: \[process_name.%s\] %s'
                                   % (self.logger_.name, msg2))

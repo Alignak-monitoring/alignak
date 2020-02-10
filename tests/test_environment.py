@@ -69,7 +69,8 @@ class TestEnvironment(AlignakTest):
         :return: None
         """
         # No defined sections
-        configuration_file = os.path.join('./cfg/environment', 'alignak_no_sections.ini')
+        configuration_file = os.path.join(self._test_dir,
+                                          os.path.join('./cfg/environment', 'alignak_no_sections.ini'))
 
         # Configuration file does not exist
         with pytest.raises(ValueError):
@@ -80,14 +81,16 @@ class TestEnvironment(AlignakTest):
 
         # --------------------
         # Syntax error
-        configuration_file = os.path.join('./cfg/environment', 'alignak_section_syntax.ini')
+        configuration_file = os.path.join(self._test_dir,
+                                          os.path.join('./cfg/environment', 'alignak_section_syntax.ini'))
         args = {'<cfg_file>': configuration_file, '--verbose': True}
         self.alignak_env = AlignakConfigParser(args)
         assert not self.alignak_env.parse()
 
         # --------------------
         # Interpolation error
-        configuration_file = os.path.join('./cfg/environment', 'alignak_section_syntax2.ini')
+        configuration_file = os.path.join(self._test_dir,
+                                          os.path.join('./cfg/environment', 'alignak_section_syntax2.ini'))
         # Get Alignak environment
         args = {'<cfg_file>': configuration_file, '--verbose': True}
         self.alignak_env = AlignakConfigParser(args)
@@ -98,11 +101,12 @@ class TestEnvironment(AlignakTest):
 
         :return: None
         """
-        # Default shipped configuration file
-        configuration_file = os.path.join('../etc', 'alignak.ini')
-
-        # Get Alignak environment
-        args = {'<cfg_file>': configuration_file, '--verbose': True}
+        # Get Alignak environment with the default shipped configuration file
+        args = {
+            '<cfg_file>': os.path.join(self._test_dir, '../etc/alignak.ini'),
+            '--verbose': True
+        }
+        print("Args: %s" % args)
         self.alignak_env = AlignakConfigParser(args)
         assert self.alignak_env.parse()
 
@@ -111,10 +115,11 @@ class TestEnvironment(AlignakTest):
 
         :return: None
         """
-        cwd = os.getcwd()
+        cwd = self._test_dir
 
         # Default shipped configuration file
-        configuration_file = os.path.join('./cfg/environment/several_files', 'alignak_ok.ini')
+        configuration_file = os.path.join(self._test_dir,
+                                          os.path.join('./cfg/environment/several_files', 'alignak_ok.ini'))
 
         # Get Alignak environment
         args = {'<cfg_file>': configuration_file, '--verbose': True}

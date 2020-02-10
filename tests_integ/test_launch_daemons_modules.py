@@ -124,7 +124,7 @@ class TestLaunchDaemonsModules(AlignakTest):
             # todo: this log does not look appropriate... investigate more on this!
             "is still living 10 seconds after a normal kill, I help it to die",
             "inner retention module is loaded but is not enabled.",
-            "Retention directory created: "
+            "Retention directory created"
         ]
         ignored_errors = [
             # Sometimes, the retention file is not correctly read ....

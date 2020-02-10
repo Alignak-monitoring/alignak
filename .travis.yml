@@ -4,12 +4,15 @@ sudo: required
 python:
   - '3.7'
   - '3.6'
-  - '3.5'
   - '2.7'
 
 env:
-  - TEST_SUITE=tests
-  - TEST_SUITE=tests_integ
+  - TEST_SUITE=tests/test_*.py
+  - TEST_SUITE=tests_integ/test_daemons_api.py
+  - TEST_SUITE=tests_integ/test_launch_arbiter.py
+  - TEST_SUITE=tests_integ/test_launch_daemons.py
+  - TEST_SUITE=tests_integ/test_launch_daemons_modules.py
+  - TEST_SUITE=tests_integ/test_launch_daemons_realms_and_checks.py
 
 install:
   - unset PYTHONWARNINGS
@@ -20,17 +23,13 @@ install:
 
 script:
   - echo "Starting tests '$TEST_SUITE' ..."
-  - |
-    # Run tests suite with code coverage analysis
-    cd $TEST_SUITE
-    echo "Starting tests '$TEST_SUITE' ..."
-    pytest --verbose --no-print-logs --cov=alignak --cov-config .coveragerc test_*.py || travis_terminate 1;
-    # Upload coverage results to codecov
-    # bash <(curl -s https://codecov.io/bash) -e $TEST_SUITE -c -F $TEST_SUITE
-    # The same flag (-F) whatever the test suite!
-    bash <(curl -s https://codecov.io/bash) -e $TEST_SUITE -c -F Alignak
-    cd ..
+  # Run tests suite with code coverage analysis
+  - echo "Starting tests '$TEST_SUITE' ..."
+  - pytest --verbose --durations=0 --no-print-logs --cov=alignak --cov-config .coveragerc $TEST_SUITE
+
 after_success:
+  - bash <(curl -s https://codecov.io/bash) -e $TEST_SUITE -c -F Alignak
+
 notifications:
   webhooks:
     urls:
@@ -38,10 +37,11 @@ notifications:
     on_success: change
     on_failure: always
     on_start: never
+
 jobs:
   include:
     - stage: Coding standard
-      python: 3.5
+      python: 3.7
       script:
         # Static code analysis
         # -- pycodestyle (former pep8)

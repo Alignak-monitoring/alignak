@@ -1185,7 +1185,7 @@ class Arbiter(Daemon):  # pylint: disable=too-many-instance-attributes
             if alive:
                 # Kill processes
                 for process in alive:
-                    logger.warning("Process %s did not stopped, trying to kill", process.name())
+                    logger.info("Process %s did not stopped, trying to kill", process.name())
                     process.kill()
                 _, alive = psutil.wait_procs(alive, timeout=timeout, callback=on_terminate)
                 if alive:

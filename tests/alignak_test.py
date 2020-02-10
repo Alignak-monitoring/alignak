@@ -44,13 +44,14 @@ import threading
 
 from copy import deepcopy
 
-import unittest2
-
 import logging
 from logging import Handler, Formatter
 from logging.handlers import TimedRotatingFileHandler
 
 import requests_mock
+
+import unittest2
+import pytest
 
 import alignak
 from alignak.log import setup_logger, ALIGNAK_LOGGER_NAME, ColorStreamHandler, CollectorHandler
@@ -105,8 +106,11 @@ class AlignakTest(unittest2.TestCase):
         self._launch_dir = os.getcwd()
         print("Test current working directory: %s" % self._launch_dir)
 
+        self._test_dir = os.path.dirname(__file__)
+        print("Test file directory: %s" % self._test_dir)
+
         # Configure Alignak logger with test configuration
-        logger_configuration_file = os.path.join(os.getcwd(), './etc/alignak-logger.json')
+        logger_configuration_file = os.path.join(self._test_dir, './etc/alignak-logger.json')
         print("Logger configuration: %s" % logger_configuration_file)
         # try:
         #     os.makedirs('/tmp/monitoring-log')
@@ -245,7 +249,8 @@ define host {
             print("Copy default configuration (../etc) to %s..." % cfg_folder)
             if os.path.exists('%s/etc' % cfg_folder):
                 shutil.rmtree('%s/etc' % cfg_folder)
-            shutil.copytree('../etc', '%s/etc' % cfg_folder)
+            shutil.copytree(os.path.join(self._test_dir, '../etc'),
+                            '%s/etc' % cfg_folder)
 
         # Load and update the configuration
         for f in ['alignak.log', 'alignak-events.log']:
@@ -287,7 +292,7 @@ define host {
             cfg.set('alignak-configuration', 'cfg', '%s/etc/alignak.cfg' % cfg_folder)
 
             # Directory for running daemons
-            cfg.set('alignak-configuration', 'daemons_script_location', '/usr/local/bin')
+            cfg.set('alignak-configuration', 'daemons_script_location', '')
 
             # Daemons launching and check
             cfg.set('alignak-configuration', 'polling_interval', '1')
@@ -509,7 +514,7 @@ define host {
                 cfg.set('alignak-configuration', 'cfg', '%s/etc/alignak.cfg' % cfg_folder)
 
                 # Directory for running daemons
-                cfg.set('alignak-configuration', 'daemons_script_location', '/usr/local/bin')
+                cfg.set('alignak-configuration', 'daemons_script_location', '')
 
                 # Daemons launching and check
                 cfg.set('alignak-configuration', 'polling_interval', '1')
@@ -541,8 +546,10 @@ define host {
         for name in daemons_list + ['arbiter-master']:
             if arbiter_only and name not in ['arbiter-master']:
                 continue
-            args = ["../alignak/bin/alignak_%s.py" % name.split('-')[0], "-n", name,
-                    "-e", "%s/etc/alignak.ini" % cfg_folder]
+            args = [
+                os.path.join(self._test_dir, "../alignak/bin/alignak_%s.py" % name.split('-')[0]),
+                "-n",  name, "-e", "%s/etc/alignak.ini" % cfg_folder
+            ]
             if verbose:
                 args.append("--debug")
             print("- %s arguments: %s" % (name, args))
@@ -692,6 +699,8 @@ define host {
         :type env_file: str
         :param verbose: load Alignak environment in verbose mode (defaults True)
         :type verbose: bool
+        :param dispatching: simulate the dispatch of the parsed configuration
+        :type dispatching: bool
         :return: None
         """
         self.broks = []
@@ -718,13 +727,29 @@ define host {
 
         assert configuration_file or env_file
 
-        current_dir = os.getcwd()
-        print("Current directory: %s" % current_dir)
+        # current_dir = os.getcwd()
+        print("Current directory: %s" % self._test_dir)
         if configuration_file:
+            if not os.path.exists(configuration_file):
+                configuration_file = os.path.join(self._test_dir, configuration_file)
+                if not os.path.exists(configuration_file):
+                    # Error for the configuration file
+                    print("Provided configuration file for the test does not exist anywhere: %s!"
+                          % configuration_file)
+                    raise SystemExit("No configuration file found for the test!")
+
             configuration_dir = os.path.dirname(configuration_file)
             print("Test configuration directory: %s, file: %s"
                   % (os.path.abspath(configuration_dir), configuration_file))
         else:
+            if not os.path.exists(env_file):
+                env_file = os.path.join(self._test_dir, env_file)
+                if not os.path.exists(env_file):
+                    # Error for the configuration file
+                    print("Provided configuration file for the test does not exist anywhere: %s!"
+                          % configuration_file)
+                    raise SystemExit("No configuration file found for the test!")
+
             configuration_dir = os.path.dirname(env_file)
             print("Test configuration directory: %s, file: %s"
                   % (os.path.abspath(configuration_dir), env_file))
@@ -735,13 +760,15 @@ define host {
             if os.path.exists(os.path.join(configuration_dir, 'alignak.ini')):
                 # alignak.ini in the same directory as the legacy configuration file
                 self.env_filename = os.path.join(configuration_dir, 'alignak.ini')
-            elif os.path.exists(os.path.join(current_dir, './etc/alignak.ini')):
+            elif os.path.exists(os.path.join(self._test_dir, './etc/alignak.ini')):
                 # alignak.ini in the test/etc directory
-                self.env_filename = os.path.join(current_dir, './etc/alignak.ini')
+                self.env_filename = os.path.join(self._test_dir, './etc/alignak.ini')
             else:
                 print("No Alignak configuration file found for the test: %s!" % self.env_filename)
                 raise SystemExit("No Alignak configuration file found for the test!")
 
+        if self.env_filename != os.path.abspath(self.env_filename):
+            self.env_filename = os.path.join(self._test_dir, self.env_filename)
         self.env_filename = os.path.abspath(self.env_filename)
         print("Found Alignak environment file: %s" % self.env_filename)
 

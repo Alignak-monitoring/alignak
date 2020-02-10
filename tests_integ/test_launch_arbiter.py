@@ -33,7 +33,6 @@ import psutil
 
 import configparser
 
-import pytest
 from .alignak_test import AlignakTest
 
 from alignak.http.generic_interface import GenericInterface
@@ -125,7 +124,8 @@ class TestLaunchArbiter(AlignakTest):
         if os.path.exists('%s/etc' % cfg_folder):
             print("deleting existing configuration in %s/etc..." % cfg_folder)
             shutil.rmtree('%s/etc' % cfg_folder)
-        shutil.copytree('../etc', '%s/etc' % cfg_folder)
+        shutil.copytree(os.path.join(self._test_dir, '../etc'),
+                        '%s/etc' % cfg_folder)
         # Remove the daemons configuration part!
         shutil.rmtree('%s/etc/alignak.d' % cfg_folder)
 
@@ -298,7 +298,10 @@ class TestLaunchArbiter(AlignakTest):
             print("* parsing error in config file: %s" % exp)
             assert False
 
-        args = ["../alignak/bin/alignak_arbiter.py", "-e", "/tmp/alignak/etc/alignak.ini"]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_arbiter.py"),
+            "-e", "/tmp/alignak/etc/alignak.ini"
+        ]
         self.procs = {'arbiter-master': subprocess.Popen(args)}
         print("%s launched (pid=%d)" % ('arbiter', self.procs['arbiter-master'].pid))
 
@@ -362,7 +365,10 @@ class TestLaunchArbiter(AlignakTest):
             print("* parsing error in config file: %s" % exp)
             assert False
 
-        args = ["../alignak/bin/alignak_arbiter.py", "-e", "/tmp/alignak/etc/alignak.ini"]
+        args = [
+            os.path.join(self._test_dir, "../alignak/bin/alignak_arbiter.py"),
+            "-e", "/tmp/alignak/etc/alignak.ini"
+        ]
         self.procs = {'arbiter-master': subprocess.Popen(args)}
         print("%s launched (pid=%d)" % ('arbiter', self.procs['arbiter-master'].pid))
 

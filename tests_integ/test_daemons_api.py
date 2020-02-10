@@ -86,11 +86,13 @@ class TestDaemonsApi(AlignakTest):
         self._prepare_configuration(copy=True, cfg_folder=self.cfg_folder)
 
         # Specific daemon load configuration preparation
-        if os.path.exists('./cfg/%s/alignak.cfg' % cfg_dir):
-            shutil.copy('./cfg/%s/alignak.cfg' % cfg_dir, '%s/etc' % self.cfg_folder)
-        if os.path.exists('%s/etc/arbiter' % self.cfg_folder):
+        if os.path.exists(os.path.join(self._test_dir, './cfg/%s/alignak.cfg' % cfg_dir)):
+            shutil.copy(os.path.join(self._test_dir, './cfg/%s/alignak.cfg' % cfg_dir),
+                        '%s/etc' % self.cfg_folder)
+        if os.path.exists(os.path.join(self._test_dir, '%s/etc/arbiter' % self.cfg_folder)):
             shutil.rmtree('%s/etc/arbiter' % self.cfg_folder)
-        shutil.copytree('./cfg/%s/arbiter' % cfg_dir, '%s/etc/arbiter' % self.cfg_folder)
+        shutil.copytree(os.path.join(self._test_dir, './cfg/%s/arbiter' % cfg_dir),
+                        '%s/etc/arbiter' % self.cfg_folder)
 
         self._prepare_hosts_configuration(cfg_folder='%s/etc/arbiter/objects/hosts'
                                                      % self.cfg_folder,
@@ -98,8 +100,9 @@ class TestDaemonsApi(AlignakTest):
                                           realms=realms)
 
         # Some script commands must be copied in the test folder
-        if os.path.exists('./libexec/check_command.sh'):
-            shutil.copy('./libexec/check_command.sh', '%s/check_command.sh' % self.cfg_folder)
+        if os.path.exists(os.path.join(self._test_dir, './libexec/check_command.sh')):
+            shutil.copy(os.path.join(self._test_dir, './libexec/check_command.sh'),
+                        '%s/check_command.sh' % self.cfg_folder)
 
         # Update the default configuration files
         files = ['%s/etc/alignak.ini' % self.cfg_folder]
@@ -919,8 +922,10 @@ class TestDaemonsApi(AlignakTest):
         cfg_folder = '/tmp/alignak'
         cfg_dir = 'default_many_hosts'
         hosts_count = 10
-        daemons_list = ['broker-master', 'poller-master', 'reactionner-master',
-                        'receiver-master', 'scheduler-master']
+        daemons_list = [
+            'broker-master', 'poller-master', 'reactionner-master',
+            'receiver-master', 'scheduler-master'
+        ]
         satellite_map = {
             'arbiter': '7770', 'scheduler': '7768', 'broker': '7772',
             'poller': '7771', 'reactionner': '7769', 'receiver': '7773'
@@ -930,18 +935,21 @@ class TestDaemonsApi(AlignakTest):
         self._prepare_configuration(copy=True, cfg_folder=cfg_folder)
 
         # Specific daemon load configuration preparation
-        if os.path.exists('./cfg/%s/alignak.cfg' % cfg_dir):
-            shutil.copy('./cfg/%s/alignak.cfg' % cfg_dir, '%s/etc' % cfg_folder)
+        if os.path.exists(os.path.join(self._test_dir, './cfg/%s/alignak.cfg' % cfg_dir)):
+            shutil.copy(os.path.join(self._test_dir, './cfg/%s/alignak.cfg' % cfg_dir),
+                        '%s/etc' % cfg_folder)
         if os.path.exists('%s/etc/arbiter' % cfg_folder):
             shutil.rmtree('%s/etc/arbiter' % cfg_folder)
-        shutil.copytree('./cfg/%s/arbiter' % cfg_dir, '%s/etc/arbiter' % cfg_folder)
+        shutil.copytree(os.path.join(self._test_dir, './cfg/%s/arbiter' % cfg_dir),
+                        '%s/etc/arbiter' % cfg_folder)
 
         self._prepare_hosts_configuration(cfg_folder='%s/etc/arbiter/objects/hosts' % cfg_folder,
                                           hosts_count=hosts_count, target_file_name='hosts.cfg')
 
         # Some script commands must be copied in the test folder
-        if os.path.exists('./libexec/check_command.sh'):
-            shutil.copy('./libexec/check_command.sh', '%s/check_command.sh' % cfg_folder)
+        if os.path.exists(os.path.join(self._test_dir, './libexec/check_command.sh')):
+            shutil.copy(os.path.join(self._test_dir, './libexec/check_command.sh'),
+                        '%s/check_command.sh' % cfg_folder)
 
         # Update the default configuration files
         files = ['%s/etc/alignak.ini' % cfg_folder]

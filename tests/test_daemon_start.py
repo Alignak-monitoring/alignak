@@ -89,9 +89,9 @@ except ImportError as exp:  # Like in nt system
         return os.getlogin()
 
 
-alignak_root = os.path.abspath("cfg/daemons")
-alignak_config = os.path.abspath("cfg/daemons/alignak.cfg")
-alignak_environment = os.path.abspath("cfg/daemons/alignak.ini")
+alignak_root = os.path.abspath("tests/cfg/daemons")
+alignak_config = os.path.abspath("tests/cfg/daemons/alignak.cfg")
+alignak_environment = os.path.abspath("tests/cfg/daemons/alignak.ini")
 
 #############################################################################
 
@@ -106,7 +106,7 @@ def get_free_port(on_ip='127.0.0.1'):
         sock.close()
 
 
-class template_Daemon_Start():
+class TemplateDaemonStart():
 
     @classmethod
     def setUpClass(cls):
@@ -536,7 +536,7 @@ class template_Daemon_Start():
 
 #############################################################################
 
-class Test_Broker_Start(template_Daemon_Start, AlignakTest):
+class Test_Broker_Start(TemplateDaemonStart, AlignakTest):
     def setUp(self):
         super(Test_Broker_Start, self).setUp()
 
@@ -544,7 +544,7 @@ class Test_Broker_Start(template_Daemon_Start, AlignakTest):
     daemon_name = 'my_broker'
 
 
-class Test_Scheduler_Start(template_Daemon_Start, AlignakTest):
+class Test_Scheduler_Start(TemplateDaemonStart, AlignakTest):
     def setUp(self):
         super(Test_Scheduler_Start, self).setUp()
 
@@ -552,7 +552,7 @@ class Test_Scheduler_Start(template_Daemon_Start, AlignakTest):
     daemon_name = 'my_scheduler'
 
 
-class Test_Poller_Start(template_Daemon_Start, AlignakTest):
+class Test_Poller_Start(TemplateDaemonStart, AlignakTest):
     def setUp(self):
         super(Test_Poller_Start, self).setUp()
 
@@ -560,7 +560,7 @@ class Test_Poller_Start(template_Daemon_Start, AlignakTest):
     daemon_name = 'my_poller'
 
 
-class Test_Reactionner_Start(template_Daemon_Start, AlignakTest):
+class Test_Reactionner_Start(TemplateDaemonStart, AlignakTest):
     def setUp(self):
         super(Test_Reactionner_Start, self).setUp()
 
@@ -568,7 +568,7 @@ class Test_Reactionner_Start(template_Daemon_Start, AlignakTest):
     daemon_name = 'my_reactionner'
 
 
-class Test_Receiver_Start(template_Daemon_Start, AlignakTest):
+class Test_Receiver_Start(TemplateDaemonStart, AlignakTest):
     def setUp(self):
         super(Test_Receiver_Start, self).setUp()
 
@@ -576,7 +576,7 @@ class Test_Receiver_Start(template_Daemon_Start, AlignakTest):
     daemon_name = 'my_receiver'
 
 
-class Test_Arbiter_Start(template_Daemon_Start, AlignakTest):
+class Test_Arbiter_Start(TemplateDaemonStart, AlignakTest):
     def setUp(self):
         super(Test_Arbiter_Start, self).setUp()
 

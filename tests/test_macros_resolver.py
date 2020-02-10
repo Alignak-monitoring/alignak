@@ -92,9 +92,9 @@ class MacroResolverTester(object):
 
         # This is a macro built from a dynamic variable
         result = self.mr.resolve_simple_macros_in_string("$MAINCONFIGFILE$", [], None, None, None)
-        assert result == os.path.abspath(self.setup_file)
+        assert result == os.path.abspath(os.path.join(self._test_dir, self.setup_file))
         result = self.mr.resolve_simple_macros_in_string("$MAINCONFIGDIR$", [], None, None, None)
-        assert result == os.path.abspath('./cfg')
+        assert result == os.path.abspath(os.path.join(self._test_dir, './cfg'))
 
         # This is an empty macro -> ''
         result = self.mr.resolve_simple_macros_in_string("$COMMENTDATAFILE$", [], None, None, None)

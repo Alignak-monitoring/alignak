@@ -628,13 +628,13 @@ class TestMonitoringLogs(AlignakTest):
         excmd = '[%d] RESTART_PROGRAM' % now
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
-        self.assert_any_log_match('RESTART command : libexec/sleep_command.sh 3')
+        self.assert_any_log_match('RESTART command : tests/libexec/sleep_command.sh 3')
 
         # RELOAD_CONFIG
         excmd = '[%d] RELOAD_CONFIG' % now
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
-        self.assert_any_log_match('RELOAD command : libexec/sleep_command.sh 2')
+        self.assert_any_log_match('RELOAD command : tests/libexec/sleep_command.sh 2')
 
         # UNKNOWN COMMAND
         excmd = '[%d] UNKNOWN_COMMAND' % now
@@ -672,7 +672,7 @@ class TestMonitoringLogs(AlignakTest):
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         # todo: it should not but it does!
-        self.assert_any_log_match('RESTART command : libexec/sleep_command.sh 3')
+        self.assert_any_log_match('RESTART command : tests/libexec/sleep_command.sh 3')
         # self.assert_no_log_match('RESTART command : libexec/sleep_command.sh 3')
 
         # RELOAD_CONFIG
@@ -680,7 +680,7 @@ class TestMonitoringLogs(AlignakTest):
         self._scheduler.run_external_commands([excmd])
         self.external_command_loop()
         # todo: it should not but it does!
-        self.assert_any_log_match('RELOAD command : libexec/sleep_command.sh 2')
+        self.assert_any_log_match('RELOAD command : tests/libexec/sleep_command.sh 2')
         # self.assert_no_log_match('RELOAD command : libexec/sleep_command.sh 2')
 
         # No monitoring logs

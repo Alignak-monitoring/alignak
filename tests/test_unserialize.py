@@ -167,7 +167,6 @@ class TestUnserialize(AlignakTest):
             "__sys_python_module__":"alignak.notification.Notification"
             }
         }
-
         '''
         unserialize(var)
         assert True
