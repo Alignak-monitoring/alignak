@@ -31,6 +31,7 @@ RUN mkdir -p /repos
 RUN mkdir -p /shinken_modules
 
 # Get the Shinken / Alignak Web UI
+RUN pwd
 ARG SHINKEN_WEBUI_VERSION
 RUN cd /repos && \
     git clone https://github.com/mohierf/mod-webui && \

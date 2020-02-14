@@ -2,7 +2,13 @@
 
 ## Host / containers shared volume
 
-The *data/alignak* directory is shared between the host system and the running containers.
+The *data/alignak* directory is shared between the host system and the running containers. It contains : 
+- a default test configuration to show how to configure and use some Alignak features
+- some commands used to check hosts and services in the default configuration
+
+The default configuration shows how to build an Alignak configuration split in 3 realms. Each realm owns its hosts and they are all monitored in the same Alignak ystem with one Web UI.
+
+Have a look into the configuration for more information -)
 
 
 ## Using the makefile

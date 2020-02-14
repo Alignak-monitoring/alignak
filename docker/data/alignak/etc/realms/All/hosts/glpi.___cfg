@@ -1,9 +1,0 @@
-define host{
-   use                  glpi,freebsd-nrpe
-
-   host_name            glpi2
-   alias                Glpi 2
-   display_name         Glpi 2
-
-   address              10.0.4.21
-}
