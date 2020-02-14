@@ -2204,14 +2204,24 @@ class TestDaemonsApi(AlignakTest):
         # Host is alive :)
         # Created and raised an host passive check command
         # No issues
-        assert data == {
-            u'_status': u'OK',
-            u'_result': [
-                u'test_host is alive :)',
-                u'Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;' % now
-            ],
-            u'_issues': []
-        }
+        try:
+            assert data == {
+                u'_status': u'OK',
+                u'_result': [
+                    u'test_host is alive :)',
+                    u'Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;' % now
+                ],
+                u'_issues': []
+            }
+        except AssertionError:
+            assert data == {
+                u'_status': u'OK',
+                u'_result': [
+                    u'test_host is alive :)',
+                    u'Raised: [%s] PROCESS_HOST_CHECK_RESULT;test_host;0;' % (now + 1)
+                ],
+                u'_issues': []
+            }
 
         # Now, with live state data
         now = int(time.time())

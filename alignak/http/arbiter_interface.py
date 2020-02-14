@@ -1653,10 +1653,9 @@ class ArbiterInterface(GenericInterface):
         :param pushed_configuration: new conf to send
         :return: None
         """
-        pushed_configuration = cherrypy.request.json
         self.app.must_run = False
         return super(ArbiterInterface, self)._push_configuration(
-            pushed_configuration=pushed_configuration['conf'])
+            pushed_configuration=pushed_configuration)
 
     @cherrypy.expose
     @cherrypy.tools.json_out()
@@ -1670,6 +1669,7 @@ class ArbiterInterface(GenericInterface):
 
         :return: None
         """
+        message = "Received message to not run. I am the spare, stopping..."
         # If I'm the master, ignore the command and raise a log
         if self.app.is_master:
             message = "Received message to not run. " \
@@ -1678,7 +1678,7 @@ class ArbiterInterface(GenericInterface):
             return {'_status': u'ERR', '_message': message}
 
         # Else, I'm just a spare, so I listen to my master
-        logger.debug("Received message to not run. I am the spare, stopping.")
+        logger.warning(message)
         self.app.last_master_speak = time.time()
         self.app.must_run = False
         return {'_status': u'OK', '_message': message}

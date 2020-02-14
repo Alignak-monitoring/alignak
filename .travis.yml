@@ -38,6 +38,12 @@ notifications:
     on_failure: always
     on_start: never
 
+addons:
+  sonarcloud:
+    organization: "alignak-monitoring"
+    token:
+      secure: "Bo34Dfdpyi7pBrrJ9enrC+P1F2xuhY2mzjt/t0MRB5gf1wUGGPickAzrbsSNC67OC6l85Jdp8JOc2nVsvV5OkSziSiZLMRJNXHMijgKtF9979qtqrAtEbpcKzIRrkfLPaQd/OS9AdO5HU84LtDPreuIvjTNbSGYy1u2XUMBZKlJTV3YeIbQovRCHfEvuWzSs27U6q8zZtF27g3rhyvwMq3tTANK+C2qNLTrcPB3CUGXDv7ChGY0H8Y8uqMa/Pmmzw/Ko8WSCrI1TSFZe66MrqF8S/pUOdB6BLtS42MJmiMLIrSyjE7TPhP4T29OUZQQ8B4cDwPqIWh6BOBDRYHI1IpDBQRkwwV60btI+WRQwdAQiUEgVniL5XYvqqHcc5n9qF3O2KCo2YimGDVRP+VJdbYSUaX6TkeT+ZoTrSZOHs6VJS5H6wubVeTxXqPn5dPkQZ2gLZGPF5chrb/mYh0ao8rJQpbC3FCTBVruuYOJoxTUs4dXVGMBpdlK1fwHlvoibWQggle3SlSzz7uzMMZq90OmBB3ziPfxB2mILdWN1x4axQezOB325vJK9LMVU/niwys1uNMjzpwrqMqjaU0LRdT+LZ0iISdppRD/VWvEqOukDLN9xo4+1Km36dsKPxu/MBGZNphylErLcdlihDGwCcB48CRcbZMZ33U1/EuxHpVI="
+
 jobs:
   include:
     - stage: Coding standard
@@ -50,6 +56,7 @@ jobs:
         - pylint --rcfile=.pylintrc -r no alignak
         # -- pep257
         - pep257 --select=D300 alignak
+        - sonar-scanner
     - stage: Pypi deployment
       script: echo "Deploying to PyPi..."
       if: (tag IS present)

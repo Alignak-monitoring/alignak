@@ -297,8 +297,7 @@ class GenericInterface(object):
         :return: None
         """
         if pushed_configuration is None:
-            confs = cherrypy.request.json
-            pushed_configuration = confs['conf']
+            pushed_configuration = cherrypy.request.json['conf']
         # It is safer to lock this part
         with self.app.conf_lock:
             self.app.new_conf = pushed_configuration
