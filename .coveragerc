@@ -17,6 +17,5 @@ source = alignak
 
 omit =
     alignak/bin/*
-    alignak/misc/dictconfig.py
     */mock/*
     */nose/*

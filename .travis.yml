@@ -25,7 +25,7 @@ script:
   - echo "Starting tests '$TEST_SUITE' ..."
   # Run tests suite with code coverage analysis
   - echo "Starting tests '$TEST_SUITE' ..."
-  - pytest --verbose --durations=0 --no-print-logs --cov=alignak --cov-config .coveragerc $TEST_SUITE
+  - pytest --verbose --durations=0 --no-print-logs --cov=alignak --cov-config .coveragerc --cov-branch --cov-report=xml $TEST_SUITE
 
 after_success:
   - bash <(curl -s https://codecov.io/bash) -e $TEST_SUITE -c -F Alignak
