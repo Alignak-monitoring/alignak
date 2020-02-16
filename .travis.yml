@@ -1,6 +1,6 @@
 dist: xenial   # required for Python >= 3.7
 language: python
-sudo: required
+
 python:
   - '3.7'
   - '3.6'
@@ -25,7 +25,9 @@ script:
   - echo "Starting tests '$TEST_SUITE' ..."
   # Run tests suite with code coverage analysis
   - echo "Starting tests '$TEST_SUITE' ..."
-  - pytest --verbose --durations=0 --no-print-logs --cov=alignak --cov-config .coveragerc --cov-branch --cov-report=xml $TEST_SUITE
+  - pytest --verbose --durations=0 --no-print-logs --cov=alignak --cov-config .coveragerc --cov-report=xml $TEST_SUITE
+  # Push code coverage to the artifacts
+  # todo: How to?
 
 after_success:
   - bash <(curl -s https://codecov.io/bash) -e $TEST_SUITE -c -F Alignak
@@ -56,6 +58,9 @@ jobs:
         - pylint --rcfile=.pylintrc -r no alignak
         # -- pep257
         - pep257 --select=D300 alignak
+        # Get code coverage from the artifacts
+        # todo: How to?
+        # Sonar Cloud scanner
         - sonar-scanner
     - stage: Pypi deployment
       script: echo "Deploying to PyPi..."
