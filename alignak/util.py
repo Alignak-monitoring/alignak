@@ -226,7 +226,7 @@ def jsonify_r(obj, running_properties=False,
         if prop in filtered_properties:
             prop = '_' + prop
 
-        # Maybe the property is not jsonable
+        # Maybe the property is not json-able
         try:
             if isinstance(val, set):
                 val = list(val)

@@ -1,0 +1,177 @@
+version: '3.4'
+
+services:
+  # Alignak daemons
+  # - arbiter
+  arbiter-master:
+    image: ${DOCKER_REPOSITORY}/${DOCKER_SERVICE}:${ALIGNAK_IMAGE_TAG}
+    build:
+      context: ./image-alignak
+      args:
+        PYTHON_BASE_VERSION: 3.6
+        ALIGNAK_IMAGE_TAG: ${ALIGNAK_IMAGE_TAG}
+        ALIGNAK_SHARE_DIR: /alignak
+        ALIGNAK_GIT_REPO: ${ALIGNAK_GIT_REPO}
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "7770:7770"
+    volumes:
+      - ${ALIGNAK_DATADIR}:/alignak
+    command: "alignak-arbiter -e ${ALIGNAK_CONFIGURATION_FILE}"
+
+  # - scheduler(s)
+  scheduler-master:
+    image: ${DOCKER_REPOSITORY}/${DOCKER_SERVICE}:${ALIGNAK_IMAGE_TAG}
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "7768:7768"
+    volumes:
+      - ${ALIGNAK_DATADIR}:/alignak
+    command: "alignak-scheduler -e ${ALIGNAK_CONFIGURATION_FILE} -n scheduler-master"
+
+  scheduler-north:
+    image: ${DOCKER_REPOSITORY}/${DOCKER_SERVICE}:${ALIGNAK_IMAGE_TAG}
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "17768:7768"
+    volumes:
+      - ${ALIGNAK_DATADIR}:/alignak
+    command: "alignak-scheduler -e ${ALIGNAK_CONFIGURATION_FILE} -n scheduler-north"
+
+  scheduler-south:
+    image: ${DOCKER_REPOSITORY}/${DOCKER_SERVICE}:${ALIGNAK_IMAGE_TAG}
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "27768:7768"
+    volumes:
+      - ${ALIGNAK_DATADIR}:/alignak
+    command: "alignak-scheduler -e ${ALIGNAK_CONFIGURATION_FILE} -n scheduler-south"
+
+  # - reactionner
+  reactionner-master:
+    image: ${DOCKER_REPOSITORY}/${DOCKER_SERVICE}:${ALIGNAK_IMAGE_TAG}
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "7769:7769"
+    volumes:
+      - ${ALIGNAK_DATADIR}:/alignak
+    command: "alignak-reactionner -e ${ALIGNAK_CONFIGURATION_FILE} -n reactionner-master"
+
+  # - poller
+  poller-master:
+    image: ${DOCKER_REPOSITORY}/${DOCKER_SERVICE}:${ALIGNAK_IMAGE_TAG}
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "7771:7771"
+    volumes:
+      - ${ALIGNAK_DATADIR}:/alignak
+    command: "alignak-poller -e ${ALIGNAK_CONFIGURATION_FILE} -n poller-master"
+
+  # - broker
+  broker-master:
+    image: ${DOCKER_REPOSITORY}/${DOCKER_SERVICE_UI}:${ALIGNAK_IMAGE_TAG}
+    build:
+      context: image-alignak-ui
+      args:
+        ALIGNAK_IMAGE_TAG: ${ALIGNAK_IMAGE_TAG}
+        ALIGNAK_SHARE_DIR: /alignak
+        SHINKEN_WEBUI_VERSION: ${SHINKEN_WEBUI_VERSION}
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "7772:7772"
+      - "7767:7767"
+      - "17767:17767"
+    volumes:
+      - ${ALIGNAK_DATADIR}:/alignak
+#      - ${ALIGNAK_DATADIR}/webui:/usr/local/lib/python3.6/site-packages/alignak_module_webui
+#    command: "alignak-broker -e ${ALIGNAK_CONFIGURATION_FILE} -n broker-master"
+
+  # - receiver
+  receiver-master:
+    image: ${DOCKER_REPOSITORY}/${DOCKER_SERVICE}:${ALIGNAK_IMAGE_TAG}
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "7773:7773"
+    volumes:
+      - ${ALIGNAK_DATADIR}:/alignak
+    command: "alignak-receiver -e ${ALIGNAK_CONFIGURATION_FILE} -n receiver-master"
+
+  graphite:
+    # See: https://hub.docker.com/r/graphiteapp/docker-graphite-statsd
+    image: graphiteapp/graphite-statsd:latest
+    restart:
+      always
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "8080:80"
+      - "2003-2004:2003-2004"
+      - "2023-2024:2023-2024"
+      - "8125:8125/udp"
+      - "8126:8126"
+    volumes:
+      - ${ALIGNAK_DATADIR}:/alignak
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "3"
+
+  # Mongo DB, for Alignak WebUI
+  mongodb:
+    image: mongo:4.0
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - alignak
+    volumes:
+      - ${MONGO_DATADIR}/db:/data/db
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "1m"
+        max-file: "3"
+
+  # Mongo Express, UI for MongoDB
+  mongoexpress:
+    image: mongo-express
+    restart: unless-stopped
+    env_file:
+      - .env
+    networks:
+      - alignak
+    ports:
+      - "8081:8081"
+
+networks:
+  alignak:
+  default:
+    external:
+      name: default
