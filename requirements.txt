@@ -31,7 +31,7 @@ termcolor==1.1.0
 setproctitle==1.1.10
 
 # ujson is used for the internal objects serialization
-ujson==1.35
+ujson==5.2.0
 
 # numpy for date and percentile computation - needs a compiler on the installation target system!
 # Comment to use an internal implementation of percentile function
