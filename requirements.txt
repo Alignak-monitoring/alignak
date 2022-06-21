@@ -35,7 +35,7 @@ ujson==1.35
 
 # numpy for date and percentile computation - needs a compiler on the installation target system!
 # Comment to use an internal implementation of percentile function
-numpy==1.14.3
+numpy==1.22.0
 
 # SSL between the daemons
 # This requirement is only a requirement if you intend to use SLL for the inter-daemons
