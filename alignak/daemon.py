@@ -1468,7 +1468,7 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
         print("Daemonizing %s..." % self.name)
 
         # Set umask
-        os.umask(UMASK)
+        mask = os.umask(UMASK)
 
         # Close all file descriptors except the one we need
         self.pre_log.append(("DEBUG", "Closing file descriptors..."))
@@ -1505,6 +1505,8 @@ class Daemon(object):  # pylint: disable=too-many-instance-attributes
 
         self.pid = os.getpid()
         self.pre_log.append(("INFO", "We are now fully daemonized :) pid=%d" % self.pid))
+        # Reset umask
+        os.umask(mask)
 
         return True
 
